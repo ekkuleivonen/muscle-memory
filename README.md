@@ -1,2 +1,34 @@
-# muscle-memory
-Open-source coding adventures with private feedback and reproducible, versioned assessments.
+# Muscle Memory
+
+Friendly coding Adventures to test, practice and maintain the craft of writing code. AI is part of everyday development; Muscle Memory makes room to enjoy writing code yourself in your free time, with private feedback and room to improve.
+
+Created by [Ekku Leivonen](https://github.com/ekkuleivonen), inspired by a developer’s observation of fading coding fluency while using AI more often. That observation is a starting question, not evidence of causation. Open source and initially free; early Foundation work, no hosted service yet.
+
+With voluntary research participation, we also hope to study how developer skills evolve over time and compare with coding models through aggregate results. Individual results stay private. Research collection and model benchmarking are later work; the current demo uses synthetic data only.
+
+An **Adventure** contains **Challenges**. Challenge **Attempts** produce versioned **Assessments**. Stories, order and clues matter, so encounter context stays attached to every Attempt.
+
+## Run the Foundation reference
+
+The contract spike uses Python 3.11+ with no dependencies. The product app is selected to use Next.js; the TypeScript app and Cloudflare build rehearsal are the next Foundation slice.
+
+Run the contract spike:
+
+```sh
+PYTHONPATH=packages/core python3 -m unittest discover -s packages/core/tests -v
+PYTHONPATH=packages/core python3 apps/reference/demo.py
+```
+
+The demo uses synthetic JSON answers. It validates the content → encounter → attempt → assessment path, preserving both content versions and the Challenge digest. It does not execute submitted code, store real participant data, or infer general ability. Scoring is a provisional fraction of fixture outputs correct; there is no leaderboard or calibrated ranking.
+
+## Monorepo
+
+- `packages/core/muscle_memory`: portable immutable contracts and pure assessment logic.
+- `content/adventures`: story, presentation and pinned Challenge sequence.
+- `content/challenges`: tasks, fixtures, hints, skills and assessment versions.
+- `apps/reference`: executable synthetic acceptance flow.
+- `docs/foundation.md`: boundaries, acceptance gates and next implementation slices.
+
+The first audience is working developers practicing basic iteration and map handling. The initial contract spike is Python; the product app uses Next.js and TypeScript; structured answers keep the domain independent of a future runner or web framework. A Challenge is not tied to an escape room: field notes, mysteries, riddles and workouts can use the same model.
+
+See [contributing](CONTRIBUTING.md) and [security](SECURITY.md). Licensed under MIT.
