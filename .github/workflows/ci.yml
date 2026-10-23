@@ -24,3 +24,18 @@ jobs:
           node-version: '22'
       - run: node --test tools/tests/content-check.test.mjs
       - run: node tools/content-check.mjs
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run check:content
+      - run: npm run build:cloudflare
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+          WRANGLER_SEND_METRICS: 'false'

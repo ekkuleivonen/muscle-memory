@@ -10,7 +10,24 @@ An **Adventure** contains **Challenges**. Challenge **Attempts** produce version
 
 ## Run the Foundation reference
 
-The contract spike uses Python 3.11+ with no dependencies. The product app is selected to use Next.js; the TypeScript app and Cloudflare build rehearsal are the next Foundation slice.
+The product app uses Next.js and TypeScript. With Node.js 22+:
+
+```sh
+npm ci
+npm run dev
+```
+
+Open http://localhost:3000. The local practice flow keeps answers in tab memory only. It does not collect research records or execute submitted code.
+
+```sh
+npm test
+npm run build
+npm run build:cloudflare
+```
+
+See [Cloudflare build notes](docs/cloudflare-build.md). No account or deployment is required for local builds.
+
+The earlier contract spike uses Python 3.11+ with no dependencies.
 
 Run the contract spike:
 
@@ -23,6 +40,8 @@ The demo uses synthetic JSON answers. It validates the content → encounter →
 
 ## Monorepo
 
+- `apps/web`: Next.js reference Adventure and local feedback.
+- `packages/domain`: pure TypeScript assessment contracts and tests.
 - `packages/core/muscle_memory`: portable immutable contracts and pure assessment logic.
 - `content/adventures`: story, presentation and pinned Challenge sequence.
 - `content/challenges`: tasks, fixtures, hints, skills and assessment versions.

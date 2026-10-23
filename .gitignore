@@ -7,3 +7,9 @@ __pycache__/
 *.sqlite*
 private/
 exports/
+node_modules/
+.next/
+.open-next/
+.wrangler/
+.dev.vars*
+*.tsbuildinfo
