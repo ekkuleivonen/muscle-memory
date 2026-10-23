@@ -1,0 +1,26 @@
+{
+  "name": "muscle-memory",
+  "private": true,
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace apps/web",
+    "build": "npm run check:content && npm run build --workspace apps/web",
+    "test": "node --test tools/tests/*.test.mjs && node --import tsx --test packages/domain/*.test.ts",
+    "check:content": "node tools/content-check.mjs",
+    "build:cloudflare": "npm run build:cloudflare --workspace apps/web"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.0",
+    "prettier": "3.6.2",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3"
+  },
+  "overrides": {
+    "@node-minify/core": {
+      "glob": "10.5.0"
+    },
+    "wrangler": "4.152.0"
+  }
+}
