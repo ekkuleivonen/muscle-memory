@@ -21,3 +21,11 @@ Wrangler is pinned to a compatible patch that fixes a transitive sharp advisory.
 ## Verified reference slice
 
 The Next production build and complete OpenNext build passed locally. `wrangler dev --local --port 8787` served the app with only local asset/self-reference bindings. Browser verification covered explicit local consent, Challenge presentation, invalid empty-answer feedback and a successful four-fixture submission. No remote resource was provisioned. Active time is unmeasured (`null`), so this slice does not score speed.
+
+## Owner preview deployment
+
+The Worker configuration reserves the custom domain `musclememory.run` and disables both `workers.dev` and version preview URLs. Before deploying, configure Cloudflare Access for the entire hostname with an explicit owner-only email rule. Do not add bypass policies or alternate public routes.
+
+The app keeps practice records on the device; the hosted endpoint serves content only. Cloudflare Access is preview entry authentication, not a participant account or research consent system.
+
+For Cloudflare Workers Builds, use the repository root, build command `npm run check:content && npm run build:cloudflare`, and deploy command `npx wrangler deploy --config apps/web/wrangler.jsonc`. Select `main` only and disable nonproduction branch deployments. Use existing authorized integrations; never commit API tokens. Deployment setup and anonymous-access verification are tracked in Linear before claiming the preview is live.
