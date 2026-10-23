@@ -1,5 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useLocalPractice } from "./use-local-practice";
+import {
+  createAttemptEvent,
+  type AttemptEvent,
+} from "../../../packages/domain/events";
 import adventureData from "../../../content/adventures/field-notes.v1.json";
 import challengeData from "../../../content/challenges/frequency-map.v1.json";
 import {
@@ -26,15 +31,26 @@ export default function Home() {
   const [hint, setHint] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<ReturnType<typeof assess> | null>(null);
-  function submit(event: React.FormEvent) {
+  const [saveLocally, setSaveLocally] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [savedMessage, setSavedMessage] = useState("");
+  const pending = useRef<AttemptEvent | null>(null);
+  const local = useLocalPractice(saveLocally);
+  async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
+    setBusy(true);
+    setResult(null);
+    setSavedMessage("");
     try {
       if (!consent || !startedAt) throw new Error("Start the Adventure first.");
       const submittedAt = new Date().toISOString();
+      const participantId = saveLocally
+        ? await local.participantId()
+        : "local-practice";
       const attempt: Attempt = {
         id: crypto.randomUUID(),
-        participantId: "local-practice",
+        participantId,
         challengeId: challenge.id,
         challengeVersion: challenge.version,
         challengeSnapshot: snapshot(challenge),
@@ -48,11 +64,50 @@ export default function Home() {
         consentVersion: "local-practice-v1",
       };
       // No active-time tracker yet; null means unmeasured. No time-based score.
-      setResult(assess(challenge, attempt));
+      if (saveLocally) {
+        const record =
+          pending.current ??
+          createAttemptEvent(adventure, challenge, {
+            ...attempt,
+            consentVersion: "device-local-practice-v1",
+          });
+        pending.current = record;
+        await local.save(record);
+        setResult(record.assessment);
+        pending.current = null;
+        setSavedMessage("Saved on this device. Research sharing is off.");
+      } else setResult(assess(challenge, attempt));
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "Unable to check answers.",
       );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function clearSaved() {
+    setBusy(true);
+    setError("");
+    try {
+      await local.clear();
+      pending.current = null;
+      setResult(null);
+      setAnswer("");
+      setHint(false);
+      setAssistance("undisclosed");
+      setStartedAt(null);
+      setConsent(false);
+      setSavedMessage(
+        "Saved practice, pending exports and local identity cleared. Downloaded copies must be removed separately.",
+      );
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Unable to clear saved practice.",
+      );
+    } finally {
+      setBusy(false);
     }
   }
   return (
@@ -86,9 +141,24 @@ export default function Home() {
         {!startedAt ? (
           <div>
             <p className="note">
-              A local practice prototype. Your answers stay in this tab and
-              disappear when it closes. No account or research data collection.
+              Session-only by default. You can optionally save practice on this
+              device. No account, server upload or research data collection.
             </p>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={saveLocally}
+                onChange={(event) => setSaveLocally(event.target.checked)}
+              />{" "}
+              Save practice history on this device (optional).
+            </label>
+            {saveLocally && (
+              <p className="note">
+                Saved events include your answers, assistance disclosure and
+                task context. They remain on this browser until you clear them.
+                Research sharing stays off.
+              </p>
+            )}
             <label className="check">
               <input
                 type="checkbox"
@@ -116,42 +186,51 @@ export default function Home() {
               ))}
             </ol>
             <button
+              disabled={busy}
               type="button"
               className="secondary"
-              onClick={() => setHint(true)}
+              onClick={() => {
+                setHint(true);
+                pending.current = null;
+              }}
             >
               Show a hint
             </button>
             {hint && <p className="note">{challenge.hints[0]}</p>}
             <label htmlFor="answers">Your outputs, in fixture order</label>
             <textarea
+              disabled={busy}
               id="answers"
               value={answer}
               onChange={(e) => {
                 setAnswer(e.target.value);
                 setResult(null);
+                pending.current = null;
               }}
               placeholder='[{"a":2,"b":1}, {}, ...]'
               spellCheck={false}
             />
             <label htmlFor="assistance">How did you approach this?</label>
             <select
+              disabled={busy}
               id="assistance"
               value={assistance}
-              onChange={(e) =>
-                setAssistance(e.target.value as Attempt["assistance"])
-              }
+              onChange={(e) => {
+                setAssistance(e.target.value as Attempt["assistance"]);
+                pending.current = null;
+              }}
             >
               <option value="undisclosed">Prefer not to say</option>
               <option value="unaided">By myself</option>
               <option value="assisted">With assistance</option>
             </select>
-            <button type="submit">Check my outputs →</button>
-            {error && (
-              <p role="alert" className="error">
-                {error}
-              </p>
-            )}
+            <button type="submit" disabled={busy}>
+              {busy
+                ? "Saving…"
+                : pending.current
+                  ? "Retry saving this attempt"
+                  : "Check my outputs →"}
+            </button>
             {result && (
               <section aria-live="polite" className="result">
                 <h3>Your notebook, checked.</h3>
@@ -168,6 +247,59 @@ export default function Home() {
           </form>
         )}
       </section>
+      {error && (
+        <p role="alert" className="error">
+          {error}
+        </p>
+      )}
+      {savedMessage && (
+        <p role="status" className="note">
+          {savedMessage}
+        </p>
+      )}
+      {saveLocally && (
+        <section
+          className="local-history"
+          aria-labelledby="local-history-title"
+        >
+          <h3 id="local-history-title">Your device-local practice</h3>
+          <p>
+            {local.saved.length} saved attempt(s). Nothing is shared for
+            research.
+          </p>
+          {local.error && <p role="alert">{local.error}</p>}
+          <ul>
+            {local.saved
+              .slice(-5)
+              .reverse()
+              .map((record) => (
+                <li key={record.eventId}>{record.assessment.feedback}</li>
+              ))}
+          </ul>
+          <button
+            className="secondary"
+            disabled={busy || !local.saved.length}
+            onClick={() =>
+              local.download().catch((cause) => setError(cause.message))
+            }
+          >
+            Download local events
+          </button>{" "}
+          <button
+            className="secondary"
+            disabled={busy || !local.saved.length}
+            onClick={clearSaved}
+          >
+            Clear saved practice and identity
+          </button>
+          <p className="note">
+            Downloads stay retryable because this browser cannot confirm a file
+            was saved. Clearing removes local events and pending exports;
+            downloaded copies need separate deletion. Browser storage may also
+            be cleared by your browser.
+          </p>
+        </section>
+      )}
       <footer>
         <p>Practice, not a verdict.</p>
         <p>
