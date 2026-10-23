@@ -29,3 +29,5 @@ The Worker configuration reserves the custom domain `musclememory.run` and disab
 The app keeps practice records on the device; the hosted endpoint serves content only. Cloudflare Access is preview entry authentication, not a participant account or research consent system.
 
 For Cloudflare Workers Builds, use the repository root, build command `npm run check:content && npm run build:cloudflare`, and deploy command `npx wrangler deploy --config apps/web/wrangler.jsonc`. Select `main` only and disable nonproduction branch deployments. Use existing authorized integrations; never commit API tokens. Deployment setup and anonymous-access verification are tracked in Linear before claiming the preview is live.
+
+The owner preview is deployed behind Cloudflare Access. Anonymous app and catalog requests redirect to the login gate; alternate workers.dev and version URLs are disabled. The Cloudflare Git connection targets main with preview branch builds disabled. The first automatic build must be verified before treating update delivery as proven; the local Mac is not a hosting dependency.
