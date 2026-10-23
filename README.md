@@ -1,6 +1,10 @@
 # Muscle Memory
 
-Open-source coding Adventures for a useful personal checkup, with private feedback and reproducible assessments. Created by [Ekku Leivonen](https://github.com/ekkuleivonen). Initially free; early Foundation work, no hosted service yet.
+Friendly coding Adventures to test, practice and maintain the craft of writing code. AI is part of everyday development; Muscle Memory makes room to enjoy writing code yourself in your free time, with private feedback and room to improve.
+
+Created by [Ekku Leivonen](https://github.com/ekkuleivonen), inspired by a developer’s observation of fading coding fluency while using AI more often. That observation is a starting question, not evidence of causation. Open source and initially free; early Foundation work, no hosted service yet.
+
+With voluntary research participation, we also hope to study how developer skills evolve over time and compare with coding models through aggregate results. Individual results stay private. Research collection and model benchmarking are later work; the current demo uses synthetic data only.
 
 An **Adventure** contains **Challenges**. Challenge **Attempts** produce versioned **Assessments**. Stories, order and clues matter, so encounter context stays attached to every Attempt.
 
@@ -25,6 +29,6 @@ The demo uses synthetic JSON answers. It validates the content → encounter →
 - `apps/reference`: executable synthetic acceptance flow.
 - `docs/foundation.md`: boundaries, acceptance gates and next implementation slices.
 
-The first audience is working developers practicing basic iteration and map handling. Python is the initial implementation language; structured answers keep the domain independent of a future runner or web framework. A Challenge is not tied to an escape room: field notes, mysteries, riddles and workouts can use the same model.
+The first audience is working developers practicing basic iteration and map handling. The initial contract spike is Python; the product app uses Next.js and TypeScript; structured answers keep the domain independent of a future runner or web framework. A Challenge is not tied to an escape room: field notes, mysteries, riddles and workouts can use the same model.
 
 See [contributing](CONTRIBUTING.md) and [security](SECURITY.md). Licensed under MIT.
