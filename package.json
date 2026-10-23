@@ -11,6 +11,7 @@
     "check:content": "node tools/content-check.mjs && node --import tsx tools/build-reference-catalog.ts --check",
     "build:cloudflare": "npm run build:cloudflare --workspace apps/web",
     "demo:events": "node --experimental-sqlite --import tsx tools/reference-events.ts",
+    "delete:participant": "node --experimental-sqlite --import tsx tools/delete-participant.ts",
     "demo:authoring": "node --import tsx tools/authoring/cli.ts demo",
     "build:reference-catalog": "node --import tsx tools/build-reference-catalog.ts"
   },
