@@ -10,15 +10,18 @@ import {
 } from "../domain/assessment";
 import { createAttemptEvent } from "../domain/events";
 
-export function referenceEvent() {
+export function referenceEvent(
+  participantId = "synthetic-participant-1",
+  attemptId = "synthetic-field-notes-1",
+) {
   const adventure: Adventure = {
     ...adventureData,
     challenges: adventureData.challenges.map(([id, version]) => [id, version]),
   };
   const challenge = challengeData as unknown as Challenge;
   const attempt: Attempt = {
-    id: "synthetic-field-notes-1",
-    participantId: "synthetic-participant-1",
+    id: attemptId,
+    participantId,
     challengeId: challenge.id,
     challengeVersion: challenge.version,
     challengeSnapshot: snapshot(challenge),

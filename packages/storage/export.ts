@@ -1,6 +1,6 @@
 /** Local bulk-archive sink. Stable filenames make write-before-ack retries idempotent. */
-import { open, mkdir, readFile, link, unlink } from "node:fs/promises";
-import { resolve, join } from "node:path";
+import { open, mkdir, readFile, readdir, link, unlink } from "node:fs/promises";
+import { resolve, join, dirname } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { EventOutbox } from "./contracts";
 import { safeIdentifier } from "../domain/events";
@@ -32,15 +32,57 @@ export async function writeEvent(
           `Export conflict for ${eventId}; existing archive was preserved.`,
         );
     }
-    const directoryHandle = await open(root, "r");
-    try {
-      await directoryHandle.sync();
-    } finally {
-      await directoryHandle.close();
-    }
+    await syncDirectory(root);
   } finally {
     await unlink(temporary);
   }
+}
+
+async function syncDirectory(root: string): Promise<void> {
+  const directoryHandle = await open(root, "r");
+  try {
+    await directoryHandle.sync();
+  } finally {
+    await directoryHandle.close();
+  }
+}
+
+/**
+ * Removes the archive file and any leftover temporary file for one event, directly
+ * inside `directory`. Never follows paths: the name comes from a validated ID and
+ * unlink removes a symlink itself, not its target. A missing file is success.
+ */
+export async function removeArchivedEvent(
+  directory: string,
+  eventId: string,
+): Promise<void> {
+  safeIdentifier(eventId);
+  const root = resolve(directory);
+  let names: string[];
+  try {
+    names = await readdir(root);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw error;
+  }
+  const temporary = new RegExp(
+    `^\\.${eventId.replaceAll(".", "\\.")}\\.[0-9a-f-]{36}\\.tmp$`,
+  );
+  const owned = names.filter(
+    (name) => name === `${eventId}.json` || temporary.test(name),
+  );
+  for (const name of owned) {
+    const path = join(root, name);
+    if (dirname(path) !== root)
+      throw new Error("Refusing path outside archive.");
+    try {
+      await unlink(path);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+  }
+  // Make the removal durable before storage records it as complete.
+  if (owned.length) await syncDirectory(root);
 }
 
 export async function exportPending(
