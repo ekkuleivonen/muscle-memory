@@ -22,7 +22,7 @@ import {
   type ContentRef,
 } from "../../packages/catalog/catalog";
 import { loadCatalog, saveCatalog } from "../../packages/catalog/file-store";
-import { snapshot, type Attempt } from "../../packages/catalog/domain";
+import { snapshot, type Attempt } from "../../packages/domain/assessment";
 
 const repositoryRoot = resolve(
   dirname(fileURLToPath(import.meta.url)),

@@ -5,24 +5,40 @@ import {
   createAttemptEvent,
   type AttemptEvent,
 } from "../../../packages/domain/events";
-import adventureData from "../../../content/adventures/field-notes.v1.json";
-import challengeData from "../../../content/challenges/frequency-map.v1.json";
+import catalogData from "../../../content/catalog/reference.v1.json";
+import {
+  findEntry,
+  startAttempt,
+  assessAttempt,
+  type StartableAttempt,
+} from "../../../packages/catalog/gates";
+import type { Catalog } from "../../../packages/catalog/catalog";
+import { currentCatalog } from "./current-catalog";
 import {
   assess,
-  encounter,
   parseOutputs,
   snapshot,
   type Adventure,
   type Challenge,
   type Attempt,
 } from "../../../packages/domain/assessment";
-// Shared JSON manifests are validated by tools/content-check.mjs before build.
-const challenge = challengeData as unknown as Challenge;
-const adventure: Adventure = {
-  ...adventureData,
-  challenges: adventureData.challenges.map(([id, version]) => [id, version]),
-};
+// Generated and checked through the authoring lifecycle before build.
+const initialCatalog = catalogData as unknown as Catalog;
+const initialAdventure = findEntry(initialCatalog, {
+  kind: "adventure",
+  id: "field-notes",
+  version: "1.0.0",
+})!.content as Adventure;
+const [challengeId, challengeVersion] = initialAdventure.challenges[0];
+const initialChallenge = findEntry(initialCatalog, {
+  kind: "challenge",
+  id: challengeId,
+  version: challengeVersion,
+})!.content as Challenge;
 export default function Home() {
+  const [active, setActive] = useState<StartableAttempt | null>(null);
+  const adventure = active?.adventure ?? initialAdventure;
+  const challenge = active?.challenge ?? initialChallenge;
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [answer, setAnswer] = useState("");
   const [consent, setConsent] = useState(false);
@@ -36,6 +52,25 @@ export default function Home() {
   const [savedMessage, setSavedMessage] = useState("");
   const pending = useRef<AttemptEvent | null>(null);
   const local = useLocalPractice(saveLocally);
+  async function begin() {
+    setBusy(true);
+    setError("");
+    try {
+      const catalog = await currentCatalog();
+      setActive(
+        startAttempt(catalog, initialAdventure.id, initialAdventure.version),
+      );
+      setStartedAt(new Date().toISOString());
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "This Adventure is unavailable.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
@@ -43,7 +78,8 @@ export default function Home() {
     setResult(null);
     setSavedMessage("");
     try {
-      if (!consent || !startedAt) throw new Error("Start the Adventure first.");
+      if (!consent || !startedAt || !active)
+        throw new Error("Start the Adventure first.");
       const submittedAt = new Date().toISOString();
       const participantId = saveLocally
         ? await local.participantId()
@@ -54,7 +90,7 @@ export default function Home() {
         challengeId: challenge.id,
         challengeVersion: challenge.version,
         challengeSnapshot: snapshot(challenge),
-        encounter: encounter(adventure),
+        encounter: active.encounter,
         outputs: parseOutputs(answer),
         assistance,
         hintsShown: hint ? [0] : [],
@@ -64,6 +100,7 @@ export default function Home() {
         consentVersion: "local-practice-v1",
       };
       // No active-time tracker yet; null means unmeasured. No time-based score.
+      const catalog = await currentCatalog();
       if (saveLocally) {
         const record =
           pending.current ??
@@ -72,11 +109,12 @@ export default function Home() {
             consentVersion: "device-local-practice-v1",
           });
         pending.current = record;
+        assessAttempt(catalog, record.attempt);
         await local.save(record);
         setResult(record.assessment);
         pending.current = null;
         setSavedMessage("Saved on this device. Research sharing is off.");
-      } else setResult(assess(challenge, attempt));
+      } else setResult(assessAttempt(catalog, attempt));
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "Unable to check answers.",
@@ -96,6 +134,7 @@ export default function Home() {
       setHint(false);
       setAssistance("undisclosed");
       setStartedAt(null);
+      setActive(null);
       setConsent(false);
       setSavedMessage(
         "Saved practice, pending exports and local identity cleared. Downloaded copies must be removed separately.",
@@ -167,10 +206,7 @@ export default function Home() {
               />{" "}
               I understand and want to practice locally.
             </label>
-            <button
-              disabled={!consent}
-              onClick={() => setStartedAt(new Date().toISOString())}
-            >
+            <button disabled={!consent || busy} onClick={begin}>
               Open the notebook →
             </button>
           </div>

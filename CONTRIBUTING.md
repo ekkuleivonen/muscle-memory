@@ -7,3 +7,5 @@ Do not edit published versions in place. Add a new version, retain old content, 
 Open a focused PR describing the behavior, a runnable check and any limitation. Foundation work precedes player progression, launch features and observatory research. Keep issue status, meaningful progress, blockers and PR links current. Avoid speculative infrastructure and repeated checks without a concrete reason.
 
 Before proposing content, use Node.js 22+ to run `node tools/content-check.mjs` and `node --test tools/tests/content-check.test.mjs`. These dependency-free authoring checks reject missing references, unpinned versions, duplicate identities and mismatched fixtures. They validate source manifests; they do not publish content or implement the runtime lifecycle.
+
+Use the [authoring CLI](docs/authoring.md) to exercise lifecycle transitions. After changing reference source manifests, regenerate the release fixture with `npm run build:reference-catalog` and run `npm run check:content`. Published versions still require new version identifiers; regeneration is not permission to overwrite them. `npm test` covers the catalog, application gates and storage adapters together.

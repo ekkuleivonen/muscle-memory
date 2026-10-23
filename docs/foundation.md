@@ -17,7 +17,7 @@ The initial scorer only compares bounded JSON outputs with canonical expected JS
 5. Produce deterministic provisional assessment and useful fixture feedback.
 6. Reject changed content, wrong encounter, missing consent and invalid hints.
 
-The Next.js app and TypeScript tests exercise the local practice flow. `npm run demo:events` separately proves durable synthetic events and retryable local export; see [local events](local-events.md). The earlier Python spike remains an executable behavior reference. Authoring lifecycle, application persistence wiring and privacy lifecycle remain pending, so this is not the full Foundation acceptance gate.
+The Next.js app and TypeScript tests exercise the local practice flow. `npm run demo:events` separately proves durable synthetic events and retryable local export; see [local events](local-events.md). The earlier Python spike remains an executable behavior reference. The local authoring lifecycle, optional browser persistence/deletion and read-only release gates are now wired. This is still not the full Foundation acceptance gate: live lifecycle administration, a single complete lifecycle/storage walkthrough and an alternate-task candidate remain pending.
 
 ## Next bounded slices
 
@@ -29,7 +29,7 @@ Use synthetic data while developing. Individual events and exports stay private 
 
 ### Authoring lifecycle
 
-Implement a manifest catalog with draft → preview → tested → published → retired plus immediate disabled. Preview may validate draft content; only published, enabled versions start attempts. Retirement stops new attempts and preserves historical reads; disable blocks new and in-flight scoring immediately. Publish pins immutable content/digests and validated references. Require new versions for edits after publish, and audit lifecycle changes locally. Test the state machine and invalid reference rejection.
+The local CLI implements a manifest catalog with draft → preview → tested → published → retired plus immediate disabled. Preview may validate draft content; only published, enabled versions start attempts. Retirement stops new attempts and preserves historical reads; disable blocks new and in-flight scoring immediately. Publish pins immutable content/digests and validated references. Require new versions for edits after publish, and audit lifecycle changes locally. Test the state machine and invalid reference rejection.
 
 ### Full reference acceptance gate
 
@@ -44,3 +44,9 @@ No hosting is required to develop the Foundation. Next.js is selected for the pr
 ## Calibration gate
 
 Before comparative claims or ranking, observe real consenting players, record task order, assistance and prior exposure, compare alternative forms and estimate practice/context effects. Keep correctness separate from time and hints; active time is unmeasured in the app (null), and any future self-reported time is not a verified capability measure. Release any later formula with a new immutable assessment version and explicit limitations.
+
+## Integrated reference checkpoint
+
+The local combined tree exercises authored published content → gated app start → pinned assessment → optional IndexedDB commit, and separately gated synthetic events → transactional SQLite outbox → retryable private archive. The app defaults to session-only; research sharing is off. Tests cover state transitions, exact context, reopen/deduplication, export crash/retry and deletion. The Cloudflare adapter builds locally without provisioning.
+
+Remaining Foundation acceptance is explicit: combine the reviewed branches, run the integrated checks, add one cohesive CLI walkthrough covering lifecycle changes, durable export and deletion, implement deletion for the local SQLite/archive adapter, and add the distinct-label alternative-task candidate with exposure context. The app has no live admin catalog storage or hosted participant database; read-only release changes take effect through a new artifact/build, as described in [authoring](authoring.md). Browser downloads stay pending because initiation cannot prove a durable disk write. No arbitrary code runner, calibrated ranking, public participant service, research collection or model benchmark runs are enabled.

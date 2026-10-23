@@ -42,6 +42,8 @@ The demo uses synthetic JSON answers. It validates the content → encounter →
 
 - `apps/web`: Next.js reference Adventure and local feedback.
 - `packages/domain`: pure TypeScript assessment/event contracts and tests.
+- `packages/catalog`: versioned authoring lifecycle and application eligibility gates.
+- `packages/browser`: optional private device-local history.
 - `packages/storage`: local transactional event store and retryable archive adapter.
 - `packages/core/muscle_memory`: portable immutable contracts and pure assessment logic.
 - `content/adventures`: story, presentation and pinned Challenge sequence.
@@ -54,3 +56,5 @@ The first audience is working developers practicing basic iteration and map hand
 See [contributing](CONTRIBUTING.md) and [security](SECURITY.md). Licensed under MIT.
 
 The [durable reference demo](docs/local-events.md) uses synthetic data to prove persisted, deduplicated events and retryable private JSON export: run `npm run demo:events` twice. The browser app keeps results in session memory unless device-local history is explicitly enabled.
+
+See the [authoring lifecycle](docs/authoring.md) for draft, preview, test, publish, retire and disable commands. The reference app reads a generated published catalog and refreshes its eligibility before starts and assessments.
