@@ -12,7 +12,12 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SqliteEventStore } from "./sqlite";
-import { exportPending, removeArchivedEvent, writeEvent } from "./export";
+import {
+  exportPending,
+  removeArchivedEvent,
+  syncDirectory,
+  writeEvent,
+} from "./export";
 import { deleteParticipant } from "./deletion";
 import { referenceEvent } from "./reference-fixture";
 
@@ -136,6 +141,54 @@ test("deletion validates identifiers and never follows archive paths", async () 
         true,
       );
       assert.equal(store.get("a-link.b"), undefined);
+    } finally {
+      store.close();
+    }
+  }));
+
+test("failed directory sync after unlink is retried before absence is recorded", async () =>
+  temporary(async (root) => {
+    const database = join(root, "events.sqlite");
+    const archive = join(root, "exports");
+    let store = new SqliteEventStore(database);
+    store.append(referenceEvent(A, "a-synced"));
+    assert.equal(await exportPending(store, archive), 1);
+    const failed = await deleteParticipant(
+      store,
+      A,
+      archive,
+      (directory, eventId) =>
+        removeArchivedEvent(directory, eventId, async () => {
+          throw new Error("EIO: simulated directory sync failure");
+        }),
+    );
+    // The unlink happened, but without a durable sync the removal stays queued.
+    assert.deepEqual(failed.remainingFiles, ["a-synced"]);
+    assert.deepEqual(await readdir(archive), []);
+    store.close();
+
+    store = new SqliteEventStore(database);
+    try {
+      const synced: string[] = [];
+      const retried = await deleteParticipant(
+        store,
+        A,
+        archive,
+        (directory, eventId) =>
+          removeArchivedEvent(directory, eventId, async (path) => {
+            synced.push(path);
+            await syncDirectory(path);
+          }),
+      );
+      assert.equal(retried.complete, true);
+      // No owned files remained, yet the existing directory was still synced.
+      assert.deepEqual(synced, [archive]);
+      assert.deepEqual(
+        await deleteParticipant(store, A, archive, async () => {
+          throw new Error("queue should be empty");
+        }),
+        { participantId: A, complete: true, remainingFiles: [], errors: [] },
+      );
     } finally {
       store.close();
     }

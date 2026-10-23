@@ -38,7 +38,7 @@ export async function writeEvent(
   }
 }
 
-async function syncDirectory(root: string): Promise<void> {
+export async function syncDirectory(root: string): Promise<void> {
   const directoryHandle = await open(root, "r");
   try {
     await directoryHandle.sync();
@@ -55,6 +55,7 @@ async function syncDirectory(root: string): Promise<void> {
 export async function removeArchivedEvent(
   directory: string,
   eventId: string,
+  sync = syncDirectory,
 ): Promise<void> {
   safeIdentifier(eventId);
   const root = resolve(directory);
@@ -81,8 +82,9 @@ export async function removeArchivedEvent(
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
   }
-  // Make the removal durable before storage records it as complete.
-  if (owned.length) await syncDirectory(root);
+  // Sync even when nothing is left: an earlier unlink may have succeeded before its
+  // sync failed, and storage must not record absence until the removal is durable.
+  await sync(root);
 }
 
 export async function exportPending(
