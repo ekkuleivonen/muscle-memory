@@ -167,13 +167,13 @@ test("Adventure references must exist for preview and be published for publicati
   );
   let catalog = saveDraft(emptyCatalog(), "challenge", challenge, at);
   catalog = saveDraft(catalog, "adventure", adventure, at);
-  catalog = markTested(preview(catalog, adventureRef, at), adventureRef, at);
+  catalog = preview(catalog, adventureRef, at);
   assert.throws(
-    () => publish(catalog, adventureRef, at),
-    /tally@1.0.0 which is draft/,
+    () => markTested(catalog, adventureRef, at),
+    /tally@1.0.0 which is draft; publish that Challenge first/,
   );
   catalog = release(catalog, challengeRef);
-  catalog = publish(catalog, adventureRef, at);
+  catalog = publish(markTested(catalog, adventureRef, at), adventureRef, at);
   assert.equal(findEntry(catalog, adventureRef)!.state, "published");
 
   // A disabled Challenge cannot be referenced by new Adventure content.
@@ -192,6 +192,94 @@ test("Adventure references must exist for preview and be published for publicati
   );
   const nextRef = { ...adventureRef, version: "1.1.0" };
   assert.throws(() => release(next, nextRef), /tally@1.0.0 which is retired/);
+});
+
+test("Adventure test results cannot go stale through a changing Challenge dependency", () => {
+  let catalog = saveDraft(emptyCatalog(), "challenge", challenge, at);
+  catalog = markTested(preview(catalog, challengeRef, at), challengeRef, at);
+  catalog = preview(
+    saveDraft(catalog, "adventure", adventure, at),
+    adventureRef,
+    at,
+  );
+  // A tested but unpublished Challenge can still change under the same version.
+  assert.throws(
+    () => markTested(catalog, adventureRef, at),
+    /tally@1.0.0 which is tested; publish that Challenge first/,
+  );
+  catalog = saveDraft(
+    catalog,
+    "challenge",
+    { ...challenge, task: "Changed" },
+    at,
+  );
+  catalog = release(catalog, challengeRef);
+  assert.throws(
+    () => publish(catalog, adventureRef, at),
+    /published from preview/,
+  );
+  // Testing now covers the frozen Challenge content that will be published.
+  catalog = publish(markTested(catalog, adventureRef, at), adventureRef, at);
+  assert.equal(findEntry(catalog, adventureRef)!.state, "published");
+  assert.equal(
+    (startAttempt(catalog, "notebook", "1.0.0").challenge as Challenge).task,
+    "Changed",
+  );
+});
+
+test("assessment rejects an encounter that differs from the Adventure snapshot", () => {
+  let catalog = release(
+    saveDraft(emptyCatalog(), "challenge", challenge, at),
+    challengeRef,
+  );
+  const other = { ...challenge, id: "sort", task: "Sort labels" };
+  const otherRef = { ...challengeRef, id: "sort" };
+  catalog = release(saveDraft(catalog, "challenge", other, at), otherRef);
+  const twoStep = {
+    ...adventure,
+    challenges: [
+      ["tally", "1.0.0"],
+      ["sort", "1.0.0"],
+    ] as const,
+  };
+  catalog = release(saveDraft(catalog, "adventure", twoStep, at), adventureRef);
+  const attempt = inFlightAttempt(catalog);
+  const withClue = {
+    ...attempt,
+    encounter: {
+      ...attempt.encounter,
+      cluesShown: ["The notebook is sorted."],
+    },
+  };
+  assert.equal(assessAttempt(catalog, withClue).correctness, 0.5);
+  const altered: Attempt[] = [
+    {
+      ...attempt,
+      encounter: { ...attempt.encounter, presentation: "other-v1" },
+    },
+    {
+      ...attempt,
+      encounter: {
+        ...attempt.encounter,
+        challengeOrder: [
+          ["sort", "1.0.0"],
+          ["tally", "1.0.0"],
+        ],
+        position: 1,
+      },
+    },
+    {
+      ...attempt,
+      encounter: { ...attempt.encounter, challengeOrder: [["tally", "1.0.0"]] },
+    },
+    { ...attempt, encounter: { ...attempt.encounter, position: 1 } },
+    { ...attempt, encounter: { ...attempt.encounter, position: 0.5 } },
+  ];
+  for (const candidate of altered)
+    assert.throws(
+      () => assessAttempt(catalog, candidate),
+      /Encounter does not match Adventure notebook@1.0.0/,
+    );
 });
 
 test("published content is frozen; changes need a new version and old versions remain", () => {

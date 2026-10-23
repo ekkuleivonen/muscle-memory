@@ -199,11 +199,11 @@ async function demo(directory: string): Promise<void> {
     saveDraft(catalog, "adventure", adventure),
   );
   await step("previewed field-notes@1.0.0", preview(catalog, adventureRef));
-  await step("tested field-notes@1.0.0", markTested(catalog, adventureRef));
-  rejected("publishing field-notes before its Challenge", () =>
-    publish(catalog, adventureRef),
+  rejected("testing field-notes before its Challenge is published", () =>
+    markTested(catalog, adventureRef),
   );
   await step("published frequency-map@1.0.0", publish(catalog, challengeRef));
+  await step("tested field-notes@1.0.0", markTested(catalog, adventureRef));
   await step("published field-notes@1.0.0", publish(catalog, adventureRef));
 
   console.log("2. Published content is frozen; drafts invalidate testing");

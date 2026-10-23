@@ -270,6 +270,21 @@ function runFixtures(challenge: Challenge, at: string): number {
   return result.passed.length;
 }
 
+function requirePublishedChallenge(
+  catalog: Catalog,
+  adventureRef: ContentRef,
+  id: string,
+  version: string,
+): CatalogEntry {
+  const ref = { kind: "challenge", id, version } as const;
+  const entry = findEntry(catalog, ref);
+  if (entry?.state !== "published")
+    throw new Error(
+      `${describe(adventureRef)} references ${describe(ref)} which is ${entry?.state ?? "missing"}; publish that Challenge first.`,
+    );
+  return entry;
+}
+
 /** Records a passing fixture run for the exact current snapshot. */
 export function markTested(
   catalog: Catalog,
@@ -277,19 +292,17 @@ export function markTested(
   at = new Date().toISOString(),
 ): Catalog {
   const entry = requireEntry(catalog, ref);
+  requireState(entry, "tested", ["preview"]);
   validateSource(catalog, ref.kind, entry.content);
   let fixtures = 0;
   if (entry.kind === "challenge") {
     fixtures = runFixtures(entry.content as Challenge, at);
   } else {
+    // Only published Challenges are frozen, so only they keep this result valid.
     const adventure = entry.content as Adventure;
     adventure.challenges.forEach(([id, version], position) => {
       encounter(adventure, position);
-      const challenge = requireEntry(catalog, {
-        kind: "challenge",
-        id,
-        version,
-      });
+      const challenge = requirePublishedChallenge(catalog, ref, id, version);
       fixtures += runFixtures(challenge.content as Challenge, at);
     });
   }
@@ -309,14 +322,8 @@ export function publish(
   if (entry.testResult?.digest !== entry.digest)
     throw new Error(`${describe(ref)} changed after testing. Test it again.`);
   if (entry.kind === "adventure") {
-    for (const [id, version] of (entry.content as Adventure).challenges) {
-      const challenge = { kind: "challenge", id, version } as const;
-      const state = findEntry(catalog, challenge)?.state ?? "missing";
-      if (state !== "published")
-        throw new Error(
-          `${describe(ref)} references ${describe(challenge)} which is ${state}; publish that Challenge first.`,
-        );
-    }
+    for (const [id, version] of (entry.content as Adventure).challenges)
+      requirePublishedChallenge(catalog, ref, id, version);
   }
   return transition(catalog, ref, "published", ["tested"], "published", at);
 }
@@ -423,8 +430,36 @@ export function assessAttempt(catalog: Catalog, attempt: Attempt) {
         `${describe(ref)} is ${state}; this attempt cannot be assessed.`,
       );
   }
+  const adventure = requireEntry(catalog, refs[0]).content as Adventure;
+  requireMatchingEncounter(adventure, attempt);
   const challenge = requireEntry(catalog, refs[1]).content as Challenge;
   return assess(challenge, attempt);
+}
+
+/**
+ * The attempt's encounter must be the exact Adventure snapshot: presentation,
+ * full Challenge order and a position that points at the attempted Challenge.
+ * Clues shown stay as recorded context.
+ */
+function requireMatchingEncounter(
+  adventure: Adventure,
+  attempt: Attempt,
+): void {
+  const context = attempt.encounter;
+  const pinned = Number.isInteger(context.position)
+    ? adventure.challenges[context.position]
+    : undefined;
+  if (
+    context.presentation !== adventure.presentation ||
+    canonical(context.challengeOrder as unknown as Json) !==
+      canonical(adventure.challenges as unknown as Json) ||
+    !pinned ||
+    pinned[0] !== attempt.challengeId ||
+    pinned[1] !== attempt.challengeVersion
+  )
+    throw new Error(
+      `Encounter does not match Adventure ${adventure.id}@${adventure.version} presentation, order and position.`,
+    );
 }
 
 /**
