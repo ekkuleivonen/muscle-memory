@@ -96,6 +96,8 @@ export function parseOutputs(text: string): Json[] {
   return value;
 }
 export function assess(challenge: Challenge, attempt: Attempt) {
+  if (challenge.assessment_version !== "1.0.0")
+    throw new Error("Unsupported assessment version.");
   if (!attempt.consentVersion) throw new Error("Consent is required.");
   if (
     attempt.challengeId !== challenge.id ||
