@@ -1,0 +1,6 @@
+{
+  "id": "field-notes", "version": "1.0.0",
+  "story": "A field researcher needs an exact tally of specimen labels. Recover the frequency map from the notebook.",
+  "presentation": "field-notes-text-v1",
+  "challenges": [["frequency-map", "1.0.0"]]
+}
