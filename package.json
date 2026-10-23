@@ -7,9 +7,10 @@
   "scripts": {
     "dev": "npm run dev --workspace apps/web",
     "build": "npm run check:content && npm run build --workspace apps/web",
-    "test": "node --test tools/tests/*.test.mjs && node --import tsx --test packages/domain/*.test.ts",
+    "test": "node --test tools/tests/*.test.mjs && node --experimental-sqlite --import tsx --test packages/domain/*.test.ts packages/storage/*.test.ts",
     "check:content": "node tools/content-check.mjs",
-    "build:cloudflare": "npm run build:cloudflare --workspace apps/web"
+    "build:cloudflare": "npm run build:cloudflare --workspace apps/web",
+    "demo:events": "node --experimental-sqlite --import tsx tools/reference-events.ts"
   },
   "devDependencies": {
     "@types/node": "22.19.0",

@@ -41,7 +41,8 @@ The demo uses synthetic JSON answers. It validates the content → encounter →
 ## Monorepo
 
 - `apps/web`: Next.js reference Adventure and local feedback.
-- `packages/domain`: pure TypeScript assessment contracts and tests.
+- `packages/domain`: pure TypeScript assessment/event contracts and tests.
+- `packages/storage`: local transactional event store and retryable archive adapter.
 - `packages/core/muscle_memory`: portable immutable contracts and pure assessment logic.
 - `content/adventures`: story, presentation and pinned Challenge sequence.
 - `content/challenges`: tasks, fixtures, hints, skills and assessment versions.
@@ -51,3 +52,5 @@ The demo uses synthetic JSON answers. It validates the content → encounter →
 The first audience is working developers practicing basic iteration and map handling. The initial contract spike is Python; the product app uses Next.js and TypeScript; structured answers keep the domain independent of a future runner or web framework. A Challenge is not tied to an escape room: field notes, mysteries, riddles and workouts can use the same model.
 
 See [contributing](CONTRIBUTING.md) and [security](SECURITY.md). Licensed under MIT.
+
+The [durable reference demo](docs/local-events.md) uses synthetic data to prove persisted, deduplicated events and retryable private JSON export: run `npm run demo:events` twice. The browser app still keeps practice results in tab memory.

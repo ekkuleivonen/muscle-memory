@@ -2,7 +2,7 @@
 
 ## Ownership and boundaries
 
-Adventure content owns story, presentation and the ordered pinned `(Challenge id, version)` references. Challenge content owns task, fixtures, expected outputs, hints, skill tags and assessment version. Attempt owns pseudonymous participant ID, exact Challenge digest, Adventure version, complete order/position, presentation variant, clues shown, hints shown, assistance self-report, consent version, timestamps and active time. Assessment owns fixture verdicts and provisional feedback. Every persisted envelope must include a schema version.
+Adventure content owns story, presentation and the ordered pinned `(Challenge id, version)` references. Challenge content owns task, fixtures, expected outputs, hints, skill tags and assessment version. Attempt owns pseudonymous participant ID, exact Challenge content identity (snapshot in TypeScript; digest in the earlier Python spike), Adventure version, complete order/position, presentation variant, clues shown, hints shown, assistance self-report, consent version, timestamps and active time. Assessment owns fixture verdicts and provisional feedback. Every persisted envelope must include a schema version.
 
 Publish content immutably: the same id/version must never point at changed bytes or meaning. Editing any task/test/hint creates a new Challenge version; scoring changes create a new assessment version. Presentation/story/clue/sequence edits create a new Adventure version. Keep old content so historical results remain reproducible. Canonical Challenge digest covers all its contract fields. Content digests are integrity identifiers, not credentials.
 
@@ -17,13 +17,13 @@ The initial scorer only compares bounded JSON outputs with canonical expected JS
 5. Produce deterministic provisional assessment and useful fixture feedback.
 6. Reject changed content, wrong encounter, missing consent and invalid hints.
 
-`apps/reference/demo.py` and contract tests exercise this slice. Authoring lifecycle, durable storage and exports are pending implementation, so this is not the full Foundation acceptance gate.
+The Next.js app and TypeScript tests exercise the local practice flow. `npm run demo:events` separately proves durable synthetic events and retryable local export; see [local events](local-events.md). The earlier Python spike remains an executable behavior reference. Authoring lifecycle, application persistence wiring and privacy lifecycle remain pending, so this is not the full Foundation acceptance gate.
 
 ## Next bounded slices
 
 ### Durable attempt store and exports
 
-Implement a local SQLite adapter outside the pure contracts. Atomically append an Attempt and its Assessment plus export outbox. Deduplicate event IDs; identical retry returns its receipt, conflicting payload fails. Persist exact snapshots (including encounter and assessment version) so replays never silently use current content. A crash between insert and export must be retryable. Export immutable JSON envelopes to a user-selected local directory using atomic replace and stable IDs; acknowledge only after successful write. A later object-storage adapter can use the same contract.
+The local Node SQLite adapter is implemented outside the pure contracts; it is a reference adapter, not the Cloudflare application store. Atomically append an Attempt and its Assessment plus export outbox. Deduplicate event IDs; identical retry returns its receipt, conflicting payload fails. Persist exact snapshots (including encounter and assessment version) so replays never silently use current content. A crash between insert and export must be retryable. Export immutable JSON envelopes to a user-selected local directory using atomic replace and stable IDs; acknowledge only after successful write. A later object-storage adapter can use the same contract.
 
 Use synthetic data while developing. Individual events and exports stay private and ignored by git; no public individual endpoint. Explicit consent precedes collection; aggregate/research consent is separate and optional. Local deletion must remove participant rows, pending exports and local export objects; document that independently copied exports need separate deletion. Avoid automatic analytics or retention guesses until a real deployment exists.
 
@@ -43,4 +43,4 @@ No hosting is required to develop the Foundation. Next.js is selected for the pr
 
 ## Calibration gate
 
-Before comparative claims or ranking, observe real consenting players, record task order, assistance and prior exposure, compare alternative forms and estimate practice/context effects. Keep correctness separate from time and hints; active time is self-reported in the prototype and is not a verified capability measure. Release any later formula with a new immutable assessment version and explicit limitations.
+Before comparative claims or ranking, observe real consenting players, record task order, assistance and prior exposure, compare alternative forms and estimate practice/context effects. Keep correctness separate from time and hints; active time is unmeasured in the app (null), and any future self-reported time is not a verified capability measure. Release any later formula with a new immutable assessment version and explicit limitations.
