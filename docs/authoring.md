@@ -64,14 +64,22 @@ Every change appends a history entry with action, from/to state, content digest,
 
 `packages/catalog/file-store.ts` writes a synced temporary file, then atomically renames it over the catalog. A crash leaves either the old or the new file. On load, every entry is checked: its key must match its content identity, the content must match its recorded digest, the history must end in the current state, and frozen content must match the digest recorded at publication. A hand edit to published content is rejected on reload.
 
-The local file is not a tamper-proof ledger. Someone who rewrites content, digests and history together can change it. There is no locking, so run one author process at a time. Nothing outside this module reads the catalog yet. The Next.js app and the event store still load content directly and do not enforce lifecycle state. That wiring is part of the full reference acceptance gate in [foundation](foundation.md).
+The local file is not a tamper-proof ledger. Someone who rewrites content, digests and history together can change it. There is no locking, so run one author process at a time. The reference app and synthetic event CLI now use lifecycle eligibility gates. See the release boundary below; this remains local development, not a hosted admin service.
 
 ## Module layout
 
 - `packages/catalog/catalog.ts`: pure lifecycle functions. Each takes a catalog and returns a new one.
-- `packages/catalog/domain.ts`: ESM bridge to `packages/domain`. Node 22 under tsx does not expose named CommonJS exports to ES modules.
+- `packages/catalog/gates.ts`: browser-compatible start and assessment eligibility; no filesystem or Node crypto imports.
 - `packages/catalog/file-store.ts`: JSON load/verify and atomic save.
 - `packages/catalog/catalog.test.ts`: focused tests for transitions, test invalidation, references, frozen content, retire versus disable and reload.
 - `tools/authoring/cli.ts`: local CLI and demo.
 
-Both `packages/catalog` and `tools/authoring` are ES modules (`"type": "module"`), so they can reuse the validators in `tools/content-check.mjs`.
+The root, web app, catalog and authoring tools use ES modules, sharing the domain directly. Only Node authoring imports the source validators and hashing implementation.
+
+## Reference app release boundary
+
+`npm run build:reference-catalog` takes the committed synthetic source manifests through the real draft, preview, test and publish functions. It writes deterministic `content/catalog/reference.v1.json`; `npm run check:content` rejects a stale release fixture. This command generates the reference release, not a general catalog administration backend.
+
+The app serves that public content from read-only `GET /api/catalog` with `Cache-Control: no-store`. Before each start or assessment it fetches the current release and applies the shared gates. No answers, participant identifiers or results are sent. Retired content rejects starts but accepts in-flight assessment; disabled content rejects both. The synthetic event CLI verifies the same release and gates before durable event creation/export.
+
+The endpoint reads the deployed release artifact. Changing a private CLI catalog does **not** change an already running app. Live lifecycle administration and immediate revocation across deployments remain unimplemented; a release update/rebuild is required. The browser is a practice client, not a trusted assessment authority. The focused application-gate test simulates successive published, retired and disabled releases without collecting user data.

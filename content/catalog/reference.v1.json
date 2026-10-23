@@ -1,0 +1,148 @@
+{
+  "schemaVersion": "1.0.0",
+  "entries": {
+    "challenge:frequency-map@1.0.0": {
+      "kind": "challenge",
+      "id": "frequency-map",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "expected": [
+          {
+            "a": 2,
+            "b": 1
+          },
+          {},
+          {
+            "A": 2,
+            "a": 1
+          },
+          {
+            "__proto__": 2,
+            "x": 1
+          }
+        ],
+        "hints": [
+          "A map can hold one counter for each distinct string."
+        ],
+        "id": "frequency-map",
+        "inputs": [
+          [
+            "a",
+            "b",
+            "a"
+          ],
+          [],
+          [
+            "A",
+            "a",
+            "A"
+          ],
+          [
+            "__proto__",
+            "__proto__",
+            "x"
+          ]
+        ],
+        "skills": [
+          "iteration",
+          "maps",
+          "edge-cases"
+        ],
+        "task": "Implement frequency_map(items): count each exact, case-sensitive string. Return an object of string to integer count. Empty input returns {}. Write your function locally, then submit one JSON output per fixture in fixture order. This prototype does not execute submitted code.",
+        "version": "1.0.0"
+      },
+      "digest": "3366942428d7e30aa2fa2f1e14d4d8505cf14ba01321590715f4678c58eb44a3",
+      "state": "published",
+      "testResult": {
+        "digest": "3366942428d7e30aa2fa2f1e14d4d8505cf14ba01321590715f4678c58eb44a3",
+        "fixtures": 4,
+        "at": "2026-10-23T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "3366942428d7e30aa2fa2f1e14d4d8505cf14ba01321590715f4678c58eb44a3",
+          "at": "2026-10-23T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "3366942428d7e30aa2fa2f1e14d4d8505cf14ba01321590715f4678c58eb44a3",
+          "at": "2026-10-23T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "3366942428d7e30aa2fa2f1e14d4d8505cf14ba01321590715f4678c58eb44a3",
+          "at": "2026-10-23T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "3366942428d7e30aa2fa2f1e14d4d8505cf14ba01321590715f4678c58eb44a3",
+          "at": "2026-10-23T00:00:00.000Z"
+        }
+      ]
+    },
+    "adventure:field-notes@1.0.0": {
+      "kind": "adventure",
+      "id": "field-notes",
+      "version": "1.0.0",
+      "content": {
+        "challenges": [
+          [
+            "frequency-map",
+            "1.0.0"
+          ]
+        ],
+        "id": "field-notes",
+        "presentation": "field-notes-text-v1",
+        "story": "A field researcher needs an exact tally of specimen labels. Recover the frequency map from the notebook.",
+        "version": "1.0.0"
+      },
+      "digest": "5442ea835da66a4837017845ae5d82f496daf46e30f5cd92398e94857410bd66",
+      "state": "published",
+      "testResult": {
+        "digest": "5442ea835da66a4837017845ae5d82f496daf46e30f5cd92398e94857410bd66",
+        "fixtures": 4,
+        "at": "2026-10-23T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "5442ea835da66a4837017845ae5d82f496daf46e30f5cd92398e94857410bd66",
+          "at": "2026-10-23T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "5442ea835da66a4837017845ae5d82f496daf46e30f5cd92398e94857410bd66",
+          "at": "2026-10-23T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "5442ea835da66a4837017845ae5d82f496daf46e30f5cd92398e94857410bd66",
+          "at": "2026-10-23T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "5442ea835da66a4837017845ae5d82f496daf46e30f5cd92398e94857410bd66",
+          "at": "2026-10-23T00:00:00.000Z"
+        }
+      ]
+    }
+  }
+}

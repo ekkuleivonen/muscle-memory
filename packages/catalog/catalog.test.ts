@@ -23,7 +23,7 @@ import {
   type Adventure,
   type Attempt,
   type Challenge,
-} from "./domain";
+} from "../domain/assessment";
 
 const at = "2026-01-01T00:00:00Z";
 const challenge: Challenge = {
