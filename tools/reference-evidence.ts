@@ -46,13 +46,14 @@ async function main() {
     });
     const capturedExports = await exportPending(store, archive);
     // Separate step: derive projections from the stored evidence, not from the input.
-    const projections = captures.map(({ observationId }) => {
-      const projection = projectAssessment(store.evidence(observationId));
-      return {
+    const projections = [];
+    for (const { observationId } of captures) {
+      const projection = await projectAssessment(store.evidence(observationId));
+      projections.push({
         ...store.appendProjection(projection),
         outcome: projection.outcome.status,
-      };
-    });
+      });
+    }
     const projectionExports = await exportPending(store, archive);
     console.log(
       JSON.stringify(

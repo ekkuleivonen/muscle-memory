@@ -16,6 +16,8 @@ import { assertEncounter, safeIdentifier } from "./events";
 /** Declares what this capture records and its size boundary. A new boundary needs a new version. */
 export const CAPTURE_VERSION = "synthetic-submission-capture-1.0.0";
 export const CAPTURE_LIMIT_BYTES = 65536;
+/** Leaves room for derived record IDs within the 128-character identifier bound. */
+export const MAX_OBSERVATION_ID_LENGTH = 64;
 /** Activity this capture version does not record. Absence here is a gap, not evidence of no activity. */
 export const CAPTURE_GAPS = [
   "workspace-edits",
@@ -146,7 +148,10 @@ export function boundText(text: string, limitBytes = CAPTURE_LIMIT_BYTES) {
   // Step back over UTF-8 continuation bytes rather than split a character.
   while (end > 0 && (bytes[end] & 0xc0) === 0x80) end--;
   return {
-    text: new TextDecoder().decode(bytes.subarray(0, end)),
+    // ignoreBOM keeps a leading U+FEFF: the prefix must match the counted bytes exactly.
+    text: new TextDecoder("utf-8", { ignoreBOM: true }).decode(
+      bytes.subarray(0, end),
+    ),
     originalBytes: bytes.length,
     capturedBytes: end,
     truncated: true,
@@ -155,6 +160,10 @@ export function boundText(text: string, limitBytes = CAPTURE_LIMIT_BYTES) {
 
 export function captureSubmission(input: SubmissionInput): CapturedSubmission {
   safeIdentifier(input.observationId);
+  if (input.observationId.length > MAX_OBSERVATION_ID_LENGTH)
+    throw new Error(
+      `Observation IDs are at most ${MAX_OBSERVATION_ID_LENGTH} characters.`,
+    );
   safeIdentifier(input.participantId);
   safeIdentifier(input.source.id);
   if (!Number.isSafeInteger(input.source.sequence) || input.source.sequence < 1)

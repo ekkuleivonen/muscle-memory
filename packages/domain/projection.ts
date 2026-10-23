@@ -10,6 +10,7 @@ import {
 } from "./assessment";
 import {
   attemptFrom,
+  encodeRecord,
   type ContentArtifact,
   type SubmissionArtifact,
   type SubmissionObservation,
@@ -64,11 +65,36 @@ export interface Evidence {
   readonly challenge: ContentArtifact;
 }
 
-/** Deterministic: the same evidence and evaluator version always give the same projection. */
-export function projectAssessment(
+/**
+ * Stable, bounded projection identity covering the full evaluator and environment
+ * provenance, so changing either one appends a new projection instead of colliding.
+ */
+export async function projectionIdFor(
+  observationId: string,
+  evaluator: Version,
+  environment: Version,
+): Promise<string> {
+  const provenance = encodeRecord({
+    evaluator: { id: evaluator.id, version: evaluator.version },
+    environment: { id: environment.id, version: environment.version },
+  });
+  const digest = new Uint8Array(
+    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(provenance)),
+  );
+  // 128 bits of SHA-256 keep the ID short; a collision would fail as a conflict, never overwrite.
+  const hex = [...digest.subarray(0, 16)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+  const projectionId = `${observationId}.assessment.${hex}`;
+  safeIdentifier(projectionId);
+  return projectionId;
+}
+
+/** Deterministic: the same evidence, evaluator and environment always give the same projection. */
+export async function projectAssessment(
   evidence: Evidence,
   evaluator: Evaluator = fixtureEvaluator,
-): AssessmentProjection {
+): Promise<AssessmentProjection> {
   const { observation, submission, adventure, challenge } = evidence;
   if (
     observation.submissionArtifactId !== submission.artifactId ||
@@ -76,8 +102,11 @@ export function projectAssessment(
     observation.challengeArtifactId !== challenge.artifactId
   )
     throw new Error("Evidence does not belong to this observation.");
-  const projectionId = `${observation.observationId}.assessment.${evaluator.id}.${evaluator.version}`;
-  safeIdentifier(projectionId);
+  const projectionId = await projectionIdFor(
+    observation.observationId,
+    evaluator,
+    evaluator.environment,
+  );
   return {
     schemaVersion: "1.0.0",
     type: "projection.assessment",
@@ -90,7 +119,10 @@ export function projectAssessment(
       submission.artifactId,
     ],
     evaluator: { id: evaluator.id, version: evaluator.version },
-    environment: evaluator.environment,
+    environment: {
+      id: evaluator.environment.id,
+      version: evaluator.environment.version,
+    },
     provisional: true,
     outcome: outcome(evidence, evaluator),
   };

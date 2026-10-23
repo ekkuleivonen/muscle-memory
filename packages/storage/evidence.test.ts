@@ -12,7 +12,11 @@ import {
 } from "./export";
 import { deleteParticipant } from "./deletion";
 import { referenceSubmission } from "./reference-fixture";
-import { captureSubmission } from "../domain/evidence";
+import {
+  captureSubmission,
+  CAPTURE_LIMIT_BYTES,
+  MAX_OBSERVATION_ID_LENGTH,
+} from "../domain/evidence";
 import {
   fixtureEvaluator,
   projectAssessment,
@@ -45,7 +49,7 @@ test("malformed submission survives reopen and export with a parse-failure proje
     try {
       const evidence = store.evidence("synthetic-submission-1");
       assert.equal(evidence.submission.text, MALFORMED);
-      store.appendProjection(projectAssessment(evidence));
+      store.appendProjection(await projectAssessment(evidence));
       assert.equal(await exportPending(store, archive), 5);
       const exported = JSON.parse(
         await readFile(
@@ -66,7 +70,7 @@ test("malformed submission survives reopen and export with a parse-failure proje
       assert.deepEqual((await readdir(archive)).sort(), [
         "adventure.field-notes.1.0.0.json",
         "challenge.frequency-map.1.0.0.json",
-        "synthetic-submission-1.assessment.fixture-json-compare.1.0.0.json",
+        `${projection.projectionId}.json`,
         "synthetic-submission-1.json",
         "synthetic-submission-1.submission.json",
       ]);
@@ -106,7 +110,7 @@ test("unsupported scoring keeps evidence; a later evaluator appends a separate p
         store.evidence("synthetic-submission-1") as never,
       );
       store.appendProjection(
-        projectAssessment(store.evidence("synthetic-submission-1")),
+        await projectAssessment(store.evidence("synthetic-submission-1")),
       );
       const later: Evaluator = {
         id: "fixture-json-compare",
@@ -121,9 +125,16 @@ test("unsupported scoring keeps evidence; a later evaluator appends a separate p
         }),
       };
       store.appendProjection(
-        projectAssessment(store.evidence("synthetic-submission-1"), later),
+        await projectAssessment(
+          store.evidence("synthetic-submission-1"),
+          later,
+        ),
       );
-      const [first, second] = store.projections("synthetic-submission-1");
+      // Projections are ordered by ID, not creation time; select by evaluator version.
+      const stored = store.projections("synthetic-submission-1");
+      assert.equal(stored.length, 2);
+      const first = stored.find((p) => p.evaluator.version === "1.0.0")!;
+      const second = stored.find((p) => p.evaluator.version === "2.0.0")!;
       assert.deepEqual(first.outcome, {
         status: "unsupported",
         assessmentVersion: "2.0.0",
@@ -147,7 +158,10 @@ test("unsupported scoring keeps evidence; a later evaluator appends a separate p
       // Recomputing the same evaluator version reproduces the same record.
       assert.equal(
         store.appendProjection(
-          projectAssessment(store.evidence("synthetic-submission-1"), later),
+          await projectAssessment(
+            store.evidence("synthetic-submission-1"),
+            later,
+          ),
         ).duplicate,
         true,
       );
@@ -194,6 +208,109 @@ test("identical retry deduplicates, conflicting ID fails atomically, write-befor
     }
   }));
 
+test("truncated submission keeps a leading BOM through capture, reopen and export", async () =>
+  temporary(async (root) => {
+    const database = join(root, "evidence.sqlite");
+    const archive = join(root, "exports");
+    const text = "\uFEFF" + "a".repeat(CAPTURE_LIMIT_BYTES);
+    let store = new SqliteEvidenceStore(database);
+    store.capture(captureSubmission(referenceSubmission(text)));
+    store.close();
+    store = new SqliteEvidenceStore(database);
+    try {
+      const { submission, observation } = store.evidence(
+        "synthetic-submission-1",
+      );
+      assert.deepEqual(submission.capture, {
+        captureVersion: "synthetic-submission-capture-1.0.0",
+        limitBytes: CAPTURE_LIMIT_BYTES,
+        originalBytes: CAPTURE_LIMIT_BYTES + 3,
+        capturedBytes: CAPTURE_LIMIT_BYTES,
+        truncated: true,
+      });
+      // The exact byte prefix: BOM (3 bytes) plus 65533 "a".
+      assert.equal(submission.text, text.slice(0, CAPTURE_LIMIT_BYTES - 2));
+      assert.ok(observation.captureGaps.includes("submission-truncated"));
+      assert.equal(await exportPending(store, archive), 4);
+      const exported = JSON.parse(
+        await readFile(
+          join(archive, "synthetic-submission-1.submission.json"),
+          "utf8",
+        ),
+      );
+      assert.equal(exported.text, submission.text);
+      assert.equal(
+        new TextEncoder().encode(exported.text).length,
+        CAPTURE_LIMIT_BYTES,
+      );
+    } finally {
+      store.close();
+    }
+  }));
+
+test("environment-only reassessment appends; same environment deduplicates", async () =>
+  temporary(async (root) => {
+    const store = new SqliteEvidenceStore(join(root, "evidence.sqlite"));
+    try {
+      store.capture(captureSubmission(referenceSubmission(VALID)));
+      const before = canonical(
+        store.evidence("synthetic-submission-1") as never,
+      );
+      const first = await projectAssessment(
+        store.evidence("synthetic-submission-1"),
+      );
+      store.appendProjection(first);
+      assert.equal(
+        store.appendProjection(
+          await projectAssessment(store.evidence("synthetic-submission-1")),
+        ).duplicate,
+        true,
+      );
+      const moved = await projectAssessment(
+        store.evidence("synthetic-submission-1"),
+        {
+          ...fixtureEvaluator,
+          environment: { ...fixtureEvaluator.environment, version: "2.0.0" },
+        },
+      );
+      assert.notEqual(moved.projectionId, first.projectionId);
+      assert.equal(store.appendProjection(moved).duplicate, false);
+      const stored = store.projections("synthetic-submission-1");
+      assert.equal(stored.length, 2);
+      // The evaluator is unchanged; only the environment differs, and the earlier result stays.
+      const earlier = stored.find(
+        (p) => p.projectionId === first.projectionId,
+      )!;
+      const later = stored.find((p) => p.projectionId === moved.projectionId)!;
+      assert.equal(canonical(earlier as never), canonical(first as never));
+      assert.deepEqual(later.evaluator, earlier.evaluator);
+      assert.deepEqual(later.environment, {
+        id: "pure-typescript-no-execution",
+        version: "2.0.0",
+      });
+      assert.equal(
+        canonical(store.evidence("synthetic-submission-1") as never),
+        before,
+      );
+      // Identity stays bounded even with the longest allowed observation ID.
+      const longId = "o".repeat(MAX_OBSERVATION_ID_LENGTH);
+      store.capture(
+        captureSubmission(referenceSubmission(VALID, undefined, longId, 2)),
+      );
+      const long = await projectAssessment(store.evidence(longId));
+      assert.ok(long.projectionId.length <= 128);
+      assert.throws(
+        () =>
+          captureSubmission(
+            referenceSubmission(VALID, undefined, longId + "o"),
+          ),
+        /at most 64/,
+      );
+    } finally {
+      store.close();
+    }
+  }));
+
 const A = "synthetic-participant-a";
 const B = "synthetic-participant-b";
 
@@ -210,12 +327,12 @@ test("participant deletion removes owned evidence and projections, keeps shared 
       store.capture(
         captureSubmission(referenceSubmission(text, participant, id)),
       );
-      store.appendProjection(projectAssessment(store.evidence(id)));
+      store.appendProjection(await projectAssessment(store.evidence(id)));
     }
     assert.equal(await exportPending(store, archive), 11);
     // A pending, unexported projection for A must also be deleted.
     store.appendProjection(
-      projectAssessment(store.evidence("a-valid"), {
+      await projectAssessment(store.evidence("a-valid"), {
         ...fixtureEvaluator,
         version: "1.0.1",
       }),
@@ -271,7 +388,7 @@ test("participant deletion removes owned evidence and projections, keeps shared 
       );
       assert.deepEqual((await readdir(archive)).sort(), [
         "adventure.field-notes.1.0.0.json",
-        "b-valid.assessment.fixture-json-compare.1.0.0.json",
+        `${store.projections("b-valid")[0].projectionId}.json`,
         "b-valid.json",
         "b-valid.submission.json",
         "challenge.frequency-map.1.0.0.json",

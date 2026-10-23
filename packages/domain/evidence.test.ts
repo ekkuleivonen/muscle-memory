@@ -22,7 +22,7 @@ function evidenceOf(text: string) {
   };
 }
 
-test("capture keeps original text and context without parsing or scoring", () => {
+test("capture keeps original text and context without parsing or scoring", async () => {
   const text =
     '  [ {"a":2, "b":1},\n{}, {"A":2,"a":1}, {"__proto__":2,"x":1} ]\t\n';
   const { captured, evidence } = evidenceOf(text);
@@ -38,7 +38,7 @@ test("capture keeps original text and context without parsing or scoring", () =>
     sequence: 1,
   });
   assert.ok(captured.observation.captureGaps.includes("workspace-edits"));
-  const projection = projectAssessment(evidence);
+  const projection = await projectAssessment(evidence);
   assert.equal(projection.outcome.status, "assessed");
   assert.deepEqual(projection.observationIds, ["synthetic-submission-1"]);
   assert.deepEqual(projection.artifactIds, [
@@ -50,7 +50,7 @@ test("capture keeps original text and context without parsing or scoring", () =>
   assert.equal(evidence.submission.text, text);
 });
 
-test("oversize input is bounded deterministically at a character boundary", () => {
+test("oversize input is bounded deterministically at a character boundary", async () => {
   const text = "é".repeat(CAPTURE_LIMIT_BYTES); // 2 bytes each, twice the limit
   const first = evidenceOf(text).captured;
   const second = evidenceOf(text).captured;
@@ -63,6 +63,13 @@ test("oversize input is bounded deterministically at a character boundary", () =
     truncated: true,
   });
   assert.ok(first.observation.captureGaps.includes("submission-truncated"));
+  // A leading BOM is part of the exact prefix, not stripped by decoding.
+  assert.deepEqual(boundText("\uFEFFab", 4), {
+    text: "\uFEFFa",
+    originalBytes: 5,
+    capturedBytes: 4,
+    truncated: true,
+  });
   // An odd limit cannot split a 2-byte character.
   assert.deepEqual(boundText("éé", 3), {
     text: "é",
@@ -71,7 +78,7 @@ test("oversize input is bounded deterministically at a character boundary", () =
     truncated: true,
   });
   assert.equal(
-    projectAssessment(evidenceOf(text).evidence).outcome.status,
+    (await projectAssessment(evidenceOf(text).evidence)).outcome.status,
     "not-assessed-truncated",
   );
   // A record claiming completeness for a prefix is rejected.
@@ -88,10 +95,10 @@ test("oversize input is bounded deterministically at a character boundary", () =
   );
 });
 
-test("malformed JSON is captured and becomes a parse-failure projection", () => {
+test("malformed JSON is captured and becomes a parse-failure projection", async () => {
   const { captured, evidence } = evidenceOf('[{"a": 2,');
   assert.equal(captured.submission.text, '[{"a": 2,');
-  assert.deepEqual(projectAssessment(evidence).outcome, {
+  assert.deepEqual((await projectAssessment(evidence)).outcome, {
     status: "parse-failed",
     message: "Enter a valid JSON array.",
   });
