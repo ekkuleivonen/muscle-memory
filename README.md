@@ -17,7 +17,7 @@ npm ci
 npm run dev
 ```
 
-Open http://localhost:3000. The local practice flow keeps answers in tab memory only. It does not collect research records or execute submitted code.
+Open http://localhost:3000. The practice flow is session-only by default, with optional [device-local history](docs/device-local-practice.md). No practice records are uploaded, and submitted code is never executed.
 
 ```sh
 npm test
@@ -53,4 +53,4 @@ The first audience is working developers practicing basic iteration and map hand
 
 See [contributing](CONTRIBUTING.md) and [security](SECURITY.md). Licensed under MIT.
 
-The [durable reference demo](docs/local-events.md) uses synthetic data to prove persisted, deduplicated events and retryable private JSON export: run `npm run demo:events` twice. The browser app still keeps practice results in tab memory.
+The [durable reference demo](docs/local-events.md) uses synthetic data to prove persisted, deduplicated events and retryable private JSON export: run `npm run demo:events` twice. The browser app keeps results in session memory unless device-local history is explicitly enabled.
