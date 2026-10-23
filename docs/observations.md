@@ -1,6 +1,6 @@
 # Evidence before interpretation
 
-This is the agreed direction for the next Foundation data contract. It is not a description of instrumentation already enabled.
+This is the agreed direction for Foundation data contracts. Only the synthetic local submission example below is implemented; no instrumentation is enabled.
 
 Two primitives underpin the data model:
 
@@ -19,13 +19,20 @@ Preserve bounded original submission evidence even when parsing, execution or as
 
 Assessments, scores, skill estimates, flags and rankings are independently versioned projections. They reference artifact and observation IDs plus evaluator/environment versions. Reassessment creates a new projection; it never rewrites captured evidence or earlier results. Recompute where retained inputs and environment permit, and record limitations otherwise. Comparative scoring remains provisional until calibrated.
 
-## Current implementation and next slice
+## Current implementation
 
-The current `attempt.assessed` v1 envelope is a bounded local reference: exact manifests and encounter context, parsed JSON outputs, hints/assistance, consent version and start/submit timestamps plus fixture assessment. Active time is unmeasured and research consent is false. It is not a raw observation stream.
+The legacy `attempt.assessed` v1 envelope remains a bounded local reference: exact manifests and encounter context, parsed JSON outputs, hints/assistance, consent version and start/submit timestamps plus fixture assessment. `createAttemptEvent` scores before the event exists and SQLite re-verifies that score, so malformed or unscorable submissions are rejected rather than stored. It is kept for the browser history and `demo:events`, labelled as an assessed snapshot. It is not raw evidence and is not converted into it.
 
-`createAttemptEvent` calls assessment before returning an event; SQLite verifies that assessment before storage. Malformed JSON is rejected by `parseOutputs`, and unsupported scoring versions reject event creation. Original submission text, failed submissions, source sequences, server receipt times and edit/run timelines are not retained. Optional browser history and the synthetic SQLite/export demo prove local adapters, not complete evidence capture.
+The capture-first example inverts this for one synthetic submission (`packages/domain/evidence.ts`, `packages/domain/projection.ts`, `packages/storage/evidence-sqlite.ts`, `npm run demo:evidence`):
 
-The next bounded example should store and export one synthetic submission observation even if its derived assessment fails, then separately produce a projection referencing its evidence. Reuse existing retry/deletion boundaries. Do not add telemetry, a message bus, an analytics cluster or real participant collection to demonstrate that contract.
+- **Content artifacts** hold the exact published Adventure and Challenge, keyed `<kind>.<id>.<version>` and shared by all participants. They hold published content only.
+- **Submission artifacts** hold the original text exactly as entered (whitespace and invalid JSON included), owned by one participant. Capture `synthetic-submission-capture-1.0.0` keeps at most 64 KiB of UTF-8, cut at a character boundary, and records original and captured byte counts and `truncated`.
+- **Submission observations** carry a stable ID, schema version, source ID and sequence, client occurrence time, an explicit `serverReceipt: {status: "absent", reason: "local-only"}`, capture and consent versions, `researchConsent: false`, the encounter, hints, assistance and references to the three artifacts. `captureGaps` lists what this capture does not record: workspace edits, code revisions, runs and execution output, active time, and `submission-truncated` when the bound applied.
+- **Assessment projections** reference observation and artifact IDs plus evaluator and environment versions. The outcome is `assessed`, `parse-failed`, `unsupported`, `rejected` or `not-assessed-truncated`. A prefix is never scored as a whole submission.
+
+Artifacts, the observation and their pending exports commit in one transaction before anything is parsed. Projections are appended afterwards from the stored evidence. A parse failure or unsupported formula becomes a projection outcome; it never removes evidence. Reassessment with a new evaluator version appends another projection. Recomputing the same version reproduces an identical record and deduplicates. Retry, conflict, export and deletion behaviour is in [local events](local-events.md).
+
+Remaining gaps: no browser or editor capture, run, execution or test-level observations, and no server receipt. Source sequences are recorded but not checked for gaps or reuse. The store checks that shared artifacts are published-shaped content; it does not verify them against the catalog, so the CLI gates starts on the published catalog. Projections have no creation time, so identical recomputation deduplicates. The browser app still parses before storing. Review the instrumentation and consent boundary before enabling any collection.
 
 ## Identity
 

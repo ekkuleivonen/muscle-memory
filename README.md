@@ -2,7 +2,7 @@
 
 Friendly coding Adventures to test, practice and maintain the craft of writing code. AI is part of everyday development; Muscle Memory makes room to enjoy writing code yourself in your free time, with private feedback and room to improve.
 
-Created by [Ekku Leivonen](https://github.com/ekkuleivonen), inspired by a developer’s observation of fading coding fluency while using AI more often. That observation is a starting question, not evidence of causation. Open source and initially free; early Foundation work, no hosted service yet.
+Created by [Ekku Leivonen](https://github.com/ekkuleivonen), inspired by a developer’s observation of fading coding fluency while using AI more often. That observation is a starting question, not evidence of causation. Open source and initially free; early Foundation work. Only an owner-only preview is hosted, behind Cloudflare Access; there is no public service yet.
 
 With voluntary research participation, we also hope to study how developer skills evolve over time and compare with coding models through aggregate results. Individual results stay private. Research collection and model benchmarking are later work; the current demo uses synthetic data only.
 
@@ -55,6 +55,6 @@ The first audience is working developers practicing basic iteration and map hand
 
 See [contributing](CONTRIBUTING.md) and [security](SECURITY.md). Licensed under MIT.
 
-The [durable reference demo](docs/local-events.md) uses synthetic data to prove persisted, deduplicated events and retryable private JSON export: run `npm run demo:events` twice. The browser app keeps results in session memory unless device-local history is explicitly enabled.
+The [durable reference demo](docs/local-events.md) uses synthetic data to prove persisted, deduplicated events and retryable private JSON export: run `npm run demo:events` twice. `npm run demo:evidence` shows the capture-first contract: original submissions, including malformed ones, are stored before a separate, versioned assessment projection. The browser app keeps results in session memory unless device-local history is explicitly enabled.
 
 See the [authoring lifecycle](docs/authoring.md) for draft, preview, test, publish, retire and disable commands. The reference app reads a generated published catalog and refreshes its eligibility before starts and assessments.

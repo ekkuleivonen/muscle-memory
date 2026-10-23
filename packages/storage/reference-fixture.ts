@@ -9,6 +9,7 @@ import {
   type Attempt,
 } from "../domain/assessment";
 import { createAttemptEvent } from "../domain/events";
+import type { SubmissionInput } from "../domain/evidence";
 
 export function referenceEvent(
   participantId = "synthetic-participant-1",
@@ -35,4 +36,31 @@ export function referenceEvent(
     consentVersion: "synthetic-demo-v1",
   };
   return createAttemptEvent(adventure, challenge, attempt);
+}
+
+/** Synthetic capture input for the pinned reference Challenge; `text` is kept exactly as given. */
+export function referenceSubmission(
+  text: string,
+  participantId = "synthetic-participant-1",
+  observationId = "synthetic-submission-1",
+  sequence = 1,
+): SubmissionInput {
+  const adventure: Adventure = {
+    ...adventureData,
+    challenges: adventureData.challenges.map(([id, version]) => [id, version]),
+  };
+  return {
+    observationId,
+    participantId,
+    source: { id: "synthetic-cli", sequence },
+    occurredAt: "2026-01-01T00:01:00Z",
+    startedAt: "2026-01-01T00:00:00Z",
+    consentVersion: "synthetic-demo-v1",
+    adventure,
+    challenge: challengeData as unknown as Challenge,
+    encounter: encounter(adventure),
+    hintsShown: [],
+    assistance: "unaided",
+    text,
+  };
 }
