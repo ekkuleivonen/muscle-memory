@@ -62,12 +62,17 @@ ORDER BY sequence;
 
 Typed tables (keys one per row, edits, runs) come later as transforms of this one; the payload keeps them possible.
 
-## Erasure (not built yet)
+## Erasure
 
-A tombstone stops new data at once. Removing what is already stored needs a scheduled job that deletes the tombstoned participants' rows from the Iceberg table (row-level deletes, for example with PyIceberg) and then expires old snapshots, within the 30 days the Privacy Notice promises. Until that job exists, erasure requests are done by hand from the tombstone list.
+A deletion request writes a tombstone, `deleted/<participant>`, in the control bucket, and the Worker refuses that participant's uploads from then on. `tools/erasure/erase.py` runs daily (`.github/workflows/erasure.yml`, also on demand) over every tombstone:
+
+- It deletes the participants' rows from the events table with PyIceberg, in chunks of 500, retrying when a commit races the pipeline's own appends. Iceberg rewrites the affected Parquet files without those rows.
+- It records each erasure that removed rows as `erased/<participant>/<time>.json`, with the count.
+- R2 Data Catalog's snapshot expiration (7 days, keeping the last 10 snapshots) then removes the old files that still held the rows, so erased data is physically gone about a week after the request, inside the 30 days the Privacy Notice promises.
+
+Running over every tombstone each day catches rows the pipeline was still holding when the request came. `tools/erasure/test_erase.py` runs the same code against a local Iceberg catalog in CI.
 
 ## Not yet
 
 - Rate limiting and abuse checks beyond validation (Cloudflare rate limiting rules on `/ingest/*`).
-- The erasure job above.
 - Typed derived tables.
