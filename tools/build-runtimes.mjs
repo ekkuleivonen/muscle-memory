@@ -9,7 +9,11 @@
  *   node tools/build-runtimes.mjs --update  build and rewrite the pinned hashes (after an upgrade)
  */
 import { createHash } from "node:crypto";
-import { gzipSync } from "node:zlib";
+// Not node:zlib: its output differs between Node versions (and so CI and dev machines),
+// which would break the pinned hashes. fflate's is the same everywhere.
+import { gzipSync as fflateGzip } from "fflate";
+const gzipSync = (bytes, { level }) =>
+  Buffer.from(fflateGzip(bytes, { level, mtime: 0 }));
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";

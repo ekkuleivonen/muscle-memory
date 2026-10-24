@@ -78,11 +78,11 @@
     "basePath": "/runtime/ruby-2.10.1/",
     "files": {
       "ruby.js": "sha256-vRYatC+rsv+QVCAEYMX7mjf5CziEZcL2+oodqcCVM/k=",
-      "ruby.wasm.gz": "sha256-ad3673Q226gs6Gh/eOwrq7yzrSFwqpB+KF9kkPeumNs="
+      "ruby.wasm.gz": "sha256-/9VjhzVh+4t6CVM9/4QnYNjNo7tNFAPbW8KzDupgkPw="
     },
     "sizes": {
       "ruby.js": 47932,
-      "ruby.wasm.gz": 8918704
+      "ruby.wasm.gz": 9227644
     }
   },
   "typescript": {
@@ -102,11 +102,11 @@
     "go": "1.25.3",
     "basePath": "/runtime/go-0.16.1/",
     "files": {
-      "go.wasm.gz": "sha256-6ybL25CXCId4+goOcermdGEY9xdZWVBcrvWTxyULjdw=",
+      "go.wasm.gz": "sha256-ihcsUfmGwbate1LDGzwSUvj98CESWmbpztuH6zDUNYA=",
       "wasm_exec.js": "sha256-DJSfSZb5qJaY5LXFht4yJJw7abe6rbZNIgBzzASsuhQ="
     },
     "sizes": {
-      "go.wasm.gz": 8232161,
+      "go.wasm.gz": 8672223,
       "wasm_exec.js": 16992
     }
   },
@@ -116,19 +116,19 @@
     "basePath": "/runtime/clang-22.0.0-git20542-10/",
     "files": {
       "clang.js": "sha256-opIcWMQyw+NCyPNcYhcfbopOOp+3gT8SWfjXRwsGXYY=",
-      "llvm.core.wasm.gz": "sha256-FAu7UMZR45sQ1Z5wisOSDzvQnEiYkXapsUaSU2UNoU8=",
+      "llvm.core.wasm.gz": "sha256-9Ud5UnqG2qzJlB7l+67607g1Rd4mV0z/HX2+LEIjw44=",
       "llvm.core2.wasm": "sha256-lgwybrm123rtvBaVQEIVh6LT8/+YfpPWrVtNpDQw/9Q=",
       "llvm.core3.wasm": "sha256-Y2gMBDGSq6xHALvaanjkwZsTn6CGsehy0caRXTekKKg=",
       "llvm.core4.wasm": "sha256-9UTcnMRviKDyLRuDmk+whT3OLW4jHYgL0ZdUxZpaI00=",
-      "llvm-resources.tar.gz": "sha256-xrhQUrVExGyEyeLdCESPDMEuQTF5nNEPSA9NZQCIgKc="
+      "llvm-resources.tar.gz": "sha256-DvibSAgVKrexbO7zb49A62PO95ZjIr6XMHJULHt+sQo="
     },
     "sizes": {
       "clang.js": 141144,
-      "llvm.core.wasm.gz": 22637145,
+      "llvm.core.wasm.gz": 23536991,
       "llvm.core2.wasm": 37626,
       "llvm.core3.wasm": 5458,
       "llvm.core4.wasm": 787,
-      "llvm-resources.tar.gz": 4243123
+      "llvm-resources.tar.gz": 4372036
     }
   },
   "csharp": {
