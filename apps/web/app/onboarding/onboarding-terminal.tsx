@@ -142,7 +142,7 @@ async function paperwork(t: TerminalApi, updated = false): Promise<Acceptance> {
     </span>,
     <span>
       <span className="t-dim">→</span> We use it to make better issues, and may
-      publish anonymised stats and datasets. Opt out of publishing any time in
+      publish anonymised stats and datasets. Rather not? Go stealth any time in
       settings.
     </span>,
     <span>

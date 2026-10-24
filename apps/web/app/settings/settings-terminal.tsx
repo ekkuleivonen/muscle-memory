@@ -6,7 +6,7 @@ import {
   readProfile,
   resetProgress,
   saveProfile,
-  setExcludeFromPublishedData,
+  setStealth,
 } from "../../lib/account";
 import { LEGAL_UPDATED } from "../../lib/legal";
 import type { Profile } from "../../lib/onboarding";
@@ -33,7 +33,7 @@ const COMMANDS: Record<
 > = {
   profile: { hint: "experience, languages, goal and editor", run: profile },
   privacy: {
-    hint: "publishing opt-out, Terms and Privacy Notice",
+    hint: "go stealth, Terms and Privacy Notice",
     run: privacy,
   },
   logout: { hint: "sign out on this device", run: logout },
@@ -126,7 +126,7 @@ async function profile(t: TerminalApi): Promise<Outcome> {
 
 async function privacy(t: TerminalApi): Promise<Outcome> {
   const stored = readProfile();
-  const excluded = stored?.excludeFromPublishedData === true;
+  const stealth = stored?.stealth === true;
   t.print(
     "What you do here is recorded to run the product: picking your next issues, comparing you with other people and LLMs, and making better issues.",
     <span>
@@ -144,24 +144,33 @@ async function privacy(t: TerminalApi): Promise<Outcome> {
       .
     </span>,
     "",
+    <span>
+      Your anonymised runs go into the stats we publish and the comparisons
+      everyone sees. Or go stealth: you&apos;re left out of both, and in return
+      you don&apos;t see anyone else&apos;s stats. Fair&apos;s fair.
+    </span>,
+    <span className="t-dim">
+      Right now you&apos;re {stealth ? "in stealth" : "in the stats"}.
+    </span>,
+    "",
   );
-  const include = await t.ask(
+  const share = await t.ask(
     {
       kind: "confirm",
-      id: "publish",
-      message: "Include your anonymised data in published datasets?",
-      initial: !excluded,
+      id: "share",
+      message: "Share your anonymised data in stats and comparisons?",
+      initial: true,
       escape: "keeps current",
     },
     { skipped: "unchanged" },
   );
-  if (include === null) return "menu";
-  setExcludeFromPublishedData(!include);
+  if (share === null) return "menu";
+  setStealth(!share);
   t.print(
     <span className="t-dim">
-      {include
-        ? "You're in. Thanks for helping make the data better."
-        : "You're out. Nothing from you goes into datasets we publish from now on, including what you've already done. Your own stats keep working."}
+      {share
+        ? "You're in the stats. Thanks: your runs make the comparisons (and the issues) better."
+        : "Done, you've gone stealth. We won't include you in our stats or comparisons from now on, including what you've already done, and you won't see other people's stats either."}
     </span>,
   );
   return "menu";

@@ -37,7 +37,7 @@ If you break these rules, we may suspend or close your account. Where we reasona
 - **You keep the copyright** in the code you write here.
 - You give us a **worldwide, non-exclusive, royalty-free, perpetual and irrevocable licence** to use, store, copy, modify, analyse and publish what you submit and the activity data around it. That includes publishing it in **anonymised datasets** under open licences, and letting others use those datasets.
 - You confirm you have the right to give us that licence (see: your employer's code, above).
-- Opting out of published datasets in Settings means we leave you out of future releases. Releases that already went out stay out there, anonymised.
+- Going stealth in Settings means we leave you out of future releases and of comparisons, and you don't see other people's stats in return. Releases that already went out stay out there, anonymised.
 
 Why the broad licence? Because "anonymised dataset of how people solve issues" only works if we may actually publish the solutions.
 

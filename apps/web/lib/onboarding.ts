@@ -29,8 +29,11 @@ export interface StoredProfile {
   handle?: string;
   /** The Terms and Privacy Notice version accepted, and when. */
   accepted?: Acceptance;
-  /** Settings opt-out: leave this account out of published datasets. */
-  excludeFromPublishedData?: boolean;
+  /**
+   * Stealth, the opt-out in settings: left out of published datasets and of comparisons, and
+   * in return shown no one else's stats.
+   */
+  stealth?: boolean;
   profile: Profile;
 }
 

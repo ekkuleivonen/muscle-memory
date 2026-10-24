@@ -7,7 +7,7 @@ export const PRIVACY = `## The short version
 - Muscle Memory is practice that feels like a real job, and **recording how you work is the product**. It's how we pick your next issues, show how you compare with other people and LLMs, and figure out which issues are any good.
 - You get a random handle like \`Quiet-Compiler-4821\`. We don't ask for your name or email.
 - Other people never see your results next to your handle. They see you as part of the crowd: percentiles, averages, that sort of thing.
-- We may publish **anonymised** stats and datasets. Don't want to be in them? There's a switch in Settings, no questions asked.
+- We may publish **anonymised** stats and datasets. Don't want to be in them? **Go stealth** in Settings, no questions asked. (Fair warning: stealth works both ways, so you won't see other people's stats either.)
 - We don't sell your personal data, and there are no ads.
 - **Today, everything stays in your browser.** We're building the bit that syncs it to our servers. This notice already covers that, so nobody gets surprised later.
 
@@ -24,7 +24,7 @@ That's the gist. The rest is the detail, which the law (reasonably) wants writte
 - Your handle. It's random, so it says nothing about you.
 - Your setup answers: experience, languages, goal and editor keybindings. All optional.
 - Which version of these documents you accepted, and when.
-- Your privacy choices, like opting out of published datasets.
+- Your privacy choices, like whether you've gone stealth.
 
 **What you do here**
 
@@ -44,13 +44,15 @@ The law asks for a reason (a "legal basis") for everything. Here are ours:
 
 1. **Running the product.** Your board, your progress, suggesting what to work on next, and comparing you with others and with LLMs. This is the thing you signed up for. *Basis: performing our contract with you (GDPR Art. 6(1)(b)).*
 2. **Making better issues.** Which issues are too hard or too easy, where people get stuck, and what to write next. *Basis: our legitimate interest in improving Muscle Memory (Art. 6(1)(f)).*
-3. **Publishing anonymised data.** We think the world could use real data on how people solve engineering problems, and how that compares with LLMs. So we may publish aggregate stats and anonymised, record-level datasets. *Basis: legitimate interest (Art. 6(1)(f)), with an opt-out in Settings.* More on how below.
+3. **Publishing anonymised data.** We think the world could use real data on how people solve engineering problems, and how that compares with LLMs. So we may publish aggregate stats and anonymised, record-level datasets. *Basis: legitimate interest (Art. 6(1)(f)), with an opt-out in Settings (going stealth).* More on how below.
 4. **Security and abuse.** Spotting bots, cheating and attacks. *Basis: legitimate interest (Art. 6(1)(f)).*
 5. **When the law makes us.** If we're legally required to keep or hand over something. *Basis: legal obligation (Art. 6(1)(c)).*
 
 ## Comparisons, and the LLMs
 
 When you compare yourself with other people, they're aggregates: "faster than 70% of people on this issue", never "faster than \`Sunny-Semicolon-7724\`".
+
+Comparisons are a two-way street. If you go stealth, you're left out of everyone else's comparisons, and you don't see other people's stats in return. Comparisons with LLMs keep working, since those don't need anyone else's data.
 
 Comparing you with LLMs doesn't involve sending your data to them. The models solve the same issues separately, and we compare the results.
 
@@ -63,7 +65,7 @@ Before anything goes public, we strip it of anything that points back to you:
 - Groups too small to hide in are dropped.
 - Record-level releases get an extra review before they go out.
 
-Data that's genuinely anonymous isn't personal data any more, and once published it can't be recalled. That's exactly why you can opt out beforehand: tick **Exclude my data from published datasets** in Settings. It covers future releases, including anything built from what you've already done.
+Data that's genuinely anonymous isn't personal data any more, and once published it can't be recalled. That's exactly why you can opt out beforehand: **go stealth** with \`privacy\` in Settings. It covers future releases, including anything built from what you've already done.
 
 ## Who else sees it
 
@@ -85,7 +87,7 @@ Depending on where you live (the EU and UK in particular), you can ask us to:
 
 - show you what we have (access), fix it, or delete it;
 - give it to you in a portable format;
-- stop using it for something, which you can call **objecting** (the publishing switch is the one-click version);
+- stop using it for something, which you can call **objecting** (going stealth is the one-command version);
 - restrict what we do with it while we sort out a disagreement.
 
 Email **[privacy@example.com]**. We'll reply within a month. You can also complain to your data protection authority. We'd rather you talked to us first, but it's your call.

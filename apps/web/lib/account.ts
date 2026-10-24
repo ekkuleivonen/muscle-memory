@@ -99,9 +99,9 @@ export function acceptTerms() {
   if (stored) write({ ...stored, accepted: acceptance() });
 }
 
-export function setExcludeFromPublishedData(exclude: boolean) {
+export function setStealth(stealth: boolean) {
   const stored = readProfile();
-  if (stored) write({ ...stored, excludeFromPublishedData: exclude });
+  if (stored) write({ ...stored, stealth });
 }
 
 /** Ends the session; profile, board and history stay in this browser. */
