@@ -9,8 +9,8 @@
   "routes": [{ "pattern": "musclememory.run/ingest/*", "zone_name": "musclememory.run" }],
   "compatibility_date": "2026-10-23",
   "r2_buckets": [{ "binding": "CONTROL", "bucket_name": "muscle-memory-control" }],
-  // Created by `wrangler pipelines setup` (docs/telemetry.md); fill in the stream id.
-  "pipelines": [{ "binding": "EVENTS", "stream": "<EVENTS_STREAM_ID>" }],
+  // The stream muscle_memory_events (docs/telemetry.md).
+  "pipelines": [{ "binding": "EVENTS", "stream": "4ccd18f15b5845159747f7c4f42a5c5e" }],
   "vars": { "ALLOWED_ORIGINS": "" },
   "observability": { "enabled": true },
   "env": {
