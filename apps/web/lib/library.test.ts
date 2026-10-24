@@ -6,9 +6,11 @@ import { difficultyRange, languagesOf, library } from "./library";
 import {
   filterCategories,
   filterIssues,
+  formatQuery,
+  groupIssues,
+  href,
   parseCategoryQuery,
   parseIssueQuery,
-  toSearch,
   toggle,
 } from "./queries";
 
@@ -26,13 +28,25 @@ const merged = library({
 test("issues are the latest published Challenge versions with their categories", () => {
   const { issues, categories } = library(reference);
   assert.deepEqual(
-    issues.map((i) => [i.slug, i.version, i.runnable, i.kind]),
-    [["frequency-map", "2.1.0", true, "feature"]],
+    issues.map((i) => [
+      i.key,
+      i.slug,
+      i.version,
+      i.runnable,
+      i.kind,
+      i.estimate,
+    ]),
+    [["FN-1", "frequency-map", "2.1.0", true, "feature", 1]],
   );
   const [issue] = issues;
   assert.equal(issue.title, "Frequency map");
   assert.deepEqual(issue.categories, [
-    { slug: "field-notes", title: "Field notes" },
+    {
+      slug: "field-notes",
+      title: "Field notes",
+      key: "FN",
+      hue: issue.categories[0].hue,
+    },
   ]);
   assert.deepEqual(issue.criteria[1], { input: [], expected: {} });
   assert.equal(issue.comments[0].author, "Priya K");
@@ -69,69 +83,103 @@ test("only Python with a starter runs; category summaries span their issues", ()
   assert.deepEqual(languagesOf(lighthouse.issues), ["python", "rust", "c"]);
 });
 
-test("issue queries keep known values, in canonical order, and drop the rest", () => {
+test("issue keys come from the category key, or one derived from its id", () => {
+  const keys = Object.fromEntries(merged.issues.map((i) => [i.slug, i.key]));
+  assert.equal(keys["frequency-map"], "FN-1");
+  assert.equal(keys["parse-log-line"], "NS-2");
+  assert.equal(keys["harvest-totals"], "RG-4");
   assert.deepEqual(
-    parseIssueQuery({
-      q: "  maps  ",
-      language: ["rust", "klingon", "python", "rust"],
-      kind: "bug",
-      difficulty: ["impossible"],
-      category: ["night-shift", "night-shift"],
-    }),
-    {
-      q: "maps",
-      language: ["python", "rust"],
-      kind: ["bug"],
-      difficulty: [],
-      category: ["night-shift"],
-    },
+    merged.categories.map((c) => c.key),
+    ["FN", "NS", "LH", "RG"],
   );
-  assert.equal(parseIssueQuery({ q: "x".repeat(500) }).q.length, 100);
+  assert.ok(merged.categories.every((c) => c.hue >= 0 && c.hue < 8));
 });
 
-test("filters combine across groups and match any value within a group", () => {
-  const slugs = (params: Record<string, string | string[]>) =>
-    filterIssues(merged.issues, parseIssueQuery(params)).map((i) => i.slug);
-  // All three are easy, so they sort by title.
-  assert.deepEqual(slugs({ kind: "bug" }), [
-    "parse-log-line",
-    "word-wrap",
-    "morse-decoder",
+test("qualifiers parse into filters; unknown ones stay as text", () => {
+  const query = parseIssueQuery(
+    'kind:bug,BUG lang:python,klingon is:runnable sort:title label:maps cat:night-shift "log parser" colour:red',
+  );
+  assert.deepEqual(query.kind, ["bug"]);
+  assert.deepEqual(query.language, ["python"]);
+  assert.deepEqual(query.label, ["maps"]);
+  assert.deepEqual(query.category, ["night-shift"]);
+  assert.equal(query.runnable, true);
+  assert.equal(query.sort, "title");
+  assert.deepEqual(query.text, ["log parser", "colour:red"]);
+  assert.equal(
+    formatQuery(query),
+    'is:runnable kind:bug lang:python category:night-shift label:maps sort:title "log parser" colour:red',
+  );
+  assert.equal(parseIssueQuery("x".repeat(500)).text[0].length, 200);
+});
+
+test("filters combine across qualifiers and match any value within one", () => {
+  const keys = (q: string) =>
+    filterIssues(merged.issues, parseIssueQuery(q)).map((i) => i.key);
+  assert.deepEqual(keys("kind:bug"), ["LH-1", "LH-3", "NS-2"]);
+  assert.deepEqual(keys("kind:bug lang:rust"), ["LH-1"]);
+  assert.deepEqual(keys("lang:rust,go"), ["LH-1", "NS-2"]);
+  assert.deepEqual(keys("is:runnable"), ["FN-1"]);
+  assert.deepEqual(keys("label:strings"), ["LH-1", "LH-3", "NS-2"]);
+  assert.deepEqual(keys("category:field-notes"), ["FN-1"]);
+  assert.deepEqual(keys("NS-2"), ["NS-2"]);
+  assert.equal(keys("garden").length, 4);
+  assert.deepEqual(keys("rust hard"), []);
+  // Natural key order by default; difficulty and title on request.
+  assert.deepEqual(keys("category:rooftop-garden"), [
+    "RG-1",
+    "RG-2",
+    "RG-3",
+    "RG-4",
   ]);
-  assert.deepEqual(slugs({ kind: "bug", language: "rust" }), ["morse-decoder"]);
-  assert.deepEqual(slugs({ language: ["rust", "go"] }), [
-    "parse-log-line",
-    "morse-decoder",
-  ]);
-  assert.deepEqual(slugs({ q: "garden" }).length, 4);
-  assert.deepEqual(slugs({ category: "field-notes" }), ["frequency-map"]);
-  assert.deepEqual(slugs({ q: "rust hard" }), []);
-  // Sorted by difficulty, then title.
-  assert.equal(slugs({})[0], "seed-labels");
-  assert.equal(slugs({}).at(-1), "harvest-totals");
+  assert.equal(keys("sort:difficulty")[0], "FN-1");
+  assert.equal(keys("sort:difficulty").at(-1), "RG-4");
+});
+
+test("groups keep their declared order and drop empty ones", () => {
+  const issues = filterIssues(
+    merged.issues,
+    parseIssueQuery("kind:bug,performance"),
+  );
+  assert.deepEqual(
+    groupIssues(issues, "kind", merged.categories).map((g) => [
+      g.id,
+      g.issues.length,
+    ]),
+    [
+      ["bug", 3],
+      ["performance", 1],
+    ],
+  );
+  assert.deepEqual(
+    groupIssues(issues, "category", merged.categories).map((g) => g.id),
+    ["night-shift", "lighthouse", "rooftop-garden"],
+  );
+  assert.equal(
+    groupIssues(issues, "none", merged.categories)[0].issues.length,
+    4,
+  );
 });
 
 test("category queries search their issues too", () => {
-  const slugs = (params: Record<string, string>) =>
-    filterCategories(merged.categories, parseCategoryQuery(params)).map(
+  const slugs = (q: string) =>
+    filterCategories(merged.categories, parseCategoryQuery(q)).map(
       (c) => c.slug,
     );
-  assert.deepEqual(slugs({ language: "cpp" }), ["rooftop-garden"]);
-  assert.deepEqual(slugs({ q: "morse" }), ["lighthouse"]);
-  assert.equal(slugs({}).length, 4);
+  assert.deepEqual(slugs("lang:cpp"), ["rooftop-garden"]);
+  assert.deepEqual(slugs("morse"), ["lighthouse"]);
+  assert.equal(slugs("").length, 4);
 });
 
-test("links round-trip through the query string", () => {
-  const query = parseIssueQuery({ q: "log", kind: "bug" });
+test("links toggle one value and round-trip through the URL", () => {
+  const query = parseIssueQuery("kind:bug log");
   const on = toggle(query, "language", "go");
-  assert.equal(toSearch(on), "?q=log&language=go&kind=bug");
-  assert.equal(toSearch(toggle(on, "language", "go")), "?q=log&kind=bug");
-  assert.equal(toSearch(parseIssueQuery({})), "");
-  const back = Object.fromEntries(
-    [...new URLSearchParams(toSearch(on)).keys()].map((k) => [
-      k,
-      new URLSearchParams(toSearch(on)).getAll(k),
-    ]),
+  assert.equal(href("/issues", on), "/issues?q=kind%3Abug+lang%3Ago+log");
+  assert.equal(
+    href("/issues", toggle(on, "language", "go"), "kind"),
+    "/issues?q=kind%3Abug+log&group=kind",
   );
+  assert.equal(href("/issues", parseIssueQuery("")), "/issues");
+  const back = new URL(href("/issues", on), "http://x").searchParams.get("q")!;
   assert.deepEqual(parseIssueQuery(back), on);
 });

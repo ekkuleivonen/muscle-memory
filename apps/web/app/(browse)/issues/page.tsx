@@ -1,20 +1,22 @@
 import type { Metadata } from "next";
 import { requireOnboarding } from "../../../lib/gate";
-import { pathWithQuery } from "../../../lib/onboarding";
+import { LANGUAGES } from "../../../lib/languages";
+import { DIFFICULTIES, KINDS, languagesOf } from "../../../lib/library";
 import { getLibrary } from "../../../lib/load";
-import {
-  DIFFICULTIES,
-  KINDS,
-  languageLabel,
-  languagesOf,
-} from "../../../lib/library";
+import { pathWithQuery } from "../../../lib/onboarding";
 import {
   filterIssues,
+  groupIssues,
+  parseGroup,
   parseIssueQuery,
+  queryParam,
   type SearchParams,
 } from "../../../lib/queries";
-import { Filters } from "../_components/filters";
-import { IssueRows } from "../_components/issue-rows";
+import { CategorySquare, LanguageDot } from "../_components/bits";
+import { KIND_LABELS, KindIcon } from "../_components/icons";
+import { IssueGroups } from "../_components/issue-list";
+import { Toolbar } from "../_components/toolbar";
+import { Topbar } from "../_components/topbar";
 
 export const metadata: Metadata = { title: "Issues · Muscle Memory" };
 
@@ -25,49 +27,67 @@ export default async function IssuesPage({
 }) {
   const params = await searchParams;
   await requireOnboarding(pathWithQuery("/issues", params));
-  const query = parseIssueQuery(params);
+  const query = parseIssueQuery(queryParam(params));
+  const group = parseGroup(params);
   const { issues, categories } = await getLibrary();
   const results = filterIssues(issues, query);
   return (
-    <main className="page">
-      <h1>Issues</h1>
-      <p className="muted">
-        Pick something up. Every issue is small enough for one sitting.
-      </p>
-      <Filters
-        path="/issues"
-        query={query}
-        placeholder="Search titles, labels, languages…"
-        groups={[
-          {
-            key: "language",
-            label: "Language",
-            options: languagesOf(issues).map((id) => ({
-              value: id,
-              label: languageLabel(id),
-            })),
-          },
-          {
-            key: "kind",
-            label: "Kind",
-            options: KINDS.map((k) => ({ value: k, label: k })),
-          },
-          {
-            key: "difficulty",
-            label: "Difficulty",
-            options: DIFFICULTIES.map((d) => ({ value: d, label: d })),
-          },
-          {
-            key: "category",
-            label: "Category",
-            options: categories.map((c) => ({ value: c.slug, label: c.title })),
-          },
-        ]}
-      />
-      <p className="result-count" role="status">
-        {results.length} of {issues.length} issues
-      </p>
-      <IssueRows issues={results} />
-    </main>
+    <>
+      <Topbar>
+        <span>Issues</span>
+        <span className="faint">
+          {results.length === issues.length
+            ? issues.length
+            : `${results.length} of ${issues.length}`}
+        </span>
+      </Topbar>
+      <main className="content">
+        <Toolbar
+          path="/issues"
+          query={query}
+          group={group}
+          placeholder="kind:bug lang:python,go difficulty:easy label:maps …"
+          filters={[
+            {
+              key: "kind",
+              label: "Kind",
+              options: KINDS.map((k) => ({
+                value: k,
+                label: KIND_LABELS[k],
+                icon: <KindIcon kind={k} size={14} />,
+              })),
+            },
+            {
+              key: "language",
+              label: "Language",
+              options: languagesOf(issues).map((id) => ({
+                value: id,
+                label: LANGUAGES.find((l) => l.id === id)!.label,
+                icon: <LanguageDot language={id} />,
+              })),
+            },
+            {
+              key: "difficulty",
+              label: "Difficulty",
+              options: DIFFICULTIES.map((d) => ({ value: d, label: d })),
+            },
+            {
+              key: "category",
+              label: "Category",
+              options: categories.map((c) => ({
+                value: c.slug,
+                label: c.title,
+                icon: <CategorySquare category={c} />,
+              })),
+            },
+          ]}
+        />
+        <IssueGroups groups={groupIssues(results, group, categories)} />
+        <p className="hint">
+          <kbd>/</kbd> search · <kbd>j</kbd> <kbd>k</kbd> move · <kbd>↵</kbd>{" "}
+          open
+        </p>
+      </main>
+    </>
   );
 }

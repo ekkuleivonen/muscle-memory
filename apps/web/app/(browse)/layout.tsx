@@ -1,20 +1,27 @@
-import Link from "next/link";
-import { Nav } from "./_components/nav";
+import { getLibrary } from "../../lib/load";
+import { Keyboard } from "./_components/keyboard";
+import { Sidebar } from "./_components/sidebar";
 
-export default function BrowseLayout({
+export default async function BrowseLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { categories, issues } = await getLibrary();
   return (
-    <>
-      <header className="shell-top">
-        <Link className="logo" href="/">
-          muscle<b>/</b>memory
-        </Link>
-        <Nav />
-      </header>
-      {children}
-    </>
+    <div className="app">
+      <Sidebar
+        issueCount={issues.length}
+        categories={categories.map(({ slug, title, key, hue, issues }) => ({
+          slug,
+          title,
+          key,
+          hue,
+          count: issues.length,
+        }))}
+      />
+      <div className="main">{children}</div>
+      <Keyboard />
+    </div>
   );
 }

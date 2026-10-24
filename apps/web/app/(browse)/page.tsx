@@ -1,16 +1,19 @@
 import Link from "next/link";
 import { requireOnboarding } from "../../lib/gate";
+import { Topbar } from "./_components/topbar";
 
 export default async function Home() {
   await requireOnboarding("/");
   return (
-    <main className="page">
-      <h1>Hello, world.</h1>
-      <p className="muted">
-        Pick up an <Link href="/issues">issue</Link>, browse the{" "}
-        <Link href="/categories">categories</Link>, or{" "}
-        <Link href="/onboarding">revisit your setup</Link>.
-      </p>
-    </main>
+    <>
+      <Topbar>Home</Topbar>
+      <main className="content">
+        <h1>Hello, world.</h1>
+        <p className="dim">
+          Pick up an <Link href="/issues">issue</Link> or browse the{" "}
+          <Link href="/categories">categories</Link>.
+        </p>
+      </main>
+    </>
   );
 }

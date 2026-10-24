@@ -28,19 +28,35 @@ export const KINDS: readonly IssueKind[] = [
   "refactor",
 ];
 
+/** Story points shown as an estimate, in the 1-2-3-5 scale trackers use. */
+export const ESTIMATES: Record<Difficulty, number> = {
+  "warm-up": 1,
+  easy: 2,
+  medium: 3,
+  hard: 5,
+};
+/** Number of distinct category colours the theme defines (--hue-0 …). */
+export const HUES = 8;
+
 export interface CategoryRef {
   slug: string;
   title: string;
+  key: string;
+  /** Index into the theme's category colours; stable for a slug. */
+  hue: number;
 }
 
 export interface Issue {
   slug: string;
+  /** Display identifier such as NS-2: its first category's key and position there. */
+  key: string;
   version: string;
   title: string;
   summary?: string;
   task: string;
   kind?: IssueKind;
   difficulty?: Difficulty;
+  estimate?: number;
   language?: LanguageId;
   labels: readonly string[];
   criteria: { input: Json; expected: Json }[];
@@ -51,10 +67,8 @@ export interface Issue {
   categories: CategoryRef[];
 }
 
-export interface Category {
-  slug: string;
+export interface Category extends CategoryRef {
   version: string;
-  title: string;
   summary?: string;
   story: string;
   /** Exactly the issue versions this category pins, in its order. */
@@ -83,16 +97,41 @@ export function languageLabel(id: string | undefined): string {
   return LANGUAGES.find((l) => l.id === id)?.label ?? "Any language";
 }
 
-function toIssue(content: Executable, categories: CategoryRef[]): Issue {
+/** "night-shift" → "NS"; a single word keeps its first three letters. */
+export function keyFromSlug(slug: string): string {
+  const words = slug.split("-").filter(Boolean);
+  return (
+    words.length > 1
+      ? words
+          .slice(0, 3)
+          .map((w) => w[0])
+          .join("")
+      : slug.slice(0, 3)
+  ).toUpperCase();
+}
+
+export function hueFor(slug: string): number {
+  let hash = 0;
+  for (const char of slug) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return hash % HUES;
+}
+
+function toIssue(
+  content: Executable,
+  categories: CategoryRef[],
+  key: string,
+): Issue {
   const language = LANGUAGES.find((l) => l.id === content.language)?.id;
   return {
     slug: content.id,
+    key,
     version: content.version,
     title: content.title ?? titleFromSlug(content.id),
     summary: content.summary,
     task: content.task,
     kind: content.kind,
     difficulty: content.difficulty,
+    estimate: content.difficulty && ESTIMATES[content.difficulty],
     language,
     labels: content.skills,
     criteria: content.inputs.map((input, i) => ({
@@ -145,24 +184,37 @@ export function library(catalog: Catalog): Library {
         .map((e) => e.content as Adventure),
     ).values(),
   ];
+  const refs = adventures.map(
+    (a): CategoryRef => ({
+      slug: a.id,
+      title: a.title ?? titleFromSlug(a.id),
+      key: a.key ?? keyFromSlug(a.id),
+      hue: hueFor(a.id),
+    }),
+  );
   const categoriesOf = (slug: string): CategoryRef[] =>
-    adventures
-      .filter((a) => a.challenges.some(([id]) => id === slug))
-      .map((a) => ({ slug: a.id, title: a.title ?? titleFromSlug(a.id) }));
+    refs.filter((_, i) => adventures[i].challenges.some(([id]) => id === slug));
+  const keyOf = (slug: string): string => {
+    const i = adventures.findIndex((a) =>
+      a.challenges.some(([id]) => id === slug),
+    );
+    if (i < 0) return keyFromSlug(slug);
+    const position = adventures[i].challenges.findIndex(([id]) => id === slug);
+    return `${refs[i].key}-${position + 1}`;
+  };
   const issueVersion = (slug: string, version: string) => {
     const content = challenges.find(
       (c) => c.id === slug && c.version === version,
     );
-    return content && toIssue(content, categoriesOf(slug));
+    return content && toIssue(content, categoriesOf(slug), keyOf(slug));
   };
   return {
     issues: [...latestBy(challenges).values()].map((c) =>
-      toIssue(c, categoriesOf(c.id)),
+      toIssue(c, categoriesOf(c.id), keyOf(c.id)),
     ),
-    categories: adventures.map((adventure) => ({
-      slug: adventure.id,
+    categories: adventures.map((adventure, i) => ({
+      ...refs[i],
       version: adventure.version,
-      title: adventure.title ?? titleFromSlug(adventure.id),
       summary: adventure.summary,
       story: adventure.story,
       // A pinned Challenge can be disabled after the Adventure was published; leave it out

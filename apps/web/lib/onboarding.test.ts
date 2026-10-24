@@ -38,7 +38,7 @@ test("next only ever leads to a path on this site, never back to onboarding", ()
 test("after onboarding, issues are filtered to the chosen stack", () => {
   assert.equal(
     issuesFor({ languages: ["python", "rust"] }),
-    "/issues?language=python&language=rust",
+    "/issues?q=lang%3Apython%2Crust",
   );
   assert.equal(issuesFor({}), "/issues");
 });

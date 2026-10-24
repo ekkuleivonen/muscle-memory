@@ -45,10 +45,10 @@ export function safeNext(value: unknown, fallback: string): string {
 
 /** The issue list filtered to the languages someone chose, or unfiltered. */
 export function issuesFor(profile: Profile): string {
-  const params = new URLSearchParams();
-  for (const id of profile.languages ?? []) params.append("language", id);
-  const search = params.toString();
-  return search ? `/issues?${search}` : "/issues";
+  const languages = profile.languages ?? [];
+  return languages.length
+    ? `/issues?${new URLSearchParams({ q: `lang:${languages.join(",")}` })}`
+    : "/issues";
 }
 
 /** Rebuilds a page's own path and query, for the onboarding return link. */

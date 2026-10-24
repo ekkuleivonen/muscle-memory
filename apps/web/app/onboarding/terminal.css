@@ -1,11 +1,11 @@
 /* Onboarding terminal. */
 .term {
-  --t-bg: #0d1512;
-  --t-fg: #e3e6dc;
-  --t-dim: #8a988c;
-  --t-accent: #f0794f;
-  --t-ok: #9ccf8f;
-  --t-err: #ff8a7a;
+  --t-bg: #0f1012;
+  --t-fg: #e5e6e9;
+  --t-dim: #8b8f99;
+  --t-accent: #7d86f1;
+  --t-ok: #3dbb7f;
+  --t-err: #f2555a;
   position: fixed;
   inset: 0;
   overflow-y: auto;
@@ -19,7 +19,7 @@
   line-height: 1.6;
 }
 .term ::selection {
-  background: #f0794f55;
+  background: #7d86f155;
 }
 .t-line,
 .t-list li {

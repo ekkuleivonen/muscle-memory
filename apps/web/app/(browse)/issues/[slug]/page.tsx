@@ -2,16 +2,28 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireOnboarding } from "../../../../lib/gate";
-import { pathWithQuery } from "../../../../lib/onboarding";
-import { getLibrary } from "../../../../lib/load";
 import type { Issue } from "../../../../lib/library";
-import type { SearchParams } from "../../../../lib/queries";
+import { getLibrary } from "../../../../lib/load";
+import { pathWithQuery } from "../../../../lib/onboarding";
 import {
-  DifficultyBadge,
-  KindBadge,
-  LanguageBadge,
-  RunBadge,
-} from "../../_components/badges";
+  formatQuery,
+  emptyIssueQuery,
+  type SearchParams,
+} from "../../../../lib/queries";
+import {
+  Avatar,
+  CategorySquare,
+  Estimate,
+  LabelPill,
+  LanguageTag,
+} from "../../_components/bits";
+import {
+  KIND_LABELS,
+  KindIcon,
+  PlayIcon,
+  StatusIcon,
+} from "../../_components/icons";
+import { Sep, Topbar } from "../../_components/topbar";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -33,19 +45,16 @@ async function find({ params, searchParams }: Props) {
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { issue } = await find(props);
   return issue
-    ? { title: `${issue.title} · Muscle Memory`, description: issue.summary }
+    ? {
+        title: `${issue.key} ${issue.title} · Muscle Memory`,
+        description: issue.summary,
+      }
     : { title: "Issue not found · Muscle Memory" };
 }
 
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
 const show = (value: unknown) => JSON.stringify(value);
+const labelHref = (label: string) =>
+  `/issues?${new URLSearchParams({ q: formatQuery({ ...emptyIssueQuery(), label: [label] }) })}`;
 
 export default async function IssuePage(props: Props) {
   const [{ slug }, params] = await Promise.all([
@@ -55,135 +64,156 @@ export default async function IssuePage(props: Props) {
   await requireOnboarding(pathWithQuery(`/issues/${slug}`, params));
   const { issue, latest } = await find(props);
   if (!issue) notFound();
+  const category = issue.categories[0];
   return (
-    <main className="page">
-      <div className="crumbs">
-        <Link href="/issues">Issues</Link> / {issue.slug}
-      </div>
-      <h1>{issue.title}</h1>
-      <div className="row-meta">
-        <KindBadge kind={issue.kind} />
-        <DifficultyBadge difficulty={issue.difficulty} />
-        <LanguageBadge language={issue.language} />
-        <RunBadge runnable={issue.runnable} />
-      </div>
-      {latest && latest.version !== issue.version && (
-        <p className="note">
-          You are viewing version {issue.version}.{" "}
-          <Link href={`/issues/${issue.slug}`}>
-            See the latest ({latest.version})
+    <>
+      <Topbar
+        actions={
+          issue.runnable && (
+            <Link className="btn primary" href={workspaceHref(issue)}>
+              <PlayIcon /> Start work
+            </Link>
+          )
+        }
+      >
+        {category ? (
+          <Link href={`/categories/${category.slug}`}>
+            <CategorySquare category={category} /> {category.title}
           </Link>
-          .
-        </p>
-      )}
-      <div className="detail">
-        <div>
-          {issue.summary && (
-            <section>
-              <h2>Summary</h2>
-              <p>{issue.summary}</p>
-            </section>
+        ) : (
+          <Link href="/issues">Issues</Link>
+        )}
+        <Sep />
+        <span className="mono">{issue.key}</span>
+      </Topbar>
+      <main className="content issue">
+        <article>
+          {latest && latest.version !== issue.version && (
+            <p className="banner">
+              You are viewing version {issue.version}.{" "}
+              <Link href={`/issues/${issue.slug}`}>
+                Open the latest ({latest.version})
+              </Link>
+            </p>
           )}
-          <section>
+          <h1>{issue.title}</h1>
+          {issue.summary && <p className="lede">{issue.summary}</p>}
+          <section className="section">
             <h2>Description</h2>
             <p>{issue.task}</p>
           </section>
-          <section>
-            <h2>Acceptance criteria · {issue.criteria.length} checks</h2>
-            <ul className="criteria">
+          <section className="section">
+            <h2>
+              Acceptance criteria{" "}
+              <span className="count">{issue.criteria.length}</span>
+            </h2>
+            <ul className="checklist">
               {issue.criteria.map(({ input, expected }, i) => (
                 <li key={i}>
-                  {show(input)} → {show(expected)}
+                  <span className="box" aria-hidden />
+                  <span>
+                    {show(input)} <span className="arrow">→</span>{" "}
+                    {show(expected)}
+                  </span>
                 </li>
               ))}
             </ul>
           </section>
-          <section>
+          <section className="section">
             <h2>Activity</h2>
-            {issue.comments.length === 0 && (
-              <p className="muted">No comments yet.</p>
-            )}
-            {issue.comments.map((comment, i) => (
-              <div className="comment" key={i}>
-                <span className="avatar" aria-hidden>
-                  {initials(comment.author)}
-                </span>
-                <div className="bubble">
-                  <div className="who">
-                    {comment.author}
-                    {comment.role && ` · ${comment.role}`}
+            <div className="timeline">
+              {issue.comments.map((comment, i) => (
+                <div className="comment" key={i}>
+                  <Avatar name={comment.author} />
+                  <div className="comment-box">
+                    <div className="comment-head">
+                      <b>{comment.author}</b>
+                      {comment.role && (
+                        <span className="role">{comment.role}</span>
+                      )}
+                    </div>
+                    <div className="comment-body">{comment.body}</div>
                   </div>
-                  {comment.body}
                 </div>
-              </div>
-            ))}
-            {issue.hints > 0 && (
-              <p className="note">
-                {issue.hints === 1
-                  ? "A teammate has a hint"
-                  : `Teammates have ${issue.hints} hints`}{" "}
-                if you get stuck while working on this.
-              </p>
-            )}
+              ))}
+              {issue.hints > 0 && (
+                <div className="event">
+                  <StatusIcon />
+                  {issue.hints === 1
+                    ? "A teammate has a hint ready if you get stuck."
+                    : `Teammates have ${issue.hints} hints ready if you get stuck.`}
+                </div>
+              )}
+              {!issue.comments.length && !issue.hints && (
+                <p className="dim">No activity yet.</p>
+              )}
+            </div>
           </section>
-        </div>
-        <Sidebar issue={issue} />
-      </div>
-    </main>
+        </article>
+        <Properties issue={issue} />
+      </main>
+    </>
   );
 }
 
-function Sidebar({ issue }: { issue: Issue }) {
+function workspaceHref(issue: Issue) {
+  return `/workspace?challenge=${encodeURIComponent(`${issue.slug}@${issue.version}`)}`;
+}
+
+function Properties({ issue }: { issue: Issue }) {
   return (
-    <aside className="side" aria-label="Issue details">
+    <aside className="props" aria-label="Properties">
       {issue.runnable ? (
-        <Link
-          className="button"
-          href={`/workspace?challenge=${encodeURIComponent(`${issue.slug}@${issue.version}`)}`}
-        >
-          Start work →
+        <Link className="btn primary start" href={workspaceHref(issue)}>
+          <PlayIcon /> Start work
         </Link>
       ) : (
-        <p className="note" style={{ marginTop: 0 }}>
-          This issue can be read but not run yet: only Python runs in the
-          browser so far.
+        <p className="note">
+          Read-only for now: only Python runs in the browser so far.
         </p>
       )}
       <dl>
+        <dt>Status</dt>
+        <dd>
+          <StatusIcon /> Todo
+        </dd>
         <dt>Kind</dt>
         <dd>
-          <KindBadge kind={issue.kind} />
+          <KindIcon kind={issue.kind} size={14} />
+          {issue.kind ? KIND_LABELS[issue.kind] : "—"}
         </dd>
-        <dt>Difficulty</dt>
-        <dd>{issue.difficulty ?? "—"}</dd>
+        <dt>Estimate</dt>
+        <dd>
+          <Estimate points={issue.estimate} /> {issue.difficulty ?? "—"}
+        </dd>
         <dt>Language</dt>
         <dd>
-          <LanguageBadge language={issue.language} />
+          <LanguageTag language={issue.language} />
         </dd>
         <dt>Labels</dt>
         <dd>
           {issue.labels.map((label) => (
-            <Link
-              key={label}
-              className="badge label"
-              href={`/issues?q=${encodeURIComponent(label)}`}
-            >
-              {label}
+            <Link key={label} href={labelHref(label)}>
+              <LabelPill label={label} />
             </Link>
           ))}
         </dd>
-        <dt>Categories</dt>
+        <dt>Category</dt>
         <dd>
           {issue.categories.length
             ? issue.categories.map((c) => (
-                <Link key={c.slug} href={`/categories/${c.slug}`}>
-                  {c.title}
+                <Link
+                  key={c.slug}
+                  href={`/categories/${c.slug}`}
+                  className="tag"
+                >
+                  <CategorySquare category={c} /> {c.title}
                 </Link>
               ))
             : "—"}
         </dd>
         <dt>Version</dt>
-        <dd>{issue.version}</dd>
+        <dd className="mono faint">{issue.version}</dd>
       </dl>
     </aside>
   );

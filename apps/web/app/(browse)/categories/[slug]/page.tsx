@@ -2,10 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireOnboarding } from "../../../../lib/gate";
+import {
+  difficultyRange,
+  languageLabel,
+  languagesOf,
+} from "../../../../lib/library";
 import { getLibrary } from "../../../../lib/load";
-import { difficultyRange, languagesOf } from "../../../../lib/library";
-import { LanguageBadge } from "../../_components/badges";
-import { IssueRows } from "../../_components/issue-rows";
+import { emptyIssueQuery, href } from "../../../../lib/queries";
+import { CategorySquare, LanguageDot } from "../../_components/bits";
+import { FilterIcon } from "../../_components/icons";
+import { IssueRows } from "../../_components/issue-list";
+import { Sep, Topbar } from "../../_components/topbar";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -32,48 +39,66 @@ export default async function CategoryPage(props: Props) {
   await requireOnboarding(`/categories/${(await props.params).slug}`);
   const { category, latest } = await find(props);
   if (!category) notFound();
-  const range = difficultyRange(category.issues);
   return (
-    <main className="page">
-      <div className="crumbs">
-        <Link href="/categories">Categories</Link> / {category.slug}
-      </div>
-      <h1>{category.title}</h1>
-      {category.summary && <p className="muted">{category.summary}</p>}
-      <div className="detail">
-        <div>
-          <section>
-            <h2>About</h2>
-            <p>{category.story}</p>
-          </section>
-          <section>
-            <h2>Issues · in order</h2>
-            <IssueRows issues={category.issues} latest={latest} numbered />
-          </section>
-        </div>
-        <aside className="side" aria-label="Category details">
+    <>
+      <Topbar
+        actions={
           <Link
-            className="button ghost"
-            href={`/issues?category=${category.slug}`}
+            className="btn"
+            href={href("/issues", {
+              ...emptyIssueQuery(),
+              category: [category.slug],
+            })}
           >
-            Filter issues by this category
+            <FilterIcon /> View in issues
           </Link>
-          <dl>
+        }
+      >
+        <Link href="/categories">Categories</Link>
+        <Sep />
+        <span>{category.title}</span>
+      </Topbar>
+      <main className="content">
+        <div className="category-head">
+          <CategorySquare category={category} />
+          <h1>{category.title}</h1>
+        </div>
+        {category.summary && <p className="dim">{category.summary}</p>}
+        <dl className="facts">
+          <div>
+            <dt>Key</dt>
+            <dd className="mono">{category.key}</dd>
+          </div>
+          <div>
             <dt>Issues</dt>
             <dd>{category.issues.length}</dd>
+          </div>
+          <div>
             <dt>Difficulty</dt>
-            <dd>{range || "—"}</dd>
+            <dd>{difficultyRange(category.issues) || "—"}</dd>
+          </div>
+          <div>
             <dt>Languages</dt>
-            <dd>
+            <dd className="langs">
               {languagesOf(category.issues).map((id) => (
-                <LanguageBadge key={id} language={id} />
+                <span key={id}>
+                  <LanguageDot language={id} /> {languageLabel(id)}
+                </span>
               ))}
             </dd>
-            <dt>Version</dt>
-            <dd>{category.version}</dd>
-          </dl>
-        </aside>
-      </div>
-    </main>
+          </div>
+        </dl>
+        <section className="section">
+          <h2>About</h2>
+          <p>{category.story}</p>
+        </section>
+        <section className="section">
+          <h2>
+            Issues <span className="count">{category.issues.length}</span>
+          </h2>
+          <IssueRows issues={category.issues} latest={latest} standalone />
+        </section>
+      </main>
+    </>
   );
 }
