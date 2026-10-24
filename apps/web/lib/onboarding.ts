@@ -43,6 +43,15 @@ export function safeNext(value: unknown, fallback: string): string {
   }
 }
 
+/**
+ * Where onboarding should continue to: the page someone was heading for, unless that was
+ * home (the default destination anyway). Null means home.
+ */
+export function returnPath(value: unknown): string | null {
+  const path = safeNext(value, "/");
+  return path === "/" ? null : path;
+}
+
 /** The issue list filtered to the languages someone chose, or unfiltered. */
 export function issuesFor(profile: Profile): string {
   const languages = profile.languages ?? [];

@@ -127,7 +127,7 @@ test("commands parse case-insensitively and Tab completes commands and subcomman
   assert.equal(parseCommand("   "), null);
   assert.deepEqual(complete("he"), { line: "help ", options: [] });
   assert.deepEqual(complete("data e"), { line: "data export ", options: [] });
-  assert.equal(complete("").options.length, 6);
+  assert.equal(complete("").options.length, 7);
   assert.deepEqual(complete("se"), { line: "setup ", options: [] });
   assert.deepEqual(complete("data "), {
     line: "data ",

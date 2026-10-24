@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { safeNext } from "../../lib/onboarding";
+import { returnPath } from "../../lib/onboarding";
 import "./terminal.css";
 import { Terminal } from "./terminal";
 
@@ -10,6 +10,5 @@ export default async function OnboardingPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const next = safeNext((await searchParams).next, "");
-  return <Terminal next={next || null} />;
+  return <Terminal next={returnPath((await searchParams).next)} />;
 }

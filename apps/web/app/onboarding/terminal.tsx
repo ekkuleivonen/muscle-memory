@@ -152,10 +152,6 @@ export function Terminal({ next }: { next: string | null }) {
     );
   }
 
-  function destination() {
-    return next ?? issuesFor(profile.current ?? {});
-  }
-
   async function setup() {
     print(
       "",
@@ -207,22 +203,22 @@ export function Terminal({ next }: { next: string | null }) {
         id: "go",
         message: next
           ? "Continue where you were going?"
-          : "Open the issues for your stack?",
+          : "Open your dashboard?",
         initial: true,
       })
     )
-      return go();
+      return go(next ?? "/");
     print(
       <span className="t-dim">
-        Type <Cmd line="help" /> to look around, or <Cmd line="issues" /> when
+        Type <Cmd line="help" /> to look around, or <Cmd line="home" /> when
         you&apos;re ready.
       </span>,
     );
   }
 
-  function go() {
-    print(<span className="t-dim">Opening {destination()}…</span>);
-    router.push(destination());
+  function go(path: string) {
+    print(<span className="t-dim">Opening {path}…</span>);
+    router.push(path);
   }
 
   async function data(sub: string | undefined) {
@@ -322,8 +318,10 @@ export function Terminal({ next }: { next: string | null }) {
               </span>,
             );
           break;
+        case "home":
+          return go(next ?? "/");
         case "issues":
-          return go();
+          return go(issuesFor(profile.current ?? {}));
         case "data":
           await data(command.args[0]);
           break;
@@ -361,7 +359,7 @@ export function Terminal({ next }: { next: string | null }) {
       print(
         "",
         <span>
-          <Cmd line="issues" /> to get to work, <Cmd line="setup" /> to answer
+          <Cmd line="home" /> for your dashboard, <Cmd line="setup" /> to answer
           again, or <Cmd line="help" />.
         </span>,
       );

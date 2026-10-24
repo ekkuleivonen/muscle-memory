@@ -3,6 +3,7 @@ export const COMMANDS = [
   { name: "help", summary: "list commands" },
   { name: "setup", summary: "answer the setup questions again" },
   { name: "profile", summary: "show your answers" },
+  { name: "home", summary: "go to your dashboard (or back where you were)" },
   { name: "issues", summary: "open the issue list for your stack" },
   {
     name: "data",

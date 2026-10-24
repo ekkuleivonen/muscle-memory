@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   isOnboarded,
+  returnPath,
   issuesFor,
   ONBOARDING_VERSION,
   pathWithQuery,
@@ -33,6 +34,22 @@ test("next only ever leads to a path on this site, never back to onboarding", ()
     ["/issues"],
   ])
     assert.equal(safeNext(bad, fallback), fallback, String(bad));
+});
+
+test("onboarding returns to the page someone was heading for, otherwise home", () => {
+  assert.equal(returnPath("/issues/frequency-map"), "/issues/frequency-map");
+  assert.equal(
+    returnPath("/categories?q=lang%3Arust"),
+    "/categories?q=lang%3Arust",
+  );
+  for (const home of [
+    "/",
+    "/onboarding",
+    "/onboarding?next=/issues",
+    "https://evil.example/",
+    undefined,
+  ])
+    assert.equal(returnPath(home), null, String(home));
 });
 
 test("after onboarding, issues are filtered to the chosen stack", () => {
