@@ -16,7 +16,7 @@ The app's `prebuild` step builds the pinned in-browser runtimes (Pyodide, Sucras
 
 The adapter build invokes Next with the standalone output it needs. A regular Next build alone is not sufficient input for `--skipNextBuild`; use the complete adapter command above.
 
-No deploy/upload script is provided. There are no remote database, R2 bucket or credential bindings. This app keeps practice state in the browser's IndexedDB; this is not a hosted multi-user application.
+No deploy/upload script is provided. The app has no database, R2 bucket or credential bindings: practice state lives in the browser's IndexedDB. Recorded practice is uploaded to a separate ingest Worker (`apps/ingest`, see [telemetry](telemetry.md)), which has an R2 bucket and a Pipelines stream of its own.
 
 Wrangler is pinned to a compatible patch that fixes a transitive sharp advisory. The root override raises the build-only `@node-minify/core` glob dependency to 10.5.0, which fixes its command-injection advisory. A clean install reported zero npm vulnerabilities. Revisit the override when upstream removes the older glob pin.
 

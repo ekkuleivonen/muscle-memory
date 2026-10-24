@@ -48,3 +48,34 @@ test("clear removes records and the identity together", async () => {
     store.close();
   }
 });
+
+test("upgrading to the outbox queues records made before it, so nothing is skipped", async () => {
+  const factory = new IDBFactory();
+  // A version 3 store, as it was before uploads existed.
+  await new Promise<void>((resolve, reject) => {
+    const request = factory.open("muscle-memory-local-practice", 3);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore("settings");
+      const workspace = request.result.createObjectStore("workspace", { keyPath: "recordId" });
+      workspace.add(record("s.1", "{}"));
+      workspace.add(record("s.2", "{}"));
+    };
+    request.onsuccess = () => {
+      request.result.close();
+      resolve();
+    };
+    request.onerror = () => reject(request.error);
+  });
+  const store = await openPracticeStore(factory);
+  try {
+    assert.equal(await store.waiting(), 2);
+    const { keys, records } = await store.pending(10, 1_000_000);
+    assert.deepEqual(records.map((r) => r.recordId), ["s.1", "s.2"]);
+    await store.sent(keys);
+    assert.equal(await store.waiting(), 0);
+    assert.ok((await store.deviceSecret()).length >= 32);
+    assert.equal(await store.deviceSecret(), await store.deviceSecret());
+  } finally {
+    store.close();
+  }
+});

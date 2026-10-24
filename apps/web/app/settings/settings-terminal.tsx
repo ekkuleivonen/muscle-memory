@@ -203,7 +203,7 @@ async function logout(t: TerminalApi): Promise<Outcome> {
 
 async function reset(t: TerminalApi): Promise<Outcome> {
   t.print(
-    "This empties your board and deletes saved practice and recorded activity. Your handle and settings stay.",
+    "This empties your board and deletes saved practice and recorded activity from this browser. Your handle and settings stay. Anything already uploaded stays with us until you delete your account.",
   );
   const yes = await t.ask({
     kind: "confirm",
@@ -225,7 +225,7 @@ async function remove(t: TerminalApi): Promise<Outcome> {
   t.print(
     <span>
       This deletes your handle, profile, board, saved practice and activity from
-      this browser, and signs you out.{" "}
+      this browser and from our servers, and signs you out.{" "}
       <span className="t-err">It can&apos;t be undone.</span> Published
       anonymised datasets aren&apos;t linked to you, so they stay.
     </span>,
@@ -246,7 +246,16 @@ async function remove(t: TerminalApi): Promise<Outcome> {
       );
     return "menu";
   }
-  await deleteAccount();
+  try {
+    await deleteAccount();
+  } catch (cause) {
+    t.print(
+      <span className="t-err">
+        {cause instanceof Error ? cause.message : "Nothing was deleted. Try again later."}
+      </span>,
+    );
+    return "menu";
+  }
   t.print(<span>Deleted. So long, {handle}.</span>);
   t.go("/onboarding", "the front door");
   return "left";

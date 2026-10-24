@@ -9,7 +9,7 @@ export const PRIVACY = `## The short version
 - Other people never see your results next to your handle. They see you as part of the crowd: percentiles, averages, that sort of thing.
 - We may publish **anonymised** stats and datasets. Don't want to be in them? **Go stealth** in Settings, no questions asked. (Fair warning: stealth works both ways, so you won't see other people's stats either.)
 - We don't sell your personal data, and there are no ads.
-- **Today, everything stays in your browser.** We're building the bit that syncs it to our servers. This notice already covers that, so nobody gets surprised later.
+- **What you do here is sent to our servers as you go**, and a copy stays in your browser. Delete your account in Settings and it's deleted on both.
 
 That's the gist. The rest is the detail, which the law (reasonably) wants written down.
 
@@ -34,11 +34,12 @@ That's the gist. The rest is the detail, which the law (reasonably) wants writte
 - **Your setup answers**, each time you save them.
 
 Keys are heard only inside the IDE's editors, never anywhere else on the page or outside it, and we never read your clipboard. Typing rhythm can tell people apart, the way handwriting can. We record it to study how people work, not to identify anyone, and we won't use it for that.
-- **A random ID** for your browser, so records from the same person stay together without saying who that person is.
+- **A random ID** for your browser, so records from the same person stay together without saying who that person is, and a secret only your browser knows, which proves that ID is yours when it sends records or asks us to delete them.
 
-**Once accounts sync to our servers**
+**When it reaches our servers**
 
-- The usual server logs: IP address, browser and timestamps. These are for keeping the lights on and the bots out, and we keep them for **[30]** days.
+- Your browser sends what's above every few seconds, plus the time it arrived. Nothing is sent before you've accepted these terms.
+- The usual server logs: IP address, browser and timestamps. These are for keeping the lights on and the bots out, and we keep them for **[30]** days. Your records don't carry your IP address.
 
 We don't collect your name, email, location or contacts, and we don't run third-party trackers. If that changes, this page changes first.
 
@@ -81,7 +82,7 @@ That's the list. No data brokers, no advertisers.
 
 ## How long we keep it
 
-- **Your account and activity**: for as long as you have an account. Delete it and it's gone. Today that's immediate, since it all lives in your browser. Once we have servers, we'll delete it within **[30]** days, plus backups rolling off.
+- **Your account and activity**: for as long as you have an account. Delete it and your browser's copy goes at once, our servers stop accepting anything from it straight away, and what they hold is erased within **[30]** days, plus backups rolling off.
 - **Server logs**: **[30]** days.
 - **Published anonymised datasets** stay published. They aren't linked to you, so there's nothing to delete them by.
 
@@ -96,11 +97,11 @@ Depending on where you live (the EU and UK in particular), you can ask us to:
 
 Email **[privacy@example.com]**. We'll reply within a month. You can also complain to your data protection authority. We'd rather you talked to us first, but it's your call.
 
-Today you can do most of this yourself: \`reset\` and \`delete\` in **Settings** reset your progress or delete your account, and clearing your browser storage does the same, rather less politely.
+You can do most of this yourself: \`delete\` in **Settings** deletes your account here and on our servers. \`reset\` only clears your progress in this browser; what was already sent stays until you delete your account. Clearing your browser storage throws away the secret that proves the records are yours, so delete your account first, or email us.
 
 ## Where it's stored
 
-Today: your browser, on your device. Later: **[region / provider]**. If data leaves the EU/EEA, we'll use the standard legal safeguards and say so here.
+In your browser, and on Cloudflare (our hosting and storage provider), in **[region]**. If data leaves the EU/EEA, we'll use the standard legal safeguards and say so here.
 
 ## Age
 
