@@ -1747,18 +1747,89 @@ export function refundTotal(refund) {
     language: "go",
     skills: ["parsing", "validation", "http"],
     task: "`ParsePage(query)` reads `page` and `per_page` from a URL query string. Defaults are page 1 and 20 per page, `per_page` is capped at 100, and missing, zero, negative or non-numeric values fall back to the default.",
-    inputs: ["page=2&per_page=50", "", "per_page=500", "page=-1&per_page=abc"],
+    inputs: [
+      "page=2&per_page=50",
+      "",
+      "per_page=500",
+      "page=-1&per_page=abc",
+      "page=3",
+      "per_page=100",
+      "per_page=101",
+      "page=0&per_page=0",
+      "per_page=-5",
+      "per_page=-500",
+      "page=abc",
+      "per_page=1",
+      "per_page=50&page=4",
+      "page=7&per_page=20&sort=name",
+      "page=&per_page=",
+      "page=5&per_page=abc",
+      "page=1000000",
+      "perPage=50",
+    ],
     expected: [
       { page: 2, perPage: 50 },
       { page: 1, perPage: 20 },
       { page: 1, perPage: 100 },
       { page: 1, perPage: 20 },
+      { page: 3, perPage: 20 },
+      { page: 1, perPage: 100 },
+      { page: 1, perPage: 100 },
+      { page: 1, perPage: 20 },
+      { page: 1, perPage: 20 },
+      { page: 1, perPage: 20 },
+      { page: 1, perPage: 20 },
+      { page: 1, perPage: 1 },
+      { page: 4, perPage: 50 },
+      { page: 7, perPage: 20 },
+      { page: 1, perPage: 20 },
+      { page: 5, perPage: 20 },
+      { page: 1000000, perPage: 20 },
+      { page: 1, perPage: 20 },
     ],
+    hidden: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
     comments: [
       mateo(
         "The mobile app sends per_page=500 to fetch everything in one go. Cap it, don't error.",
       ),
     ],
+    private: {
+      reference: {
+        "parse_page.go": `package accounts
+
+import (
+	"net/url"
+	"strconv"
+)
+
+// Page is the pagination requested by a list endpoint.
+type Page struct {
+	Page    int \`json:"page"\`
+	PerPage int \`json:"perPage"\`
+}
+
+// ParsePage reads page and per_page from a URL query string, with defaults
+// of page 1 and 20 per page, and per_page capped at 100.
+func ParsePage(query string) Page {
+	values, _ := url.ParseQuery(query)
+	perPage := positiveOr(values.Get("per_page"), 20)
+	if perPage > 100 {
+		perPage = 100
+	}
+	return Page{Page: positiveOr(values.Get("page"), 1), PerPage: perPage}
+}
+
+// positiveOr reads a positive whole number, or gives the fallback for anything else.
+func positiveOr(text string, fallback int) int {
+	n, err := strconv.Atoi(text)
+	if err != nil || n <= 0 {
+		return fallback
+	}
+	return n
+}
+`,
+      },
+    },
   }),
   challenge("reset-link-expiry", {
     parameters: ["issuedAt", "now", "ttlMinutes"],
@@ -1774,13 +1845,46 @@ export function refundTotal(refund) {
       [1000, 4600, 60],
       [1000, 4601, 60],
       [1000, 1000, 0],
+      [1000, 1060, 1],
+      [1000, 1061, 1],
+      [1000, 1001, 0],
+      [0, 60, 1],
+      [0, 61, 1],
+      [1000, 1600, 10],
+      [1000, 1601, 10],
+      [1700000000, 1700000900, 15],
+      [1700000000, 1700000901, 15],
+      [1700000000, 1700086400, 1440],
+      [1700000000, 1700086401, 1440],
+      [1700000000, 1699999990, 15],
     ],
-    expected: [false, false, true, false],
+    expected: [
+      false, false, true, false, false, true, true, false, true, false, true, false, true,
+      false, true, false,
+    ],
+    hidden: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     comments: [
       jo(
         "Customers say reset emails 'never work'. They do, if you click within a minute.",
       ),
     ],
+    private: {
+      reference: {
+        "src/isExpired.php": `<?php
+
+declare(strict_types=1);
+
+/**
+ * Whether a password reset link has expired. Timestamps are Unix seconds;
+ * a link stays valid until $issuedAt + $ttlMinutes * 60, inclusive.
+ */
+function isExpired(int $issuedAt, int $now, int $ttlMinutes): bool
+{
+    return $now > $issuedAt + $ttlMinutes * 60;
+}
+`,
+      },
+    },
   }),
   challenge("rate-limiter", {
     parameters: ["times", "limit", "windowMs"],
@@ -1795,8 +1899,59 @@ export function refundTotal(refund) {
       [[0, 1, 2, 3], 3, 10],
       [[], 1, 10],
       [[0, 10, 20], 1, 10],
+      [[0, 0, 0, 0], 2, 10],
+      [[0, 5, 10, 15], 2, 10],
+      [[1, 2, 3], 0, 10],
+      [[0, 1, 2, 10], 3, 10],
+      [[0, 1, 2, 9], 3, 10],
+      [[0, 1, 2, 9, 12], 3, 10],
+      [[0, 100, 200, 300], 3, 1000],
+      [[0, 1, 2], 1, 1],
+      [[1700000000000, 1700000000500, 1700000001000, 1700000001500, 1700000060600], 3, 60000],
+      [[5, 6, 7, 12], 3, 10],
+      [[995, 1000, 1005], 2, 1000],
+      [[0, 10, 20, 30, 40], 2, 20],
+      [[1000, 1000, 1000], 1, 1000],
+      [[0, 1000, 1999, 2000], 2, 1000],
     ],
-    expected: [[true, true, true, false], [], [true, true, true]],
+    expected: [
+      [true, true, true, false],
+      [],
+      [true, true, true],
+      [true, true, false, false],
+      [true, true, true, true],
+      [false, false, false],
+      [true, true, true, true],
+      [true, true, true, false],
+      [true, true, true, false, true],
+      [true, true, true, false],
+      [true, true, true],
+      [true, true, true, false, true],
+      [true, true, true, false],
+      [true, true, false],
+      [true, true, true, true, true],
+      [true, false, false],
+      [true, true, true, true],
+    ],
+    hidden: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+    private: {
+      reference: {
+        "src/allow.ts": `/**
+ * For each login attempt time, whether it is allowed: at most \`limit\` attempts
+ * may fall inside any window of \`windowMs\` milliseconds.
+ */
+export function allow(times: number[], limit: number, windowMs: number): boolean[] {
+  const recent: number[] = [];
+  return times.map((time) => {
+    while (recent.length > 0 && recent[0] <= time - windowMs) recent.shift();
+    if (recent.length >= limit) return false;
+    recent.push(time);
+    return true;
+  });
+}
+`,
+      },
+    },
     hints: ["Keep only the timestamps still inside the window."],
     comments: [
       sam(
@@ -1812,8 +1967,67 @@ export function refundTotal(refund) {
     language: "ruby",
     skills: ["strings", "unicode", "urls"],
     task: '`slugify(name)` turns a workspace name into its URL slug: lowercase ASCII letters and digits, with every run of anything else between words becoming a single hyphen, and no hyphen at either end. Accented Latin letters lose their accents first, so `"Café Ünïcorn"` becomes `"cafe-unicorn"`.',
-    inputs: ["Acme Inc", "  Café   Ünïcorn  ", "R&D / Ops", "2024 Planning!!", "---"],
-    expected: ["acme-inc", "cafe-unicorn", "r-d-ops", "2024-planning", ""],
+    inputs: [
+      "Acme Inc",
+      "  Café   Ünïcorn  ",
+      "R&D / Ops",
+      "2024 Planning!!",
+      "---",
+      "Équipe Été",
+      "ACME",
+      "already-a-slug",
+      "Team_42",
+      "a--b",
+      "Señor Piñata",
+      "Crème Brûlée Co.",
+      "naïve façade",
+      "ÀÉÎÕÜ",
+      "Ångström Labs",
+      "Cafe\u0301 Nuit",
+      "日本 Team",
+      "🚀 Launch 🚀",
+      "Q3/Q4 Roadmap",
+      "Tab\tSeparated\nName",
+      "",
+    ],
+    expected: [
+      "acme-inc",
+      "cafe-unicorn",
+      "r-d-ops",
+      "2024-planning",
+      "",
+      "equipe-ete",
+      "acme",
+      "already-a-slug",
+      "team-42",
+      "a-b",
+      "senor-pinata",
+      "creme-brulee-co",
+      "naive-facade",
+      "aeiou",
+      "angstrom-labs",
+      "cafe-nuit",
+      "team",
+      "launch",
+      "q3-q4-roadmap",
+      "tab-separated-name",
+      "",
+    ],
+    hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+    private: {
+      reference: {
+        "lib/slugify.rb": `# Workspace URLs are /w/<slug>. Turn a workspace name into its slug:
+# lowercase ASCII letters and digits, words joined by single hyphens.
+def slugify(name)
+  name.unicode_normalize(:nfd)
+      .gsub(/\\p{Mn}/, "")
+      .downcase
+      .gsub(/[^a-z0-9]+/, "-")
+      .gsub(/\\A-+|-+\\z/, "")
+end
+`,
+      },
+    },
     hints: [
       "Unicode normalization (NFD) splits a letter from its accent, so the accent can be dropped.",
     ],
@@ -1846,6 +2060,20 @@ final class Adapter {
       "hunter2hunter2",
       "123456789012",
       "",
+      "abcdefghijk1",
+      "abcdefghij1",
+      "abcdefghijkl",
+      "passwordpassword",
+      "abcdef 12345",
+      "abc\tdefgh1234",
+      "zzzzzzzzzzz9 ",
+      "!!!!!!!!!!!!",
+      "            ",
+      "a1",
+      "a b",
+      "1 2",
+      " ",
+      "ALLCAPSLETTERS9",
     ],
     expected: [
       ["no-digit", "has-whitespace"],
@@ -1853,7 +2081,58 @@ final class Adapter {
       [],
       ["no-letter"],
       ["too-short", "no-digit", "no-letter"],
+      [],
+      ["too-short"],
+      ["no-digit"],
+      ["no-digit"],
+      ["has-whitespace"],
+      ["has-whitespace"],
+      ["has-whitespace"],
+      ["no-digit", "no-letter"],
+      ["no-digit", "no-letter", "has-whitespace"],
+      ["too-short"],
+      ["too-short", "no-digit", "has-whitespace"],
+      ["too-short", "no-letter", "has-whitespace"],
+      ["too-short", "no-digit", "no-letter", "has-whitespace"],
+      [],
     ],
+    hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+    private: {
+      reference: {
+        "src/main/java/com/acme/accounts/PasswordPolicy.java": `package com.acme.accounts;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/** The password rules sign-up and password reset enforce. */
+public final class PasswordPolicy {
+    private PasswordPolicy() {}
+
+    /**
+     * The rules a password breaks, in this order: too-short, no-digit, no-letter,
+     * has-whitespace. Empty when it passes.
+     */
+    public static List<String> violations(String password) {
+        boolean digit = false;
+        boolean letter = false;
+        boolean whitespace = false;
+        for (int i = 0; i < password.length(); i++) {
+            char c = password.charAt(i);
+            digit |= Character.isDigit(c);
+            letter |= Character.isLetter(c);
+            whitespace |= Character.isWhitespace(c);
+        }
+        List<String> broken = new ArrayList<>();
+        if (password.length() < 12) broken.add("too-short");
+        if (!digit) broken.add("no-digit");
+        if (!letter) broken.add("no-letter");
+        if (whitespace) broken.add("has-whitespace");
+        return broken;
+    }
+}
+`,
+      },
+    },
     comments: [
       mateo(
         "Security moved the minimum to 12 last quarter. The form says 12, the API still checks 8, and nothing reports the other rules.",
@@ -1868,11 +2147,71 @@ final class Adapter {
     language: "go",
     skills: ["parsing", "strings"],
     task: 'Write `ParseLine(line)` for lines like `GET /cart 200 12ms`, returning method, path, status and duration in milliseconds.',
-    inputs: ["GET /cart 200 12ms", "POST /pay 502 1300ms"],
+    inputs: [
+      "GET /cart 200 12ms",
+      "POST /pay 502 1300ms",
+      "DELETE /sessions/42 204 3ms",
+      "GET /search?q=red+shoes&page=2 200 87ms",
+      "PUT /users/7/avatar 413 0ms",
+      "GET / 301 1ms",
+      "PATCH /orders/1009 409 15ms",
+      "HEAD /health 200 0ms",
+      "GET /reports/2024/q4 504 30000ms",
+      "POST /login 401 245ms",
+      "GET /static/app.js 304 2ms",
+      "OPTIONS /api/v1/items 200 5ms",
+      "GET /metrics/p99-200ms 503 1200ms",
+      "POST /pay 500 1ms",
+      "GET /checkout 503 60000ms",
+    ],
     expected: [
       { method: "GET", path: "/cart", status: 200, ms: 12 },
       { method: "POST", path: "/pay", status: 502, ms: 1300 },
+      { method: "DELETE", path: "/sessions/42", status: 204, ms: 3 },
+      { method: "GET", path: "/search?q=red+shoes&page=2", status: 200, ms: 87 },
+      { method: "PUT", path: "/users/7/avatar", status: 413, ms: 0 },
+      { method: "GET", path: "/", status: 301, ms: 1 },
+      { method: "PATCH", path: "/orders/1009", status: 409, ms: 15 },
+      { method: "HEAD", path: "/health", status: 200, ms: 0 },
+      { method: "GET", path: "/reports/2024/q4", status: 504, ms: 30000 },
+      { method: "POST", path: "/login", status: 401, ms: 245 },
+      { method: "GET", path: "/static/app.js", status: 304, ms: 2 },
+      { method: "OPTIONS", path: "/api/v1/items", status: 200, ms: 5 },
+      { method: "GET", path: "/metrics/p99-200ms", status: 503, ms: 1200 },
+      { method: "POST", path: "/pay", status: 500, ms: 1 },
+      { method: "GET", path: "/checkout", status: 503, ms: 60000 },
     ],
+    hidden: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+    private: {
+      reference: {
+        "parse_line.go": `package accesslog
+
+import (
+	"strconv"
+	"strings"
+)
+
+// Entry is one line of the access log.
+type Entry struct {
+	Method string \`json:"method"\`
+	Path   string \`json:"path"\`
+	Status int    \`json:"status"\`
+	Ms     int    \`json:"ms"\`
+}
+
+// ParseLine parses lines like "GET /cart 200 12ms".
+func ParseLine(line string) Entry {
+	fields := strings.Fields(line)
+	if len(fields) != 4 {
+		return Entry{}
+	}
+	status, _ := strconv.Atoi(fields[2])
+	ms, _ := strconv.Atoi(strings.TrimSuffix(fields[3], "ms"))
+	return Entry{Method: fields[0], Path: fields[1], Status: status, Ms: ms}
+}
+`,
+      },
+    },
     comments: [
       sam(
         "Alerting is blind to the 502s because duration and status come back empty.",
@@ -2255,8 +2594,82 @@ mm_value *mm_call(const mm_value *args) {
     inputs: [
       [3, [1, 2, 3, 4]],
       [2, []],
+      [3, [1, 2, 3]],
+      [3, [1, 2]],
+      [3, [1, 2, 3, 4, 5, 6]],
+      [3, [1, 2, 3, 4, 5, 6, 7]],
+      [1, [7, 8, 9]],
+      [1, []],
+      [5, [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]],
+      [4, [5, 5, 5, 6]],
+      [2, [0, 0, 1]],
+      [10, [3, 1, 2]],
+      [3, [9, 8, 7, 6]],
+      [2, [1, 2, 3, 4, 5]],
+      [3, [1000, 2000, 3000, 4000, 5000]],
+      [0, [1, 2]],
     ],
-    expected: [[2, 3, 4], []],
+    expected: [
+      [2, 3, 4],
+      [],
+      [1, 2, 3],
+      [1, 2],
+      [4, 5, 6],
+      [5, 6, 7],
+      [9],
+      [],
+      [80, 90, 100, 110, 120],
+      [5, 5, 5, 6],
+      [0, 1],
+      [3, 1, 2],
+      [8, 7, 6],
+      [4, 5],
+      [3000, 4000, 5000],
+      [],
+    ],
+    hidden: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    private: {
+      reference: {
+        "src/ring_buffer.c": `#include <stddef.h>
+
+/* Reverses items[from, to). */
+static void reverse(int *items, size_t from, size_t to)
+{
+    while (from + 1 < to) {
+        int held = items[from];
+        items[from++] = items[--to];
+        items[to] = held;
+    }
+}
+
+/*
+ * Keeps the last \`capacity\` request latencies. Push each value in order, then
+ * write the contents oldest first into \`out\` and return how many there are.
+ */
+size_t ring_buffer(size_t capacity, const int *values, size_t count, int *out)
+{
+    size_t next = 0;
+    size_t size = 0;
+    if (capacity == 0)
+        return 0;
+    /* out is the buffer itself: the oldest entry is overwritten once it is full. */
+    for (size_t i = 0; i < count; i++) {
+        out[next] = values[i];
+        next = (next + 1) % capacity;
+        if (size < capacity)
+            size++;
+    }
+    /* Rotate so the oldest entry, at next, comes first. */
+    if (size == capacity && next != 0) {
+        reverse(out, 0, next);
+        reverse(out, next, size);
+        reverse(out, 0, size);
+    }
+    return size;
+}
+`,
+      },
+    },
     comments: [
       sam("No malloc on the hot path. Fixed-size array, overwrite the oldest."),
     ],
@@ -2275,8 +2688,54 @@ mm_value *mm_call(const mm_value *args) {
       [[15, 20, 35, 40, 50], 100],
       [[], 99],
       [[5], 99],
+      [[50, 15, 40, 20, 35], 30],
+      [Array.from({ length: 100 }, (_, i) => i + 1), 99],
+      [Array.from({ length: 100 }, (_, i) => i + 1), 100],
+      [Array.from({ length: 100 }, (_, i) => i + 1), 50],
+      [[Array.from({ length: 100 }, (_, i) => i + 1), 101].flat(), 99],
+      [Array.from({ length: 100 }, (_, i) => i + 1).reverse(), 90],
+      [[3, 1, 2], 50],
+      [[3, 1, 2], 34],
+      [[3, 1, 2], 33],
+      [[20, 10], 1],
+      [[100, 1], 99],
+      [[7, 7, 7, 7], 50],
+      [[9, 5, 9, 1, 9, 5], 50],
+      [[], 50],
+      [[120, 80, 4000, 95, 110, 87, 101, 99, 130, 92], 99],
     ],
-    expected: [20, 50, null, 5],
+    expected: [20, 50, null, 5, 20, 99, 100, 50, 100, 90, 2, 2, 1, 10, 100, 7, 5, null, 4000],
+    hidden: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+    private: {
+      reference: {
+        "percentile.go": `package metrics
+
+import (
+	"math"
+	"sort"
+)
+
+// Percentile returns the nearest-rank percentile of the samples: sort them and
+// take the value at rank ceil(p / 100 × n), counting from 1. ok is false when
+// there are no samples.
+func Percentile(samples []int, p float64) (value int, ok bool) {
+	if len(samples) == 0 {
+		return 0, false
+	}
+	sorted := append([]int(nil), samples...)
+	sort.Ints(sorted)
+	rank := int(math.Ceil(p / 100 * float64(len(sorted))))
+	if rank < 1 {
+		rank = 1
+	}
+	if rank > len(sorted) {
+		rank = len(sorted)
+	}
+	return sorted[rank-1], true
+}
+`,
+      },
+    },
     comments: [
       sam(
         "The current version re-sorts every sample for every percentile. Busy hours have two million samples.",
@@ -2338,8 +2797,89 @@ mm_value *mm_call(const mm_value *args) {
           ["get", 1],
         ],
       ],
+      [2, [["put", 1, 1], ["put", 2, 2], ["put", 1, 10], ["put", 3, 3], ["get", 1], ["get", 2], ["get", 3]]],
+      [2, [["put", 1, 1], ["put", 2, 2], ["get", 9], ["put", 3, 3], ["get", 1], ["get", 2], ["get", 3]]],
+      [1, [["put", 1, 1], ["get", 1], ["put", 2, 2], ["get", 1], ["get", 2]]],
+      [3, [["get", 1]]],
+      [2, []],
+      [3, [["put", 1, 1], ["put", 2, 2], ["put", 3, 3], ["get", 1], ["get", 2], ["put", 4, 4], ["get", 3], ["get", 1], ["get", 2], ["get", 4]]],
+      [2, [["put", 1, 1], ["put", 1, 5], ["get", 1], ["put", 2, 2], ["put", 3, 3], ["get", 1], ["get", 2], ["get", 3]]],
+      [2, [["put", 1, 1], ["put", 2, 2], ["put", 2, 20], ["get", 1], ["get", 2]]],
+      [2, [["put", 1, 0], ["put", 2, 0], ["get", 1], ["get", 2]]],
+      [3, [["put", 1, 1], ["put", 2, 2], ["get", 1], ["get", 1], ["get", 1], ["put", 3, 3], ["put", 4, 4], ["get", 2], ["get", 1], ["get", 3], ["get", 4]]],
+      [2, [["put", 1, 1], ["put", 2, 2], ["put", 3, 3], ["put", 4, 4], ["get", 1], ["get", 2], ["get", 3], ["get", 4]]],
+      [4, [["put", 1, 1], ["put", 2, 2], ["put", 3, 3], ["put", 4, 4], ["get", 4], ["get", 3], ["get", 2], ["get", 1], ["put", 5, 5], ["get", 4], ["get", 5]]],
+      [2, [["put", 7, 70], ["get", 7], ["put", 8, 80], ["get", 7], ["put", 9, 90], ["get", 8], ["get", 7], ["get", 9]]],
     ],
-    expected: [[1, -1, 1], [-1]],
+    expected: [
+      [1, -1, 1],
+      [-1],
+      [10, -1, 3],
+      [-1, -1, 2, 3],
+      [1, -1, 2],
+      [-1],
+      [],
+      [1, 2, -1, 1, 2, 4],
+      [5, -1, 2, 3],
+      [1, 20],
+      [0, 0],
+      [1, 1, 1, -1, 1, 3, 4],
+      [-1, -1, 3, 4],
+      [4, 3, 2, 1, -1, 5],
+      [70, 70, -1, 70, 90],
+    ],
+    hidden: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+    private: {
+      reference: {
+        "src/simulate.cpp": `#include <list>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+// One cache operation: {"put", key, value} or {"get", key}.
+struct Op {
+    std::string name;
+    int key;
+    int value;
+};
+
+// Runs the operations against an LRU cache of the given capacity and returns
+// the result of each get, -1 for a miss. A get counts as a use.
+std::vector<int> simulate(int capacity, const std::vector<Op>& ops) {
+    // Most recently used first; the map points into the list.
+    std::list<std::pair<int, int>> order;
+    std::unordered_map<int, std::list<std::pair<int, int>>::iterator> where;
+    std::vector<int> results;
+    for (const Op& op : ops) {
+        auto found = where.find(op.key);
+        if (op.name == "get") {
+            if (found == where.end()) {
+                results.push_back(-1);
+                continue;
+            }
+            order.splice(order.begin(), order, found->second);
+            results.push_back(found->second->second);
+        } else if (op.name == "put") {
+            if (found != where.end()) {
+                found->second->second = op.value;
+                order.splice(order.begin(), order, found->second);
+                continue;
+            }
+            if (capacity <= 0) continue;
+            if ((int)order.size() >= capacity) {
+                where.erase(order.back().first);
+                order.pop_back();
+            }
+            order.emplace_front(op.key, op.value);
+            where[op.key] = order.begin();
+        }
+    }
+    return results;
+}
+`,
+      },
+    },
     hints: ["Pair a hash map with a doubly linked list ordered by last use."],
     comments: [
       mateo(
@@ -2355,8 +2895,79 @@ mm_value *mm_call(const mm_value *args) {
     language: "go",
     skills: ["parsing", "config"],
     task: '`ParseDuration(text)` turns strings like `"1h30m"`, `"45s"` or `"2h"` into seconds. Units are `h`, `m` and `s`, each at most once and in that order; anything else returns an error (shown as `null` in the checks).',
-    inputs: ["1h30m", "45s", "2h", "1h1h", "90", ""],
-    expected: [5400, 45, 7200, null, null, null],
+    inputs: [
+      "1h30m",
+      "45s",
+      "2h",
+      "1h1h",
+      "90",
+      "",
+      "30m",
+      "1m30s",
+      "1h2m3s",
+      "2h45s",
+      "0s",
+      "0h0m0s",
+      "90m",
+      "100s",
+      "1m1h",
+      "1s1m",
+      "1d",
+      "h",
+      "1.5h",
+      "-1h",
+      "1h 30m",
+      "1h30",
+      "10ms",
+      "1H",
+    ],
+    expected: [
+      5400, 45, 7200, null, null, null, 1800, 90, 3723, 7245, 0, 0, 5400, 100, null, null, null,
+      null, null, null, null, null, null, null,
+    ],
+    hidden: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+    private: {
+      reference: {
+        "parse_duration.go": `package config
+
+import "errors"
+
+var errBadDuration = errors.New("durations look like 1h30m: h, m and s, each at most once, in that order")
+
+// ParseDuration turns durations like "1h30m", "45s" or "2h" into seconds.
+// Units are h, m and s, each at most once and in that order; anything else
+// is an error.
+func ParseDuration(text string) (int, error) {
+	units := []byte{'h', 'm', 's'}
+	seconds := []int{3600, 60, 1}
+	if text == "" {
+		return 0, errBadDuration
+	}
+	total, unit, i := 0, 0, 0
+	for i < len(text) {
+		start, n := i, 0
+		for i < len(text) && text[i] >= '0' && text[i] <= '9' {
+			n = n*10 + int(text[i]-'0')
+			i++
+		}
+		if i == start || i == len(text) {
+			return 0, errBadDuration
+		}
+		for unit < len(units) && units[unit] != text[i] {
+			unit++
+		}
+		if unit == len(units) {
+			return 0, errBadDuration
+		}
+		total += n * seconds[unit]
+		unit++
+		i++
+	}
+	return total, nil
+}
+`,
+      },
+    },
     comments: [
       sam(
         "Somebody set idle_timeout = 3600 meaning minutes. Let people write 1h.",
