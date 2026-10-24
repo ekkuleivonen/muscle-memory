@@ -79,10 +79,22 @@ export class PythonRunner {
   private spare?: Sandbox;
   private active?: { sandbox: Sandbox; finish: (outcome: RunOutcome) => void };
 
+  private readonly assetBase: URL;
+
   constructor(
     private readonly host: HTMLElement,
     private readonly options: { timeoutMs: number; assetBase?: string },
-  ) {}
+  ) {
+    // Credentials are sent with asset requests, so they may only go to this page's origin.
+    this.assetBase = new URL(
+      options.assetBase ?? manifest.basePath,
+      location.href,
+    );
+    if (this.assetBase.origin !== location.origin)
+      throw new Error(
+        "Runtime files must be served from this site's own origin.",
+      );
+  }
 
   /** Starts loading a sandbox ahead of the first run. Safe to call repeatedly. */
   prepare(): void {
@@ -158,15 +170,29 @@ export class PythonRunner {
   }
 
   private loadAssets(): Promise<Record<string, ArrayBuffer>> {
-    // Same-origin, pinned files; the browser checks each hash before handing over bytes.
+    // Only this trusted page fetches runtime files, and only from its own origin, so the
+    // site's existing sign-in (such as a Cloudflare Access cookie) applies. The sandbox
+    // receives bytes, never credentials. Each file must match its pinned hash, and any
+    // redirect (for example to a sign-in page) fails instead of being followed.
     this.assets ??= Promise.all(
       Object.entries(manifest.files).map(async ([name, integrity]) => {
-        const response = await fetch(
-          (this.options.assetBase ?? manifest.basePath) + name,
-          { integrity, credentials: "omit" },
-        );
+        let response: Response;
+        try {
+          response = await fetch(new URL(name, this.assetBase), {
+            integrity,
+            credentials: "same-origin",
+            mode: "same-origin",
+            redirect: "error",
+          });
+        } catch {
+          throw new Error(
+            `Runtime file ${name} could not be loaded from this site, or did not match its pinned hash. If your sign-in has expired, reload the page.`,
+          );
+        }
         if (!response.ok)
-          throw new Error(`Runtime file ${name} is unavailable.`);
+          throw new Error(
+            `Runtime file ${name} is unavailable (${response.status}).`,
+          );
         return [name, await response.arrayBuffer()] as const;
       }),
     ).then(Object.fromEntries);
