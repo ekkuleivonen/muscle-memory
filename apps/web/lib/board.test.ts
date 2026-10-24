@@ -120,6 +120,14 @@ test("suggestions prefer runnable, then the person's stack, then easier issues",
   }));
   assert.deepEqual(
     suggestions(issues, runnableOnBoard, ["cpp"]).map((i) => i.key),
+    [],
+  );
+  // With only the C and C++ issues left, the person's C++ comes first.
+  const allButC = runnableOnBoard.filter(
+    (item) => item.key !== "EDGE-1" && item.key !== "EDGE-3",
+  );
+  assert.deepEqual(
+    suggestions(issues, allButC, ["cpp"]).map((i) => i.key),
     ["EDGE-3", "EDGE-1"],
   );
   // Among runnable issues not on the board, the person's languages come first.

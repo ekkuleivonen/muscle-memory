@@ -109,5 +109,26 @@
       "go.wasm.gz": 8232161,
       "wasm_exec.js": 16992
     }
+  },
+  "clang": {
+    "version": "22.0.0-git20542-10",
+    "clang": "22.1",
+    "basePath": "/runtime/clang-22.0.0-git20542-10/",
+    "files": {
+      "clang.js": "sha256-opIcWMQyw+NCyPNcYhcfbopOOp+3gT8SWfjXRwsGXYY=",
+      "llvm.core.wasm.gz": "sha256-FAu7UMZR45sQ1Z5wisOSDzvQnEiYkXapsUaSU2UNoU8=",
+      "llvm.core2.wasm": "sha256-lgwybrm123rtvBaVQEIVh6LT8/+YfpPWrVtNpDQw/9Q=",
+      "llvm.core3.wasm": "sha256-Y2gMBDGSq6xHALvaanjkwZsTn6CGsehy0caRXTekKKg=",
+      "llvm.core4.wasm": "sha256-9UTcnMRviKDyLRuDmk+whT3OLW4jHYgL0ZdUxZpaI00=",
+      "llvm-resources.tar.gz": "sha256-xrhQUrVExGyEyeLdCESPDMEuQTF5nNEPSA9NZQCIgKc="
+    },
+    "sizes": {
+      "clang.js": 141144,
+      "llvm.core.wasm.gz": 22637145,
+      "llvm.core2.wasm": 37626,
+      "llvm.core3.wasm": 5458,
+      "llvm.core4.wasm": 787,
+      "llvm-resources.tar.gz": 4243123
+    }
   }
 }

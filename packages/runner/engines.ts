@@ -4,6 +4,7 @@
  * all of them run inside the same sandbox. Adding a language means adding an engine here.
  */
 import manifest from "./runtime-manifest.json";
+import { CLANG_WORKER } from "./workers/clang";
 import { GO_WORKER } from "./workers/go";
 import { HTML_WORKER } from "./workers/html";
 import { JAVASCRIPT_WORKER } from "./workers/javascript";
@@ -32,9 +33,16 @@ export interface Engine {
   /** Passed to the worker with its files. */
   readonly config: Readonly<Record<string, unknown>>;
   readonly worker: string;
+  /** A longer run limit, for engines that compile before running. */
+  readonly timeoutMs?: number;
+  /**
+   * The sandbox may serve several runs: only for engines whose user code runs outside the
+   * worker's JavaScript realm (as a separate WebAssembly instance with WASI imports only).
+   */
+  readonly reusable?: boolean;
 }
 
-const { pyodide, javascript, pglite, html, php, ruby, go } = manifest;
+const { pyodide, javascript, pglite, html, php, ruby, go, clang } = manifest;
 
 export const ENGINES: Record<EngineId, Engine> = {
   pyodide: {
@@ -119,6 +127,18 @@ export const ENGINES: Record<EngineId, Engine> = {
     config: {},
     worker: GO_WORKER,
   },
+  clang: {
+    id: "clang",
+    label: `Clang ${clang.clang}`,
+    runtime: { id: "yowasp-clang", version: clang.version, clang: clang.clang },
+    basePath: clang.basePath,
+    files: clang.files,
+    sizes: clang.sizes,
+    config: {},
+    worker: CLANG_WORKER,
+    timeoutMs: 30_000,
+    reusable: true,
+  },
 };
 
 const BY_LANGUAGE: Record<string, EngineId> = {
@@ -130,6 +150,8 @@ const BY_LANGUAGE: Record<string, EngineId> = {
   php: "php",
   ruby: "ruby",
   go: "go",
+  c: "clang",
+  cpp: "clang",
 };
 
 /** The engine that runs a language, if any does yet. */

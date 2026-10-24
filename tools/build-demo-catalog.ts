@@ -37,6 +37,8 @@ const challenge = (
     parameters?: string[];
     /** SQL: the tables each case's rows go into. */
     schema?: string;
+    /** C and C++: turns a case's JSON arguments into the function's types. */
+    adapter?: string;
   },
 ) => ({
   id,
@@ -618,6 +620,27 @@ const challenges = [
 
   // Edge proxy: systems and performance
   challenge("ring-buffer", {
+    adapter: `#include <stdlib.h>
+#include "mm_json.h"
+
+size_t ring_buffer(size_t capacity, const int *values, size_t count, int *out);
+
+/* [capacity, values] → the buffer's contents, oldest first. */
+mm_value *mm_call(const mm_value *args) {
+    size_t capacity = (size_t)mm_integer(mm_at(args, 0));
+    const mm_value *list = mm_at(args, 1);
+    size_t count = mm_length(list);
+    int *values = calloc(count + 1, sizeof(int));
+    int *out = calloc(count + 1, sizeof(int));
+    for (size_t i = 0; i < count; i++)
+        values[i] = (int)mm_integer(mm_at(list, i));
+    size_t kept = ring_buffer(capacity, values, count, out);
+    mm_value *result = mm_new_array();
+    for (size_t i = 0; i < kept && i <= count; i++)
+        mm_push(result, mm_new_integer(out[i]));
+    return result;
+}
+`,
     parameters: ["capacity", "values"],
     title: "Keep the last N request latencies in memory",
     summary: "A fixed-size buffer that overwrites its oldest entry.",
@@ -658,6 +681,32 @@ const challenges = [
     ],
   }),
   challenge("lru-cache", {
+    adapter: `#include <string>
+#include <vector>
+#include "mm_json.h"
+
+struct Op {
+    std::string name;
+    int key;
+    int value;
+};
+std::vector<int> simulate(int capacity, const std::vector<Op>& ops);
+
+// [capacity, [[name, key, value?], ...]] → the result of each get.
+mm_value *mm_call(const mm_value *args) {
+    std::vector<Op> ops;
+    const mm_value *list = mm_at(args, 1);
+    for (size_t i = 0; i < mm_length(list); i++) {
+        const mm_value *op = mm_at(list, i);
+        ops.push_back({mm_string(mm_at(op, 0)), (int)mm_integer(mm_at(op, 1)),
+                       (int)mm_integer(mm_at(op, 2))});
+    }
+    mm_value *result = mm_new_array();
+    for (int got : simulate((int)mm_integer(mm_at(args, 0)), ops))
+        mm_push(result, mm_new_integer(got));
+    return result;
+}
+`,
     parameters: ["capacity", "ops"],
     title: "Cache evicts entries that were just used",
     summary: "Reads must refresh recency in the LRU cache.",

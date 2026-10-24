@@ -47,6 +47,10 @@ const app = createServer(async (request, response) => {
   const path = new URL(request.url, "http://x").pathname;
   if (path === "/")
     return response.writeHead(200, { "content-type": "text/html" }).end(page);
+  if (path === "/demo-catalog.json")
+    return response
+      .writeHead(200, { "content-type": "application/json" })
+      .end(await readFile(join(root, "content/demo/catalog.json")));
   if (path === "/runner.js")
     return response
       .writeHead(200, { "content-type": "text/javascript" })
@@ -830,6 +834,180 @@ export function applyDiscount() { return 0; }`,
   };
 }
 
+/**
+ * Whether this machine's browser survives a WebAssembly memory trap. Normally it is a
+ * catchable RuntimeError; on some hosts (seen on a Debian cloud kernel) the renderer dies
+ * instead, which no page can handle. The crash check is skipped there, and says so.
+ */
+async function survivesMemoryTraps(browserType) {
+  // (module (memory 1) (func (export "f") (result i32) i32.const 0x7ffffff0 i32.load))
+  const bytes = [
+    0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 127, 3, 2, 1, 0, 5, 3, 1, 0,
+    1, 7, 5, 1, 1, 102, 0, 0, 10, 13, 1, 11, 0, 65, 240, 255, 255, 255, 7, 40,
+    2, 0, 11,
+  ];
+  const browser = await browserType.launch();
+  const page = await browser.newPage();
+  const result = await page
+    .evaluate(async (bytes) => {
+      const { instance } = await WebAssembly.instantiate(new Uint8Array(bytes));
+      try {
+        instance.exports.f();
+        return false;
+      } catch (error) {
+        return error instanceof WebAssembly.RuntimeError;
+      }
+    }, bytes)
+    .catch(() => false);
+  await browser.close();
+  return result;
+}
+
+/** C and C++ in a page of their own: LLVM alone is 75 MB of WebAssembly. */
+async function clangCheck(browserType) {
+  const traps = await survivesMemoryTraps(browserType);
+  if (!traps)
+    console.log(
+      "SKIP c: a crash stays with its case (this machine's browser dies on any WebAssembly memory trap)",
+    );
+  resetHits();
+  const browser = await browserType.launch();
+  const context = await signedInContext(browser, AUTH_VALUE);
+  const tab = await context.newPage();
+  if (process.env.VERBOSE)
+    tab.on("console", (m) => console.log("page:", m.text().slice(0, 160)));
+  tab.on("crash", () => console.log("C/C++ page crashed"));
+  await tab.goto(APP + "/");
+  const report = await tab.evaluate(async (traps) => {
+    const host = document.getElementById("host");
+    const results = {};
+    const catalog = await (await fetch("/demo-catalog.json")).json();
+    const issue = (id) =>
+      Object.values(catalog.entries).find((e) => e.content.id === id).content;
+    const ring = issue("ring-buffer");
+    const lru = issue("lru-cache");
+    // One runner for C, kept between runs like the IDE does.
+    const clang = new MMRunner.Runner(MMRunner.ENGINES.clang, host, {
+      timeoutMs: 4000,
+    });
+    const c = (code, extra = {}) =>
+      clang.run({
+        runId: "c" + Math.random(),
+        code,
+        inputs: ring.inputs,
+        filename: "src/ring_buffer.c",
+        language: "c",
+        entrypoint: ring.entrypoint,
+        parameters: ring.parameters,
+        adapter: ring.adapter,
+        ...extra,
+      });
+    const started = performance.now();
+    results.c = await c(`#include <stdio.h>
+#include <stddef.h>
+size_t ring_buffer(size_t capacity, const int *values, size_t count, int *out) {
+    size_t start = count > capacity ? count - capacity : 0;
+    printf("keeping %zu\\n", count - start);
+    for (size_t i = start; i < count; i++) out[i - start] = values[i];
+    return count - start;
+}
+`);
+    results.cFirstMs = Math.round(performance.now() - started);
+    const again = performance.now();
+    results.cAgain = await c(ring.starter);
+    results.cAgainMs = Math.round(performance.now() - again);
+    results.cSyntax = await c("size_t ring_buffer( {\n");
+    if (traps)
+      results.cCrash = await c(`#include <stddef.h>
+size_t ring_buffer(size_t capacity, const int *values, size_t count, int *out) {
+    int *nowhere = (int *)0x7fffffff;
+    out[0] = *nowhere;
+    return 1;
+}
+`);
+    clang.dispose();
+    const cpp = new MMRunner.Runner(MMRunner.ENGINES.clang, host, {
+      timeoutMs: 4000,
+    });
+    results.cpp = await cpp.run({
+      runId: "cpp",
+      code: `#include <list>
+#include <string>
+#include <unordered_map>
+#include <vector>
+struct Op { std::string name; int key; int value; };
+std::vector<int> simulate(int capacity, const std::vector<Op>& ops) {
+    std::list<std::pair<int, int>> order;
+    std::unordered_map<int, std::list<std::pair<int, int>>::iterator> where;
+    std::vector<int> results;
+    for (const Op& op : ops) {
+        auto found = where.find(op.key);
+        if (op.name == "get") {
+            if (found == where.end()) { results.push_back(-1); continue; }
+            order.splice(order.begin(), order, found->second);
+            results.push_back(found->second->second);
+        } else {
+            if (found != where.end()) order.erase(found->second);
+            order.emplace_front(op.key, op.value);
+            where[op.key] = order.begin();
+            if ((int)order.size() > capacity) { where.erase(order.back().first); order.pop_back(); }
+        }
+    }
+    return results;
+}
+`,
+      inputs: lru.inputs,
+      filename: "src/simulate.cpp",
+      language: "cpp",
+      entrypoint: lru.entrypoint,
+      parameters: lru.parameters,
+      adapter: lru.adapter,
+    });
+    results.cppExpected = lru.expected;
+    cpp.dispose();
+    results.ringExpected = ring.expected;
+    results.frames = document.querySelectorAll("iframe").length;
+    return results;
+  }, traps);
+  await new Promise((done) => setTimeout(done, 500));
+  await browser.close();
+  if (process.env.VERBOSE)
+    for (const [name, value] of Object.entries(report))
+      console.log(name, JSON.stringify(value).slice(0, 700));
+  return {
+    "c: compiles, runs every case, printf captured": (() => {
+      const expected = report.ringExpected.map((e) => JSON.stringify(e));
+      return (
+        report.c.status === "completed" &&
+        report.c.cases.every((r, i) => r.output?.text === expected[i]) &&
+        /keeping 3\n/.test(report.c.stdout.text)
+      );
+    })(),
+    "c: the sandbox is kept, so a second run skips loading LLVM":
+      report.cAgain.status === "completed" && report.cAgainMs < report.cFirstMs,
+    "c: a compile error shows clang's message for the solution file":
+      report.cSyntax.phase === "compile" &&
+      /src\/ring_buffer\.c:1:/.test(report.cSyntax.error.traceback.text),
+    ...(traps
+      ? {
+          "c: a crash stays with its case": report.cCrash.cases.every(
+            (r) => r.error?.type === "Crash",
+          ),
+        }
+      : {}),
+    "cpp: libc++ containers, the adapter's struct, every case": (() => {
+      const expected = report.cppExpected.map((e) => JSON.stringify(e));
+      return (
+        report.cpp.status === "completed" &&
+        report.cpp.cases.every((r, i) => r.output?.text === expected[i])
+      );
+    })(),
+    "no request from C or C++ reached either server":
+      hits.app.length === 0 && hits.outside.length === 0,
+    "no sandbox frames left behind": report.frames === 0,
+  };
+}
+
 const requested = process.argv.slice(2);
 const engines = { chromium, firefox, webkit };
 let failures = 0;
@@ -858,6 +1036,16 @@ for (const name of process.env.ONLY_AUTH
     );
   }
 }
+if (!process.env.PREVIEW_URL && !process.env.ONLY_AUTH)
+  for (const name of requested.length ? requested : ["chromium"]) {
+    console.log(`\n=== ${name}: C and C++ ===`);
+    for (const [label, pass] of Object.entries(
+      await clangCheck(engines[name]),
+    )) {
+      if (!pass) failures++;
+      console.log(`${pass ? "ok  " : "FAIL"} ${label}`);
+    }
+  }
 if (!process.env.PREVIEW_URL && !process.env.ONLY_AUTH)
   for (const name of requested.length ? requested : ["chromium"]) {
     console.log(

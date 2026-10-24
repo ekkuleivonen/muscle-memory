@@ -33,7 +33,7 @@ const versionOf = async (name) =>
   JSON.parse(await readFile(join(packageDir(name), "package.json"), "utf8"))
     .version;
 
-async function bundle(source, define = {}) {
+async function bundle(source, define = {}, external = []) {
   const result = await build({
     stdin: {
       contents: source,
@@ -47,6 +47,7 @@ async function bundle(source, define = {}) {
     minify: true,
     legalComments: "inline",
     define,
+    external,
     write: false,
     logLevel: "silent",
   });
@@ -170,6 +171,35 @@ const ENGINES = {
         // 39 MB unpacked: shipped gzipped, unpacked by the page after its hash is checked.
         "go.wasm.gz": gzipSync(built["go.wasm"], { level: 9 }),
         "wasm_exec.js": built["wasm_exec.js"],
+      };
+    },
+  },
+  clang: {
+    package: "@yowasp/clang",
+    license: (v) =>
+      `YoWASP Clang ${v} (ISC), https://yowasp.org/\nLLVM, Clang and LLD (Apache-2.0 WITH LLVM-exception), https://llvm.org/LICENSE.txt\nwasi-libc and libc++ (see their licenses in llvm-resources.tar)\nbrowser_wasi_shim (MIT OR Apache-2.0), https://github.com/bjorn3/browser_wasi_shim\n`,
+    files: async () => {
+      const gen = join(packageDir("@yowasp/clang"), "gen");
+      const read = (name) => readFile(join(gen, name));
+      return {
+        // Its wasm and headers are served from memory, so URLs resolve against a dummy base;
+        // the Node-only branch of its loader is left out.
+        "clang.js": await bundle(
+          `export { commands } from "@yowasp/clang";
+           export * as wasi from "@bjorn3/browser_wasi_shim";`,
+          { "import.meta.url": '"https://runtime.invalid/clang.js"' },
+          ["node:*"],
+        ),
+        // 75 MB unpacked, over Cloudflare's 25 MiB per-file limit: shipped gzipped.
+        "llvm.core.wasm.gz": gzipSync(await read("llvm.core.wasm"), {
+          level: 9,
+        }),
+        "llvm.core2.wasm": await read("llvm.core2.wasm"),
+        "llvm.core3.wasm": await read("llvm.core3.wasm"),
+        "llvm.core4.wasm": await read("llvm.core4.wasm"),
+        "llvm-resources.tar.gz": gzipSync(await read("llvm-resources.tar"), {
+          level: 9,
+        }),
       };
     },
   },

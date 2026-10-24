@@ -13,8 +13,8 @@ import { boundText, CAPTURE_LIMIT_BYTES } from "./evidence";
 import { safeIdentifier } from "./events";
 
 /**
- * 1.3.0: JavaScript, TypeScript, SQL, HTML, PHP, Ruby and Go run too; the runtime names the engine that ran the
- * code (pyodide, browser-javascript, pglite, linkedom, php-wasm, ruby.wasm or yaegi), and cases may list several arguments.
+ * 1.3.0: JavaScript, TypeScript, SQL, HTML, PHP, Ruby, Go, C and C++ run too; the runtime names the engine that ran the
+ * code (pyodide, browser-javascript, pglite, linkedom, php-wasm, ruby.wasm, yaegi or yowasp-clang), and cases may list several arguments.
  * 1.2.0: runs say whether they were local or a pull request's checks, and each pull request
  * is recorded with its result. 1.1.0: code revisions in any language (the media type follows the file), the editor's
  * keymap among its features, and a null runtime for languages that cannot run yet.

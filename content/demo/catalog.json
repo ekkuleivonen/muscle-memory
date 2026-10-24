@@ -1304,6 +1304,7 @@
       "id": "ring-buffer",
       "version": "1.0.0",
       "content": {
+        "adapter": "#include <stdlib.h>\n#include \"mm_json.h\"\n\nsize_t ring_buffer(size_t capacity, const int *values, size_t count, int *out);\n\n/* [capacity, values] → the buffer's contents, oldest first. */\nmm_value *mm_call(const mm_value *args) {\n    size_t capacity = (size_t)mm_integer(mm_at(args, 0));\n    const mm_value *list = mm_at(args, 1);\n    size_t count = mm_length(list);\n    int *values = calloc(count + 1, sizeof(int));\n    int *out = calloc(count + 1, sizeof(int));\n    for (size_t i = 0; i < count; i++)\n        values[i] = (int)mm_integer(mm_at(list, i));\n    size_t kept = ring_buffer(capacity, values, count, out);\n    mm_value *result = mm_new_array();\n    for (size_t i = 0; i < kept && i <= count; i++)\n        mm_push(result, mm_new_integer(out[i]));\n    return result;\n}\n",
         "assessment_version": "1.0.0",
         "comments": [
           {
@@ -1356,10 +1357,10 @@
         "title": "Keep the last N request latencies in memory",
         "version": "1.0.0"
       },
-      "digest": "257735cf850909024ed62c211f7205deb45308b1c24292ccf6badfa836440554",
+      "digest": "817e12592f6acf210b5b4ac2495ed4b5806f0ae4ba0c985ae7611e8f3e5b11ba",
       "state": "published",
       "testResult": {
-        "digest": "257735cf850909024ed62c211f7205deb45308b1c24292ccf6badfa836440554",
+        "digest": "817e12592f6acf210b5b4ac2495ed4b5806f0ae4ba0c985ae7611e8f3e5b11ba",
         "fixtures": 2,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1368,28 +1369,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "257735cf850909024ed62c211f7205deb45308b1c24292ccf6badfa836440554",
+          "digest": "817e12592f6acf210b5b4ac2495ed4b5806f0ae4ba0c985ae7611e8f3e5b11ba",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "257735cf850909024ed62c211f7205deb45308b1c24292ccf6badfa836440554",
+          "digest": "817e12592f6acf210b5b4ac2495ed4b5806f0ae4ba0c985ae7611e8f3e5b11ba",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "257735cf850909024ed62c211f7205deb45308b1c24292ccf6badfa836440554",
+          "digest": "817e12592f6acf210b5b4ac2495ed4b5806f0ae4ba0c985ae7611e8f3e5b11ba",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "257735cf850909024ed62c211f7205deb45308b1c24292ccf6badfa836440554",
+          "digest": "817e12592f6acf210b5b4ac2495ed4b5806f0ae4ba0c985ae7611e8f3e5b11ba",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -1509,6 +1510,7 @@
       "id": "lru-cache",
       "version": "1.0.0",
       "content": {
+        "adapter": "#include <string>\n#include <vector>\n#include \"mm_json.h\"\n\nstruct Op {\n    std::string name;\n    int key;\n    int value;\n};\nstd::vector<int> simulate(int capacity, const std::vector<Op>& ops);\n\n// [capacity, [[name, key, value?], ...]] → the result of each get.\nmm_value *mm_call(const mm_value *args) {\n    std::vector<Op> ops;\n    const mm_value *list = mm_at(args, 1);\n    for (size_t i = 0; i < mm_length(list); i++) {\n        const mm_value *op = mm_at(list, i);\n        ops.push_back({mm_string(mm_at(op, 0)), (int)mm_integer(mm_at(op, 1)),\n                       (int)mm_integer(mm_at(op, 2))});\n    }\n    mm_value *result = mm_new_array();\n    for (int got : simulate((int)mm_integer(mm_at(args, 0)), ops))\n        mm_push(result, mm_new_integer(got));\n    return result;\n}\n",
         "assessment_version": "1.0.0",
         "comments": [
           {
@@ -1604,10 +1606,10 @@
         "title": "Cache evicts entries that were just used",
         "version": "1.0.0"
       },
-      "digest": "a3a3fa562bbeecc29c79236e800b86c16eb9362be7027b096a0384464aacb9e3",
+      "digest": "eb58cd7a994f3f5daf4231e49d2a84997075a62137ca92006a0408ce2a5129ee",
       "state": "published",
       "testResult": {
-        "digest": "a3a3fa562bbeecc29c79236e800b86c16eb9362be7027b096a0384464aacb9e3",
+        "digest": "eb58cd7a994f3f5daf4231e49d2a84997075a62137ca92006a0408ce2a5129ee",
         "fixtures": 2,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1616,28 +1618,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "a3a3fa562bbeecc29c79236e800b86c16eb9362be7027b096a0384464aacb9e3",
+          "digest": "eb58cd7a994f3f5daf4231e49d2a84997075a62137ca92006a0408ce2a5129ee",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "a3a3fa562bbeecc29c79236e800b86c16eb9362be7027b096a0384464aacb9e3",
+          "digest": "eb58cd7a994f3f5daf4231e49d2a84997075a62137ca92006a0408ce2a5129ee",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "a3a3fa562bbeecc29c79236e800b86c16eb9362be7027b096a0384464aacb9e3",
+          "digest": "eb58cd7a994f3f5daf4231e49d2a84997075a62137ca92006a0408ce2a5129ee",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "a3a3fa562bbeecc29c79236e800b86c16eb9362be7027b096a0384464aacb9e3",
+          "digest": "eb58cd7a994f3f5daf4231e49d2a84997075a62137ca92006a0408ce2a5129ee",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]

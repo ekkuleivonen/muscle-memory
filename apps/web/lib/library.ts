@@ -99,6 +99,8 @@ type Executable = Challenge & {
   starter?: string;
   /** SQL: the tables each case fills. Without it a SQL issue cannot run. */
   schema?: string;
+  /** C and C++: the adapter from JSON arguments; without it they cannot run. */
+  adapter?: string;
 };
 
 export function compareVersions(a: string, b: string): number {
@@ -164,7 +166,10 @@ function toIssue(
     runnable:
       !!engineFor(language) &&
       workable &&
-      (language !== "sql" || typeof content.schema === "string"),
+      (language !== "sql" || typeof content.schema === "string") &&
+      // C and C++ need the issue's adapter to call the function.
+      ((language !== "c" && language !== "cpp") ||
+        typeof content.adapter === "string"),
     workable,
     project,
   };

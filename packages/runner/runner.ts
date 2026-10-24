@@ -72,6 +72,8 @@ export interface RunRequest {
   readonly parameters?: readonly string[];
   /** SQL: statements that create the schema before each case. */
   readonly setup?: string;
+  /** C and C++: the issue's adapter from JSON arguments to the function's types. */
+  readonly adapter?: string;
   /** Fixture inputs only; expected outputs never enter the sandbox. */
   readonly inputs: readonly unknown[];
 }
@@ -89,7 +91,8 @@ interface Sandbox {
 }
 
 export class Runner {
-  private assets?: Promise<Record<string, ArrayBuffer>>;
+  /** Progress is shown for the first load; later sandboxes load from the HTTP cache. */
+  private loadedOnce = false;
   private spare?: Sandbox;
   private active?: { sandbox: Sandbox; finish: (outcome: RunOutcome) => void };
 
@@ -114,6 +117,11 @@ export class Runner {
       throw new Error(
         "Runtime files must be served from this site's own origin.",
       );
+  }
+
+  /** How long a run may take: the engine's own limit when it compiles first. */
+  get timeoutMs(): number {
+    return Math.max(this.options.timeoutMs, this.engine.timeoutMs ?? 0);
   }
 
   /** Starts loading a sandbox ahead of the first run. Safe to call repeatedly. */
@@ -142,8 +150,18 @@ export class Runner {
         if (this.active?.sandbox !== sandbox) return;
         clearTimeout(timer);
         this.active = undefined;
-        sandbox.destroy();
-        this.prepare();
+        // An engine whose code never runs in the worker's own realm may keep its sandbox
+        // after a clean finish; timeouts, cancels and failures always start over.
+        const clean =
+          outcome.status === "completed" || outcome.status === "user-error";
+        if (this.engine.reusable && clean && !this.spare) {
+          sandbox.onMessage = undefined;
+          sandbox.onFailure = undefined;
+          this.spare = sandbox;
+        } else {
+          sandbox.destroy();
+          this.prepare();
+        }
         resolve(outcome);
       };
       this.active = { sandbox, finish };
@@ -158,9 +176,8 @@ export class Runner {
             finish({ status: "runner-error", phase: "execution", message });
           // The timeout covers execution only, not runtime loading.
           timer = setTimeout(
-            () =>
-              finish({ status: "timeout", timeoutMs: this.options.timeoutMs }),
-            this.options.timeoutMs,
+            () => finish({ status: "timeout", timeoutMs: this.timeoutMs }),
+            this.timeoutMs,
           );
           sandbox.frame.contentWindow?.postMessage(
             { type: "run", ...request },
@@ -189,14 +206,19 @@ export class Runner {
     this.spare = undefined;
   }
 
-  private loadAssets(): Promise<Record<string, ArrayBuffer>> {
-    this.assets ??= loadPinned(
+  /**
+   * Fresh bytes for each sandbox, transferred rather than copied: runtimes run to 100 MB, and
+   * keeping a copy here while the frame and its worker hold theirs runs a tab out of memory.
+   * Each load is hash-checked again; the browser's HTTP cache makes the repeats cheap.
+   */
+  private async loadAssets(): Promise<Record<string, ArrayBuffer>> {
+    const assets = await loadPinned(
       this.engine,
       this.assetBase,
-      this.options.onProgress,
+      this.loadedOnce ? undefined : this.options.onProgress,
     );
-    this.assets.catch(() => (this.assets = undefined));
-    return this.assets;
+    this.loadedOnce = true;
+    return assets;
   }
 
   private createSandbox(): Sandbox {
@@ -239,6 +261,7 @@ export class Runner {
                   config: this.engine.config,
                 },
                 "*",
+                Object.values(assets),
               );
             },
             (error: Error) => reject(error),

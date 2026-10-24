@@ -35,6 +35,8 @@ export interface RepoSource {
   parameters?: readonly string[];
   /** SQL: CREATE TABLE statements for the tables the cases fill. */
   schema?: string;
+  /** C and C++: the adapter from JSON arguments to the function's types. */
+  adapter?: string;
   criteria: readonly { input: unknown; expected: unknown }[];
   project?: { slug: string; title: string; story?: string };
 }
@@ -231,25 +233,25 @@ fn ${src.entrypoint}_matches_every_case() {
 `;
 }
 
-function cTests(src: RepoSource, header_: string, cpp: boolean): string {
+/**
+ * C and C++ have no reflection, so each issue's adapter turns a case's JSON arguments into
+ * the function's types (with the small mm_json library); the test file is that adapter plus
+ * the cases it is run against, one program run per case.
+ */
+function cTests(src: RepoSource): string {
   const cases = src.criteria
     .map((c) => `    {${cString(c.input)}, ${cString(c.expected)}},`)
     .join("\n");
   return `${header("//", src.key)}
-#include ${cpp ? "<cassert>" : "<assert.h>"}
-#include "${header_}"
+// Each case runs the program once: the arguments go to mm_call as JSON, and what it
+// returns is compared with the expected JSON.
 
-/* Input and expected output as JSON. */
-static const struct { const char *input; const char *expected; } cases[] = {
+${(src.adapter ?? "").trim()}
+
+/* Arguments and expected result, as JSON. */
+static const struct { const char *args; const char *expected; } cases[] = {
 ${cases}
 };
-
-int main(void)
-{
-    for (size_t i = 0; i < sizeof cases / sizeof cases[0]; i++)
-        assert(check_${src.entrypoint}(cases[i].input, cases[i].expected));
-    return 0;
-}
 `;
 }
 
@@ -485,13 +487,13 @@ function layout(src: RepoSource): {
       return {
         solution: `src/${snake(e)}.c`,
         tests: `tests/test_${snake(e)}.c`,
-        text: cTests(src, `../src/${snake(e)}.h`, false),
+        text: cTests(src),
       };
     case "cpp":
       return {
         solution: `src/${snake(e)}.cpp`,
         tests: `tests/${snake(e)}_test.cpp`,
-        text: cTests(src, `../src/${snake(e)}.hpp`, true),
+        text: cTests(src),
       };
     case "sql":
       return {

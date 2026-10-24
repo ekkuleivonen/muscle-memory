@@ -70,6 +70,8 @@ type Executable = Challenge & {
   parameters?: string[];
   /** SQL: the tables each case's rows go into. */
   schema?: string;
+  /** C and C++: turns a case's JSON arguments into the function's types. */
+  adapter?: string;
   language?: string;
 };
 
@@ -144,6 +146,7 @@ export function Ide({
         task: challenge.task,
         parameters: challenge.parameters,
         schema: challenge.schema,
+        adapter: challenge.adapter,
         criteria: challenge.inputs.map((input, i) => ({
           input,
           expected: challenge.expected[i],

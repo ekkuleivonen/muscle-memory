@@ -34,7 +34,10 @@ export const BOOT_SCRIPT = String.raw`(() => {
         workerEvent.preventDefault();
         send({ type: "boot-failed", message: String(workerEvent.message) });
       };
-      worker.postMessage({ type: "init", assets: message.assets, config: message.config });
+      worker.postMessage(
+        { type: "init", assets: message.assets, config: message.config },
+        Object.values(message.assets),
+      );
     } else if (message && message.type === "run" && worker) {
       worker.postMessage(message);
     }

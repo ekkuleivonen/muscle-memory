@@ -10,6 +10,7 @@
     "preview": "opennextjs-cloudflare preview"
   },
   "dependencies": {
+    "@bjorn3/browser_wasi_shim": "0.4.2",
     "@codemirror/commands": "6.11.1",
     "@codemirror/lang-cpp": "6.0.3",
     "@codemirror/lang-go": "6.0.1",
@@ -31,6 +32,7 @@
     "@replit/codemirror-vim": "6.4.0",
     "@ruby/3.4-wasm-wasi": "2.10.1",
     "@ruby/wasm-wasi": "2.10.1",
+    "@yowasp/clang": "22.0.0-git20542-10",
     "linkedom": "0.18.14",
     "next": "16.4.3",
     "php-wasm": "0.2.0",

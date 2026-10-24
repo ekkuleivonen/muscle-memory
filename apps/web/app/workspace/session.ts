@@ -63,6 +63,7 @@ export interface SessionOptions {
     entrypoint: string;
     parameters?: readonly string[];
     schema?: string;
+    adapter?: string;
   };
   readonly sink: CaptureSink;
   readonly initialCode: string;
@@ -229,7 +230,7 @@ export class WorkspaceSession {
       revision,
       codeArtifactId: code.artifactId,
       runtime: this.runtime,
-      timeoutMs: RUN_TIMEOUT_MS,
+      timeoutMs: this.options.runner().timeoutMs ?? RUN_TIMEOUT_MS,
     };
     const pullRequest =
       purpose === "pull-request"
@@ -265,6 +266,9 @@ export class WorkspaceSession {
           : {}),
         ...(this.options.challenge.schema
           ? { setup: this.options.challenge.schema }
+          : {}),
+        ...(this.options.challenge.adapter
+          ? { adapter: this.options.challenge.adapter }
           : {}),
         inputs: this.options.challenge.inputs,
       },

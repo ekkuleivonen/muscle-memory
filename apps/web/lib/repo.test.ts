@@ -40,6 +40,7 @@ function sources(): RepoSource[] {
         ? { parameters: c.parameters as string[] }
         : {}),
       ...(typeof c.schema === "string" ? { schema: c.schema } : {}),
+      ...(typeof c.adapter === "string" ? { adapter: c.adapter } : {}),
       criteria: (c.inputs as unknown[]).map((input, i) => ({
         input,
         expected: (c.expected as unknown[])[i],
