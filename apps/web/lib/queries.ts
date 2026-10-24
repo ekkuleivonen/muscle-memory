@@ -8,6 +8,7 @@ import type {
   Difficulty,
   IssueKind,
 } from "../../../packages/domain/assessment";
+import { STATUS_LABELS, type Status } from "./board";
 import { LANGUAGES, type LanguageId } from "./languages";
 import {
   DIFFICULTIES,
@@ -21,8 +22,16 @@ export type SearchParams = Record<string, string | string[] | undefined>;
 
 export const SORTS = ["key", "difficulty", "title"] as const;
 export type Sort = (typeof SORTS)[number];
+/** Board statuses as search terms: is:todo, is:backlog,done. */
+export const STATUSES: readonly Status[] = [
+  "backlog",
+  "todo",
+  "in-progress",
+  "done",
+];
 export const GROUPS = [
   "project",
+  "status",
   "kind",
   "difficulty",
   "language",
@@ -36,6 +45,8 @@ export interface IssueQuery {
   difficulty: Difficulty[];
   project: string[];
   label: string[];
+  /** Board status lives in the browser, so the server leaves this filter to the client. */
+  status: Status[];
   runnable: boolean;
   sort: Sort;
   text: string[];
@@ -46,7 +57,13 @@ export interface ProjectQuery {
   text: string[];
 }
 
-export type ListKey = "language" | "kind" | "difficulty" | "project" | "label";
+export type ListKey =
+  | "language"
+  | "kind"
+  | "difficulty"
+  | "project"
+  | "label"
+  | "status";
 
 const LANGUAGE_IDS = LANGUAGES.map((l) => l.id);
 /** Qualifier names people type, mapped to the filter they set. */
@@ -78,6 +95,7 @@ export const emptyIssueQuery = (): IssueQuery => ({
   difficulty: [],
   project: [],
   label: [],
+  status: [],
   runnable: false,
   sort: "key",
   text: [],
@@ -102,8 +120,14 @@ export function parseIssueQuery(q: string): IssueQuery {
   for (const token of tokens(q)) {
     const match = /^([a-z]+):(.+)$/i.exec(token);
     const name = match?.[1].toLowerCase();
-    if (name === "is" && match![2].toLowerCase() === "runnable") {
-      query.runnable = true;
+    if (name === "is") {
+      // is:runnable, and board statuses as is:todo or is:backlog,done.
+      for (const raw of match![2].toLowerCase().split(",")) {
+        const value = raw.trim();
+        if (value === "runnable") query.runnable = true;
+        else if (STATUSES.includes(value as Status))
+          add(query.status, value as Status);
+      }
       continue;
     }
     if (name === "sort" && SORTS.includes(match![2] as Sort)) {
@@ -123,6 +147,7 @@ export function parseIssueQuery(q: string): IssueQuery {
     }
   }
   query.text = query.text.filter(Boolean);
+  query.status = STATUSES.filter((st) => query.status.includes(st));
   return query;
 }
 
@@ -135,6 +160,10 @@ export function parseProjectQuery(q: string): ProjectQuery {
 export function formatQuery(query: IssueQuery | ProjectQuery): string {
   const parts: string[] = [];
   if ("runnable" in query && query.runnable) parts.push("is:runnable");
+  if ("status" in query && query.status.length)
+    parts.push(
+      `is:${STATUSES.filter((s) => query.status.includes(s)).join(",")}`,
+    );
   const lists: [string, readonly string[]][] =
     "kind" in query
       ? [
@@ -226,7 +255,18 @@ const SORTERS: Record<Sort, (a: Issue, b: Issue) => number> = {
   title: (a, b) => a.title.localeCompare(b.title) || byKey(a, b),
 };
 
-/** Every filter must match (any value within one); every text term must appear. */
+/** The board-status part of a query, applied where the board is known (the browser). */
+export function filterByStatus<T extends { key: string }>(
+  issues: readonly T[],
+  statuses: readonly Status[],
+  statusOf: (key: string) => Status,
+): T[] {
+  return statuses.length
+    ? issues.filter((issue) => statuses.includes(statusOf(issue.key)))
+    : [...issues];
+}
+
+/** Every filter except board status must match (any value within one); every text term must appear. */
 export function filterIssues(
   issues: readonly Issue[],
   query: IssueQuery,
@@ -273,36 +313,46 @@ export function filterProjects(
   );
 }
 
-export interface IssueGroup {
+type GroupableIssue = Pick<
+  Issue,
+  "key" | "project" | "kind" | "difficulty" | "language"
+>;
+
+export interface IssueGroup<T = Issue> {
   id: string;
   label: string;
-  issues: Issue[];
+  issues: T[];
 }
 
 /** Splits sorted issues into display groups, keeping each group's internal order. */
-export function groupIssues(
-  issues: readonly Issue[],
+export function groupIssues<T extends GroupableIssue>(
+  issues: readonly T[],
   group: Group,
-  projects: readonly Project[],
-): IssueGroup[] {
+  projects: readonly Pick<Project, "slug" | "title">[],
+  statusOf: (key: string) => Status = () => "backlog",
+): IssueGroup<T>[] {
   if (group === "none")
     return [{ id: "all", label: "All issues", issues: [...issues] }];
   const order: { id: string; label: string }[] =
     group === "project"
       ? projects.map((c) => ({ id: c.slug, label: c.title }))
-      : group === "kind"
-        ? KINDS.map((k) => ({ id: k, label: k }))
-        : group === "difficulty"
-          ? DIFFICULTIES.map((d) => ({ id: d, label: d }))
-          : LANGUAGES.map((l) => ({ id: l.id, label: l.label }));
-  const valueOf = (issue: Issue): string | undefined =>
+      : group === "status"
+        ? STATUSES.map((s) => ({ id: s, label: STATUS_LABELS[s] }))
+        : group === "kind"
+          ? KINDS.map((k) => ({ id: k, label: k }))
+          : group === "difficulty"
+            ? DIFFICULTIES.map((d) => ({ id: d, label: d }))
+            : LANGUAGES.map((l) => ({ id: l.id, label: l.label }));
+  const valueOf = (issue: T): string | undefined =>
     group === "project"
       ? issue.project?.slug
-      : group === "kind"
-        ? issue.kind
-        : group === "difficulty"
-          ? issue.difficulty
-          : issue.language;
+      : group === "status"
+        ? statusOf(issue.key)
+        : group === "kind"
+          ? issue.kind
+          : group === "difficulty"
+            ? issue.difficulty
+            : issue.language;
   const groups = [...order, { id: "", label: "Other" }].map((g) => ({
     ...g,
     issues: issues.filter((i) => (valueOf(i) ?? "") === g.id),

@@ -11,6 +11,7 @@ import {
   summarize,
 } from "./library";
 import {
+  filterByStatus,
   filterProjects,
   filterIssues,
   formatQuery,
@@ -248,4 +249,33 @@ test("summaries for client components leave out fixtures and long text", () => {
     assert.equal(field in summary, false, field);
   // Nothing left that React's serializer would mangle.
   assert.equal(JSON.stringify(summary).includes("__proto__"), false);
+});
+
+test("board statuses parse as is: qualifiers and filter wherever the board is known", () => {
+  const query = parseIssueQuery("is:done,todo is:runnable lang:python");
+  assert.deepEqual(query.status, ["todo", "done"]);
+  assert.equal(query.runnable, true);
+  assert.equal(formatQuery(query), "is:runnable is:todo,done lang:python");
+  assert.deepEqual(parseIssueQuery("is:nonsense").status, []);
+  const onBoard = new Set(["API-2", "FN-1"]);
+  const statusOf = (key: string) =>
+    onBoard.has(key) ? ("todo" as const) : ("backlog" as const);
+  const keys = (q: string) =>
+    filterByStatus(merged.issues, parseIssueQuery(q).status, statusOf)
+      .map((i) => i.key)
+      .sort();
+  assert.deepEqual(keys("is:todo"), ["API-2", "FN-1"]);
+  assert.equal(keys("is:backlog").length, merged.issues.length - 2);
+  assert.equal(keys("is:todo,backlog").length, merged.issues.length);
+  assert.deepEqual(keys("is:done"), []);
+  assert.deepEqual(
+    groupIssues(merged.issues, "status", merged.projects, statusOf).map((g) => [
+      g.id,
+      g.issues.length,
+    ]),
+    [
+      ["backlog", merged.issues.length - 2],
+      ["todo", 2],
+    ],
+  );
 });

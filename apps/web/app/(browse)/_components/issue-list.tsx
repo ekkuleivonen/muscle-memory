@@ -48,7 +48,11 @@ export function IssueRows({
   );
 }
 
-export function IssueGroups({ groups }: { groups: readonly IssueGroup[] }) {
+export function IssueGroups({
+  groups,
+}: {
+  groups: readonly IssueGroup<Issue>[];
+}) {
   if (!groups.length)
     return (
       <p className="empty">

@@ -1,20 +1,26 @@
 import type { Metadata } from "next";
 import { requireOnboarding } from "../../../lib/gate";
 import { LANGUAGES } from "../../../lib/languages";
-import { DIFFICULTIES, KINDS, languagesOf } from "../../../lib/library";
+import { STATUS_LABELS } from "../../../lib/board";
+import {
+  DIFFICULTIES,
+  KINDS,
+  languagesOf,
+  summarize,
+} from "../../../lib/library";
 import { getLibrary } from "../../../lib/load";
 import { pathWithQuery } from "../../../lib/onboarding";
 import {
   filterIssues,
-  groupIssues,
+  STATUSES,
   parseGroup,
   parseIssueQuery,
   queryParam,
   type SearchParams,
 } from "../../../lib/queries";
 import { ProjectSquare, LanguageDot } from "../_components/bits";
-import { KIND_LABELS, KindIcon } from "../_components/icons";
-import { IssueGroups } from "../_components/issue-list";
+import { KIND_LABELS, KindIcon, StatusIcon } from "../_components/icons";
+import { IssueResults } from "../_components/issue-results";
 import { Toolbar } from "../_components/toolbar";
 import { Topbar } from "../_components/topbar";
 
@@ -49,6 +55,15 @@ export default async function IssuesPage({
           placeholder="kind:bug lang:python,go difficulty:easy label:maps …"
           filters={[
             {
+              key: "status",
+              label: "Status",
+              options: STATUSES.map((s) => ({
+                value: s,
+                label: STATUS_LABELS[s],
+                icon: <StatusIcon status={s} />,
+              })),
+            },
+            {
               key: "kind",
               label: "Kind",
               options: KINDS.map((k) => ({
@@ -82,7 +97,12 @@ export default async function IssuesPage({
             },
           ]}
         />
-        <IssueGroups groups={groupIssues(results, group, projects)} />
+        <IssueResults
+          issues={results.map(summarize)}
+          group={group}
+          status={query.status}
+          projects={projects.map(({ slug, title }) => ({ slug, title }))}
+        />
         <p className="hint">
           <kbd>/</kbd> search · <kbd>j</kbd> <kbd>k</kbd> move · <kbd>↵</kbd>{" "}
           open

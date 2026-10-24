@@ -223,6 +223,13 @@ function ActiveFilters<Q extends IssueQuery | ProjectQuery>({
 
 function clearFilters(query: IssueQuery | ProjectQuery) {
   return "kind" in query
-    ? { language: [], kind: [], difficulty: [], project: [], label: [] }
+    ? {
+        language: [],
+        kind: [],
+        difficulty: [],
+        project: [],
+        label: [],
+        status: [],
+      }
     : { language: [] };
 }
