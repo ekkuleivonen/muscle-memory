@@ -157,7 +157,8 @@ export function allPullRequests(
 }
 
 export type TimelineEntry =
-  | { kind: "opened"; at: string }
+  /** Opened in the IDE; `times` when it was opened again with nothing done in between. */
+  | { kind: "opened"; at: string; times: number }
   | { kind: "edits"; at: string; from: string; count: number }
   | {
       kind: "run";
@@ -177,7 +178,19 @@ export type TimelineEntry =
       passed: number;
       total: number;
     }
-  | { kind: "merged"; at: string };
+  | { kind: "merged"; at: string }
+  /** A teammate's review comment on this pull request; its thread is read from feedback. */
+  | { kind: "review"; at: string; comment: string; push: number }
+  | { kind: "resolved"; at: string; comment: string; push: number; issueRevision: string }
+  /** A comment or hint released into the ticket's thread while this work went on. */
+  | {
+      kind: "note";
+      at: string;
+      source: "comment" | "hint";
+      id: string;
+      wording: number;
+      issueRevision: string;
+    };
 
 export interface PullDetail {
   pull: PullSummary;
@@ -279,7 +292,9 @@ export function pullRequestDetail(
     }
     if (o.type === "observation.workspace.opened") {
       flush();
-      timeline.push({ kind: "opened", at: o.occurredAt });
+      const last = timeline.at(-1);
+      if (last?.kind === "opened") last.times++;
+      else timeline.push({ kind: "opened", at: o.occurredAt, times: 1 });
     } else if (o.type === "observation.workspace.run") {
       const status = String(o.data.status);
       const revision = o.issueRevision ? revisionFor(o.issueRevision) : undefined;
@@ -339,7 +354,49 @@ export function pullRequestDetail(
     }
   }
   flush();
+  // Teammate feedback: this pull request's review, whenever it came (it follows the checks),
+  // and the ticket's comments and hints released during the work above.
+  for (const o of all) {
+    const d = o.data;
+    if (
+      o.type === "observation.workspace.comment" &&
+      d.where === "review" &&
+      Number(d.pullRequest) === number
+    )
+      timeline.push({
+        kind: "review",
+        at: o.occurredAt,
+        comment: String(d.comment),
+        push: Number(d.push),
+      });
+    else if (
+      o.type === "observation.workspace.thread-resolved" &&
+      Number(d.pullRequest) === number
+    )
+      timeline.push({
+        kind: "resolved",
+        at: o.occurredAt,
+        comment: String(d.comment),
+        push: Number(d.push),
+        issueRevision: o.issueRevision ?? "",
+      });
+    else if (
+      (o.type === "observation.workspace.hint" ||
+        (o.type === "observation.workspace.comment" && d.where === "issue")) &&
+      window.includes(o)
+    )
+      timeline.push({
+        kind: "note",
+        at: o.occurredAt,
+        source: o.type === "observation.workspace.hint" ? "hint" : "comment",
+        id: String(o.type === "observation.workspace.hint" ? d.hint : d.comment),
+        wording: Number(d.wording ?? 0),
+        issueRevision: o.issueRevision ?? "",
+      });
+  }
   if (pull.mergedAt) timeline.push({ kind: "merged", at: pull.mergedAt });
+  // In time order; entries at the same moment keep the order they were added in.
+  timeline.sort((a, b) => a.at.localeCompare(b.at));
 
   const artifact = records.find(
     (r) => r.kind === "artifact" && r.recordId === pull.codeArtifactId,

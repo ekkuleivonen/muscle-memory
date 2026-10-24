@@ -1,5 +1,5 @@
 /**
- * Records board moves on this device for accounts that accepted the current Terms, stamped
+ * Records board moves and replies to review comments on this device for accounts that accepted the current Terms, stamped
  * with that version. Nothing is uploaded yet. One source
  * stream per page load; positions are assigned in call order and writes retry with the same
  * IDs, so retried records deduplicate.
@@ -12,7 +12,9 @@ import { randomId } from "../../../../../packages/browser/random-id";
 import {
   boardMove,
   boardRecord,
+  boardReply,
   type BoardMoveData,
+  type BoardObservation,
 } from "../../../../../packages/domain/board";
 import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
 import { readProfile } from "../../../lib/account";
@@ -23,9 +25,30 @@ let sequence = 0;
 let store: Promise<PracticeStore> | null = null;
 const pending: WorkspaceRecord[] = [];
 
-export async function logBoardMove(
+export function logBoardMove(
   issue: { id: string; revision: string },
   data: BoardMoveData,
+): Promise<void> {
+  return log((base) => boardMove({ ...base, issue, data }), "Board move");
+}
+
+/** A reply to a review comment; resolves the thread if it was blocking. */
+export function logReply(
+  issue: { id: string; revision: string },
+  data: { issueKey: string; pullRequest: number; comment: string; text: string },
+): Promise<void> {
+  return log((base) => boardReply({ ...base, issue, data }), "Reply");
+}
+
+async function log(
+  build: (base: {
+    participantId: string;
+    sourceId: string;
+    sequence: number;
+    occurredAt: string;
+    termsVersion: string;
+  }) => BoardObservation,
+  what: string,
 ): Promise<void> {
   const accepted = readProfile()?.accepted;
   // The gate keeps people without current acceptance out; this is the belt to its braces.
@@ -38,14 +61,12 @@ export async function logBoardMove(
     const opened = await store;
     pending.push(
       boardRecord(
-        boardMove({
+        build({
           participantId: await opened.participantId(),
           sourceId,
           sequence: position,
           occurredAt,
           termsVersion: accepted.version,
-          issue,
-          data,
         }),
       ),
     );
@@ -59,6 +80,6 @@ export async function logBoardMove(
   } catch (cause) {
     store = null;
     // A missed position stays visible as a gap in the source stream.
-    console.warn("Board move was not recorded.", cause);
+    console.warn(`${what} was not recorded.`, cause);
   }
 }

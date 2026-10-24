@@ -5,6 +5,8 @@ import {
   boardMove,
   boardPayloads,
   boardRecord,
+  boardReply,
+  REPLY_LIMIT_BYTES,
 } from "./board";
 
 const base = {
@@ -111,4 +113,34 @@ test("only merging a pull request moves an issue to Done", () => {
   assert.throws(bad({ from: "done", to: "todo" }), /on to Done/);
   // Nothing is automatic, Done included.
   assert.throws(bad({ via: "automatic" }), /Unknown way/);
+});
+
+test("a reply to a review comment is recorded on the board, its text bounded", () => {
+  const reply = boardReply({
+    ...base,
+    data: { issueKey: "API-2", pullRequest: 3, comment: "ada-abs", text: "Refunds stay negative." },
+  });
+  assert.equal(reply.type, "observation.board.replied");
+  assert.equal(reply.captureVersion, BOARD_CAPTURE_VERSION);
+  assert.deepEqual(reply.data, {
+    issueKey: "API-2",
+    pullRequest: 3,
+    comment: "ada-abs",
+    text: "Refunds stay negative.",
+    textBytes: 22,
+    truncated: false,
+  });
+  const long = boardReply({
+    ...base,
+    data: { issueKey: "API-2", pullRequest: 3, comment: "ada-abs", text: "é".repeat(REPLY_LIMIT_BYTES) },
+  });
+  assert.equal(long.data.truncated, true);
+  assert.equal(long.data.textBytes, REPLY_LIMIT_BYTES * 2);
+  assert.ok(new TextEncoder().encode(long.data.text).length <= REPLY_LIMIT_BYTES);
+  assert.deepEqual(boardPayloads([boardRecord(reply)]).length, 1);
+  for (const data of [
+    { issueKey: "API-2", pullRequest: 0, comment: "ada-abs", text: "x" },
+    { issueKey: "API-2", pullRequest: 3, comment: "ada-abs", text: "  " },
+  ])
+    assert.throws(() => boardReply({ ...base, data }));
 });

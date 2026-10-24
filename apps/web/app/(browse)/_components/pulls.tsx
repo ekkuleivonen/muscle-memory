@@ -23,7 +23,10 @@ import {
 import type { BoardMoveVia } from "../../../../../packages/domain/board";
 import { LanguageTag } from "./bits";
 import { useBoard } from "./board";
+import { logReply } from "./board-log";
+import { Markdown } from "./markdown";
 import { useNow, useRecords } from "./records";
+import { feedbackOf, openBlocking, type Thread } from "../../../lib/feedback";
 
 export interface PullIssue {
   key: string;
@@ -203,7 +206,9 @@ export function PullView({
   /** Every published revision of the issue by id, as JSON: fixtures may hold a "__proto__" key. */
   revisionsJson: string;
 }) {
-  const records = useRecords();
+  /** Bumped after a reply is recorded, so the records are read again. */
+  const [version, setVersion] = useState(0);
+  const records = useRecords(version);
   const board = useBoard();
   const [tab, setTab] = useState<"timeline" | "checks" | "files">("timeline");
   /** Set when merged on this page, before the stored records are read again. */
@@ -217,6 +222,10 @@ export function PullView({
       records &&
       pullRequestDetail(records, issue.slug, number, (id) => revisions[id]),
     [records, issue.slug, number, revisions],
+  );
+  const feedback = useMemo(
+    () => (records ? feedbackOf(records, issue.slug) : { released: [], threads: [] }),
+    [records, issue.slug],
   );
   if (!records) return null;
   if (!detail)
@@ -247,6 +256,15 @@ export function PullView({
     { added: 0, removed: 0 },
   );
   const label = STATE_LABELS[pull.state];
+  const threads = feedback.threads.filter((t) => t.number === number);
+  const blocking = openBlocking(feedback, number);
+  const reply = async (thread: Thread, text: string) => {
+    await logReply(
+      { id: issue.slug, revision: thread.issueRevision },
+      { issueKey: issue.key, pullRequest: number, comment: thread.comment, text },
+    );
+    setVersion((v) => v + 1);
+  };
   const merge = (via: BoardMoveVia) => {
     board.complete(
       { key: issue.key, slug: issue.slug, revision: issue.revision ?? pull.issueRevision },
@@ -308,6 +326,9 @@ export function PullView({
                 : detail
             }
             issue={issue}
+            threads={threads}
+            revisions={revisions}
+            onReply={pull.state === "merged" ? undefined : reply}
           />
         )}
         {tab === "checks" && (
@@ -316,7 +337,12 @@ export function PullView({
         {tab === "files" && (
           <Files saved={!!detail.code} changes={changes} />
         )}
-        <MergeBox pull={pull} issue={issue} onMerge={merge} />
+        <MergeBox
+          pull={pull}
+          issue={issue}
+          blocking={blocking.length}
+          onMerge={merge}
+        />
       </article>
       <aside className="props" aria-label="Details">
         <dl>
@@ -386,7 +412,18 @@ function Tab<T extends string>({
   );
 }
 
-function Timeline({ detail, issue }: { detail: PullDetail; issue: PullIssue }) {
+interface Review {
+  threads: Thread[];
+  revisions: Record<string, Revision>;
+  /** Absent once merged: the conversation is closed. */
+  onReply?: (thread: Thread, text: string) => Promise<void>;
+}
+
+function Timeline({
+  detail,
+  issue,
+  ...review
+}: { detail: PullDetail; issue: PullIssue } & Review) {
   const { stats, previous } = detail;
   return (
     <div className="pull-timeline">
@@ -414,7 +451,7 @@ function Timeline({ detail, issue }: { detail: PullDetail; issue: PullIssue }) {
           </TimelineRow>
         )}
         {detail.timeline.map((entry, index) => (
-          <Entry key={index} entry={entry} issue={issue} />
+          <Entry key={index} entry={entry} issue={issue} {...review} />
         ))}
       </ol>
     </div>
@@ -439,12 +476,60 @@ function TimelineRow({
   );
 }
 
-function Entry({ entry, issue }: { entry: TimelineEntry; issue: PullIssue }) {
+function Entry({
+  entry,
+  issue,
+  threads,
+  revisions,
+  onReply,
+}: { entry: TimelineEntry; issue: PullIssue } & Review) {
   switch (entry.kind) {
+    case "review": {
+      const thread = threads.find(
+        (t) => t.comment === entry.comment && t.at === entry.at,
+      );
+      return thread ? (
+        <ReviewThread
+          thread={thread}
+          revision={revisions[thread.issueRevision]}
+          onReply={onReply}
+        />
+      ) : null;
+    }
+    case "resolved": {
+      const author = revisions[entry.issueRevision]?.team.find(
+        (c) => c.id === entry.comment,
+      )?.author.name;
+      return (
+        <TimelineRow at={entry.at} tone="pass">
+          {author ? `${author}'s review comment` : "A review comment"} was
+          resolved by push {entry.push}.
+        </TimelineRow>
+      );
+    }
+    case "note": {
+      const from = revisions[entry.issueRevision];
+      const note =
+        entry.source === "hint"
+          ? from?.hints.find((h) => h.id === entry.id)
+          : from?.team.find((c) => c.id === entry.id);
+      if (!note) return null;
+      const text =
+        "level" in note ? note.text : (note.text[entry.wording] ?? note.text[0]);
+      return (
+        <TimelineRow at={entry.at} tone="dim">
+          {note.author.name} commented on {issue.key}:
+          <span className="pull-note">
+            <Markdown source={text} />
+          </span>
+        </TimelineRow>
+      );
+    }
     case "opened":
       return (
         <TimelineRow at={entry.at} tone="dim">
           Opened {issue.key} in the IDE
+          {entry.times > 1 && ` (${entry.times} times)`}
         </TimelineRow>
       );
     case "edits":
@@ -691,17 +776,106 @@ function HunkRows({ hunk }: { hunk: ReturnType<typeof hunks>[number] }) {
   );
 }
 
+/** A teammate's review comment, its replies and whether it is resolved. */
+function ReviewThread({
+  thread,
+  revision,
+  onReply,
+}: {
+  thread: Thread;
+  revision: Revision | undefined;
+  onReply?: (thread: Thread, text: string) => Promise<void>;
+}) {
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const comment = revision?.team.find((c) => c.id === thread.comment);
+  if (!comment) return null;
+  const blocking = thread.severity === "blocking";
+  const send = async () => {
+    if (!text.trim() || !onReply) return;
+    setSending(true);
+    try {
+      await onReply(thread, text);
+      setText("");
+    } finally {
+      setSending(false);
+    }
+  };
+  return (
+    <li className={`review-thread ${blocking && !thread.resolved ? "open" : ""}`}>
+      <span className="dot" aria-hidden />
+      <div className="review-card">
+        <header>
+          <b>{comment.author.name}</b>{" "}
+          <span className="faint">· {comment.author.role}</span>{" "}
+          {blocking ? (
+            <span className={`review-badge ${thread.resolved ? "resolved" : "blocking"}`}>
+              {thread.resolved ? "Resolved" : "Requested changes"}
+            </span>
+          ) : thread.severity === "nit" ? (
+            <span className="review-badge">Nit</span>
+          ) : null}
+          <time dateTime={thread.at}>{clock(thread.at)}</time>
+        </header>
+        <Markdown source={comment.text[thread.wording] ?? comment.text[0]} />
+        <p className="faint review-on">On push {thread.push}</p>
+        {thread.replies.map((r, i) => (
+          <div className="review-reply" key={i}>
+            <b>You</b> <time dateTime={r.at}>{clock(r.at)}</time>
+            <p>{r.text}</p>
+          </div>
+        ))}
+        {thread.resolved && (
+          <p className="faint">
+            {thread.resolved.by === "code"
+              ? `Resolved by push ${thread.resolved.push}: it no longer applies.`
+              : "Resolved by your reply."}
+          </p>
+        )}
+        {onReply && (
+          <form
+            className="review-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void send();
+            }}
+          >
+            <textarea
+              value={text}
+              rows={2}
+              placeholder={
+                blocking && !thread.resolved
+                  ? "Reply, if the code should stay as it is…"
+                  : "Reply…"
+              }
+              aria-label={`Reply to ${comment.author.name}`}
+              onChange={(event) => setText(event.target.value)}
+            />
+            <button type="submit" disabled={!text.trim() || sending}>
+              Reply
+            </button>
+          </form>
+        )}
+      </div>
+    </li>
+  );
+}
+
 /**
- * Review, then merge: only a pull request whose checks all passed can be merged, as with
- * branch protection. Merging moves the issue to Done.
+ * Review, then merge: only a pull request whose checks all passed and whose blocking review
+ * comments are resolved can be merged, as with branch protection. Merging moves the issue to
+ * Done.
  */
 function MergeBox({
   pull,
   issue,
+  blocking,
   onMerge,
 }: {
   pull: PullSummary;
   issue: PullIssue;
+  /** Open blocking review threads. */
+  blocking: number;
   onMerge: (via: BoardMoveVia) => void;
 }) {
   if (pull.state === "merged")
@@ -728,14 +902,25 @@ function MergeBox({
         </div>
       </div>
     );
-  const green = passed(pull.result);
+  const checks = passed(pull.result);
+  const green = checks && blocking === 0;
   return (
     <div className={green ? "merge-box ready" : "merge-box blocked"}>
       <span className="merge-mark" aria-hidden>
         {green ? "✔" : "✘"}
       </span>
       <div className="merge-text">
-        {green ? (
+        {checks && !green ? (
+          <>
+            <b>
+              All {pull.total} checks passed, but {blocking} blocking review
+              comment{blocking === 1 ? " is" : "s are"} open.
+            </b>{" "}
+            Change the code in the <Link href={workHref(issue)}>IDE</Link> and push
+            to it (<kbd>⌘⇧⏎</kbd>), or reply to explain why it should stay as it
+            is.
+          </>
+        ) : green ? (
           <>
             <b>All {pull.total} checks passed.</b> Read through your changes,
             then merge when you&apos;re happy with them. Merging moves{" "}

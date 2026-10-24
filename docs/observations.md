@@ -5,7 +5,7 @@ How Muscle Memory records practice. Two primitives underpin the data model:
 - **Immutable content.** Every issue revision a player works against is stored once under the SHA-256 of its content, with its repo, cases, teammate comments and hints ([issue model](issue-model.md)). Recorded data names the revision, so it can always be read against exactly what the player saw.
 - **Ordered observations** of disclosed activity inside the IDE and on the board. Each observation has a stable ID, schema version, source sequence, client occurrence time and (once there is a server) a receipt time. Gaps, dropped capture and truncation are explicit.
 
-What the [workspace](workspace.md) and the [board](board-activity.md) record today: opening an issue, editor transactions with recovery snapshots, code revisions, runs with their raw bounded outcomes, pull requests and their pushes, and board moves, including merging. All of it stays on the device; nothing is uploaded yet.
+What the [workspace](workspace.md) and the [board](board-activity.md) record today: opening an issue, editor transactions with recovery snapshots, code revisions, runs with their raw bounded outcomes, pull requests and their pushes, teammate comments, review threads and hints as they are released, replies to review comments, and board moves, including merging. All of it stays on the device; nothing is uploaded yet.
 
 ## Capture boundary
 

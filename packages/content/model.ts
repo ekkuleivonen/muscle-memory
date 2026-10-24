@@ -20,10 +20,12 @@ export interface Persona {
 
 /**
  * When a teammate comment or hint is released. Every trigger is a pure function of recorded
- * facts, so it can be re-evaluated later and gives the same answer.
+ * facts, so it can be re-evaluated later and gives the same answer (./triggers). Events:
+ * opened is the issue's thread as the ticket shows it; pull-request is opening one (push 1);
+ * push is every later push to it.
  */
 export type Trigger =
-  | { readonly event: "opened" | "pull-request" | "push" | "merged" }
+  | { readonly event: "opened" | "pull-request" | "push" }
   | {
       readonly metric: "lines" | "function-lines" | "nesting";
       readonly above: number;
@@ -56,7 +58,15 @@ export interface TeamComment {
   readonly severity: "blocking" | "nit" | "info";
   /** A few wordings of the same comment; one is picked per player, so it stays stable. */
   readonly text: readonly string[];
+  /**
+   * An issue comment is evaluated whenever feedback is (opening, runs, pushes, every half
+   * minute); a review comment only when a push's checks finish, with the pushed code.
+   */
   readonly when: Trigger;
+  /**
+   * once (default): at most once per issue, or per pull request for a review comment.
+   * while-true: a resolved review thread opens again on a later push that triggers it.
+   */
   readonly repeat?: "once" | "while-true";
 }
 

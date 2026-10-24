@@ -12,7 +12,8 @@ import {
   LabelPill,
   LanguageTag,
 } from "../../_components/bits";
-import { KIND_LABELS, KindIcon, StatusIcon } from "../../_components/icons";
+import { KIND_LABELS, KindIcon } from "../../_components/icons";
+import { IssueThread } from "../../_components/issue-thread";
 import { Sep, Topbar } from "../../_components/topbar";
 import { StartWork, StatusMenu } from "../../_components/board";
 import { Markdown } from "../../_components/markdown";
@@ -45,6 +46,7 @@ export default async function IssuePage(props: Props) {
   await requireOnboarding(`/issues/${key}`);
   const issue = await find(props);
   if (!issue) notFound();
+  const { revisionsOf } = await getLibrary();
   // One canonical URL per issue: /issues/RG-4. A lowercase key or the issue's id land here.
   if (key !== issue.key) permanentRedirect(issueHref(issue));
   const { project } = issue;
@@ -103,16 +105,12 @@ export default async function IssuePage(props: Props) {
                   </div>
                 </div>
               ))}
-              {issue.hints > 0 && (
-                <div className="event">
-                  <StatusIcon />
-                  {issue.hints === 1
-                    ? "A teammate has a hint ready if you get stuck."
-                    : `Teammates have ${issue.hints} hints ready if you get stuck.`}
-                </div>
-              )}
-              {!issue.comments.length && !issue.hints && (
-                <p className="dim">No activity yet.</p>
+              <IssueThread
+                issue={issue.slug}
+                revisionsJson={JSON.stringify(revisionsOf(issue.slug))}
+              />
+              {!issue.comments.length && (
+                <p className="dim">No comments yet.</p>
               )}
             </div>
           </section>

@@ -2,7 +2,7 @@
 
 What an issue is, how it is managed and where it is stored.
 
-**Built so far:** the model itself. Issue metadata, revisions and the catalog are in `packages/content` (types, validation, revision hashing). The seed (`content/seed.ts`) is built into `content/catalog.json` by `tools/build-content.ts`, and the app reads every page and the IDE from it. Recorded data names the issue and revision. The IDE takes several editable and read-only files, recorded per file (JavaScript and TypeScript run them; other runners still load one source file). **Not built yet:** trigger evaluation (teammate comments other than the opening notes, review comments, hints, the merge gate for blocking threads), the database, R2 and the admin UI. Until then, the seed and its build stand in for authoring.
+**Built so far:** the model itself. Issue metadata, revisions and the catalog are in `packages/content` (types, validation, revision hashing). The seed (`content/seed.ts`) is built into `content/catalog.json` by `tools/build-content.ts`, and the app reads every page and the IDE from it. Recorded data names the issue and revision. The IDE takes several editable and read-only files, recorded per file (JavaScript and TypeScript run them; other runners still load one source file). Teammate comments, review threads and hints are released by their triggers (`packages/content/triggers.ts`, read from records by `apps/web/lib/feedback.ts`), recorded, and blocking threads hold the merge. **Not built yet:** hidden cases, static rules and scaling checks in CI, the private part (reference solution, trigger examples) and the checks that use it, the database, R2 and the admin UI. Until then, the seed and its build stand in for authoring.
 
 ## Principles
 
@@ -116,11 +116,14 @@ interface TeamComment {
   severity: "blocking" | "nit" | "info";
   text: string[];                     // a few wordings; picked by player and comment, so stable per person
   when: Trigger;
-  repeat?: "once" | "while-true";     // review comments re-check on every push
+  repeat?: "once" | "while-true";     // while-true: a resolved review thread opens again
 }
 ```
 
-A **blocking** comment must be resolved before merging: either the next push no longer triggers it, or the player replies. A reply needs no approval; the reply text is recorded. A **nit** is shown but never blocks. Merge needs green CI *and* every blocking thread resolved.
+- **The ticket's own thread** is the issue comments on the `opened` event: they are part of the ticket, shown on the issue page and in the IDE from the start, and not recorded as feedback.
+- **Other issue comments** are checked whenever feedback is (opening the IDE, after every run and push, and every 30 seconds) against the current code and the latest push's checks, and posted to the ticket's thread at most once.
+- **Review comments** are checked only when a push's checks finish, against the code pushed and that push's results, at most once per pull request. They appear on the pull request's page as threads, with the push they reviewed.
+- A **blocking** review comment must be resolved before merging: either a later push no longer triggers it (recorded as resolved by code), or the player replies (resolved by reply). A reply needs no approval; its text is recorded. With `repeat: "while-true"` a resolved thread opens again on a later push that triggers it. A **nit** or **info** comment never blocks. Merge needs green CI *and* every blocking thread resolved. Only review comments may block.
 
 ### Hints
 
@@ -134,7 +137,7 @@ interface Hint {
 }
 ```
 
-There is no "ask for a hint" button. Hints arrive the way a colleague notices someone is stuck, one level at a time, never two at once.
+There is no "ask for a hint" button, and nothing says hints exist before one arrives. Hints arrive the way a colleague notices someone is stuck: as a comment from the ticket's lead in the ticket's thread, one level at a time, never two at once. Only the next level is checked, against the current code and behaviour.
 
 ### Triggers
 
@@ -142,23 +145,24 @@ Every trigger is a pure function of recorded facts, so it can be re-evaluated la
 
 | Kind | Fires when | Example |
 |---|---|---|
-| `event` | issue opened, first run, pull request opened, pushed, merged | welcome note on opening |
+| `event` | issue opened (the ticket's thread), pull request opened (`pull-request`), pushed to again (`push`) | welcome note on opening |
 | `metric` | a size measure of the code crosses a bound: lines, function lines, nesting depth | `{ metric: "function-lines", above: 30 }` |
 | `pattern` | text is present or absent in a file (regular expression) | uses `toFixed` and no `Intl.NumberFormat` |
 | `check` | a named case fails or passes on a push | refund case fails: "refunds broke again" |
-| `behaviour` | active minutes without progress, failing pushes, runs without progress | `{ failingPushes: 3 }` |
+| `behaviour` | active minutes without progress, failing pushes, runs without progress | `{ behaviour: "failing-pushes", atLeast: 3 }` |
 
-Triggers combine with `all`, `any` and `not`. **Active minutes** count minutes with an edit or a run, ignoring gaps over five minutes, so a lunch break never releases a hint. **Progress** means the number of passing cases went up.
+Triggers combine with `all`, `any` and `not`. **Active minutes** are distinct clock minutes with an edit or a run, so a lunch break never releases a hint. **Progress** is a run or push that passes more cases than any before it; active minutes and runs are counted since the last one. **Failing pushes** count every push whose checks did not all pass. **Metrics** read code as text: `lines` counts non-blank lines; `function-lines` is the longest function from its signature to its end (by braces, or by indentation in Python and Ruby); `nesting` is the deepest block. A `metric` or `pattern` looks at every editable file unless it names one.
 
 Pattern rules are text-based for now, so they work the same in all twelve languages. Syntax-aware rules can come later per language without changing the manifest shape.
 
 ## What gets recorded
 
-New workspace observations, under a capture version bump when built:
+Workspace capture 4.0.0 and board capture 3.0.0:
 
-- `comment` — a teammate comment fired: comment id, revision, the push (if any) and which trigger part matched.
-- `thread-resolved` — a blocking comment resolved: by `code` (with the push) or by `reply` (with the text).
-- `hint` — a hint released: hint id, level, revision and the trigger.
+- `observation.workspace.comment`: a teammate comment released, with its id, place, severity and which wording was shown; a review comment also names the pull request and push. Its text is read from the revision the observation names.
+- `observation.workspace.hint`: a hint released, with its id and level.
+- `observation.workspace.thread-resolved`: a blocking review thread resolved `by: "code"`, with the push that no longer triggers it.
+- `observation.board.replied`: a reply to a review comment from the pull request's page, with its text (bounded to 8 KiB). A reply resolves a blocking thread.
 
 From these, every attempt can say when it stopped being unaided, which feedback it got and how it responded.
 

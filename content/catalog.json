@@ -82,7 +82,7 @@
         "edge-cases"
       ],
       "state": "live",
-      "revision": "sha256:7b99f204cfdfbc46484e343479fd72588e0250d162e6d305166dc4c85034de2c"
+      "revision": "sha256:14153171b5fc3f1532f08ee702213efeaa16f190aded75eadd6e4b2ca385e8d7"
     },
     {
       "id": "format-price",
@@ -569,6 +569,187 @@
         }
       ],
       "hints": [],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:14153171b5fc3f1532f08ee702213efeaa16f190aded75eadd6e4b2ca385e8d7": {
+      "issue": "frequency-map",
+      "kind": "feature",
+      "body": "Write `frequency_map(items)`: count each exact, case-sensitive string and return a dict of string to integer count. Empty input returns `{}`.",
+      "skills": [
+        "iteration",
+        "maps",
+        "edge-cases"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "python",
+        "files": {
+          "frequency_map.py": {
+            "role": "edit",
+            "language": "python",
+            "text": "def frequency_map(items):\n    counts = {}\n    # Count each item.\n    return counts\n"
+          },
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Field notes\n\nA field researcher keeps specimen labels in a notebook and needs exact tallies. A good first ticket: small, in Python, with one surprise in the data.\n"
+          },
+          "tests/test_frequency_map.py": {
+            "role": "tests",
+            "language": "python",
+            "text": "# Acceptance criteria for FN-1. The checks run against these cases.\nimport pytest\n\nfrom frequency_map import frequency_map\n\nCASES = [\n    ([\"a\", \"b\", \"a\"], {\"a\": 2, \"b\": 1}),\n    ([], {}),\n    ([\"A\", \"a\", \"A\"], {\"A\": 2, \"a\": 1}),\n    ([\"__proto__\", \"__proto__\", \"x\"], {\"__proto__\": 2, \"x\": 1}),\n]\n\n\n@pytest.mark.parametrize(\"given, expected\", CASES)\ndef test_frequency_map(given, expected):\n    assert frequency_map(given) == expected\n"
+          }
+        },
+        "entry": "frequency_map.py",
+        "entrypoint": "frequency_map"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": [
+              "a",
+              "b",
+              "a"
+            ],
+            "expected": {
+              "a": 2,
+              "b": 1
+            },
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": [],
+            "expected": {},
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": [
+              "A",
+              "a",
+              "A"
+            ],
+            "expected": {
+              "A": 2,
+              "a": 1
+            },
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": [
+              "__proto__",
+              "__proto__",
+              "x"
+            ],
+            "expected": {
+              "__proto__": 2,
+              "x": 1
+            },
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "priya-1",
+          "author": {
+            "name": "Priya K",
+            "role": "Data"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Heads up: the scanner sometimes emits odd labels like __proto__. Please don't special-case anything; every label is just a string."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        },
+        {
+          "id": "priya-debug-print",
+          "where": "review",
+          "severity": "blocking",
+          "text": [
+            "Could you take the `print` out before this goes in? The scanner job ships everything on stdout to the warehouse logs.",
+            "There's a `print` left in here. Anything on stdout ends up in the warehouse logs, so it needs to go before we merge."
+          ],
+          "when": {
+            "pattern": "^\\s*print\\(",
+            "present": true
+          },
+          "repeat": "while-true",
+          "author": {
+            "name": "Priya K",
+            "role": "Data"
+          }
+        },
+        {
+          "id": "priya-long-function",
+          "where": "review",
+          "severity": "nit",
+          "text": [
+            "Nit: `frequency_map` has grown quite long for what it does. Could the dict itself do more of the work?"
+          ],
+          "when": {
+            "metric": "function-lines",
+            "above": 12
+          },
+          "author": {
+            "name": "Priya K",
+            "role": "Data"
+          }
+        },
+        {
+          "id": "priya-proto-passes",
+          "where": "review",
+          "severity": "info",
+          "text": [
+            "Nice, `__proto__` comes through as a plain label now. That was the one breaking the nightly run."
+          ],
+          "when": {
+            "check": "case-4",
+            "is": "passing"
+          },
+          "author": {
+            "name": "Priya K",
+            "role": "Data"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "id": "hint-1",
+          "level": 1,
+          "author": {
+            "name": "Priya K",
+            "role": "Data"
+          },
+          "text": "A dict can hold one counter for each distinct string.",
+          "when": {
+            "behaviour": "active-minutes-without-progress",
+            "atLeast": 10
+          }
+        },
+        {
+          "id": "hint-2",
+          "level": 2,
+          "author": {
+            "name": "Priya K",
+            "role": "Data"
+          },
+          "text": "Try the `__proto__` case by hand: what does your dict hold after the first label, and after the second?",
+          "when": {
+            "behaviour": "failing-pushes",
+            "atLeast": 2
+          }
+        }
+      ],
       "authored": {
         "by": "ai-drafted",
         "reviewers": []
@@ -1356,124 +1537,6 @@
         }
       ],
       "hints": [],
-      "authored": {
-        "by": "ai-drafted",
-        "reviewers": []
-      }
-    },
-    "sha256:7b99f204cfdfbc46484e343479fd72588e0250d162e6d305166dc4c85034de2c": {
-      "issue": "frequency-map",
-      "kind": "feature",
-      "body": "Write `frequency_map(items)`: count each exact, case-sensitive string and return a dict of string to integer count. Empty input returns `{}`.",
-      "skills": [
-        "iteration",
-        "maps",
-        "edge-cases"
-      ],
-      "format": "code-change",
-      "workspace": {
-        "language": "python",
-        "files": {
-          "frequency_map.py": {
-            "role": "edit",
-            "language": "python",
-            "text": "def frequency_map(items):\n    counts = {}\n    # Count each item.\n    return counts\n"
-          },
-          "README.md": {
-            "role": "docs",
-            "language": "markdown",
-            "text": "# Field notes\n\nA field researcher keeps specimen labels in a notebook and needs exact tallies. A good first ticket: small, in Python, with one surprise in the data.\n"
-          },
-          "tests/test_frequency_map.py": {
-            "role": "tests",
-            "language": "python",
-            "text": "# Acceptance criteria for FN-1. The checks run against these cases.\nimport pytest\n\nfrom frequency_map import frequency_map\n\nCASES = [\n    ([\"a\", \"b\", \"a\"], {\"a\": 2, \"b\": 1}),\n    ([], {}),\n    ([\"A\", \"a\", \"A\"], {\"A\": 2, \"a\": 1}),\n    ([\"__proto__\", \"__proto__\", \"x\"], {\"__proto__\": 2, \"x\": 1}),\n]\n\n\n@pytest.mark.parametrize(\"given, expected\", CASES)\ndef test_frequency_map(given, expected):\n    assert frequency_map(given) == expected\n"
-          }
-        },
-        "entry": "frequency_map.py",
-        "entrypoint": "frequency_map"
-      },
-      "checks": {
-        "cases": [
-          {
-            "id": "case-1",
-            "input": [
-              "a",
-              "b",
-              "a"
-            ],
-            "expected": {
-              "a": 2,
-              "b": 1
-            },
-            "visible": true
-          },
-          {
-            "id": "case-2",
-            "input": [],
-            "expected": {},
-            "visible": true
-          },
-          {
-            "id": "case-3",
-            "input": [
-              "A",
-              "a",
-              "A"
-            ],
-            "expected": {
-              "A": 2,
-              "a": 1
-            },
-            "visible": true
-          },
-          {
-            "id": "case-4",
-            "input": [
-              "__proto__",
-              "__proto__",
-              "x"
-            ],
-            "expected": {
-              "__proto__": 2,
-              "x": 1
-            },
-            "visible": true
-          }
-        ]
-      },
-      "team": [
-        {
-          "id": "priya-1",
-          "author": {
-            "name": "Priya K",
-            "role": "Data"
-          },
-          "where": "issue",
-          "severity": "info",
-          "text": [
-            "Heads up: the scanner sometimes emits odd labels like __proto__. Please don't special-case anything; every label is just a string."
-          ],
-          "when": {
-            "event": "opened"
-          }
-        }
-      ],
-      "hints": [
-        {
-          "id": "hint-1",
-          "level": 1,
-          "author": {
-            "name": "Priya K",
-            "role": "Data"
-          },
-          "text": "A dict can hold one counter for each distinct string.",
-          "when": {
-            "behaviour": "active-minutes-without-progress",
-            "atLeast": 10
-          }
-        }
-      ],
       "authored": {
         "by": "ai-drafted",
         "reviewers": []

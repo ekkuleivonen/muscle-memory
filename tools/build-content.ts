@@ -19,6 +19,7 @@ import {
   type IssueMetadata,
   type Persona,
   type Revision,
+  type TeamComment,
 } from "../packages/content/model";
 import { revisionId, verifyCatalog } from "../packages/content/revision";
 import { SEED_ISSUES, SEED_PROJECTS, type SeedIssue } from "../content/seed";
@@ -75,23 +76,38 @@ function revisionOf(seed: SeedIssue, key: string, project: (typeof SEED_PROJECTS
       ...(seed.adapter ? { adapter: seed.adapter } : {}),
     },
     checks: { cases },
-    team: seed.comments.map((comment, index) => ({
-      id: `${comment.author.split(" ")[0].toLowerCase()}-${index + 1}`,
-      author: persona(comment),
-      where: "issue",
-      severity: "info",
-      text: [comment.body],
-      when: { event: "opened" },
-    })),
-    hints: seed.hints.map((text, index) => ({
+    team: [
+      // The ticket's own thread: there when the issue is opened.
+      ...seed.comments.map(
+        (comment, index): TeamComment => ({
+          id: `${comment.author.split(" ")[0].toLowerCase()}-${index + 1}`,
+          author: persona(comment),
+          where: "issue",
+          severity: "info",
+          text: [comment.body],
+          when: { event: "opened" },
+        }),
+      ),
+      ...(seed.team ?? []).map(
+        ({ author, role, ...comment }): TeamComment => ({
+          ...comment,
+          author: { name: author, role },
+        }),
+      ),
+    ],
+    hints: seed.hints.map((hint, index) => ({
       id: `hint-${index + 1}`,
       level: index + 1,
       author: lead,
-      text,
-      when: {
-        behaviour: "active-minutes-without-progress",
-        atLeast: HINT_MINUTES * (index + 1),
-      },
+      ...(typeof hint === "string"
+        ? {
+            text: hint,
+            when: {
+              behaviour: "active-minutes-without-progress" as const,
+              atLeast: HINT_MINUTES * (index + 1),
+            },
+          }
+        : hint),
     })),
     // Drafted with a model while designing the tracker; not yet reviewed issue by issue.
     authored: { by: "ai-drafted", reviewers: [] },

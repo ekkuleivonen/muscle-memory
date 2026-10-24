@@ -7,6 +7,10 @@ import { boundText, CAPTURE_LIMIT_BYTES, safeIdentifier } from "./capture";
 import { canonical, type Json } from "./json";
 
 /**
+ * 4.0.0: teammate feedback. `comment` records a teammate comment released by its trigger,
+ * `hint` a hint, and `thread-resolved` a blocking review thread that a later push no longer
+ * triggers. The ticket's own thread (comments on the `opened` event) is part of the ticket and
+ * is not recorded. A reply is recorded on the board (board capture 3.0.0).
  * 3.0.0: a workspace can have several editable files. Every edit names its `file`, and a code
  * revision artifact holds every editable file (`files`, each bounded on its own) instead of one
  * `text`; `revision` counts edits across all files.
@@ -17,7 +21,7 @@ import { canonical, type Json } from "./json";
  * `number` with `push` 2, 3, …, and `result` reports only that run's checks. Earlier versions
  * were never released.
  */
-export const WORKSPACE_CAPTURE_VERSION = "workspace-capture-3.0.0";
+export const WORKSPACE_CAPTURE_VERSION = "workspace-capture-4.0.0";
 /** An edit whose change set is larger than this is recorded without it, plus a snapshot. */
 export const EDIT_CHANGES_LIMIT_BYTES = 16384;
 /** What this capture version does not record. Absence is a gap, not evidence of no activity. */
@@ -99,6 +103,31 @@ export interface ObservationData {
     readonly result: PullRequestResult;
     readonly passed: number;
     readonly total: number;
+  };
+  /**
+   * A teammate comment released by its trigger. Its text is in the revision this observation
+   * names; `wording` is which of its wordings was shown.
+   */
+  "observation.workspace.comment": {
+    readonly comment: string;
+    readonly where: "issue" | "review";
+    readonly severity: "blocking" | "nit" | "info";
+    readonly wording: number;
+    /** For a review comment: the pull request and the push it reviewed. */
+    readonly pullRequest?: number;
+    readonly push?: number;
+  };
+  /** A hint released by its trigger, strictly in level order. */
+  "observation.workspace.hint": {
+    readonly hint: string;
+    readonly level: number;
+  };
+  /** A blocking review thread resolved by a push that no longer triggers it. */
+  "observation.workspace.thread-resolved": {
+    readonly comment: string;
+    readonly pullRequest: number;
+    readonly push: number;
+    readonly by: "code";
   };
   "observation.workspace.capture-gap": {
     /** Inclusive source positions whose observations were not stored. */

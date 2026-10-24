@@ -18,6 +18,9 @@ const DIFFICULTIES: readonly Difficulty[] = ["warm-up", "easy", "medium", "hard"
 const KINDS: readonly IssueKind[] = ["feature", "bug", "performance", "refactor"];
 const STATES = ["draft", "live", "retired", "disabled"];
 const ROLES = ["edit", "read", "tests", "docs"];
+const EVENTS = ["opened", "pull-request", "push"];
+const METRICS = ["lines", "function-lines", "nesting"];
+const BEHAVIOURS = ["active-minutes-without-progress", "failing-pushes", "runs-without-progress"];
 
 function fail(where: string, problem: string): never {
   throw new Error(`${where}: ${problem}`);
@@ -36,22 +39,31 @@ function unique(values: readonly string[], where: string) {
   }
 }
 
-function checkTrigger(trigger: Trigger, where: string): void {
+function checkTrigger(trigger: Trigger, where: string, cases: Set<string>): void {
   if ("all" in trigger || "any" in trigger) {
     const list = "all" in trigger ? trigger.all : trigger.any;
     if (!Array.isArray(list) || !list.length) fail(where, "an empty trigger list");
-    list.forEach((t) => checkTrigger(t, where));
-  } else if ("not" in trigger) checkTrigger(trigger.not, where);
+    list.forEach((t) => checkTrigger(t, where, cases));
+  } else if ("not" in trigger) checkTrigger(trigger.not, where, cases);
   else if ("pattern" in trigger) {
     try {
       new RegExp(trigger.pattern);
     } catch {
       fail(where, `invalid pattern ${trigger.pattern}`);
     }
-  } else if (
-    !("event" in trigger || "metric" in trigger || "check" in trigger || "behaviour" in trigger)
-  )
-    fail(where, "an unknown trigger");
+  } else if ("event" in trigger) {
+    if (!EVENTS.includes(trigger.event)) fail(where, `unknown event ${trigger.event}`);
+  } else if ("metric" in trigger) {
+    if (!METRICS.includes(trigger.metric)) fail(where, `unknown metric ${trigger.metric}`);
+    if (!Number.isFinite(trigger.above)) fail(where, "a metric needs a bound");
+  } else if ("behaviour" in trigger) {
+    if (!BEHAVIOURS.includes(trigger.behaviour))
+      fail(where, `unknown behaviour ${trigger.behaviour}`);
+    if (!Number.isInteger(trigger.atLeast) || trigger.atLeast < 1)
+      fail(where, "a behaviour needs a whole-number threshold");
+  } else if ("check" in trigger) {
+    if (!cases.has(trigger.check)) fail(where, `unknown case ${trigger.check}`);
+  } else fail(where, "an unknown trigger");
 }
 
 export function validateRevision(revision: Revision, where: string): void {
@@ -85,16 +97,25 @@ export function validateRevision(revision: Revision, where: string): void {
     for (const c of cases)
       if (!Array.isArray(c.input) || c.input.length !== workspace.parameters.length)
         fail(where, `case ${c.id} must list one argument per parameter`);
+  const caseIds = new Set(cases.map((c) => c.id));
   unique(revision.team.map((c) => c.id), `${where} team comments`);
   for (const comment of revision.team) {
+    if (!ID.test(comment.id)) fail(where, `comment id ${comment.id} is not a slug`);
     if (!comment.text.length) fail(where, `comment ${comment.id} has no text`);
-    checkTrigger(comment.when, `${where} comment ${comment.id}`);
+    if (!["issue", "review"].includes(comment.where))
+      fail(where, `comment ${comment.id} is neither on the issue nor a review`);
+    if (!["blocking", "nit", "info"].includes(comment.severity))
+      fail(where, `comment ${comment.id} has an unknown severity`);
+    // Only a review thread can be resolved, by a push or a reply, before merging.
+    if (comment.severity === "blocking" && comment.where !== "review")
+      fail(where, `comment ${comment.id} blocks merging, so it must be a review comment`);
+    checkTrigger(comment.when, `${where} comment ${comment.id}`, caseIds);
   }
   unique(revision.hints.map((h) => h.id), `${where} hints`);
   revision.hints.forEach((hint, index) => {
     if (hint.level !== index + 1) fail(where, "hint levels must run 1, 2, 3, … in order");
     text(hint.text, `${where} hint ${hint.id}`);
-    checkTrigger(hint.when, `${where} hint ${hint.id}`);
+    checkTrigger(hint.when, `${where} hint ${hint.id}`, caseIds);
   });
 }
 

@@ -4,7 +4,26 @@
  * of issues people meet in a normal job. tools/build-content.ts turns this into the catalog
  * (content/catalog.json): it generates each issue's repo and hashes each revision.
  */
+import type { Trigger } from "../packages/content/model";
+
+/** A note in the ticket's own thread, there when the issue is opened. */
 export type Comment = { author: string; role: string; body: string };
+
+/** A teammate's later comment, on the ticket or in a pull request review, with its trigger. */
+export interface SeedTeamComment {
+  id: string;
+  author: string;
+  role: string;
+  where: "issue" | "review";
+  severity: "blocking" | "nit" | "info";
+  /** A few wordings of the same comment; each person sees one. */
+  text: string[];
+  when: Trigger;
+  repeat?: "once" | "while-true";
+}
+
+/** A hint: an idea, never solution code. A plain string waits for active minutes. */
+export type SeedHint = string | { text: string; when: Trigger };
 
 export interface SeedIssue {
   id: string;
@@ -17,8 +36,11 @@ export interface SeedIssue {
   task: string;
   inputs: unknown[];
   expected: unknown[];
-  hints: string[];
+  /** Released one at a time, in order, by the lead of the ticket's thread. */
+  hints: SeedHint[];
   comments: Comment[];
+  /** Later comments released by triggers: on the ticket, or reviewing a pull request. */
+  team?: SeedTeamComment[];
   entrypoint: string;
   starter: string;
   /** Named when each input lists several arguments; otherwise it is the only one. */
@@ -42,7 +64,7 @@ export interface SeedProject {
 const challenge = (
   id: string,
   fields: Omit<SeedIssue, "id" | "hints" | "comments" | "entrypoint" | "starter"> & {
-    hints?: string[];
+    hints?: SeedHint[];
     comments?: Comment[];
   },
 ): SeedIssue => ({
@@ -378,11 +400,52 @@ export const SEED_ISSUES: SeedIssue[] = [
     task: "Write `frequency_map(items)`: count each exact, case-sensitive string and return a dict of string to integer count. Empty input returns `{}`.",
     inputs: [["a", "b", "a"], [], ["A", "a", "A"], ["__proto__", "__proto__", "x"]],
     expected: [{ a: 2, b: 1 }, {}, { A: 2, a: 1 }, JSON.parse('{"__proto__":2,"x":1}')],
-    hints: ["A dict can hold one counter for each distinct string."],
+    hints: [
+      "A dict can hold one counter for each distinct string.",
+      {
+        text: "Try the `__proto__` case by hand: what does your dict hold after the first label, and after the second?",
+        when: { behaviour: "failing-pushes", atLeast: 2 },
+      },
+    ],
     comments: [
       priya(
         "Heads up: the scanner sometimes emits odd labels like __proto__. Please don't special-case anything; every label is just a string.",
       ),
+    ],
+    team: [
+      {
+        id: "priya-debug-print",
+        author: "Priya K",
+        role: "Data",
+        where: "review",
+        severity: "blocking",
+        text: [
+          "Could you take the `print` out before this goes in? The scanner job ships everything on stdout to the warehouse logs.",
+          "There's a `print` left in here. Anything on stdout ends up in the warehouse logs, so it needs to go before we merge.",
+        ],
+        when: { pattern: "^\\s*print\\(", present: true },
+        repeat: "while-true",
+      },
+      {
+        id: "priya-long-function",
+        author: "Priya K",
+        role: "Data",
+        where: "review",
+        severity: "nit",
+        text: [
+          "Nit: `frequency_map` has grown quite long for what it does. Could the dict itself do more of the work?",
+        ],
+        when: { metric: "function-lines", above: 12 },
+      },
+      {
+        id: "priya-proto-passes",
+        author: "Priya K",
+        role: "Data",
+        where: "review",
+        severity: "info",
+        text: ["Nice, `__proto__` comes through as a plain label now. That was the one breaking the nightly run."],
+        when: { check: "case-4", is: "passing" },
+      },
     ],
   }),
   // Storefront: frontend

@@ -3,6 +3,7 @@
  * revisions, grouped into projects. Pure, so pages, search and filters are testable without a
  * server.
  */
+import { inTicket } from "./feedback";
 import {
   ESTIMATES,
   type Catalog,
@@ -63,7 +64,6 @@ export interface Issue {
   labels: readonly string[];
   /** The visible cases: hidden ones only run in CI. */
   criteria: { input: Json; expected: Json }[];
-  hints: number;
   comments: readonly IssueComment[];
   /** Runs in this browser: its language has an engine and the issue has what the engine needs. */
   runnable: boolean;
@@ -129,12 +129,9 @@ function toIssue(
     criteria: revision.checks.cases
       .filter((c) => c.visible)
       .map(({ input, expected }) => ({ input, expected })),
-    hints: revision.hints.length,
     // Notes posted when the issue is opened read as the ticket's thread.
     comments: revision.team
-      .filter(
-        (c) => c.where === "issue" && "event" in c.when && c.when.event === "opened",
-      )
+      .filter(inTicket)
       .map((c) => ({ author: c.author.name, role: c.author.role, body: c.text[0] })),
     runnable: runnable(revision),
     project,

@@ -1,27 +1,29 @@
 /**
- * Raw observations of personal-board moves: an issue's status set by hand (Backlog, Todo,
- * In progress) from its Status menu.
+ * Raw observations from the tracker: personal-board moves (an issue's status set by hand from
+ * its Status menu, or Done by merging a pull request) and replies to review comments.
  * Recorded for every account under the Terms and Privacy Notice it accepted, whose version
  * each move carries; nothing here reads anything beyond the move itself and the board at
  * that moment.
  */
-import { safeIdentifier } from "./capture";
+import { boundText, safeIdentifier } from "./capture";
 import { canonical, type Json } from "./json";
 import type { WorkspaceRecord } from "./workspace";
 
 /**
+ * 3.0.0: replies. `observation.board.replied` records a reply to a teammate's review comment
+ * on a pull request, with its bounded text; a reply resolves a blocking thread.
  * 2.0.0: moves name the `issue` and its live `issueRevision` (SHA-256 of the revision's
  * content) instead of a versioned Challenge, and only a person merging a pull request moves an
  * issue to Done (`trigger: "pull-request-merged"`, by pointer or keyboard). Earlier versions
  * were never released.
  */
-export const BOARD_CAPTURE_VERSION = "board-capture-2.0.0";
+export const BOARD_CAPTURE_VERSION = "board-capture-3.0.0";
 /** What this capture does not record. Absence is a gap, not evidence of no activity. */
 export const BOARD_CAPTURE_GAPS = [
   "issue-views",
   "searches-and-filters",
   "time-on-page",
-  "activity-outside-board-moves",
+  "activity-outside-board-moves-and-replies",
 ] as const;
 
 export type BoardColumn = "backlog" | "todo" | "in-progress" | "done";
@@ -48,9 +50,27 @@ export interface BoardMoveData {
   readonly runId?: string;
 }
 
-export interface BoardObservation {
+/** A reply to a teammate's review comment on one of the person's pull requests. */
+export interface BoardReplyData {
+  readonly issueKey: string;
+  readonly pullRequest: number;
+  /** The comment replied to, by id in the revision this observation names. */
+  readonly comment: string;
+  readonly text: string;
+  readonly textBytes: number;
+  readonly truncated: boolean;
+}
+
+interface BoardData {
+  "observation.board.moved": BoardMoveData;
+  "observation.board.replied": BoardReplyData;
+}
+
+export interface BoardObservation<
+  T extends keyof BoardData = keyof BoardData,
+> {
   readonly schemaVersion: "1.0.0";
-  readonly type: "observation.board.moved";
+  readonly type: T;
   readonly observationId: string;
   readonly participantId: string;
   readonly source: { readonly id: string; readonly sequence: number };
@@ -67,7 +87,7 @@ export interface BoardObservation {
   /** As in workspace observations: the issue and the revision live at the time. */
   readonly issue: string;
   readonly issueRevision: string;
-  readonly data: BoardMoveData;
+  readonly data: BoardData[T];
 }
 
 const ISSUE_KEY = /^[A-Z][A-Z0-9]{1,4}-[1-9]\d{0,3}$/;
@@ -94,27 +114,8 @@ export function boardMove(input: {
   termsVersion: string;
   issue: { id: string; revision: string };
   data: BoardMoveData;
-}): BoardObservation {
-  const {
-    participantId,
-    sourceId,
-    sequence,
-    occurredAt,
-    termsVersion,
-    issue,
-    data,
-  } = input;
-  safeIdentifier(participantId);
-  safeIdentifier(sourceId);
-  safeIdentifier(issue.id);
-  if (!Number.isSafeInteger(sequence) || sequence < 1)
-    throw new Error("Source positions are positive whole numbers.");
-  if (!REVISION.test(issue.revision))
-    throw new Error("Board moves name the issue's exact revision.");
-  if (Number.isNaN(Date.parse(occurredAt)))
-    throw new Error("Board moves need a time.");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(termsVersion))
-    throw new Error("Board moves name the accepted Terms version.");
+}): BoardObservation<"observation.board.moved"> {
+  const { data } = input;
   if (!ISSUE_KEY.test(data.issueKey)) throw new Error("Unknown issue key.");
   if (
     !COLUMNS.includes(data.from) ||
@@ -144,11 +145,76 @@ export function boardMove(input: {
     throw new Error("Board count must be a whole number.");
   if (typeof data.nudged !== "boolean")
     throw new Error("nudged is true or false.");
+  return envelope("observation.board.moved", input, {
+      issueKey: data.issueKey,
+      from: data.from,
+      to: data.to,
+      via: data.via,
+      trigger: data.trigger,
+      onBoardBefore: data.onBoardBefore,
+      nudged: data.nudged,
+      ...(merged ? { pullRequest: data.pullRequest, runId: data.runId } : {}),
+  });
+}
+
+/** The longest reply kept; a longer one is cut at a character boundary and marked. */
+export const REPLY_LIMIT_BYTES = 8192;
+
+export function boardReply(input: {
+  participantId: string;
+  sourceId: string;
+  sequence: number;
+  occurredAt: string;
+  termsVersion: string;
+  issue: { id: string; revision: string };
+  data: { issueKey: string; pullRequest: number; comment: string; text: string };
+}): BoardObservation<"observation.board.replied"> {
+  const { data } = input;
+  if (!ISSUE_KEY.test(data.issueKey)) throw new Error("Unknown issue key.");
+  if (!Number.isSafeInteger(data.pullRequest) || data.pullRequest < 1)
+    throw new Error("A reply names its pull request.");
+  safeIdentifier(data.comment);
+  if (!data.text.trim()) throw new Error("A reply needs text.");
+  const cut = boundText(data.text, REPLY_LIMIT_BYTES);
+  return envelope("observation.board.replied", input, {
+    issueKey: data.issueKey,
+    pullRequest: data.pullRequest,
+    comment: data.comment,
+    text: cut.text,
+    textBytes: cut.originalBytes,
+    truncated: cut.truncated,
+  });
+}
+
+function envelope<T extends keyof BoardData>(
+  type: T,
+  input: {
+    participantId: string;
+    sourceId: string;
+    sequence: number;
+    occurredAt: string;
+    termsVersion: string;
+    issue: { id: string; revision: string };
+  },
+  data: BoardData[T],
+): BoardObservation<T> {
+  const { participantId, sourceId, sequence, occurredAt, termsVersion, issue } = input;
+  safeIdentifier(participantId);
+  safeIdentifier(sourceId);
+  safeIdentifier(issue.id);
+  if (!Number.isSafeInteger(sequence) || sequence < 1)
+    throw new Error("Source positions are positive whole numbers.");
+  if (!REVISION.test(issue.revision))
+    throw new Error("Board observations name the issue's exact revision.");
+  if (Number.isNaN(Date.parse(occurredAt)))
+    throw new Error("Board observations need a time.");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(termsVersion))
+    throw new Error("Board observations name the accepted Terms version.");
   const observationId = `${sourceId}.${sequence}`;
   safeIdentifier(observationId);
   return {
     schemaVersion: "1.0.0",
-    type: "observation.board.moved",
+    type,
     observationId,
     participantId,
     source: { id: sourceId, sequence },
@@ -160,16 +226,7 @@ export function boardMove(input: {
     researchConsent: false,
     issue: issue.id,
     issueRevision: issue.revision,
-    data: {
-      issueKey: data.issueKey,
-      from: data.from,
-      to: data.to,
-      via: data.via,
-      trigger: data.trigger,
-      onBoardBefore: data.onBoardBefore,
-      nudged: data.nudged,
-      ...(merged ? { pullRequest: data.pullRequest, runId: data.runId } : {}),
-    },
+    data,
   };
 }
 
@@ -189,7 +246,7 @@ export function boardPayloads(records: readonly WorkspaceRecord[]): string[] {
     .filter(
       (r) =>
         r.kind === "observation" &&
-        r.payload.includes('"type":"observation.board.moved"'),
+        r.payload.includes('"type":"observation.board.'),
     )
     .map((r) => r.payload);
 }

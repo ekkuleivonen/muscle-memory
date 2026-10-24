@@ -38,6 +38,12 @@ import {
 } from "../../lib/activity";
 import { statusOf } from "../../lib/board";
 import { mergedPullRequests } from "../../lib/pulls";
+import {
+  due,
+  feedbackOf,
+  type Feedback,
+  type Release,
+} from "../../lib/feedback";
 import { languageLabel, type IssueComment } from "../../lib/library";
 import type { LanguageId } from "../../lib/languages";
 import {
@@ -96,20 +102,25 @@ type Opening =
  * opens read-only.
  */
 export function Ide({
-  revisionJson,
+  revisionsJson,
   issue,
   root,
 }: {
-  /** The live revision as a JSON string: React's serializer would drop a "__proto__" fixture key. */
-  revisionJson: string;
+  /**
+   * Every published revision of the issue by id, as a JSON string: React's serializer would
+   * drop a "__proto__" fixture key. The IDE opens the live one; feedback recorded against
+   * earlier ones is read from theirs.
+   */
+  revisionsJson: string;
   issue: IdeIssue;
   /** The repo's folder: the project's key, as in project:shop. */
   root: string;
 }) {
-  const revision = useMemo(
-    () => JSON.parse(revisionJson) as Revision,
-    [revisionJson],
+  const revisions = useMemo(
+    () => JSON.parse(revisionsJson) as Record<string, Revision>,
+    [revisionsJson],
   );
+  const revision = revisions[issue.revision];
   const challenge = useMemo(() => executableOf(revision), [revision]);
   const repo = useMemo(
     () => repoOf(revision.workspace, issue, root),
@@ -150,6 +161,10 @@ export function Ide({
   const [edited, setEdited] = useState<ReadonlySet<string>>(new Set());
   /** The boot screen can be dismissed while only the runtime is still loading. */
   const [booted, setBooted] = useState(false);
+  /** Teammate comments, hints and review threads released so far. */
+  const [feedback, setFeedback] = useState<Feedback>({ released: [], threads: [] });
+  /** Something new arrived in the ticket's thread while another view was showing. */
+  const [unread, setUnread] = useState(false);
 
   const layout = useIdeLayout();
   const mainRef = useRef<HTMLElement>(null);
@@ -166,6 +181,41 @@ export function Ide({
       : null;
   const openPullRef = useRef(openPull);
   openPullRef.current = openPull;
+  /** The ticket's thread: its own comments, then released comments and hints. */
+  const thread = useMemo(
+    () => [
+      ...issue.comments.map((c) => ({ ...c, at: undefined as string | undefined })),
+      ...feedback.released.flatMap((r) => {
+        const from = revisions[r.issueRevision];
+        if (r.kind === "hint") {
+          const hint = from?.hints.find((h) => h.id === r.hint);
+          return hint
+            ? [{ author: hint.author.name, role: hint.author.role, body: hint.text, at: r.at }]
+            : [];
+        }
+        const comment = from?.team.find((c) => c.id === r.comment);
+        return comment
+          ? [
+              {
+                author: comment.author.name,
+                role: comment.author.role,
+                body: comment.text[r.wording] ?? comment.text[0],
+                at: r.at,
+              },
+            ]
+          : [];
+      }),
+    ],
+    [issue.comments, feedback, revisions],
+  );
+  /** Open blocking review threads by pull request number. */
+  const blocking = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const t of feedback.threads)
+      if (t.severity === "blocking" && !t.resolved)
+        counts.set(t.number, (counts.get(t.number) ?? 0) + 1);
+    return counts;
+  }, [feedback]);
 
   const hosts = useRef(new Map<string, HTMLDivElement>());
   const viewers = useRef(new Map<string, EditorView>());
@@ -177,6 +227,51 @@ export function Ide({
   const store = useRef<PracticeStore | null>(null);
   // Each mount (twice in development) bumps this; a superseded open installs nothing.
   const generation = useRef(0);
+  const participant = useRef("");
+  /** Feedback checks run one at a time, in the order asked for. */
+  const reviewing = useRef<Promise<void>>(Promise.resolve());
+  const viewRef = useRef(view);
+  viewRef.current = view;
+
+  /**
+   * Releases whatever teammate feedback the revision's triggers say is due, from what is
+   * stored (so pending writes are flushed first), and shows it. `push` names a push whose
+   * checks just finished: only then are review comments checked.
+   */
+  function review(push?: { number: number; push: number }) {
+    reviewing.current = reviewing.current.then(async () => {
+      const current = session.current;
+      const opened = store.current;
+      if (!current || !opened) return;
+      try {
+        await current.recorder.flush();
+        let records = await opened.workspaceRecords();
+        const releases = due({
+          revision,
+          records,
+          issue: issue.slug,
+          participantId: participant.current,
+          revisionFor: (id) => revisions[id],
+          files: current.code(),
+          push,
+        });
+        if (releases.length) {
+          current.release(releases);
+          await current.recorder.flush();
+          records = await opened.workspaceRecords();
+          setMessage(announcement(releases));
+          if (
+            releases.some((r) => r.kind !== "resolved" && !("pullRequest" in r && r.pullRequest)) &&
+            viewRef.current !== "ticket"
+          )
+            setUnread(true);
+        }
+        if (session.current === current) setFeedback(feedbackOf(records, issue.slug));
+      } catch (cause) {
+        console.warn("Teammate feedback could not be checked.", cause);
+      }
+    });
+  }
 
   function startRuntime() {
     if (!issue.runnable || !engine) return;
@@ -211,6 +306,7 @@ export function Ide({
       setKeymap(keys);
       store.current ??= await openPracticeStore();
       const participantId = await store.current.participantId();
+      participant.current = participantId;
       const records = await store.current.workspaceRecords();
       const recovered: RecoveredCode | null = latestSavedCode(
         records,
@@ -225,6 +321,7 @@ export function Ide({
       if (recovered) setMessage(recoveryMessage(recovered));
       setPulls(history);
       setMerged(mergedNumbers);
+      setFeedback(feedbackOf(records, issue.slug));
       session.current = new WorkspaceSession({
         participantId,
         consentVersion: `terms-${account?.accepted?.version ?? "unknown"}`,
@@ -261,6 +358,9 @@ export function Ide({
           setRun(next);
           setStale(next.revision !== session.current?.currentRevision);
           const pr = next.pullRequest;
+          // Once a run or a push's checks finish, teammates may have something to say.
+          if (next.status !== "queued" && next.status !== "running")
+            review(pr ? { number: pr.number, push: pr.push } : undefined);
           if (!pr) return;
           // Opening shows the pull request at once; its checks fill in when they finish.
           setPulls((current) => [
@@ -289,6 +389,7 @@ export function Ide({
           session.current.mount(file.path, hosts.current.get(file.path)!);
       session.current.mount(home, homeHost);
       setOpening({ state: "open" });
+      review();
     } catch (cause) {
       if (current())
         setOpening({
@@ -315,9 +416,12 @@ export function Ide({
           : new Set(changed),
       );
     }, 1000);
+    // Hints wait for active minutes, which pass without any other event.
+    const feedbackTimer = setInterval(() => review(), 30_000);
     return () => {
       generation.current++;
       clearInterval(timer);
+      clearInterval(feedbackTimer);
       runner.current?.dispose();
       runner.current = null;
       types.current?.dispose();
@@ -450,9 +554,13 @@ export function Ide({
 
       <nav className="ide-activity" aria-label="Views">
         <ActivityButton
-          label="Ticket"
+          label={unread ? "Ticket (new comments)" : "Ticket"}
           active={view === "ticket"}
-          onClick={() => setView("ticket")}
+          dot={unread}
+          onClick={() => {
+            setView("ticket");
+            setUnread(false);
+          }}
         >
           <TicketIcon />
         </ActivityButton>
@@ -479,6 +587,7 @@ export function Ide({
             issue={issue}
             cases={challenge.cases.length}
             testsPath={testsFile.path}
+            thread={thread}
             onOpenTests={() => openFile(testsFile.path)}
           />
         )}
@@ -606,6 +715,7 @@ export function Ide({
               <PullRequests
                 pulls={pulls}
                 merged={merged}
+                blocking={blocking}
                 issue={issue}
                 done={done}
                 runnable={issue.runnable}
@@ -697,11 +807,14 @@ function runtimeLabel(runtime: Runtime): string {
 function ActivityButton({
   label,
   active,
+  dot,
   onClick,
   children,
 }: {
   label: string;
   active: boolean;
+  /** Something new to look at. */
+  dot?: boolean;
   onClick(): void;
   children: ReactNode;
 }) {
@@ -715,6 +828,7 @@ function ActivityButton({
       onClick={onClick}
     >
       {children}
+      {dot && <span className="ide-activity-dot" aria-hidden />}
     </button>
   );
 }
@@ -775,13 +889,17 @@ function Ticket({
   issue,
   cases,
   testsPath,
+  thread,
   onOpenTests,
 }: {
   issue: IdeIssue;
   cases: number;
   testsPath: string;
+  /** The ticket's comments, then teammates' later ones, with when they were posted. */
+  thread: (IssueComment & { at?: string })[];
   onOpenTests(): void;
 }) {
+  const now = new Date();
   return (
     <div className="ide-ticket">
       <h2>Ticket</h2>
@@ -794,12 +912,18 @@ function Ticket({
           {testsPath}
         </button>
       </p>
-      {issue.comments.length > 0 && (
+      {thread.length > 0 && (
         <div className="ide-comments">
-          {issue.comments.map((comment, i) => (
+          {thread.map((comment, i) => (
             <div className="ide-comment" key={i}>
               <b>{comment.author}</b>
               {comment.role && <span className="faint"> · {comment.role}</span>}
+              {comment.at && (
+                <time className="faint" dateTime={comment.at}>
+                  {" "}
+                  · {timeAgo(comment.at, now)}
+                </time>
+              )}
               <Markdown source={comment.body} />
             </div>
           ))}
@@ -969,12 +1093,15 @@ const MERGED = { mark: "⇢", label: "Merged", tone: "merged" };
 function PullRequests({
   pulls,
   merged,
+  blocking,
   issue,
   done,
   runnable,
 }: {
   pulls: PullRequestRecord[];
   merged: ReadonlySet<number>;
+  /** Open blocking review threads by pull request number. */
+  blocking: ReadonlyMap<number, number>;
   issue: IdeIssue;
   done: boolean;
   runnable: boolean;
@@ -990,7 +1117,15 @@ function PullRequests({
         !done &&
         !isMerged(latest) &&
         latest.result !== "running" &&
-        (latest.result === "checks-passed" ? (
+        (latest.result === "checks-passed" && blocking.get(latest.number) ? (
+          <p className="ide-review">
+            Pull request #{latest.number}&apos;s checks pass, but{" "}
+            {comments(blocking.get(latest.number)!)} in its review{" "}
+            {blocking.get(latest.number) === 1 ? "blocks" : "block"} merging.
+            Change the code and push (<kbd>⌘⇧⏎</kbd>), or{" "}
+            <Link href={pullHref(issue.key, latest.number)}>reply on #{latest.number}</Link>.
+          </p>
+        ) : latest.result === "checks-passed" ? (
           <p className="ide-review">
             Pull request #{latest.number} is open and its checks pass.{" "}
             <Link href={pullHref(issue.key, latest.number)}>
@@ -1051,6 +1186,12 @@ function PullRequests({
                     ? `${pr.total} checks`
                     : `${pr.passed}/${pr.total} checks`}
                   {pr.pushes > 1 && ` · ${pr.pushes} pushes`}
+                  {!isMerged(pr) && blocking.get(pr.number) && (
+                    <span className="ide-pr-blocking">
+                      {" · "}
+                      {comments(blocking.get(pr.number)!)}
+                    </span>
+                  )}
                 </span>
                 <time className="faint" dateTime={pr.at}>
                   {timeAgo(pr.at, now)}
@@ -1062,6 +1203,25 @@ function PullRequests({
       )}
     </div>
   );
+}
+
+function comments(count: number): string {
+  return `${count} blocking comment${count === 1 ? "" : "s"}`;
+}
+
+/** One line in the panel saying what teammates just did. */
+function announcement(releases: readonly Release[]): string {
+  return releases
+    .map((r) => {
+      if (r.kind === "hint") return `${r.hint.author.name} commented on the ticket.`;
+      if (r.kind === "resolved") return `Review comment on #${r.pullRequest} resolved by your push.`;
+      const who = r.comment.author.name;
+      if (!r.pullRequest) return `${who} commented on the ticket.`;
+      return r.comment.severity === "blocking"
+        ? `${who} requested changes on #${r.pullRequest}.`
+        : `${who} commented on #${r.pullRequest}.`;
+    })
+    .join(" ");
 }
 
 /** The run as a terminal shows it: printed output, errors with traces, cases, summary. */

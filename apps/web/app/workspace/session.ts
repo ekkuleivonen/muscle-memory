@@ -28,6 +28,7 @@ import {
   type Runner,
   type RunOutcome,
 } from "../../../../packages/runner/runner";
+import type { Release } from "../../lib/feedback";
 import type { FileLanguage } from "../../lib/repo";
 import { createEditor, editorFeatures, type Keymap } from "./editor";
 import type { TypeChecker } from "./type-checker";
@@ -339,6 +340,31 @@ export class WorkspaceSession {
 
   cancel(): void {
     this.options.runner().cancel();
+  }
+
+  /** Records teammate feedback the revision's triggers released (see lib/feedback). */
+  release(releases: readonly Release[]): void {
+    for (const r of releases)
+      if (r.kind === "comment")
+        this.recorder.observe("observation.workspace.comment", {
+          comment: r.comment.id,
+          where: r.comment.where,
+          severity: r.comment.severity,
+          wording: r.wording,
+          ...(r.pullRequest ? { pullRequest: r.pullRequest, push: r.push } : {}),
+        });
+      else if (r.kind === "hint")
+        this.recorder.observe("observation.workspace.hint", {
+          hint: r.hint.id,
+          level: r.hint.level,
+        });
+      else
+        this.recorder.observe("observation.workspace.thread-resolved", {
+          comment: r.comment,
+          pullRequest: r.pullRequest,
+          push: r.push,
+          by: "code",
+        });
   }
 
   /** Stops capture after in-flight writes settle; the caller then clears storage. */
