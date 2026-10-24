@@ -120,10 +120,14 @@ test("suggestions prefer runnable, then the person's stack, then easier issues",
   }));
   assert.deepEqual(
     suggestions(issues, runnableOnBoard, ["cpp"]).map((i) => i.key),
-    ["EDGE-3", "API-1", "API-4"],
+    ["EDGE-3", "EDGE-1"],
   );
+  // Among runnable issues not on the board, the person's languages come first.
+  const notGo = issues
+    .filter((i) => i.runnable && i.language !== "go")
+    .map((key) => ({ key: key.key, addedAt: "t", status: "todo" as const }));
   assert.deepEqual(
-    suggestions(issues, runnableOnBoard, ["go"], 2).map((i) => i.key),
+    suggestions(issues, notGo, ["go"], 2).map((i) => i.key),
     ["API-1", "API-4"],
   );
 });

@@ -4,6 +4,7 @@
  * all of them run inside the same sandbox. Adding a language means adding an engine here.
  */
 import manifest from "./runtime-manifest.json";
+import { GO_WORKER } from "./workers/go";
 import { HTML_WORKER } from "./workers/html";
 import { JAVASCRIPT_WORKER } from "./workers/javascript";
 import { PHP_WORKER } from "./workers/php";
@@ -33,7 +34,7 @@ export interface Engine {
   readonly worker: string;
 }
 
-const { pyodide, javascript, pglite, html, php, ruby } = manifest;
+const { pyodide, javascript, pglite, html, php, ruby, go } = manifest;
 
 export const ENGINES: Record<EngineId, Engine> = {
   pyodide: {
@@ -108,6 +109,16 @@ export const ENGINES: Record<EngineId, Engine> = {
     config: {},
     worker: RUBY_WORKER,
   },
+  go: {
+    id: "go",
+    label: `Go ${go.go} (Yaegi)`,
+    runtime: { id: "yaegi", version: go.version, go: go.go },
+    basePath: go.basePath,
+    files: go.files,
+    sizes: go.sizes,
+    config: {},
+    worker: GO_WORKER,
+  },
 };
 
 const BY_LANGUAGE: Record<string, EngineId> = {
@@ -118,6 +129,7 @@ const BY_LANGUAGE: Record<string, EngineId> = {
   html: "html",
   php: "php",
   ruby: "ruby",
+  go: "go",
 };
 
 /** The engine that runs a language, if any does yet. */

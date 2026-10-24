@@ -698,6 +698,34 @@ export function applyDiscount() { return 0; }`,
     results.rubyNonJson = await ruby(
       "def sorted(values, label) = Float::NAN\n",
     );
+    const go = (code, extra = {}) =>
+      run(
+        "go",
+        {
+          code,
+          inputs: [
+            [[15, 20, 35, 40, 50], 30],
+            [[], 99],
+          ],
+          filename: "percentile.go",
+          language: "go",
+          entrypoint: "Percentile",
+          parameters: ["samples", "p"],
+          ...extra,
+        },
+        15000,
+      );
+    results.go = await go(
+      'package metrics\n\nimport (\n\t"fmt"\n\t"sort"\n)\n\nfunc Percentile(samples []int, p float64) (int, bool) {\n\tfmt.Println("n =", len(samples))\n\tif len(samples) == 0 {\n\t\treturn 0, false\n\t}\n\ts := append([]int(nil), samples...)\n\tsort.Ints(s)\n\treturn s[1], true\n}\n',
+    );
+    results.goSyntax = await go("package metrics\n\nfunc Percentile( {\n");
+    results.goPanic = await go(
+      "package metrics\n\nfunc Percentile(samples []int, p float64) (int, bool) {\n\treturn samples[10], true\n}\n",
+    );
+    results.goEscape = await go(
+      `package metrics\n\nimport "net/http"\n\nfunc Percentile(samples []int, p float64) (int, bool) {\n\t_, err := http.Get("${OUT}/go-fetch")\n\tif err != nil {\n\t\treturn 1, true\n\t}\n\treturn 2, true\n}\n`,
+      { inputs: [[[1], 1]] },
+    );
     results.frames = document.querySelectorAll("iframe").length;
     return results;
   }, OUT);
@@ -785,6 +813,17 @@ export function applyDiscount() { return 0; }`,
     "ruby: values JSON cannot hold are refused": Boolean(
       report.rubyNonJson.cases[0]?.unserializable,
     ),
+    "go: typed arguments, comma-ok as null, fmt output captured":
+      out(report.go) === "20" &&
+      out(report.go, 1) === "null" &&
+      report.go.stdout.text === "n = 5\nn = 0\n",
+    "go: syntax error is a compile error in the solution file":
+      report.goSyntax.phase === "compile" &&
+      /percentile\.go:3/.test(report.goSyntax.error.traceback.text),
+    "go: a panic stays with its case and says where":
+      report.goPanic.cases[0]?.error?.type === "panic" &&
+      /percentile\.go:4/.test(report.goPanic.cases[0].error.traceback.text),
+    "go: net/http cannot reach the network": out(report.goEscape) === "1",
     "no request from any engine reached either server":
       hits.app.length === 0 && hits.outside.length === 0,
     "no sandbox frames left behind": report.frames === 0,
@@ -822,7 +861,7 @@ for (const name of process.env.ONLY_AUTH
 if (!process.env.PREVIEW_URL && !process.env.ONLY_AUTH)
   for (const name of requested.length ? requested : ["chromium"]) {
     console.log(
-      `\n=== ${name}: JavaScript, TypeScript, SQL, HTML, PHP and Ruby ===`,
+      `\n=== ${name}: JavaScript, TypeScript, SQL, HTML, PHP, Ruby and Go ===`,
     );
     for (const [label, pass] of Object.entries(
       await enginesCheck(engines[name]),

@@ -10,6 +10,7 @@
  */
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
+import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -155,6 +156,23 @@ const ENGINES = {
       };
     },
   },
+  go: {
+    // Not an npm package: Yaegi's version is pinned in tools/runtimes/go/go.mod.
+    version: async () =>
+      /traefik\/yaegi v([\d.]+)/.exec(
+        await readFile(join(root, "tools/runtimes/go/go.mod"), "utf8"),
+      )[1],
+    license: (v) =>
+      `Yaegi ${v} (Apache-2.0), https://github.com/traefik/yaegi\nGo (BSD-3-Clause), https://go.dev/LICENSE\n`,
+    files: async () => {
+      const built = await goRunner();
+      return {
+        // 39 MB unpacked: shipped gzipped, unpacked by the page after its hash is checked.
+        "go.wasm.gz": gzipSync(built["go.wasm"], { level: 9 }),
+        "wasm_exec.js": built["wasm_exec.js"],
+      };
+    },
+  },
   pglite: {
     package: "@electric-sql/pglite",
     license: (v) =>
@@ -176,16 +194,80 @@ const ENGINES = {
   },
 };
 
+/**
+ * The Go runner is built from tools/runtimes/go in a pinned Go image, so every machine and CI
+ * produce the same bytes (checked against the pins like everything else). Builds are cached
+ * by their inputs, so dev starts after the first do not rebuild.
+ */
+const GO_IMAGE =
+  "golang:1.25.3-bookworm@sha256:4f43b271f9673eb7bd0cb3a49cc17b08d8d6ee110277e26dbacc93c43a5a7793";
+async function goRunner() {
+  const src = join(root, "tools/runtimes/go");
+  const inputs = await Promise.all(
+    ["main.go", "go.mod", "go.sum"].map((name) => readFile(join(src, name))),
+  );
+  const key = createHash("sha256")
+    .update(GO_IMAGE)
+    .update(Buffer.concat(inputs))
+    .digest("hex")
+    .slice(0, 16);
+  const cache = join(
+    root,
+    "node_modules/.cache/muscle-memory-runtimes",
+    `go-${key}`,
+  );
+  if (!existsSync(join(cache, "go.wasm"))) {
+    await mkdir(cache, { recursive: true });
+    console.log("building the Go runner (once per change, in Docker)…");
+    execFileSync(
+      "docker",
+      [
+        "run",
+        "--rm",
+        "-u",
+        `${process.getuid()}:${process.getgid()}`,
+        "-e",
+        "HOME=/tmp",
+        "-e",
+        "GOCACHE=/tmp/gocache",
+        "-e",
+        "GOMODCACHE=/tmp/gomod",
+        "-e",
+        "GOOS=js",
+        "-e",
+        "GOARCH=wasm",
+        "-v",
+        `${src}:/src:ro`,
+        "-v",
+        `${cache}:/out`,
+        "-w",
+        "/src",
+        GO_IMAGE,
+        "sh",
+        "-c",
+        'go build -trimpath -ldflags="-s -w -buildid=" -o /out/go.wasm . && cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" /out/',
+      ],
+      { stdio: ["ignore", "ignore", "inherit"] },
+    );
+  }
+  return {
+    "go.wasm": await readFile(join(cache, "go.wasm")),
+    "wasm_exec.js": await readFile(join(cache, "wasm_exec.js")),
+  };
+}
+
 const integrity = (bytes) =>
   "sha256-" + createHash("sha256").update(bytes).digest("base64");
 
 for (const [id, engine] of Object.entries(ENGINES)) {
   const pinned = manifest[id];
-  const installed = await versionOf(engine.package);
+  const installed = engine.version
+    ? await engine.version()
+    : await versionOf(engine.package);
   if (installed !== pinned.version) {
     if (!update)
       throw new Error(
-        `Installed ${engine.package} ${installed} does not match pinned ${pinned.version}. Run with --update after an upgrade.`,
+        `Installed ${engine.package ?? id} ${installed} does not match pinned ${pinned.version}. Run with --update after an upgrade.`,
       );
     pinned.version = installed;
     pinned.basePath = `/runtime/${id}-${installed}/`;

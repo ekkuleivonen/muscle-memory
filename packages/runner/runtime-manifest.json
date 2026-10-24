@@ -96,5 +96,18 @@
       "typescript.js": 3590382,
       "libs.json": 530735
     }
+  },
+  "go": {
+    "version": "0.16.1",
+    "go": "1.25.3",
+    "basePath": "/runtime/go-0.16.1/",
+    "files": {
+      "go.wasm.gz": "sha256-6ybL25CXCId4+goOcermdGEY9xdZWVBcrvWTxyULjdw=",
+      "wasm_exec.js": "sha256-DJSfSZb5qJaY5LXFht4yJJw7abe6rbZNIgBzzASsuhQ="
+    },
+    "sizes": {
+      "go.wasm.gz": 8232161,
+      "wasm_exec.js": 16992
+    }
   }
 }
