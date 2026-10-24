@@ -2,6 +2,24 @@
   "schemaVersion": "2.0.0",
   "projects": [
     {
+      "id": "quick-fixes",
+      "key": "QUICK",
+      "title": "Quick fixes",
+      "summary": "Five-minute bugs: the same small bug in each language, for the five-minute test.",
+      "story": "Small bugs the writing app's team never got round to. Each takes about five minutes, which makes it the five-minute test at /play: pick a language, fix it, merge it.",
+      "issues": [
+        "word-count-python",
+        "word-count-javascript",
+        "word-count-typescript",
+        "word-count-go",
+        "word-count-java",
+        "word-count-csharp",
+        "word-count-ruby",
+        "word-count-php"
+      ],
+      "listed": false
+    },
+    {
       "id": "field-notes",
       "key": "FN",
       "title": "Field notes",
@@ -9,7 +27,8 @@
       "story": "A field researcher keeps specimen labels in a notebook and needs exact tallies. A good first ticket: small, in Python, with one surprise in the data.",
       "issues": [
         "frequency-map"
-      ]
+      ],
+      "listed": true
     },
     {
       "id": "storefront",
@@ -23,7 +42,8 @@
         "filter-form-labels",
         "debounce-search",
         "refund-totals"
-      ]
+      ],
+      "listed": true
     },
     {
       "id": "accounts-api",
@@ -38,7 +58,8 @@
         "parse-log-line",
         "workspace-slugs",
         "password-policy"
-      ]
+      ],
+      "listed": true
     },
     {
       "id": "data-platform",
@@ -52,7 +73,8 @@
         "top-customers",
         "unpaid-orders",
         "late-fee-rounding"
-      ]
+      ],
+      "listed": true
     },
     {
       "id": "edge-proxy",
@@ -65,10 +87,131 @@
         "p99-latency",
         "lru-cache",
         "parse-duration"
-      ]
+      ],
+      "listed": true
     }
   ],
   "issues": [
+    {
+      "id": "word-count-python",
+      "project": "quick-fixes",
+      "number": 1,
+      "title": "The composer says 1 word when the post is empty",
+      "summary": "A five-minute bug: the word count under the text box is off.",
+      "difficulty": "warm-up",
+      "estimate": 1,
+      "labels": [
+        "strings",
+        "edge-cases"
+      ],
+      "state": "live",
+      "revision": "sha256:f554ba2496f0786de821ab61cb825018b6f33ae3634d2b4aea2e5e544e1e76ab"
+    },
+    {
+      "id": "word-count-javascript",
+      "project": "quick-fixes",
+      "number": 2,
+      "title": "The composer says 1 word when the post is empty",
+      "summary": "A five-minute bug: the word count under the text box is off.",
+      "difficulty": "warm-up",
+      "estimate": 1,
+      "labels": [
+        "strings",
+        "edge-cases"
+      ],
+      "state": "live",
+      "revision": "sha256:470f213a1776b4c2597848c5f638eb248105639e2dfa9b209c6e45bf3a8ad221"
+    },
+    {
+      "id": "word-count-typescript",
+      "project": "quick-fixes",
+      "number": 3,
+      "title": "The composer says 1 word when the post is empty",
+      "summary": "A five-minute bug: the word count under the text box is off.",
+      "difficulty": "warm-up",
+      "estimate": 1,
+      "labels": [
+        "strings",
+        "edge-cases"
+      ],
+      "state": "live",
+      "revision": "sha256:c188f84c51a37fc3299ee7c30b88a5108f6045522164fdd526e769b038ce92c4"
+    },
+    {
+      "id": "word-count-go",
+      "project": "quick-fixes",
+      "number": 4,
+      "title": "The composer says 1 word when the post is empty",
+      "summary": "A five-minute bug: the word count under the text box is off.",
+      "difficulty": "warm-up",
+      "estimate": 1,
+      "labels": [
+        "strings",
+        "edge-cases"
+      ],
+      "state": "live",
+      "revision": "sha256:67e4ffb14cff5327a631de6b66cb823961f349f6802ea991c2abb7df76504e2b"
+    },
+    {
+      "id": "word-count-java",
+      "project": "quick-fixes",
+      "number": 5,
+      "title": "The composer says 1 word when the post is empty",
+      "summary": "A five-minute bug: the word count under the text box is off.",
+      "difficulty": "warm-up",
+      "estimate": 1,
+      "labels": [
+        "strings",
+        "edge-cases"
+      ],
+      "state": "live",
+      "revision": "sha256:bc9a4e1f4a4881c6b4058d61e129a9717dacb320dd22b46a9bc605a5485b1984"
+    },
+    {
+      "id": "word-count-csharp",
+      "project": "quick-fixes",
+      "number": 6,
+      "title": "The composer says 1 word when the post is empty",
+      "summary": "A five-minute bug: the word count under the text box is off.",
+      "difficulty": "warm-up",
+      "estimate": 1,
+      "labels": [
+        "strings",
+        "edge-cases"
+      ],
+      "state": "live",
+      "revision": "sha256:2ff511ad9b215bb69e1731a6a971cb10ad90f88fc088617881db6cfe88202117"
+    },
+    {
+      "id": "word-count-ruby",
+      "project": "quick-fixes",
+      "number": 7,
+      "title": "The composer says 1 word when the post is empty",
+      "summary": "A five-minute bug: the word count under the text box is off.",
+      "difficulty": "warm-up",
+      "estimate": 1,
+      "labels": [
+        "strings",
+        "edge-cases"
+      ],
+      "state": "live",
+      "revision": "sha256:811136031200725cc7a1ac07eb65fd9652f72e9057f387fbd0fa26143ff70e91"
+    },
+    {
+      "id": "word-count-php",
+      "project": "quick-fixes",
+      "number": 8,
+      "title": "The composer says 1 word when the post is empty",
+      "summary": "A five-minute bug: the word count under the text box is off.",
+      "difficulty": "warm-up",
+      "estimate": 1,
+      "labels": [
+        "strings",
+        "edge-cases"
+      ],
+      "state": "live",
+      "revision": "sha256:908e348b194d6ae514f94a8bffa338f93577684e02a8743a4dbcfa81e5689bc2"
+    },
     {
       "id": "frequency-map",
       "project": "field-notes",
@@ -1257,6 +1400,137 @@
         "reviewers": []
       }
     },
+    "sha256:2ff511ad9b215bb69e1731a6a971cb10ad90f88fc088617881db6cfe88202117": {
+      "issue": "word-count-csharp",
+      "kind": "bug",
+      "body": "Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.\n\n`WordCount.Count(text)` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.",
+      "skills": [
+        "strings",
+        "edge-cases"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "csharp",
+        "files": {
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Quick fixes\n\nSmall bugs the writing app's team never got round to. Each takes about five minutes, which makes it the five-minute test at /play: pick a language, fix it, merge it.\n"
+          },
+          "src/WordCount.cs": {
+            "role": "edit",
+            "language": "csharp",
+            "text": "namespace Composer;\n\n/// <summary>The word count the composer shows under the text box.</summary>\npublic static class WordCount\n{\n    /// <summary>The number of words in a post.</summary>\n    public static int Count(string text)\n    {\n        return text.Split(' ').Length;\n    }\n}\n"
+          },
+          "tests/WordCountTests.cs": {
+            "role": "tests",
+            "language": "csharp",
+            "text": "// Acceptance criteria for QUICK-6. CI runs these cases and 1 more it does not show.\nusing Xunit;\n\npublic class WordCountTests\n{\n    // Input and expected output as JSON.\n    [Theory]\n    [InlineData(\"\\\"\\\"\", \"0\")]\n    [InlineData(\"\\\"hello world\\\"\", \"2\")]\n    [InlineData(\"\\\"  spaced   out  \\\"\", \"2\")]\n    [InlineData(\"\\\"one\\\"\", \"1\")]\n    public void Count(string input, string expected)\n    {\n        Assert.Equal(Json.Parse(expected), Json.Call(WordCount.Count, input));\n    }\n}\n"
+          }
+        },
+        "entry": "src/WordCount.cs",
+        "entrypoint": "Count"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": "",
+            "expected": 0,
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": "hello world",
+            "expected": 2,
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": "  spaced   out  ",
+            "expected": 2,
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": "one",
+            "expected": 1,
+            "visible": true
+          },
+          {
+            "id": "case-5",
+            "input": "tabs\tand\nnew lines",
+            "expected": 4,
+            "visible": false
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "lena-1",
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        },
+        {
+          "id": "lena-shipped",
+          "where": "review",
+          "severity": "info",
+          "text": [
+            "Lovely, that's the one. Empty posts say 0 words again."
+          ],
+          "when": {
+            "check": "case-1",
+            "is": "passing"
+          },
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "id": "hint-1",
+          "level": 1,
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "text": "What does your function return for an empty post, and where does that number come from?",
+          "when": {
+            "behaviour": "active-minutes-without-progress",
+            "atLeast": 3
+          }
+        },
+        {
+          "id": "hint-2",
+          "level": 2,
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "text": "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
+          "when": {
+            "behaviour": "failing-pushes",
+            "atLeast": 2
+          }
+        }
+      ],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
     "sha256:43c9f82af02d2540c0391d7937fbd6f2c38188625363dc764fa9089ead0527af": {
       "issue": "workspace-slugs",
       "kind": "bug",
@@ -1352,6 +1626,137 @@
           "when": {
             "behaviour": "active-minutes-without-progress",
             "atLeast": 10
+          }
+        }
+      ],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:470f213a1776b4c2597848c5f638eb248105639e2dfa9b209c6e45bf3a8ad221": {
+      "issue": "word-count-javascript",
+      "kind": "bug",
+      "body": "Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.\n\n`countWords(text)` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.",
+      "skills": [
+        "strings",
+        "edge-cases"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "javascript",
+        "files": {
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Quick fixes\n\nSmall bugs the writing app's team never got round to. Each takes about five minutes, which makes it the five-minute test at /play: pick a language, fix it, merge it.\n"
+          },
+          "src/count-words.js": {
+            "role": "edit",
+            "language": "javascript",
+            "text": "/** The number of words in a post, as the composer shows it under the text box. */\nexport function countWords(text) {\n  return text.split(\" \").length;\n}\n"
+          },
+          "src/count-words.test.js": {
+            "role": "tests",
+            "language": "javascript",
+            "text": "// Acceptance criteria for QUICK-2. CI runs these cases and 1 more it does not show.\nimport { describe, expect, it } from \"vitest\";\nimport { countWords } from \"./count-words\";\n\nconst cases = [\n  [\"\", 0],\n  [\"hello world\", 2],\n  [\"  spaced   out  \", 2],\n  [\"one\", 1],\n];\n\ndescribe(\"countWords\", () => {\n  it.each(cases)(\"case %#\", (input, expected) => {\n    expect(countWords(input)).toEqual(expected);\n  });\n});\n"
+          }
+        },
+        "entry": "src/count-words.js",
+        "entrypoint": "countWords"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": "",
+            "expected": 0,
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": "hello world",
+            "expected": 2,
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": "  spaced   out  ",
+            "expected": 2,
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": "one",
+            "expected": 1,
+            "visible": true
+          },
+          {
+            "id": "case-5",
+            "input": "tabs\tand\nnew lines",
+            "expected": 4,
+            "visible": false
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "lena-1",
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        },
+        {
+          "id": "lena-shipped",
+          "where": "review",
+          "severity": "info",
+          "text": [
+            "Lovely, that's the one. Empty posts say 0 words again."
+          ],
+          "when": {
+            "check": "case-1",
+            "is": "passing"
+          },
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "id": "hint-1",
+          "level": 1,
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "text": "What does your function return for an empty post, and where does that number come from?",
+          "when": {
+            "behaviour": "active-minutes-without-progress",
+            "atLeast": 3
+          }
+        },
+        {
+          "id": "hint-2",
+          "level": 2,
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "text": "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
+          "when": {
+            "behaviour": "failing-pushes",
+            "atLeast": 2
           }
         }
       ],
@@ -1736,6 +2141,137 @@
         "reviewers": []
       }
     },
+    "sha256:67e4ffb14cff5327a631de6b66cb823961f349f6802ea991c2abb7df76504e2b": {
+      "issue": "word-count-go",
+      "kind": "bug",
+      "body": "Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.\n\n`CountWords(text)` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.",
+      "skills": [
+        "strings",
+        "edge-cases"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "go",
+        "files": {
+          "count_words_test.go": {
+            "role": "tests",
+            "language": "go",
+            "text": "package composer\n\nimport \"testing\"\n\n// Acceptance criteria for QUICK-4. CI runs these cases and 1 more it does not show.\n// Input and expected output are JSON.\nvar countWordsCases = []struct {\n\tinput string\n\twant  string\n}{\n\t{`\"\"`, `0`},\n\t{`\"hello world\"`, `2`},\n\t{`\"  spaced   out  \"`, `2`},\n\t{`\"one\"`, `1`},\n}\n\nfunc TestCountWords(t *testing.T) {\n\tfor _, c := range countWordsCases {\n\t\tt.Run(c.input, func(t *testing.T) {\n\t\t\tassertJSON(t, CountWords, c.input, c.want)\n\t\t})\n\t}\n}\n"
+          },
+          "count_words.go": {
+            "role": "edit",
+            "language": "go",
+            "text": "package composer\n\nimport \"strings\"\n\n// CountWords is the number of words in a post, as the composer shows it under the text box.\nfunc CountWords(text string) int {\n\treturn strings.Count(text, \" \") + 1\n}\n"
+          },
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Quick fixes\n\nSmall bugs the writing app's team never got round to. Each takes about five minutes, which makes it the five-minute test at /play: pick a language, fix it, merge it.\n"
+          }
+        },
+        "entry": "count_words.go",
+        "entrypoint": "CountWords"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": "",
+            "expected": 0,
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": "hello world",
+            "expected": 2,
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": "  spaced   out  ",
+            "expected": 2,
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": "one",
+            "expected": 1,
+            "visible": true
+          },
+          {
+            "id": "case-5",
+            "input": "tabs\tand\nnew lines",
+            "expected": 4,
+            "visible": false
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "lena-1",
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        },
+        {
+          "id": "lena-shipped",
+          "where": "review",
+          "severity": "info",
+          "text": [
+            "Lovely, that's the one. Empty posts say 0 words again."
+          ],
+          "when": {
+            "check": "case-1",
+            "is": "passing"
+          },
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "id": "hint-1",
+          "level": 1,
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "text": "What does your function return for an empty post, and where does that number come from?",
+          "when": {
+            "behaviour": "active-minutes-without-progress",
+            "atLeast": 3
+          }
+        },
+        {
+          "id": "hint-2",
+          "level": 2,
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "text": "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
+          "when": {
+            "behaviour": "failing-pushes",
+            "atLeast": 2
+          }
+        }
+      ],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
     "sha256:70c73fef246df0693a991a10539f3a29b6b73a7231772e8d973c0d7b2cdd1841": {
       "issue": "parse-duration",
       "kind": "feature",
@@ -1825,6 +2361,137 @@
         }
       ],
       "hints": [],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:811136031200725cc7a1ac07eb65fd9652f72e9057f387fbd0fa26143ff70e91": {
+      "issue": "word-count-ruby",
+      "kind": "bug",
+      "body": "Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.\n\n`count_words(text)` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.",
+      "skills": [
+        "strings",
+        "edge-cases"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "ruby",
+        "files": {
+          "lib/count_words.rb": {
+            "role": "edit",
+            "language": "ruby",
+            "text": "# The number of words in a post, as the composer shows it under the text box.\ndef count_words(text)\n  text.count(\" \") + 1\nend\n"
+          },
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Quick fixes\n\nSmall bugs the writing app's team never got round to. Each takes about five minutes, which makes it the five-minute test at /play: pick a language, fix it, merge it.\n"
+          },
+          "spec/count_words_spec.rb": {
+            "role": "tests",
+            "language": "ruby",
+            "text": "# Acceptance criteria for QUICK-7. CI runs these cases and 1 more it does not show.\nrequire \"json\"\nrequire_relative \"../lib/count_words\"\n\nRSpec.describe \"count_words\" do\n  # Input and expected output as JSON.\n  [\n    [\"\\\"\\\"\", \"0\"],\n    [\"\\\"hello world\\\"\", \"2\"],\n    [\"\\\"  spaced   out  \\\"\", \"2\"],\n    [\"\\\"one\\\"\", \"1\"],\n  ].each_with_index do |(input, expected), i|\n    it \"passes case #{i + 1}\" do\n      expect(count_words(JSON.parse(input))).to eq(JSON.parse(expected))\n    end\n  end\nend\n"
+          }
+        },
+        "entry": "lib/count_words.rb",
+        "entrypoint": "count_words"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": "",
+            "expected": 0,
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": "hello world",
+            "expected": 2,
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": "  spaced   out  ",
+            "expected": 2,
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": "one",
+            "expected": 1,
+            "visible": true
+          },
+          {
+            "id": "case-5",
+            "input": "tabs\tand\nnew lines",
+            "expected": 4,
+            "visible": false
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "lena-1",
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        },
+        {
+          "id": "lena-shipped",
+          "where": "review",
+          "severity": "info",
+          "text": [
+            "Lovely, that's the one. Empty posts say 0 words again."
+          ],
+          "when": {
+            "check": "case-1",
+            "is": "passing"
+          },
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "id": "hint-1",
+          "level": 1,
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "text": "What does your function return for an empty post, and where does that number come from?",
+          "when": {
+            "behaviour": "active-minutes-without-progress",
+            "atLeast": 3
+          }
+        },
+        {
+          "id": "hint-2",
+          "level": 2,
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "text": "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
+          "when": {
+            "behaviour": "failing-pushes",
+            "atLeast": 2
+          }
+        }
+      ],
       "authored": {
         "by": "ai-drafted",
         "reviewers": []
@@ -1920,6 +2587,137 @@
         }
       ],
       "hints": [],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:908e348b194d6ae514f94a8bffa338f93577684e02a8743a4dbcfa81e5689bc2": {
+      "issue": "word-count-php",
+      "kind": "bug",
+      "body": "Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.\n\n`countWords($text)` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.",
+      "skills": [
+        "strings",
+        "edge-cases"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "php",
+        "files": {
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Quick fixes\n\nSmall bugs the writing app's team never got round to. Each takes about five minutes, which makes it the five-minute test at /play: pick a language, fix it, merge it.\n"
+          },
+          "src/countWords.php": {
+            "role": "edit",
+            "language": "php",
+            "text": "<?php\n\ndeclare(strict_types=1);\n\n/** The number of words in a post, as the composer shows it under the text box. */\nfunction countWords(string $text): int\n{\n    return substr_count($text, \" \") + 1;\n}\n"
+          },
+          "tests/CountWordsTest.php": {
+            "role": "tests",
+            "language": "php",
+            "text": "<?php\n\ndeclare(strict_types=1);\n\nuse PHPUnit\\Framework\\Attributes\\DataProvider;\nuse PHPUnit\\Framework\\TestCase;\n\n// Acceptance criteria for QUICK-8. CI runs these cases and 1 more it does not show.\nfinal class CountWordsTest extends TestCase\n{\n    /** [arguments, expected] as JSON. */\n    public static function cases(): array\n    {\n        return [\n            'case 1' => ['\"\"', '0'],\n            'case 2' => ['\"hello world\"', '2'],\n            'case 3' => ['\"  spaced   out  \"', '2'],\n            'case 4' => ['\"one\"', '1'],\n        ];\n    }\n\n    #[DataProvider('cases')]\n    public function testCountWords(string $input, string $expected): void\n    {\n        $args = json_decode($input, true);\n        $actual = countWords($args);\n        $this->assertSame(json_decode($expected, true), $actual);\n    }\n}\n"
+          }
+        },
+        "entry": "src/countWords.php",
+        "entrypoint": "countWords"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": "",
+            "expected": 0,
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": "hello world",
+            "expected": 2,
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": "  spaced   out  ",
+            "expected": 2,
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": "one",
+            "expected": 1,
+            "visible": true
+          },
+          {
+            "id": "case-5",
+            "input": "tabs\tand\nnew lines",
+            "expected": 4,
+            "visible": false
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "lena-1",
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        },
+        {
+          "id": "lena-shipped",
+          "where": "review",
+          "severity": "info",
+          "text": [
+            "Lovely, that's the one. Empty posts say 0 words again."
+          ],
+          "when": {
+            "check": "case-1",
+            "is": "passing"
+          },
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "id": "hint-1",
+          "level": 1,
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "text": "What does your function return for an empty post, and where does that number come from?",
+          "when": {
+            "behaviour": "active-minutes-without-progress",
+            "atLeast": 3
+          }
+        },
+        {
+          "id": "hint-2",
+          "level": 2,
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "text": "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
+          "when": {
+            "behaviour": "failing-pushes",
+            "atLeast": 2
+          }
+        }
+      ],
       "authored": {
         "by": "ai-drafted",
         "reviewers": []
@@ -2299,6 +3097,269 @@
           "when": {
             "behaviour": "active-minutes-without-progress",
             "atLeast": 10
+          }
+        }
+      ],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:bc9a4e1f4a4881c6b4058d61e129a9717dacb320dd22b46a9bc605a5485b1984": {
+      "issue": "word-count-java",
+      "kind": "bug",
+      "body": "Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.\n\n`WordCount.count(text)` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.",
+      "skills": [
+        "strings",
+        "edge-cases"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "java",
+        "files": {
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Quick fixes\n\nSmall bugs the writing app's team never got round to. Each takes about five minutes, which makes it the five-minute test at /play: pick a language, fix it, merge it.\n"
+          },
+          "src/main/java/com/acme/composer/WordCount.java": {
+            "role": "edit",
+            "language": "java",
+            "text": "package com.acme.composer;\n\n/** The word count the composer shows under the text box. */\npublic final class WordCount {\n    private WordCount() {}\n\n    /** The number of words in a post. */\n    public static int count(String text) {\n        return text.split(\" \").length;\n    }\n}\n"
+          },
+          "src/test/java/com/acme/composer/WordCountTest.java": {
+            "role": "tests",
+            "language": "java",
+            "text": "// Acceptance criteria for QUICK-5. CI runs these cases and 1 more it does not show.\n// Each case runs the program once: the arguments go to Adapter.call as JSON, and what it\n// returns is compared with the expected JSON.\n\nimport com.acme.composer.WordCount;\n\n/** [text] → its word count. */\nfinal class Adapter {\n    static Object call(Json args) {\n        return WordCount.count(args.at(0).asString());\n    }\n}\n\nfinal class WordCountCases {\n    /** Arguments and expected result, as JSON. */\n    static final String[][] CASES = {\n        {\"\\\"\\\"\", \"0\"},\n        {\"\\\"hello world\\\"\", \"2\"},\n        {\"\\\"  spaced   out  \\\"\", \"2\"},\n        {\"\\\"one\\\"\", \"1\"},\n    };\n}\n"
+          }
+        },
+        "entry": "src/main/java/com/acme/composer/WordCount.java",
+        "entrypoint": "count",
+        "adapter": "import com.acme.composer.WordCount;\n\n/** [text] → its word count. */\nfinal class Adapter {\n    static Object call(Json args) {\n        return WordCount.count(args.at(0).asString());\n    }\n}\n"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": "",
+            "expected": 0,
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": "hello world",
+            "expected": 2,
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": "  spaced   out  ",
+            "expected": 2,
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": "one",
+            "expected": 1,
+            "visible": true
+          },
+          {
+            "id": "case-5",
+            "input": "tabs\tand\nnew lines",
+            "expected": 4,
+            "visible": false
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "lena-1",
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        },
+        {
+          "id": "lena-shipped",
+          "where": "review",
+          "severity": "info",
+          "text": [
+            "Lovely, that's the one. Empty posts say 0 words again."
+          ],
+          "when": {
+            "check": "case-1",
+            "is": "passing"
+          },
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "id": "hint-1",
+          "level": 1,
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "text": "What does your function return for an empty post, and where does that number come from?",
+          "when": {
+            "behaviour": "active-minutes-without-progress",
+            "atLeast": 3
+          }
+        },
+        {
+          "id": "hint-2",
+          "level": 2,
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "text": "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
+          "when": {
+            "behaviour": "failing-pushes",
+            "atLeast": 2
+          }
+        }
+      ],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:c188f84c51a37fc3299ee7c30b88a5108f6045522164fdd526e769b038ce92c4": {
+      "issue": "word-count-typescript",
+      "kind": "bug",
+      "body": "Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.\n\n`countWords(text)` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.",
+      "skills": [
+        "strings",
+        "edge-cases"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "typescript",
+        "files": {
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Quick fixes\n\nSmall bugs the writing app's team never got round to. Each takes about five minutes, which makes it the five-minute test at /play: pick a language, fix it, merge it.\n"
+          },
+          "src/count-words.test.ts": {
+            "role": "tests",
+            "language": "typescript",
+            "text": "// Acceptance criteria for QUICK-3. CI runs these cases and 1 more it does not show.\nimport { describe, expect, it } from \"vitest\";\nimport { countWords } from \"./count-words\";\n\nconst cases: [unknown, unknown][] = [\n  [\"\", 0],\n  [\"hello world\", 2],\n  [\"  spaced   out  \", 2],\n  [\"one\", 1],\n];\n\ndescribe(\"countWords\", () => {\n  it.each(cases)(\"case %#\", (input, expected) => {\n    expect(countWords(input as never)).toEqual(expected);\n  });\n});\n"
+          },
+          "src/count-words.ts": {
+            "role": "edit",
+            "language": "typescript",
+            "text": "/** The number of words in a post, as the composer shows it under the text box. */\nexport function countWords(text: string): number {\n  return text.split(\" \").length;\n}\n"
+          }
+        },
+        "entry": "src/count-words.ts",
+        "entrypoint": "countWords"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": "",
+            "expected": 0,
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": "hello world",
+            "expected": 2,
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": "  spaced   out  ",
+            "expected": 2,
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": "one",
+            "expected": 1,
+            "visible": true
+          },
+          {
+            "id": "case-5",
+            "input": "tabs\tand\nnew lines",
+            "expected": 4,
+            "visible": false
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "lena-1",
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        },
+        {
+          "id": "lena-shipped",
+          "where": "review",
+          "severity": "info",
+          "text": [
+            "Lovely, that's the one. Empty posts say 0 words again."
+          ],
+          "when": {
+            "check": "case-1",
+            "is": "passing"
+          },
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "id": "hint-1",
+          "level": 1,
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "text": "What does your function return for an empty post, and where does that number come from?",
+          "when": {
+            "behaviour": "active-minutes-without-progress",
+            "atLeast": 3
+          }
+        },
+        {
+          "id": "hint-2",
+          "level": 2,
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "text": "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
+          "when": {
+            "behaviour": "failing-pushes",
+            "atLeast": 2
           }
         }
       ],
@@ -2878,6 +3939,137 @@
         }
       ],
       "hints": [],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:f554ba2496f0786de821ab61cb825018b6f33ae3634d2b4aea2e5e544e1e76ab": {
+      "issue": "word-count-python",
+      "kind": "bug",
+      "body": "Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.\n\n`count_words(text)` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.",
+      "skills": [
+        "strings",
+        "edge-cases"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "python",
+        "files": {
+          "count_words.py": {
+            "role": "edit",
+            "language": "python",
+            "text": "def count_words(text):\n    \"\"\"The number of words in a post, as the composer shows it under the text box.\"\"\"\n    return text.count(\" \") + 1\n"
+          },
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Quick fixes\n\nSmall bugs the writing app's team never got round to. Each takes about five minutes, which makes it the five-minute test at /play: pick a language, fix it, merge it.\n"
+          },
+          "tests/test_count_words.py": {
+            "role": "tests",
+            "language": "python",
+            "text": "# Acceptance criteria for QUICK-1. CI runs these cases and 1 more it does not show.\nimport pytest\n\nfrom count_words import count_words\n\nCASES = [\n    (\"\", 0),\n    (\"hello world\", 2),\n    (\"  spaced   out  \", 2),\n    (\"one\", 1),\n]\n\n\n@pytest.mark.parametrize(\"given, expected\", CASES)\ndef test_count_words(given, expected):\n    assert count_words(given) == expected\n"
+          }
+        },
+        "entry": "count_words.py",
+        "entrypoint": "count_words"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": "",
+            "expected": 0,
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": "hello world",
+            "expected": 2,
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": "  spaced   out  ",
+            "expected": 2,
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": "one",
+            "expected": 1,
+            "visible": true
+          },
+          {
+            "id": "case-5",
+            "input": "tabs\tand\nnew lines",
+            "expected": 4,
+            "visible": false
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "lena-1",
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        },
+        {
+          "id": "lena-shipped",
+          "where": "review",
+          "severity": "info",
+          "text": [
+            "Lovely, that's the one. Empty posts say 0 words again."
+          ],
+          "when": {
+            "check": "case-1",
+            "is": "passing"
+          },
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "id": "hint-1",
+          "level": 1,
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "text": "What does your function return for an empty post, and where does that number come from?",
+          "when": {
+            "behaviour": "active-minutes-without-progress",
+            "atLeast": 3
+          }
+        },
+        {
+          "id": "hint-2",
+          "level": 2,
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "text": "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
+          "when": {
+            "behaviour": "failing-pushes",
+            "atLeast": 2
+          }
+        }
+      ],
       "authored": {
         "by": "ai-drafted",
         "reviewers": []

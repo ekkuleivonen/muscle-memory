@@ -87,6 +87,8 @@ export interface SeedProject {
   story: string;
   /** Issue ids in board order; an issue's number is its position here, from 1. */
   issues: string[];
+  /** False keeps the project out of lists and suggestions (see Project.listed). */
+  listed?: boolean;
 }
 
 const challenge = (
@@ -109,6 +111,92 @@ const challenge = (
  * up to the app's runners, not the content.
  */
 const STARTERS: Record<string, { entrypoint: string; starter: string }> = {
+  "word-count-php": {
+    entrypoint: "countWords",
+    starter: `<?php
+
+declare(strict_types=1);
+
+/** The number of words in a post, as the composer shows it under the text box. */
+function countWords(string $text): int
+{
+    return substr_count($text, " ") + 1;
+}
+`,
+  },
+  "word-count-ruby": {
+    entrypoint: "count_words",
+    starter: `# The number of words in a post, as the composer shows it under the text box.
+def count_words(text)
+  text.count(" ") + 1
+end
+`,
+  },
+  "word-count-csharp": {
+    entrypoint: "Count",
+    starter: `namespace Composer;
+
+/// <summary>The word count the composer shows under the text box.</summary>
+public static class WordCount
+{
+    /// <summary>The number of words in a post.</summary>
+    public static int Count(string text)
+    {
+        return text.Split(' ').Length;
+    }
+}
+`,
+  },
+  "word-count-java": {
+    entrypoint: "count",
+    starter: `package com.acme.composer;
+
+/** The word count the composer shows under the text box. */
+public final class WordCount {
+    private WordCount() {}
+
+    /** The number of words in a post. */
+    public static int count(String text) {
+        return text.split(" ").length;
+    }
+}
+`,
+  },
+  "word-count-go": {
+    entrypoint: "CountWords",
+    starter: `package composer
+
+import "strings"
+
+// CountWords is the number of words in a post, as the composer shows it under the text box.
+func CountWords(text string) int {
+	return strings.Count(text, " ") + 1
+}
+`,
+  },
+  "word-count-typescript": {
+    entrypoint: "countWords",
+    starter: `/** The number of words in a post, as the composer shows it under the text box. */
+export function countWords(text: string): number {
+  return text.split(" ").length;
+}
+`,
+  },
+  "word-count-javascript": {
+    entrypoint: "countWords",
+    starter: `/** The number of words in a post, as the composer shows it under the text box. */
+export function countWords(text) {
+  return text.split(" ").length;
+}
+`,
+  },
+  "word-count-python": {
+    entrypoint: "count_words",
+    starter: `def count_words(text):
+    """The number of words in a post, as the composer shows it under the text box."""
+    return text.count(" ") + 1
+`,
+  },
   "frequency-map": {
     entrypoint: "frequency_map",
     starter: `def frequency_map(items):
@@ -438,6 +526,399 @@ const rui = (body: string): Comment => ({
 });
 
 export const SEED_ISSUES: SeedIssue[] = [
+  // Quick fixes: five-minute bugs, one per language, for /play
+  challenge("word-count-python", {
+    title: "The composer says 1 word when the post is empty",
+    summary: "A five-minute bug: the word count under the text box is off.",
+    kind: "bug",
+    difficulty: "warm-up",
+    language: "python",
+    skills: ["strings", "edge-cases"],
+    task: `Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.
+
+\`count_words(text)\` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.`,
+    inputs: ["", "hello world", "  spaced   out  ", "one", "tabs\tand\nnew lines"],
+    expected: [0, 2, 2, 1, 4],
+    hidden: [4],
+    comments: [
+      lena("An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."),
+    ],
+    hints: [
+      {
+        text: "What does your function return for an empty post, and where does that number come from?",
+        when: { behaviour: "active-minutes-without-progress", atLeast: 3 },
+      },
+      {
+        text: "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
+        when: { behaviour: "failing-pushes", atLeast: 2 },
+      },
+    ],
+    team: [
+      {
+        id: "lena-shipped",
+        author: "Lena M",
+        role: "Product",
+        where: "review",
+        severity: "info",
+        text: ["Lovely, that's the one. Empty posts say 0 words again."],
+        when: { check: "case-1", is: "passing" },
+      },
+    ],
+    private: {
+      reference: { "count_words.py": `def count_words(text):
+    """The number of words in a post, as the composer shows it under the text box."""
+    return len(text.split())
+` },
+    },
+  }),
+  challenge("word-count-javascript", {
+    title: "The composer says 1 word when the post is empty",
+    summary: "A five-minute bug: the word count under the text box is off.",
+    kind: "bug",
+    difficulty: "warm-up",
+    language: "javascript",
+    skills: ["strings", "edge-cases"],
+    task: `Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.
+
+\`countWords(text)\` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.`,
+    inputs: ["", "hello world", "  spaced   out  ", "one", "tabs\tand\nnew lines"],
+    expected: [0, 2, 2, 1, 4],
+    hidden: [4],
+    comments: [
+      lena("An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."),
+    ],
+    hints: [
+      {
+        text: "What does your function return for an empty post, and where does that number come from?",
+        when: { behaviour: "active-minutes-without-progress", atLeast: 3 },
+      },
+      {
+        text: "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
+        when: { behaviour: "failing-pushes", atLeast: 2 },
+      },
+    ],
+    team: [
+      {
+        id: "lena-shipped",
+        author: "Lena M",
+        role: "Product",
+        where: "review",
+        severity: "info",
+        text: ["Lovely, that's the one. Empty posts say 0 words again."],
+        when: { check: "case-1", is: "passing" },
+      },
+    ],
+    private: {
+      reference: { "src/count-words.js": `/** The number of words in a post, as the composer shows it under the text box. */
+export function countWords(text) {
+  return text.split(/\\s+/).filter(Boolean).length;
+}
+` },
+    },
+  }),
+  challenge("word-count-typescript", {
+    title: "The composer says 1 word when the post is empty",
+    summary: "A five-minute bug: the word count under the text box is off.",
+    kind: "bug",
+    difficulty: "warm-up",
+    language: "typescript",
+    skills: ["strings", "edge-cases"],
+    task: `Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.
+
+\`countWords(text)\` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.`,
+    inputs: ["", "hello world", "  spaced   out  ", "one", "tabs\tand\nnew lines"],
+    expected: [0, 2, 2, 1, 4],
+    hidden: [4],
+    comments: [
+      lena("An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."),
+    ],
+    hints: [
+      {
+        text: "What does your function return for an empty post, and where does that number come from?",
+        when: { behaviour: "active-minutes-without-progress", atLeast: 3 },
+      },
+      {
+        text: "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
+        when: { behaviour: "failing-pushes", atLeast: 2 },
+      },
+    ],
+    team: [
+      {
+        id: "lena-shipped",
+        author: "Lena M",
+        role: "Product",
+        where: "review",
+        severity: "info",
+        text: ["Lovely, that's the one. Empty posts say 0 words again."],
+        when: { check: "case-1", is: "passing" },
+      },
+    ],
+    private: {
+      reference: { "src/count-words.ts": `/** The number of words in a post, as the composer shows it under the text box. */
+export function countWords(text: string): number {
+  return text.split(/\\s+/).filter(Boolean).length;
+}
+` },
+    },
+  }),
+  challenge("word-count-go", {
+    title: "The composer says 1 word when the post is empty",
+    summary: "A five-minute bug: the word count under the text box is off.",
+    kind: "bug",
+    difficulty: "warm-up",
+    language: "go",
+    skills: ["strings", "edge-cases"],
+    task: `Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.
+
+\`CountWords(text)\` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.`,
+    inputs: ["", "hello world", "  spaced   out  ", "one", "tabs\tand\nnew lines"],
+    expected: [0, 2, 2, 1, 4],
+    hidden: [4],
+    comments: [
+      lena("An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."),
+    ],
+    hints: [
+      {
+        text: "What does your function return for an empty post, and where does that number come from?",
+        when: { behaviour: "active-minutes-without-progress", atLeast: 3 },
+      },
+      {
+        text: "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
+        when: { behaviour: "failing-pushes", atLeast: 2 },
+      },
+    ],
+    team: [
+      {
+        id: "lena-shipped",
+        author: "Lena M",
+        role: "Product",
+        where: "review",
+        severity: "info",
+        text: ["Lovely, that's the one. Empty posts say 0 words again."],
+        when: { check: "case-1", is: "passing" },
+      },
+    ],
+    private: {
+      reference: { "count_words.go": `package composer
+
+import "strings"
+
+// CountWords is the number of words in a post, as the composer shows it under the text box.
+func CountWords(text string) int {
+	return len(strings.Fields(text))
+}
+` },
+    },
+  }),
+  challenge("word-count-java", {
+    adapter: `import com.acme.composer.WordCount;
+
+/** [text] → its word count. */
+final class Adapter {
+    static Object call(Json args) {
+        return WordCount.count(args.at(0).asString());
+    }
+}
+`,
+    title: "The composer says 1 word when the post is empty",
+    summary: "A five-minute bug: the word count under the text box is off.",
+    kind: "bug",
+    difficulty: "warm-up",
+    language: "java",
+    skills: ["strings", "edge-cases"],
+    task: `Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.
+
+\`WordCount.count(text)\` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.`,
+    inputs: ["", "hello world", "  spaced   out  ", "one", "tabs\tand\nnew lines"],
+    expected: [0, 2, 2, 1, 4],
+    hidden: [4],
+    comments: [
+      lena("An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."),
+    ],
+    hints: [
+      {
+        text: "What does your function return for an empty post, and where does that number come from?",
+        when: { behaviour: "active-minutes-without-progress", atLeast: 3 },
+      },
+      {
+        text: "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
+        when: { behaviour: "failing-pushes", atLeast: 2 },
+      },
+    ],
+    team: [
+      {
+        id: "lena-shipped",
+        author: "Lena M",
+        role: "Product",
+        where: "review",
+        severity: "info",
+        text: ["Lovely, that's the one. Empty posts say 0 words again."],
+        when: { check: "case-1", is: "passing" },
+      },
+    ],
+    private: {
+      reference: { "src/main/java/com/acme/composer/WordCount.java": `package com.acme.composer;
+
+/** The word count the composer shows under the text box. */
+public final class WordCount {
+    private WordCount() {}
+
+    /** The number of words in a post. */
+    public static int count(String text) {
+        String trimmed = text.strip();
+        return trimmed.isEmpty() ? 0 : trimmed.split("\\\\s+").length;
+    }
+}
+` },
+    },
+  }),
+  challenge("word-count-csharp", {
+    title: "The composer says 1 word when the post is empty",
+    summary: "A five-minute bug: the word count under the text box is off.",
+    kind: "bug",
+    difficulty: "warm-up",
+    language: "csharp",
+    skills: ["strings", "edge-cases"],
+    task: `Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.
+
+\`WordCount.Count(text)\` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.`,
+    inputs: ["", "hello world", "  spaced   out  ", "one", "tabs\tand\nnew lines"],
+    expected: [0, 2, 2, 1, 4],
+    hidden: [4],
+    comments: [
+      lena("An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."),
+    ],
+    hints: [
+      {
+        text: "What does your function return for an empty post, and where does that number come from?",
+        when: { behaviour: "active-minutes-without-progress", atLeast: 3 },
+      },
+      {
+        text: "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
+        when: { behaviour: "failing-pushes", atLeast: 2 },
+      },
+    ],
+    team: [
+      {
+        id: "lena-shipped",
+        author: "Lena M",
+        role: "Product",
+        where: "review",
+        severity: "info",
+        text: ["Lovely, that's the one. Empty posts say 0 words again."],
+        when: { check: "case-1", is: "passing" },
+      },
+    ],
+    private: {
+      reference: { "src/WordCount.cs": `namespace Composer;
+
+/// <summary>The word count the composer shows under the text box.</summary>
+public static class WordCount
+{
+    /// <summary>The number of words in a post.</summary>
+    public static int Count(string text)
+    {
+        return text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+    }
+}
+` },
+    },
+  }),
+  challenge("word-count-ruby", {
+    title: "The composer says 1 word when the post is empty",
+    summary: "A five-minute bug: the word count under the text box is off.",
+    kind: "bug",
+    difficulty: "warm-up",
+    language: "ruby",
+    skills: ["strings", "edge-cases"],
+    task: `Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.
+
+\`count_words(text)\` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.`,
+    inputs: ["", "hello world", "  spaced   out  ", "one", "tabs\tand\nnew lines"],
+    expected: [0, 2, 2, 1, 4],
+    hidden: [4],
+    comments: [
+      lena("An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."),
+    ],
+    hints: [
+      {
+        text: "What does your function return for an empty post, and where does that number come from?",
+        when: { behaviour: "active-minutes-without-progress", atLeast: 3 },
+      },
+      {
+        text: "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
+        when: { behaviour: "failing-pushes", atLeast: 2 },
+      },
+    ],
+    team: [
+      {
+        id: "lena-shipped",
+        author: "Lena M",
+        role: "Product",
+        where: "review",
+        severity: "info",
+        text: ["Lovely, that's the one. Empty posts say 0 words again."],
+        when: { check: "case-1", is: "passing" },
+      },
+    ],
+    private: {
+      reference: { "lib/count_words.rb": `# The number of words in a post, as the composer shows it under the text box.
+def count_words(text)
+  text.split.length
+end
+` },
+    },
+  }),
+  challenge("word-count-php", {
+    title: "The composer says 1 word when the post is empty",
+    summary: "A five-minute bug: the word count under the text box is off.",
+    kind: "bug",
+    difficulty: "warm-up",
+    language: "php",
+    skills: ["strings", "edge-cases"],
+    task: `Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.
+
+\`countWords($text)\` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.`,
+    inputs: ["", "hello world", "  spaced   out  ", "one", "tabs\tand\nnew lines"],
+    expected: [0, 2, 2, 1, 4],
+    hidden: [4],
+    comments: [
+      lena("An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."),
+    ],
+    hints: [
+      {
+        text: "What does your function return for an empty post, and where does that number come from?",
+        when: { behaviour: "active-minutes-without-progress", atLeast: 3 },
+      },
+      {
+        text: "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
+        when: { behaviour: "failing-pushes", atLeast: 2 },
+      },
+    ],
+    team: [
+      {
+        id: "lena-shipped",
+        author: "Lena M",
+        role: "Product",
+        where: "review",
+        severity: "info",
+        text: ["Lovely, that's the one. Empty posts say 0 words again."],
+        when: { check: "case-1", is: "passing" },
+      },
+    ],
+    private: {
+      reference: { "src/countWords.php": `<?php
+
+declare(strict_types=1);
+
+/** The number of words in a post, as the composer shows it under the text box. */
+function countWords(string $text): int
+{
+    return count(preg_split('/\\s+/', $text, -1, PREG_SPLIT_NO_EMPTY));
+}
+` },
+    },
+  }),
   // Field notes: a warm-up
   challenge("frequency-map", {
     title: "Frequency map",
@@ -1332,6 +1813,15 @@ mm_value *mm_call(const mm_value *args) {
 ];
 
 export const SEED_PROJECTS: SeedProject[] = [
+  {
+    id: "quick-fixes",
+    key: "QUICK",
+    listed: false,
+    title: "Quick fixes",
+    summary: "Five-minute bugs: the same small bug in each language, for the five-minute test.",
+    story: `Small bugs the writing app's team never got round to. Each takes about five minutes, which makes it the five-minute test at /play: pick a language, fix it, merge it.`,
+    issues: ["word-count-python", "word-count-javascript", "word-count-typescript", "word-count-go", "word-count-java", "word-count-csharp", "word-count-ruby", "word-count-php"],
+  },
   {
     id: "field-notes",
     key: "FN",

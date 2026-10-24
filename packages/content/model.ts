@@ -165,6 +165,11 @@ export interface Project {
   readonly story: string;
   /** Issue ids in board order. */
   readonly issues: readonly string[];
+  /**
+   * Listed projects appear in issue lists, suggestions and the project index. An unlisted one
+   * (the five-minute test's quick fixes) is reachable only by its issues' keys and links.
+   */
+  readonly listed: boolean;
 }
 
 /**
