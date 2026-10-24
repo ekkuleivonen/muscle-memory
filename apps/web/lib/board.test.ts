@@ -120,7 +120,7 @@ test("suggestions prefer runnable, then the person's stack, then easier issues",
   }));
   assert.deepEqual(
     suggestions(issues, runnableOnBoard, ["cpp"]).map((i) => i.key),
-    ["EDGE-3", "API-1", "API-2"],
+    ["EDGE-3", "API-1", "API-4"],
   );
   assert.deepEqual(
     suggestions(issues, runnableOnBoard, ["go"], 2).map((i) => i.key),

@@ -723,6 +723,91 @@
         }
       ]
     },
+    "challenge:workspace-slugs@1.0.0": {
+      "kind": "challenge",
+      "id": "workspace-slugs",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Mateo O",
+            "body": "Support has a customer whose workspace is \"Équipe Été\". The link we email them is /w/%C3%A9quipe-%C3%A9t%C3%A9 and it 404s.",
+            "role": "Backend"
+          }
+        ],
+        "difficulty": "easy",
+        "entrypoint": "slugify",
+        "expected": [
+          "acme-inc",
+          "cafe-unicorn",
+          "r-d-ops",
+          "2024-planning",
+          ""
+        ],
+        "hints": [
+          "Unicode normalization (NFD) splits a letter from its accent, so the accent can be dropped."
+        ],
+        "id": "workspace-slugs",
+        "inputs": [
+          "Acme Inc",
+          "  Café   Ünïcorn  ",
+          "R&D / Ops",
+          "2024 Planning!!",
+          "---"
+        ],
+        "kind": "bug",
+        "language": "ruby",
+        "number": 5,
+        "skills": [
+          "strings",
+          "unicode",
+          "urls"
+        ],
+        "starter": "# Workspace URLs are /w/<slug>. Turn a workspace name into its slug:\n# lowercase ASCII letters and digits, words joined by single hyphens.\ndef slugify(name)\n  name.downcase.tr(\" \", \"-\")\nend\n",
+        "summary": "Make URL slugs from workspace names, accents and all.",
+        "task": "`slugify(name)` turns a workspace name into its URL slug: lowercase ASCII letters and digits, with every run of anything else between words becoming a single hyphen, and no hyphen at either end. Accented Latin letters lose their accents first, so `\"Café Ünïcorn\"` becomes `\"cafe-unicorn\"`.",
+        "title": "Workspace URLs break on names with accents",
+        "version": "1.0.0"
+      },
+      "digest": "34750d3967c9f012333db99a103bee4fe7db8c23df2f0e6f801223dfd274a9c5",
+      "state": "published",
+      "testResult": {
+        "digest": "34750d3967c9f012333db99a103bee4fe7db8c23df2f0e6f801223dfd274a9c5",
+        "fixtures": 5,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "34750d3967c9f012333db99a103bee4fe7db8c23df2f0e6f801223dfd274a9c5",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "34750d3967c9f012333db99a103bee4fe7db8c23df2f0e6f801223dfd274a9c5",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "34750d3967c9f012333db99a103bee4fe7db8c23df2f0e6f801223dfd274a9c5",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "34750d3967c9f012333db99a103bee4fe7db8c23df2f0e6f801223dfd274a9c5",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
     "challenge:parse-log-line@1.0.0": {
       "kind": "challenge",
       "id": "parse-log-line",
@@ -1731,21 +1816,25 @@
           [
             "parse-log-line",
             "1.0.0"
+          ],
+          [
+            "workspace-slugs",
+            "1.0.0"
           ]
         ],
         "id": "accounts-api",
         "key": "API",
         "presentation": "demo-text-v1",
-        "story": "The service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, and the login gateway in front is TypeScript.\n\nIt mostly works, and the on-call channel has opinions about the rest: list endpoints that accept any page size, reset links that expire too soon, and logs that are hard to search during an incident.\n\n## What you'll work on\n\n- Parsing and validating request parameters with sensible defaults\n- Time and expiry logic, where off-by-one and unit mix-ups hide\n- Rate limiting and log handling for the people on call\n\n## Good fit if you\n\n- Write backend services, or want practice with the bugs they actually get\n- Like **input validation**, edge cases and reading a stack trace at 2am\n- Know **Go**, **PHP** or **TypeScript**, or want to try one of them on familiar problems\n\nStack: Go, PHP, TypeScript.",
+        "story": "The service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, the admin back office is a small Ruby app, and the login gateway in front is TypeScript.\n\nIt mostly works, and the on-call channel has opinions about the rest: list endpoints that accept any page size, reset links that expire too soon, and logs that are hard to search during an incident.\n\n## What you'll work on\n\n- Parsing and validating request parameters with sensible defaults\n- Time and expiry logic, where off-by-one and unit mix-ups hide\n- Rate limiting and log handling for the people on call\n\n## Good fit if you\n\n- Write backend services, or want practice with the bugs they actually get\n- Like **input validation**, edge cases and reading a stack trace at 2am\n- Know **Go**, **PHP**, **Ruby** or **TypeScript**, or want to try one of them on familiar problems\n\nStack: Go, PHP, Ruby, TypeScript.",
         "summary": "Backend: sign-up, login and account endpoints behind every app.",
         "title": "Accounts API",
         "version": "1.0.0"
       },
-      "digest": "1b7351fc7f1fd85ef7b619f993ce7b7ee90a39d557a96c6f240dc4110d605ee3",
+      "digest": "4a7916348619a07a86912e6ace22ef48f0493d940e7e0092225e323fd86e3e4d",
       "state": "published",
       "testResult": {
-        "digest": "1b7351fc7f1fd85ef7b619f993ce7b7ee90a39d557a96c6f240dc4110d605ee3",
-        "fixtures": 13,
+        "digest": "4a7916348619a07a86912e6ace22ef48f0493d940e7e0092225e323fd86e3e4d",
+        "fixtures": 18,
         "at": "2026-10-24T00:00:00.000Z"
       },
       "history": [
@@ -1753,28 +1842,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "1b7351fc7f1fd85ef7b619f993ce7b7ee90a39d557a96c6f240dc4110d605ee3",
+          "digest": "4a7916348619a07a86912e6ace22ef48f0493d940e7e0092225e323fd86e3e4d",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "1b7351fc7f1fd85ef7b619f993ce7b7ee90a39d557a96c6f240dc4110d605ee3",
+          "digest": "4a7916348619a07a86912e6ace22ef48f0493d940e7e0092225e323fd86e3e4d",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "1b7351fc7f1fd85ef7b619f993ce7b7ee90a39d557a96c6f240dc4110d605ee3",
+          "digest": "4a7916348619a07a86912e6ace22ef48f0493d940e7e0092225e323fd86e3e4d",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "1b7351fc7f1fd85ef7b619f993ce7b7ee90a39d557a96c6f240dc4110d605ee3",
+          "digest": "4a7916348619a07a86912e6ace22ef48f0493d940e7e0092225e323fd86e3e4d",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]

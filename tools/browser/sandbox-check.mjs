@@ -638,6 +638,66 @@ export function applyDiscount() { return 0; }`,
       entrypoint: "page",
       parameters: ["selector", "read"],
     });
+    const php = (code, extra = {}) =>
+      run(
+        "php",
+        {
+          code,
+          inputs: [
+            [1000, 1059, 60],
+            [1000, 4601, 60],
+          ],
+          filename: "src/isExpired.php",
+          language: "php",
+          entrypoint: "isExpired",
+          parameters: ["issuedAt", "now", "ttlMinutes"],
+          ...extra,
+        },
+        15000,
+      );
+    results.php = await php(
+      "<?php\nfunction isExpired(int $issuedAt, int $now, int $ttlMinutes): bool {\n  echo 'checked ';\n  return $now - $issuedAt > $ttlMinutes * 60;\n}\n",
+    );
+    results.phpSyntax = await php("<?php\nfunction isExpired( {\n");
+    results.phpThrown = await php(
+      "<?php\nfunction isExpired($a, $b, $c) {\n  throw new InvalidArgumentException('nope');\n}\n",
+    );
+    results.phpFatal = await php("<?php\nundefined_thing();\n");
+    results.phpEscape = await php(
+      // Emscripten emulates sockets over WebSocket, which the sandbox's CSP refuses: fsockopen
+      // hands back a socket that never connects, and no request reaches either server.
+      `<?php\nfunction isExpired($a, $b, $c) {\n  $s = @fsockopen('127.0.0.1', ${new URL(OUT).port}, $errno, $errstr, 1);\n  if ($s) { @fwrite($s, "GET /php-socket HTTP/1.0\\r\\n\\r\\n"); @fread($s, 10); }\n  return [@file_get_contents("${OUT}/php-fetch") === false, function_exists('curl_init')];\n}\n`,
+      { inputs: [[1, 2, 3]] },
+    );
+    const ruby = (code, extra = {}) =>
+      run(
+        "ruby",
+        {
+          code,
+          inputs: [
+            [[3, 1, 2], "#{x}"],
+            [[], "é"],
+          ],
+          filename: "lib/sorted.rb",
+          language: "ruby",
+          entrypoint: "sorted",
+          parameters: ["values", "label"],
+          ...extra,
+        },
+        15000,
+      );
+    results.ruby = await ruby(
+      'def sorted(values, label)\n  puts "sorting #{values.size}"\n  { "label" => label, "values" => values.sort, "ratio" => 0.5, "none" => nil }\nend\n',
+    );
+    results.rubySyntax = await ruby(
+      "def sorted(values, label)\n  values.sort(\n",
+    );
+    results.rubyRaised = await ruby(
+      'def sorted(values, label)\n  raise ArgumentError, "nope"\nend\n',
+    );
+    results.rubyNonJson = await ruby(
+      "def sorted(values, label) = Float::NAN\n",
+    );
     results.frames = document.querySelectorAll("iframe").length;
     return results;
   }, OUT);
@@ -646,7 +706,8 @@ export function applyDiscount() { return 0; }`,
   const out = (outcome, i = 0) => outcome.cases?.[i]?.output?.text;
   const escapes = report.escapes.stdout?.text ?? "";
   if (process.env.VERBOSE)
-    console.log(JSON.stringify(report, null, 1).slice(0, 6000));
+    for (const [name, value] of Object.entries(report))
+      console.log(name, JSON.stringify(value).slice(0, 700));
   return {
     "typescript: types stripped, parameters spread":
       out(report.ts) === "9000" && out(report.ts, 1) === "5000",
@@ -695,6 +756,35 @@ export function applyDiscount() { return 0; }`,
       out(report.html, 1) === '["x","y",null,"bare"]' &&
       out(report.html, 2) === "2" &&
       out(report.html, 3) === '["In stock","On sale"]',
+    "php: spread arguments, echo captured as output":
+      out(report.php) === "false" &&
+      out(report.php, 1) === "true" &&
+      report.php.stdout.text === "checked checked ",
+    "php: parse error is a compile error in the solution file":
+      report.phpSyntax.phase === "compile" &&
+      /src\/isExpired\.php:2/.test(report.phpSyntax.error.traceback.text),
+    "php: an exception stays with its case":
+      report.phpThrown.cases[0]?.error?.type === "InvalidArgumentException",
+    "php: a fatal error is the person's error, explained":
+      report.phpFatal.status === "user-error" &&
+      /undefined_thing/.test(report.phpFatal.error.traceback.text),
+    "php: no network from file_get_contents or curl (sockets: see the request check)":
+      out(report.phpEscape) === "[true,false]",
+    "ruby: spread arguments, no interpolation of inputs, puts captured":
+      out(report.ruby) ===
+        '{"label":"#{x}","values":[1,2,3],"ratio":0.5,"none":null}' &&
+      out(report.ruby, 1) ===
+        '{"label":"é","values":[],"ratio":0.5,"none":null}' &&
+      report.ruby.stdout.text === "sorting 3\nsorting 0\n",
+    "ruby: syntax error is a compile error in the solution file":
+      report.rubySyntax.phase === "compile" &&
+      /lib\/sorted\.rb/.test(report.rubySyntax.error.traceback.text),
+    "ruby: an exception stays with its case":
+      report.rubyRaised.cases[0]?.error?.type === "ArgumentError" &&
+      /lib\/sorted\.rb:2/.test(report.rubyRaised.cases[0].error.traceback.text),
+    "ruby: values JSON cannot hold are refused": Boolean(
+      report.rubyNonJson.cases[0]?.unserializable,
+    ),
     "no request from any engine reached either server":
       hits.app.length === 0 && hits.outside.length === 0,
     "no sandbox frames left behind": report.frames === 0,
@@ -731,7 +821,9 @@ for (const name of process.env.ONLY_AUTH
 }
 if (!process.env.PREVIEW_URL && !process.env.ONLY_AUTH)
   for (const name of requested.length ? requested : ["chromium"]) {
-    console.log(`\n=== ${name}: JavaScript, TypeScript, SQL and HTML ===`);
+    console.log(
+      `\n=== ${name}: JavaScript, TypeScript, SQL, HTML, PHP and Ruby ===`,
+    );
     for (const [label, pass] of Object.entries(
       await enginesCheck(engines[name]),
     )) {

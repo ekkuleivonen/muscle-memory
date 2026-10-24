@@ -250,7 +250,12 @@ export class Runner {
           throw new Error(
             `Runtime file ${name} is unavailable (${response.status}).`,
           );
-        return [name, await this.read(response)] as const;
+        const bytes = await this.read(response);
+        // Large files ship gzipped (static hosts cap file sizes); the hash covers the
+        // compressed bytes, and the worker gets them unpacked under their plain name.
+        if (name.endsWith(".gz"))
+          return [name.slice(0, -3), await gunzip(bytes)] as const;
+        return [name, bytes] as const;
       }),
     ).then(Object.fromEntries);
     this.assets.catch(() => (this.assets = undefined));
@@ -327,6 +332,13 @@ export class Runner {
     });
     return sandbox;
   }
+}
+
+function gunzip(bytes: ArrayBuffer): Promise<ArrayBuffer> {
+  const stream = new Blob([bytes])
+    .stream()
+    .pipeThrough(new DecompressionStream("gzip"));
+  return new Response(stream).arrayBuffer();
 }
 
 /** Validates an untrusted message from the sandbox; anything malformed is ignored. */

@@ -6,7 +6,9 @@
 import manifest from "./runtime-manifest.json";
 import { HTML_WORKER } from "./workers/html";
 import { JAVASCRIPT_WORKER } from "./workers/javascript";
+import { PHP_WORKER } from "./workers/php";
 import { PYTHON_WORKER } from "./workers/python";
+import { RUBY_WORKER } from "./workers/ruby";
 import { SQL_WORKER } from "./workers/sql";
 
 export type EngineId = keyof typeof manifest;
@@ -30,7 +32,7 @@ export interface Engine {
   readonly worker: string;
 }
 
-const { pyodide, javascript, pglite, html } = manifest;
+const { pyodide, javascript, pglite, html, php, ruby } = manifest;
 
 export const ENGINES: Record<EngineId, Engine> = {
   pyodide: {
@@ -85,6 +87,26 @@ export const ENGINES: Record<EngineId, Engine> = {
     config: {},
     worker: HTML_WORKER,
   },
+  php: {
+    id: "php",
+    label: `PHP ${php.php}`,
+    runtime: { id: "php-wasm", version: php.version, php: php.php },
+    basePath: php.basePath,
+    files: php.files,
+    sizes: php.sizes,
+    config: {},
+    worker: PHP_WORKER,
+  },
+  ruby: {
+    id: "ruby",
+    label: `Ruby ${ruby.ruby}`,
+    runtime: { id: "ruby.wasm", version: ruby.version, ruby: ruby.ruby },
+    basePath: ruby.basePath,
+    files: ruby.files,
+    sizes: ruby.sizes,
+    config: {},
+    worker: RUBY_WORKER,
+  },
 };
 
 const BY_LANGUAGE: Record<string, EngineId> = {
@@ -93,6 +115,8 @@ const BY_LANGUAGE: Record<string, EngineId> = {
   typescript: "javascript",
   sql: "pglite",
   html: "html",
+  php: "php",
+  ruby: "ruby",
 };
 
 /** The engine that runs a language, if any does yet. */

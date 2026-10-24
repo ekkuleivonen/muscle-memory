@@ -9,6 +9,7 @@
  *   node tools/build-runtimes.mjs --update  build and rewrite the pinned hashes (after an upgrade)
  */
 import { createHash } from "node:crypto";
+import { gzipSync } from "node:zlib";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -82,9 +83,47 @@ const ENGINES = {
   },
   html: {
     package: "linkedom",
-    license: (v) => `linkedom ${v} (ISC), https://github.com/WebReflection/linkedom\n`,
+    license: (v) =>
+      `linkedom ${v} (ISC), https://github.com/WebReflection/linkedom\n`,
     files: async () => ({
       "dom.js": await bundle(`export { parseHTML } from "linkedom";`),
+    }),
+  },
+  php: {
+    package: "php-wasm",
+    license: (v) =>
+      `php-wasm ${v} (Apache-2.0, chosen from Apache-2.0 OR GPL-2.0), https://github.com/seanmorris/php-wasm\nPHP (PHP License 3.01), https://www.php.net/license/\n`,
+    files: async () => {
+      const dir = packageDir("php-wasm");
+      const loader = await readFile(join(dir, "php8.4-web.mjs"), "utf8");
+      const wasm = /"([0-9a-f]{40}\.wasm)"/.exec(loader)[1];
+      return {
+        // The wasm is handed over as bytes, so the loader never resolves its URL.
+        "php.js": await bundle(
+          `export { PhpBase } from "php-wasm/PhpBase.mjs";
+           export * as runtime from "php-wasm/php8.4-web.mjs";`,
+          { "import.meta.url": '"https://runtime.invalid/php.js"' },
+        ),
+        "php.wasm": await readFile(join(dir, wasm)),
+      };
+    },
+  },
+  ruby: {
+    package: "@ruby/3.4-wasm-wasi",
+    license: (v) =>
+      `ruby.wasm ${v} (MIT), https://github.com/ruby/ruby.wasm\nCRuby (Ruby License or BSD-2-Clause), https://www.ruby-lang.org/en/about/license.txt\n`,
+    files: async () => ({
+      "ruby.js": await bundle(
+        `export { DefaultRubyVM } from "@ruby/wasm-wasi/dist/browser";`,
+      ),
+      // 30 MB unpacked, over Cloudflare's 25 MiB per-file limit: shipped gzipped and
+      // unpacked by the page after its hash is checked.
+      "ruby.wasm.gz": gzipSync(
+        await readFile(
+          join(packageDir("@ruby/3.4-wasm-wasi"), "dist/ruby+stdlib.wasm"),
+        ),
+        { level: 9 },
+      ),
     }),
   },
   pglite: {

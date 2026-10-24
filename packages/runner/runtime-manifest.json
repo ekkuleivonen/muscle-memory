@@ -58,5 +58,31 @@
     "sizes": {
       "dom.js": 323787
     }
+  },
+  "php": {
+    "version": "0.2.0",
+    "php": "8.4.1",
+    "basePath": "/runtime/php-0.2.0/",
+    "files": {
+      "php.js": "sha256-+k8ldSI/k6rZUOeI2Vv4xRc5NrV0pCzSMxOHCZvuTGY=",
+      "php.wasm": "sha256-faBPth+b4AjHnrHu44Xate09NwL3vtB91l/YK6O/Nyk="
+    },
+    "sizes": {
+      "php.js": 578506,
+      "php.wasm": 12868946
+    }
+  },
+  "ruby": {
+    "version": "2.10.1",
+    "ruby": "3.4.1",
+    "basePath": "/runtime/ruby-2.10.1/",
+    "files": {
+      "ruby.js": "sha256-vRYatC+rsv+QVCAEYMX7mjf5CziEZcL2+oodqcCVM/k=",
+      "ruby.wasm.gz": "sha256-ad3673Q226gs6Gh/eOwrq7yzrSFwqpB+KF9kkPeumNs="
+    },
+    "sizes": {
+      "ruby.js": 47932,
+      "ruby.wasm.gz": 8918704
+    }
   }
 }

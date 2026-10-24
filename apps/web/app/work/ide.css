@@ -471,6 +471,8 @@
   overflow-wrap: anywhere;
 }
 .ide-case-body code {
+  /* Inputs and outputs are data: keep every space. */
+  white-space: pre-wrap;
   border: 0;
   background: none;
   padding: 0;

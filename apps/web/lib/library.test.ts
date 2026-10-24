@@ -91,7 +91,9 @@ test("issues run when their language has an engine; project summaries span their
       "discount-codes",
       "filter-form-labels",
       "debounce-search",
+      "reset-link-expiry",
       "rate-limiter",
+      "workspace-slugs",
       "csv-quoted-fields",
       "dedupe-customers",
       "top-customers",
@@ -144,6 +146,7 @@ test("filters combine across qualifiers and match any value within one", () => {
     "API-1",
     "API-2",
     "API-4",
+    "API-5",
     "DATA-1",
     "EDGE-3",
     "SHOP-1",
@@ -157,7 +160,9 @@ test("filters combine across qualifiers and match any value within one", () => {
     "EDGE-4",
   ]);
   assert.deepEqual(keys("is:runnable"), [
+    "API-2",
     "API-3",
+    "API-5",
     "DATA-1",
     "DATA-2",
     "DATA-3",
@@ -170,6 +175,7 @@ test("filters combine across qualifiers and match any value within one", () => {
   ]);
   assert.deepEqual(keys("label:strings"), [
     "API-4",
+    "API-5",
     "DATA-1",
     "SHOP-1",
     "SHOP-2",
@@ -200,7 +206,7 @@ test("groups keep their declared order and drop empty ones", () => {
       g.issues.length,
     ]),
     [
-      ["bug", 7],
+      ["bug", 8],
       ["performance", 2],
     ],
   );
@@ -210,7 +216,7 @@ test("groups keep their declared order and drop empty ones", () => {
   );
   assert.equal(
     groupIssues(issues, "none", merged.projects)[0].issues.length,
-    9,
+    10,
   );
 });
 

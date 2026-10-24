@@ -53,6 +53,15 @@ const challenge = (
  * up to the app's runners, not the content.
  */
 const STARTERS: Record<string, { entrypoint: string; starter: string }> = {
+  "workspace-slugs": {
+    entrypoint: "slugify",
+    starter: `# Workspace URLs are /w/<slug>. Turn a workspace name into its slug:
+# lowercase ASCII letters and digits, words joined by single hyphens.
+def slugify(name)
+  name.downcase.tr(" ", "-")
+end
+`,
+  },
   "format-price": {
     entrypoint: "formatPrice",
     starter: `/**
@@ -461,6 +470,25 @@ const challenges = [
       ),
     ],
   }),
+  challenge("workspace-slugs", {
+    title: "Workspace URLs break on names with accents",
+    summary: "Make URL slugs from workspace names, accents and all.",
+    kind: "bug",
+    difficulty: "easy",
+    language: "ruby",
+    skills: ["strings", "unicode", "urls"],
+    task: '`slugify(name)` turns a workspace name into its URL slug: lowercase ASCII letters and digits, with every run of anything else between words becoming a single hyphen, and no hyphen at either end. Accented Latin letters lose their accents first, so `"Café Ünïcorn"` becomes `"cafe-unicorn"`.',
+    inputs: ["Acme Inc", "  Café   Ünïcorn  ", "R&D / Ops", "2024 Planning!!", "---"],
+    expected: ["acme-inc", "cafe-unicorn", "r-d-ops", "2024-planning", ""],
+    hints: [
+      "Unicode normalization (NFD) splits a letter from its accent, so the accent can be dropped.",
+    ],
+    comments: [
+      mateo(
+        "Support has a customer whose workspace is \"Équipe Été\". The link we email them is /w/%C3%A9quipe-%C3%A9t%C3%A9 and it 404s.",
+      ),
+    ],
+  }),
   challenge("parse-log-line", {
     title: "Access log parser drops fields on 5xx lines",
     summary: "Turn an access log line into a structured record.",
@@ -720,7 +748,7 @@ Stack: TypeScript, JavaScript, HTML.`,
     key: "API",
     title: "Accounts API",
     summary: "Backend: sign-up, login and account endpoints behind every app.",
-    story: `The service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, and the login gateway in front is TypeScript.
+    story: `The service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, the admin back office is a small Ruby app, and the login gateway in front is TypeScript.
 
 It mostly works, and the on-call channel has opinions about the rest: list endpoints that accept any page size, reset links that expire too soon, and logs that are hard to search during an incident.
 
@@ -734,14 +762,15 @@ It mostly works, and the on-call channel has opinions about the rest: list endpo
 
 - Write backend services, or want practice with the bugs they actually get
 - Like **input validation**, edge cases and reading a stack trace at 2am
-- Know **Go**, **PHP** or **TypeScript**, or want to try one of them on familiar problems
+- Know **Go**, **PHP**, **Ruby** or **TypeScript**, or want to try one of them on familiar problems
 
-Stack: Go, PHP, TypeScript.`,
+Stack: Go, PHP, Ruby, TypeScript.`,
     challenges: [
       "pagination-params",
       "reset-link-expiry",
       "rate-limiter",
       "parse-log-line",
+      "workspace-slugs",
     ],
   },
   {
