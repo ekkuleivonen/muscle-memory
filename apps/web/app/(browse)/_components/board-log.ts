@@ -11,20 +11,27 @@ import {
 } from "../../../../../packages/browser/practice-store";
 import { randomId } from "../../../../../packages/browser/random-id";
 import {
+  boardArrival,
   boardMove,
+  boardResult,
+  boardShare,
   boardPage,
   boardProfile,
   boardRecord,
   boardReply,
   boardView,
   type BoardBase,
+  type BoardArrivalData,
   type BoardMoveData,
+  type BoardResultData,
+  type BoardShareData,
   type BoardObservation,
   type BoardPageData,
   type BoardProfileData,
   type BoardViewData,
 } from "../../../../../packages/domain/board";
 import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
+import type { Json } from "../../../../../packages/domain/json";
 import { readProfile } from "../../../lib/account";
 import { acceptsCurrent } from "../../../lib/legal";
 
@@ -51,6 +58,59 @@ export function logReply(
   return log((base) => boardReply({ ...base, issue, data }), "Reply");
 }
 
+/** Where an arrival is remembered until the Terms are accepted and it can be recorded. */
+const ARRIVAL_KEY = "muscle-memory.arrival";
+
+/**
+ * Remembers the first landing page and any referral code, before anything may be recorded.
+ * Only the first landing counts; a later shared link does not overwrite it.
+ */
+export function noteArrival(
+  ref: string | null,
+  landing = location.pathname + location.search,
+): void {
+  try {
+    if (localStorage.getItem(ARRIVAL_KEY)) return;
+    const arrival = {
+      ref: ref && /^[a-z0-9]{6,32}$/.test(ref) ? ref : null,
+      landing,
+      landedAt: new Date().toISOString(),
+      recorded: false,
+    };
+    localStorage.setItem(ARRIVAL_KEY, JSON.stringify(arrival));
+  } catch {
+    // Storage can be unavailable; the arrival then goes unrecorded.
+  }
+}
+
+/** Records the remembered arrival once the Terms are accepted; once only. */
+export async function logArrival(): Promise<void> {
+  let arrival: (BoardArrivalData & { recorded: boolean }) | null = null;
+  try {
+    arrival = JSON.parse(localStorage.getItem(ARRIVAL_KEY) ?? "null");
+  } catch {
+    return;
+  }
+  if (!arrival || arrival.recorded) return;
+  const { ref, landing, landedAt } = arrival;
+  localStorage.setItem(ARRIVAL_KEY, JSON.stringify({ ...arrival, recorded: true }));
+  await log((base) => boardArrival({ ...base, data: { ref, landing, landedAt } }), "Arrival");
+}
+
+export function logResult(
+  issue: { id: string; revision: string },
+  data: BoardResultData,
+): Promise<void> {
+  return log((base) => boardResult({ ...base, issue, data }), "Result");
+}
+
+export function logShare(
+  issue: { id: string; revision: string },
+  data: BoardShareData,
+): Promise<void> {
+  return log((base) => boardShare({ ...base, issue, data }), "Share");
+}
+
 export function logView(
   issue: { id: string; revision: string } | null,
   data: BoardViewData,
@@ -62,8 +122,18 @@ export function logPage(data: BoardPageData): Promise<void> {
   return log((base) => boardPage({ ...base, data }), "Page state");
 }
 
-export function logProfile(data: BoardProfileData): Promise<void> {
-  return log((base) => boardProfile({ ...base, data }), "Profile answers");
+/**
+ * The profile as now saved, after an answer given `from` somewhere: every answer, which ones
+ * the person gave themselves, and stealth.
+ */
+export function logProfile(from: BoardProfileData["from"]): Promise<void> {
+  const stored = readProfile();
+  if (!stored) return Promise.resolve();
+  const answered = Object.entries(stored.asked ?? {})
+    .filter(([, asked]) => asked?.answeredAt)
+    .map(([id]) => id);
+  const answers = { ...stored.profile, answered, stealth: stored.stealth ?? false } as Json;
+  return log((base) => boardProfile({ ...base, data: { from, answers } }), "Profile answers");
 }
 
 /**

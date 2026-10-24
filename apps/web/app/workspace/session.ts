@@ -109,6 +109,8 @@ export interface SessionOptions {
   /** The app page the IDE was opened from, and the window size, for `opened`. */
   readonly entry?: string | null;
   readonly viewport?: { width: number; height: number } | null;
+  /** The self-reported profile when the IDE opened, for `opened`. */
+  readonly profile?: Json | null;
 }
 
 /** Keys are written about once a second, or sooner when this many are waiting. */
@@ -187,6 +189,7 @@ export class WorkspaceSession {
           revision: 0,
           codeArtifactId: code.artifactId,
           entry: options.entry ?? null,
+          profile: options.profile ?? null,
           viewport: options.viewport ?? null,
           editor: editorFeatures(
             options.language ?? "python",

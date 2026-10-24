@@ -6,15 +6,17 @@ import { openPracticeStore } from "../../../packages/browser/practice-store";
 import { eraseUploaded } from "./ingest";
 import { BOARD_CHANGE, BOARD_KEY } from "./board";
 import { HANDLE_PATTERN, randomHandle } from "./handle";
+import type { LanguageId } from "./languages";
 import { LEGAL_VERSION, type Acceptance } from "./legal";
 import {
-  ONBOARDING_COOKIE,
-  ONBOARDING_VERSION,
+  CONSENT_COOKIE,
+  CONSENT_VALUE,
   PROFILE_KEY,
-  SESSION_VALUE,
+  PROFILE_VERSION,
+  SNOOZE_MS,
   type Profile,
   type StoredProfile,
-} from "./onboarding";
+} from "./profile";
 
 /** Same-tab change notice; other tabs hear the storage event. */
 export const ACCOUNT_CHANGE = "muscle-memory:account";
@@ -25,7 +27,7 @@ const LEGACY_ACTIVITY_KEY = "muscle-memory.activity-log";
 export function parseStoredProfile(raw: string | null): StoredProfile | null {
   try {
     const stored = JSON.parse(raw ?? "null") as StoredProfile | null;
-    return stored?.version === ONBOARDING_VERSION ? stored : null;
+    return stored?.version === PROFILE_VERSION ? stored : null;
   } catch {
     return null;
   }
@@ -40,35 +42,24 @@ function write(stored: StoredProfile) {
   window.dispatchEvent(new Event(ACCOUNT_CHANGE));
 }
 
-export function startSession() {
-  document.cookie = `${ONBOARDING_COOKIE}=${SESSION_VALUE}; Path=/; Max-Age=${YEAR_SECONDS}; SameSite=Lax`;
-}
-
 /** Accepting the current Terms and Privacy Notice, now. */
 export function acceptance(): Acceptance {
   return { version: LEGAL_VERSION, at: new Date().toISOString() };
 }
 
 /**
- * Saves answers, keeping the handle someone already has or handing out a new one, and the
- * latest acceptance: `accepted` when given, otherwise the one on file.
+ * The whole profile from settings, every question in it answered by the person. Keeps the
+ * handle, the acceptance and everything else on file.
  */
-export function saveProfile(
-  profile: Profile,
-  accepted?: Acceptance,
-): StoredProfile {
-  const previous = readProfile();
-  const stored: StoredProfile = {
-    ...previous,
-    version: ONBOARDING_VERSION,
-    completedAt: previous?.completedAt ?? new Date().toISOString(),
-    handle: validHandle(previous?.handle) ?? randomHandle(),
-    accepted: accepted ?? previous?.accepted,
-    profile,
-  };
-  write(stored);
-  startSession();
-  return stored;
+export function saveProfile(profile: Profile): StoredProfile | null {
+  const stored = readProfile();
+  if (!stored) return null;
+  const at = new Date().toISOString();
+  const asked = { ...stored.asked };
+  for (const id of Object.keys(profile) as (keyof Profile)[]) asked[id] = { answeredAt: at };
+  const next = { ...stored, profile, asked };
+  write(next);
+  return next;
 }
 
 function validHandle(handle: unknown): string | undefined {
@@ -88,16 +79,63 @@ export function ensureHandle(): string | null {
   return next.handle;
 }
 
-export function hasSession(): boolean {
-  return document.cookie
-    .split("; ")
-    .includes(`${ONBOARDING_COOKIE}=${SESSION_VALUE}`);
+/**
+ * Accept the current Terms (/consent, /play): the only thing any page needs. Keeps whatever
+ * this browser already has and signs it back in; a newcomer gets a handle and an empty profile,
+ * which the app's questions fill in as they go. Opens every page.
+ */
+export function acceptConsent(): StoredProfile {
+  const previous = readProfile();
+  const { signedOut: _, ...kept } = previous ?? ({} as Partial<StoredProfile>);
+  const stored: StoredProfile = previous
+    ? { ...(kept as StoredProfile), accepted: acceptance() }
+    : {
+        version: PROFILE_VERSION,
+        createdAt: new Date().toISOString(),
+        handle: randomHandle(),
+        accepted: acceptance(),
+        profile: {},
+      };
+  write(stored);
+  document.cookie = `${CONSENT_COOKIE}=${CONSENT_VALUE}; Path=/; Max-Age=${YEAR_SECONDS}; SameSite=Lax`;
+  return stored;
 }
 
-/** Records acceptance of the current Terms on an existing account. */
-export function acceptTerms() {
+/**
+ * The language picked for the five-minute test, as a first guess at the languages answer: saved
+ * when the profile has none yet, so every IDE session's profile snapshot carries it. The
+ * languages question still counts as open until the person answers it. Returns the profile.
+ */
+export function playLanguage(language: LanguageId): Profile {
   const stored = readProfile();
-  if (stored) write({ ...stored, accepted: acceptance() });
+  if (!stored) return { languages: [language] };
+  if (stored.profile.languages?.length) return stored.profile;
+  const profile = { ...stored.profile, languages: [language] };
+  write({ ...stored, profile });
+  return profile;
+}
+
+/**
+ * Answers given where the app asked (a result card, the dashboard, an issue page): merged into
+ * the profile and marked as the person's own. Returns the profile as it now stands.
+ */
+export function answerQuestions(answers: Partial<Profile>): Profile | null {
+  const stored = readProfile();
+  if (!stored) return null;
+  const at = new Date().toISOString();
+  const asked = { ...stored.asked };
+  for (const id of Object.keys(answers) as (keyof Profile)[]) asked[id] = { answeredAt: at };
+  const profile = { ...stored.profile, ...answers };
+  write({ ...stored, profile, asked });
+  return profile;
+}
+
+/** "Not now": the question is not asked anywhere on this device for a few days. */
+export function snoozeQuestion(id: keyof Profile) {
+  const stored = readProfile();
+  if (!stored) return;
+  const snoozedUntil = new Date(Date.now() + SNOOZE_MS).toISOString();
+  write({ ...stored, asked: { ...stored.asked, [id]: { ...stored.asked?.[id], snoozedUntil } } });
 }
 
 export function setStealth(stealth: boolean) {
@@ -105,9 +143,14 @@ export function setStealth(stealth: boolean) {
   if (stored) write({ ...stored, stealth });
 }
 
-/** Ends the session; profile, board and history stay in this browser. */
+/**
+ * Ends the session; profile, board and history stay in this browser, and the consent page
+ * offers to sign back in rather than doing it silently.
+ */
 export function logOut() {
-  document.cookie = `${ONBOARDING_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+  const stored = readProfile();
+  if (stored) write({ ...stored, signedOut: true });
+  document.cookie = `${CONSENT_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
 }
 
 /**

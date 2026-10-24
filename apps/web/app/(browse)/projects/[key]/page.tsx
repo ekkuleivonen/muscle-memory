@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { requireOnboarding } from "../../../../lib/gate";
+import { requireConsent } from "../../../../lib/gate";
 import {
   projectFilterValue,
   difficultyRange,
@@ -38,7 +38,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
 export default async function ProjectPage(props: Props) {
   const { key } = await props.params;
-  await requireOnboarding(`/projects/${key}`);
+  await requireConsent(`/projects/${key}`);
   const { project } = await find(props);
   if (!project) notFound();
   // One canonical URL per project: /projects/FN.

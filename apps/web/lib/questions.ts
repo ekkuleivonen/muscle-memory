@@ -1,7 +1,7 @@
-import { RUNNABLE_LANGUAGES } from "../../../../packages/runner/engines";
-import { LANGUAGES, OFFERED } from "../../lib/languages";
-import type { Profile } from "../../lib/onboarding";
-import type { Answer, Prompt } from "./prompts";
+import { RUNNABLE_LANGUAGES } from "../../../packages/runner/engines";
+import { LANGUAGES, OFFERED } from "./languages";
+import type { Profile } from "./profile";
+import type { Answer, Prompt } from "../app/_terminal/prompts";
 
 export const QUESTIONS = [
   {
@@ -13,6 +13,17 @@ export const QUESTIONS = [
       { value: "some", label: "Getting comfortable", hint: "1–3 years" },
       { value: "professional", label: "Professional", hint: "3–10 years" },
       { value: "veteran", label: "Veteran", hint: "10+ years" },
+    ],
+  },
+  {
+    kind: "select",
+    id: "aiUse",
+    message: "How often do you code with AI help?",
+    choices: [
+      { value: "daily", label: "Every day" },
+      { value: "weekly", label: "Most weeks" },
+      { value: "rarely", label: "Now and then" },
+      { value: "never", label: "Never" },
     ],
   },
   {

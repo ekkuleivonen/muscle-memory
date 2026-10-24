@@ -35,3 +35,5 @@ jobs:
       - run: pip install -r tools/erasure/requirements-test.txt
       - run: python -m unittest -v test_erase
         working-directory: tools/erasure
+      - run: python -m unittest -v test_aggregate
+        working-directory: tools/aggregates

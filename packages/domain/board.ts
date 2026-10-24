@@ -2,7 +2,7 @@
  * Raw observations from the tracker, every page outside the IDE: pages viewed (with their
  * search and filters), the page becoming visible, hidden, focused or resized, personal-board
  * moves (an issue's status set by hand, or Done by merging a pull request), replies to review
- * comments and the onboarding and settings answers. Recorded for every account under the Terms
+ * comments and the profile answers. Recorded for every account under the Terms
  * and Privacy Notice it accepted, whose version each observation carries. Typing in text
  * fields is not recorded key by key: a search is recorded as the query it produced, a reply as
  * the text sent.
@@ -12,6 +12,20 @@ import { canonical, type Json } from "./json";
 import type { WorkspaceRecord } from "./workspace";
 
 /**
+ * 6.0.0: no onboarding. Profile questions are asked one at a time where the app needs them, so
+ * `profile` comes `from` the place that asked: "result" (a merged pull request's card),
+ * "dashboard", "issue" (an issue page, before opening the IDE), "settings" or "play" (the
+ * five-minute test's language, a guess). `answers` is always the whole profile as saved, and
+ * now also lists which questions the person answered themselves (`answered`), since the play
+ * language is not one of them. "onboarding" is gone.
+ * 5.0.0: the referral loop. `arrived` records how someone first came in (the landing page,
+ * and the referral code of the shared result that brought them, if any), once they have
+ * accepted the Terms; `shared` records sharing a result card (which channel, and the card).
+ * A referral code is a random code per device, never the participant ID. `result` records the
+ * numbers on a merged pull request's result card (metrics version 2, see apps/web/lib/result),
+ * which the aggregate percentiles are computed from. `profile` can come `from: "play"` (the
+ * language picked for the test, as the languages answer) or `from: "result"` (the questions
+ * answered on a result card).
  * 4.0.0: everything in the tracker. Every observation has `elapsedMs`, a monotonic clock from
  * the start of its source stream (a page load). New: `viewed` (each page, with its query and
  * the page before it), `page` (visible, focused, size) and `profile` (the onboarding and
@@ -24,9 +38,10 @@ import type { WorkspaceRecord } from "./workspace";
  * issue to Done (`trigger: "pull-request-merged"`, by pointer or keyboard). Earlier versions
  * were never released.
  */
-export const BOARD_CAPTURE_VERSION = "board-capture-4.0.0";
+export const BOARD_CAPTURE_VERSION = "board-capture-6.0.0";
 /** What this capture does not record. Absence is a gap, not evidence of no activity. */
 export const BOARD_CAPTURE_GAPS = [
+  "visits-before-accepting-the-terms",
   "keystrokes-in-text-fields",
   "pointer-movement-and-hover",
   "menus-opened-without-a-choice",
@@ -83,10 +98,41 @@ export interface BoardPageData {
   readonly height: number;
 }
 
-/** The answers given in onboarding or settings, as saved. */
+/** Where a profile answer was given. */
+export const PROFILE_SOURCES = ["result", "dashboard", "issue", "settings", "play"] as const;
+
+/** The profile as saved after an answer, and the place that asked. */
 export interface BoardProfileData {
-  readonly from: "onboarding" | "settings";
+  readonly from: (typeof PROFILE_SOURCES)[number];
   readonly answers: Json;
+}
+
+/** How someone first came in: recorded once, after they accept the Terms. */
+export interface BoardArrivalData {
+  /** The referral code in the link that brought them, if any. */
+  readonly ref: string | null;
+  /** The first app page they landed on, and when (before the Terms, so not recorded then). */
+  readonly landing: string;
+  readonly landedAt: string;
+}
+
+/** A merged pull request's result card: its numbers, as the person saw them. */
+export interface BoardResultData {
+  readonly issueKey: string;
+  readonly pullRequest: number;
+  readonly language: string;
+  /** Version of the metric definitions. */
+  readonly metrics: 2;
+  readonly values: Json;
+}
+
+/** A result card shared: where to, and what it said. */
+export interface BoardShareData {
+  readonly issueKey: string;
+  readonly channel: "copy" | "x" | "linkedin" | "native";
+  /** This device's referral code, carried by the shared link. */
+  readonly ref: string;
+  readonly card: Json;
 }
 
 interface BoardData {
@@ -95,6 +141,9 @@ interface BoardData {
   "observation.board.viewed": BoardViewData;
   "observation.board.page": BoardPageData;
   "observation.board.profile": BoardProfileData;
+  "observation.board.arrived": BoardArrivalData;
+  "observation.board.shared": BoardShareData;
+  "observation.board.result": BoardResultData;
 }
 
 export interface BoardObservation<
@@ -310,8 +359,8 @@ export function boardPage(
 export function boardProfile(
   input: BoardBase & { data: BoardProfileData },
 ): BoardObservation<"observation.board.profile"> {
-  if (!["onboarding", "settings"].includes(input.data.from))
-    throw new Error("Profile answers come from onboarding or settings.");
+  if (!(PROFILE_SOURCES as readonly string[]).includes(input.data.from))
+    throw new Error(`Profile answers come from ${PROFILE_SOURCES.join(", ")}.`);
   return envelope("observation.board.profile", { ...input, issue: null }, input.data);
 }
 
@@ -334,4 +383,42 @@ export function boardPayloads(records: readonly WorkspaceRecord[]): string[] {
         r.payload.includes('"type":"observation.board.'),
     )
     .map((r) => r.payload);
+}
+
+const REFERRAL = /^[a-z0-9]{6,32}$/;
+
+export function boardArrival(
+  input: BoardBase & { data: BoardArrivalData },
+): BoardObservation<"observation.board.arrived"> {
+  const { ref, landing, landedAt } = input.data;
+  if (ref !== null && !REFERRAL.test(ref)) throw new Error("Unknown referral code.");
+  if (!PAGE_PATH.test(landing.split("?")[0])) throw new Error("A landing page is an app path.");
+  if (Number.isNaN(Date.parse(landedAt))) throw new Error("An arrival needs its time.");
+  return envelope("observation.board.arrived", { ...input, issue: null }, {
+    ref,
+    landing: boundText(landing, 2048).text,
+    landedAt,
+  });
+}
+
+export function boardShare(
+  input: BoardBase & { issue: { id: string; revision: string }; data: BoardShareData },
+): BoardObservation<"observation.board.shared"> {
+  const { issueKey, channel, ref, card } = input.data;
+  if (!ISSUE_KEY.test(issueKey)) throw new Error("Unknown issue key.");
+  if (!["copy", "x", "linkedin", "native"].includes(channel)) throw new Error("Unknown channel.");
+  if (!REFERRAL.test(ref)) throw new Error("Unknown referral code.");
+  return envelope("observation.board.shared", input, { issueKey, channel, ref, card });
+}
+
+export function boardResult(
+  input: BoardBase & { issue: { id: string; revision: string }; data: BoardResultData },
+): BoardObservation<"observation.board.result"> {
+  const { issueKey, pullRequest, language, metrics, values } = input.data;
+  if (!ISSUE_KEY.test(issueKey)) throw new Error("Unknown issue key.");
+  if (!Number.isSafeInteger(pullRequest) || pullRequest < 1)
+    throw new Error("A result names its pull request.");
+  if (metrics !== 2) throw new Error("Unknown metrics version.");
+  if (!/^[a-z+#]{1,16}$/.test(language)) throw new Error("Unknown language.");
+  return envelope("observation.board.result", input, { issueKey, pullRequest, language, metrics, values });
 }

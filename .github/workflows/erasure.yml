@@ -1,7 +1,8 @@
-name: Erasure
+name: Erasure and aggregates
 
 # Deletes the rows of every participant who deleted their account (tools/erasure/erase.py,
-# docs/telemetry.md). Daily, and on demand.
+# docs/telemetry.md), then recomputes the percentiles result cards compare with
+# (tools/aggregates/aggregate.py, docs/play.md) from what is left. Daily, and on demand.
 on:
   schedule:
     - cron: "17 3 * * *"
@@ -18,6 +19,15 @@ jobs:
   erase:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      CATALOG_URI: ${{ secrets.R2_CATALOG_URI }}
+      WAREHOUSE: ${{ secrets.R2_WAREHOUSE }}
+      CATALOG_TOKEN: ${{ secrets.R2_CATALOG_TOKEN }}
+      EVENTS_TABLE: default.events
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      CONTROL_BUCKET: muscle-memory-control
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,12 +35,4 @@ jobs:
           python-version: "3.13"
       - run: pip install -r tools/erasure/requirements.txt
       - run: python tools/erasure/erase.py
-        env:
-          CATALOG_URI: ${{ secrets.R2_CATALOG_URI }}
-          WAREHOUSE: ${{ secrets.R2_WAREHOUSE }}
-          CATALOG_TOKEN: ${{ secrets.R2_CATALOG_TOKEN }}
-          EVENTS_TABLE: default.events
-          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          CONTROL_BUCKET: muscle-memory-control
+      - run: python tools/aggregates/aggregate.py

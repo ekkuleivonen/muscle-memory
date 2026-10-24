@@ -9,11 +9,11 @@ import {
   setStealth,
 } from "../../lib/account";
 import { LEGAL_UPDATED } from "../../lib/legal";
-import type { Profile } from "../../lib/onboarding";
-import type { Json } from "../../../../packages/domain/json";
+import { readTheme, setTheme, type Theme } from "../../lib/theme";
+import type { Profile } from "../../lib/profile";
 import { logProfile } from "../(browse)/_components/board-log";
 import type { Answer, Prompt } from "../_terminal/prompts";
-import { QUESTIONS, toProfile } from "../_terminal/questions";
+import { QUESTIONS, toProfile } from "../../lib/questions";
 import {
   Banner,
   profileLines,
@@ -34,7 +34,8 @@ const COMMANDS: Record<
   string,
   { hint: string; run: (t: TerminalApi) => Promise<Outcome> }
 > = {
-  profile: { hint: "experience, languages, goal and editor", run: profile },
+  theme: { hint: "light, dark, or follow your system", run: theme },
+  profile: { hint: "your answers: experience, AI use, languages, goal, editor", run: profile },
   privacy: {
     hint: "go stealth, Terms and Privacy Notice",
     run: privacy,
@@ -63,7 +64,7 @@ async function settings(t: TerminalApi) {
   const handle = ensureHandle();
   if (!handle) {
     t.print("", "No account on this device yet.");
-    return t.go("/onboarding", "setup");
+    return t.go("/consent?next=%2Fsettings", "the Terms");
   }
   t.print(
     <Banner
@@ -127,9 +128,38 @@ async function profile(t: TerminalApi): Promise<Outcome> {
     const answer = await t.ask(prompt, { skipped: "unchanged" });
     if (answer !== null) answers[question.id] = answer;
   }
-  const saved = saveProfile(toProfile(answers));
-  void logProfile({ from: "settings", answers: { ...saved.profile, stealth: saved.stealth ?? false } as Json });
+  saveProfile(toProfile(answers));
+  void logProfile("settings");
   t.print(<span className="t-ok">Saved.</span>);
+  return "menu";
+}
+
+const THEMES: { value: Theme; label: string; hint: string }[] = [
+  { value: "system", label: "system", hint: "follow your OS" },
+  { value: "light", label: "light", hint: "" },
+  { value: "dark", label: "dark", hint: "" },
+];
+
+async function theme(t: TerminalApi): Promise<Outcome> {
+  const current = readTheme();
+  const picked = await t.ask(
+    {
+      kind: "select",
+      id: "theme",
+      message: "Theme",
+      choices: THEMES.map(({ value, label, hint }) => ({
+        value,
+        label,
+        ...(hint ? { hint } : {}),
+      })),
+      initial: THEMES.findIndex((choice) => choice.value === current),
+      escape: "keeps current",
+    },
+    { skipped: "unchanged" },
+  );
+  if (picked === null) return "menu";
+  setTheme(picked as Theme);
+  t.print(<span className="t-ok">Theme: {String(picked)}.</span>);
   return "menu";
 }
 
@@ -175,9 +205,7 @@ async function privacy(t: TerminalApi): Promise<Outcome> {
   );
   if (share === null) return "menu";
   setStealth(!share);
-  const after = readProfile();
-  if (after)
-    void logProfile({ from: "settings", answers: { ...after.profile, stealth: after.stealth ?? false } as Json });
+  void logProfile("settings");
   t.print(
     <span className="t-dim">
       {share
@@ -197,7 +225,7 @@ async function logout(t: TerminalApi): Promise<Outcome> {
   });
   if (!yes) return "menu";
   logOut();
-  t.go("/onboarding", "the front door");
+  t.go("/", "the front door");
   return "left";
 }
 
@@ -257,7 +285,7 @@ async function remove(t: TerminalApi): Promise<Outcome> {
     return "menu";
   }
   t.print(<span>Deleted. So long, {handle}.</span>);
-  t.go("/onboarding", "the front door");
+  t.go("/", "the front door");
   return "left";
 }
 

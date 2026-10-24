@@ -24,6 +24,14 @@ export class PracticeStore implements CaptureSink {
     return this.setting("deviceSecret", () => randomId() + randomId());
   }
 
+  /**
+   * This device's referral code, carried by the links its result cards share. Random and
+   * separate from the participant ID, so a public link never reveals it.
+   */
+  referralCode(): Promise<string> {
+    return this.setting("referralCode", () => randomId().replace(/-/g, "").slice(0, 12));
+  }
+
   private setting(key: string, make: () => string): Promise<string> {
     return new Promise((resolve, reject) => {
       const transaction = this.database.transaction("settings", "readwrite");

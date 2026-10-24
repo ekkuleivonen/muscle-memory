@@ -38,7 +38,7 @@ function observation(participantId: string, sequence: number, extra: Record<stri
     source: { id: "workspace-a", sequence },
     occurredAt: "2026-10-25T10:00:00.000Z",
     elapsedMs: 12.5 * sequence,
-    captureVersion: "workspace-capture-5.0.0",
+    captureVersion: "workspace-capture-6.0.0",
     consentVersion: "terms-2026-10-25",
     issue: "frequency-map",
     issueRevision: "sha256:" + "a".repeat(64),
@@ -179,4 +179,14 @@ test("too many requests from one participant or one address get 429, and the dev
   const fifth = await handle(post("/ingest/v1/batches", theirs, { "cf-connecting-ip": "203.0.113.7" }), limited);
   assert.equal(fifth.status, 429);
   assert.equal(fifth.headers.get("retry-after"), "60");
+});
+
+test("aggregates are served from the control bucket, or empty before the first run", async () => {
+  const { env, objects } = fakes();
+  const get = () => handle(new Request("https://musclememory.run/ingest/v1/aggregates"), env);
+  assert.deepEqual(await (await get()).json(), { version: 1, issues: {} });
+  objects.set("aggregates/v1.json", JSON.stringify({ version: 1, issues: { "QUICK-1": { n: 3 } } }));
+  const response = await get();
+  assert.equal(response.headers.get("cache-control"), "public, max-age=3600");
+  assert.equal((await response.json()).issues["QUICK-1"].n, 3);
 });

@@ -136,6 +136,7 @@ export function validateCatalog(value: unknown): Catalog {
     if (!ID.test(project.id)) fail(project.id, "project id is not a slug");
     if (!KEY.test(project.key)) fail(project.id, `key ${project.key} is not 2–5 capitals`);
     text(project.title, `${project.id} title`);
+    if (typeof project.listed !== "boolean") fail(project.id, "needs listed true or false");
     unique(project.issues, `${project.id} issues`);
   }
   const numbers = new Set<string>();

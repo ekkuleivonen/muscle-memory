@@ -161,13 +161,14 @@ for (const id of seeds.keys())
 
 const catalog: Catalog = verifyCatalog({
   schemaVersion: "2.0.0",
-  projects: SEED_PROJECTS.map(({ id, key, title, summary, story, issues }) => ({
+  projects: SEED_PROJECTS.map(({ id, key, title, summary, story, issues, listed }) => ({
     id,
     key,
     title,
     summary,
     story,
     issues,
+    listed: listed ?? true,
   })),
   issues,
   // Sorted, so the file only changes where content does.

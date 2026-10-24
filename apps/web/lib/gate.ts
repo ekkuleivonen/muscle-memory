@@ -1,10 +1,13 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { isOnboarded, ONBOARDING_COOKIE } from "./onboarding";
+import { CONSENT_COOKIE, hasConsent } from "./profile";
 
-/** Sends people who have not finished onboarding there first, then back to `path`. */
-export async function requireOnboarding(path: string): Promise<void> {
+/**
+ * Every app page needs the current Terms accepted, nothing more: without them it sends people
+ * to /consent (one click) and back to `path`. The profile questions are never required.
+ */
+export async function requireConsent(path: string): Promise<void> {
   const store = await cookies();
-  if (!isOnboarded(store.get(ONBOARDING_COOKIE)?.value))
-    redirect(`/onboarding?next=${encodeURIComponent(path)}`);
+  if (!hasConsent(store.get(CONSENT_COOKIE)?.value))
+    redirect(`/consent?next=${encodeURIComponent(path)}`);
 }

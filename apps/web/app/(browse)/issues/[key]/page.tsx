@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { requireOnboarding } from "../../../../lib/gate";
+import { requireConsent } from "../../../../lib/gate";
 import { issueHref, projectHref, type Issue } from "../../../../lib/library";
 import { getLibrary } from "../../../../lib/load";
 import { formatQuery, emptyIssueQuery } from "../../../../lib/queries";
@@ -16,6 +16,7 @@ import { KIND_LABELS, KindIcon } from "../../_components/icons";
 import { IssueThread } from "../../_components/issue-thread";
 import { IssueContext } from "../../_components/tracker-activity";
 import { Sep, Topbar } from "../../_components/topbar";
+import { Ask } from "../../_components/ask";
 import { StartWork, StatusMenu } from "../../_components/board";
 import { Markdown } from "../../_components/markdown";
 
@@ -44,7 +45,7 @@ const labelHref = (label: string) =>
 
 export default async function IssuePage(props: Props) {
   const { key } = await props.params;
-  await requireOnboarding(`/issues/${key}`);
+  await requireConsent(`/issues/${key}`);
   const issue = await find(props);
   if (!issue) notFound();
   const { revisionsOf } = await getLibrary();
@@ -168,6 +169,12 @@ function Properties({ issue }: { issue: Issue }) {
       <StartWork
         issue={{ key: issue.key, slug: issue.slug, revision: issue.revision }}
         href={`/work/${issue.key}`}
+      />
+      <Ask
+        className="issue-ask"
+        ids={["editor"]}
+        from="issue"
+        why={{ editor: "Before you start: the editor opens with the keys you're used to." }}
       />
       {!issue.runnable && (
         <p className="note">

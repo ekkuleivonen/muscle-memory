@@ -25,6 +25,7 @@ import {
   type Revision,
 } from "../../../../packages/content/model";
 import { runFeedback } from "../../../../packages/domain/workspace";
+import type { Json } from "../../../../packages/domain/json";
 import {
   engineFor,
   Runner,
@@ -385,6 +386,7 @@ export function Ide({
         onSaveStatus: setCapture,
         onVimMode: setVimMode,
         entry: entryPath(),
+        profile: account?.profile ? ({ ...account.profile } as Json) : null,
         viewport: { width: window.innerWidth, height: window.innerHeight },
       });
       // The home file mounts last, so it has the focus.

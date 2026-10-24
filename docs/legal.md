@@ -1,6 +1,6 @@
 # Terms, privacy and what we record
 
-The Terms (`/terms`) and Privacy Notice (`/privacy`) are drafts, written to be read, and versioned together as `LEGAL_VERSION` in `apps/web/lib/legal.ts`. Onboarding starts with accepting them ("I'm 16 or older and accept…"); there is no way in without it. The account stores the version and time, the session cookie carries `<setup>.<legal version>`, and recorded observations carry `terms-<version>` as their `consentVersion`. A new version therefore sends everyone back to sign again on their next visit.
+The Terms (`/terms`) and Privacy Notice (`/privacy`) are drafts, written to be read, and versioned together as `LEGAL_VERSION` in `apps/web/lib/legal.ts`. Every app page requires accepting them first ("I'm 16 or older and accept…"), at `/consent` or on `/play`; nothing is recorded before. The account stores the version and time, the consent cookie (`mm_consent`) carries the legal version, and recorded observations carry `terms-<version>` as their `consentVersion`. A new version therefore sends everyone back to sign again on their next visit.
 
 ## Why no opt-in for recording
 

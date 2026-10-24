@@ -29,7 +29,7 @@
   font-size: 13px;
 }
 @media (prefers-color-scheme: dark) {
-  .ide {
+  :root:not([data-theme="light"]) .ide {
     --ide-bar: #0b0c0e;
     --ide-side: #121316;
     --ide-editor: #0f1012;
@@ -45,6 +45,22 @@
     --syn-punctuation: #9da3ad;
     --syn-invalid: #f2555a;
   }
+}
+:root[data-theme="dark"] .ide {
+  --ide-bar: #0b0c0e;
+  --ide-side: #121316;
+  --ide-editor: #0f1012;
+  --syn-keyword: #c678dd;
+  --syn-string: #98c379;
+  --syn-number: #d19a66;
+  --syn-comment: #6c7280;
+  --syn-function: #61afef;
+  --syn-type: #e5c07b;
+  --syn-property: #e06c75;
+  --syn-tag: #e06c75;
+  --syn-variable: #d7dae0;
+  --syn-punctuation: #9da3ad;
+  --syn-invalid: #f2555a;
 }
 
 /* Title bar */

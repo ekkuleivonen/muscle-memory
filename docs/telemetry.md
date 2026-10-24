@@ -21,6 +21,7 @@ browser (IndexedDB) ──outbox──▶ ingest Worker ──▶ Pipelines stre
 
 - `POST /ingest/v1/batches`: a batch (`packages/domain/ingest.ts`). The whole batch is refused (400) only if its shape is wrong; single records are checked one by one and refused with a reason in a successful reply (another participant, an unknown capture version, a payload that does not match its envelope). Only the current capture versions are accepted.
 - **Rate limits** (Workers rate limiting bindings, approximate and per Cloudflare location): 600 requests a minute per address, checked before the body is read, and 120 a minute per participant (the uploader sends at most 60 while draining a backlog). Over a limit the reply is 429 with `Retry-After: 60`, and the device keeps its records and backs off.
+- `GET /ingest/v1/aggregates`: the percentiles result cards compare with, made daily by `tools/aggregates/aggregate.py` ([the five-minute test](play.md)).
 - `POST /ingest/v1/participants/<id>/delete` with `{ "secret": … }`: writes a tombstone (`deleted/<id>` in the control bucket), after which uploads for that ID get 410 and the uploader stops.
 - Each accepted record becomes one row (`EventRow`): the envelope as columns (`record_id`, `kind`, `participant_id`, `received_at`, `type`, `capture_version`, `source_id`, `sequence`, `occurred_at`, `elapsed_ms`, `issue`, `issue_revision`, `consent_version`) and `payload`, the record exactly as the device stored it. The table therefore is the raw archive too: anything can be re-derived from `payload`.
 
