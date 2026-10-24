@@ -8,7 +8,7 @@ import {
   logOut,
   parseStoredProfile,
 } from "../../../lib/account";
-import { PROFILE_KEY } from "../../../lib/onboarding";
+import { PROFILE_KEY } from "../../../lib/profile";
 import { Avatar } from "./bits";
 
 function subscribe(onChange: () => void) {
@@ -103,7 +103,7 @@ export function ProfileMenu() {
             className="menu-item"
             onClick={() => {
               logOut();
-              router.push("/onboarding");
+              router.push("/");
             }}
           >
             Log out

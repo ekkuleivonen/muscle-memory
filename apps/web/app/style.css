@@ -1,6 +1,8 @@
 /*
  * Neutral, developer-tool palette (in the spirit of GitHub and Linear): greys plus one
- * indigo accent, light and dark following the OS. Project colours are hues 0-7 (--hue-n).
+ * indigo accent, light and dark following the OS unless settings chose one (data-theme on
+ * <html>, see lib/theme.ts). Each dark block is written twice: chosen, and the OS's when
+ * nothing was chosen. Project colours are hues 0-7 (--hue-n).
  */
 :root {
   color-scheme: light dark;
@@ -33,7 +35,7 @@
   --shadow: 0 4px 16px #0000001a, 0 0 0 1px var(--line);
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0f1012;
     --bg-subtle: #141518;
     --panel: #17181b;
@@ -54,6 +56,31 @@
     --label-l: 74%;
     --shadow: 0 8px 24px #00000066, 0 0 0 1px var(--line-strong);
   }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f1012;
+  --bg-subtle: #141518;
+  --panel: #17181b;
+  --hover: #1e1f23;
+  --active: #25262b;
+  --line: #26272c;
+  --line-strong: #35373d;
+  --fg: #e5e6e9;
+  --dim: #9b9ea6;
+  --faint: #6c6f78;
+  --accent: #7d86f1;
+  --accent-fg: #0f1012;
+  --accent-soft: #7d86f122;
+  --red: #f2555a;
+  --green: #3dbb7f;
+  --amber: #f0b03c;
+  --blue: #5aa2ff;
+  --label-l: 74%;
+  --shadow: 0 8px 24px #00000066, 0 0 0 1px var(--line-strong);
 }
 
 * {
@@ -1208,9 +1235,12 @@ kbd {
 }
 /* Dark mode's lighter accent is too pale behind white text; deepen it to keep AA. */
 @media (prefers-color-scheme: dark) {
-  .home-cta {
+  :root:not([data-theme="light"]) .home-cta {
     background: color-mix(in srgb, var(--accent), #000 25%);
   }
+}
+:root[data-theme="dark"] .home-cta {
+  background: color-mix(in srgb, var(--accent), #000 25%);
 }
 .home-cta:focus-visible {
   outline: 2px solid var(--accent);
@@ -2196,41 +2226,6 @@ kbd {
   border-color: #6e56cf;
   color: #fff;
 }
-.quick-questions {
-  margin-top: 16px;
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  font-size: 14px;
-}
-.quick-questions > p {
-  margin: 0 0 10px;
-  color: var(--dim);
-}
-.quick-question {
-  display: grid;
-  gap: 6px;
-  margin-top: 8px;
-}
-.quick-question > div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.quick-question button {
-  font: inherit;
-  font-size: 13px;
-  padding: 5px 11px;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  background: var(--bg);
-  color: var(--fg);
-  cursor: pointer;
-}
-.quick-question button:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
 .result-next {
   margin: 14px 0 0;
   font-size: 13px;
@@ -2254,41 +2249,101 @@ button.home-cta:disabled {
   cursor: default;
 }
 
-/* The dashboard's offer to answer the setup questions. */
-.setup-nudge {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin: 0 0 20px;
+/* A profile question asked in place: one at a time, one tap, always skippable. */
+.ask {
+  display: grid;
+  gap: 10px;
   padding: 14px 16px;
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--accent) 5%, var(--bg));
+  background: color-mix(in srgb, var(--accent) 4%, var(--bg));
   font-size: 14px;
 }
-.setup-nudge-actions {
+.ask-head {
   display: flex;
-  gap: 8px;
-  flex-shrink: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
 }
-.setup-nudge-actions a,
-.setup-nudge-actions button {
+.ask-head b {
+  font-weight: 600;
+}
+.ask-why {
+  display: block;
+  color: var(--dim);
+  font-size: 13px;
+}
+.ask-later {
+  flex-shrink: 0;
   font: inherit;
-  font-size: 13.5px;
-  padding: 6px 12px;
-  border-radius: var(--radius);
+  font-size: 13px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--dim);
+  cursor: pointer;
+}
+.ask-later:hover {
+  color: var(--fg);
+}
+.ask-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ask-choices button {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 11px;
   border: 1px solid var(--line-strong);
+  border-radius: 999px;
   background: var(--bg);
   color: var(--fg);
   cursor: pointer;
-  text-decoration: none;
 }
-.setup-nudge-actions .setup-nudge-go {
+.ask-choices button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.ask-choices button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.ask-choices button small {
+  color: var(--faint);
+  margin-left: 4px;
+}
+.ask-choices button.ask-save {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-fg);
+}
+.ask-choices button.ask-save:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 .result-card.shared {
   margin: 8px 0 48px;
+}
+.result-card .ask {
+  margin-top: 16px;
+}
+.dashboard-ask {
+  margin: 0 0 20px;
+}
+/* The issue sidebar is narrow: the question, the choices, then "Not now"; no hints. */
+.issue-ask {
+  margin-top: 12px;
+  font-size: 13px;
+}
+.issue-ask .ask-head {
+  display: contents;
+}
+.issue-ask .ask-later {
+  order: 1;
+  justify-self: start;
+}
+.issue-ask .ask-choices small {
+  display: none;
 }

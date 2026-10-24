@@ -1,20 +1,20 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { CONSENT_COOKIE, hasConsent, ONBOARDING_COOKIE } from "../lib/onboarding";
+import { CONSENT_COOKIE, hasConsent } from "../lib/profile";
 
 /**
  * The public front door: the question that brings people here, what they get, and why it
- * matters, in that order. Outside the onboarding gate; returning players get a way back to
+ * matters, in that order. Outside the consent gate; returning players get a way back to
  * their desk instead of the first-day invite.
  */
 
-/** The first day, as it actually goes: Terms, setup questions, the first ticket. */
+/** The first day, as it actually goes: Terms, the desk, the first ticket. */
 const SCHEDULE = [
   ["9:00", "Paperwork", "Short, plain Terms and a Privacy Notice."],
   [
     "9:05",
-    "Setup",
-    "Five questions: experience, how much you code with AI, the languages you work with, why you're here, Vim or not.",
+    "Your desk",
+    "A board, a backlog and a team. No forms: questions about you come up where they matter, and you can always say not now.",
   ],
   [
     "9:10",
@@ -30,12 +30,9 @@ const SCHEDULE = [
 
 export default async function Home() {
   const store = await cookies();
-  // Anyone who accepted the Terms has a desk, setup questions answered or not.
-  const onboarded = hasConsent(
-    store.get(ONBOARDING_COOKIE)?.value,
-    store.get(CONSENT_COOKIE)?.value,
-  );
-  const start = onboarded ? (
+  // Anyone who accepted the Terms has a desk.
+  const signedIn = hasConsent(store.get(CONSENT_COOKIE)?.value);
+  const start = signedIn ? (
     <Link className="home-cta" href="/dashboard">
       Back to your desk →
     </Link>
@@ -61,8 +58,8 @@ export default async function Home() {
         <nav>
           <Link href="/terms">Terms</Link>
           <Link href="/privacy">Privacy</Link>
-          <Link href={onboarded ? "/dashboard" : "/onboarding"}>
-            {onboarded ? "Your desk" : "Clock in"}
+          <Link href={signedIn ? "/dashboard" : "/dashboard"}>
+            {signedIn ? "Your desk" : "Clock in"}
           </Link>
         </nav>
       </header>
@@ -81,10 +78,10 @@ export default async function Home() {
           </p>
           <div className="home-actions">
             {start}
-            {!onboarded && (
+            {!signedIn && (
               <span className="home-note">
                 No account, no email, no AI. Or{" "}
-                <Link href="/onboarding">start your first day</Link>.
+                <Link href="/dashboard">start your first day</Link>.
               </span>
             )}
           </div>
@@ -165,8 +162,8 @@ export default async function Home() {
           </p>
           <div className="home-actions">
             {start}
-            {!onboarded && (
-              <Link className="home-note" href="/onboarding">
+            {!signedIn && (
+              <Link className="home-note" href="/dashboard">
                 Start your first day instead
               </Link>
             )}

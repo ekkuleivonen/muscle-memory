@@ -7,16 +7,21 @@ import { logArrival, noteArrival } from "../(browse)/_components/board-log";
 
 /**
  * Accepts the current Terms and goes on; says so when the Terms changed since the last
- * acceptance, and skips the click when this browser already accepted these ones.
+ * acceptance, skips the click when this browser already accepted these ones (the cookie was
+ * only missing), and offers to sign back in after logging out.
  */
 export function ConsentButton({ next }: { next: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [renewal, setRenewal] = useState(false);
+  const [returning, setReturning] = useState<string | null>(null);
   useEffect(() => {
-    const accepted = readProfile()?.accepted;
-    // Already accepted these Terms in this browser (the cookie was only missing): go on.
+    const stored = readProfile();
+    const accepted = stored?.accepted;
     if (accepted && acceptsCurrent(accepted)) {
+      // Logged out on purpose: ask, rather than signing them straight back in.
+      if (stored?.signedOut) return setReturning(stored.handle ?? null);
+      // Already accepted these Terms in this browser (the cookie was only missing): go on.
       acceptConsent();
       router.replace(next);
       return;
@@ -34,10 +39,14 @@ export function ConsentButton({ next }: { next: string }) {
   return (
     <div className="home-actions">
       <button type="button" className="home-cta" disabled={busy} onClick={() => void accept()}>
-        {busy ? "Opening…" : "I'm 16 or older and accept"}
+        {busy ? "Opening…" : returning ? `Sign back in as ${returning}` : "I'm 16 or older and accept"}
       </button>
       <span className="home-note">
-        {renewal ? "The Terms changed since you last accepted them." : "No account, no email."}
+        {returning
+          ? "Everything you did is still in this browser."
+          : renewal
+            ? "The Terms changed since you last accepted them."
+            : "No account, no email."}
       </span>
     </div>
   );

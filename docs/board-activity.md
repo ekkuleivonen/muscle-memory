@@ -1,10 +1,10 @@
 # Board activity
 
-Setting an issue's status by hand (Backlog, Todo or In progress, from its Status menu) is recorded as raw evidence of what people choose to work on. Done is never set from the Status menu: you merge a pull request whose checks all pass, from its page, which moves the issue to Done for good, and that move is recorded too, as are replies to teammates' review comments on a pull request. There is no separate switch: every account records moves under the [Terms and Privacy Notice](legal.md) it accepted during onboarding, and each move carries that version.
+Setting an issue's status by hand (Backlog, Todo or In progress, from its Status menu) is recorded as raw evidence of what people choose to work on. Done is never set from the Status menu: you merge a pull request whose checks all pass, from its page, which moves the issue to Done for good, and that move is recorded too, as are replies to teammates' review comments on a pull request. There is no separate switch: every account records moves under the [Terms and Privacy Notice](legal.md) it accepted, and each move carries that version.
 
 ## What is recorded
 
-`observation.board.moved` (`packages/domain/board.ts`), capture version `board-capture-5.0.0`, in the same envelope as [workspace observations](workspace.md): stable ID `<source>.<sequence>`, one source stream per page load (`board-<uuid>`), client `occurredAt`, an explicit absent server receipt, `consentVersion` set to the accepted Terms version (`terms-2026-10-24`), `researchConsent: false`, and the issue with the revision live at the time (`issue`, `issueRevision`). Data:
+`observation.board.moved` (`packages/domain/board.ts`), capture version `board-capture-6.0.0`, in the same envelope as [workspace observations](workspace.md): stable ID `<source>.<sequence>`, one source stream per page load (`board-<uuid>`), client `occurredAt`, an explicit absent server receipt, `consentVersion` set to the accepted Terms version (`terms-2026-10-24`), `researchConsent: false`, and the issue with the revision live at the time (`issue`, `issueRevision`). Data:
 
 - `issueKey` (`API-2`), `from` and `to` (`backlog`, `todo`, `in-progress`)
 - `via`: `pointer` or `keyboard` (the Status menu opened with `s` and driven by arrows, Enter on Start work, or the Merge button)
@@ -18,7 +18,7 @@ Every page of the app is recorded as it is shown (`TrackerActivity` in the root 
 
 - `observation.board.viewed`: the `path`, its `query` (searches and filters are GET forms and links, so they arrive here), and the `previous` page in this tab. A page about one issue (the issue page, a pull request, the IDE) names the issue and its live revision; other pages have `issue: null`.
 - `observation.board.page`, outside the IDE (which records its own): the page becoming visible or hidden, focused or not, or resized.
-- `observation.board.profile`: the onboarding and settings answers (experience, how often they code with AI, languages, goal, editor, stealth) each time they are saved, and the language picked for the five-minute test (`from: "play"`).
+- `observation.board.profile`: the whole profile (experience, how often they code with AI, languages, goal, editor, stealth, and which answers the person gave themselves) each time an answer is saved, with the place that asked (`from`: `result`, `dashboard`, `issue`, `settings`, or `play` for the five-minute test's language, a guess). See [profile](profile.md).
 - `observation.board.arrived`: once per browser, after the Terms are accepted: the first landing page and when, and the referral code of the shared result that brought them ([the five-minute test](play.md)).
 - `observation.board.shared`: a result card shared, with the channel, the card and this device's referral code.
 - `observation.board.result`: a merged pull request's result card numbers (metrics version 2, see [the five-minute test](play.md)), the source of the aggregate percentiles.

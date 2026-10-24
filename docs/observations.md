@@ -9,7 +9,7 @@ What the [workspace](workspace.md) and the [board](board-activity.md) record tod
 
 ## Capture boundary
 
-Lossless means within the declared capture, size and retention boundary. It does not guarantee deterministic replay under every environment. Capture stays inside the IDE and the board: no unrelated browsing or clipboard history. Detailed editing capture is disclosed in the Terms and Privacy Notice accepted at onboarding ([legal](legal.md)). Immutable while retained does not mean undeletable: `reset` and `delete` in Settings remove it.
+Lossless means within the declared capture, size and retention boundary. It does not guarantee deterministic replay under every environment. Capture stays inside the IDE and the board: no unrelated browsing or clipboard history. Detailed editing capture is disclosed in the Terms and Privacy Notice accepted at `/consent` or `/play` ([legal](legal.md)). Immutable while retained does not mean undeletable: `reset` and `delete` in Settings remove it.
 
 Keep bounded original evidence even when execution or checking fails. Normalised outputs and pass counts never replace the raw outcome. If evidence exceeds a limit (64 KiB of UTF-8 per code revision or output, cut at a character boundary), record what was omitted instead of silently calling it complete.
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { CONSENT_COOKIE, hasConsent, ONBOARDING_COOKIE, safeNext } from "../../lib/onboarding";
+import { CONSENT_COOKIE, hasConsent, safeNext } from "../../lib/profile";
 import { ConsentButton } from "./consent-button";
 
 export const metadata: Metadata = { title: "Before you go in · Muscle Memory" };
@@ -16,7 +16,7 @@ type Props = { searchParams: Promise<{ next?: string }> };
 export default async function Consent({ searchParams }: Props) {
   const next = safeNext((await searchParams).next, "/dashboard");
   const store = await cookies();
-  if (hasConsent(store.get(ONBOARDING_COOKIE)?.value, store.get(CONSENT_COOKIE)?.value))
+  if (hasConsent(store.get(CONSENT_COOKIE)?.value))
     redirect(next);
   return (
     <div className="legal home play">

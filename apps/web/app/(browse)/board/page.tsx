@@ -3,7 +3,7 @@ import Link from "next/link";
 import { requireConsent } from "../../../lib/gate";
 import { summarize } from "../../../lib/library";
 import { getLibrary } from "../../../lib/load";
-import { pathWithQuery } from "../../../lib/onboarding";
+import { pathWithQuery } from "../../../lib/profile";
 import type { SearchParams } from "../../../lib/queries";
 import { Board } from "../_components/board-view";
 import { Topbar } from "../_components/topbar";

@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { Json } from "../../../../packages/domain/json";
 import { acceptConsent, playLanguage } from "../../lib/account";
 import type { LanguageId } from "../../lib/languages";
 import { logArrival, logProfile, noteArrival } from "../(browse)/_components/board-log";
@@ -41,10 +40,10 @@ export function PlayStart({
     setStarting(choice.key);
     if (!consented) acceptConsent();
     // Recorded only now that the Terms are accepted: how they came (once per browser), and
-    // the language they picked, as the same languages answer onboarding asks for.
+    // the language they picked, as a first guess at the languages answer.
     await logArrival().catch(() => undefined);
-    const profile = playLanguage(choice.language as LanguageId);
-    await logProfile({ from: "play", answers: { ...profile } as Json }).catch(() => undefined);
+    playLanguage(choice.language as LanguageId);
+    await logProfile("play").catch(() => undefined);
     router.push(`/work/${choice.key}`);
   };
   return (

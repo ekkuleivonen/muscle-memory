@@ -5,9 +5,8 @@ import { openPracticeStore } from "../../../../../packages/browser/practice-stor
 import type { Revision } from "../../../../../packages/content/model";
 import type { Json } from "../../../../../packages/domain/json";
 import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
-import { answerQuestions, readProfile } from "../../../lib/account";
+import { readProfile } from "../../../lib/account";
 import { LANGUAGES } from "../../../lib/languages";
-import type { Profile } from "../../../lib/onboarding";
 import { INGEST_URL } from "../../../lib/ingest";
 import {
   compare,
@@ -20,7 +19,8 @@ import {
   type Metrics,
   type Result,
 } from "../../../lib/result";
-import { logProfile, logShare } from "./board-log";
+import { Ask } from "./ask";
+import { logShare } from "./board-log";
 
 type Channel = "copy" | "x" | "linkedin" | "native";
 
@@ -196,66 +196,18 @@ export function ResultCard({
           </span>
         </div>
       </Receipt>
-      <QuickQuestions />
+      <Ask
+        ids={["experience", "aiUse"]}
+        from="result"
+        why={{
+          experience: "So a time like yours means something next to everyone else's.",
+          aiUse: "So we can tell how unaided work changes with how much AI people use.",
+        }}
+      />
       <p className="result-next">
         Every number comes from your own keystrokes and runs; typos are estimated from quick
         backspaces. <Link href="/dashboard">Look around your desk →</Link>
       </p>
     </section>
-  );
-}
-
-const EXPERIENCE: [NonNullable<Profile["experience"]>, string][] = [
-  ["new", "Under a year"],
-  ["some", "1–3 years"],
-  ["professional", "3–10 years"],
-  ["veteran", "10+ years"],
-];
-const AI_USE: [NonNullable<Profile["aiUse"]>, string][] = [
-  ["daily", "Every day"],
-  ["weekly", "Most weeks"],
-  ["rarely", "Now and then"],
-  ["never", "Never"],
-];
-
-/** Two of the setup questions, one tap each, while they are unanswered. Optional. */
-function QuickQuestions() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  useEffect(() => setProfile(readProfile()?.profile ?? null), []);
-  if (!profile || (profile.experience && profile.aiUse)) return null;
-  const answer = (answers: Partial<Profile>) => {
-    const next = answerQuestions(answers);
-    if (!next) return;
-    setProfile(next);
-    void logProfile({ from: "result", answers: { ...next } as Json });
-  };
-  return (
-    <div className="quick-questions">
-      <p>Two quick questions, so numbers like these mean something. Optional.</p>
-      {!profile.experience && (
-        <div className="quick-question">
-          <span>How long have you been writing code?</span>
-          <div>
-            {EXPERIENCE.map(([value, label]) => (
-              <button key={value} type="button" onClick={() => answer({ experience: value })}>
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-      {!profile.aiUse && (
-        <div className="quick-question">
-          <span>How often do you code with AI help?</span>
-          <div>
-            {AI_USE.map(([value, label]) => (
-              <button key={value} type="button" onClick={() => answer({ aiUse: value })}>
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
   );
 }

@@ -7,14 +7,14 @@ How people arrive from a shared link, and how a result gets shared. The goal is 
 - One small bug, the same in eight languages: the quick fixes project (`QUICK-1` to `QUICK-8`, "The composer says 1 word when the post is empty"), in Python, JavaScript, TypeScript, Go, Java, C#, Ruby and PHP. The project is **unlisted** (`listed: false` on the project, live metadata): it stays out of the platform's issue lists, suggestions and project index, and its issues open by key.
 - `/play` is public. It shows the ticket and a language picker; the language a shared link names (`?lang=go`) comes first.
 - **No setup questions.** Picking a language accepts the current Terms (the line above the buttons says so, including that every keystroke is recorded) and opens `/work/QUICK-n`.
-- **The language picked is the languages answer.** It is saved into the profile when the profile has none, so every IDE session's profile snapshot carries it, and recorded as a `profile` event with `from: "play"`, the same event onboarding records.
+- **The language picked is a first guess at the languages answer.** It is saved into the profile when the profile has none, so every IDE session's profile snapshot carries it, and recorded as a `profile` event with `from: "play"`. The languages question stays open until the person answers it ([profile](profile.md)).
 
 ## Getting in, everywhere
 
 Accepting the current Terms is the only thing any page requires (`requireConsent`):
 
 - Someone who has not (a deep link, or the Terms changed since) is sent to `/consent`: the Terms in four points, one button, then on to the page they were heading for. `/play` does the same inline.
-- The setup questions are never required. They are offered: by "Start your first day" on the landing page (the full onboarding, a choice), by a dismissible card on the dashboard while they are unanswered, and in settings. Onboarding sees Terms already accepted and asks only the questions. Answers given later join earlier sessions by participant ID.
+- "Start your first day" on the landing page goes to the dashboard (through `/consent`). There is no onboarding: the profile questions are asked in place, one at a time, and can always wait ([profile](profile.md)).
 
 ## The result card
 
@@ -28,7 +28,7 @@ Merging a pull request shows a receipt of what happened, computed in the browser
 - **test runs**, and which one first passed every case ("green first try");
 - **hints**, **pastes** and **left the tab** (times the page was hidden).
 
-The fix itself is never shown, so a friend still gets a fair go. The same numbers are recorded at the merge as a `result` event, so aggregates use exactly the definitions people see. Under the receipt, two of the setup questions (experience, AI use) are offered as one-tap answers while unanswered, recorded as `profile` with `from: "result"`.
+The fix itself is never shown, so a friend still gets a fair go. The same numbers are recorded at the merge as a `result` event, so aggregates use exactly the definitions people see. Under the receipt, the experience and AI-use questions are asked while open, one tap each, recorded as `profile` with `from: "result"`.
 
 Sharing (copy link, X, LinkedIn, or the system share sheet) makes a link `/r/<card>`: the numbers, base64url-encoded in the path, plus this device's **referral code**, a random code separate from the participant ID. The link is a brag, not a record: anyone could edit it, so nothing trusts it.
 

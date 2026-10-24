@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { describeProfile, QUESTIONS, toProfile } from "./questions";
+import { describeProfile, QUESTIONS, toProfile } from "../../lib/questions";
 import {
   choose,
   confirmKey,

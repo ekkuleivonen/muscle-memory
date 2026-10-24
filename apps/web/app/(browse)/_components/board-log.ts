@@ -31,6 +31,7 @@ import {
   type BoardViewData,
 } from "../../../../../packages/domain/board";
 import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
+import type { Json } from "../../../../../packages/domain/json";
 import { readProfile } from "../../../lib/account";
 import { acceptsCurrent } from "../../../lib/legal";
 
@@ -121,8 +122,18 @@ export function logPage(data: BoardPageData): Promise<void> {
   return log((base) => boardPage({ ...base, data }), "Page state");
 }
 
-export function logProfile(data: BoardProfileData): Promise<void> {
-  return log((base) => boardProfile({ ...base, data }), "Profile answers");
+/**
+ * The profile as now saved, after an answer given `from` somewhere: every answer, which ones
+ * the person gave themselves, and stealth.
+ */
+export function logProfile(from: BoardProfileData["from"]): Promise<void> {
+  const stored = readProfile();
+  if (!stored) return Promise.resolve();
+  const answered = Object.entries(stored.asked ?? {})
+    .filter(([, asked]) => asked?.answeredAt)
+    .map(([id]) => id);
+  const answers = { ...stored.profile, answered, stealth: stored.stealth ?? false } as Json;
+  return log((base) => boardProfile({ ...base, data: { from, answers } }), "Profile answers");
 }
 
 /**

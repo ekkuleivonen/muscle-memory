@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-/** Terms and Privacy: readable before signing up, so outside the onboarding gate. */
+/** Terms and Privacy: readable before signing up, so outside the consent gate. */
 export default function LegalLayout({
   children,
 }: {

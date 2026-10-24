@@ -2,7 +2,7 @@
  * Raw observations from the tracker, every page outside the IDE: pages viewed (with their
  * search and filters), the page becoming visible, hidden, focused or resized, personal-board
  * moves (an issue's status set by hand, or Done by merging a pull request), replies to review
- * comments and the onboarding and settings answers. Recorded for every account under the Terms
+ * comments and the profile answers. Recorded for every account under the Terms
  * and Privacy Notice it accepted, whose version each observation carries. Typing in text
  * fields is not recorded key by key: a search is recorded as the query it produced, a reply as
  * the text sent.
@@ -12,6 +12,12 @@ import { canonical, type Json } from "./json";
 import type { WorkspaceRecord } from "./workspace";
 
 /**
+ * 6.0.0: no onboarding. Profile questions are asked one at a time where the app needs them, so
+ * `profile` comes `from` the place that asked: "result" (a merged pull request's card),
+ * "dashboard", "issue" (an issue page, before opening the IDE), "settings" or "play" (the
+ * five-minute test's language, a guess). `answers` is always the whole profile as saved, and
+ * now also lists which questions the person answered themselves (`answered`), since the play
+ * language is not one of them. "onboarding" is gone.
  * 5.0.0: the referral loop. `arrived` records how someone first came in (the landing page,
  * and the referral code of the shared result that brought them, if any), once they have
  * accepted the Terms; `shared` records sharing a result card (which channel, and the card).
@@ -32,7 +38,7 @@ import type { WorkspaceRecord } from "./workspace";
  * issue to Done (`trigger: "pull-request-merged"`, by pointer or keyboard). Earlier versions
  * were never released.
  */
-export const BOARD_CAPTURE_VERSION = "board-capture-5.0.0";
+export const BOARD_CAPTURE_VERSION = "board-capture-6.0.0";
 /** What this capture does not record. Absence is a gap, not evidence of no activity. */
 export const BOARD_CAPTURE_GAPS = [
   "visits-before-accepting-the-terms",
@@ -92,9 +98,12 @@ export interface BoardPageData {
   readonly height: number;
 }
 
-/** The answers given in onboarding or settings (or on /play or a result card), as saved. */
+/** Where a profile answer was given. */
+export const PROFILE_SOURCES = ["result", "dashboard", "issue", "settings", "play"] as const;
+
+/** The profile as saved after an answer, and the place that asked. */
 export interface BoardProfileData {
-  readonly from: "onboarding" | "settings" | "play" | "result";
+  readonly from: (typeof PROFILE_SOURCES)[number];
   readonly answers: Json;
 }
 
@@ -350,8 +359,8 @@ export function boardPage(
 export function boardProfile(
   input: BoardBase & { data: BoardProfileData },
 ): BoardObservation<"observation.board.profile"> {
-  if (!["onboarding", "settings", "play", "result"].includes(input.data.from))
-    throw new Error("Profile answers come from onboarding, settings or the test.");
+  if (!(PROFILE_SOURCES as readonly string[]).includes(input.data.from))
+    throw new Error(`Profile answers come from ${PROFILE_SOURCES.join(", ")}.`);
   return envelope("observation.board.profile", { ...input, issue: null }, input.data);
 }
 

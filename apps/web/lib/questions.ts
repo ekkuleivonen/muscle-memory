@@ -1,7 +1,7 @@
-import { RUNNABLE_LANGUAGES } from "../../../../packages/runner/engines";
-import { LANGUAGES, OFFERED } from "../../lib/languages";
-import type { Profile } from "../../lib/onboarding";
-import type { Answer, Prompt } from "./prompts";
+import { RUNNABLE_LANGUAGES } from "../../../packages/runner/engines";
+import { LANGUAGES, OFFERED } from "./languages";
+import type { Profile } from "./profile";
+import type { Answer, Prompt } from "../app/_terminal/prompts";
 
 export const QUESTIONS = [
   {

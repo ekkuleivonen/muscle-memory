@@ -9,7 +9,7 @@ import {
   summarize,
 } from "../../../lib/library";
 import { getLibrary } from "../../../lib/load";
-import { pathWithQuery } from "../../../lib/onboarding";
+import { pathWithQuery } from "../../../lib/profile";
 import {
   parsePullQuery,
   PULL_CHECKS,

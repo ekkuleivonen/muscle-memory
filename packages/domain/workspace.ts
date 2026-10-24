@@ -73,7 +73,7 @@ export interface ObservationData {
     readonly codeArtifactId: string;
     /** The app page the IDE was opened from (same-origin path), or null. */
     readonly entry: string | null;
-    /** The self-reported profile at this moment (onboarding or settings answers), or null. */
+    /** The self-reported profile at this moment (answers so far, including the play language guess), or null. */
     readonly profile: Json | null;
     readonly viewport: { readonly width: number; readonly height: number } | null;
     readonly editor: {

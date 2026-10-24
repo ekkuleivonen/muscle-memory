@@ -1,8 +1,8 @@
 import { requireConsent } from "../../../lib/gate";
 import { summarize } from "../../../lib/library";
 import { getLibrary } from "../../../lib/load";
+import { Ask } from "../_components/ask";
 import { Dashboard } from "../_components/dashboard";
-import { SetupNudge } from "../_components/setup-nudge";
 import { Topbar } from "../_components/topbar";
 
 /** The player's own page: their week, their board, what to pick up next. */
@@ -13,7 +13,7 @@ export default async function DashboardPage() {
     <>
       <Topbar>Dashboard</Topbar>
       <main className="content">
-        <SetupNudge />
+        <Ask className="dashboard-ask" ids={["experience", "aiUse", "languages", "goal"]} from="dashboard" />
         <Dashboard issues={issues.map(summarize)} />
       </main>
     </>

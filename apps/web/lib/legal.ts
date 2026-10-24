@@ -4,7 +4,7 @@
  * everyone again on their next visit (the session cookie carries it).
  */
 export const LEGAL_VERSION = "2026-10-25";
-/** Shown on the pages and in the onboarding paperwork. */
+/** Shown on the legal pages and in settings. */
 export const LEGAL_UPDATED = "25 October 2026";
 export const LEGAL_DRAFT = true;
 

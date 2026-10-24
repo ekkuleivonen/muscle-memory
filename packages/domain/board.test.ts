@@ -186,7 +186,7 @@ test("page views, page state and profile answers; only views may name an issue",
   assert.deepEqual(page.data, { visible: false, focused: false, width: 1280, height: 800 });
   const profile = boardProfile({
     ...common,
-    data: { from: "onboarding", answers: { experience: "some", languages: ["python"] } },
+    data: { from: "dashboard", answers: { experience: "some", languages: ["python"], answered: ["experience"] } },
   });
   assert.equal(profile.type, "observation.board.profile");
   assert.equal(profile.issue, null);

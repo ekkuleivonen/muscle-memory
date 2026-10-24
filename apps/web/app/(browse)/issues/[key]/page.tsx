@@ -16,6 +16,7 @@ import { KIND_LABELS, KindIcon } from "../../_components/icons";
 import { IssueThread } from "../../_components/issue-thread";
 import { IssueContext } from "../../_components/tracker-activity";
 import { Sep, Topbar } from "../../_components/topbar";
+import { Ask } from "../../_components/ask";
 import { StartWork, StatusMenu } from "../../_components/board";
 import { Markdown } from "../../_components/markdown";
 
@@ -168,6 +169,12 @@ function Properties({ issue }: { issue: Issue }) {
       <StartWork
         issue={{ key: issue.key, slug: issue.slug, revision: issue.revision }}
         href={`/work/${issue.key}`}
+      />
+      <Ask
+        className="issue-ask"
+        ids={["editor"]}
+        from="issue"
+        why={{ editor: "Before you start: the editor opens with the keys you're used to." }}
       />
       {!issue.runnable && (
         <p className="note">

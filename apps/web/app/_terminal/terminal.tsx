@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
-import type { Profile } from "../../lib/onboarding";
+import type { Profile } from "../../lib/profile";
 import {
   choose,
   confirmKey,
@@ -20,7 +20,7 @@ import {
   type ListState,
   type Prompt,
 } from "./prompts";
-import { describeProfile } from "./questions";
+import { describeProfile } from "../../lib/questions";
 
 type Line = { id: number; node: ReactNode };
 type Active =
@@ -52,7 +52,7 @@ export interface TerminalApi {
 }
 
 /**
- * A full-screen terminal that runs one script: onboarding or settings. Scripts print lines
+ * A full-screen terminal that runs one script (settings). Scripts print lines
  * and ask prompts; every prompt works by keyboard and by pointer.
  */
 export function Terminal({
