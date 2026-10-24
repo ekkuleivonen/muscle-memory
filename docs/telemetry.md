@@ -23,16 +23,17 @@ browser (IndexedDB) ──outbox──▶ ingest Worker ──▶ Pipelines stre
 - `POST /ingest/v1/participants/<id>/delete` with `{ "secret": … }`: writes a tombstone (`deleted/<id>` in the control bucket), after which uploads for that ID get 410 and the uploader stops.
 - Each accepted record becomes one row (`EventRow`): the envelope as columns (`record_id`, `kind`, `participant_id`, `received_at`, `type`, `capture_version`, `source_id`, `sequence`, `occurred_at`, `elapsed_ms`, `issue`, `issue_revision`, `consent_version`) and `payload`, the record exactly as the device stored it. The table therefore is the raw archive too: anything can be re-derived from `payload`.
 
-## Setting it up (not done yet)
+## Setup
 
-Creating these touches the Cloudflare account, so it is done by hand:
+Created on the Cloudflare account that hosts the app (`166fd3dff06a9c3f1aef172a25db7ace`, Workers Paid, which Pipelines needs):
 
-1. `npx wrangler r2 bucket create muscle-memory-control` and `npx wrangler r2 bucket create muscle-memory-events`, and enable R2 Data Catalog on the events bucket.
-2. `npx wrangler pipelines setup --name muscle-memory-events`: a stream with the schema in `apps/ingest/events.schema.json` and no public HTTP endpoint (the Worker binding writes to it), an Iceberg sink into the events bucket (Parquet, zstd, table `events`), and `INSERT INTO <sink> SELECT * FROM <stream>`.
-3. Put the stream id in `apps/ingest/wrangler.jsonc`, then `npx wrangler deploy --config apps/ingest/wrangler.jsonc`.
-4. Build the app with `NEXT_PUBLIC_INGEST_URL=/ingest`.
+- R2 buckets `muscle-memory-control` and `muscle-memory-events`, with R2 Data Catalog on the events bucket (warehouse `166fd3dff06a9c3f1aef172a25db7ace_muscle-memory-events`) and snapshot expiration (older than 7 days, keeping the last 10).
+- Stream `muscle_memory_events` (id `4ccd18f15b5845159747f7c4f42a5c5e`, schema `apps/ingest/events.schema.json`, no HTTP endpoint), sink `muscle_memory_events_iceberg` (Iceberg table `default.events`, Parquet with zstd, a file every 5 minutes) and pipeline `muscle_memory_events_pipeline` (`INSERT INTO muscle_memory_events_iceberg SELECT * FROM muscle_memory_events`).
+- The Worker `muscle-memory-ingest` on the route `musclememory.run/ingest/*`. A route takes precedence over the app's Custom Domain on the same hostname, and Cloudflare Access covers it like the rest of the hostname.
+- An R2 API token (Admin Read & Write, which Data Catalog needs) for the sink and the erasure job, stored as the repository secrets `R2_CATALOG_TOKEN`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`, with `R2_CATALOG_URI`, `R2_WAREHOUSE` and `R2_ENDPOINT`.
+- The app is built with `NEXT_PUBLIC_INGEST_URL=/ingest` (`apps/web/.env.production`).
 
-Wrangler needs Node.js 22.
+To deploy the Worker after a change: `npx wrangler deploy --config apps/ingest/wrangler.jsonc --env=""`. Wrangler needs Node.js 22.
 
 ## Local development
 
