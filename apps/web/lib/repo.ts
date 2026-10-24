@@ -11,8 +11,8 @@ export interface RepoFile {
   path: string;
   language: FileLanguage;
   text: string;
-  /** Only the solution is editable (and recorded). */
-  role: "solution" | "tests" | "readme";
+  /** Only the solution is editable (and recorded). A schema is read-only, like the tests. */
+  role: "solution" | "tests" | "schema" | "readme";
 }
 
 export interface Repo {
@@ -31,6 +31,10 @@ export interface RepoSource {
   entrypoint: string;
   starter: string;
   task: string;
+  /** Named when each case's input is a list of arguments; otherwise it is the only one. */
+  parameters?: readonly string[];
+  /** SQL: CREATE TABLE statements for the tables the cases fill. */
+  schema?: string;
   criteria: readonly { input: unknown; expected: unknown }[];
   project?: { slug: string; title: string; story?: string };
 }
@@ -45,6 +49,14 @@ export function kebab(name: string): string {
 
 export function snake(name: string): string {
   return kebab(name).replace(/-/g, "_");
+}
+
+/** parse_page → ParsePage, for class names. */
+export function pascal(name: string): string {
+  return kebab(name)
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join("");
 }
 
 const json = (value: unknown) => JSON.stringify(value);
@@ -101,7 +113,7 @@ ${cases}
 
 @pytest.mark.parametrize("given, expected", CASES)
 def test_${snake(src.entrypoint)}(given, expected):
-    assert ${src.entrypoint}(given) == expected
+    assert ${src.entrypoint}(${src.parameters ? "*given" : "given"}) == expected
 `;
 }
 
@@ -120,9 +132,11 @@ ${cases}
 
 describe("${fn}", () => {
   it.each(cases)("case %#", (input, expected) => {
-    // An array holds the arguments; anything else is the only argument.
-    const args = Array.isArray(input) ? input : [input];
-    expect(${fn}(...${typed ? `(args as Parameters<typeof ${fn}>)` : "args"})).toEqual(expected);
+${
+  src.parameters
+    ? `    expect(${fn}(...${typed ? `(input as Parameters<typeof ${fn}>)` : "input"})).toEqual(expected);`
+    : `    expect(${fn}(input${typed ? " as never" : ""})).toEqual(expected);`
+}
   });
 });
 `;
@@ -189,7 +203,7 @@ ${cases}
     public function test${name}(string $input, string $expected): void
     {
         $args = json_decode($input, true);
-        $actual = ${src.entrypoint}(...(is_array($args) ? $args : [$args]));
+        $actual = ${src.parameters ? `${src.entrypoint}(...$args)` : `${src.entrypoint}($args)`};
         $this->assertSame(json_decode($expected, true), $actual);
     }
 }
@@ -239,19 +253,115 @@ int main(void)
 `;
 }
 
-/** Table columns from the task, e.g. "orders(id, customer, total)". */
-export function sqlTables(task: string): Map<string, string[]> {
+function rubyTests(src: RepoSource, file: string): string {
+  const cases = src.criteria
+    .map((c) => `    [${json(json(c.input))}, ${json(json(c.expected))}],`)
+    .join("\n");
+  const call = src.parameters ? "*JSON.parse(input)" : "JSON.parse(input)";
+  return `${header("#", src.key)}
+require "json"
+require_relative "../lib/${file}"
+
+RSpec.describe "${src.entrypoint}" do
+  # Input and expected output as JSON.
+  [
+${cases}
+  ].each_with_index do |(input, expected), i|
+    it "passes case #{i + 1}" do
+      expect(${src.entrypoint}(${call})).to eq(JSON.parse(expected))
+    end
+  end
+end
+`;
+}
+
+/** Java and C# test against JSON too, so the cases read the same as everywhere else. */
+function javaTests(src: RepoSource, name: string): string {
+  const cases = src.criteria
+    // List.of takes no trailing comma.
+    .map(
+      (c) =>
+        `        ${json(json(c.input))} + " -> " + ${json(json(c.expected))}`,
+    )
+    .join(",\n");
+  return `${header("//", src.key)}
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.FieldSource;
+
+class ${name}Test {
+    /** Input and expected output as JSON, separated by " -> ". */
+    static final java.util.List<String> CASES = java.util.List.of(
+${cases}
+    );
+
+    @ParameterizedTest
+    @FieldSource("CASES")
+    void ${src.entrypoint}(String testCase) {
+        var parts = testCase.split(" -> ", 2);
+        assertEquals(Json.parse(parts[1]), Json.call(${name}::${src.entrypoint}, parts[0]));
+    }
+}
+`;
+}
+
+function csharpTests(src: RepoSource, name: string): string {
+  const cases = src.criteria
+    .map(
+      (c) =>
+        `    [InlineData(${json(json(c.input))}, ${json(json(c.expected))})]`,
+    )
+    .join("\n");
+  return `${header("//", src.key)}
+using Xunit;
+
+public class ${name}Tests
+{
+    // Input and expected output as JSON.
+    [Theory]
+${cases}
+    public void ${pascal(src.entrypoint)}(string input, string expected)
+    {
+        Assert.Equal(Json.Parse(expected), Json.Call(${name}.${pascal(src.entrypoint)}, input));
+    }
+}
+`;
+}
+
+/** Splits on commas outside parentheses: "a numeric(10, 2), b" → two parts. */
+function topLevel(list: string): string[] {
+  const parts = [""];
+  let depth = 0;
+  for (const char of list) {
+    if (char === "(") depth++;
+    if (char === ")") depth--;
+    if (char === "," && depth === 0) parts.push("");
+    else parts[parts.length - 1] += char;
+  }
+  return parts;
+}
+
+/** Table columns from the schema's CREATE TABLE statements. */
+export function sqlTables(schema: string): Map<string, string[]> {
   const tables = new Map<string, string[]>();
-  for (const match of task.matchAll(/`?(\w+)\(([\w\s,]+)\)`?/g))
+  for (const match of schema.matchAll(
+    /create\s+table\s+(?:if\s+not\s+exists\s+)?"?(\w+)"?\s*\(([^;]*)\)\s*;/gi,
+  ))
     tables.set(
       match[1],
-      match[2].split(",").map((column) => column.trim()),
+      topLevel(match[2])
+        .map((column) => /^\s*"?(\w+)"?/.exec(column)?.[1] ?? "")
+        .filter(
+          (name) =>
+            name && !/^(primary|foreign|unique|check|constraint)$/i.test(name),
+        ),
     );
   return tables;
 }
 
 function sqlTests(src: RepoSource): string {
-  const tables = sqlTables(src.task);
+  const tables = sqlTables(src.schema ?? "");
   const blocks = src.criteria.map((c, i) => {
     const input = (c.input ?? {}) as Record<string, unknown[][]>;
     const inserts = Object.entries(input).map(([table, rows]) => {
@@ -346,6 +456,24 @@ function layout(src: RepoSource): {
         tests: `tests/${src.slug}.sql`,
         text: sqlTests(src),
       };
+    case "ruby":
+      return {
+        solution: `lib/${snake(e)}.rb`,
+        tests: `spec/${snake(e)}_spec.rb`,
+        text: rubyTests(src, snake(e)),
+      };
+    case "java":
+      return {
+        solution: `src/main/java/${pascal(e)}.java`,
+        tests: `src/test/java/${pascal(e)}Test.java`,
+        text: javaTests(src, pascal(e)),
+      };
+    case "csharp":
+      return {
+        solution: `src/${pascal(e)}.cs`,
+        tests: `tests/${pascal(e)}Tests.cs`,
+        text: csharpTests(src, pascal(e)),
+      };
     case "html":
       return {
         solution: `templates/${src.slug}.html`,
@@ -363,11 +491,19 @@ export function repoFor(src: RepoSource): Repo {
     text: src.starter,
     role: "solution",
   };
-  const files = [
+  const files: RepoFile[] = [
     readme(src),
     solution,
-    { path: tests, language: src.language, text, role: "tests" as const },
-  ].sort((a, b) => a.path.localeCompare(b.path));
+    { path: tests, language: src.language, text, role: "tests" },
+  ];
+  if (src.schema)
+    files.push({
+      path: "db/schema.sql",
+      language: "sql",
+      text: src.schema.endsWith("\n") ? src.schema : `${src.schema}\n`,
+      role: "schema",
+    });
+  files.sort((a, b) => a.path.localeCompare(b.path));
   return {
     root: src.project?.slug ?? src.slug,
     branch: `${src.key.toLowerCase()}-${src.slug}`,

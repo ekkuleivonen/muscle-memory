@@ -35,7 +35,7 @@ const page = `<!doctype html><meta charset="utf-8"><body><div id="host"></div>
   localStorage.setItem("app_secret", "local-value");
   indexedDB.open("app-secret-db").onsuccess = () => (window.dbReady = true);
   window.makeRunner = (options) =>
-    new MMRunner.PythonRunner(document.getElementById("host"), options);
+    new MMRunner.Runner(MMRunner.ENGINES.pyodide, document.getElementById("host"), options);
 </script>`;
 
 function listen(server) {
@@ -212,7 +212,8 @@ async function check(browserType) {
       host.id = "host";
       document.cookie = "app_secret=cookie-value; path=/";
       localStorage.setItem("app_secret", "local-value");
-      window.makeRunner = (options) => new MMRunner.PythonRunner(host, options);
+      window.makeRunner = (options) =>
+        new MMRunner.Runner(MMRunner.ENGINES.pyodide, host, options);
     });
   } else {
     await tab.goto(APP + "/");
@@ -230,7 +231,9 @@ async function check(browserType) {
         runId,
         code,
         inputs: tests.map((test) => test.input),
-        functionName: "frequency_map",
+        entrypoint: "frequency_map",
+        filename: "solution.py",
+        language: "python",
       });
       const results = {};
       runner.prepare();
@@ -274,7 +277,9 @@ async function check(browserType) {
           ["cyclic"],
           ["raise"],
         ],
-        functionName: "frequency_map",
+        entrypoint: "frequency_map",
+        filename: "solution.py",
+        language: "python",
       });
       results.flood = await runner.run(
         request(
@@ -378,7 +383,9 @@ async function authCheck(browserType) {
           runId: "auth",
           code: SOLUTION,
           inputs: [["a", "b", "a"]],
-          functionName: "frequency_map",
+          entrypoint: "frequency_map",
+          filename: "solution.py",
+          language: "python",
         });
         runner.dispose();
         return result;
@@ -496,6 +503,184 @@ function verdicts({ report, frameProbe, hits }) {
   };
 }
 
+/**
+ * The JavaScript/TypeScript and SQL engines in the same sandbox: correct results through the
+ * shared protocol, errors located in the solution file, and no way out to the network.
+ */
+async function enginesCheck(browserType) {
+  resetHits();
+  const browser = await browserType.launch();
+  const context = await signedInContext(browser, AUTH_VALUE);
+  const tab = await context.newPage();
+  await tab.goto(APP + "/");
+  const report = await tab.evaluate(async (OUT) => {
+    const host = document.getElementById("host");
+    const run = async (engine, request, timeoutMs = 4000) => {
+      const runner = new MMRunner.Runner(MMRunner.ENGINES[engine], host, {
+        timeoutMs,
+      });
+      try {
+        return await runner.run({ runId: "e", ...request });
+      } finally {
+        runner.dispose();
+      }
+    };
+    const ts = (code, inputs, extra = {}) =>
+      run("javascript", {
+        code,
+        inputs,
+        filename: "src/apply-discount.ts",
+        language: "typescript",
+        entrypoint: "applyDiscount",
+        parameters: ["totalCents", "code", "codes"],
+        ...extra,
+      });
+    const results = {};
+    results.ts = await ts(
+      `export type Codes = Record<string, number>;
+export function applyDiscount(total: number, code: string, codes: Codes): number {
+  const percent = codes[code.trim().toUpperCase()];
+  return percent === undefined ? total : Math.floor(total * (100 - percent) / 100);
+}`,
+      [
+        [10000, " save10 ", { SAVE10: 10 }],
+        [5000, "NOPE", {}],
+      ],
+    );
+    results.single = await run("javascript", {
+      code: "export const formatPrice = (cents) => (cents / 100).toFixed(2);",
+      inputs: [123, [1, 2]],
+      filename: "src/format-price.js",
+      language: "javascript",
+      entrypoint: "formatPrice",
+    });
+    results.syntax = await ts("export function applyDiscount( {", [
+      [1, "a", {}],
+    ]);
+    results.thrown = await ts(
+      "export function applyDiscount(): number {\n  throw new RangeError('nope');\n}",
+      [[1, "a", {}]],
+    );
+    results.missing = await ts("export const other = 1;", [[1, "a", {}]]);
+    results.nonJson = await ts(
+      "export function applyDiscount(): number { return NaN; }",
+      [[1, "a", {}]],
+    );
+    results.escapes = await ts(
+      `const attempts = {
+  fetch: () => fetch("${OUT}/js-fetch"),
+  "dynamic-import": () => import("${OUT}/js-import.js"),
+  websocket: () => new Promise((ok, fail) => { const s = new WebSocket("${OUT.replace("http", "ws")}/js-ws"); s.onopen = ok; s.onerror = () => fail(new Error("refused")); }),
+  xhr: () => { const r = new XMLHttpRequest(); r.open("GET", "${OUT}/js-xhr", false); r.send(); },
+  "import-scripts": () => importScripts("${OUT}/js-script.js"),
+  eval: () => new Function("return 1")(),
+  indexeddb: () => indexedDB.open("x"),
+  "parent-document": () => parent.document.title,
+};
+for (const [name, attempt] of Object.entries(attempts)) {
+  try { await attempt(); console.log(name + " => allowed"); }
+  catch (error) { console.log(name + " => blocked " + (error && error.name)); }
+}
+export function applyDiscount() { return 0; }`,
+      [[1, "a", {}]],
+    );
+    results.loop = await ts(
+      "export function applyDiscount() { for (;;) {} }",
+      [[1, "a", {}]],
+      {},
+    );
+    const sql = (code, extra = {}) =>
+      run(
+        "pglite",
+        {
+          code,
+          inputs: [
+            {
+              orders: [
+                [1, "ana", 30],
+                [2, "bo", 10],
+                [3, "ana", 5.5],
+              ],
+            },
+          ],
+          filename: "queries/top-customers.sql",
+          language: "sql",
+          entrypoint: "query",
+          setup:
+            "CREATE TABLE orders (id integer PRIMARY KEY, customer text NOT NULL, total numeric NOT NULL);",
+          ...extra,
+        },
+        15000,
+      );
+    results.sql = await sql(
+      "-- revenue\nSELECT customer, sum(total) AS revenue\nFROM orders\nGROUP BY customer\nORDER BY revenue DESC;",
+    );
+    results.sqlTwice = await sql("SELECT count(*) FROM orders;", {
+      inputs: [{ orders: [[1, "a", 1]] }, { orders: [] }],
+    });
+    results.sqlSyntax = await sql(
+      "SELECT customer\nFROM orders\nGROUP BYE customer;",
+    );
+    results.sqlError = await sql("SELECT 1 / (total - total) FROM orders;");
+    results.sqlFixture = await sql("SELECT 1;", { inputs: [{ nope: [[1]] }] });
+    results.frames = document.querySelectorAll("iframe").length;
+    return results;
+  }, OUT);
+  await new Promise((done) => setTimeout(done, 500));
+  await browser.close();
+  const out = (outcome, i = 0) => outcome.cases?.[i]?.output?.text;
+  const escapes = report.escapes.stdout?.text ?? "";
+  if (process.env.VERBOSE)
+    console.log(JSON.stringify(report, null, 1).slice(0, 6000));
+  return {
+    "typescript: types stripped, parameters spread":
+      out(report.ts) === "9000" && out(report.ts, 1) === "5000",
+    "javascript: an array input is one argument without parameters":
+      out(report.single) === '"1.23"' && out(report.single, 1) === '"NaN"',
+    "typescript: syntax error is a compile error":
+      report.syntax.status === "user-error" &&
+      report.syntax.phase === "compile" &&
+      /src\/apply-discount\.ts:1:/.test(report.syntax.error.traceback.text),
+    "javascript: a thrown error stays with its case and points at the file":
+      report.thrown.cases[0]?.error?.type === "RangeError" &&
+      /src\/apply-discount\.ts:2:/.test(
+        report.thrown.cases[0].error.traceback.text,
+      ),
+    "javascript: a missing export is explained":
+      report.missing.error?.message ===
+      "Export a function named applyDiscount.",
+    "javascript: values JSON cannot hold are refused, not guessed":
+      Boolean(report.nonJson.cases[0]?.unserializable) &&
+      !report.nonJson.cases[0]?.output,
+    "javascript: network, storage, eval and parent all blocked": [
+      "fetch",
+      "dynamic-import",
+      "websocket",
+      "xhr",
+      "import-scripts",
+      "eval",
+      "indexeddb",
+      "parent-document",
+    ].every((name) => new RegExp(`${name} => blocked`).test(escapes)),
+    "javascript: infinite loop times out": report.loop.status === "timeout",
+    "sql: rows come back in order, numeric as numbers":
+      out(report.sql) === '[["ana",35.5],["bo",10]]',
+    "sql: every case starts from empty tables":
+      out(report.sqlTwice) === "[[1]]" && out(report.sqlTwice, 1) === "[[0]]",
+    "sql: syntax error points at the line, like psql":
+      report.sqlSyntax.phase === "compile" &&
+      /LINE 3: GROUP BYE customer/.test(report.sqlSyntax.error.traceback.text),
+    "sql: runtime error stays with its case": /division by zero/.test(
+      report.sqlError.cases[0]?.error?.message ?? "",
+    ),
+    "sql: broken fixtures are a runner error, not the person's":
+      report.sqlFixture.status === "runner-error",
+    "no request from any engine reached either server":
+      hits.app.length === 0 && hits.outside.length === 0,
+    "no sandbox frames left behind": report.frames === 0,
+  };
+}
+
 const requested = process.argv.slice(2);
 const engines = { chromium, firefox, webkit };
 let failures = 0;
@@ -524,6 +709,16 @@ for (const name of process.env.ONLY_AUTH
     );
   }
 }
+if (!process.env.PREVIEW_URL && !process.env.ONLY_AUTH)
+  for (const name of requested.length ? requested : ["chromium"]) {
+    console.log(`\n=== ${name}: JavaScript, TypeScript and SQL ===`);
+    for (const [label, pass] of Object.entries(
+      await enginesCheck(engines[name]),
+    )) {
+      if (!pass) failures++;
+      console.log(`${pass ? "ok  " : "FAIL"} ${label}`);
+    }
+  }
 if (!process.env.PREVIEW_URL)
   for (const name of requested.length ? requested : ["chromium"]) {
     console.log(`\n=== ${name}: runtime files behind sign-in ===`);

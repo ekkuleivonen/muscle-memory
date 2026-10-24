@@ -82,14 +82,24 @@ test("older and disabled versions stay out of lists but specific versions resolv
   assert.equal(disabled.issues[0].version, "2.0.0");
 });
 
-test("only Python with a starter runs; project summaries span their issues", () => {
+test("issues run when their language has an engine; project summaries span their issues", () => {
   assert.deepEqual(
     merged.issues.filter((i) => i.runnable).map((i) => i.slug),
-    ["frequency-map", "csv-quoted-fields", "dedupe-customers"],
+    [
+      "frequency-map",
+      "format-price",
+      "discount-codes",
+      "debounce-search",
+      "rate-limiter",
+      "csv-quoted-fields",
+      "dedupe-customers",
+      "top-customers",
+      "unpaid-orders",
+    ],
   );
   const edge = merged.projects.find((c) => c.slug === "edge-proxy")!;
   assert.equal(difficultyRange(edge.issues), "easy–hard");
-  assert.deepEqual(languagesOf(edge.issues), ["rust", "c", "cpp"]);
+  assert.deepEqual(languagesOf(edge.issues), ["c", "cpp", "rust"]);
 });
 
 test("issue keys come from the project key, or one derived from its id", () => {
@@ -145,7 +155,17 @@ test("filters combine across qualifiers and match any value within one", () => {
     "EDGE-2",
     "EDGE-4",
   ]);
-  assert.deepEqual(keys("is:runnable"), ["DATA-1", "DATA-2", "FN-1"]);
+  assert.deepEqual(keys("is:runnable"), [
+    "API-3",
+    "DATA-1",
+    "DATA-2",
+    "DATA-3",
+    "DATA-4",
+    "FN-1",
+    "SHOP-1",
+    "SHOP-2",
+    "SHOP-4",
+  ]);
   assert.deepEqual(keys("label:strings"), [
     "API-4",
     "DATA-1",

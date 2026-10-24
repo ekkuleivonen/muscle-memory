@@ -1,18 +1,37 @@
 {
-  "runtime": "pyodide",
-  "version": "314.0.7",
-  "python": "3.14.2",
-  "basePath": "/runtime/pyodide-314.0.7/",
-  "lockInfo": {
-    "abi_version": "2026_0",
-    "arch": "wasm32",
-    "platform": "emscripten_5_0_3",
-    "python": "3.14.2"
+  "pyodide": {
+    "version": "314.0.7",
+    "python": "3.14.2",
+    "basePath": "/runtime/pyodide-314.0.7/",
+    "lockInfo": {
+      "abi_version": "2026_0",
+      "arch": "wasm32",
+      "platform": "emscripten_5_0_3",
+      "python": "3.14.2"
+    },
+    "files": {
+      "pyodide.mjs": "sha256-bx1g979Sm+swDw9HmDySHTmCNjZAuiCvDjjv3dvGYQk=",
+      "pyodide.asm.mjs": "sha256-983I7OgGeM63EvjmXr5tOoMgOhgMOZhl9JYSoFFpNjU=",
+      "pyodide.asm.wasm": "sha256-zDbjyrBP38mmP/E+tS6uK5Eb9GwCXMeygfOUvT3h1eY=",
+      "python_stdlib.zip": "sha256-+hlX5XdwaPxPdDf5bYYK4vvpwZcyugbITgBOwW3X3Xo="
+    }
   },
-  "files": {
-    "pyodide.mjs": "sha256-bx1g979Sm+swDw9HmDySHTmCNjZAuiCvDjjv3dvGYQk=",
-    "pyodide.asm.mjs": "sha256-983I7OgGeM63EvjmXr5tOoMgOhgMOZhl9JYSoFFpNjU=",
-    "pyodide.asm.wasm": "sha256-zDbjyrBP38mmP/E+tS6uK5Eb9GwCXMeygfOUvT3h1eY=",
-    "python_stdlib.zip": "sha256-+hlX5XdwaPxPdDf5bYYK4vvpwZcyugbITgBOwW3X3Xo="
+  "javascript": {
+    "version": "3.35.1",
+    "basePath": "/runtime/javascript-3.35.1/",
+    "files": {
+      "transpiler.js": "sha256-TwFtetl0wWEw+97itizWOwn72QKvbk0EJFSLY/uYiwQ="
+    }
+  },
+  "pglite": {
+    "version": "0.5.11",
+    "postgres": "18.6",
+    "basePath": "/runtime/pglite-0.5.11/",
+    "files": {
+      "pglite.js": "sha256-dfU+OpKc+n+UrzoQI2Azn7LmW912cAQrgF1iECszeIU=",
+      "pglite.wasm": "sha256-aykHifiaq/AFKpde7gPPl0MPKggpOP4YE3skaq8RNrU=",
+      "initdb.wasm": "sha256-mF2bbwcV6YUO+1eYzlH2Tn/YYp1wlw/Rph5117rgvec=",
+      "pglite.data": "sha256-R/8pva3w39ivYLsBMTx/kYwiUY7kh3L8QO1JAoqBzMQ="
+    }
   }
 }

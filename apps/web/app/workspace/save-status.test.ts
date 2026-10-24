@@ -9,7 +9,7 @@ import {
 import { latestSavedCode } from "../../../../packages/capture/restore";
 import type { Challenge } from "../../../../packages/domain/assessment";
 import { contentArtifactId } from "../../../../packages/domain/evidence";
-import type { PythonRunner } from "../../../../packages/runner/runner";
+import type { Runner } from "../../../../packages/runner/runner";
 import { saveState } from "./save-state";
 import { WorkspaceSession, type SaveStatus } from "./session";
 
@@ -43,7 +43,7 @@ function workspace(sink: CaptureSink, initialCode = "") {
       ({
         running: false,
         run: async () => ({ status: "cancelled" }),
-      }) as unknown as PythonRunner,
+      }) as unknown as Runner,
     onRun: () => undefined,
     onEditedAfterRun: () => undefined,
     onSaveStatus: (status) => updates.push(status),

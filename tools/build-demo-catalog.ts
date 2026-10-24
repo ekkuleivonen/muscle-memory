@@ -33,6 +33,10 @@ const challenge = (
     expected: unknown[];
     hints?: string[];
     comments?: Comment[];
+    /** Named when each input lists several arguments; otherwise it is the only one. */
+    parameters?: string[];
+    /** SQL: the tables each case's rows go into. */
+    schema?: string;
   },
 ) => ({
   id,
@@ -41,15 +45,13 @@ const challenge = (
   hints: [],
   ...fields,
   ...STARTERS[id],
-  ...(fields.language === "python" ? { runtime: PYODIDE } : {}),
 });
 
 /**
  * The file each issue opens in the IDE: an entry point and starter code in the issue's own
- * language, written like the file you would find at work. Python ones also name the runtime,
- * which makes them runnable in the browser; the rest are editable until a runner exists.
+ * language, written like the file you would find at work. Whether it runs in the browser is
+ * up to the app's runners, not the content.
  */
-const PYODIDE = { id: "pyodide", python: "3.14.2", version: "314.0.7" };
 const STARTERS: Record<string, { entrypoint: string; starter: string }> = {
   "format-price": {
     entrypoint: "formatPrice",
@@ -308,6 +310,7 @@ const challenges = [
     ],
   }),
   challenge("discount-codes", {
+    parameters: ["totalCents", "code", "codes"],
     title: "Discount codes fail when typed in lowercase",
     summary: "Match promo codes case-insensitively and ignore stray spaces.",
     kind: "bug",
@@ -349,6 +352,7 @@ const challenges = [
     ],
   }),
   challenge("debounce-search", {
+    parameters: ["keystrokes", "waitMs"],
     title: "Search box sends a request on every keystroke",
     summary:
       "Debounce search-as-you-type so the API sees one request per pause.",
@@ -396,6 +400,7 @@ const challenges = [
     ],
   }),
   challenge("reset-link-expiry", {
+    parameters: ["issuedAt", "now", "ttlMinutes"],
     title: "Password reset links expire after a minute",
     summary: "The TTL is in minutes but the check compares seconds.",
     kind: "bug",
@@ -417,6 +422,7 @@ const challenges = [
     ],
   }),
   challenge("rate-limiter", {
+    parameters: ["times", "limit", "windowMs"],
     title: "Rate-limit login attempts",
     summary: "Allow at most n attempts in any sliding window.",
     kind: "feature",
@@ -510,6 +516,7 @@ const challenges = [
     ],
   }),
   challenge("top-customers", {
+    schema: "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  customer text NOT NULL,\n  total integer NOT NULL\n);",
     title: "Revenue by customer for the monthly report",
     summary: "Total each customer's orders, biggest first.",
     kind: "feature",
@@ -537,6 +544,7 @@ const challenges = [
     ],
   }),
   challenge("unpaid-orders", {
+    schema: "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  customer text NOT NULL\n);\n\nCREATE TABLE payments (\n  order_id integer NOT NULL REFERENCES orders (id),\n  amount integer NOT NULL\n);",
     title: "Find orders with no matching payment",
     summary: "Reconcile orders against payments before month-end close.",
     kind: "feature",
@@ -564,6 +572,7 @@ const challenges = [
 
   // Edge proxy: systems and performance
   challenge("ring-buffer", {
+    parameters: ["capacity", "values"],
     title: "Keep the last N request latencies in memory",
     summary: "A fixed-size buffer that overwrites its oldest entry.",
     kind: "feature",
@@ -581,6 +590,7 @@ const challenges = [
     ],
   }),
   challenge("p99-latency", {
+    parameters: ["samples", "p"],
     title: "p99 latency panel times out in busy hours",
     summary: "Compute nearest-rank percentiles for the metrics endpoint.",
     kind: "performance",
@@ -602,6 +612,7 @@ const challenges = [
     ],
   }),
   challenge("lru-cache", {
+    parameters: ["capacity", "ops"],
     title: "Cache evicts entries that were just used",
     summary: "Reads must refresh recency in the LRU cache.",
     kind: "bug",

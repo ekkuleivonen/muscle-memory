@@ -27,8 +27,8 @@ import type {
 import { contentArtifactId } from "../../../../packages/domain/evidence";
 import { runFeedback } from "../../../../packages/domain/workspace";
 import {
-  PythonRunner,
-  RUNTIME,
+  engineFor,
+  Runner,
   type CaseResult,
 } from "../../../../packages/runner/runner";
 import { readProfile } from "../../lib/account";
@@ -61,7 +61,27 @@ import {
   type SaveStatus,
 } from "../workspace/session";
 
-type Executable = Challenge & { entrypoint: string; starter: string };
+type Executable = Challenge & {
+  entrypoint: string;
+  starter: string;
+  /** Named when each case lists several arguments. */
+  parameters?: string[];
+  /** SQL: the tables each case's rows go into. */
+  schema?: string;
+};
+
+/** How a case reads in the panel: the call, or for SQL the rows it starts with. */
+function caseLabel(challenge: Executable, input: unknown): string {
+  if (challenge.schema && input && typeof input === "object")
+    return Object.entries(input as Record<string, unknown[]>)
+      .map(
+        ([table, rows]) =>
+          `${table}: ${rows.length} row${rows.length === 1 ? "" : "s"}`,
+      )
+      .join(", ");
+  const args = challenge.parameters ? (input as unknown[]) : [input];
+  return `${challenge.entrypoint}(${args.map((arg) => JSON.stringify(arg)).join(", ")})`;
+}
 
 export interface IdeIssue {
   key: string;
@@ -117,6 +137,8 @@ export function Ide({
         entrypoint: challenge.entrypoint,
         starter: challenge.starter,
         task: challenge.task,
+        parameters: challenge.parameters,
+        schema: challenge.schema,
         criteria: challenge.inputs.map((input, i) => ({
           input,
           expected: challenge.expected[i],
@@ -159,16 +181,17 @@ export function Ide({
   const hosts = useRef(new Map<string, HTMLDivElement>());
   const viewers = useRef(new Map<string, EditorView>());
   const sandboxHost = useRef<HTMLDivElement>(null);
-  const runner = useRef<PythonRunner | null>(null);
+  const engine = engineFor(issue.language);
+  const runner = useRef<Runner | null>(null);
   const session = useRef<WorkspaceSession | null>(null);
   const store = useRef<PracticeStore | null>(null);
   // Each mount (twice in development) bumps this; a superseded open installs nothing.
   const generation = useRef(0);
 
   function startRuntime() {
-    if (!issue.runnable) return;
+    if (!issue.runnable || !engine) return;
     runner.current?.dispose();
-    const next = new PythonRunner(sandboxHost.current!, {
+    const next = new Runner(engine, sandboxHost.current!, {
       timeoutMs: RUN_TIMEOUT_MS,
     });
     runner.current = next;
@@ -221,7 +244,8 @@ export function Ide({
         language: issue.language,
         keymap: keys,
         mediaType: mediaTypeOf(issue.language),
-        runtime: issue.runnable ? RUNTIME : null,
+        filename: repo.solution.path,
+        runtime: issue.runnable && engine ? engine.runtime : null,
         pullRequestsBefore: history[0]?.number ?? 0,
         // Read at use time, so a runtime reloaded with Retry is the one that runs.
         runner: () => runner.current!,
@@ -584,8 +608,8 @@ export function Ide({
           )}
           <span>{languageLabel(issue.language)}</span>
           <span>
-            {issue.runnable
-              ? `Python ${RUNTIME.python} · ${runtimeLabel(runtime)}`
+            {issue.runnable && engine
+              ? `${engine.label} · ${runtimeLabel(runtime)}`
               : "No runner yet"}
           </span>
         </span>
@@ -745,7 +769,7 @@ function Tests({
   if (runtime.state === "unavailable")
     return (
       <p className="error" role="alert">
-        Python could not load: {runtime.message}{" "}
+        {engineFor(issue.language)?.label} could not load: {runtime.message}{" "}
         <button type="button" className="ide-link" onClick={onRetry}>
           Retry
         </button>
@@ -770,7 +794,8 @@ function Tests({
   if (o.status === "runner-error")
     return (
       <p className="error">
-        The Python runtime failed ({o.phase}), not your code: {o.message}
+        {engineFor(issue.language)?.label} failed ({o.phase}), not your code:{" "}
+        {o.message}
       </p>
     );
   if (o.error && o.phase !== "tests")
@@ -804,8 +829,7 @@ function Tests({
           <Case
             key={index}
             index={index}
-            name={challenge.entrypoint}
-            input={input}
+            label={caseLabel(challenge, input)}
             expected={challenge.expected[index]}
             passed={feedback.passed[index]}
             result={o.cases[index]}
@@ -818,15 +842,13 @@ function Tests({
 
 function Case({
   index,
-  name,
-  input,
+  label,
   expected,
   passed,
   result,
 }: {
   index: number;
-  name: string;
-  input: unknown;
+  label: string;
   expected: unknown;
   passed: boolean;
   result?: CaseResult;
@@ -835,9 +857,7 @@ function Case({
     <li className={passed ? "pass" : "fail"}>
       <span className="ide-case-mark">{passed ? "✔" : "✘"}</span>
       <span className="ide-case-body">
-        <code>
-          {name}({JSON.stringify(input)})
-        </code>
+        <code>{label}</code>
         {!passed && (
           <span className="ide-case-detail">
             <span>

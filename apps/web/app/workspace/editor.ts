@@ -24,6 +24,7 @@ import {
   indentOnInput,
   indentUnit,
   LanguageSupport,
+  StreamLanguage,
   syntaxHighlighting,
 } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
@@ -39,6 +40,9 @@ import { phpLanguage } from "@codemirror/lang-php";
 import { StandardSQL } from "@codemirror/lang-sql";
 import { htmlLanguage } from "@codemirror/lang-html";
 import { markdownLanguage } from "@codemirror/lang-markdown";
+import { javaLanguage } from "@codemirror/lang-java";
+import { csharp } from "@codemirror/legacy-modes/mode/clike";
+import { ruby } from "@codemirror/legacy-modes/mode/ruby";
 import { getCM, vim } from "@replit/codemirror-vim";
 import type { FileLanguage } from "../../lib/repo";
 
@@ -68,13 +72,25 @@ function languageSupport(language: FileLanguage): LanguageSupport {
       return new LanguageSupport(htmlLanguage);
     case "markdown":
       return new LanguageSupport(markdownLanguage);
+    case "java":
+      return new LanguageSupport(javaLanguage);
+    case "csharp":
+      return new LanguageSupport(StreamLanguage.define(csharp));
+    case "ruby":
+      return new LanguageSupport(StreamLanguage.define(ruby));
   }
 }
 
 /** Indentation people expect per language: Go uses tabs, the rest spaces. */
 function indent(language: FileLanguage): string {
   if (language === "go") return "\t";
-  if (language === "python" || language === "rust" || language === "php")
+  if (
+    language === "python" ||
+    language === "rust" ||
+    language === "php" ||
+    language === "java" ||
+    language === "csharp"
+  )
     return "    ";
   if (language === "c" || language === "cpp") return "    ";
   return "  ";

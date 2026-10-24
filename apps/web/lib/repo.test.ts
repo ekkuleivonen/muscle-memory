@@ -36,6 +36,10 @@ function sources(): RepoSource[] {
       entrypoint: String(c.entrypoint),
       starter: String(c.starter),
       task: String(c.task),
+      ...(Array.isArray(c.parameters)
+        ? { parameters: c.parameters as string[] }
+        : {}),
+      ...(typeof c.schema === "string" ? { schema: c.schema } : {}),
       criteria: (c.inputs as unknown[]).map((input, i) => ({
         input,
         expected: (c.expected as unknown[])[i],
@@ -63,20 +67,21 @@ test("python literals", () => {
   );
 });
 
-test("every issue with a starter opens as a repo of three files", () => {
+test("every issue with a starter opens as a repo: readme, solution, tests (and a schema)", () => {
   const all = sources();
   assert.ok(all.length >= 17, `${all.length} starters`);
   for (const src of all) {
     const repo = repoFor(src);
-    assert.equal(repo.files.length, 3, src.slug);
     assert.deepEqual(
       repo.files.map((f) => f.role).sort(),
-      ["readme", "solution", "tests"],
+      src.schema
+        ? ["readme", "schema", "solution", "tests"]
+        : ["readme", "solution", "tests"],
       src.slug,
     );
     assert.equal(repo.solution.text, src.starter);
     const paths = repo.files.map((f) => f.path);
-    assert.equal(new Set(paths).size, 3, `${src.slug}: ${paths}`);
+    assert.equal(new Set(paths).size, paths.length, `${src.slug}: ${paths}`);
     const tests = repo.files.find((f) => f.role === "tests")!;
     assert.match(tests.text, new RegExp(src.key), src.slug);
     // Every expected value appears in the test file one way or another.
@@ -119,20 +124,36 @@ test("each language uses its usual layout and test style", () => {
     "src/lib.rs",
     "tests/percentile.rs",
   ]);
+  assert.deepEqual(paths("top-customers"), [
+    "README.md",
+    "db/schema.sql",
+    "queries/top-customers.sql",
+    "tests/top-customers.sql",
+  ]);
   assert.match(
     testText("top-customers"),
     /INSERT INTO orders \(id, customer, total\) VALUES/,
   );
+  // Named parameters spread the case into arguments; otherwise the case is the argument.
+  assert.match(testText("discount-codes"), /applyDiscount\(\.\.\.\(input as/);
+  assert.match(testText("format-price"), /formatPrice\(input\)/);
+  assert.match(testText("reset-link-expiry"), /isExpired\(\.\.\.\$args\)/);
+  assert.match(testText("dedupe-customers"), /dedupe\(given\) == expected/);
   assert.match(testText("top-customers"), /--\s+\('ana', 35\)/);
   assert.match(testText("filter-form-labels"), /<label for="filter-in-stock">/);
   assert.equal(bySlug.get("lru-cache")!.branch, "lru-cache-lru-cache");
 });
 
-test("sql tables come from the task", () => {
+test("sql tables come from the schema", () => {
   assert.deepEqual(
     [
       ...sqlTables(
-        "Given `orders(id, customer)` and `payments(order_id, amount)`",
+        `CREATE TABLE orders (id integer PRIMARY KEY, customer text);
+CREATE TABLE IF NOT EXISTS "payments" (
+  order_id integer REFERENCES orders (id),
+  amount numeric(10, 2) NOT NULL,
+  PRIMARY KEY (order_id)
+);`,
       ),
     ],
     [

@@ -145,6 +145,11 @@
         "kind": "bug",
         "language": "typescript",
         "number": 2,
+        "parameters": [
+          "totalCents",
+          "code",
+          "codes"
+        ],
         "skills": [
           "strings",
           "validation"
@@ -155,10 +160,10 @@
         "title": "Discount codes fail when typed in lowercase",
         "version": "1.0.0"
       },
-      "digest": "8474b59822e2714f219df37fb27b62149392d4868d7013aaf572c1b5dde6ded8",
+      "digest": "79f01a19073f8c1ec489358507b313435d26ebd089d0a5d2661f97ec4ec6d8a5",
       "state": "published",
       "testResult": {
-        "digest": "8474b59822e2714f219df37fb27b62149392d4868d7013aaf572c1b5dde6ded8",
+        "digest": "79f01a19073f8c1ec489358507b313435d26ebd089d0a5d2661f97ec4ec6d8a5",
         "fixtures": 4,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -167,28 +172,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "8474b59822e2714f219df37fb27b62149392d4868d7013aaf572c1b5dde6ded8",
+          "digest": "79f01a19073f8c1ec489358507b313435d26ebd089d0a5d2661f97ec4ec6d8a5",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "8474b59822e2714f219df37fb27b62149392d4868d7013aaf572c1b5dde6ded8",
+          "digest": "79f01a19073f8c1ec489358507b313435d26ebd089d0a5d2661f97ec4ec6d8a5",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "8474b59822e2714f219df37fb27b62149392d4868d7013aaf572c1b5dde6ded8",
+          "digest": "79f01a19073f8c1ec489358507b313435d26ebd089d0a5d2661f97ec4ec6d8a5",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "8474b59822e2714f219df37fb27b62149392d4868d7013aaf572c1b5dde6ded8",
+          "digest": "79f01a19073f8c1ec489358507b313435d26ebd089d0a5d2661f97ec4ec6d8a5",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -328,6 +333,10 @@
         "kind": "performance",
         "language": "typescript",
         "number": 4,
+        "parameters": [
+          "keystrokes",
+          "waitMs"
+        ],
         "skills": [
           "timing",
           "events"
@@ -338,10 +347,10 @@
         "title": "Search box sends a request on every keystroke",
         "version": "1.0.0"
       },
-      "digest": "6cab12d19f6a2b2b752c06433313a8724560691feb3dbdd636467f1370605438",
+      "digest": "e53dec551208c669d9e02bc1d8062deb086b946d6a6a54a6c0f6a0b463c19b06",
       "state": "published",
       "testResult": {
-        "digest": "6cab12d19f6a2b2b752c06433313a8724560691feb3dbdd636467f1370605438",
+        "digest": "e53dec551208c669d9e02bc1d8062deb086b946d6a6a54a6c0f6a0b463c19b06",
         "fixtures": 3,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -350,28 +359,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "6cab12d19f6a2b2b752c06433313a8724560691feb3dbdd636467f1370605438",
+          "digest": "e53dec551208c669d9e02bc1d8062deb086b946d6a6a54a6c0f6a0b463c19b06",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "6cab12d19f6a2b2b752c06433313a8724560691feb3dbdd636467f1370605438",
+          "digest": "e53dec551208c669d9e02bc1d8062deb086b946d6a6a54a6c0f6a0b463c19b06",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "6cab12d19f6a2b2b752c06433313a8724560691feb3dbdd636467f1370605438",
+          "digest": "e53dec551208c669d9e02bc1d8062deb086b946d6a6a54a6c0f6a0b463c19b06",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "6cab12d19f6a2b2b752c06433313a8724560691feb3dbdd636467f1370605438",
+          "digest": "e53dec551208c669d9e02bc1d8062deb086b946d6a6a54a6c0f6a0b463c19b06",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -517,6 +526,11 @@
         "kind": "bug",
         "language": "php",
         "number": 2,
+        "parameters": [
+          "issuedAt",
+          "now",
+          "ttlMinutes"
+        ],
         "skills": [
           "time",
           "units"
@@ -527,10 +541,10 @@
         "title": "Password reset links expire after a minute",
         "version": "1.0.0"
       },
-      "digest": "ceedc40453b76c0e8f62995e7efa5bc7773e62cce418efdeb8b59c821b6817d2",
+      "digest": "42aeceac6c24e7837b9b8678b20f77460ab410b41052257c8ee1d4b77a58e807",
       "state": "published",
       "testResult": {
-        "digest": "ceedc40453b76c0e8f62995e7efa5bc7773e62cce418efdeb8b59c821b6817d2",
+        "digest": "42aeceac6c24e7837b9b8678b20f77460ab410b41052257c8ee1d4b77a58e807",
         "fixtures": 4,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -539,28 +553,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "ceedc40453b76c0e8f62995e7efa5bc7773e62cce418efdeb8b59c821b6817d2",
+          "digest": "42aeceac6c24e7837b9b8678b20f77460ab410b41052257c8ee1d4b77a58e807",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "ceedc40453b76c0e8f62995e7efa5bc7773e62cce418efdeb8b59c821b6817d2",
+          "digest": "42aeceac6c24e7837b9b8678b20f77460ab410b41052257c8ee1d4b77a58e807",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "ceedc40453b76c0e8f62995e7efa5bc7773e62cce418efdeb8b59c821b6817d2",
+          "digest": "42aeceac6c24e7837b9b8678b20f77460ab410b41052257c8ee1d4b77a58e807",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "ceedc40453b76c0e8f62995e7efa5bc7773e62cce418efdeb8b59c821b6817d2",
+          "digest": "42aeceac6c24e7837b9b8678b20f77460ab410b41052257c8ee1d4b77a58e807",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -627,6 +641,11 @@
         "kind": "feature",
         "language": "typescript",
         "number": 3,
+        "parameters": [
+          "times",
+          "limit",
+          "windowMs"
+        ],
         "skills": [
           "sliding-window",
           "queues"
@@ -637,10 +656,10 @@
         "title": "Rate-limit login attempts",
         "version": "1.0.0"
       },
-      "digest": "9b8a29bb4bfa531b4f66112e2694a4ecc1c584b4c020ef753d8bd110e4a0df55",
+      "digest": "7eb3298209921922241037189e2dd38b1e7e6be5c45351ee5b6100aecf773936",
       "state": "published",
       "testResult": {
-        "digest": "9b8a29bb4bfa531b4f66112e2694a4ecc1c584b4c020ef753d8bd110e4a0df55",
+        "digest": "7eb3298209921922241037189e2dd38b1e7e6be5c45351ee5b6100aecf773936",
         "fixtures": 3,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -649,28 +668,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "9b8a29bb4bfa531b4f66112e2694a4ecc1c584b4c020ef753d8bd110e4a0df55",
+          "digest": "7eb3298209921922241037189e2dd38b1e7e6be5c45351ee5b6100aecf773936",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "9b8a29bb4bfa531b4f66112e2694a4ecc1c584b4c020ef753d8bd110e4a0df55",
+          "digest": "7eb3298209921922241037189e2dd38b1e7e6be5c45351ee5b6100aecf773936",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "9b8a29bb4bfa531b4f66112e2694a4ecc1c584b4c020ef753d8bd110e4a0df55",
+          "digest": "7eb3298209921922241037189e2dd38b1e7e6be5c45351ee5b6100aecf773936",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "9b8a29bb4bfa531b4f66112e2694a4ecc1c584b4c020ef753d8bd110e4a0df55",
+          "digest": "7eb3298209921922241037189e2dd38b1e7e6be5c45351ee5b6100aecf773936",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -811,11 +830,6 @@
         "kind": "bug",
         "language": "python",
         "number": 1,
-        "runtime": {
-          "id": "pyodide",
-          "python": "3.14.2",
-          "version": "314.0.7"
-        },
         "skills": [
           "parsing",
           "strings",
@@ -827,10 +841,10 @@
         "title": "CSV import splits company names on commas",
         "version": "1.0.0"
       },
-      "digest": "0d5c36f6ce8500fa6a48773f4193782e8351baed31e447296c56464cc5caf388",
+      "digest": "3b2419eff730f1330280c56ad0d761fb756b4ca184070bed544d5b6427c8e8a9",
       "state": "published",
       "testResult": {
-        "digest": "0d5c36f6ce8500fa6a48773f4193782e8351baed31e447296c56464cc5caf388",
+        "digest": "3b2419eff730f1330280c56ad0d761fb756b4ca184070bed544d5b6427c8e8a9",
         "fixtures": 4,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -839,28 +853,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "0d5c36f6ce8500fa6a48773f4193782e8351baed31e447296c56464cc5caf388",
+          "digest": "3b2419eff730f1330280c56ad0d761fb756b4ca184070bed544d5b6427c8e8a9",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "0d5c36f6ce8500fa6a48773f4193782e8351baed31e447296c56464cc5caf388",
+          "digest": "3b2419eff730f1330280c56ad0d761fb756b4ca184070bed544d5b6427c8e8a9",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "0d5c36f6ce8500fa6a48773f4193782e8351baed31e447296c56464cc5caf388",
+          "digest": "3b2419eff730f1330280c56ad0d761fb756b4ca184070bed544d5b6427c8e8a9",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "0d5c36f6ce8500fa6a48773f4193782e8351baed31e447296c56464cc5caf388",
+          "digest": "3b2419eff730f1330280c56ad0d761fb756b4ca184070bed544d5b6427c8e8a9",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -915,11 +929,6 @@
         "kind": "feature",
         "language": "python",
         "number": 2,
-        "runtime": {
-          "id": "pyodide",
-          "python": "3.14.2",
-          "version": "314.0.7"
-        },
         "skills": [
           "maps",
           "data-cleaning"
@@ -930,10 +939,10 @@
         "title": "Deduplicate customer records by email",
         "version": "1.0.0"
       },
-      "digest": "c126e2d4fbf38bb67c49450e66fc85b66f69da90ca53c45594af52e712521b1d",
+      "digest": "039e783d85745dbf537bee87610b64607e791e22f3be0835bae391ff34d3950d",
       "state": "published",
       "testResult": {
-        "digest": "c126e2d4fbf38bb67c49450e66fc85b66f69da90ca53c45594af52e712521b1d",
+        "digest": "039e783d85745dbf537bee87610b64607e791e22f3be0835bae391ff34d3950d",
         "fixtures": 2,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -942,28 +951,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "c126e2d4fbf38bb67c49450e66fc85b66f69da90ca53c45594af52e712521b1d",
+          "digest": "039e783d85745dbf537bee87610b64607e791e22f3be0835bae391ff34d3950d",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "c126e2d4fbf38bb67c49450e66fc85b66f69da90ca53c45594af52e712521b1d",
+          "digest": "039e783d85745dbf537bee87610b64607e791e22f3be0835bae391ff34d3950d",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "c126e2d4fbf38bb67c49450e66fc85b66f69da90ca53c45594af52e712521b1d",
+          "digest": "039e783d85745dbf537bee87610b64607e791e22f3be0835bae391ff34d3950d",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "c126e2d4fbf38bb67c49450e66fc85b66f69da90ca53c45594af52e712521b1d",
+          "digest": "039e783d85745dbf537bee87610b64607e791e22f3be0835bae391ff34d3950d",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -1021,6 +1030,7 @@
         "kind": "feature",
         "language": "sql",
         "number": 3,
+        "schema": "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  customer text NOT NULL,\n  total integer NOT NULL\n);",
         "skills": [
           "aggregation",
           "sorting"
@@ -1031,10 +1041,10 @@
         "title": "Revenue by customer for the monthly report",
         "version": "1.0.0"
       },
-      "digest": "3f9242e07b02242f937a9fc5c3e918b51c347edea9209861166f336b9c3ef91d",
+      "digest": "105234bdd90c212f3f24a65bd81c84329c7f41a1bc0618c1e96487f4f65ec82d",
       "state": "published",
       "testResult": {
-        "digest": "3f9242e07b02242f937a9fc5c3e918b51c347edea9209861166f336b9c3ef91d",
+        "digest": "105234bdd90c212f3f24a65bd81c84329c7f41a1bc0618c1e96487f4f65ec82d",
         "fixtures": 1,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1043,28 +1053,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "3f9242e07b02242f937a9fc5c3e918b51c347edea9209861166f336b9c3ef91d",
+          "digest": "105234bdd90c212f3f24a65bd81c84329c7f41a1bc0618c1e96487f4f65ec82d",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "3f9242e07b02242f937a9fc5c3e918b51c347edea9209861166f336b9c3ef91d",
+          "digest": "105234bdd90c212f3f24a65bd81c84329c7f41a1bc0618c1e96487f4f65ec82d",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "3f9242e07b02242f937a9fc5c3e918b51c347edea9209861166f336b9c3ef91d",
+          "digest": "105234bdd90c212f3f24a65bd81c84329c7f41a1bc0618c1e96487f4f65ec82d",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "3f9242e07b02242f937a9fc5c3e918b51c347edea9209861166f336b9c3ef91d",
+          "digest": "105234bdd90c212f3f24a65bd81c84329c7f41a1bc0618c1e96487f4f65ec82d",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -1126,6 +1136,7 @@
         "kind": "feature",
         "language": "sql",
         "number": 4,
+        "schema": "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  customer text NOT NULL\n);\n\nCREATE TABLE payments (\n  order_id integer NOT NULL REFERENCES orders (id),\n  amount integer NOT NULL\n);",
         "skills": [
           "joins",
           "reconciliation"
@@ -1136,10 +1147,10 @@
         "title": "Find orders with no matching payment",
         "version": "1.0.0"
       },
-      "digest": "e540a26681828ab8d7fe334c7dd09f2c3aadfe8a7d09fe538f64d364e38ac808",
+      "digest": "f8f28d62b39f10621065705336d2ae0a7405fdfd5143d5776c042ca9f854cf68",
       "state": "published",
       "testResult": {
-        "digest": "e540a26681828ab8d7fe334c7dd09f2c3aadfe8a7d09fe538f64d364e38ac808",
+        "digest": "f8f28d62b39f10621065705336d2ae0a7405fdfd5143d5776c042ca9f854cf68",
         "fixtures": 1,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1148,28 +1159,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "e540a26681828ab8d7fe334c7dd09f2c3aadfe8a7d09fe538f64d364e38ac808",
+          "digest": "f8f28d62b39f10621065705336d2ae0a7405fdfd5143d5776c042ca9f854cf68",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "e540a26681828ab8d7fe334c7dd09f2c3aadfe8a7d09fe538f64d364e38ac808",
+          "digest": "f8f28d62b39f10621065705336d2ae0a7405fdfd5143d5776c042ca9f854cf68",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "e540a26681828ab8d7fe334c7dd09f2c3aadfe8a7d09fe538f64d364e38ac808",
+          "digest": "f8f28d62b39f10621065705336d2ae0a7405fdfd5143d5776c042ca9f854cf68",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "e540a26681828ab8d7fe334c7dd09f2c3aadfe8a7d09fe538f64d364e38ac808",
+          "digest": "f8f28d62b39f10621065705336d2ae0a7405fdfd5143d5776c042ca9f854cf68",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -1217,6 +1228,10 @@
         "kind": "feature",
         "language": "c",
         "number": 1,
+        "parameters": [
+          "capacity",
+          "values"
+        ],
         "skills": [
           "arrays",
           "modular-arithmetic"
@@ -1227,10 +1242,10 @@
         "title": "Keep the last N request latencies in memory",
         "version": "1.0.0"
       },
-      "digest": "b79bd87f3d61b7a1b8f32f57752a60cd4fcc25b734ba11b4417c0b296a6d7326",
+      "digest": "257735cf850909024ed62c211f7205deb45308b1c24292ccf6badfa836440554",
       "state": "published",
       "testResult": {
-        "digest": "b79bd87f3d61b7a1b8f32f57752a60cd4fcc25b734ba11b4417c0b296a6d7326",
+        "digest": "257735cf850909024ed62c211f7205deb45308b1c24292ccf6badfa836440554",
         "fixtures": 2,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1239,28 +1254,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "b79bd87f3d61b7a1b8f32f57752a60cd4fcc25b734ba11b4417c0b296a6d7326",
+          "digest": "257735cf850909024ed62c211f7205deb45308b1c24292ccf6badfa836440554",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "b79bd87f3d61b7a1b8f32f57752a60cd4fcc25b734ba11b4417c0b296a6d7326",
+          "digest": "257735cf850909024ed62c211f7205deb45308b1c24292ccf6badfa836440554",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "b79bd87f3d61b7a1b8f32f57752a60cd4fcc25b734ba11b4417c0b296a6d7326",
+          "digest": "257735cf850909024ed62c211f7205deb45308b1c24292ccf6badfa836440554",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "b79bd87f3d61b7a1b8f32f57752a60cd4fcc25b734ba11b4417c0b296a6d7326",
+          "digest": "257735cf850909024ed62c211f7205deb45308b1c24292ccf6badfa836440554",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -1323,6 +1338,10 @@
         "kind": "performance",
         "language": "rust",
         "number": 2,
+        "parameters": [
+          "samples",
+          "p"
+        ],
         "skills": [
           "sorting",
           "statistics"
@@ -1333,10 +1352,10 @@
         "title": "p99 latency panel times out in busy hours",
         "version": "1.0.0"
       },
-      "digest": "6467cd22680679317d6e7b0efd8556736eb0a8ee559db5e8f408f5e2ac6bd986",
+      "digest": "f6bb263e0b5d3910fda639356c4d8fbbcb5db75786d84cdc4046fbeeaaf4bc8b",
       "state": "published",
       "testResult": {
-        "digest": "6467cd22680679317d6e7b0efd8556736eb0a8ee559db5e8f408f5e2ac6bd986",
+        "digest": "f6bb263e0b5d3910fda639356c4d8fbbcb5db75786d84cdc4046fbeeaaf4bc8b",
         "fixtures": 4,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1345,28 +1364,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "6467cd22680679317d6e7b0efd8556736eb0a8ee559db5e8f408f5e2ac6bd986",
+          "digest": "f6bb263e0b5d3910fda639356c4d8fbbcb5db75786d84cdc4046fbeeaaf4bc8b",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "6467cd22680679317d6e7b0efd8556736eb0a8ee559db5e8f408f5e2ac6bd986",
+          "digest": "f6bb263e0b5d3910fda639356c4d8fbbcb5db75786d84cdc4046fbeeaaf4bc8b",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "6467cd22680679317d6e7b0efd8556736eb0a8ee559db5e8f408f5e2ac6bd986",
+          "digest": "f6bb263e0b5d3910fda639356c4d8fbbcb5db75786d84cdc4046fbeeaaf4bc8b",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "6467cd22680679317d6e7b0efd8556736eb0a8ee559db5e8f408f5e2ac6bd986",
+          "digest": "f6bb263e0b5d3910fda639356c4d8fbbcb5db75786d84cdc4046fbeeaaf4bc8b",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -1456,6 +1475,10 @@
         "kind": "bug",
         "language": "cpp",
         "number": 3,
+        "parameters": [
+          "capacity",
+          "ops"
+        ],
         "skills": [
           "caching",
           "linked-lists",
@@ -1467,10 +1490,10 @@
         "title": "Cache evicts entries that were just used",
         "version": "1.0.0"
       },
-      "digest": "a82d90dc7314f0a07fd0061eec5f1a3ef36c0c20a272f2e2cde3142beafe43dc",
+      "digest": "a3a3fa562bbeecc29c79236e800b86c16eb9362be7027b096a0384464aacb9e3",
       "state": "published",
       "testResult": {
-        "digest": "a82d90dc7314f0a07fd0061eec5f1a3ef36c0c20a272f2e2cde3142beafe43dc",
+        "digest": "a3a3fa562bbeecc29c79236e800b86c16eb9362be7027b096a0384464aacb9e3",
         "fixtures": 2,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1479,28 +1502,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "a82d90dc7314f0a07fd0061eec5f1a3ef36c0c20a272f2e2cde3142beafe43dc",
+          "digest": "a3a3fa562bbeecc29c79236e800b86c16eb9362be7027b096a0384464aacb9e3",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "a82d90dc7314f0a07fd0061eec5f1a3ef36c0c20a272f2e2cde3142beafe43dc",
+          "digest": "a3a3fa562bbeecc29c79236e800b86c16eb9362be7027b096a0384464aacb9e3",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "a82d90dc7314f0a07fd0061eec5f1a3ef36c0c20a272f2e2cde3142beafe43dc",
+          "digest": "a3a3fa562bbeecc29c79236e800b86c16eb9362be7027b096a0384464aacb9e3",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "a82d90dc7314f0a07fd0061eec5f1a3ef36c0c20a272f2e2cde3142beafe43dc",
+          "digest": "a3a3fa562bbeecc29c79236e800b86c16eb9362be7027b096a0384464aacb9e3",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]

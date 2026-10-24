@@ -1,24 +1,22 @@
 /**
- * Browser-side controller for the sandboxed Python runtime. Every run gets a fresh sandbox:
+ * Browser-side controller for a sandboxed language runtime (see engines.ts). Every run gets a
+ * fresh sandbox:
  * finished, timed-out and cancelled runs all destroy their iframe (and with it the worker
  * and anything it spawned). A spare sandbox is prepared in the background so reruns start
  * quickly. If the runtime cannot load inside the boundary, runs fail closed as runner errors.
  */
-import manifest from "./runtime-manifest.json";
-import { sandboxDocument, WORKER_SCRIPT } from "./sandbox";
+import type { Engine } from "./engines";
+import { sandboxDocument } from "./sandbox";
 
-export const RUNTIME = {
-  id: manifest.runtime,
-  version: manifest.version,
-  python: manifest.python,
-} as const;
+export { ENGINES, engineFor, RUNNABLE_LANGUAGES, type Engine } from "./engines";
 
 export interface Bounded {
   readonly text: string;
   readonly bytes: number;
   readonly truncated: boolean;
 }
-export interface PythonError {
+/** An error raised by the solution, in its language's own words. */
+export interface CodeError {
   readonly type: string;
   readonly message: string;
   readonly traceback: Bounded;
@@ -26,21 +24,21 @@ export interface PythonError {
 /** Raw result of calling the entrypoint on one fixture input. Not a verdict. */
 export interface CaseResult {
   readonly index: number;
-  /** `json.dumps` of the return value, when it is JSON-serializable. */
+  /** The return value as JSON, when it can be represented as JSON. */
   readonly output?: Bounded;
   readonly repr?: Bounded;
   readonly unserializable?: string;
   /** The call raised. */
-  readonly error?: PythonError;
+  readonly error?: CodeError;
   /** The call returned, but converting its value (repr or JSON) raised. */
-  readonly conversionError?: PythonError;
+  readonly conversionError?: CodeError;
 }
 
 export type RunOutcome =
   | {
       readonly status: "completed" | "user-error";
       readonly phase: "compile" | "execute" | "tests";
-      readonly error?: PythonError;
+      readonly error?: CodeError;
       readonly cases: readonly CaseResult[];
       readonly stdout: Bounded;
       readonly stderr: Bounded;
@@ -57,7 +55,14 @@ export type RunOutcome =
 export interface RunRequest {
   readonly runId: string;
   readonly code: string;
-  readonly functionName: string;
+  /** The solution's file name, used in error locations. */
+  readonly filename: string;
+  readonly language: string;
+  readonly entrypoint: string;
+  /** When set, each input is the list of arguments; otherwise it is the only argument. */
+  readonly parameters?: readonly string[];
+  /** SQL: statements that create the schema before each case. */
+  readonly setup?: string;
   /** Fixture inputs only; expected outputs never enter the sandbox. */
   readonly inputs: readonly unknown[];
 }
@@ -74,7 +79,7 @@ interface Sandbox {
   destroy(): void;
 }
 
-export class PythonRunner {
+export class Runner {
   private assets?: Promise<Record<string, ArrayBuffer>>;
   private spare?: Sandbox;
   private active?: { sandbox: Sandbox; finish: (outcome: RunOutcome) => void };
@@ -82,12 +87,13 @@ export class PythonRunner {
   private readonly assetBase: URL;
 
   constructor(
+    readonly engine: Engine,
     private readonly host: HTMLElement,
     private readonly options: { timeoutMs: number; assetBase?: string },
   ) {
     // Credentials are sent with asset requests, so they may only go to this page's origin.
     this.assetBase = new URL(
-      options.assetBase ?? manifest.basePath,
+      options.assetBase ?? engine.basePath,
       location.href,
     );
     if (this.assetBase.origin !== location.origin)
@@ -175,7 +181,7 @@ export class PythonRunner {
     // receives bytes, never credentials. Each file must match its pinned hash, and any
     // redirect (for example to a sign-in page) fails instead of being followed.
     this.assets ??= Promise.all(
-      Object.entries(manifest.files).map(async ([name, integrity]) => {
+      Object.entries(this.engine.files).map(async ([name, integrity]) => {
         let response: Response;
         try {
           response = await fetch(new URL(name, this.assetBase), {
@@ -205,7 +211,7 @@ export class PythonRunner {
     frame.sandbox.add("allow-scripts");
     frame.referrerPolicy = "no-referrer";
     frame.hidden = true;
-    frame.title = "Python sandbox";
+    frame.title = `${this.engine.label} sandbox`;
     let listener: ((event: MessageEvent) => void) | undefined;
     let destroyed = false;
     const sandbox: Sandbox = {
@@ -220,7 +226,7 @@ export class PythonRunner {
     let isReady = false;
     const ready = new Promise<void>((resolve, reject) => {
       const timer = setTimeout(
-        () => reject(new Error("The Python runtime did not start in time.")),
+        () => reject(new Error(`${this.engine.label} did not start in time.`)),
         BOOT_TIMEOUT_MS,
       );
       listener = (event: MessageEvent) => {
@@ -234,9 +240,9 @@ export class PythonRunner {
               frame.contentWindow?.postMessage(
                 {
                   type: "init",
-                  workerSource: WORKER_SCRIPT,
+                  workerSource: this.engine.worker,
                   assets,
-                  lock: manifest.lockInfo,
+                  config: this.engine.config,
                 },
                 "*",
               ),
@@ -252,7 +258,7 @@ export class PythonRunner {
           else
             reject(
               new Error(
-                `The Python runtime failed to start: ${text(data.message, 500)}`,
+                `${this.engine.label} failed to start: ${text(data.message, 500)}`,
               ),
             );
         } else sandbox.onMessage?.(data);
@@ -294,9 +300,9 @@ function parseResult(data: unknown, runId: string): RunOutcome | undefined {
           ...(typeof result.unserializable === "string"
             ? { unserializable: result.unserializable.slice(0, 500) }
             : {}),
-          ...(result.error ? { error: pythonError(result.error) } : {}),
+          ...(result.error ? { error: codeError(result.error) } : {}),
           ...(result.conversionError
-            ? { conversionError: pythonError(result.conversionError) }
+            ? { conversionError: codeError(result.conversionError) }
             : {}),
         };
       })
@@ -304,7 +310,7 @@ function parseResult(data: unknown, runId: string): RunOutcome | undefined {
   return {
     status: message.error ? "user-error" : "completed",
     phase,
-    ...(message.error ? { error: pythonError(message.error) } : {}),
+    ...(message.error ? { error: codeError(message.error) } : {}),
     cases,
     stdout: bounded(message.stdout),
     stderr: bounded(message.stderr),
@@ -314,7 +320,7 @@ function parseResult(data: unknown, runId: string): RunOutcome | undefined {
   };
 }
 
-function pythonError(value: unknown): PythonError {
+function codeError(value: unknown): CodeError {
   const error = (value ?? {}) as Record<string, unknown>;
   return {
     type: text(error.type, 200),

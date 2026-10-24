@@ -13,12 +13,14 @@ import { boundText, CAPTURE_LIMIT_BYTES } from "./evidence";
 import { safeIdentifier } from "./events";
 
 /**
+ * 1.3.0: JavaScript, TypeScript and SQL run too; the runtime names the engine that ran the
+ * code (pyodide, browser-javascript or pglite), and cases may list several arguments.
  * 1.2.0: runs say whether they were local or a pull request's checks, and each pull request
  * is recorded with its result. 1.1.0: code revisions in any language (the media type follows the file), the editor's
  * keymap among its features, and a null runtime for languages that cannot run yet.
  * 1.0.0 was Python only. Stored records keep theirs.
  */
-export const WORKSPACE_CAPTURE_VERSION = "workspace-capture-1.2.0";
+export const WORKSPACE_CAPTURE_VERSION = "workspace-capture-1.3.0";
 export const PYTHON_MEDIA_TYPE = "text/x-python; charset=utf-8";
 /** An edit whose change set is larger than this is recorded without it, plus a snapshot. */
 export const EDIT_CHANGES_LIMIT_BYTES = 16384;
