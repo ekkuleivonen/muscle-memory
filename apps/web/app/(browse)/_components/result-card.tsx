@@ -174,6 +174,36 @@ export function ResultFacts({ state }: { state: ResultState }) {
 }
 
 /**
+ * Copies text: the Clipboard API where the page is a secure context (HTTPS, localhost), else
+ * the older select-and-copy, which also works over plain HTTP (a LAN address in development).
+ */
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // Denied or unavailable: try the fallback.
+  }
+  const area = document.createElement("textarea");
+  area.value = text;
+  area.setAttribute("readonly", "");
+  area.style.position = "fixed";
+  area.style.opacity = "0";
+  // Inside the open dialog, so the modal's focus trap does not block the selection.
+  (document.querySelector("dialog[open]") ?? document.body).append(area);
+  area.select();
+  try {
+    return document.execCommand("copy");
+  } catch {
+    return false;
+  } finally {
+    area.remove();
+  }
+}
+
+/**
  * Share, with a preview of exactly what a post or chat will show (the shared link's image),
  * then copy, X, LinkedIn or the system share sheet. The fix itself is never shared.
  */
@@ -196,10 +226,8 @@ export function ShareResult({
       { id: issue.slug, revision: issue.revision },
       { issueKey: issue.key, channel, ref: result.c, card: result as unknown as Json },
     );
-    if (channel === "copy") {
-      await navigator.clipboard.writeText(`${text} ${url}`);
-      setCopied(true);
-    } else if (channel === "x")
+    if (channel === "copy") setCopied(await copyText(`${text} ${url}`));
+    else if (channel === "x")
       window.open(`https://x.com/intent/post?${new URLSearchParams({ text, url })}`, "_blank", "noopener");
     else if (channel === "linkedin")
       window.open(
