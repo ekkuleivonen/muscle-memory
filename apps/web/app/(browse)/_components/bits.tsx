@@ -58,8 +58,10 @@ export function ProjectSquare({
 }
 
 export function Avatar({ name }: { name: string }) {
+  // "Priya K" → PK, "Quiet-Compiler-4821" → QC.
   const initials = name
-    .split(/\s+/)
+    .split(/[\s-]+/)
+    .filter((part) => /^[a-z]/i.test(part))
     .map((part) => part[0])
     .join("")
     .slice(0, 2)

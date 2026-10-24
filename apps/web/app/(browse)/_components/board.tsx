@@ -10,6 +10,7 @@ import {
 import type { BoardMoveVia } from "../../../../../packages/domain/board";
 import { ACTIVITY_KEY, parseConsent } from "../../../lib/activity-log";
 import {
+  BOARD_CHANGE as CHANGE,
   BOARD_KEY,
   boardFull,
   parseBoard,
@@ -24,7 +25,6 @@ import {
 import { logBoardMove } from "./board-log";
 import { StatusIcon } from "./icons";
 
-const CHANGE = "muscle-memory:board";
 const OPTIONS: readonly Status[] = ["backlog", "todo", "in-progress", "done"];
 
 /** What a move needs to know about the issue: its key and the exact content shown. */
@@ -275,8 +275,8 @@ export function ActivityLogNote() {
       {on
         ? "Status changes are recorded in this browser only. "
         : "Status changes are not recorded. "}
-      <Link href="/onboarding">
-        {on ? "Turn it off in Setup (log off)" : "Turn it on in Setup (log on)"}
+      <Link href="/settings#privacy">
+        {on ? "Turn it off in Settings" : "Turn it on in Settings"}
       </Link>
     </p>
   );

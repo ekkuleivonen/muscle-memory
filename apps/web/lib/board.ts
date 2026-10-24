@@ -6,6 +6,8 @@
 import type { IssueSummary as Issue } from "./library";
 
 export const BOARD_KEY = "muscle-memory.board";
+/** Same-tab change notice; other tabs hear the storage event. */
+export const BOARD_CHANGE = "muscle-memory:board";
 /** More than this many in Todo gets a gentle nudge, not a block. */
 export const TODO_LIMIT = 3;
 

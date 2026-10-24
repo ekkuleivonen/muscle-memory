@@ -11,7 +11,14 @@ import {
   encodePendingExport,
   openPracticeStore,
 } from "../../../../packages/browser/practice-store";
-import { BOARD_KEY } from "../../lib/board";
+import {
+  deleteAccount,
+  ensureHandle,
+  hasSession,
+  readProfile,
+  saveProfile,
+  startSession,
+} from "../../lib/account";
 import {
   ACTIVITY_DISCLOSURE,
   ACTIVITY_KEY,
@@ -20,14 +27,7 @@ import {
 } from "../../lib/activity-log";
 import { boardPayloads } from "../../../../packages/domain/board";
 import { languageLabel } from "../../lib/library";
-import {
-  issuesFor,
-  ONBOARDING_COOKIE,
-  ONBOARDING_VERSION,
-  PROFILE_KEY,
-  type Profile,
-  type StoredProfile,
-} from "../../lib/onboarding";
+import { issuesFor, type Profile } from "../../lib/onboarding";
 import { COMMANDS, complete, parseCommand } from "./commands";
 import {
   choose,
@@ -56,28 +56,6 @@ type Active =
     };
 
 const PS1 = "~ $";
-const YEAR_SECONDS = 60 * 60 * 24 * 365;
-
-function readProfile(): StoredProfile | null {
-  try {
-    const stored = JSON.parse(
-      localStorage.getItem(PROFILE_KEY) ?? "null",
-    ) as StoredProfile | null;
-    return stored?.version === ONBOARDING_VERSION ? stored : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveProfile(profile: Profile) {
-  const stored: StoredProfile = {
-    version: ONBOARDING_VERSION,
-    completedAt: new Date().toISOString(),
-    profile,
-  };
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(stored));
-  document.cookie = `${ONBOARDING_COOKIE}=${ONBOARDING_VERSION}; Path=/; Max-Age=${YEAR_SECONDS}; SameSite=Lax`;
-}
 
 function activityLogOn(): boolean {
   return parseConsent(localStorage.getItem(ACTIVITY_KEY)) !== null;
@@ -92,13 +70,6 @@ function download(name: string, text: string) {
   link.download = name;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function forgetProfile() {
-  localStorage.removeItem(PROFILE_KEY);
-  localStorage.removeItem(BOARD_KEY);
-  localStorage.removeItem(ACTIVITY_KEY);
-  document.cookie = `${ONBOARDING_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
 }
 
 /**
@@ -193,7 +164,7 @@ export function Terminal({ next }: { next: string | null }) {
       if (answer !== null) answers[question.id] = answer;
     }
     profile.current = toProfile(answers);
-    saveProfile(profile.current);
+    const { handle } = saveProfile(profile.current);
     const { languages = [], editor } = profile.current;
     print(
       "",
@@ -213,6 +184,11 @@ export function Terminal({ next }: { next: string | null }) {
           ]
         : []),
       <span className="t-ok">Laptop ready.</span>,
+      <span>
+        <span className="t-dim">→</span> your handle is{" "}
+        <span className="t-brand">{handle}</span>{" "}
+        <span className="t-dim">(anonymous, handed out at random)</span>
+      </span>,
     );
     printProfile(profile.current);
     print(
@@ -314,18 +290,14 @@ export function Terminal({ next }: { next: string | null }) {
         initial: false,
       });
       if (!sure) return print(<span className="t-dim">Nothing cleared.</span>);
+      await deleteAccount();
+      profile.current = null;
+      return print(
+        "Cleared. Downloaded copies must be removed separately. Setup starts again on your next visit, or run setup now.",
+      );
     }
     const store = await openPracticeStore();
     try {
-      if (sub === "clear") {
-        await store.clear();
-        forgetProfile();
-        profile.current = null;
-        print(
-          "Cleared. Downloaded copies must be removed separately. Setup starts again on your next visit, or run setup now.",
-        );
-        return;
-      }
       const events = await store.pending();
       const moves = boardPayloads(await store.workspaceRecords());
       if (!events.length && !moves.length)
@@ -391,10 +363,39 @@ export function Terminal({ next }: { next: string | null }) {
               </span>,
             );
           break;
-        case "home":
+        case "login": {
+          const handle = ensureHandle();
+          if (!handle) {
+            print(
+              <span>
+                No account on this device yet. Run <Cmd line="setup" />.
+              </span>,
+            );
+            break;
+          }
+          startSession();
+          print(
+            <span>
+              Signed in as <span className="t-brand">{handle}</span>.
+            </span>,
+          );
           return go(next ?? "/");
+        }
+        case "home":
         case "issues":
-          return go(issuesFor(profile.current ?? {}));
+          if (profile.current && !hasSession()) {
+            print(
+              <span>
+                You&apos;re signed out. Run <Cmd line="login" /> first.
+              </span>,
+            );
+            break;
+          }
+          return go(
+            command.name === "home"
+              ? (next ?? "/")
+              : issuesFor(profile.current ?? {}),
+          );
         case "data":
           await data(command.args[0]);
           break;
@@ -430,7 +431,26 @@ export function Terminal({ next }: { next: string | null }) {
     const stored = readProfile();
     if (stored) {
       profile.current = stored.profile;
-      print("", <span>You&apos;re already set up.</span>);
+      const handle = ensureHandle();
+      if (!hasSession()) {
+        print(
+          "",
+          <span>
+            Signed out. <Cmd line="login" /> to continue as{" "}
+            <span className="t-brand">{handle}</span>, or <Cmd line="setup" />{" "}
+            to answer the questions again.
+          </span>,
+        );
+        setActive({ type: "shell" });
+        return;
+      }
+      print(
+        "",
+        <span>
+          Welcome back, <span className="t-brand">{handle}</span>. You&apos;re
+          already set up.
+        </span>,
+      );
       printProfile(stored.profile);
       print(
         "",

@@ -4,7 +4,8 @@ import { usePathname } from "next/navigation";
 import { projectHref, type ProjectRef } from "../../../lib/library";
 import { ProjectSquare } from "./bits";
 import { BoardCount } from "./board";
-import { BoardIcon, ProjectsIcon, IssuesIcon, TerminalIcon } from "./icons";
+import { BoardIcon, ProjectsIcon, IssuesIcon } from "./icons";
+import { ProfileMenu } from "./profile-menu";
 
 export function Sidebar({
   projects,
@@ -58,9 +59,7 @@ export function Sidebar({
         </Link>
       ))}
       <div className="spacer" />
-      <Link className="side-link" href="/onboarding">
-        <TerminalIcon /> Setup
-      </Link>
+      <ProfileMenu />
     </aside>
   );
 }

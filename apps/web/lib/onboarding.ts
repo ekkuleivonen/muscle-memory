@@ -19,6 +19,8 @@ export interface Profile {
 export interface StoredProfile {
   version: string;
   completedAt: string;
+  /** Anonymous, handed out rather than chosen: Quiet-Compiler-4821. */
+  handle?: string;
   profile: Profile;
 }
 

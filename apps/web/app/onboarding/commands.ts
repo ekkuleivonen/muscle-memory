@@ -1,6 +1,7 @@
 /** Shell commands available once setup is done, plus parsing and Tab completion. */
 export const COMMANDS = [
   { name: "help", summary: "list commands" },
+  { name: "login", summary: "sign back in on this device after logging out" },
   { name: "setup", summary: "answer the setup questions again" },
   { name: "profile", summary: "show your answers" },
   { name: "home", summary: "go to your dashboard (or back where you were)" },

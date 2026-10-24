@@ -1013,3 +1013,202 @@ kbd {
     grid-template-columns: 1fr;
   }
 }
+
+/* Profile menu, bottom of the sidebar */
+.profile-menu {
+  position: relative;
+}
+.profile-trigger {
+  width: 100%;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  text-align: left;
+}
+.profile-trigger .avatar {
+  width: 22px;
+  height: 22px;
+  font-size: 9.5px;
+}
+.profile-trigger .handle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profile-trigger .caret {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--faint);
+}
+.profile-pop {
+  top: auto;
+  bottom: calc(100% + 4px);
+  width: 100%;
+}
+.profile-head {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.profile-head .faint {
+  font-size: 11.5px;
+}
+.profile-pop .menu-item {
+  width: 100%;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+.profile-pop .menu-item:focus-visible {
+  background: var(--hover);
+  outline: none;
+}
+
+/* Settings */
+.settings {
+  max-width: 720px;
+}
+.settings h1 {
+  font-size: 22px;
+  margin: 8px 0 20px;
+}
+.settings-section {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+.settings-section h2 {
+  font-size: 14px;
+  margin: 0 0 14px;
+}
+.settings-section > p.dim {
+  margin: 0 0 12px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+}
+.field > label,
+.field > legend {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 0;
+}
+.field > legend {
+  margin-bottom: 6px;
+}
+.field .hint {
+  margin: 0;
+}
+.field input:not([type]),
+.field select,
+.danger-confirm input {
+  height: 32px;
+  max-width: 360px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 13px;
+}
+.field input[readonly] {
+  background: var(--bg-subtle);
+  color: var(--dim);
+}
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.choices .choice {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 4px 10px 4px 8px;
+}
+.choices .choice:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.choice input {
+  accent-color: var(--accent);
+  margin: 0;
+}
+.toggle {
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.form-actions .hint {
+  margin: 0;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.danger-zone {
+  border-color: color-mix(in srgb, var(--red) 45%, var(--line));
+}
+.danger-zone h2 {
+  color: var(--red);
+}
+.danger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+}
+.danger-row + .danger-row {
+  border-top: 1px solid var(--line);
+}
+.danger-row b {
+  font-size: 13.5px;
+}
+.danger-row .hint {
+  margin: 4px 0 0;
+}
+.btn.danger {
+  color: var(--red);
+}
+.btn.danger:not(:disabled):hover {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+.danger-confirm {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+.danger-confirm.wide {
+  flex-direction: column;
+  padding: 12px 0 4px;
+  font-size: 13px;
+}
