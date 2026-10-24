@@ -1,4 +1,5 @@
-import { LANGUAGES } from "../../lib/languages";
+import { RUNNABLE_LANGUAGES } from "../../../../packages/runner/engines";
+import { LANGUAGES, OFFERED } from "../../lib/languages";
 import type { Profile } from "../../lib/onboarding";
 import type { Answer, Prompt } from "./prompts";
 
@@ -18,7 +19,11 @@ export const QUESTIONS = [
     kind: "multiselect",
     id: "languages",
     message: "Which languages should we install on your laptop?",
-    choices: LANGUAGES.map(({ id, label }) => ({ value: id, label })),
+    choices: OFFERED.map((id) => ({
+      value: id,
+      label: LANGUAGES.find((l) => l.id === id)!.label,
+      ...(RUNNABLE_LANGUAGES.includes(id) ? {} : { hint: "coming soon" }),
+    })),
     min: 1,
   },
   {

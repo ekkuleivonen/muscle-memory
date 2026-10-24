@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { EditorState, type Transaction } from "@codemirror/state";
 import { MemorySink } from "../../../../packages/capture/recorder";
 import type { Challenge } from "../../../../packages/domain/assessment";
-import type { PythonRunner } from "../../../../packages/runner/runner";
+import type { Runner } from "../../../../packages/runner/runner";
 import { WorkspaceSession } from "./session";
 
 const challenge = JSON.parse(
@@ -24,7 +24,7 @@ function session(sink: MemorySink) {
     challenge,
     sink,
     initialCode: "",
-    runner: () => ({ running: false }) as unknown as PythonRunner,
+    runner: () => ({ running: false }) as unknown as Runner,
     onRun: () => undefined,
     onEditedAfterRun: () => undefined,
   });

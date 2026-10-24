@@ -33,6 +33,12 @@ const challenge = (
     expected: unknown[];
     hints?: string[];
     comments?: Comment[];
+    /** Named when each input lists several arguments; otherwise it is the only one. */
+    parameters?: string[];
+    /** SQL: the tables each case's rows go into. */
+    schema?: string;
+    /** C and C++: turns a case's JSON arguments into the function's types. */
+    adapter?: string;
   },
 ) => ({
   id,
@@ -41,16 +47,42 @@ const challenge = (
   hints: [],
   ...fields,
   ...STARTERS[id],
-  ...(fields.language === "python" ? { runtime: PYODIDE } : {}),
 });
 
 /**
  * The file each issue opens in the IDE: an entry point and starter code in the issue's own
- * language, written like the file you would find at work. Python ones also name the runtime,
- * which makes them runnable in the browser; the rest are editable until a runner exists.
+ * language, written like the file you would find at work. Whether it runs in the browser is
+ * up to the app's runners, not the content.
  */
-const PYODIDE = { id: "pyodide", python: "3.14.2", version: "314.0.7" };
 const STARTERS: Record<string, { entrypoint: string; starter: string }> = {
+  "late-fee-rounding": {
+    entrypoint: "LateFee",
+    starter: `namespace Billing;
+
+public static class LateFees
+{
+    /// <summary>
+    /// The late fee on an overdue invoice: 0.5% of the balance per day late, at most 10% of
+    /// the balance, in cents. Finance rounds halves away from zero.
+    /// </summary>
+    public static decimal LateFee(decimal balance, int daysLate)
+    {
+        if (daysLate <= 0) return 0;
+        var fee = balance * 0.005m * daysLate;
+        return Math.Round(Math.Min(fee, balance * 0.10m), 2);
+    }
+}
+`,
+  },
+  "workspace-slugs": {
+    entrypoint: "slugify",
+    starter: `# Workspace URLs are /w/<slug>. Turn a workspace name into its slug:
+# lowercase ASCII letters and digits, words joined by single hyphens.
+def slugify(name)
+  name.downcase.tr(" ", "-")
+end
+`,
+  },
   "format-price": {
     entrypoint: "formatPrice",
     starter: `/**
@@ -76,10 +108,10 @@ export function applyDiscount(totalCents: number, code: string, codes: Codes): n
 `,
   },
   "filter-form-labels": {
-    entrypoint: "render",
+    entrypoint: "page",
     starter: `<!--
-  Product filters on the category page. Render one checkbox per filter name,
-  each with a label tied to it, all inside the form.
+  Product filters on the category page. The accessibility audit flagged these
+  checkboxes: each needs a label tied to it.
 -->
 <form>
   <input type="checkbox" name="in-stock"> in-stock
@@ -215,12 +247,18 @@ size_t ring_buffer(size_t capacity, const int *values, size_t count, int *out)
 `,
   },
   "p99-latency": {
-    entrypoint: "percentile",
-    starter: `/// Nearest-rank percentile of the samples: sort them and take the value at
-/// rank ceil(p / 100 × n), counting from 1. None when there are no samples.
-pub fn percentile(samples: &[u32], p: f64) -> Option<u32> {
-    let _ = (samples, p);
-    None
+    entrypoint: "Percentile",
+    starter: `package metrics
+
+import "sort"
+
+// Percentile returns the nearest-rank percentile of the samples: sort them and
+// take the value at rank ceil(p / 100 × n), counting from 1. ok is false when
+// there are no samples.
+func Percentile(samples []int, p float64) (value int, ok bool) {
+	sorted := append([]int(nil), samples...)
+	sort.Ints(sorted)
+	return 0, false
 }
 `,
   },
@@ -245,12 +283,16 @@ std::vector<int> simulate(int capacity, const std::vector<Op>& ops) {
 `,
   },
   "parse-duration": {
-    entrypoint: "parse_duration",
-    starter: `/// Parses durations like "1h30m", "45s" or "2h" into seconds. Units are h, m
-/// and s, each at most once and in that order; anything else is None.
-pub fn parse_duration(text: &str) -> Option<u64> {
-    let _ = text;
-    None
+    entrypoint: "ParseDuration",
+    starter: `package config
+
+import "errors"
+
+// ParseDuration turns durations like "1h30m", "45s" or "2h" into seconds.
+// Units are h, m and s, each at most once and in that order; anything else
+// is an error.
+func ParseDuration(text string) (int, error) {
+	return 0, errors.New("not implemented")
 }
 `,
   },
@@ -308,6 +350,7 @@ const challenges = [
     ],
   }),
   challenge("discount-codes", {
+    parameters: ["totalCents", "code", "codes"],
     title: "Discount codes fail when typed in lowercase",
     summary: "Match promo codes case-insensitively and ignore stray spaces.",
     kind: "bug",
@@ -330,17 +373,25 @@ const challenges = [
     ],
   }),
   challenge("filter-form-labels", {
+    parameters: ["selector", "read"],
     title: "Product filter checkboxes have no labels",
     summary: "Tie every filter checkbox to a label so it is accessible.",
     kind: "refactor",
     difficulty: "warm-up",
     language: "html",
     skills: ["accessibility", "forms", "semantics"],
-    task: 'Render the product filter form: for each filter name, a `<label for="filter-NAME">` with the name as text, followed by `<input type="checkbox" id="filter-NAME" name="NAME">`, all inside a `<form>`.',
-    inputs: [["in-stock", "on-sale"], []],
+    task: 'The category page\'s filter form has two checkboxes, `in-stock` and `on-sale`, with bare text next to them, so screen readers announce "checkbox" and nothing else. Give each checkbox the id `filter-NAME` and a `<label for="filter-NAME">` with its name as the text. Keep the `name` attributes, and keep everything inside the `<form>`. The checks query the page like the frontend tests do: each one is a CSS selector and what to read from the matches (their count, text, accessible label or an attribute).',
+    inputs: [
+      ["form input[type=checkbox]", "name"],
+      ["form input[type=checkbox]", "id"],
+      ["form input[type=checkbox]", "label"],
+      ["form label", "text"],
+    ],
     expected: [
-      '<form><label for="filter-in-stock">in-stock</label><input type="checkbox" id="filter-in-stock" name="in-stock"><label for="filter-on-sale">on-sale</label><input type="checkbox" id="filter-on-sale" name="on-sale"></form>',
-      "<form></form>",
+      ["in-stock", "on-sale"],
+      ["filter-in-stock", "filter-on-sale"],
+      ["in-stock", "on-sale"],
+      ["in-stock", "on-sale"],
     ],
     comments: [
       ada(
@@ -349,6 +400,7 @@ const challenges = [
     ],
   }),
   challenge("debounce-search", {
+    parameters: ["keystrokes", "waitMs"],
     title: "Search box sends a request on every keystroke",
     summary:
       "Debounce search-as-you-type so the API sees one request per pause.",
@@ -396,6 +448,7 @@ const challenges = [
     ],
   }),
   challenge("reset-link-expiry", {
+    parameters: ["issuedAt", "now", "ttlMinutes"],
     title: "Password reset links expire after a minute",
     summary: "The TTL is in minutes but the check compares seconds.",
     kind: "bug",
@@ -417,6 +470,7 @@ const challenges = [
     ],
   }),
   challenge("rate-limiter", {
+    parameters: ["times", "limit", "windowMs"],
     title: "Rate-limit login attempts",
     summary: "Allow at most n attempts in any sliding window.",
     kind: "feature",
@@ -434,6 +488,25 @@ const challenges = [
     comments: [
       sam(
         "Credential-stuffing bot again last night. A sliding window per IP, nothing fancy.",
+      ),
+    ],
+  }),
+  challenge("workspace-slugs", {
+    title: "Workspace URLs break on names with accents",
+    summary: "Make URL slugs from workspace names, accents and all.",
+    kind: "bug",
+    difficulty: "easy",
+    language: "ruby",
+    skills: ["strings", "unicode", "urls"],
+    task: '`slugify(name)` turns a workspace name into its URL slug: lowercase ASCII letters and digits, with every run of anything else between words becoming a single hyphen, and no hyphen at either end. Accented Latin letters lose their accents first, so `"Café Ünïcorn"` becomes `"cafe-unicorn"`.',
+    inputs: ["Acme Inc", "  Café   Ünïcorn  ", "R&D / Ops", "2024 Planning!!", "---"],
+    expected: ["acme-inc", "cafe-unicorn", "r-d-ops", "2024-planning", ""],
+    hints: [
+      "Unicode normalization (NFD) splits a letter from its accent, so the accent can be dropped.",
+    ],
+    comments: [
+      mateo(
+        "Support has a customer whose workspace is \"Équipe Été\". The link we email them is /w/%C3%A9quipe-%C3%A9t%C3%A9 and it 404s.",
       ),
     ],
   }),
@@ -509,7 +582,35 @@ const challenges = [
       ),
     ],
   }),
+  challenge("late-fee-rounding", {
+    parameters: ["balance", "daysLate"],
+    title: "Late fees are a cent off on some invoices",
+    summary: "Round late fees the way finance does: halves away from zero.",
+    kind: "bug",
+    difficulty: "easy",
+    language: "csharp",
+    skills: ["rounding", "decimals", "finance"],
+    task: "`LateFee(balance, daysLate)` is the fee on an overdue invoice: 0.5% of the balance per day late, capped at 10% of the balance, rounded to cents with halves rounded away from zero. Nothing is charged when the invoice is not late.",
+    inputs: [
+      [100.0, 1],
+      [101.0, 1],
+      [1.0, 1],
+      [250.0, 30],
+      [99.9, 3],
+      [80.0, 0],
+    ],
+    expected: [0.5, 0.51, 0.01, 25, 1.5, 0],
+    hints: [
+      "Math.Round on a decimal rounds halves to the nearest even digit unless told otherwise.",
+    ],
+    comments: [
+      rui(
+        "Customers keep emailing about a one-cent difference between the invoice and the reminder. Finance's spreadsheet rounds 0.505 up.",
+      ),
+    ],
+  }),
   challenge("top-customers", {
+    schema: "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  customer text NOT NULL,\n  total integer NOT NULL\n);",
     title: "Revenue by customer for the monthly report",
     summary: "Total each customer's orders, biggest first.",
     kind: "feature",
@@ -537,6 +638,7 @@ const challenges = [
     ],
   }),
   challenge("unpaid-orders", {
+    schema: "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  customer text NOT NULL\n);\n\nCREATE TABLE payments (\n  order_id integer NOT NULL REFERENCES orders (id),\n  amount integer NOT NULL\n);",
     title: "Find orders with no matching payment",
     summary: "Reconcile orders against payments before month-end close.",
     kind: "feature",
@@ -564,6 +666,28 @@ const challenges = [
 
   // Edge proxy: systems and performance
   challenge("ring-buffer", {
+    adapter: `#include <stdlib.h>
+#include "mm_json.h"
+
+size_t ring_buffer(size_t capacity, const int *values, size_t count, int *out);
+
+/* [capacity, values] → the buffer's contents, oldest first. */
+mm_value *mm_call(const mm_value *args) {
+    size_t capacity = (size_t)mm_integer(mm_at(args, 0));
+    const mm_value *list = mm_at(args, 1);
+    size_t count = mm_length(list);
+    int *values = calloc(count + 1, sizeof(int));
+    int *out = calloc(count + 1, sizeof(int));
+    for (size_t i = 0; i < count; i++)
+        values[i] = (int)mm_integer(mm_at(list, i));
+    size_t kept = ring_buffer(capacity, values, count, out);
+    mm_value *result = mm_new_array();
+    for (size_t i = 0; i < kept && i <= count; i++)
+        mm_push(result, mm_new_integer(out[i]));
+    return result;
+}
+`,
+    parameters: ["capacity", "values"],
     title: "Keep the last N request latencies in memory",
     summary: "A fixed-size buffer that overwrites its oldest entry.",
     kind: "feature",
@@ -581,13 +705,14 @@ const challenges = [
     ],
   }),
   challenge("p99-latency", {
+    parameters: ["samples", "p"],
     title: "p99 latency panel times out in busy hours",
     summary: "Compute nearest-rank percentiles for the metrics endpoint.",
     kind: "performance",
     difficulty: "medium",
-    language: "rust",
+    language: "go",
     skills: ["sorting", "statistics"],
-    task: "`percentile(samples, p)` returns the nearest-rank percentile: sort the samples and take the value at rank `ceil(p / 100 × n)`, counting from 1. Return `null` when there are no samples.",
+    task: "`Percentile(samples, p)` returns the nearest-rank percentile: sort the samples and take the value at rank `ceil(p / 100 × n)`, counting from 1. With no samples, `ok` is false (shown as `null` in the checks).",
     inputs: [
       [[15, 20, 35, 40, 50], 30],
       [[15, 20, 35, 40, 50], 100],
@@ -602,6 +727,33 @@ const challenges = [
     ],
   }),
   challenge("lru-cache", {
+    adapter: `#include <string>
+#include <vector>
+#include "mm_json.h"
+
+struct Op {
+    std::string name;
+    int key;
+    int value;
+};
+std::vector<int> simulate(int capacity, const std::vector<Op>& ops);
+
+// [capacity, [[name, key, value?], ...]] → the result of each get.
+mm_value *mm_call(const mm_value *args) {
+    std::vector<Op> ops;
+    const mm_value *list = mm_at(args, 1);
+    for (size_t i = 0; i < mm_length(list); i++) {
+        const mm_value *op = mm_at(list, i);
+        ops.push_back({mm_string(mm_at(op, 0)), (int)mm_integer(mm_at(op, 1)),
+                       (int)mm_integer(mm_at(op, 2))});
+    }
+    mm_value *result = mm_new_array();
+    for (int got : simulate((int)mm_integer(mm_at(args, 0)), ops))
+        mm_push(result, mm_new_integer(got));
+    return result;
+}
+`,
+    parameters: ["capacity", "ops"],
     title: "Cache evicts entries that were just used",
     summary: "Reads must refresh recency in the LRU cache.",
     kind: "bug",
@@ -643,9 +795,9 @@ const challenges = [
     summary: "Accept durations like 1h30m in config files.",
     kind: "feature",
     difficulty: "easy",
-    language: "rust",
+    language: "go",
     skills: ["parsing", "config"],
-    task: '`parse_duration(text)` turns strings like `"1h30m"`, `"45s"` or `"2h"` into seconds. Units are `h`, `m` and `s`, each at most once and in that order; return `null` for anything else.',
+    task: '`ParseDuration(text)` turns strings like `"1h30m"`, `"45s"` or `"2h"` into seconds. Units are `h`, `m` and `s`, each at most once and in that order; anything else returns an error (shown as `null` in the checks).',
     inputs: ["1h30m", "45s", "2h", "1h1h", "90", ""],
     expected: [5400, 45, 7200, null, null, null],
     comments: [
@@ -691,7 +843,7 @@ Stack: TypeScript, JavaScript, HTML.`,
     key: "API",
     title: "Accounts API",
     summary: "Backend: sign-up, login and account endpoints behind every app.",
-    story: `The service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, and the login gateway in front is TypeScript.
+    story: `The service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, the admin back office is a small Ruby app, and the login gateway in front is TypeScript.
 
 It mostly works, and the on-call channel has opinions about the rest: list endpoints that accept any page size, reset links that expire too soon, and logs that are hard to search during an incident.
 
@@ -705,14 +857,15 @@ It mostly works, and the on-call channel has opinions about the rest: list endpo
 
 - Write backend services, or want practice with the bugs they actually get
 - Like **input validation**, edge cases and reading a stack trace at 2am
-- Know **Go**, **PHP** or **TypeScript**, or want to try one of them on familiar problems
+- Know **Go**, **PHP**, **Ruby** or **TypeScript**, or want to try one of them on familiar problems
 
-Stack: Go, PHP, TypeScript.`,
+Stack: Go, PHP, Ruby, TypeScript.`,
     challenges: [
       "pagination-params",
       "reset-link-expiry",
       "rate-limiter",
       "parse-log-line",
+      "workspace-slugs",
     ],
   },
   {
@@ -735,14 +888,15 @@ The exports are messier than anyone admits: quoted commas in company names, dupl
 
 - Work with data, or are the person on your team who ends up writing the SQL
 - Enjoy turning messy input into something you can trust
-- Know **Python** and **SQL**, or want more practice with both
+- Know **Python**, **SQL** or **C#**, or want more practice with them
 
-Stack: Python, SQL.`,
+Stack: Python, SQL, and C# for the billing jobs.`,
     challenges: [
       "csv-quoted-fields",
       "dedupe-customers",
       "top-customers",
       "unpaid-orders",
+      "late-fee-rounding",
     ],
   },
   {
@@ -750,7 +904,7 @@ Stack: Python, SQL.`,
     key: "EDGE",
     title: "Edge proxy",
     summary: "Systems: the low-latency proxy in front of everything.",
-    story: `A small proxy in front of everything: it terminates connections, caches hot responses and exports latency metrics. It's written in C, C++ and Rust, depending on who wrote which part and when.
+    story: `A small proxy in front of everything: it terminates connections, caches hot responses and exports latency metrics. The hot path is C and C++; the control plane and metrics are Go.
 
 Every allocation shows up on a flame graph here. The backlog is about doing more with fixed memory, measuring the right thing, and keeping configuration readable for whoever is paged.
 
@@ -764,9 +918,9 @@ Every allocation shows up on a flame graph here. The backlog is about doing more
 
 - Do systems or performance work, or want to get closer to the metal
 - Think about memory, ordering and what happens under load
-- Know **C**, **C++** or **Rust**, or are learning one of them
+- Know **C**, **C++** or **Go**, or are learning one of them
 
-Stack: C, C++, Rust.`,
+Stack: C, C++, Go.`,
     challenges: ["ring-buffer", "p99-latency", "lru-cache", "parse-duration"],
   },
 ].map(({ challenges: ids, ...adventure }) => ({

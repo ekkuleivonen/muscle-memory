@@ -24,12 +24,14 @@ import {
   type RunStatus,
 } from "../../../../packages/domain/workspace";
 import {
-  PythonRunner,
-  RUNTIME,
+  engineFor,
+  type Engine,
+  type Runner,
   type RunOutcome,
 } from "../../../../packages/runner/runner";
 import type { FileLanguage } from "../../lib/repo";
 import { createEditor, editorFeatures, type Keymap } from "./editor";
+import type { TypeChecker } from "./type-checker";
 
 export const RUN_TIMEOUT_MS = 5000;
 const SNAPSHOT_EVERY_EDITS = 25;
@@ -57,21 +59,33 @@ export interface PullRequestView {
 export interface SessionOptions {
   readonly participantId: string;
   readonly consentVersion: string;
-  readonly challenge: Challenge & { entrypoint: string };
+  readonly challenge: Challenge & {
+    entrypoint: string;
+    parameters?: readonly string[];
+    schema?: string;
+    adapter?: string;
+  };
   readonly sink: CaptureSink;
   readonly initialCode: string;
   readonly restoredFrom?: number;
   /** The solution file's language, keymap and media type; Python unless told otherwise. */
   readonly language?: FileLanguage;
+  /** The solution's path in the repo, used in error locations. */
+  readonly filename?: string;
   readonly keymap?: Keymap;
   readonly mediaType?: string;
-  /** Null when this language cannot run yet: edits are still recorded, Run is not. */
-  readonly runtime?: typeof RUNTIME | null;
+  /** Type hints (squiggles, hover types) for languages that have them. */
+  readonly types?: TypeChecker;
+  /**
+   * What runs the code, recorded with the session; by default the language's engine. Null
+   * when this language cannot run yet: edits are still recorded, Run is not.
+   */
+  readonly runtime?: Engine["runtime"] | null;
   readonly onVimMode?: (mode: string) => void;
   /** Pull requests opened for this Challenge in earlier sessions, so numbers continue. */
   readonly pullRequestsBefore?: number;
   /** The page's current runner; it changes when the runtime is reloaded. */
-  readonly runner: () => PythonRunner;
+  readonly runner: () => Runner;
   readonly onRun: (run: RunView) => void;
   /** Called on the first edit after a run, so its result can be shown as stale. */
   readonly onEditedAfterRun: () => void;
@@ -103,6 +117,12 @@ export class WorkspaceSession {
   private statusKey = "";
   private pullRequests = 0;
 
+  private get runtime(): Engine["runtime"] | null {
+    return this.options.runtime === undefined
+      ? (engineFor(this.options.language ?? "python")?.runtime ?? null)
+      : this.options.runtime;
+  }
+
   constructor(private readonly options: SessionOptions) {
     this.pullRequests = options.pullRequestsBefore ?? 0;
     const challengeArtifact = contentArtifact("challenge", options.challenge);
@@ -125,8 +145,9 @@ export class WorkspaceSession {
           editor: editorFeatures(
             options.language ?? "python",
             options.keymap ?? "standard",
+            Boolean(options.types),
           ),
-          runtime: options.runtime === undefined ? RUNTIME : options.runtime,
+          runtime: this.runtime,
           captureGaps: WORKSPACE_CAPTURE_GAPS,
         },
         [code],
@@ -174,6 +195,7 @@ export class WorkspaceSession {
         language: this.options.language ?? "python",
         keymap: this.options.keymap ?? "standard",
         label: "Code editor",
+        types: this.options.types,
       },
     );
     this.view.focus();
@@ -189,7 +211,7 @@ export class WorkspaceSession {
 
   /** Whether this language can run in the browser. */
   get runnable(): boolean {
-    return this.options.runtime !== null;
+    return this.runtime !== null;
   }
 
   /** Opens a pull request: this exact code, checked by a run of every case. */
@@ -207,8 +229,8 @@ export class WorkspaceSession {
       purpose,
       revision,
       codeArtifactId: code.artifactId,
-      runtime: RUNTIME,
-      timeoutMs: RUN_TIMEOUT_MS,
+      runtime: this.runtime,
+      timeoutMs: this.options.runner().timeoutMs ?? RUN_TIMEOUT_MS,
     };
     const pullRequest =
       purpose === "pull-request"
@@ -236,7 +258,18 @@ export class WorkspaceSession {
       {
         runId,
         code: this.view.state.doc.sliceString(0),
-        functionName: this.options.challenge.entrypoint,
+        filename: this.options.filename ?? "solution.py",
+        language: this.options.language ?? "python",
+        entrypoint: this.options.challenge.entrypoint,
+        ...(this.options.challenge.parameters
+          ? { parameters: this.options.challenge.parameters }
+          : {}),
+        ...(this.options.challenge.schema
+          ? { setup: this.options.challenge.schema }
+          : {}),
+        ...(this.options.challenge.adapter
+          ? { adapter: this.options.challenge.adapter }
+          : {}),
         inputs: this.options.challenge.inputs,
       },
       () => update("running"),

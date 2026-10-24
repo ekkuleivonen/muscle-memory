@@ -9,9 +9,11 @@ import {
   EditorView,
   highlightActiveLine,
   highlightActiveLineGutter,
+  hoverTooltip,
   keymap,
   lineNumbers,
 } from "@codemirror/view";
+import { linter } from "@codemirror/lint";
 import {
   defaultKeymap,
   history,
@@ -24,6 +26,7 @@ import {
   indentOnInput,
   indentUnit,
   LanguageSupport,
+  StreamLanguage,
   syntaxHighlighting,
 } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
@@ -39,8 +42,12 @@ import { phpLanguage } from "@codemirror/lang-php";
 import { StandardSQL } from "@codemirror/lang-sql";
 import { htmlLanguage } from "@codemirror/lang-html";
 import { markdownLanguage } from "@codemirror/lang-markdown";
+import { javaLanguage } from "@codemirror/lang-java";
+import { csharp } from "@codemirror/legacy-modes/mode/clike";
+import { ruby } from "@codemirror/legacy-modes/mode/ruby";
 import { getCM, vim } from "@replit/codemirror-vim";
 import type { FileLanguage } from "../../lib/repo";
+import { TYPE_CHECK_FEATURES, type TypeChecker } from "./type-checker";
 
 export type Keymap = "standard" | "vim";
 
@@ -68,13 +75,25 @@ function languageSupport(language: FileLanguage): LanguageSupport {
       return new LanguageSupport(htmlLanguage);
     case "markdown":
       return new LanguageSupport(markdownLanguage);
+    case "java":
+      return new LanguageSupport(javaLanguage);
+    case "csharp":
+      return new LanguageSupport(StreamLanguage.define(csharp));
+    case "ruby":
+      return new LanguageSupport(StreamLanguage.define(ruby));
   }
 }
 
 /** Indentation people expect per language: Go uses tabs, the rest spaces. */
 function indent(language: FileLanguage): string {
   if (language === "go") return "\t";
-  if (language === "python" || language === "rust" || language === "php")
+  if (
+    language === "python" ||
+    language === "rust" ||
+    language === "php" ||
+    language === "java" ||
+    language === "csharp"
+  )
     return "    ";
   if (language === "c" || language === "cpp") return "    ";
   return "  ";
@@ -162,7 +181,11 @@ const shared = (language: FileLanguage): Extension[] => [
 ];
 
 /** What the opened observation records as the editor's features. */
-export function editorFeatures(language: FileLanguage, keys: Keymap) {
+export function editorFeatures(
+  language: FileLanguage,
+  keys: Keymap,
+  typeChecked = false,
+) {
   return {
     name: "codemirror-6",
     features: [
@@ -175,6 +198,7 @@ export function editorFeatures(language: FileLanguage, keys: Keymap) {
       "mod-enter-runs",
       "mod-shift-enter-opens-pull-request",
       keys === "vim" ? "vim-keybindings" : "standard-keybindings",
+      ...(typeChecked ? TYPE_CHECK_FEATURES : []),
     ],
   };
 }
@@ -192,7 +216,13 @@ export function createEditor(
   parent: HTMLElement,
   doc: string,
   hooks: EditorHooks,
-  options: { language: FileLanguage; keymap: Keymap; label: string },
+  options: {
+    language: FileLanguage;
+    keymap: Keymap;
+    label: string;
+    /** Squiggles and hover types, for languages that have them. */
+    types?: TypeChecker;
+  },
 ): EditorView {
   const view = new EditorView({
     parent,
@@ -227,6 +257,7 @@ export function createEditor(
           ...defaultKeymap,
         ]),
         EditorView.contentAttributes.of({ "aria-label": options.label }),
+        options.types ? typeHints(options.types) : [],
         EditorView.updateListener.of((update) => {
           for (const transaction of update.transactions)
             if (transaction.docChanged)
@@ -242,6 +273,50 @@ export function createEditor(
     );
   }
   return view;
+}
+
+/** Errors as squiggles (after a pause in typing) and the type under the pointer. */
+function typeHints(types: TypeChecker): Extension {
+  return [
+    linter(
+      async (view) => {
+        const length = view.state.doc.length;
+        try {
+          return (await types.check(view.state.doc.toString())).map((d) => ({
+            from: Math.min(d.from, length),
+            to: Math.min(Math.max(d.to, d.from), length),
+            severity: d.severity,
+            message: d.message,
+          }));
+        } catch {
+          return []; // The checker failing never gets in the way of editing.
+        }
+      },
+      { delay: 500 },
+    ),
+    hoverTooltip(async (view, position) => {
+      const hint = await types
+        .hover(view.state.doc.toString(), position)
+        .catch(() => null);
+      if (!hint) return null;
+      return {
+        pos: hint.from,
+        end: hint.to,
+        above: true,
+        create() {
+          const dom = document.createElement("div");
+          dom.className = "cm-type-hint";
+          const type = dom.appendChild(document.createElement("code"));
+          type.textContent = hint.type;
+          if (hint.documentation) {
+            const doc = dom.appendChild(document.createElement("p"));
+            doc.textContent = hint.documentation;
+          }
+          return { dom };
+        },
+      };
+    }),
+  ];
 }
 
 /** Tests and README: highlighted and selectable, never editable or recorded. */

@@ -11,8 +11,8 @@ export interface RepoFile {
   path: string;
   language: FileLanguage;
   text: string;
-  /** Only the solution is editable (and recorded). */
-  role: "solution" | "tests" | "readme";
+  /** Only the solution is editable (and recorded). A schema is read-only, like the tests. */
+  role: "solution" | "tests" | "schema" | "readme";
 }
 
 export interface Repo {
@@ -31,6 +31,12 @@ export interface RepoSource {
   entrypoint: string;
   starter: string;
   task: string;
+  /** Named when each case's input is a list of arguments; otherwise it is the only one. */
+  parameters?: readonly string[];
+  /** SQL: CREATE TABLE statements for the tables the cases fill. */
+  schema?: string;
+  /** C and C++: the adapter from JSON arguments to the function's types. */
+  adapter?: string;
   criteria: readonly { input: unknown; expected: unknown }[];
   project?: { slug: string; title: string; story?: string };
 }
@@ -45,6 +51,14 @@ export function kebab(name: string): string {
 
 export function snake(name: string): string {
   return kebab(name).replace(/-/g, "_");
+}
+
+/** parse_page → ParsePage, for class names. */
+export function pascal(name: string): string {
+  return kebab(name)
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join("");
 }
 
 const json = (value: unknown) => JSON.stringify(value);
@@ -101,7 +115,7 @@ ${cases}
 
 @pytest.mark.parametrize("given, expected", CASES)
 def test_${snake(src.entrypoint)}(given, expected):
-    assert ${src.entrypoint}(given) == expected
+    assert ${src.entrypoint}(${src.parameters ? "*given" : "given"}) == expected
 `;
 }
 
@@ -120,9 +134,11 @@ ${cases}
 
 describe("${fn}", () => {
   it.each(cases)("case %#", (input, expected) => {
-    // An array holds the arguments; anything else is the only argument.
-    const args = Array.isArray(input) ? input : [input];
-    expect(${fn}(...${typed ? `(args as Parameters<typeof ${fn}>)` : "args"})).toEqual(expected);
+${
+  src.parameters
+    ? `    expect(${fn}(...${typed ? `(input as Parameters<typeof ${fn}>)` : "input"})).toEqual(expected);`
+    : `    expect(${fn}(input${typed ? " as never" : ""})).toEqual(expected);`
+}
   });
 });
 `;
@@ -189,7 +205,7 @@ ${cases}
     public function test${name}(string $input, string $expected): void
     {
         $args = json_decode($input, true);
-        $actual = ${src.entrypoint}(...(is_array($args) ? $args : [$args]));
+        $actual = ${src.parameters ? `${src.entrypoint}(...$args)` : `${src.entrypoint}($args)`};
         $this->assertSame(json_decode($expected, true), $actual);
     }
 }
@@ -217,41 +233,142 @@ fn ${src.entrypoint}_matches_every_case() {
 `;
 }
 
-function cTests(src: RepoSource, header_: string, cpp: boolean): string {
+/**
+ * C and C++ have no reflection, so each issue's adapter turns a case's JSON arguments into
+ * the function's types (with the small mm_json library); the test file is that adapter plus
+ * the cases it is run against, one program run per case.
+ */
+function cTests(src: RepoSource): string {
   const cases = src.criteria
     .map((c) => `    {${cString(c.input)}, ${cString(c.expected)}},`)
     .join("\n");
   return `${header("//", src.key)}
-#include ${cpp ? "<cassert>" : "<assert.h>"}
-#include "${header_}"
+// Each case runs the program once: the arguments go to mm_call as JSON, and what it
+// returns is compared with the expected JSON.
 
-/* Input and expected output as JSON. */
-static const struct { const char *input; const char *expected; } cases[] = {
+${(src.adapter ?? "").trim()}
+
+/* Arguments and expected result, as JSON. */
+static const struct { const char *args; const char *expected; } cases[] = {
 ${cases}
 };
+`;
+}
 
-int main(void)
-{
-    for (size_t i = 0; i < sizeof cases / sizeof cases[0]; i++)
-        assert(check_${src.entrypoint}(cases[i].input, cases[i].expected));
-    return 0;
+function rubyTests(src: RepoSource, file: string): string {
+  const cases = src.criteria
+    .map((c) => `    [${json(json(c.input))}, ${json(json(c.expected))}],`)
+    .join("\n");
+  const call = src.parameters ? "*JSON.parse(input)" : "JSON.parse(input)";
+  return `${header("#", src.key)}
+require "json"
+require_relative "../lib/${file}"
+
+RSpec.describe "${src.entrypoint}" do
+  # Input and expected output as JSON.
+  [
+${cases}
+  ].each_with_index do |(input, expected), i|
+    it "passes case #{i + 1}" do
+      expect(${src.entrypoint}(${call})).to eq(JSON.parse(expected))
+    end
+  end
+end
+`;
+}
+
+/** Java and C# test against JSON too, so the cases read the same as everywhere else. */
+function javaTests(src: RepoSource, name: string): string {
+  const cases = src.criteria
+    // List.of takes no trailing comma.
+    .map(
+      (c) =>
+        `        ${json(json(c.input))} + " -> " + ${json(json(c.expected))}`,
+    )
+    .join(",\n");
+  return `${header("//", src.key)}
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.FieldSource;
+
+class ${name}Test {
+    /** Input and expected output as JSON, separated by " -> ". */
+    static final java.util.List<String> CASES = java.util.List.of(
+${cases}
+    );
+
+    @ParameterizedTest
+    @FieldSource("CASES")
+    void ${src.entrypoint}(String testCase) {
+        var parts = testCase.split(" -> ", 2);
+        assertEquals(Json.parse(parts[1]), Json.call(${name}::${src.entrypoint}, parts[0]));
+    }
 }
 `;
 }
 
-/** Table columns from the task, e.g. "orders(id, customer, total)". */
-export function sqlTables(task: string): Map<string, string[]> {
+/** The class a C# or Java starter declares, e.g. "LateFees"; else one named after the method. */
+function className(src: RepoSource): string {
+  return /\bclass\s+(\w+)/.exec(src.starter)?.[1] ?? pascal(src.entrypoint);
+}
+
+function csharpTests(src: RepoSource, name: string): string {
+  const cases = src.criteria
+    .map(
+      (c) =>
+        `    [InlineData(${json(json(c.input))}, ${json(json(c.expected))})]`,
+    )
+    .join("\n");
+  return `${header("//", src.key)}
+using Xunit;
+
+public class ${name}Tests
+{
+    // Input and expected output as JSON.
+    [Theory]
+${cases}
+    public void ${src.entrypoint}(string input, string expected)
+    {
+        Assert.Equal(Json.Parse(expected), Json.Call(${className(src)}.${src.entrypoint}, input));
+    }
+}
+`;
+}
+
+/** Splits on commas outside parentheses: "a numeric(10, 2), b" → two parts. */
+function topLevel(list: string): string[] {
+  const parts = [""];
+  let depth = 0;
+  for (const char of list) {
+    if (char === "(") depth++;
+    if (char === ")") depth--;
+    if (char === "," && depth === 0) parts.push("");
+    else parts[parts.length - 1] += char;
+  }
+  return parts;
+}
+
+/** Table columns from the schema's CREATE TABLE statements. */
+export function sqlTables(schema: string): Map<string, string[]> {
   const tables = new Map<string, string[]>();
-  for (const match of task.matchAll(/`?(\w+)\(([\w\s,]+)\)`?/g))
+  for (const match of schema.matchAll(
+    /create\s+table\s+(?:if\s+not\s+exists\s+)?"?(\w+)"?\s*\(([^;]*)\)\s*;/gi,
+  ))
     tables.set(
       match[1],
-      match[2].split(",").map((column) => column.trim()),
+      topLevel(match[2])
+        .map((column) => /^\s*"?(\w+)"?/.exec(column)?.[1] ?? "")
+        .filter(
+          (name) =>
+            name && !/^(primary|foreign|unique|check|constraint)$/i.test(name),
+        ),
     );
   return tables;
 }
 
 function sqlTests(src: RepoSource): string {
-  const tables = sqlTables(src.task);
+  const tables = sqlTables(src.schema ?? "");
   const blocks = src.criteria.map((c, i) => {
     const input = (c.input ?? {}) as Record<string, unknown[][]>;
     const inserts = Object.entries(input).map(([table, rows]) => {
@@ -269,11 +386,52 @@ function sqlTests(src: RepoSource): string {
   return `${header("--", src.key)}\n\n${blocks.join("\n\n")}\n`;
 }
 
-function htmlTests(src: RepoSource): string {
-  const blocks = src.criteria.map(
-    (c, i) => `<!-- Case ${i + 1}: ${json(c.input)} -->\n${String(c.expected)}`,
-  );
-  return `<!-- ${header("", src.key).trim()} -->\n\n${blocks.join("\n\n")}\n`;
+/** HTML is checked by querying the page, so its tests are a DOM test in JavaScript. */
+function htmlTests(src: RepoSource, page: string): string {
+  const cases = src.criteria
+    .map((c) => {
+      const [selector, how] = c.input as [string, string];
+      return `  [${json(selector)}, ${json(how)}, ${json(c.expected)}],`;
+    })
+    .join("\n");
+  return `${header("//", src.key)}
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+import { JSDOM } from "jsdom";
+
+const { document } = new JSDOM(readFileSync("${page}", "utf8")).window;
+const squash = (text) => (text ?? "").replace(/\\s+/g, " ").trim();
+
+/** The name a screen reader announces: aria-labelledby, aria-label, then the label. */
+function label(element) {
+  const ids = element.getAttribute("aria-labelledby");
+  if (ids) return squash(ids.split(/\\s+/).map((id) => document.getElementById(id)?.textContent).join(" "));
+  if (element.hasAttribute("aria-label")) return squash(element.getAttribute("aria-label"));
+  const tied = element.id && document.querySelector(\`label[for="\${element.id}"]\`);
+  const owner = tied || element.closest("label");
+  return owner ? squash(owner.textContent) : null;
+}
+
+function read(selector, how) {
+  const matches = [...document.querySelectorAll(selector)];
+  if (how === "count") return matches.length;
+  if (how === "text") return matches.map((element) => squash(element.textContent));
+  if (how === "label") return matches.map(label);
+  return matches.map((element) => element.getAttribute(how));
+}
+
+// [selector, what to read, expected]: "count", "text", "label" (the accessible
+// name a screen reader announces) or an attribute name.
+const cases = [
+${cases}
+];
+
+describe("${page}", () => {
+  it.each(cases)("%s → %s", (selector, how, expected) => {
+    expect(read(selector, how)).toEqual(expected);
+  });
+});
+`;
 }
 
 function readme(src: RepoSource): RepoFile {
@@ -289,6 +447,8 @@ function layout(src: RepoSource): {
   solution: string;
   tests: string;
   text: string;
+  /** When the tests are written in another language than the solution. */
+  testsLanguage?: FileLanguage;
 } {
   const e = src.entrypoint;
   switch (src.language) {
@@ -332,13 +492,13 @@ function layout(src: RepoSource): {
       return {
         solution: `src/${snake(e)}.c`,
         tests: `tests/test_${snake(e)}.c`,
-        text: cTests(src, `../src/${snake(e)}.h`, false),
+        text: cTests(src),
       };
     case "cpp":
       return {
         solution: `src/${snake(e)}.cpp`,
         tests: `tests/${snake(e)}_test.cpp`,
-        text: cTests(src, `../src/${snake(e)}.hpp`, true),
+        text: cTests(src),
       };
     case "sql":
       return {
@@ -346,28 +506,60 @@ function layout(src: RepoSource): {
         tests: `tests/${src.slug}.sql`,
         text: sqlTests(src),
       };
+    case "ruby":
+      return {
+        solution: `lib/${snake(e)}.rb`,
+        tests: `spec/${snake(e)}_spec.rb`,
+        text: rubyTests(src, snake(e)),
+      };
+    case "java":
+      return {
+        solution: `src/main/java/${pascal(e)}.java`,
+        tests: `src/test/java/${pascal(e)}Test.java`,
+        text: javaTests(src, pascal(e)),
+      };
+    case "csharp":
+      return {
+        solution: `src/${className(src)}.cs`,
+        tests: `tests/${className(src)}Tests.cs`,
+        text: csharpTests(src, className(src)),
+      };
     case "html":
       return {
         solution: `templates/${src.slug}.html`,
-        tests: `tests/${src.slug}.expected.html`,
-        text: htmlTests(src),
+        tests: `tests/${src.slug}.test.js`,
+        text: htmlTests(src, `templates/${src.slug}.html`),
+        testsLanguage: "javascript",
       };
   }
 }
 
 export function repoFor(src: RepoSource): Repo {
-  const { solution: solutionPath, tests, text } = layout(src);
+  const { solution: solutionPath, tests, text, testsLanguage } = layout(src);
   const solution: RepoFile = {
     path: solutionPath,
     language: src.language,
     text: src.starter,
     role: "solution",
   };
-  const files = [
+  const files: RepoFile[] = [
     readme(src),
     solution,
-    { path: tests, language: src.language, text, role: "tests" as const },
-  ].sort((a, b) => a.path.localeCompare(b.path));
+    {
+      path: tests,
+      language: testsLanguage ?? src.language,
+      text,
+      role: "tests",
+    },
+  ];
+  if (src.schema)
+    files.push({
+      path: "db/schema.sql",
+      language: "sql",
+      text: src.schema.endsWith("\n") ? src.schema : `${src.schema}\n`,
+      role: "schema",
+    });
+  files.sort((a, b) => a.path.localeCompare(b.path));
   return {
     root: src.project?.slug ?? src.slug,
     branch: `${src.key.toLowerCase()}-${src.slug}`,

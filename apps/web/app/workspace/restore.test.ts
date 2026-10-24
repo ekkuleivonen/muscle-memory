@@ -11,7 +11,7 @@ import { latestSavedCode } from "../../../../packages/capture/restore";
 import type { Challenge } from "../../../../packages/domain/assessment";
 import { contentArtifactId } from "../../../../packages/domain/evidence";
 import type { WorkspaceRecord } from "../../../../packages/domain/workspace";
-import type { PythonRunner } from "../../../../packages/runner/runner";
+import type { Runner } from "../../../../packages/runner/runner";
 import { WorkspaceSession } from "./session";
 
 const challenge = JSON.parse(
@@ -47,7 +47,7 @@ function workspace(
       ({
         running: false,
         run: async () => ({ status: "cancelled" }),
-      }) as unknown as PythonRunner,
+      }) as unknown as Runner,
     onRun: () => undefined,
     onEditedAfterRun: () => undefined,
   });

@@ -12,7 +12,7 @@ npm run build:cloudflare
 npm run preview --workspace apps/web
 ```
 
-The app's `prebuild` step copies the pinned Pyodide runtime (about 13 MB, hash-verified) into `public/runtime/`; it is served as static assets and never fetched from a CDN. See [workspace](workspace.md).
+The app's `prebuild` step builds the pinned in-browser runtimes (Pyodide, Sucrase, PGlite, linkedom, php-wasm, ruby.wasm, Clang, and the Go and C# runners, which are built in Docker; hash-verified, none over the 25 MiB per-file limit) into `public/runtime/`; it is served as static assets and never fetched from a CDN. See [workspace](workspace.md).
 
 The adapter build invokes Next with the standalone output it needs. A regular Next build alone is not sufficient input for `--skipNextBuild`; use the complete adapter command above.
 

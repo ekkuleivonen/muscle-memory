@@ -11,10 +11,9 @@ import type {
   IssueKind,
   Json,
 } from "../../../packages/domain/assessment";
+import { engineFor } from "../../../packages/runner/engines";
 import { LANGUAGES, type LanguageId } from "./languages";
 
-/** Languages with an in-browser runner today. */
-export const RUNNABLE: readonly LanguageId[] = ["python"];
 export const DIFFICULTIES: readonly Difficulty[] = [
   "warm-up",
   "easy",
@@ -98,6 +97,10 @@ type Executable = Challenge & {
   language?: string;
   entrypoint?: string;
   starter?: string;
+  /** SQL: the tables each case fills. Without it a SQL issue cannot run. */
+  schema?: string;
+  /** C and C++: the adapter from JSON arguments; without it they cannot run. */
+  adapter?: string;
 };
 
 export function compareVersions(a: string, b: string): number {
@@ -160,7 +163,13 @@ function toIssue(
     })),
     hints: content.hints.length,
     comments: content.comments ?? [],
-    runnable: !!language && RUNNABLE.includes(language) && workable,
+    runnable:
+      !!engineFor(language) &&
+      workable &&
+      (language !== "sql" || typeof content.schema === "string") &&
+      // C and C++ need the issue's adapter to call the function.
+      ((language !== "c" && language !== "cpp") ||
+        typeof content.adapter === "string"),
     workable,
     project,
   };

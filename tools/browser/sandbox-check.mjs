@@ -35,7 +35,7 @@ const page = `<!doctype html><meta charset="utf-8"><body><div id="host"></div>
   localStorage.setItem("app_secret", "local-value");
   indexedDB.open("app-secret-db").onsuccess = () => (window.dbReady = true);
   window.makeRunner = (options) =>
-    new MMRunner.PythonRunner(document.getElementById("host"), options);
+    new MMRunner.Runner(MMRunner.ENGINES.pyodide, document.getElementById("host"), options);
 </script>`;
 
 function listen(server) {
@@ -47,6 +47,10 @@ const app = createServer(async (request, response) => {
   const path = new URL(request.url, "http://x").pathname;
   if (path === "/")
     return response.writeHead(200, { "content-type": "text/html" }).end(page);
+  if (path === "/demo-catalog.json")
+    return response
+      .writeHead(200, { "content-type": "application/json" })
+      .end(await readFile(join(root, "content/demo/catalog.json")));
   if (path === "/runner.js")
     return response
       .writeHead(200, { "content-type": "text/javascript" })
@@ -212,7 +216,8 @@ async function check(browserType) {
       host.id = "host";
       document.cookie = "app_secret=cookie-value; path=/";
       localStorage.setItem("app_secret", "local-value");
-      window.makeRunner = (options) => new MMRunner.PythonRunner(host, options);
+      window.makeRunner = (options) =>
+        new MMRunner.Runner(MMRunner.ENGINES.pyodide, host, options);
     });
   } else {
     await tab.goto(APP + "/");
@@ -230,7 +235,9 @@ async function check(browserType) {
         runId,
         code,
         inputs: tests.map((test) => test.input),
-        functionName: "frequency_map",
+        entrypoint: "frequency_map",
+        filename: "solution.py",
+        language: "python",
       });
       const results = {};
       runner.prepare();
@@ -274,7 +281,9 @@ async function check(browserType) {
           ["cyclic"],
           ["raise"],
         ],
-        functionName: "frequency_map",
+        entrypoint: "frequency_map",
+        filename: "solution.py",
+        language: "python",
       });
       results.flood = await runner.run(
         request(
@@ -283,8 +292,9 @@ async function check(browserType) {
           [],
         ),
       );
-      results.frames = document.querySelectorAll("iframe").length;
+      // The runner keeps one spare sandbox ready; disposing it must leave none.
       runner.dispose();
+      results.frames = document.querySelectorAll("iframe").length;
       const tampered = window.makeRunner({
         timeoutMs: 4000,
         assetBase: BAD_ASSETS,
@@ -378,7 +388,9 @@ async function authCheck(browserType) {
           runId: "auth",
           code: SOLUTION,
           inputs: [["a", "b", "a"]],
-          functionName: "frequency_map",
+          entrypoint: "frequency_map",
+          filename: "solution.py",
+          language: "python",
         });
         runner.dispose();
         return result;
@@ -496,6 +508,599 @@ function verdicts({ report, frameProbe, hits }) {
   };
 }
 
+/**
+ * The JavaScript/TypeScript and SQL engines in the same sandbox: correct results through the
+ * shared protocol, errors located in the solution file, and no way out to the network.
+ */
+async function enginesCheck(browserType) {
+  resetHits();
+  const browser = await browserType.launch();
+  const context = await signedInContext(browser, AUTH_VALUE);
+  const tab = await context.newPage();
+  await tab.goto(APP + "/");
+  const report = await tab.evaluate(async (OUT) => {
+    const host = document.getElementById("host");
+    const run = async (engine, request, timeoutMs = 4000) => {
+      const runner = new MMRunner.Runner(MMRunner.ENGINES[engine], host, {
+        timeoutMs,
+      });
+      try {
+        return await runner.run({ runId: "e", ...request });
+      } finally {
+        runner.dispose();
+      }
+    };
+    const ts = (code, inputs, extra = {}) =>
+      run("javascript", {
+        code,
+        inputs,
+        filename: "src/apply-discount.ts",
+        language: "typescript",
+        entrypoint: "applyDiscount",
+        parameters: ["totalCents", "code", "codes"],
+        ...extra,
+      });
+    const results = {};
+    results.ts = await ts(
+      `export type Codes = Record<string, number>;
+export function applyDiscount(total: number, code: string, codes: Codes): number {
+  const percent = codes[code.trim().toUpperCase()];
+  return percent === undefined ? total : Math.floor(total * (100 - percent) / 100);
+}`,
+      [
+        [10000, " save10 ", { SAVE10: 10 }],
+        [5000, "NOPE", {}],
+      ],
+    );
+    results.single = await run("javascript", {
+      code: "export const formatPrice = (cents) => (cents / 100).toFixed(2);",
+      inputs: [123, [1, 2]],
+      filename: "src/format-price.js",
+      language: "javascript",
+      entrypoint: "formatPrice",
+    });
+    results.syntax = await ts("export function applyDiscount( {", [
+      [1, "a", {}],
+    ]);
+    results.thrown = await ts(
+      "export function applyDiscount(): number {\n  throw new RangeError('nope');\n}",
+      [[1, "a", {}]],
+    );
+    results.missing = await ts("export const other = 1;", [[1, "a", {}]]);
+    results.nonJson = await ts(
+      "export function applyDiscount(): number { return NaN; }",
+      [[1, "a", {}]],
+    );
+    results.escapes = await ts(
+      `const attempts = {
+  fetch: () => fetch("${OUT}/js-fetch"),
+  "dynamic-import": () => import("${OUT}/js-import.js"),
+  websocket: () => new Promise((ok, fail) => { const s = new WebSocket("${OUT.replace("http", "ws")}/js-ws"); s.onopen = ok; s.onerror = () => fail(new Error("refused")); }),
+  xhr: () => { const r = new XMLHttpRequest(); r.open("GET", "${OUT}/js-xhr", false); r.send(); },
+  "import-scripts": () => importScripts("${OUT}/js-script.js"),
+  eval: () => new Function("return 1")(),
+  indexeddb: () => indexedDB.open("x"),
+  "parent-document": () => parent.document.title,
+};
+for (const [name, attempt] of Object.entries(attempts)) {
+  try { await attempt(); console.log(name + " => allowed"); }
+  catch (error) { console.log(name + " => blocked " + (error && error.name)); }
+}
+export function applyDiscount() { return 0; }`,
+      [[1, "a", {}]],
+    );
+    results.loop = await ts(
+      "export function applyDiscount() { for (;;) {} }",
+      [[1, "a", {}]],
+      {},
+    );
+    const sql = (code, extra = {}) =>
+      run(
+        "pglite",
+        {
+          code,
+          inputs: [
+            {
+              orders: [
+                [1, "ana", 30],
+                [2, "bo", 10],
+                [3, "ana", 5.5],
+              ],
+            },
+          ],
+          filename: "queries/top-customers.sql",
+          language: "sql",
+          entrypoint: "query",
+          setup:
+            "CREATE TABLE orders (id integer PRIMARY KEY, customer text NOT NULL, total numeric NOT NULL);",
+          ...extra,
+        },
+        15000,
+      );
+    results.sql = await sql(
+      "-- revenue\nSELECT customer, sum(total) AS revenue\nFROM orders\nGROUP BY customer\nORDER BY revenue DESC;",
+    );
+    results.sqlTwice = await sql("SELECT count(*) FROM orders;", {
+      inputs: [{ orders: [[1, "a", 1]] }, { orders: [] }],
+    });
+    results.sqlSyntax = await sql(
+      "SELECT customer\nFROM orders\nGROUP BYE customer;",
+    );
+    results.sqlError = await sql("SELECT 1 / (total - total) FROM orders;");
+    results.sqlFixture = await sql("SELECT 1;", { inputs: [{ nope: [[1]] }] });
+    results.html = await run("html", {
+      code: `<form><label for="a">In <b>stock</b></label><input type="checkbox" id="a" name="x">
+<label>On sale <input type="checkbox" name="y"></label><input type="checkbox" aria-label="Clearance">
+<input type="checkbox" name="bare"><img src="${OUT}/html-img"><script src="${OUT}/html-script.js"></script></form>`,
+      inputs: [
+        ["input[type=checkbox]", "label"],
+        ["input", "name"],
+        ["label", "count"],
+        ["label", "text"],
+      ],
+      filename: "templates/form.html",
+      language: "html",
+      entrypoint: "page",
+      parameters: ["selector", "read"],
+    });
+    const php = (code, extra = {}) =>
+      run(
+        "php",
+        {
+          code,
+          inputs: [
+            [1000, 1059, 60],
+            [1000, 4601, 60],
+          ],
+          filename: "src/isExpired.php",
+          language: "php",
+          entrypoint: "isExpired",
+          parameters: ["issuedAt", "now", "ttlMinutes"],
+          ...extra,
+        },
+        15000,
+      );
+    results.php = await php(
+      "<?php\nfunction isExpired(int $issuedAt, int $now, int $ttlMinutes): bool {\n  echo 'checked ';\n  return $now - $issuedAt > $ttlMinutes * 60;\n}\n",
+    );
+    results.phpSyntax = await php("<?php\nfunction isExpired( {\n");
+    results.phpThrown = await php(
+      "<?php\nfunction isExpired($a, $b, $c) {\n  throw new InvalidArgumentException('nope');\n}\n",
+    );
+    results.phpFatal = await php("<?php\nundefined_thing();\n");
+    results.phpEscape = await php(
+      // Emscripten emulates sockets over WebSocket, which the sandbox's CSP refuses: fsockopen
+      // hands back a socket that never connects, and no request reaches either server.
+      `<?php\nfunction isExpired($a, $b, $c) {\n  $s = @fsockopen('127.0.0.1', ${new URL(OUT).port}, $errno, $errstr, 1);\n  if ($s) { @fwrite($s, "GET /php-socket HTTP/1.0\\r\\n\\r\\n"); @fread($s, 10); }\n  return [@file_get_contents("${OUT}/php-fetch") === false, function_exists('curl_init')];\n}\n`,
+      { inputs: [[1, 2, 3]] },
+    );
+    const ruby = (code, extra = {}) =>
+      run(
+        "ruby",
+        {
+          code,
+          inputs: [
+            [[3, 1, 2], "#{x}"],
+            [[], "é"],
+          ],
+          filename: "lib/sorted.rb",
+          language: "ruby",
+          entrypoint: "sorted",
+          parameters: ["values", "label"],
+          ...extra,
+        },
+        15000,
+      );
+    results.ruby = await ruby(
+      'def sorted(values, label)\n  puts "sorting #{values.size}"\n  { "label" => label, "values" => values.sort, "ratio" => 0.5, "none" => nil }\nend\n',
+    );
+    results.rubySyntax = await ruby(
+      "def sorted(values, label)\n  values.sort(\n",
+    );
+    results.rubyRaised = await ruby(
+      'def sorted(values, label)\n  raise ArgumentError, "nope"\nend\n',
+    );
+    results.rubyNonJson = await ruby(
+      "def sorted(values, label) = Float::NAN\n",
+    );
+    const go = (code, extra = {}) =>
+      run(
+        "go",
+        {
+          code,
+          inputs: [
+            [[15, 20, 35, 40, 50], 30],
+            [[], 99],
+          ],
+          filename: "percentile.go",
+          language: "go",
+          entrypoint: "Percentile",
+          parameters: ["samples", "p"],
+          ...extra,
+        },
+        15000,
+      );
+    results.go = await go(
+      'package metrics\n\nimport (\n\t"fmt"\n\t"sort"\n)\n\nfunc Percentile(samples []int, p float64) (int, bool) {\n\tfmt.Println("n =", len(samples))\n\tif len(samples) == 0 {\n\t\treturn 0, false\n\t}\n\ts := append([]int(nil), samples...)\n\tsort.Ints(s)\n\treturn s[1], true\n}\n',
+    );
+    results.goSyntax = await go("package metrics\n\nfunc Percentile( {\n");
+    results.goPanic = await go(
+      "package metrics\n\nfunc Percentile(samples []int, p float64) (int, bool) {\n\treturn samples[10], true\n}\n",
+    );
+    results.goEscape = await go(
+      `package metrics\n\nimport "net/http"\n\nfunc Percentile(samples []int, p float64) (int, bool) {\n\t_, err := http.Get("${OUT}/go-fetch")\n\tif err != nil {\n\t\treturn 1, true\n\t}\n\treturn 2, true\n}\n`,
+      { inputs: [[[1], 1]] },
+    );
+    results.frames = document.querySelectorAll("iframe").length;
+    return results;
+  }, OUT);
+  await new Promise((done) => setTimeout(done, 500));
+  await browser.close();
+  const out = (outcome, i = 0) => outcome.cases?.[i]?.output?.text;
+  const escapes = report.escapes.stdout?.text ?? "";
+  if (process.env.VERBOSE)
+    for (const [name, value] of Object.entries(report))
+      console.log(name, JSON.stringify(value).slice(0, 700));
+  return {
+    "typescript: types stripped, parameters spread":
+      out(report.ts) === "9000" && out(report.ts, 1) === "5000",
+    "javascript: an array input is one argument without parameters":
+      out(report.single) === '"1.23"' && out(report.single, 1) === '"NaN"',
+    "typescript: syntax error is a compile error":
+      report.syntax.status === "user-error" &&
+      report.syntax.phase === "compile" &&
+      /src\/apply-discount\.ts:1:/.test(report.syntax.error.traceback.text),
+    "javascript: a thrown error stays with its case and points at the file":
+      report.thrown.cases[0]?.error?.type === "RangeError" &&
+      /src\/apply-discount\.ts:2:/.test(
+        report.thrown.cases[0].error.traceback.text,
+      ),
+    "javascript: a missing export is explained":
+      report.missing.error?.message ===
+      "Export a function named applyDiscount.",
+    "javascript: values JSON cannot hold are refused, not guessed":
+      Boolean(report.nonJson.cases[0]?.unserializable) &&
+      !report.nonJson.cases[0]?.output,
+    "javascript: network, storage, eval and parent all blocked": [
+      "fetch",
+      "dynamic-import",
+      "websocket",
+      "xhr",
+      "import-scripts",
+      "eval",
+      "indexeddb",
+      "parent-document",
+    ].every((name) => new RegExp(`${name} => blocked`).test(escapes)),
+    "javascript: infinite loop times out": report.loop.status === "timeout",
+    "sql: rows come back in order, numeric as numbers":
+      out(report.sql) === '[["ana",35.5],["bo",10]]',
+    "sql: every case starts from empty tables":
+      out(report.sqlTwice) === "[[1]]" && out(report.sqlTwice, 1) === "[[0]]",
+    "sql: syntax error points at the line, like psql":
+      report.sqlSyntax.phase === "compile" &&
+      /LINE 3: GROUP BYE customer/.test(report.sqlSyntax.error.traceback.text),
+    "sql: runtime error stays with its case": /division by zero/.test(
+      report.sqlError.cases[0]?.error?.message ?? "",
+    ),
+    "sql: broken fixtures are a runner error, not the person's":
+      report.sqlFixture.status === "runner-error",
+    "html: labels, attributes, counts and text read like a DOM test":
+      out(report.html) === '["In stock","On sale","Clearance",null]' &&
+      out(report.html, 1) === '["x","y",null,"bare"]' &&
+      out(report.html, 2) === "2" &&
+      out(report.html, 3) === '["In stock","On sale"]',
+    "php: spread arguments, echo captured as output":
+      out(report.php) === "false" &&
+      out(report.php, 1) === "true" &&
+      report.php.stdout.text === "checked checked ",
+    "php: parse error is a compile error in the solution file":
+      report.phpSyntax.phase === "compile" &&
+      /src\/isExpired\.php:2/.test(report.phpSyntax.error.traceback.text),
+    "php: an exception stays with its case":
+      report.phpThrown.cases[0]?.error?.type === "InvalidArgumentException",
+    "php: a fatal error is the person's error, explained":
+      report.phpFatal.status === "user-error" &&
+      /undefined_thing/.test(report.phpFatal.error.traceback.text),
+    "php: no network from file_get_contents or curl (sockets: see the request check)":
+      out(report.phpEscape) === "[true,false]",
+    "ruby: spread arguments, no interpolation of inputs, puts captured":
+      out(report.ruby) ===
+        '{"label":"#{x}","values":[1,2,3],"ratio":0.5,"none":null}' &&
+      out(report.ruby, 1) ===
+        '{"label":"é","values":[],"ratio":0.5,"none":null}' &&
+      report.ruby.stdout.text === "sorting 3\nsorting 0\n",
+    "ruby: syntax error is a compile error in the solution file":
+      report.rubySyntax.phase === "compile" &&
+      /lib\/sorted\.rb/.test(report.rubySyntax.error.traceback.text),
+    "ruby: an exception stays with its case":
+      report.rubyRaised.cases[0]?.error?.type === "ArgumentError" &&
+      /lib\/sorted\.rb:2/.test(report.rubyRaised.cases[0].error.traceback.text),
+    "ruby: values JSON cannot hold are refused": Boolean(
+      report.rubyNonJson.cases[0]?.unserializable,
+    ),
+    "go: typed arguments, comma-ok as null, fmt output captured":
+      out(report.go) === "20" &&
+      out(report.go, 1) === "null" &&
+      report.go.stdout.text === "n = 5\nn = 0\n",
+    "go: syntax error is a compile error in the solution file":
+      report.goSyntax.phase === "compile" &&
+      /percentile\.go:3/.test(report.goSyntax.error.traceback.text),
+    "go: a panic stays with its case and says where":
+      report.goPanic.cases[0]?.error?.type === "panic" &&
+      /percentile\.go:4/.test(report.goPanic.cases[0].error.traceback.text),
+    "go: net/http cannot reach the network": out(report.goEscape) === "1",
+    "no request from any engine reached either server":
+      hits.app.length === 0 && hits.outside.length === 0,
+    "no sandbox frames left behind": report.frames === 0,
+  };
+}
+
+/**
+ * Whether this machine's browser survives a WebAssembly memory trap. Normally it is a
+ * catchable RuntimeError; on some hosts (seen on a Debian cloud kernel) the renderer dies
+ * instead, which no page can handle. The crash check is skipped there, and says so.
+ */
+async function survivesMemoryTraps(browserType) {
+  // (module (memory 1) (func (export "f") (result i32) i32.const 0x7ffffff0 i32.load))
+  const bytes = [
+    0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 127, 3, 2, 1, 0, 5, 3, 1, 0,
+    1, 7, 5, 1, 1, 102, 0, 0, 10, 13, 1, 11, 0, 65, 240, 255, 255, 255, 7, 40,
+    2, 0, 11,
+  ];
+  const browser = await browserType.launch();
+  const page = await browser.newPage();
+  const result = await page
+    .evaluate(async (bytes) => {
+      const { instance } = await WebAssembly.instantiate(new Uint8Array(bytes));
+      try {
+        instance.exports.f();
+        return false;
+      } catch (error) {
+        return error instanceof WebAssembly.RuntimeError;
+      }
+    }, bytes)
+    .catch(() => false);
+  await browser.close();
+  return result;
+}
+
+/** C and C++ in a page of their own: LLVM alone is 75 MB of WebAssembly. */
+async function clangCheck(browserType) {
+  const traps = await survivesMemoryTraps(browserType);
+  if (!traps)
+    console.log(
+      "SKIP c: a crash stays with its case (this machine's browser dies on any WebAssembly memory trap)",
+    );
+  resetHits();
+  const browser = await browserType.launch();
+  const context = await signedInContext(browser, AUTH_VALUE);
+  const tab = await context.newPage();
+  if (process.env.VERBOSE)
+    tab.on("console", (m) => console.log("page:", m.text().slice(0, 160)));
+  tab.on("crash", () => console.log("C/C++ page crashed"));
+  await tab.goto(APP + "/");
+  const report = await tab.evaluate(async (traps) => {
+    const host = document.getElementById("host");
+    const results = {};
+    const catalog = await (await fetch("/demo-catalog.json")).json();
+    const issue = (id) =>
+      Object.values(catalog.entries).find((e) => e.content.id === id).content;
+    const ring = issue("ring-buffer");
+    const lru = issue("lru-cache");
+    // One runner for C, kept between runs like the IDE does.
+    const clang = new MMRunner.Runner(MMRunner.ENGINES.clang, host, {
+      timeoutMs: 4000,
+    });
+    const c = (code, extra = {}) =>
+      clang.run({
+        runId: "c" + Math.random(),
+        code,
+        inputs: ring.inputs,
+        filename: "src/ring_buffer.c",
+        language: "c",
+        entrypoint: ring.entrypoint,
+        parameters: ring.parameters,
+        adapter: ring.adapter,
+        ...extra,
+      });
+    const started = performance.now();
+    results.c = await c(`#include <stdio.h>
+#include <stddef.h>
+size_t ring_buffer(size_t capacity, const int *values, size_t count, int *out) {
+    size_t start = count > capacity ? count - capacity : 0;
+    printf("keeping %zu\\n", count - start);
+    for (size_t i = start; i < count; i++) out[i - start] = values[i];
+    return count - start;
+}
+`);
+    results.cFirstMs = Math.round(performance.now() - started);
+    const again = performance.now();
+    results.cAgain = await c(ring.starter);
+    results.cAgainMs = Math.round(performance.now() - again);
+    results.cSyntax = await c("size_t ring_buffer( {\n");
+    if (traps)
+      results.cCrash = await c(`#include <stddef.h>
+size_t ring_buffer(size_t capacity, const int *values, size_t count, int *out) {
+    int *nowhere = (int *)0x7fffffff;
+    out[0] = *nowhere;
+    return 1;
+}
+`);
+    clang.dispose();
+    const cpp = new MMRunner.Runner(MMRunner.ENGINES.clang, host, {
+      timeoutMs: 4000,
+    });
+    results.cpp = await cpp.run({
+      runId: "cpp",
+      code: `#include <list>
+#include <string>
+#include <unordered_map>
+#include <vector>
+struct Op { std::string name; int key; int value; };
+std::vector<int> simulate(int capacity, const std::vector<Op>& ops) {
+    std::list<std::pair<int, int>> order;
+    std::unordered_map<int, std::list<std::pair<int, int>>::iterator> where;
+    std::vector<int> results;
+    for (const Op& op : ops) {
+        auto found = where.find(op.key);
+        if (op.name == "get") {
+            if (found == where.end()) { results.push_back(-1); continue; }
+            order.splice(order.begin(), order, found->second);
+            results.push_back(found->second->second);
+        } else {
+            if (found != where.end()) order.erase(found->second);
+            order.emplace_front(op.key, op.value);
+            where[op.key] = order.begin();
+            if ((int)order.size() > capacity) { where.erase(order.back().first); order.pop_back(); }
+        }
+    }
+    return results;
+}
+`,
+      inputs: lru.inputs,
+      filename: "src/simulate.cpp",
+      language: "cpp",
+      entrypoint: lru.entrypoint,
+      parameters: lru.parameters,
+      adapter: lru.adapter,
+    });
+    results.cppExpected = lru.expected;
+    cpp.dispose();
+    results.ringExpected = ring.expected;
+    results.frames = document.querySelectorAll("iframe").length;
+    return results;
+  }, traps);
+  await new Promise((done) => setTimeout(done, 500));
+  await browser.close();
+  if (process.env.VERBOSE)
+    for (const [name, value] of Object.entries(report))
+      console.log(name, JSON.stringify(value).slice(0, 700));
+  return {
+    "c: compiles, runs every case, printf captured": (() => {
+      const expected = report.ringExpected.map((e) => JSON.stringify(e));
+      return (
+        report.c.status === "completed" &&
+        report.c.cases.every((r, i) => r.output?.text === expected[i]) &&
+        /keeping 3\n/.test(report.c.stdout.text)
+      );
+    })(),
+    "c: the sandbox is kept, so a second run skips loading LLVM":
+      report.cAgain.status === "completed" && report.cAgainMs < report.cFirstMs,
+    "c: a compile error shows clang's message for the solution file":
+      report.cSyntax.phase === "compile" &&
+      /src\/ring_buffer\.c:1:/.test(report.cSyntax.error.traceback.text),
+    ...(traps
+      ? {
+          "c: a crash stays with its case": report.cCrash.cases.every(
+            (r) => r.error?.type === "Crash",
+          ),
+        }
+      : {}),
+    "cpp: libc++ containers, the adapter's struct, every case": (() => {
+      const expected = report.cppExpected.map((e) => JSON.stringify(e));
+      return (
+        report.cpp.status === "completed" &&
+        report.cpp.cases.every((r, i) => r.output?.text === expected[i])
+      );
+    })(),
+    "no request from C or C++ reached either server":
+      hits.app.length === 0 && hits.outside.length === 0,
+    "no sandbox frames left behind": report.frames === 0,
+  };
+}
+
+/** C# in a page of its own: the .NET runtime and Roslyn are 22 MB of WebAssembly. */
+async function csharpCheck(browserType) {
+  resetHits();
+  const browser = await browserType.launch();
+  const context = await signedInContext(browser, AUTH_VALUE);
+  const tab = await context.newPage();
+  await tab.goto(APP + "/");
+  const report = await tab.evaluate(async (OUT) => {
+    const catalog = await (await fetch("/demo-catalog.json")).json();
+    const fee = Object.values(catalog.entries).find(
+      (e) => e.content.id === "late-fee-rounding",
+    ).content;
+    const host = document.getElementById("host");
+    const run = async (code, extra = {}) => {
+      const runner = new MMRunner.Runner(MMRunner.ENGINES.csharp, host, {
+        timeoutMs: 4000,
+      });
+      try {
+        return await runner.run({
+          runId: "cs",
+          code,
+          inputs: fee.inputs,
+          filename: "src/LateFees.cs",
+          language: "csharp",
+          entrypoint: fee.entrypoint,
+          parameters: fee.parameters,
+          ...extra,
+        });
+      } finally {
+        runner.dispose();
+      }
+    };
+    const results = { expected: fee.expected };
+    results.starter = await run(fee.starter);
+    results.fixed = await run(
+      fee.starter
+        .replace(
+          "Math.Round(Math.Min(fee, balance * 0.10m), 2)",
+          "Math.Round(Math.Min(fee, balance * 0.10m), 2, MidpointRounding.AwayFromZero)",
+        )
+        .replace(
+          "if (daysLate <= 0) return 0;",
+          'if (daysLate <= 0) return 0;\n        Console.WriteLine($"{balance} for {daysLate} days");',
+        ),
+    );
+    results.syntax = await run(
+      "public static class LateFees { public static decimal LateFee(decimal b, int d) { return b }",
+    );
+    results.thrown = await run(
+      'public static class LateFees { public static decimal LateFee(decimal b, int d) => throw new InvalidOperationException("nope"); }',
+    );
+    results.escape = await run(
+      `public static class LateFees { public static decimal LateFee(decimal b, int d) { try { new System.Net.Http.HttpClient().GetStringAsync("${OUT}/cs-fetch").Wait(); return 1; } catch { return 2; } } }`,
+      { inputs: [[1, 1]] },
+    );
+    results.frames = document.querySelectorAll("iframe").length;
+    return results;
+  }, OUT);
+  await new Promise((done) => setTimeout(done, 500));
+  await browser.close();
+  if (process.env.VERBOSE)
+    for (const [name, value] of Object.entries(report))
+      console.log(name, JSON.stringify(value).slice(0, 700));
+  const outputs = (outcome) => outcome.cases?.map((c) => c.output?.text);
+  const expected = report.expected.map((e) => JSON.stringify(e));
+  return {
+    "csharp: the starter's banker's rounding fails just the midpoint cases":
+      report.starter.status === "completed" &&
+      outputs(report.starter).filter(
+        (o, i) => Number(o) !== JSON.parse(expected[i]),
+      ).length === 2,
+    "csharp: the fix passes every case, Console output captured":
+      outputs(report.fixed).every(
+        (o, i) => Number(o) === JSON.parse(expected[i]),
+      ) && /100 for 1 days\n/.test(report.fixed.stdout.text),
+    "csharp: a compile error shows Roslyn's message for the solution file":
+      report.syntax.phase === "compile" &&
+      /src\/LateFees\.cs\(1,\d+\): error CS1002/.test(
+        report.syntax.error.traceback.text,
+      ),
+    "csharp: an exception stays with its case":
+      report.thrown.cases[0]?.error?.type === "InvalidOperationException",
+    // Networking assemblies are not among the references, so it does not even compile.
+    "csharp: HttpClient is not available to solutions":
+      report.escape.phase === "compile" &&
+      /HttpClient/.test(report.escape.error.traceback.text),
+    "no request from C# reached either server":
+      hits.app.length === 0 && hits.outside.length === 0,
+    "no sandbox frames left behind": report.frames === 0,
+  };
+}
+
 const requested = process.argv.slice(2);
 const engines = { chromium, firefox, webkit };
 let failures = 0;
@@ -524,6 +1129,35 @@ for (const name of process.env.ONLY_AUTH
     );
   }
 }
+if (!process.env.PREVIEW_URL && !process.env.ONLY_AUTH)
+  for (const name of requested.length ? requested : ["chromium"]) {
+    console.log(`\n=== ${name}: C# ===`);
+    for (const [label, pass] of Object.entries(
+      await csharpCheck(engines[name]),
+    )) {
+      if (!pass) failures++;
+      console.log(`${pass ? "ok  " : "FAIL"} ${label}`);
+    }
+    console.log(`\n=== ${name}: C and C++ ===`);
+    for (const [label, pass] of Object.entries(
+      await clangCheck(engines[name]),
+    )) {
+      if (!pass) failures++;
+      console.log(`${pass ? "ok  " : "FAIL"} ${label}`);
+    }
+  }
+if (!process.env.PREVIEW_URL && !process.env.ONLY_AUTH)
+  for (const name of requested.length ? requested : ["chromium"]) {
+    console.log(
+      `\n=== ${name}: JavaScript, TypeScript, SQL, HTML, PHP, Ruby and Go ===`,
+    );
+    for (const [label, pass] of Object.entries(
+      await enginesCheck(engines[name]),
+    )) {
+      if (!pass) failures++;
+      console.log(`${pass ? "ok  " : "FAIL"} ${label}`);
+    }
+  }
 if (!process.env.PREVIEW_URL)
   for (const name of requested.length ? requested : ["chromium"]) {
     console.log(`\n=== ${name}: runtime files behind sign-in ===`);

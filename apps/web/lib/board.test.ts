@@ -107,22 +107,35 @@ test("the board keeps the order issues were added and skips ones that no longer 
 });
 
 test("suggestions prefer runnable, then the person's stack, then easier issues", () => {
-  // The three Python issues run in the browser, so they come first, easiest first.
+  // Issues that run in the browser come first, easiest first.
   assert.deepEqual(
     suggestions(issues, [], ["rust"]).map((i) => i.key),
-    ["FN-1", "DATA-1", "DATA-2"],
+    ["FN-1", "SHOP-1", "SHOP-3"],
   );
-  const runnableOnBoard = ["FN-1", "DATA-1", "DATA-2"].map((key) => ({
+  const runnable = issues.filter((i) => i.runnable).map((i) => i.key);
+  const runnableOnBoard = runnable.map((key) => ({
     key,
     addedAt: "t",
     status: "todo" as const,
   }));
   assert.deepEqual(
-    suggestions(issues, runnableOnBoard, ["rust"]).map((i) => i.key),
-    ["EDGE-4", "EDGE-2", "SHOP-1"],
+    suggestions(issues, runnableOnBoard, ["cpp"]).map((i) => i.key),
+    [],
+  );
+  // With only the C and C++ issues left, the person's C++ comes first.
+  const allButC = runnableOnBoard.filter(
+    (item) => item.key !== "EDGE-1" && item.key !== "EDGE-3",
   );
   assert.deepEqual(
-    suggestions(issues, runnableOnBoard, ["go"], 2).map((i) => i.key),
+    suggestions(issues, allButC, ["cpp"]).map((i) => i.key),
+    ["EDGE-3", "EDGE-1"],
+  );
+  // Among runnable issues not on the board, the person's languages come first.
+  const notGo = issues
+    .filter((i) => i.runnable && i.language !== "go")
+    .map((key) => ({ key: key.key, addedAt: "t", status: "todo" as const }));
+  assert.deepEqual(
+    suggestions(issues, notGo, ["go"], 2).map((i) => i.key),
     ["API-1", "API-4"],
   );
 });

@@ -11,6 +11,7 @@ import { acceptsCurrent, type Acceptance } from "../../lib/legal";
 import { languageLabel } from "../../lib/library";
 import type { Profile } from "../../lib/onboarding";
 import type { Answer } from "../_terminal/prompts";
+import { RUNNABLE_LANGUAGES } from "../../../../packages/runner/engines";
 import { QUESTIONS, toProfile } from "../_terminal/questions";
 import {
   Banner,
@@ -96,7 +97,11 @@ async function setup(t: TerminalApi, accepted?: Acceptance) {
     ...languages.map((id) => (
       <span>
         <span className="t-dim">→</span> installing {languageLabel(id)}{" "}
-        <span className="t-ok">✔</span>
+        {RUNNABLE_LANGUAGES.includes(id) ? (
+          <span className="t-ok">✔</span>
+        ) : (
+          <span className="t-dim">coming soon</span>
+        )}
       </span>
     )),
     ...(editor

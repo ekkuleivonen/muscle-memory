@@ -82,14 +82,34 @@ test("older and disabled versions stay out of lists but specific versions resolv
   assert.equal(disabled.issues[0].version, "2.0.0");
 });
 
-test("only Python with a starter runs; project summaries span their issues", () => {
+test("issues run when their language has an engine; project summaries span their issues", () => {
   assert.deepEqual(
     merged.issues.filter((i) => i.runnable).map((i) => i.slug),
-    ["frequency-map", "csv-quoted-fields", "dedupe-customers"],
+    [
+      "frequency-map",
+      "format-price",
+      "discount-codes",
+      "filter-form-labels",
+      "debounce-search",
+      "pagination-params",
+      "reset-link-expiry",
+      "rate-limiter",
+      "workspace-slugs",
+      "parse-log-line",
+      "csv-quoted-fields",
+      "dedupe-customers",
+      "late-fee-rounding",
+      "top-customers",
+      "unpaid-orders",
+      "ring-buffer",
+      "p99-latency",
+      "lru-cache",
+      "parse-duration",
+    ],
   );
   const edge = merged.projects.find((c) => c.slug === "edge-proxy")!;
   assert.equal(difficultyRange(edge.issues), "easy–hard");
-  assert.deepEqual(languagesOf(edge.issues), ["rust", "c", "cpp"]);
+  assert.deepEqual(languagesOf(edge.issues), ["go", "c", "cpp"]);
 });
 
 test("issue keys come from the project key, or one derived from its id", () => {
@@ -133,7 +153,9 @@ test("filters combine across qualifiers and match any value within one", () => {
     "API-1",
     "API-2",
     "API-4",
+    "API-5",
     "DATA-1",
+    "DATA-5",
     "EDGE-3",
     "SHOP-1",
     "SHOP-2",
@@ -145,9 +167,30 @@ test("filters combine across qualifiers and match any value within one", () => {
     "EDGE-2",
     "EDGE-4",
   ]);
-  assert.deepEqual(keys("is:runnable"), ["DATA-1", "DATA-2", "FN-1"]);
+  assert.deepEqual(keys("is:runnable"), [
+    "API-1",
+    "API-2",
+    "API-3",
+    "API-4",
+    "API-5",
+    "DATA-1",
+    "DATA-2",
+    "DATA-3",
+    "DATA-4",
+    "DATA-5",
+    "EDGE-1",
+    "EDGE-2",
+    "EDGE-3",
+    "EDGE-4",
+    "FN-1",
+    "SHOP-1",
+    "SHOP-2",
+    "SHOP-3",
+    "SHOP-4",
+  ]);
   assert.deepEqual(keys("label:strings"), [
     "API-4",
+    "API-5",
     "DATA-1",
     "SHOP-1",
     "SHOP-2",
@@ -178,7 +221,7 @@ test("groups keep their declared order and drop empty ones", () => {
       g.issues.length,
     ]),
     [
-      ["bug", 7],
+      ["bug", 9],
       ["performance", 2],
     ],
   );
@@ -188,7 +231,7 @@ test("groups keep their declared order and drop empty ones", () => {
   );
   assert.equal(
     groupIssues(issues, "none", merged.projects)[0].issues.length,
-    9,
+    11,
   );
 });
 

@@ -1,0 +1,58 @@
+<!--
+  The C# runner: Roslyn and the .NET runtime as WebAssembly. Built in a pinned .NET SDK image by
+  tools/build-runtimes.mjs; the sandbox's worker calls Runner.Run with one request per run.
+-->
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <WasmFingerprintAssets>false</WasmFingerprintAssets>
+    <CompressionEnabled>false</CompressionEnabled>
+    <Deterministic>true</Deterministic>
+    <PathMap>$(MSBuildProjectDirectory)=/src</PathMap>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- Arguments and results are the solution's own types, known only at run time. -->
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+  </PropertyGroup>
+  <!--
+    Publishing trims unused code, but a solution may call any framework member, and Roslyn reflects
+    over itself. These stay whole: everything a solution compiles against, plus the compiler.
+  -->
+  <ItemGroup>
+    <TrimmerRootAssembly Include="System.Private.CoreLib" />
+    <TrimmerRootAssembly Include="System.Runtime" />
+    <TrimmerRootAssembly Include="System.Collections" />
+    <TrimmerRootAssembly Include="System.Collections.Concurrent" />
+    <TrimmerRootAssembly Include="System.Linq" />
+    <TrimmerRootAssembly Include="System.Console" />
+    <TrimmerRootAssembly Include="System.Memory" />
+    <TrimmerRootAssembly Include="System.Runtime.Numerics" />
+    <TrimmerRootAssembly Include="System.Text.RegularExpressions" />
+    <TrimmerRootAssembly Include="System.Text.Json" />
+    <TrimmerRootAssembly Include="Microsoft.CodeAnalysis" />
+    <TrimmerRootAssembly Include="Microsoft.CodeAnalysis.CSharp" />
+  </ItemGroup>
+  <!-- What solutions compile against: the framework's reference assemblies, embedded. -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(NetCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/$(BundledNETCoreAppPackageVersion)/ref/net9.0/System.Runtime.dll" LogicalName="ref/System.Runtime.dll" />
+    <EmbeddedResource Include="$(NetCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/$(BundledNETCoreAppPackageVersion)/ref/net9.0/System.Collections.dll" LogicalName="ref/System.Collections.dll" />
+    <EmbeddedResource Include="$(NetCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/$(BundledNETCoreAppPackageVersion)/ref/net9.0/System.Linq.dll" LogicalName="ref/System.Linq.dll" />
+    <EmbeddedResource Include="$(NetCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/$(BundledNETCoreAppPackageVersion)/ref/net9.0/System.Console.dll" LogicalName="ref/System.Console.dll" />
+    <EmbeddedResource Include="$(NetCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/$(BundledNETCoreAppPackageVersion)/ref/net9.0/System.Text.RegularExpressions.dll" LogicalName="ref/System.Text.RegularExpressions.dll" />
+    <EmbeddedResource Include="$(NetCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/$(BundledNETCoreAppPackageVersion)/ref/net9.0/System.Memory.dll" LogicalName="ref/System.Memory.dll" />
+    <EmbeddedResource Include="$(NetCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/$(BundledNETCoreAppPackageVersion)/ref/net9.0/System.Runtime.Numerics.dll" LogicalName="ref/System.Runtime.Numerics.dll" />
+    <EmbeddedResource Include="$(NetCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/$(BundledNETCoreAppPackageVersion)/ref/net9.0/System.Collections.Concurrent.dll" LogicalName="ref/System.Collections.Concurrent.dll" />
+    <EmbeddedResource Include="$(NetCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/$(BundledNETCoreAppPackageVersion)/ref/net9.0/System.Text.Json.dll" LogicalName="ref/System.Text.Json.dll" />
+    <EmbeddedResource Include="$(NetCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/$(BundledNETCoreAppPackageVersion)/ref/net9.0/System.Runtime.InteropServices.dll" LogicalName="ref/System.Runtime.InteropServices.dll" />
+    <EmbeddedResource Include="$(NetCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/$(BundledNETCoreAppPackageVersion)/ref/net9.0/System.Threading.dll" LogicalName="ref/System.Threading.dll" />
+    <EmbeddedResource Include="$(NetCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/$(BundledNETCoreAppPackageVersion)/ref/net9.0/System.Threading.Tasks.dll" LogicalName="ref/System.Threading.Tasks.dll" />
+    <EmbeddedResource Include="$(NetCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/$(BundledNETCoreAppPackageVersion)/ref/net9.0/netstandard.dll" LogicalName="ref/netstandard.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0" />
+  </ItemGroup>
+</Project>
