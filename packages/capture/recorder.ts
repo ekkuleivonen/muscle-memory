@@ -34,6 +34,12 @@ export interface RecorderOptions {
   readonly batchSize?: number;
   readonly flushDelayMs?: number;
   readonly retryBaseMs?: number;
+  /**
+   * Called when what the player should be told may have changed: the buffer becomes
+   * non-empty or drains, a write starts or stops failing, or something is lost. Not called
+   * per record while the buffer stays non-empty, so typing does not trigger re-renders.
+   */
+  readonly onTransition?: () => void;
   readonly now?: () => Date;
 }
 
@@ -46,6 +52,8 @@ export interface CaptureStatus {
   readonly undisclosedDrops: number;
   readonly gaps: number;
   readonly artifactConflicts: number;
+  /** Highest source position at or after which something was lost (0: nothing lost). */
+  readonly lastLossSequence: number;
   readonly retrying: boolean;
   readonly lastError: string | null;
 }
@@ -62,6 +70,8 @@ export class CaptureRecorder {
   private queuedBytes = 0;
   private persisted = 0;
   private gaps = 0;
+  private lastLoss = 0;
+  private transitionKey = "";
   private readonly artifacts = new Set<string>();
   private conflicts = 0;
   private dropped: {
@@ -120,11 +130,13 @@ export class CaptureRecorder {
     // One slot and some bytes stay reserved so a gap can always be disclosed.
     if (!this.fits(entries, 1, 1024)) {
       this.drop(sequence, "buffer-full");
+      this.transition();
       return null;
     }
     for (const artifact of fresh) this.artifacts.add(artifact.artifactId);
     this.enqueue(entries);
     this.schedule(this.options.flushDelayMs ?? 250);
+    this.transition();
     return observation;
   }
 
@@ -133,6 +145,7 @@ export class CaptureRecorder {
     if (this.stopped) return;
     this.enqueue([entry(record)]);
     this.schedule(this.options.flushDelayMs ?? 250);
+    this.transition();
   }
 
   status(): CaptureStatus {
@@ -147,6 +160,7 @@ export class CaptureRecorder {
       ),
       gaps: this.gaps,
       artifactConflicts: this.conflicts,
+      lastLossSequence: this.lastLoss,
       retrying: this.failures > 0,
       lastError: this.lastError,
     };
@@ -194,6 +208,7 @@ export class CaptureRecorder {
       this.schedule(
         Math.min((this.options.retryBaseMs ?? 250) * 2 ** this.failures, 8000),
       );
+      this.transition();
       return;
     }
     if (this.stopped) return;
@@ -205,13 +220,30 @@ export class CaptureRecorder {
       else if (item.sequence) this.drop(item.sequence, "write-conflict");
       else {
         // An artifact ID already holds different content: keep the stored one, say so.
+        // Conservatively, everything recorded so far may depend on it.
         this.conflicts++;
+        this.lastLoss = Math.max(this.lastLoss, this.sequence);
         this.lastError = `${item.record.recordId} already exists with different content.`;
       }
     });
     this.queue.splice(0, batch.length);
     this.discloseGaps();
     if (this.queue.length) this.schedule(0);
+    this.transition();
+  }
+
+  private transition(): void {
+    const key = [
+      this.queue.length > 0,
+      this.failures > 0,
+      this.lastLoss,
+      this.gaps,
+      this.dropped.length,
+      this.conflicts,
+    ].join();
+    if (key === this.transitionKey) return;
+    this.transitionKey = key;
+    this.options.onTransition?.();
   }
 
   private discloseGaps(): void {
@@ -251,6 +283,7 @@ export class CaptureRecorder {
     sequence: number,
     reason: "buffer-full" | "write-conflict",
   ): void {
+    this.lastLoss = Math.max(this.lastLoss, sequence);
     const last = this.dropped.at(-1);
     if (last && last.reason === reason && last.to === sequence - 1)
       last.to = sequence;

@@ -5,10 +5,7 @@ import type { Catalog } from "../../../../packages/catalog/catalog";
 import { findEntry } from "../../../../packages/catalog/gates";
 import type { Challenge } from "../../../../packages/domain/assessment";
 import { runFeedback } from "../../../../packages/domain/workspace";
-import {
-  MemorySink,
-  type CaptureStatus,
-} from "../../../../packages/capture/recorder";
+import { MemorySink } from "../../../../packages/capture/recorder";
 import {
   openPracticeStore,
   type PracticeStore,
@@ -21,7 +18,12 @@ import {
 } from "../../../../packages/capture/restore";
 import { contentArtifactId } from "../../../../packages/domain/evidence";
 import { recoveryMessage, saveState } from "./save-state";
-import { RUN_TIMEOUT_MS, WorkspaceSession, type RunView } from "./session";
+import {
+  RUN_TIMEOUT_MS,
+  WorkspaceSession,
+  type RunView,
+  type SaveStatus,
+} from "./session";
 
 type Executable = Challenge & { entrypoint: string; starter: string };
 const REF = {
@@ -47,7 +49,7 @@ export default function Workspace() {
   const [runtime, setRuntime] = useState<Runtime>({ state: "loading" });
   const [run, setRun] = useState<RunView | null>(null);
   const [stale, setStale] = useState(false);
-  const [capture, setCapture] = useState<CaptureStatus | null>(null);
+  const [capture, setCapture] = useState<SaveStatus | null>(null);
   const editorHost = useRef<HTMLDivElement>(null);
   const sandboxHost = useRef<HTMLDivElement>(null);
   const runner = useRef<PythonRunner | null>(null);
@@ -87,7 +89,8 @@ export default function Workspace() {
   useEffect(() => {
     if (!open) return;
     const timer = setInterval(
-      () => setCapture(session.current?.recorder.status() ?? null),
+      // Counts refresh each second; state changes arrive at once through onSaveStatus.
+      () => setCapture(session.current?.saveStatus() ?? null),
       1000,
     );
     return () => clearInterval(timer);
@@ -140,6 +143,7 @@ export default function Workspace() {
           setStale(view.revision !== session.current?.currentRevision);
         },
         onEditedAfterRun: () => setStale(true),
+        onSaveStatus: setCapture,
       });
       setOpen(true);
     } catch (cause) {

@@ -5,11 +5,15 @@
 import { Transaction } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { CaptureRecorder } from "../../../../packages/capture/recorder";
-import type { CaptureSink } from "../../../../packages/capture/recorder";
+import type {
+  CaptureSink,
+  CaptureStatus,
+} from "../../../../packages/capture/recorder";
 import type { Challenge, Json } from "../../../../packages/domain/assessment";
 import { contentArtifact } from "../../../../packages/domain/evidence";
 import {
   codeRevision,
+  type CodeRevisionArtifact,
   EDIT_CHANGES_LIMIT_BYTES,
   toRecord,
   WORKSPACE_CAPTURE_GAPS,
@@ -44,6 +48,14 @@ export interface SessionOptions {
   readonly onRun: (run: RunView) => void;
   /** Called on the first edit after a run, so its result can be shown as stale. */
   readonly onEditedAfterRun: () => void;
+  /** Called only when the save status shown to the player may have changed. */
+  readonly onSaveStatus?: (status: SaveStatus) => void;
+}
+
+/** Capture status plus whether the current code could be rebuilt exactly after a refresh. */
+export interface SaveStatus extends CaptureStatus {
+  readonly recoverable: boolean;
+  readonly unrecoverableReason?: string;
 }
 
 export class WorkspaceSession {
@@ -54,6 +66,12 @@ export class WorkspaceSession {
   private editsSinceSnapshot = 0;
   private lastRun?: RunView;
   private staleNotified = true;
+  // Source position of the latest stored complete copy of the code, and of the latest
+  // point after which the code could not be rebuilt from saved records.
+  private safeStart = 0;
+  private unsafeAt = 0;
+  private unsafeReason = "";
+  private statusKey = "";
 
   constructor(private readonly options: SessionOptions) {
     const challengeArtifact = contentArtifact("challenge", options.challenge);
@@ -63,26 +81,44 @@ export class WorkspaceSession {
       consentVersion: options.consentVersion,
       challengeArtifactId: challengeArtifact.artifactId,
       sink: options.sink,
+      onTransition: () => this.notify(),
     });
     this.recorder.include(toRecord(challengeArtifact));
     const code = this.artifact(options.initialCode);
-    this.recorder.observe(
-      "observation.workspace.opened",
-      {
-        revision: 0,
-        codeArtifactId: code.artifactId,
-        editor: EDITOR,
-        runtime: RUNTIME,
-        captureGaps: WORKSPACE_CAPTURE_GAPS,
-      },
-      [code],
+    this.markCopy(
+      this.recorder.observe(
+        "observation.workspace.opened",
+        {
+          revision: 0,
+          codeArtifactId: code.artifactId,
+          editor: EDITOR,
+          runtime: RUNTIME,
+          captureGaps: WORKSPACE_CAPTURE_GAPS,
+        },
+        [code],
+      ),
+      code,
     );
-    if (options.restoredFrom !== undefined)
-      this.recorder.observe("observation.workspace.snapshot", {
-        revision: 0,
-        codeArtifactId: code.artifactId,
-        reason: "restored",
-      });
+    if (options.restoredFrom !== undefined) this.snapshot(code, "restored");
+  }
+
+  /** What a refresh could bring back right now, with the capture status. */
+  saveStatus(): SaveStatus {
+    const status = this.recorder.status();
+    // Replay starts from the latest stored complete copy; anything lost or unreplayable
+    // at or after it means a refresh cannot rebuild the current code exactly.
+    const lost =
+      status.lastLossSequence > 0 && status.lastLossSequence >= this.safeStart;
+    const unsafe = this.unsafeAt > 0 && this.unsafeAt >= this.safeStart;
+    return {
+      ...status,
+      recoverable: !lost && !unsafe,
+      ...(lost
+        ? { unrecoverableReason: "some activity was not saved (capture gap)" }
+        : unsafe
+          ? { unrecoverableReason: this.unsafeReason }
+          : {}),
+    };
   }
 
   mount(parent: HTMLElement): void {
@@ -113,15 +149,7 @@ export class WorkspaceSession {
       runtime: RUNTIME,
       timeoutMs: RUN_TIMEOUT_MS,
     };
-    this.recorder.observe(
-      "observation.workspace.snapshot",
-      {
-        revision,
-        codeArtifactId: code.artifactId,
-        reason: "run",
-      },
-      [code],
-    );
+    this.snapshot(code, "run");
     this.editsSinceSnapshot = 0;
     const update = (status: RunStatus, outcome?: RunOutcome) => {
       this.recorder.observe("observation.workspace.run", {
@@ -167,7 +195,7 @@ export class WorkspaceSession {
       JSON.stringify(changes),
     ).length;
     const oversize = changesBytes > EDIT_CHANGES_LIMIT_BYTES;
-    this.recorder.observe("observation.workspace.edit", {
+    const edit = this.recorder.observe("observation.workspace.edit", {
       revision: this.revision,
       changes: oversize ? null : changes,
       changesBytes,
@@ -176,27 +204,79 @@ export class WorkspaceSession {
       selection: transaction.newSelection.toJSON() as Json,
       docLength: transaction.newDoc.length,
     });
+    // Without a change set this edit cannot be replayed; only a complete copy made after
+    // it (the snapshot below) makes the code recoverable again.
+    if (oversize && edit)
+      this.markUnsafe(
+        edit.source.sequence,
+        "a large edit could not be saved as a change",
+      );
     // Recovery snapshots let the document be rebuilt from the stream; an oversize edit
     // has no change set, so it is followed by a snapshot immediately.
     if (oversize || ++this.editsSinceSnapshot >= SNAPSHOT_EVERY_EDITS) {
       // This transaction's document, not the view's: one update can hold several
       // transactions, and the snapshot must match the revision it is labelled with.
       const code = this.artifact(transaction.newDoc.toString());
-      this.recorder.observe(
-        "observation.workspace.snapshot",
-        {
-          revision: this.revision,
-          codeArtifactId: code.artifactId,
-          reason: oversize ? "oversize-edit" : "periodic",
-        },
-        [code],
-      );
+      this.snapshot(code, oversize ? "oversize-edit" : "periodic");
       this.editsSinceSnapshot = 0;
     }
+    this.notify();
     if (this.lastRun && !this.staleNotified) {
       this.staleNotified = true;
       this.options.onEditedAfterRun();
     }
+  }
+
+  private snapshot(
+    code: CodeRevisionArtifact,
+    reason: "restored" | "run" | "periodic" | "oversize-edit",
+  ): void {
+    this.markCopy(
+      this.recorder.observe(
+        "observation.workspace.snapshot",
+        { revision: code.revision, codeArtifactId: code.artifactId, reason },
+        [code],
+      ),
+      code,
+    );
+  }
+
+  /** A stored complete copy is a safe point; a truncated one cannot restore the code. */
+  private markCopy(
+    observation: { source: { sequence: number } } | null,
+    code: CodeRevisionArtifact,
+  ): void {
+    if (!observation) return; // Dropped: the recorder records the loss.
+    if (!code.capture.truncated)
+      this.safeStart = Math.max(this.safeStart, observation.source.sequence);
+    // A truncated copy only matters when there is no exact replay to fall back on:
+    // at opening, or right after an edit that had no change set.
+    else if (this.safeStart === 0 || this.unsafeAt >= this.safeStart)
+      this.markUnsafe(
+        observation.source.sequence,
+        "the code is larger than 64 KiB, too large to save a complete copy",
+      );
+    this.notify();
+  }
+
+  private markUnsafe(sequence: number, reason: string): void {
+    this.unsafeAt = Math.max(this.unsafeAt, sequence);
+    this.unsafeReason = reason;
+  }
+
+  private notify(): void {
+    if (!this.options.onSaveStatus || !this.recorder) return;
+    const status = this.saveStatus();
+    const key = [
+      status.buffered > 0,
+      status.retrying,
+      status.recoverable,
+      status.unrecoverableReason,
+      status.gaps,
+    ].join();
+    if (key === this.statusKey) return;
+    this.statusKey = key;
+    this.options.onSaveStatus(status);
   }
 
   private artifact(code: string) {

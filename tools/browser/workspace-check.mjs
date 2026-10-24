@@ -473,8 +473,44 @@ try {
       message,
     );
 
+    // The saved label must disappear at once when an edit makes the code dirty.
+    const status = page.locator("p[role=status]", {
+      hasText: /records stored/,
+    });
+    await page.locator(".cm-content").click();
+    await page.keyboard.press("Control+End");
+    await page.keyboard.type("#");
+    const immediately = await status.innerText();
+    check(
+      "an edit removes the saved label immediately",
+      !/All edits so far are saved/.test(immediately),
+      immediately,
+    );
+    check("saved returns after the edit is stored", await savedConfirmed());
+
+    // A paste too large to save completely is never reported as saved.
+    await page.locator(".cm-content").click();
+    await page.keyboard.press("Control+End");
+    await page.keyboard.insertText("x".repeat(70000));
+    await page.waitForTimeout(2500);
+    const large = await status.innerText();
+    check(
+      "a truncated large paste is reported as not fully restorable",
+      /cannot be fully restored after a refresh/.test(large) &&
+        !/All edits so far are saved/.test(large),
+      large.slice(0, 160),
+    );
     await setCode(page, SOLUTION);
+    await page.waitForTimeout(1500);
+    check(
+      "still not saved after removing the paste, until a complete copy",
+      /cannot be fully restored/.test(await status.innerText()),
+    );
     await runAndWait(page, /Run result/);
+    check(
+      "Run stores a complete copy and saved returns",
+      await savedConfirmed(),
+    );
     await page.locator(".cm-content").click();
     await page.keyboard.press("Control+End");
     await page.keyboard.type("# after run");
