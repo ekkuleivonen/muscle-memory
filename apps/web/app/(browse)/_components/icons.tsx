@@ -1,5 +1,6 @@
 /** Small inline icons in the style of developer trackers. 16px, currentColor unless noted. */
 import type { IssueKind } from "../../../../../packages/domain/assessment";
+import { STATUS_LABELS, type Status } from "../../../lib/board";
 
 type Props = { size?: number; className?: string };
 
@@ -67,12 +68,42 @@ export function KindIcon({ kind, size = 16 }: Props & { kind?: IssueKind }) {
   );
 }
 
-/** "Todo" until per-person progress is tracked. */
-export function StatusIcon({ size = 14 }: Props) {
+/** Linear-style status: dashed backlog, open todo, half in progress, filled done. */
+export function StatusIcon({
+  size = 14,
+  status = "backlog",
+}: Props & { status?: Status }) {
   return (
     <svg {...svg(size)}>
-      <title>Todo</title>
-      <circle cx="8" cy="8" r="6" stroke="var(--faint)" strokeWidth="1.6" />
+      <title>{STATUS_LABELS[status]}</title>
+      {status === "backlog" ? (
+        <circle
+          cx="8"
+          cy="8"
+          r="6"
+          stroke="var(--faint)"
+          strokeWidth="1.6"
+          strokeDasharray="2.2 2"
+        />
+      ) : status === "todo" ? (
+        <circle cx="8" cy="8" r="6" stroke="var(--dim)" strokeWidth="1.6" />
+      ) : status === "in-progress" ? (
+        <>
+          <circle cx="8" cy="8" r="6" stroke="var(--amber)" strokeWidth="1.6" />
+          <path d="M8 4a4 4 0 0 1 0 8z" fill="var(--amber)" />
+        </>
+      ) : (
+        <>
+          <circle cx="8" cy="8" r="6.8" fill="var(--accent)" />
+          <path
+            d="m5.2 8.2 1.9 1.9 3.8-3.9"
+            stroke="var(--accent-fg)"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </>
+      )}
     </svg>
   );
 }
@@ -82,6 +113,40 @@ export function IssuesIcon({ size = 16 }: Props) {
     <svg {...svg(size)}>
       <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" />
       <circle cx="8" cy="8" r="1.6" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function BoardIcon({ size = 16 }: Props) {
+  return (
+    <svg {...svg(size)}>
+      <rect
+        x="1.8"
+        y="2.5"
+        width="3.6"
+        height="11"
+        rx="1"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+      <rect
+        x="6.2"
+        y="2.5"
+        width="3.6"
+        height="7.5"
+        rx="1"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+      <rect
+        x="10.6"
+        y="2.5"
+        width="3.6"
+        height="5"
+        rx="1"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
     </svg>
   );
 }

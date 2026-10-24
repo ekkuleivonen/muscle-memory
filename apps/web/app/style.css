@@ -791,3 +791,136 @@ kbd {
     display: none;
   }
 }
+
+/* Board: backlog ↔ Todo is the only manual status */
+.avatar.me {
+  width: 20px;
+  height: 20px;
+  font-size: 8.5px;
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.btn.primary-outline {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.btn.todo-btn[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.todo-wrap {
+  position: relative;
+}
+.nudge {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  width: 340px;
+  display: grid;
+  gap: 8px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--amber);
+  background: color-mix(in srgb, var(--amber) 10%, var(--panel));
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 13px;
+  max-width: 340px;
+}
+.nudge-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.segmented {
+  display: inline-flex;
+}
+.segmented .btn {
+  border-radius: 0;
+}
+.segmented .btn:first-child {
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+.segmented .btn:last-child {
+  border-radius: 0 var(--radius) var(--radius) 0;
+  margin-left: -1px;
+}
+.see-all {
+  margin-left: auto;
+  font-weight: 400;
+  color: var(--accent);
+}
+
+/* Board: columns fill themselves; nothing to drag */
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.column {
+  background: var(--bg-subtle);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  min-height: 200px;
+}
+.column h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 4px 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.column h2 .count {
+  color: var(--faint);
+  font-weight: 400;
+}
+.column .hint {
+  margin: 8px 4px;
+}
+.board-card {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.board-card:hover,
+.board-card:focus-visible {
+  border-color: var(--line-strong);
+  outline: none;
+}
+.board-card .key {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 12px var(--mono);
+  color: var(--faint);
+}
+.link-btn {
+  border: 0;
+  background: none;
+  padding: 0;
+  margin-left: 6px;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--accent);
+  cursor: pointer;
+}
+.board-hint {
+  margin-top: 14px;
+}
+.board-card .meta {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+@media (max-width: 860px) {
+  .board {
+    grid-template-columns: 1fr;
+  }
+}

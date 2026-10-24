@@ -24,6 +24,7 @@ import {
   StatusIcon,
 } from "../../../_components/icons";
 import { Sep, Topbar } from "../../../_components/topbar";
+import { StatusField, TodoButton } from "../../../_components/board";
 
 type Props = {
   params: Promise<{ key: string; slug?: string[] }>;
@@ -77,11 +78,14 @@ export default async function IssuePage(props: Props) {
     <>
       <Topbar
         actions={
-          issue.runnable && (
-            <Link className="btn primary" href={workspaceHref(issue)}>
-              <PlayIcon /> Start work
-            </Link>
-          )
+          <>
+            <TodoButton issueKey={issue.key} />
+            {issue.runnable && (
+              <Link className="btn primary" href={workspaceHref(issue)}>
+                <PlayIcon /> Start work
+              </Link>
+            )}
+          </>
         }
       >
         {project ? (
@@ -183,7 +187,7 @@ function Properties({ issue }: { issue: Issue }) {
       <dl>
         <dt>Status</dt>
         <dd>
-          <StatusIcon /> Todo
+          <StatusField issueKey={issue.key} />
         </dd>
         <dt>Kind</dt>
         <dd>

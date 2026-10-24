@@ -1,14 +1,15 @@
 import Link from "next/link";
-import { issueHref, type Issue } from "../../../lib/library";
+import { issueHref, type IssueSummary as Issue } from "../../../lib/library";
 import type { IssueGroup } from "../../../lib/queries";
 import { Estimate, LabelPill, LanguageTag } from "./bits";
-import { KindIcon, StatusIcon } from "./icons";
+import { IssueStatus } from "./board";
+import { KindIcon } from "./icons";
 
 function IssueRow({ issue, href }: { issue: Issue; href: string }) {
   return (
     <li>
       <Link className="row" href={href} data-row>
-        <StatusIcon />
+        <IssueStatus issueKey={issue.key} />
         <KindIcon kind={issue.kind} />
         <span className="key">{issue.key}</span>
         <span className="title">{issue.title}</span>

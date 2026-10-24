@@ -67,6 +67,22 @@ export interface Issue {
   project?: ProjectRef;
 }
 
+/**
+ * What lists and client components need. Leaves out the description, comments and
+ * acceptance criteria: besides being heavier, fixtures cannot cross the server-to-client
+ * boundary intact (React's serializer drops a "__proto__" key, which fixtures contain).
+ */
+export type IssueSummary = Omit<Issue, "task" | "comments" | "criteria">;
+
+export function summarize({
+  task: _task,
+  comments: _comments,
+  criteria: _criteria,
+  ...summary
+}: Issue): IssueSummary {
+  return summary;
+}
+
 export interface Project extends ProjectRef {
   version: string;
   summary?: string;
@@ -168,7 +184,7 @@ export interface Library {
 
 /** Canonical issue URL: the key decides, the slug is for people. */
 export function issueHref(
-  issue: Pick<Issue, "key" | "slug" | "version">,
+  issue: Pick<IssueSummary, "key" | "slug" | "version">,
   latestVersion?: string,
 ): string {
   const path = `/issues/${issue.key}/${issue.slug}`;

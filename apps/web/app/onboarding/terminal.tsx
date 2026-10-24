@@ -11,6 +11,7 @@ import {
   encodePendingExport,
   openPracticeStore,
 } from "../../../../packages/browser/practice-store";
+import { BOARD_KEY } from "../../lib/board";
 import { languageLabel } from "../../lib/library";
 import {
   issuesFor,
@@ -73,6 +74,7 @@ function saveProfile(profile: Profile) {
 
 function forgetProfile() {
   localStorage.removeItem(PROFILE_KEY);
+  localStorage.removeItem(BOARD_KEY);
   document.cookie = `${ONBOARDING_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
 }
 
@@ -235,7 +237,7 @@ export function Terminal({ next }: { next: string | null }) {
         kind: "confirm",
         id: "clear",
         message:
-          "Clear your profile, saved practice, workspace activity and local identity on this device?",
+          "Clear your profile, board, saved practice, workspace activity and local identity on this device?",
         initial: false,
       });
       if (!sure) return print(<span className="t-dim">Nothing cleared.</span>);

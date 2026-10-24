@@ -1,18 +1,17 @@
-import Link from "next/link";
 import { requireOnboarding } from "../../lib/gate";
+import { summarize } from "../../lib/library";
+import { getLibrary } from "../../lib/load";
+import { Dashboard } from "./_components/board-view";
 import { Topbar } from "./_components/topbar";
 
 export default async function Home() {
   await requireOnboarding("/");
+  const { issues } = await getLibrary();
   return (
     <>
       <Topbar>Home</Topbar>
       <main className="content">
-        <h1>Hello, world.</h1>
-        <p className="dim">
-          Pick up an <Link href="/issues">issue</Link> or browse the{" "}
-          <Link href="/projects">projects</Link>.
-        </p>
+        <Dashboard issues={issues.map(summarize)} />
       </main>
     </>
   );

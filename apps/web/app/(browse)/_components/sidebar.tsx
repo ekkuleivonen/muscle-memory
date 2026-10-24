@@ -3,7 +3,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ProjectRef } from "../../../lib/library";
 import { ProjectSquare } from "./bits";
-import { ProjectsIcon, IssuesIcon, TerminalIcon } from "./icons";
+import { BoardCount } from "./board";
+import { BoardIcon, ProjectsIcon, IssuesIcon, TerminalIcon } from "./icons";
 
 export function Sidebar({
   projects,
@@ -22,6 +23,13 @@ export function Sidebar({
       <Link href="/" className="workspace-name">
         <span className="logo-mark">M</span>
         muscle memory
+      </Link>
+      <Link
+        className="side-link"
+        href="/board"
+        aria-current={current("/board")}
+      >
+        <BoardIcon /> Board <BoardCount />
       </Link>
       <Link
         className="side-link"

@@ -3,7 +3,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import type { Catalog } from "../../../packages/catalog/catalog";
 import type { Adventure } from "../../../packages/domain/assessment";
-import { difficultyRange, issueHref, languagesOf, library } from "./library";
+import {
+  difficultyRange,
+  issueHref,
+  languagesOf,
+  library,
+  summarize,
+} from "./library";
 import {
   filterProjects,
   filterIssues,
@@ -233,4 +239,13 @@ test("keys come from authored numbers, not from list position", () => {
   });
   assert.equal(reordered.findIssue("API-1")?.slug, "pagination-params");
   assert.equal(reordered.findIssue("API-4")?.slug, "parse-log-line");
+});
+
+test("summaries for client components leave out fixtures and long text", () => {
+  const summary = summarize(merged.findIssue("FN-1")!);
+  assert.equal(summary.key, "FN-1");
+  for (const field of ["criteria", "task", "comments"])
+    assert.equal(field in summary, false, field);
+  // Nothing left that React's serializer would mangle.
+  assert.equal(JSON.stringify(summary).includes("__proto__"), false);
 });
