@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { requireOnboarding } from "../../../../lib/gate";
 import {
   difficultyRange,
   languageLabel,
   languagesOf,
+  projectHref,
 } from "../../../../lib/library";
 import { getLibrary } from "../../../../lib/load";
 import { emptyIssueQuery, href } from "../../../../lib/queries";
@@ -15,13 +16,14 @@ import { IssueRows } from "../../_components/issue-list";
 import { Markdown } from "../../_components/markdown";
 import { Sep, Topbar } from "../../_components/topbar";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = { params: Promise<{ key: string }> };
 
+/** `key` is a project key such as FN (any case) or, for older links, its slug. */
 async function find({ params }: Props) {
-  const { slug } = await params;
-  const { projects, issues } = await getLibrary();
+  const { key } = await params;
+  const { findProject, issues } = await getLibrary();
   return {
-    project: projects.find((c) => c.slug === slug),
+    project: findProject(decodeURIComponent(key)),
     latest: new Map(issues.map((i) => [i.slug, i.version])),
   };
 }
@@ -37,9 +39,12 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 }
 
 export default async function ProjectPage(props: Props) {
-  await requireOnboarding(`/projects/${(await props.params).slug}`);
+  const { key } = await props.params;
+  await requireOnboarding(`/projects/${key}`);
   const { project, latest } = await find(props);
   if (!project) notFound();
+  // One canonical URL per project: /projects/FN.
+  if (key !== project.key) permanentRedirect(projectHref(project));
   return (
     <>
       <Topbar

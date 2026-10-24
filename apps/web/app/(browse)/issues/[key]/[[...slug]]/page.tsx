@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { requireOnboarding } from "../../../../../lib/gate";
-import { issueHref, type Issue } from "../../../../../lib/library";
+import {
+  issueHref,
+  projectHref,
+  type Issue,
+} from "../../../../../lib/library";
 import { getLibrary } from "../../../../../lib/load";
 import { pathWithQuery } from "../../../../../lib/onboarding";
 import {
@@ -71,15 +75,16 @@ export default async function IssuePage(props: Props) {
   );
   const { issue, latest } = await find(props);
   if (!issue || !latest) notFound();
-  // One canonical URL per issue: /issues/RG-4/harvest-totals, keeping ?version.
-  if (key !== issue.key || slug.length !== 1 || slug[0] !== issue.slug)
+  // One canonical URL per issue: /issues/RG-4, keeping ?version. Older links that name
+  // a slug, a lowercase key or a trailing slug segment land here.
+  if (key !== issue.key || slug.length > 0)
     permanentRedirect(issueHref(issue, latest.version));
   const { project } = issue;
   return (
     <>
       <Topbar>
         {project ? (
-          <Link href={`/projects/${project.slug}`}>
+          <Link href={projectHref(project)}>
             <ProjectSquare project={project} /> {project.title}
           </Link>
         ) : (
@@ -196,7 +201,7 @@ function Properties({ issue }: { issue: Issue }) {
         <dt>Project</dt>
         <dd>
           {issue.project ? (
-            <Link href={`/projects/${issue.project.slug}`} className="tag">
+            <Link href={projectHref(issue.project)} className="tag">
               <ProjectSquare project={issue.project} /> {issue.project.title}
             </Link>
           ) : (

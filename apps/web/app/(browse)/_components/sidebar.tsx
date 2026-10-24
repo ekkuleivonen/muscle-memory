@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ProjectRef } from "../../../lib/library";
+import { projectHref, type ProjectRef } from "../../../lib/library";
 import { ProjectSquare } from "./bits";
 import { BoardCount } from "./board";
 import { BoardIcon, ProjectsIcon, IssuesIcon, TerminalIcon } from "./icons";
@@ -50,8 +50,8 @@ export function Sidebar({
         <Link
           key={project.slug}
           className="side-link project-link"
-          href={`/projects/${project.slug}`}
-          aria-current={current(`/projects/${project.slug}`)}
+          href={projectHref(project)}
+          aria-current={current(projectHref(project), true)}
         >
           <ProjectSquare project={project} /> {project.title}
           <span className="key">{project.key}</span>

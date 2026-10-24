@@ -6,6 +6,7 @@ import {
   difficultyRange,
   languageLabel,
   languagesOf,
+  projectHref,
 } from "../../../lib/library";
 import { getLibrary } from "../../../lib/load";
 import { pathWithQuery } from "../../../lib/onboarding";
@@ -72,7 +73,7 @@ export default async function ProjectsPage({
                     <div className="name">
                       <ProjectSquare project={project} />
                       <div>
-                        <Link href={`/projects/${project.slug}`}>
+                        <Link href={projectHref(project)}>
                           <b>{project.title}</b>
                         </Link>
                         <div className="dim">{project.summary}</div>

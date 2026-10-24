@@ -7,9 +7,12 @@ import {
   difficultyRange,
   issueHref,
   languagesOf,
+  keyFromSlug,
   library,
+  projectHref,
   summarize,
 } from "./library";
+import { keyFromId } from "../../../tools/content-check.mjs";
 import {
   filterByStatus,
   filterProjects,
@@ -216,11 +219,27 @@ test("issues are found by permanent key, in any case, or by an older slug link",
   assert.equal(merged.findIssue("edge-3"), lru);
   assert.equal(merged.findIssue("lru-cache"), lru);
   assert.equal(merged.findIssue("EDGE-99"), undefined);
-  assert.equal(issueHref(lru), "/issues/EDGE-3/lru-cache");
+  assert.equal(issueHref(lru), "/issues/EDGE-3");
   assert.equal(
     issueHref({ ...lru, version: "0.9.0" }, lru.version),
-    "/issues/EDGE-3/lru-cache?version=0.9.0",
+    "/issues/EDGE-3?version=0.9.0",
   );
+});
+
+test("projects are found by unique key, in any case, or by an older slug link", () => {
+  const edge = merged.findProject("EDGE")!;
+  assert.equal(edge.slug, "edge-proxy");
+  assert.equal(merged.findProject("edge"), edge);
+  assert.equal(merged.findProject("edge-proxy"), edge);
+  assert.equal(merged.findProject("NOPE"), undefined);
+  assert.equal(projectHref(edge), "/projects/EDGE");
+  const keys = merged.projects.map((p) => p.key);
+  assert.equal(new Set(keys).size, keys.length);
+});
+
+test("derived keys match the content check's derivation", () => {
+  for (const id of ["night-shift", "field-notes", "edge", "a-b-c-d", "x"])
+    assert.equal(keyFromSlug(id), keyFromId(id), id);
 });
 
 test("keys come from authored numbers, not from list position", () => {

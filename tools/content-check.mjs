@@ -79,10 +79,22 @@ export function requireSingleOwner(adventures) {
 }
 
 /**
+ * The issue-key prefix an Adventure id implies when it sets no `key`:
+ * "night-shift" → "NS"; a single word keeps its first three letters.
+ * @param {string} id
+ * @returns {string}
+ */
+export function keyFromId(id) {
+  const words = id.split('-').filter(Boolean);
+  return (words.length > 1 ? words.slice(0, 3).map((w) => w[0]).join('') : id.slice(0, 3)).toUpperCase();
+}
+
+/**
  * Issue keys such as RG-4 appear in URLs and must never change meaning. Across every version:
  * a project keeps its key, an issue keeps its number, and a number within a project always
  * means the same issue. Within one Adventure version numbers are all set or all absent, and
- * distinct. `challenges` maps `id@version` to content.
+ * distinct. A key, set or derived from the id, names one project, since /projects/RG and
+ * /issues/RG-4 resolve by it. `challenges` maps `id@version` to content.
  */
 export function requireStableIdentity(adventures, challenges) {
   const agree = (map, id, value, what) => {
@@ -102,6 +114,14 @@ export function requireStableIdentity(adventures, challenges) {
     requireValue(numbered.length === 0 || numbered.length === pinned.length, `Adventure ${adventure.id}@${adventure.version} numbers all of its Challenges or none`);
     requireValue(new Set(numbered.map((c) => c.number)).size === numbered.length, `Adventure ${adventure.id}@${adventure.version} uses an issue number twice`);
     for (const c of numbered) agree(issueAt, `${adventure.id}#${c.number}`, c.id, `${adventure.id} issue ${c.number}`);
+    if (!keys.has(adventure.id)) keys.set(adventure.id, undefined);
+  }
+  const owners = new Map();
+  for (const [id, key] of keys) {
+    const effective = key ?? keyFromId(id);
+    const owner = owners.get(effective);
+    requireValue(owner === undefined, `Projects ${owner} and ${id} both use key ${effective}; project keys must be unique`);
+    owners.set(effective, id);
   }
 }
 

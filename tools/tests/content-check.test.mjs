@@ -66,6 +66,19 @@ test('issue keys never change meaning across versions', () => {
   assert.throws(() => requireStableIdentity([project], map(v1, { ...other, number: 1 })), /twice/);
 });
 
+test('a project key, set or derived from the id, names one project', () => {
+  const map = (...cs) => new Map(cs.map((c) => [`${c.id}@${c.version}`, c]));
+  const catalog = map(challenge, { ...challenge, id: 'ledger' });
+  const notebook = { ...adventure, key: 'NB', challenges: [['tally', '1.0.0']] };
+  const ledger = { ...adventure, id: 'ledger', challenges: [['ledger', '1.0.0']] };
+  requireStableIdentity([notebook, ledger], catalog);
+  assert.throws(() => requireStableIdentity([notebook, { ...ledger, key: 'NB' }], catalog), /notebook and ledger both use key NB/);
+  // "night-book" derives NB, which notebook already claims.
+  assert.throws(() => requireStableIdentity([notebook, { ...ledger, id: 'night-book' }], catalog), /key NB/);
+  // Later versions of one project share its key.
+  requireStableIdentity([notebook, { ...notebook, version: '2.0.0' }], catalog);
+});
+
 test('rejects duplicate content identities across files', async () => {
   const root = await mkdtemp(join(tmpdir(), 'muscle-memory-content-'));
   try {

@@ -113,7 +113,10 @@ export function languageLabel(id: string | undefined): string {
   return LANGUAGES.find((l) => l.id === id)?.label ?? "Any language";
 }
 
-/** "night-shift" → "NS"; a single word keeps its first three letters. */
+/**
+ * "night-shift" → "NS"; a single word keeps its first three letters. Mirrors `keyFromId` in
+ * tools/content-check.mjs, which this module cannot import because it reads the filesystem.
+ */
 export function keyFromSlug(slug: string): string {
   const words = slug.split("-").filter(Boolean);
   return (
@@ -180,14 +183,21 @@ export interface Library {
   issueVersion(slug: string, version: string): Issue | undefined;
   /** The latest issue for a key (any case) or, for older links, a slug. */
   findIssue(ref: string): Issue | undefined;
+  /** A project by key (any case) or, for older links, its slug. */
+  findProject(ref: string): Project | undefined;
 }
 
-/** Canonical issue URL: the key decides, the slug is for people. */
+/** Canonical project URL: its key, unique across projects. */
+export function projectHref(project: Pick<ProjectRef, "key">): string {
+  return `/projects/${project.key}`;
+}
+
+/** Canonical issue URL: the permanent key alone, plus ?version for an older one. */
 export function issueHref(
-  issue: Pick<IssueSummary, "key" | "slug" | "version">,
+  issue: Pick<IssueSummary, "key" | "version">,
   latestVersion?: string,
 ): string {
-  const path = `/issues/${issue.key}/${issue.slug}`;
+  const path = `/issues/${issue.key}`;
   return latestVersion && latestVersion !== issue.version
     ? `${path}?version=${issue.version}`
     : path;
@@ -238,9 +248,8 @@ export function library(catalog: Catalog): Library {
   const issues = [...latestBy(challenges).values()].map((c) =>
     toIssue(c, projectOf(c.id), keyOf(c.id)),
   );
-  return {
-    issues,
-    projects: adventures.map((adventure, i) => ({
+  const projects = adventures.map(
+    (adventure, i): Project => ({
       ...refs[i],
       version: adventure.version,
       summary: adventure.summary,
@@ -250,11 +259,18 @@ export function library(catalog: Catalog): Library {
       issues: adventure.challenges.flatMap(
         ([id, version]) => issueVersion(id, version) ?? [],
       ),
-    })),
+    }),
+  );
+  return {
+    issues,
+    projects,
     issueVersion,
     findIssue: (ref) =>
       issues.find((i) => i.key === ref.toUpperCase()) ??
       issues.find((i) => i.slug === ref),
+    findProject: (ref) =>
+      projects.find((p) => p.key === ref.toUpperCase()) ??
+      projects.find((p) => p.slug === ref),
   };
 }
 
