@@ -384,7 +384,7 @@ async function javaRunner() {
   const key = createHash("sha256")
     .update(JDK_IMAGE)
     .update(TEAVM_JAVAC.commit)
-    .update("single-processor")
+    .update("single-processor, sorted walks")
     .digest("hex")
     .slice(0, 16);
   const cache = join(
@@ -423,6 +423,29 @@ async function javaRunner() {
       TEAVM_JAVAC.commit,
     ]);
     execFileSync("git", ["-C", src, "checkout", "-q", "FETCH_HEAD"]);
+    // Its class libraries are built by walking directories, in whatever order the filesystem
+    // lists them, so other machines (CI) got other bytes. Sorted walks fix the order.
+    const sortedWalks = [
+      [
+        "compiler/src/main/java/org/teavm/javac/StdlibConverter.java",
+        "stream.forEach(path ->",
+        "stream.sorted().forEach(path ->",
+      ],
+      [
+        "compiler/src/main/java/org/teavm/javac/ArchiveBuilder.java",
+        "input.forEach(file ->",
+        "input.sorted().forEach(file ->",
+      ],
+    ];
+    for (const [file, from, to] of sortedWalks) {
+      const path = join(src, file);
+      const text = await readFile(path, "utf8");
+      if (text.split(from).length !== 2)
+        throw new Error(
+          `teavm-javac changed: update the sorted-walk patch for ${file}.`,
+        );
+      await writeFile(path, text.replace(from, to));
+    }
     execFileSync(
       "docker",
       [
