@@ -52,9 +52,12 @@ export interface SeedIssue {
   schema?: string;
   /** C, C++ and Java: turns a case's JSON arguments into the function's types. */
   adapter?: string;
-  /** JavaScript and TypeScript: where the entry file lives, when not src/<entry point>. */
+  /** JavaScript, TypeScript and Python: where the entry file lives, when not the default. */
   entry?: string;
-  /** More of the repo: source the code uses but may not change (read), and documents (docs). */
+  /**
+   * More of the repo: more files to change (edit), source the code uses but may not change
+   * (read), and documents (docs). Only multi-file runners (engines.ts) load other source files.
+   */
   files?: SeedFile[];
   /** Cases left out of the repo's test file, by index: only CI runs them. */
   hidden?: number[];
@@ -63,7 +66,7 @@ export interface SeedIssue {
 
 export interface SeedFile {
   path: string;
-  role: "read" | "docs";
+  role: "edit" | "read" | "docs";
   language: string;
   text: string;
 }

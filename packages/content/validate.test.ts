@@ -26,22 +26,37 @@ test("a workspace may have several editable files and read-only sources, if its 
     },
   };
   validateRevision(multi, "js");
-  // Python's runner loads one file, so a second source file is refused.
+  // Python loads the repo's other files too.
   const py = revisionOf("frequency-map");
+  validateRevision(
+    {
+      ...py,
+      workspace: {
+        ...py.workspace,
+        files: {
+          ...py.workspace.files,
+          "helpers.py": { role: "read", language: "python", text: "\n" },
+        },
+      },
+    },
+    "py",
+  );
+  // Go's runner loads one file, so a second source file is refused.
+  const go = revisionOf("pagination-params");
   assert.throws(
     () =>
       validateRevision(
         {
-          ...py,
+          ...go,
           workspace: {
-            ...py.workspace,
+            ...go.workspace,
             files: {
-              ...py.workspace.files,
-              "helpers.py": { role: "read", language: "python", text: "\n" },
+              ...go.workspace.files,
+              "internal/helpers.go": { role: "read", language: "go", text: "package main\n" },
             },
           },
         },
-        "py",
+        "go",
       ),
     /cannot load more than one source file/,
   );

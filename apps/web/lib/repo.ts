@@ -455,12 +455,16 @@ function layout(src: RepoSource): {
 } {
   const e = src.entrypoint;
   switch (src.language) {
-    case "python":
+    case "python": {
+      // At the repo root unless the issue places it in a package; tests import it by module.
+      const solution = src.entry ?? `${snake(e)}.py`;
+      const module = solution.replace(/\.py$/, "").replace(/\//g, ".");
       return {
-        solution: `${snake(e)}.py`,
-        tests: `tests/test_${snake(e)}.py`,
-        text: pythonTests(src, snake(e)),
+        solution,
+        tests: `tests/test_${module.replace(/^.*\./, "")}.py`,
+        text: pythonTests(src, module),
       };
+    }
     case "javascript":
     case "typescript": {
       const ext = src.language === "typescript" ? "ts" : "js";
