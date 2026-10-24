@@ -21,6 +21,8 @@ export interface Challenge {
   readonly summary?: string;
   readonly difficulty?: Difficulty;
   readonly kind?: IssueKind;
+  /** Issue number within its project (RG-4); permanent once published. */
+  readonly number?: number;
   /** Authored context from the fictional team; not participant comments. */
   readonly comments?: readonly IssueComment[];
 }

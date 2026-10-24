@@ -381,3 +381,35 @@ test("an issue belongs to one project unless its owner was retired", () => {
   const retired = retire(catalog, adventureRef, at);
   assert.ok(saveDraft(retired, "adventure", ledger, at));
 });
+
+test("issue numbers and project keys are permanent across versions", () => {
+  const numbered = { ...challenge, number: 1 };
+  let catalog = release(
+    saveDraft(emptyCatalog(), "challenge", numbered, at),
+    challengeRef,
+  );
+  assert.throws(
+    () =>
+      saveDraft(
+        catalog,
+        "challenge",
+        { ...numbered, version: "1.1.0", number: 2 },
+        at,
+      ),
+    /number changed from 1 to 2/,
+  );
+  catalog = release(
+    saveDraft(catalog, "adventure", { ...adventure, key: "NB" }, at),
+    adventureRef,
+  );
+  assert.throws(
+    () =>
+      saveDraft(
+        catalog,
+        "adventure",
+        { ...adventure, version: "1.1.0", key: "NX" },
+        at,
+      ),
+    /key changed from NB to NX/,
+  );
+});

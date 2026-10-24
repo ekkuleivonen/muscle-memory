@@ -1,43 +1,46 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { requireOnboarding } from "../../../../lib/gate";
-import type { Issue } from "../../../../lib/library";
-import { getLibrary } from "../../../../lib/load";
-import { pathWithQuery } from "../../../../lib/onboarding";
+import { notFound, permanentRedirect } from "next/navigation";
+import { requireOnboarding } from "../../../../../lib/gate";
+import { issueHref, type Issue } from "../../../../../lib/library";
+import { getLibrary } from "../../../../../lib/load";
+import { pathWithQuery } from "../../../../../lib/onboarding";
 import {
   formatQuery,
   emptyIssueQuery,
   type SearchParams,
-} from "../../../../lib/queries";
+} from "../../../../../lib/queries";
 import {
   Avatar,
   ProjectSquare,
   Estimate,
   LabelPill,
   LanguageTag,
-} from "../../_components/bits";
+} from "../../../_components/bits";
 import {
   KIND_LABELS,
   KindIcon,
   PlayIcon,
   StatusIcon,
-} from "../../_components/icons";
-import { Sep, Topbar } from "../../_components/topbar";
+} from "../../../_components/icons";
+import { Sep, Topbar } from "../../../_components/topbar";
 
 type Props = {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ key: string; slug?: string[] }>;
   searchParams: Promise<SearchParams>;
 };
 
-/** The requested version when it is published, otherwise the latest. */
+/**
+ * `key` is an issue key such as RG-4 (any case) or, for older links, a slug. The requested
+ * version is shown when it is published, otherwise the latest.
+ */
 async function find({ params, searchParams }: Props) {
-  const [{ slug }, { version }] = await Promise.all([params, searchParams]);
-  const { issues, issueVersion } = await getLibrary();
-  const latest = issues.find((i) => i.slug === slug);
+  const [{ key }, { version }] = await Promise.all([params, searchParams]);
+  const { findIssue, issueVersion } = await getLibrary();
+  const latest = findIssue(decodeURIComponent(key));
   const issue =
-    typeof version === "string" && version !== latest?.version
-      ? issueVersion(slug, version)
+    latest && typeof version === "string" && version !== latest.version
+      ? issueVersion(latest.slug, version)
       : latest;
   return { issue, latest };
 }
@@ -57,13 +60,18 @@ const labelHref = (label: string) =>
   `/issues?${new URLSearchParams({ q: formatQuery({ ...emptyIssueQuery(), label: [label] }) })}`;
 
 export default async function IssuePage(props: Props) {
-  const [{ slug }, params] = await Promise.all([
+  const [{ key, slug = [] }, params] = await Promise.all([
     props.params,
     props.searchParams,
   ]);
-  await requireOnboarding(pathWithQuery(`/issues/${slug}`, params));
+  await requireOnboarding(
+    pathWithQuery(`/issues/${[key, ...slug].join("/")}`, params),
+  );
   const { issue, latest } = await find(props);
-  if (!issue) notFound();
+  if (!issue || !latest) notFound();
+  // One canonical URL per issue: /issues/RG-4/harvest-totals, keeping ?version.
+  if (key !== issue.key || slug.length !== 1 || slug[0] !== issue.slug)
+    permanentRedirect(issueHref(issue, latest.version));
   const { project } = issue;
   return (
     <>
@@ -91,7 +99,7 @@ export default async function IssuePage(props: Props) {
           {latest && latest.version !== issue.version && (
             <p className="banner">
               You are viewing version {issue.version}.{" "}
-              <Link href={`/issues/${issue.slug}`}>
+              <Link href={issueHref(latest)}>
                 Open the latest ({latest.version})
               </Link>
             </p>

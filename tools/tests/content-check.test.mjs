@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { checkContent, requireSingleOwner, validateChallenge, validateAdventure } from '../content-check.mjs';
+import { checkContent, requireSingleOwner, requireStableIdentity, validateChallenge, validateAdventure } from '../content-check.mjs';
 
 const challenge = { id: 'tally', version: '1.0.0', assessment_version: '1.0.0', task: 'Count labels', skills: ['maps'], hints: [], inputs: [[]], expected: [{}] };
 const adventure = { id: 'notebook', version: '1.0.0', story: 'Read the notebook', presentation: 'text-v1', challenges: [['tally', '1.0.0']] };
@@ -42,6 +42,28 @@ test('an issue belongs to one project, once', () => {
   assert.throws(() => validateAdventure({ ...adventure, challenges: [['tally', '1.0.0'], ['tally', '1.0.0']] }, catalog), /once/);
   requireSingleOwner([adventure, { ...adventure, version: '2.0.0' }]);
   assert.throws(() => requireSingleOwner([adventure, { ...adventure, id: 'ledger' }]), /pinned by both notebook and ledger/);
+});
+
+test('issue keys never change meaning across versions', () => {
+  const v1 = { ...challenge, number: 1 };
+  const other = { ...challenge, id: 'ledger', number: 2 };
+  const map = (...cs) => new Map(cs.map((c) => [`${c.id}@${c.version}`, c]));
+  const project = { ...adventure, key: 'NB', challenges: [['tally', '1.0.0'], ['ledger', '1.0.0']] };
+  requireStableIdentity([project], map(v1, other));
+  assert.throws(() => validateChallenge({ ...challenge, number: 0 }), /number/);
+  // A number cannot change between versions of an issue.
+  assert.throws(() => requireStableIdentity([project], map(v1, { ...v1, version: '1.1.0', number: 3 }, other)), /number changed/);
+  // A project keeps its key.
+  assert.throws(() => requireStableIdentity([project, { ...project, version: '2.0.0', key: 'NX' }], map(v1, other)), /key changed/);
+  // A dropped issue's number is never reused for another.
+  const reuse = { ...challenge, id: 'abacus', number: 2 };
+  assert.throws(
+    () => requireStableIdentity([project, { ...project, version: '2.0.0', challenges: [['tally', '1.0.0'], ['abacus', '1.0.0']] }], map(v1, other, reuse)),
+    /issue 2 changed from ledger to abacus/,
+  );
+  // All or none within a version, and distinct.
+  assert.throws(() => requireStableIdentity([project], map(v1, { ...other, number: undefined })), /all of its Challenges or none/);
+  assert.throws(() => requireStableIdentity([project], map(v1, { ...other, number: 1 })), /twice/);
 });
 
 test('rejects duplicate content identities across files', async () => {

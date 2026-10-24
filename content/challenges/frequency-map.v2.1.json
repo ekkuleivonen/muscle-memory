@@ -4,6 +4,7 @@
   "summary": "Count every exact, case-sensitive label in a list.",
   "difficulty": "warm-up",
   "kind": "feature",
+  "number": 1,
   "comments": [
     {"author": "Priya K", "role": "Data", "body": "Heads up: the scanner sometimes emits odd labels like __proto__. Please don't special-case anything; every label is just a string."}
   ],

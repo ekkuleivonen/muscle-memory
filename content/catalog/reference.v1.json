@@ -295,6 +295,7 @@
         ],
         "kind": "feature",
         "language": "python",
+        "number": 1,
         "runtime": {
           "id": "pyodide",
           "python": "3.14.2",
@@ -311,10 +312,10 @@
         "title": "Frequency map",
         "version": "2.1.0"
       },
-      "digest": "7855ef9e03fefe7087043023e2cecb44d1a2ccdea0771e08a58bf0304c531f4a",
+      "digest": "645a19b6be00dacae58d80fe458f1ed88dd205fd000b545bda11f3eb7b266994",
       "state": "published",
       "testResult": {
-        "digest": "7855ef9e03fefe7087043023e2cecb44d1a2ccdea0771e08a58bf0304c531f4a",
+        "digest": "645a19b6be00dacae58d80fe458f1ed88dd205fd000b545bda11f3eb7b266994",
         "fixtures": 4,
         "at": "2026-10-23T00:00:00.000Z"
       },
@@ -323,28 +324,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "7855ef9e03fefe7087043023e2cecb44d1a2ccdea0771e08a58bf0304c531f4a",
+          "digest": "645a19b6be00dacae58d80fe458f1ed88dd205fd000b545bda11f3eb7b266994",
           "at": "2026-10-23T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "7855ef9e03fefe7087043023e2cecb44d1a2ccdea0771e08a58bf0304c531f4a",
+          "digest": "645a19b6be00dacae58d80fe458f1ed88dd205fd000b545bda11f3eb7b266994",
           "at": "2026-10-23T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "7855ef9e03fefe7087043023e2cecb44d1a2ccdea0771e08a58bf0304c531f4a",
+          "digest": "645a19b6be00dacae58d80fe458f1ed88dd205fd000b545bda11f3eb7b266994",
           "at": "2026-10-23T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "7855ef9e03fefe7087043023e2cecb44d1a2ccdea0771e08a58bf0304c531f4a",
+          "digest": "645a19b6be00dacae58d80fe458f1ed88dd205fd000b545bda11f3eb7b266994",
           "at": "2026-10-23T00:00:00.000Z"
         }
       ]
@@ -361,16 +362,17 @@
           ]
         ],
         "id": "field-notes",
+        "key": "FN",
         "presentation": "field-notes-text-v1",
         "story": "A field researcher needs an exact tally of specimen labels. Recover the frequency map from the notebook.",
         "summary": "Help a field researcher make sense of a messy notebook.",
         "title": "Field notes",
         "version": "2.0.0"
       },
-      "digest": "25f30b7377b9bf4a82b8e6cf1b1b829b950d4409e117c81694ec07ec44729e13",
+      "digest": "e6b2966f3822583507299579c0ff75739162af3a02c3df7f3eb75a51bab50b8c",
       "state": "published",
       "testResult": {
-        "digest": "25f30b7377b9bf4a82b8e6cf1b1b829b950d4409e117c81694ec07ec44729e13",
+        "digest": "e6b2966f3822583507299579c0ff75739162af3a02c3df7f3eb75a51bab50b8c",
         "fixtures": 4,
         "at": "2026-10-23T00:00:00.000Z"
       },
@@ -379,28 +381,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "25f30b7377b9bf4a82b8e6cf1b1b829b950d4409e117c81694ec07ec44729e13",
+          "digest": "e6b2966f3822583507299579c0ff75739162af3a02c3df7f3eb75a51bab50b8c",
           "at": "2026-10-23T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "25f30b7377b9bf4a82b8e6cf1b1b829b950d4409e117c81694ec07ec44729e13",
+          "digest": "e6b2966f3822583507299579c0ff75739162af3a02c3df7f3eb75a51bab50b8c",
           "at": "2026-10-23T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "25f30b7377b9bf4a82b8e6cf1b1b829b950d4409e117c81694ec07ec44729e13",
+          "digest": "e6b2966f3822583507299579c0ff75739162af3a02c3df7f3eb75a51bab50b8c",
           "at": "2026-10-23T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "25f30b7377b9bf4a82b8e6cf1b1b829b950d4409e117c81694ec07ec44729e13",
+          "digest": "e6b2966f3822583507299579c0ff75739162af3a02c3df7f3eb75a51bab50b8c",
           "at": "2026-10-23T00:00:00.000Z"
         }
       ]

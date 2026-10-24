@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import type { Catalog } from "../../../packages/catalog/catalog";
-import { difficultyRange, languagesOf, library } from "./library";
+import { difficultyRange, issueHref, languagesOf, library } from "./library";
 import {
   filterProjects,
   filterIssues,
@@ -182,4 +182,36 @@ test("links toggle one value and round-trip through the URL", () => {
   assert.equal(href("/issues", parseIssueQuery("")), "/issues");
   const back = new URL(href("/issues", on), "http://x").searchParams.get("q")!;
   assert.deepEqual(parseIssueQuery(back), on);
+});
+
+test("issues are found by permanent key, in any case, or by an older slug link", () => {
+  const harvest = merged.findIssue("RG-4")!;
+  assert.equal(harvest.slug, "harvest-totals");
+  assert.equal(merged.findIssue("rg-4"), harvest);
+  assert.equal(merged.findIssue("harvest-totals"), harvest);
+  assert.equal(merged.findIssue("RG-99"), undefined);
+  assert.equal(issueHref(harvest), "/issues/RG-4/harvest-totals");
+  assert.equal(
+    issueHref({ ...harvest, version: "0.9.0" }, harvest.version),
+    "/issues/RG-4/harvest-totals?version=0.9.0",
+  );
+});
+
+test("keys come from authored numbers, not from list position", () => {
+  const key = "adventure:night-shift@1.0.0";
+  const entry = demo.entries[key];
+  const content = entry.content as { challenges: [string, string][] };
+  // Reordering a project must not renumber its issues.
+  const reordered = library({
+    ...demo,
+    entries: {
+      ...demo.entries,
+      [key]: {
+        ...entry,
+        content: { ...content, challenges: [...content.challenges].reverse() },
+      },
+    },
+  });
+  assert.equal(reordered.findIssue("NS-1")?.slug, "rate-limiter");
+  assert.equal(reordered.findIssue("NS-3")?.slug, "top-customers");
 });

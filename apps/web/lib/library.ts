@@ -48,7 +48,7 @@ export interface ProjectRef {
 
 export interface Issue {
   slug: string;
-  /** Display identifier such as NS-2: its first project's key and position there. */
+  /** Permanent identifier such as NS-2: project key and issue number. */
   key: string;
   version: string;
   title: string;
@@ -168,6 +168,19 @@ export interface Library {
   projects: Project[];
   /** A specific published version, e.g. one a project pins. */
   issueVersion(slug: string, version: string): Issue | undefined;
+  /** The latest issue for a key (any case) or, for older links, a slug. */
+  findIssue(ref: string): Issue | undefined;
+}
+
+/** Canonical issue URL: the key decides, the slug is for people. */
+export function issueHref(
+  issue: Pick<Issue, "key" | "slug" | "version">,
+  latestVersion?: string,
+): string {
+  const path = `/issues/${issue.key}/${issue.slug}`;
+  return latestVersion && latestVersion !== issue.version
+    ? `${path}?version=${issue.version}`
+    : path;
 }
 
 export function library(catalog: Catalog): Library {
@@ -199,8 +212,11 @@ export function library(catalog: Catalog): Library {
   const keyOf = (slug: string): string => {
     const i = ownerOf(slug);
     if (i < 0) return keyFromSlug(slug);
-    const position = adventures[i].challenges.findIndex(([id]) => id === slug);
-    return `${refs[i].key}-${position + 1}`;
+    // Numbers are permanent across versions; unnumbered legacy content falls back to order.
+    const number =
+      challenges.find((c) => c.id === slug && c.number !== undefined)?.number ??
+      adventures[i].challenges.findIndex(([id]) => id === slug) + 1;
+    return `${refs[i].key}-${number}`;
   };
   const issueVersion = (slug: string, version: string) => {
     const content = challenges.find(
@@ -208,10 +224,11 @@ export function library(catalog: Catalog): Library {
     );
     return content && toIssue(content, projectOf(slug), keyOf(slug));
   };
+  const issues = [...latestBy(challenges).values()].map((c) =>
+    toIssue(c, projectOf(c.id), keyOf(c.id)),
+  );
   return {
-    issues: [...latestBy(challenges).values()].map((c) =>
-      toIssue(c, projectOf(c.id), keyOf(c.id)),
-    ),
+    issues,
     projects: adventures.map((adventure, i) => ({
       ...refs[i],
       version: adventure.version,
@@ -224,6 +241,9 @@ export function library(catalog: Catalog): Library {
       ),
     })),
     issueVersion,
+    findIssue: (ref) =>
+      issues.find((i) => i.key === ref.toUpperCase()) ??
+      issues.find((i) => i.slug === ref),
   };
 }
 

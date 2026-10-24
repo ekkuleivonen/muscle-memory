@@ -1,5 +1,6 @@
 {
   "id": "field-notes", "version": "2.0.0",
+  "key": "FN",
   "title": "Field notes",
   "summary": "Help a field researcher make sense of a messy notebook.",
   "story": "A field researcher needs an exact tally of specimen labels. Recover the frequency map from the notebook.",

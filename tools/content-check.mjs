@@ -50,6 +50,9 @@ export function validateChallenge(challenge) {
     requireValue(difficulties.includes(challenge.difficulty), `Challenge difficulty must be one of ${difficulties.join(', ')}`);
   if (challenge.kind !== undefined)
     requireValue(issueKinds.includes(challenge.kind), `Challenge kind must be one of ${issueKinds.join(', ')}`);
+  // Issue number within its project (RG-4). Fixed for good once published.
+  if (challenge.number !== undefined)
+    requireValue(Number.isInteger(challenge.number) && challenge.number >= 1 && challenge.number <= 9999, 'Challenge number must be a whole number from 1 to 9999');
   if (challenge.comments !== undefined) {
     requireValue(Array.isArray(challenge.comments), 'Challenge comments must be a list');
     for (const comment of challenge.comments)
@@ -73,6 +76,33 @@ export function requireSingleOwner(adventures) {
       requireValue(!owner || owner === adventure.id, `Challenge ${id} is pinned by both ${owner} and ${adventure.id}; an issue belongs to one project`);
       owners.set(id, adventure.id);
     }
+}
+
+/**
+ * Issue keys such as RG-4 appear in URLs and must never change meaning. Across every version:
+ * a project keeps its key, an issue keeps its number, and a number within a project always
+ * means the same issue. Within one Adventure version numbers are all set or all absent, and
+ * distinct. `challenges` maps `id@version` to content.
+ */
+export function requireStableIdentity(adventures, challenges) {
+  const agree = (map, id, value, what) => {
+    if (value === undefined) return;
+    const seen = map.get(id);
+    requireValue(seen === undefined || seen === value, `${what} changed from ${seen} to ${value}; published keys and numbers are permanent`);
+    map.set(id, value);
+  };
+  const keys = new Map();
+  const numbers = new Map();
+  for (const challenge of challenges.values()) agree(numbers, challenge.id, challenge.number, `Challenge ${challenge.id} number`);
+  const issueAt = new Map();
+  for (const adventure of adventures) {
+    agree(keys, adventure.id, adventure.key, `Adventure ${adventure.id} key`);
+    const pinned = (adventure.challenges ?? []).map(([id, version]) => challenges.get(`${id}@${version}`)).filter(Boolean);
+    const numbered = pinned.filter((c) => c.number !== undefined);
+    requireValue(numbered.length === 0 || numbered.length === pinned.length, `Adventure ${adventure.id}@${adventure.version} numbers all of its Challenges or none`);
+    requireValue(new Set(numbered.map((c) => c.number)).size === numbered.length, `Adventure ${adventure.id}@${adventure.version} uses an issue number twice`);
+    for (const c of numbered) agree(issueAt, `${adventure.id}#${c.number}`, c.id, `${adventure.id} issue ${c.number}`);
+  }
 }
 
 export function validateAdventure(adventure, challenges) {
@@ -118,6 +148,7 @@ export async function checkContent(root) {
   }
   requireValue(challenges.size > 0 && adventures.size > 0, 'Content needs at least one Adventure and Challenge');
   requireSingleOwner(adventures.values());
+  requireStableIdentity(adventures.values(), challenges);
   return { challenges: challenges.size, adventures: adventures.size };
 }
 

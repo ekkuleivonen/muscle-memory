@@ -1,14 +1,8 @@
 import Link from "next/link";
-import type { Issue } from "../../../lib/library";
+import { issueHref, type Issue } from "../../../lib/library";
 import type { IssueGroup } from "../../../lib/queries";
 import { Estimate, LabelPill, LanguageTag } from "./bits";
 import { KindIcon, StatusIcon } from "./icons";
-
-export function issueHref(issue: Issue, latestVersion?: string): string {
-  return latestVersion && latestVersion !== issue.version
-    ? `/issues/${issue.slug}?version=${issue.version}`
-    : `/issues/${issue.slug}`;
-}
 
 function IssueRow({ issue, href }: { issue: Issue; href: string }) {
   return (

@@ -295,8 +295,16 @@ const adventures = [
 
 const at = "2026-10-24T00:00:00.000Z"; // Synthetic, deterministic across builds.
 let catalog = emptyCatalog();
+// Issue numbers follow each project's order at first publication and never change.
+const numberOf = new Map(
+  adventures.flatMap((a) =>
+    a.challenges.map(([id], i) => [id, i + 1] as const),
+  ),
+);
 for (const [kind, content] of [
-  ...challenges.map((c) => ["challenge", c] as const),
+  ...challenges.map(
+    (c) => ["challenge", { ...c, number: numberOf.get(c.id) }] as const,
+  ),
   ...adventures.map((a) => ["adventure", a] as const),
 ]) {
   const ref: ContentRef = { kind, id: content.id, version: content.version };

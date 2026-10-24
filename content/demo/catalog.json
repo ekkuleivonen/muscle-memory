@@ -61,6 +61,7 @@
         ],
         "kind": "feature",
         "language": "typescript",
+        "number": 1,
         "skills": [
           "sliding-window",
           "queues"
@@ -70,10 +71,10 @@
         "title": "Rate-limit the checkout endpoint",
         "version": "1.0.0"
       },
-      "digest": "8e765c0c7d4dc74bef9bbde1783786b2aa152c6631373d0d0fff498cb29c6967",
+      "digest": "b5eb0e3c352d80b793b97cd015738b147978e563617d90af18f339253da3bc21",
       "state": "published",
       "testResult": {
-        "digest": "8e765c0c7d4dc74bef9bbde1783786b2aa152c6631373d0d0fff498cb29c6967",
+        "digest": "b5eb0e3c352d80b793b97cd015738b147978e563617d90af18f339253da3bc21",
         "fixtures": 3,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -82,28 +83,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "8e765c0c7d4dc74bef9bbde1783786b2aa152c6631373d0d0fff498cb29c6967",
+          "digest": "b5eb0e3c352d80b793b97cd015738b147978e563617d90af18f339253da3bc21",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "8e765c0c7d4dc74bef9bbde1783786b2aa152c6631373d0d0fff498cb29c6967",
+          "digest": "b5eb0e3c352d80b793b97cd015738b147978e563617d90af18f339253da3bc21",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "8e765c0c7d4dc74bef9bbde1783786b2aa152c6631373d0d0fff498cb29c6967",
+          "digest": "b5eb0e3c352d80b793b97cd015738b147978e563617d90af18f339253da3bc21",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "8e765c0c7d4dc74bef9bbde1783786b2aa152c6631373d0d0fff498cb29c6967",
+          "digest": "b5eb0e3c352d80b793b97cd015738b147978e563617d90af18f339253da3bc21",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -149,6 +150,7 @@
         ],
         "kind": "bug",
         "language": "go",
+        "number": 2,
         "skills": [
           "parsing",
           "strings"
@@ -158,10 +160,10 @@
         "title": "Log parser drops fields on 5xx lines",
         "version": "1.0.0"
       },
-      "digest": "394668c0b9b675b8bcea4c16dd35a59c002fdeae1790b081d1d44cc40d7e60d2",
+      "digest": "9e510afd8f15cb6786fabeb1a47e1967d16085a28ab42207ab594772566e2c8d",
       "state": "published",
       "testResult": {
-        "digest": "394668c0b9b675b8bcea4c16dd35a59c002fdeae1790b081d1d44cc40d7e60d2",
+        "digest": "9e510afd8f15cb6786fabeb1a47e1967d16085a28ab42207ab594772566e2c8d",
         "fixtures": 2,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -170,28 +172,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "394668c0b9b675b8bcea4c16dd35a59c002fdeae1790b081d1d44cc40d7e60d2",
+          "digest": "9e510afd8f15cb6786fabeb1a47e1967d16085a28ab42207ab594772566e2c8d",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "394668c0b9b675b8bcea4c16dd35a59c002fdeae1790b081d1d44cc40d7e60d2",
+          "digest": "9e510afd8f15cb6786fabeb1a47e1967d16085a28ab42207ab594772566e2c8d",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "394668c0b9b675b8bcea4c16dd35a59c002fdeae1790b081d1d44cc40d7e60d2",
+          "digest": "9e510afd8f15cb6786fabeb1a47e1967d16085a28ab42207ab594772566e2c8d",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "394668c0b9b675b8bcea4c16dd35a59c002fdeae1790b081d1d44cc40d7e60d2",
+          "digest": "9e510afd8f15cb6786fabeb1a47e1967d16085a28ab42207ab594772566e2c8d",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -247,6 +249,7 @@
         ],
         "kind": "feature",
         "language": "sql",
+        "number": 3,
         "skills": [
           "aggregation",
           "sorting"
@@ -256,10 +259,10 @@
         "title": "Top customers report for stand-up",
         "version": "1.0.0"
       },
-      "digest": "003ab41db68924766d57b035d28219e33b69629e64faa870c04f3216b1c2ee62",
+      "digest": "45b9f90cf854aeeb9f7fb87ded57621dd7966f51c557234f37eba07da32139e8",
       "state": "published",
       "testResult": {
-        "digest": "003ab41db68924766d57b035d28219e33b69629e64faa870c04f3216b1c2ee62",
+        "digest": "45b9f90cf854aeeb9f7fb87ded57621dd7966f51c557234f37eba07da32139e8",
         "fixtures": 1,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -268,28 +271,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "003ab41db68924766d57b035d28219e33b69629e64faa870c04f3216b1c2ee62",
+          "digest": "45b9f90cf854aeeb9f7fb87ded57621dd7966f51c557234f37eba07da32139e8",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "003ab41db68924766d57b035d28219e33b69629e64faa870c04f3216b1c2ee62",
+          "digest": "45b9f90cf854aeeb9f7fb87ded57621dd7966f51c557234f37eba07da32139e8",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "003ab41db68924766d57b035d28219e33b69629e64faa870c04f3216b1c2ee62",
+          "digest": "45b9f90cf854aeeb9f7fb87ded57621dd7966f51c557234f37eba07da32139e8",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "003ab41db68924766d57b035d28219e33b69629e64faa870c04f3216b1c2ee62",
+          "digest": "45b9f90cf854aeeb9f7fb87ded57621dd7966f51c557234f37eba07da32139e8",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -328,6 +331,7 @@
         ],
         "kind": "feature",
         "language": "c",
+        "number": 2,
         "skills": [
           "arrays",
           "modular-arithmetic"
@@ -337,10 +341,10 @@
         "title": "Keep only the latest lamp readings",
         "version": "1.0.0"
       },
-      "digest": "ad2275dade967e75728b68abf843b152f5e7a35519a55950329282f4fc0697ee",
+      "digest": "c625d78ab29b9f200596d45013d5c56ef20bc1fbff7e728021a4807bd9610932",
       "state": "published",
       "testResult": {
-        "digest": "ad2275dade967e75728b68abf843b152f5e7a35519a55950329282f4fc0697ee",
+        "digest": "c625d78ab29b9f200596d45013d5c56ef20bc1fbff7e728021a4807bd9610932",
         "fixtures": 2,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -349,28 +353,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "ad2275dade967e75728b68abf843b152f5e7a35519a55950329282f4fc0697ee",
+          "digest": "c625d78ab29b9f200596d45013d5c56ef20bc1fbff7e728021a4807bd9610932",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "ad2275dade967e75728b68abf843b152f5e7a35519a55950329282f4fc0697ee",
+          "digest": "c625d78ab29b9f200596d45013d5c56ef20bc1fbff7e728021a4807bd9610932",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "ad2275dade967e75728b68abf843b152f5e7a35519a55950329282f4fc0697ee",
+          "digest": "c625d78ab29b9f200596d45013d5c56ef20bc1fbff7e728021a4807bd9610932",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "ad2275dade967e75728b68abf843b152f5e7a35519a55950329282f4fc0697ee",
+          "digest": "c625d78ab29b9f200596d45013d5c56ef20bc1fbff7e728021a4807bd9610932",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -401,6 +405,7 @@
         ],
         "kind": "bug",
         "language": "rust",
+        "number": 1,
         "skills": [
           "maps",
           "strings"
@@ -410,10 +415,10 @@
         "title": "Morse decoder merges separate words",
         "version": "1.0.0"
       },
-      "digest": "8acd5d62bb084ee31361ce48f765759e878751db1658624bf3069f04fb3df328",
+      "digest": "3993368e3ee08cb1a8bea8c143f801fbd46373d2cf6f88b17881f47590835016",
       "state": "published",
       "testResult": {
-        "digest": "8acd5d62bb084ee31361ce48f765759e878751db1658624bf3069f04fb3df328",
+        "digest": "3993368e3ee08cb1a8bea8c143f801fbd46373d2cf6f88b17881f47590835016",
         "fixtures": 2,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -422,28 +427,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "8acd5d62bb084ee31361ce48f765759e878751db1658624bf3069f04fb3df328",
+          "digest": "3993368e3ee08cb1a8bea8c143f801fbd46373d2cf6f88b17881f47590835016",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "8acd5d62bb084ee31361ce48f765759e878751db1658624bf3069f04fb3df328",
+          "digest": "3993368e3ee08cb1a8bea8c143f801fbd46373d2cf6f88b17881f47590835016",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "8acd5d62bb084ee31361ce48f765759e878751db1658624bf3069f04fb3df328",
+          "digest": "3993368e3ee08cb1a8bea8c143f801fbd46373d2cf6f88b17881f47590835016",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "8acd5d62bb084ee31361ce48f765759e878751db1658624bf3069f04fb3df328",
+          "digest": "3993368e3ee08cb1a8bea8c143f801fbd46373d2cf6f88b17881f47590835016",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -477,6 +482,7 @@
         ],
         "kind": "bug",
         "language": "python",
+        "number": 3,
         "skills": [
           "strings",
           "greedy"
@@ -486,10 +492,10 @@
         "title": "Logbook lines overflow the printer",
         "version": "1.0.0"
       },
-      "digest": "cb4c026c97233a3c45180899da9adfdc74bec32b54b182c5cbd49c4b4421b2c5",
+      "digest": "d45582a5159f221abc2c0b02b1bd1025fc6ae56b96af3ebbb81c4393592137cf",
       "state": "published",
       "testResult": {
-        "digest": "cb4c026c97233a3c45180899da9adfdc74bec32b54b182c5cbd49c4b4421b2c5",
+        "digest": "d45582a5159f221abc2c0b02b1bd1025fc6ae56b96af3ebbb81c4393592137cf",
         "fixtures": 2,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -498,28 +504,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "cb4c026c97233a3c45180899da9adfdc74bec32b54b182c5cbd49c4b4421b2c5",
+          "digest": "d45582a5159f221abc2c0b02b1bd1025fc6ae56b96af3ebbb81c4393592137cf",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "cb4c026c97233a3c45180899da9adfdc74bec32b54b182c5cbd49c4b4421b2c5",
+          "digest": "d45582a5159f221abc2c0b02b1bd1025fc6ae56b96af3ebbb81c4393592137cf",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "cb4c026c97233a3c45180899da9adfdc74bec32b54b182c5cbd49c4b4421b2c5",
+          "digest": "d45582a5159f221abc2c0b02b1bd1025fc6ae56b96af3ebbb81c4393592137cf",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "cb4c026c97233a3c45180899da9adfdc74bec32b54b182c5cbd49c4b4421b2c5",
+          "digest": "d45582a5159f221abc2c0b02b1bd1025fc6ae56b96af3ebbb81c4393592137cf",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -562,6 +568,7 @@
         ],
         "kind": "feature",
         "language": "php",
+        "number": 2,
         "skills": [
           "iteration",
           "dates"
@@ -571,10 +578,10 @@
         "title": "Watering schedule for the co-op",
         "version": "1.0.0"
       },
-      "digest": "de52b6374178f44c9f06fc8604a706898a4e599f101aab444e0744c7fb9745d5",
+      "digest": "fe88e8de336266d4383890c014395cf208e7318fff1becc55594671cfba5d00e",
       "state": "published",
       "testResult": {
-        "digest": "de52b6374178f44c9f06fc8604a706898a4e599f101aab444e0744c7fb9745d5",
+        "digest": "fe88e8de336266d4383890c014395cf208e7318fff1becc55594671cfba5d00e",
         "fixtures": 1,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -583,28 +590,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "de52b6374178f44c9f06fc8604a706898a4e599f101aab444e0744c7fb9745d5",
+          "digest": "fe88e8de336266d4383890c014395cf208e7318fff1becc55594671cfba5d00e",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "de52b6374178f44c9f06fc8604a706898a4e599f101aab444e0744c7fb9745d5",
+          "digest": "fe88e8de336266d4383890c014395cf208e7318fff1becc55594671cfba5d00e",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "de52b6374178f44c9f06fc8604a706898a4e599f101aab444e0744c7fb9745d5",
+          "digest": "fe88e8de336266d4383890c014395cf208e7318fff1becc55594671cfba5d00e",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "de52b6374178f44c9f06fc8604a706898a4e599f101aab444e0744c7fb9745d5",
+          "digest": "fe88e8de336266d4383890c014395cf208e7318fff1becc55594671cfba5d00e",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -662,6 +669,7 @@
         ],
         "kind": "performance",
         "language": "javascript",
+        "number": 3,
         "skills": [
           "grids",
           "breadth-first-search"
@@ -671,10 +679,10 @@
         "title": "Path finder times out on big gardens",
         "version": "1.0.0"
       },
-      "digest": "7e119acd9cfaac2b6556555773ed30e82b8462aee8c86985e66f77e4181b43de",
+      "digest": "15def7c4e99aefe931835c57203b01a7e9a948945c7960cf3c02a8de3319ddaf",
       "state": "published",
       "testResult": {
-        "digest": "7e119acd9cfaac2b6556555773ed30e82b8462aee8c86985e66f77e4181b43de",
+        "digest": "15def7c4e99aefe931835c57203b01a7e9a948945c7960cf3c02a8de3319ddaf",
         "fixtures": 2,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -683,28 +691,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "7e119acd9cfaac2b6556555773ed30e82b8462aee8c86985e66f77e4181b43de",
+          "digest": "15def7c4e99aefe931835c57203b01a7e9a948945c7960cf3c02a8de3319ddaf",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "7e119acd9cfaac2b6556555773ed30e82b8462aee8c86985e66f77e4181b43de",
+          "digest": "15def7c4e99aefe931835c57203b01a7e9a948945c7960cf3c02a8de3319ddaf",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "7e119acd9cfaac2b6556555773ed30e82b8462aee8c86985e66f77e4181b43de",
+          "digest": "15def7c4e99aefe931835c57203b01a7e9a948945c7960cf3c02a8de3319ddaf",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "7e119acd9cfaac2b6556555773ed30e82b8462aee8c86985e66f77e4181b43de",
+          "digest": "15def7c4e99aefe931835c57203b01a7e9a948945c7960cf3c02a8de3319ddaf",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -747,6 +755,7 @@
         ],
         "kind": "feature",
         "language": "cpp",
+        "number": 4,
         "skills": [
           "dynamic-programming"
         ],
@@ -755,10 +764,10 @@
         "title": "Pick crops for the biggest harvest",
         "version": "1.0.0"
       },
-      "digest": "477eb75c1c03086d8d8fc876b07c5e7f55fc6d71ee3aa6d85e9c14d57ca22c28",
+      "digest": "74a1b837038860ab3cc138c5efef5e81e89b35b6ee871a99184a143d23a9769d",
       "state": "published",
       "testResult": {
-        "digest": "477eb75c1c03086d8d8fc876b07c5e7f55fc6d71ee3aa6d85e9c14d57ca22c28",
+        "digest": "74a1b837038860ab3cc138c5efef5e81e89b35b6ee871a99184a143d23a9769d",
         "fixtures": 2,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -767,28 +776,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "477eb75c1c03086d8d8fc876b07c5e7f55fc6d71ee3aa6d85e9c14d57ca22c28",
+          "digest": "74a1b837038860ab3cc138c5efef5e81e89b35b6ee871a99184a143d23a9769d",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "477eb75c1c03086d8d8fc876b07c5e7f55fc6d71ee3aa6d85e9c14d57ca22c28",
+          "digest": "74a1b837038860ab3cc138c5efef5e81e89b35b6ee871a99184a143d23a9769d",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "477eb75c1c03086d8d8fc876b07c5e7f55fc6d71ee3aa6d85e9c14d57ca22c28",
+          "digest": "74a1b837038860ab3cc138c5efef5e81e89b35b6ee871a99184a143d23a9769d",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "477eb75c1c03086d8d8fc876b07c5e7f55fc6d71ee3aa6d85e9c14d57ca22c28",
+          "digest": "74a1b837038860ab3cc138c5efef5e81e89b35b6ee871a99184a143d23a9769d",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -820,6 +829,7 @@
         ],
         "kind": "refactor",
         "language": "html",
+        "number": 1,
         "skills": [
           "semantics",
           "accessibility"
@@ -829,10 +839,10 @@
         "title": "Clean up the seed list markup",
         "version": "1.0.0"
       },
-      "digest": "fdf71bb55d1770717dbab9c43d908e87489b4cb30a5e5dbd41902b52931adce0",
+      "digest": "3b7c441527b305e44dd2d68485a3d5992bbf3b909d0c1a835ef263ef981fb97e",
       "state": "published",
       "testResult": {
-        "digest": "fdf71bb55d1770717dbab9c43d908e87489b4cb30a5e5dbd41902b52931adce0",
+        "digest": "3b7c441527b305e44dd2d68485a3d5992bbf3b909d0c1a835ef263ef981fb97e",
         "fixtures": 1,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -841,28 +851,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "fdf71bb55d1770717dbab9c43d908e87489b4cb30a5e5dbd41902b52931adce0",
+          "digest": "3b7c441527b305e44dd2d68485a3d5992bbf3b909d0c1a835ef263ef981fb97e",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "fdf71bb55d1770717dbab9c43d908e87489b4cb30a5e5dbd41902b52931adce0",
+          "digest": "3b7c441527b305e44dd2d68485a3d5992bbf3b909d0c1a835ef263ef981fb97e",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "fdf71bb55d1770717dbab9c43d908e87489b4cb30a5e5dbd41902b52931adce0",
+          "digest": "3b7c441527b305e44dd2d68485a3d5992bbf3b909d0c1a835ef263ef981fb97e",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "fdf71bb55d1770717dbab9c43d908e87489b4cb30a5e5dbd41902b52931adce0",
+          "digest": "3b7c441527b305e44dd2d68485a3d5992bbf3b909d0c1a835ef263ef981fb97e",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
