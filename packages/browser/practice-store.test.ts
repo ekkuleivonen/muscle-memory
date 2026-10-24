@@ -79,3 +79,29 @@ test("upgrading to the outbox queues records made before it, so nothing is skipp
     store.close();
   }
 });
+
+test("a dump restores elsewhere as the same identity, records and upload queue", async () => {
+  const from = await openPracticeStore(new IDBFactory());
+  const id = await from.participantId();
+  const secret = await from.deviceSecret();
+  await from.write([record("s.1", "{}"), record("s.2", "{}"), record("s.3", "{}")]);
+  const { keys } = await from.pending(1, 1_000_000);
+  await from.sent(keys);
+  const dump = await from.dump();
+  from.close();
+  assert.deepEqual(dump.outbox, ["s.2", "s.3"]);
+
+  const to = await openPracticeStore(new IDBFactory());
+  try {
+    await to.participantId();
+    await to.write([record("other.1", "{}")]);
+    await to.restore(dump);
+    assert.equal(await to.participantId(), id);
+    assert.equal(await to.deviceSecret(), secret);
+    assert.deepEqual((await to.workspaceRecords()).map((r) => r.recordId), ["s.1", "s.2", "s.3"]);
+    // What was already uploaded is not sent again; the rest is, oldest first.
+    assert.deepEqual((await to.pending(10, 1_000_000)).records.map((r) => r.recordId), ["s.2", "s.3"]);
+  } finally {
+    to.close();
+  }
+});
