@@ -1,6 +1,558 @@
 {
   "schemaVersion": "1.0.0",
   "entries": {
+    "challenge:format-price@1.0.0": {
+      "kind": "challenge",
+      "id": "format-price",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Ada N",
+            "body": "Design wants the minus before the dollar sign for refunds, same as on the receipts.",
+            "role": "Frontend"
+          }
+        ],
+        "difficulty": "warm-up",
+        "expected": [
+          "$1,234.56",
+          "$0.05",
+          "$0.00",
+          "-$5.00",
+          "$1,000,000.00"
+        ],
+        "hints": [],
+        "id": "format-price",
+        "inputs": [
+          123456,
+          5,
+          0,
+          -500,
+          100000000
+        ],
+        "kind": "bug",
+        "language": "javascript",
+        "number": 1,
+        "skills": [
+          "formatting",
+          "strings",
+          "numbers"
+        ],
+        "summary": "Format amounts as dollars with separators, including refunds.",
+        "task": "Write formatPrice(cents): return the amount in dollars with two decimals and comma thousands separators, e.g. 123456 → \"$1,234.56\". Negative amounts are refunds and get a leading minus: -500 → \"-$5.00\".",
+        "title": "Cart shows prices as raw cents",
+        "version": "1.0.0"
+      },
+      "digest": "b7b60d6e02fecd3afa85090ad5f7428d2587dae28dfbd475f6a1b203670aa103",
+      "state": "published",
+      "testResult": {
+        "digest": "b7b60d6e02fecd3afa85090ad5f7428d2587dae28dfbd475f6a1b203670aa103",
+        "fixtures": 5,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "b7b60d6e02fecd3afa85090ad5f7428d2587dae28dfbd475f6a1b203670aa103",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "b7b60d6e02fecd3afa85090ad5f7428d2587dae28dfbd475f6a1b203670aa103",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "b7b60d6e02fecd3afa85090ad5f7428d2587dae28dfbd475f6a1b203670aa103",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "b7b60d6e02fecd3afa85090ad5f7428d2587dae28dfbd475f6a1b203670aa103",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:discount-codes@1.0.0": {
+      "kind": "challenge",
+      "id": "discount-codes",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Jo T",
+            "body": "40 tickets this morning. People type codes the way they read them in the email.",
+            "role": "Support"
+          },
+          {
+            "author": "Lena M",
+            "body": "Black Friday is in two weeks, so this one jumps the queue.",
+            "role": "Product"
+          }
+        ],
+        "difficulty": "easy",
+        "expected": [
+          9000,
+          9000,
+          499,
+          5000
+        ],
+        "hints": [],
+        "id": "discount-codes",
+        "inputs": [
+          [
+            10000,
+            "save10",
+            {
+              "SAVE10": 10
+            }
+          ],
+          [
+            10000,
+            " SAVE10 ",
+            {
+              "SAVE10": 10
+            }
+          ],
+          [
+            999,
+            "HALF",
+            {
+              "HALF": 50
+            }
+          ],
+          [
+            5000,
+            "NOPE",
+            {
+              "SAVE10": 10
+            }
+          ]
+        ],
+        "kind": "bug",
+        "language": "typescript",
+        "number": 2,
+        "skills": [
+          "strings",
+          "validation"
+        ],
+        "summary": "Match promo codes case-insensitively and ignore stray spaces.",
+        "task": "applyDiscount(totalCents, code, codes) returns the total after the matching code's percentage off, rounded down to whole cents. Codes match case-insensitively and ignoring surrounding spaces; an unknown code leaves the total unchanged.",
+        "title": "Discount codes fail when typed in lowercase",
+        "version": "1.0.0"
+      },
+      "digest": "5b00bacb5e0ac2affd0f16003bd34cfe996188613086cba84e243acb56ad524d",
+      "state": "published",
+      "testResult": {
+        "digest": "5b00bacb5e0ac2affd0f16003bd34cfe996188613086cba84e243acb56ad524d",
+        "fixtures": 4,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "5b00bacb5e0ac2affd0f16003bd34cfe996188613086cba84e243acb56ad524d",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "5b00bacb5e0ac2affd0f16003bd34cfe996188613086cba84e243acb56ad524d",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "5b00bacb5e0ac2affd0f16003bd34cfe996188613086cba84e243acb56ad524d",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "5b00bacb5e0ac2affd0f16003bd34cfe996188613086cba84e243acb56ad524d",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:filter-form-labels@1.0.0": {
+      "kind": "challenge",
+      "id": "filter-form-labels",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Ada N",
+            "body": "The accessibility audit flagged every checkbox here. Clicking the text should toggle the box.",
+            "role": "Frontend"
+          }
+        ],
+        "difficulty": "warm-up",
+        "expected": [
+          "<form><label for=\"filter-in-stock\">in-stock</label><input type=\"checkbox\" id=\"filter-in-stock\" name=\"in-stock\"><label for=\"filter-on-sale\">on-sale</label><input type=\"checkbox\" id=\"filter-on-sale\" name=\"on-sale\"></form>",
+          "<form></form>"
+        ],
+        "hints": [],
+        "id": "filter-form-labels",
+        "inputs": [
+          [
+            "in-stock",
+            "on-sale"
+          ],
+          []
+        ],
+        "kind": "refactor",
+        "language": "html",
+        "number": 3,
+        "skills": [
+          "accessibility",
+          "forms",
+          "semantics"
+        ],
+        "summary": "Tie every filter checkbox to a label so it is accessible.",
+        "task": "Render the product filter form: for each filter name, a <label for=\"filter-NAME\"> with the name as text, followed by <input type=\"checkbox\" id=\"filter-NAME\" name=\"NAME\">, all inside a <form>.",
+        "title": "Product filter checkboxes have no labels",
+        "version": "1.0.0"
+      },
+      "digest": "23918de7db9a91e25c48fd969bc7ac00c9889c3715539e525a89e41dd0b016dd",
+      "state": "published",
+      "testResult": {
+        "digest": "23918de7db9a91e25c48fd969bc7ac00c9889c3715539e525a89e41dd0b016dd",
+        "fixtures": 2,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "23918de7db9a91e25c48fd969bc7ac00c9889c3715539e525a89e41dd0b016dd",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "23918de7db9a91e25c48fd969bc7ac00c9889c3715539e525a89e41dd0b016dd",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "23918de7db9a91e25c48fd969bc7ac00c9889c3715539e525a89e41dd0b016dd",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "23918de7db9a91e25c48fd969bc7ac00c9889c3715539e525a89e41dd0b016dd",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:debounce-search@1.0.0": {
+      "kind": "challenge",
+      "id": "debounce-search",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Sam R",
+            "body": "Search API gets about eight requests per query. 300 ms after the last keystroke is plenty.",
+            "role": "SRE"
+          }
+        ],
+        "difficulty": "medium",
+        "expected": [
+          [
+            500,
+            1300
+          ],
+          [],
+          [
+            300,
+            800
+          ]
+        ],
+        "hints": [
+          "Each keystroke cancels the pending request if it arrives before the timer fires."
+        ],
+        "id": "debounce-search",
+        "inputs": [
+          [
+            [
+              0,
+              100,
+              200,
+              1000
+            ],
+            300
+          ],
+          [
+            [],
+            300
+          ],
+          [
+            [
+              0,
+              500
+            ],
+            300
+          ]
+        ],
+        "kind": "performance",
+        "language": "typescript",
+        "number": 4,
+        "skills": [
+          "timing",
+          "events"
+        ],
+        "summary": "Debounce search-as-you-type so the API sees one request per pause.",
+        "task": "debounceTimes(keystrokes, waitMs): given keystroke times in milliseconds, return the times at which the debounced search fires. It fires waitMs after a keystroke unless another keystroke comes first.",
+        "title": "Search box sends a request on every keystroke",
+        "version": "1.0.0"
+      },
+      "digest": "d258e914aa52d0f7692715491b491324f642d65d321abba37d92da3122ecfcd2",
+      "state": "published",
+      "testResult": {
+        "digest": "d258e914aa52d0f7692715491b491324f642d65d321abba37d92da3122ecfcd2",
+        "fixtures": 3,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "d258e914aa52d0f7692715491b491324f642d65d321abba37d92da3122ecfcd2",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "d258e914aa52d0f7692715491b491324f642d65d321abba37d92da3122ecfcd2",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "d258e914aa52d0f7692715491b491324f642d65d321abba37d92da3122ecfcd2",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "d258e914aa52d0f7692715491b491324f642d65d321abba37d92da3122ecfcd2",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:pagination-params@1.0.0": {
+      "kind": "challenge",
+      "id": "pagination-params",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Mateo O",
+            "body": "The mobile app sends per_page=500 to fetch everything in one go. Cap it, don't error.",
+            "role": "Backend"
+          }
+        ],
+        "difficulty": "easy",
+        "expected": [
+          {
+            "page": 2,
+            "perPage": 50
+          },
+          {
+            "page": 1,
+            "perPage": 20
+          },
+          {
+            "page": 1,
+            "perPage": 100
+          },
+          {
+            "page": 1,
+            "perPage": 20
+          }
+        ],
+        "hints": [],
+        "id": "pagination-params",
+        "inputs": [
+          "page=2&per_page=50",
+          "",
+          "per_page=500",
+          "page=-1&per_page=abc"
+        ],
+        "kind": "bug",
+        "language": "go",
+        "number": 1,
+        "skills": [
+          "parsing",
+          "validation",
+          "http"
+        ],
+        "summary": "Parse page and per_page with defaults and a hard cap.",
+        "task": "ParsePage(query) reads page and per_page from a URL query string. Defaults are page 1 and 20 per page, per_page is capped at 100, and missing, zero, negative or non-numeric values fall back to the default.",
+        "title": "List endpoints accept any page size",
+        "version": "1.0.0"
+      },
+      "digest": "484675dc548a1d8c1eec311fc35448ab32abce039a8c7ed777434829d6f27622",
+      "state": "published",
+      "testResult": {
+        "digest": "484675dc548a1d8c1eec311fc35448ab32abce039a8c7ed777434829d6f27622",
+        "fixtures": 4,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "484675dc548a1d8c1eec311fc35448ab32abce039a8c7ed777434829d6f27622",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "484675dc548a1d8c1eec311fc35448ab32abce039a8c7ed777434829d6f27622",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "484675dc548a1d8c1eec311fc35448ab32abce039a8c7ed777434829d6f27622",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "484675dc548a1d8c1eec311fc35448ab32abce039a8c7ed777434829d6f27622",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:reset-link-expiry@1.0.0": {
+      "kind": "challenge",
+      "id": "reset-link-expiry",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Jo T",
+            "body": "Customers say reset emails 'never work'. They do, if you click within a minute.",
+            "role": "Support"
+          }
+        ],
+        "difficulty": "easy",
+        "expected": [
+          false,
+          false,
+          true,
+          false
+        ],
+        "hints": [],
+        "id": "reset-link-expiry",
+        "inputs": [
+          [
+            1000,
+            1059,
+            60
+          ],
+          [
+            1000,
+            4600,
+            60
+          ],
+          [
+            1000,
+            4601,
+            60
+          ],
+          [
+            1000,
+            1000,
+            0
+          ]
+        ],
+        "kind": "bug",
+        "language": "php",
+        "number": 2,
+        "skills": [
+          "time",
+          "units"
+        ],
+        "summary": "The TTL is in minutes but the check compares seconds.",
+        "task": "isExpired(issuedAt, now, ttlMinutes) with Unix timestamps in seconds. A link issued at t stays valid until t + ttlMinutes × 60, inclusive.",
+        "title": "Password reset links expire after a minute",
+        "version": "1.0.0"
+      },
+      "digest": "1e0eb2ba48c2c977e69e0376aa211784e66c191e7b11eb759686586867d9181f",
+      "state": "published",
+      "testResult": {
+        "digest": "1e0eb2ba48c2c977e69e0376aa211784e66c191e7b11eb759686586867d9181f",
+        "fixtures": 4,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "1e0eb2ba48c2c977e69e0376aa211784e66c191e7b11eb759686586867d9181f",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "1e0eb2ba48c2c977e69e0376aa211784e66c191e7b11eb759686586867d9181f",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "1e0eb2ba48c2c977e69e0376aa211784e66c191e7b11eb759686586867d9181f",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "1e0eb2ba48c2c977e69e0376aa211784e66c191e7b11eb759686586867d9181f",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
     "challenge:rate-limiter@1.0.0": {
       "kind": "challenge",
       "id": "rate-limiter",
@@ -10,7 +562,7 @@
         "comments": [
           {
             "author": "Sam R",
-            "body": "We got hammered by a retry storm last night. Keep it simple, a sliding window is fine.",
+            "body": "Credential-stuffing bot again last night. A sliding window per IP, nothing fancy.",
             "role": "SRE"
           }
         ],
@@ -61,20 +613,20 @@
         ],
         "kind": "feature",
         "language": "typescript",
-        "number": 1,
+        "number": 3,
         "skills": [
           "sliding-window",
           "queues"
         ],
-        "summary": "Allow at most n requests in any sliding window.",
-        "task": "Write allow(times, limit, windowMs): for each request time, return whether it is allowed when at most `limit` requests may fall inside any window of `windowMs`.",
-        "title": "Rate-limit the checkout endpoint",
+        "summary": "Allow at most n attempts in any sliding window.",
+        "task": "Write allow(times, limit, windowMs): for each login attempt time, return whether it is allowed when at most `limit` attempts may fall inside any window of `windowMs`.",
+        "title": "Rate-limit login attempts",
         "version": "1.0.0"
       },
-      "digest": "b5eb0e3c352d80b793b97cd015738b147978e563617d90af18f339253da3bc21",
+      "digest": "66a322d02a8ca9405108b1512daa92d4da605980247a0e3467b6879735f0d262",
       "state": "published",
       "testResult": {
-        "digest": "b5eb0e3c352d80b793b97cd015738b147978e563617d90af18f339253da3bc21",
+        "digest": "66a322d02a8ca9405108b1512daa92d4da605980247a0e3467b6879735f0d262",
         "fixtures": 3,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -83,28 +635,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "b5eb0e3c352d80b793b97cd015738b147978e563617d90af18f339253da3bc21",
+          "digest": "66a322d02a8ca9405108b1512daa92d4da605980247a0e3467b6879735f0d262",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "b5eb0e3c352d80b793b97cd015738b147978e563617d90af18f339253da3bc21",
+          "digest": "66a322d02a8ca9405108b1512daa92d4da605980247a0e3467b6879735f0d262",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "b5eb0e3c352d80b793b97cd015738b147978e563617d90af18f339253da3bc21",
+          "digest": "66a322d02a8ca9405108b1512daa92d4da605980247a0e3467b6879735f0d262",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "b5eb0e3c352d80b793b97cd015738b147978e563617d90af18f339253da3bc21",
+          "digest": "66a322d02a8ca9405108b1512daa92d4da605980247a0e3467b6879735f0d262",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -150,20 +702,20 @@
         ],
         "kind": "bug",
         "language": "go",
-        "number": 2,
+        "number": 4,
         "skills": [
           "parsing",
           "strings"
         ],
         "summary": "Turn an access log line into a structured record.",
         "task": "Write ParseLine(line) for lines like \"GET /cart 200 12ms\", returning method, path, status and duration in milliseconds.",
-        "title": "Log parser drops fields on 5xx lines",
+        "title": "Access log parser drops fields on 5xx lines",
         "version": "1.0.0"
       },
-      "digest": "9e510afd8f15cb6786fabeb1a47e1967d16085a28ab42207ab594772566e2c8d",
+      "digest": "b9a7c87e0695e977fc8f50896718d4d500591117c25317efe798623d35318134",
       "state": "published",
       "testResult": {
-        "digest": "9e510afd8f15cb6786fabeb1a47e1967d16085a28ab42207ab594772566e2c8d",
+        "digest": "b9a7c87e0695e977fc8f50896718d4d500591117c25317efe798623d35318134",
         "fixtures": 2,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -172,28 +724,216 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "9e510afd8f15cb6786fabeb1a47e1967d16085a28ab42207ab594772566e2c8d",
+          "digest": "b9a7c87e0695e977fc8f50896718d4d500591117c25317efe798623d35318134",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "9e510afd8f15cb6786fabeb1a47e1967d16085a28ab42207ab594772566e2c8d",
+          "digest": "b9a7c87e0695e977fc8f50896718d4d500591117c25317efe798623d35318134",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "9e510afd8f15cb6786fabeb1a47e1967d16085a28ab42207ab594772566e2c8d",
+          "digest": "b9a7c87e0695e977fc8f50896718d4d500591117c25317efe798623d35318134",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "9e510afd8f15cb6786fabeb1a47e1967d16085a28ab42207ab594772566e2c8d",
+          "digest": "b9a7c87e0695e977fc8f50896718d4d500591117c25317efe798623d35318134",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:csv-quoted-fields@1.0.0": {
+      "kind": "challenge",
+      "id": "csv-quoted-fields",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Priya K",
+            "body": "Every customer with a comma in their company name lands in the wrong column. 'Acme, Inc.' is our biggest account.",
+            "role": "Data"
+          }
+        ],
+        "difficulty": "easy",
+        "expected": [
+          [
+            "a",
+            "b",
+            "c"
+          ],
+          [
+            "Acme, Inc.",
+            "42",
+            "NY"
+          ],
+          [
+            "say \"hi\"",
+            "x"
+          ],
+          [
+            ""
+          ]
+        ],
+        "hints": [],
+        "id": "csv-quoted-fields",
+        "inputs": [
+          "a,b,c",
+          "\"Acme, Inc.\",42,\"NY\"",
+          "\"say \"\"hi\"\"\",x",
+          ""
+        ],
+        "kind": "bug",
+        "language": "python",
+        "number": 1,
+        "skills": [
+          "parsing",
+          "strings",
+          "csv"
+        ],
+        "summary": "Respect quoted fields when parsing partner exports.",
+        "task": "parse_csv_line(line) splits a CSV line on commas, except inside double quotes. Quotes are removed, and a doubled quote inside a quoted field is a literal quote: \"say \"\"hi\"\"\" → say \"hi\".",
+        "title": "CSV import splits company names on commas",
+        "version": "1.0.0"
+      },
+      "digest": "cc8cb9265cc024e2b4abd9c366e7a338b116dab7d560cda5a69ba2907dc73cd4",
+      "state": "published",
+      "testResult": {
+        "digest": "cc8cb9265cc024e2b4abd9c366e7a338b116dab7d560cda5a69ba2907dc73cd4",
+        "fixtures": 4,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "cc8cb9265cc024e2b4abd9c366e7a338b116dab7d560cda5a69ba2907dc73cd4",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "cc8cb9265cc024e2b4abd9c366e7a338b116dab7d560cda5a69ba2907dc73cd4",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "cc8cb9265cc024e2b4abd9c366e7a338b116dab7d560cda5a69ba2907dc73cd4",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "cc8cb9265cc024e2b4abd9c366e7a338b116dab7d560cda5a69ba2907dc73cd4",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:dedupe-customers@1.0.0": {
+      "kind": "challenge",
+      "id": "dedupe-customers",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Lena M",
+            "body": "Marketing sent last week's newsletter three times to some people. They were not thrilled.",
+            "role": "Product"
+          }
+        ],
+        "difficulty": "medium",
+        "expected": [
+          [
+            {
+              "email": "Ann@x.io",
+              "id": 1
+            },
+            {
+              "email": "bo@x.io",
+              "id": 3
+            }
+          ],
+          []
+        ],
+        "hints": [],
+        "id": "dedupe-customers",
+        "inputs": [
+          [
+            {
+              "email": "Ann@x.io",
+              "id": 1
+            },
+            {
+              "email": " ann@x.io",
+              "id": 2
+            },
+            {
+              "email": "bo@x.io",
+              "id": 3
+            }
+          ],
+          []
+        ],
+        "kind": "feature",
+        "language": "python",
+        "number": 2,
+        "skills": [
+          "maps",
+          "data-cleaning"
+        ],
+        "summary": "Keep the first record per email before the newsletter sync.",
+        "task": "dedupe(records) keeps the first record for each email, comparing emails case-insensitively and ignoring surrounding spaces. Keep the original order.",
+        "title": "Deduplicate customer records by email",
+        "version": "1.0.0"
+      },
+      "digest": "f7f2241812b17c4ac61730eff0c0480925bba0b7bb66509226c90ea4d90b231a",
+      "state": "published",
+      "testResult": {
+        "digest": "f7f2241812b17c4ac61730eff0c0480925bba0b7bb66509226c90ea4d90b231a",
+        "fixtures": 2,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "f7f2241812b17c4ac61730eff0c0480925bba0b7bb66509226c90ea4d90b231a",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "f7f2241812b17c4ac61730eff0c0480925bba0b7bb66509226c90ea4d90b231a",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "f7f2241812b17c4ac61730eff0c0480925bba0b7bb66509226c90ea4d90b231a",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "f7f2241812b17c4ac61730eff0c0480925bba0b7bb66509226c90ea4d90b231a",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -206,9 +946,9 @@
         "assessment_version": "1.0.0",
         "comments": [
           {
-            "author": "Lena M",
-            "body": "Just the totals per customer, biggest first. No need for a chart.",
-            "role": "Product"
+            "author": "Rui F",
+            "body": "Just the totals per customer, biggest first. The chart is my job.",
+            "role": "Finance"
           }
         ],
         "difficulty": "easy",
@@ -254,15 +994,15 @@
           "aggregation",
           "sorting"
         ],
-        "summary": "Rank customers by what they spent tonight.",
+        "summary": "Total each customer's orders, biggest first.",
         "task": "Given orders(id, customer, total), select each customer and the sum of their totals, highest first.",
-        "title": "Top customers report for stand-up",
+        "title": "Revenue by customer for the monthly report",
         "version": "1.0.0"
       },
-      "digest": "45b9f90cf854aeeb9f7fb87ded57621dd7966f51c557234f37eba07da32139e8",
+      "digest": "9083afac1b4e5a959bf516134a1a11645752af374fe2ba38c8e8712e5ccc1878",
       "state": "published",
       "testResult": {
-        "digest": "45b9f90cf854aeeb9f7fb87ded57621dd7966f51c557234f37eba07da32139e8",
+        "digest": "9083afac1b4e5a959bf516134a1a11645752af374fe2ba38c8e8712e5ccc1878",
         "fixtures": 1,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -271,28 +1011,131 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "45b9f90cf854aeeb9f7fb87ded57621dd7966f51c557234f37eba07da32139e8",
+          "digest": "9083afac1b4e5a959bf516134a1a11645752af374fe2ba38c8e8712e5ccc1878",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "45b9f90cf854aeeb9f7fb87ded57621dd7966f51c557234f37eba07da32139e8",
+          "digest": "9083afac1b4e5a959bf516134a1a11645752af374fe2ba38c8e8712e5ccc1878",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "45b9f90cf854aeeb9f7fb87ded57621dd7966f51c557234f37eba07da32139e8",
+          "digest": "9083afac1b4e5a959bf516134a1a11645752af374fe2ba38c8e8712e5ccc1878",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "45b9f90cf854aeeb9f7fb87ded57621dd7966f51c557234f37eba07da32139e8",
+          "digest": "9083afac1b4e5a959bf516134a1a11645752af374fe2ba38c8e8712e5ccc1878",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:unpaid-orders@1.0.0": {
+      "kind": "challenge",
+      "id": "unpaid-orders",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Rui F",
+            "body": "Month-end close is Friday. I need this list before then.",
+            "role": "Finance"
+          }
+        ],
+        "difficulty": "medium",
+        "expected": [
+          [
+            [
+              2
+            ]
+          ]
+        ],
+        "hints": [
+          "A LEFT JOIN keeps orders even when no payment matches."
+        ],
+        "id": "unpaid-orders",
+        "inputs": [
+          {
+            "orders": [
+              [
+                1,
+                "ana"
+              ],
+              [
+                2,
+                "bo"
+              ],
+              [
+                3,
+                "cy"
+              ]
+            ],
+            "payments": [
+              [
+                1,
+                30
+              ],
+              [
+                3,
+                12
+              ]
+            ]
+          }
+        ],
+        "kind": "feature",
+        "language": "sql",
+        "number": 4,
+        "skills": [
+          "joins",
+          "reconciliation"
+        ],
+        "summary": "Reconcile orders against payments before month-end close.",
+        "task": "Given orders(id, customer) and payments(order_id, amount), select the ids of orders that have no payment, smallest first.",
+        "title": "Find orders with no matching payment",
+        "version": "1.0.0"
+      },
+      "digest": "96086be7f5d32965210ef7b044d8aa0ad1e8d6c22de08926c3a79119b1307ebe",
+      "state": "published",
+      "testResult": {
+        "digest": "96086be7f5d32965210ef7b044d8aa0ad1e8d6c22de08926c3a79119b1307ebe",
+        "fixtures": 1,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "96086be7f5d32965210ef7b044d8aa0ad1e8d6c22de08926c3a79119b1307ebe",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "96086be7f5d32965210ef7b044d8aa0ad1e8d6c22de08926c3a79119b1307ebe",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "96086be7f5d32965210ef7b044d8aa0ad1e8d6c22de08926c3a79119b1307ebe",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "96086be7f5d32965210ef7b044d8aa0ad1e8d6c22de08926c3a79119b1307ebe",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -303,6 +1146,13 @@
       "version": "1.0.0",
       "content": {
         "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Sam R",
+            "body": "No malloc on the hot path. Fixed-size array, overwrite the oldest.",
+            "role": "SRE"
+          }
+        ],
         "difficulty": "medium",
         "expected": [
           [
@@ -331,20 +1181,20 @@
         ],
         "kind": "feature",
         "language": "c",
-        "number": 2,
+        "number": 1,
         "skills": [
           "arrays",
           "modular-arithmetic"
         ],
-        "summary": "A fixed-size log that overwrites its oldest entry.",
+        "summary": "A fixed-size buffer that overwrites its oldest entry.",
         "task": "Implement a ring buffer of capacity n. Given a sequence of pushes, return the contents oldest first.",
-        "title": "Keep only the latest lamp readings",
+        "title": "Keep the last N request latencies in memory",
         "version": "1.0.0"
       },
-      "digest": "c625d78ab29b9f200596d45013d5c56ef20bc1fbff7e728021a4807bd9610932",
+      "digest": "724626a0200f14f35b9914c34e114d4d10dabdd473482f9a8376eada28573963",
       "state": "published",
       "testResult": {
-        "digest": "c625d78ab29b9f200596d45013d5c56ef20bc1fbff7e728021a4807bd9610932",
+        "digest": "724626a0200f14f35b9914c34e114d4d10dabdd473482f9a8376eada28573963",
         "fixtures": 2,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -353,422 +1203,103 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "c625d78ab29b9f200596d45013d5c56ef20bc1fbff7e728021a4807bd9610932",
+          "digest": "724626a0200f14f35b9914c34e114d4d10dabdd473482f9a8376eada28573963",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "c625d78ab29b9f200596d45013d5c56ef20bc1fbff7e728021a4807bd9610932",
+          "digest": "724626a0200f14f35b9914c34e114d4d10dabdd473482f9a8376eada28573963",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "c625d78ab29b9f200596d45013d5c56ef20bc1fbff7e728021a4807bd9610932",
+          "digest": "724626a0200f14f35b9914c34e114d4d10dabdd473482f9a8376eada28573963",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "c625d78ab29b9f200596d45013d5c56ef20bc1fbff7e728021a4807bd9610932",
+          "digest": "724626a0200f14f35b9914c34e114d4d10dabdd473482f9a8376eada28573963",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
     },
-    "challenge:morse-decoder@1.0.0": {
+    "challenge:p99-latency@1.0.0": {
       "kind": "challenge",
-      "id": "morse-decoder",
-      "version": "1.0.0",
-      "content": {
-        "assessment_version": "1.0.0",
-        "comments": [
-          {
-            "author": "Mateo O",
-            "body": "Three spaces between words, one between letters. The old code treated both the same.",
-            "role": "Backend"
-          }
-        ],
-        "difficulty": "easy",
-        "expected": [
-          "SOS",
-          "HI THERE"
-        ],
-        "hints": [],
-        "id": "morse-decoder",
-        "inputs": [
-          "... --- ...",
-          ".... ..   - .... . .-. ."
-        ],
-        "kind": "bug",
-        "language": "rust",
-        "number": 1,
-        "skills": [
-          "maps",
-          "strings"
-        ],
-        "summary": "Read the keeper's signal lamp.",
-        "task": "Write decode(signal): letters are separated by one space and words by three. Return the uppercase text.",
-        "title": "Morse decoder merges separate words",
-        "version": "1.0.0"
-      },
-      "digest": "3993368e3ee08cb1a8bea8c143f801fbd46373d2cf6f88b17881f47590835016",
-      "state": "published",
-      "testResult": {
-        "digest": "3993368e3ee08cb1a8bea8c143f801fbd46373d2cf6f88b17881f47590835016",
-        "fixtures": 2,
-        "at": "2026-10-24T00:00:00.000Z"
-      },
-      "history": [
-        {
-          "action": "drafted",
-          "from": null,
-          "to": "draft",
-          "digest": "3993368e3ee08cb1a8bea8c143f801fbd46373d2cf6f88b17881f47590835016",
-          "at": "2026-10-24T00:00:00.000Z"
-        },
-        {
-          "action": "previewed",
-          "from": "draft",
-          "to": "preview",
-          "digest": "3993368e3ee08cb1a8bea8c143f801fbd46373d2cf6f88b17881f47590835016",
-          "at": "2026-10-24T00:00:00.000Z"
-        },
-        {
-          "action": "tested",
-          "from": "preview",
-          "to": "tested",
-          "digest": "3993368e3ee08cb1a8bea8c143f801fbd46373d2cf6f88b17881f47590835016",
-          "at": "2026-10-24T00:00:00.000Z"
-        },
-        {
-          "action": "published",
-          "from": "tested",
-          "to": "published",
-          "digest": "3993368e3ee08cb1a8bea8c143f801fbd46373d2cf6f88b17881f47590835016",
-          "at": "2026-10-24T00:00:00.000Z"
-        }
-      ]
-    },
-    "challenge:word-wrap@1.0.0": {
-      "kind": "challenge",
-      "id": "word-wrap",
-      "version": "1.0.0",
-      "content": {
-        "assessment_version": "1.0.0",
-        "difficulty": "easy",
-        "expected": [
-          [
-            "the",
-            "light",
-            "is on"
-          ],
-          []
-        ],
-        "hints": [],
-        "id": "word-wrap",
-        "inputs": [
-          [
-            "the light is on",
-            7
-          ],
-          [
-            "",
-            5
-          ]
-        ],
-        "kind": "bug",
-        "language": "python",
-        "number": 3,
-        "skills": [
-          "strings",
-          "greedy"
-        ],
-        "summary": "Fit the logbook onto a narrow page.",
-        "task": "Write wrap(text, width): break text into lines of at most width characters without splitting words.",
-        "title": "Logbook lines overflow the printer",
-        "version": "1.0.0"
-      },
-      "digest": "d45582a5159f221abc2c0b02b1bd1025fc6ae56b96af3ebbb81c4393592137cf",
-      "state": "published",
-      "testResult": {
-        "digest": "d45582a5159f221abc2c0b02b1bd1025fc6ae56b96af3ebbb81c4393592137cf",
-        "fixtures": 2,
-        "at": "2026-10-24T00:00:00.000Z"
-      },
-      "history": [
-        {
-          "action": "drafted",
-          "from": null,
-          "to": "draft",
-          "digest": "d45582a5159f221abc2c0b02b1bd1025fc6ae56b96af3ebbb81c4393592137cf",
-          "at": "2026-10-24T00:00:00.000Z"
-        },
-        {
-          "action": "previewed",
-          "from": "draft",
-          "to": "preview",
-          "digest": "d45582a5159f221abc2c0b02b1bd1025fc6ae56b96af3ebbb81c4393592137cf",
-          "at": "2026-10-24T00:00:00.000Z"
-        },
-        {
-          "action": "tested",
-          "from": "preview",
-          "to": "tested",
-          "digest": "d45582a5159f221abc2c0b02b1bd1025fc6ae56b96af3ebbb81c4393592137cf",
-          "at": "2026-10-24T00:00:00.000Z"
-        },
-        {
-          "action": "published",
-          "from": "tested",
-          "to": "published",
-          "digest": "d45582a5159f221abc2c0b02b1bd1025fc6ae56b96af3ebbb81c4393592137cf",
-          "at": "2026-10-24T00:00:00.000Z"
-        }
-      ]
-    },
-    "challenge:plant-schedule@1.0.0": {
-      "kind": "challenge",
-      "id": "plant-schedule",
-      "version": "1.0.0",
-      "content": {
-        "assessment_version": "1.0.0",
-        "comments": [
-          {
-            "author": "Lena M",
-            "body": "Day 0 counts. Basil on a 2-day cycle gets watered on day 0, 2 and 4.",
-            "role": "Product"
-          }
-        ],
-        "difficulty": "warm-up",
-        "expected": [
-          {
-            "basil": [
-              0,
-              2,
-              4
-            ]
-          }
-        ],
-        "hints": [],
-        "id": "plant-schedule",
-        "inputs": [
-          [
-            [
-              {
-                "every": 2,
-                "name": "basil"
-              }
-            ],
-            5
-          ]
-        ],
-        "kind": "feature",
-        "language": "php",
-        "number": 2,
-        "skills": [
-          "iteration",
-          "dates"
-        ],
-        "summary": "List the days each plant needs water.",
-        "task": "Write schedule(plants, days): each plant waters every `every` days starting on day 0. Return the watering days per plant within `days`.",
-        "title": "Watering schedule for the co-op",
-        "version": "1.0.0"
-      },
-      "digest": "fe88e8de336266d4383890c014395cf208e7318fff1becc55594671cfba5d00e",
-      "state": "published",
-      "testResult": {
-        "digest": "fe88e8de336266d4383890c014395cf208e7318fff1becc55594671cfba5d00e",
-        "fixtures": 1,
-        "at": "2026-10-24T00:00:00.000Z"
-      },
-      "history": [
-        {
-          "action": "drafted",
-          "from": null,
-          "to": "draft",
-          "digest": "fe88e8de336266d4383890c014395cf208e7318fff1becc55594671cfba5d00e",
-          "at": "2026-10-24T00:00:00.000Z"
-        },
-        {
-          "action": "previewed",
-          "from": "draft",
-          "to": "preview",
-          "digest": "fe88e8de336266d4383890c014395cf208e7318fff1becc55594671cfba5d00e",
-          "at": "2026-10-24T00:00:00.000Z"
-        },
-        {
-          "action": "tested",
-          "from": "preview",
-          "to": "tested",
-          "digest": "fe88e8de336266d4383890c014395cf208e7318fff1becc55594671cfba5d00e",
-          "at": "2026-10-24T00:00:00.000Z"
-        },
-        {
-          "action": "published",
-          "from": "tested",
-          "to": "published",
-          "digest": "fe88e8de336266d4383890c014395cf208e7318fff1becc55594671cfba5d00e",
-          "at": "2026-10-24T00:00:00.000Z"
-        }
-      ]
-    },
-    "challenge:garden-grid@1.0.0": {
-      "kind": "challenge",
-      "id": "garden-grid",
+      "id": "p99-latency",
       "version": "1.0.0",
       "content": {
         "assessment_version": "1.0.0",
         "comments": [
           {
             "author": "Sam R",
-            "body": "The current version tries every route. A breadth-first search should be plenty.",
+            "body": "The current version re-sorts every sample for every percentile. Busy hours have two million samples.",
             "role": "SRE"
           }
         ],
         "difficulty": "medium",
         "expected": [
-          4,
-          -1
+          20,
+          50,
+          null,
+          5
         ],
         "hints": [],
-        "id": "garden-grid",
+        "id": "p99-latency",
         "inputs": [
           [
             [
-              "..#",
-              "...",
-              "#.."
+              15,
+              20,
+              35,
+              40,
+              50
             ],
-            [
-              0,
-              0
-            ],
-            [
-              2,
-              2
-            ]
+            30
           ],
           [
             [
-              ".#",
-              "#."
+              15,
+              20,
+              35,
+              40,
+              50
             ],
-            [
-              0,
-              0
-            ],
-            [
-              1,
-              1
-            ]
-          ]
-        ],
-        "kind": "performance",
-        "language": "javascript",
-        "number": 3,
-        "skills": [
-          "grids",
-          "breadth-first-search"
-        ],
-        "summary": "Find the shortest path between two beds.",
-        "task": "Write shortestPath(grid, from, to) over a grid of '.' paths and '#' beds. Return the number of steps, or -1.",
-        "title": "Path finder times out on big gardens",
-        "version": "1.0.0"
-      },
-      "digest": "15def7c4e99aefe931835c57203b01a7e9a948945c7960cf3c02a8de3319ddaf",
-      "state": "published",
-      "testResult": {
-        "digest": "15def7c4e99aefe931835c57203b01a7e9a948945c7960cf3c02a8de3319ddaf",
-        "fixtures": 2,
-        "at": "2026-10-24T00:00:00.000Z"
-      },
-      "history": [
-        {
-          "action": "drafted",
-          "from": null,
-          "to": "draft",
-          "digest": "15def7c4e99aefe931835c57203b01a7e9a948945c7960cf3c02a8de3319ddaf",
-          "at": "2026-10-24T00:00:00.000Z"
-        },
-        {
-          "action": "previewed",
-          "from": "draft",
-          "to": "preview",
-          "digest": "15def7c4e99aefe931835c57203b01a7e9a948945c7960cf3c02a8de3319ddaf",
-          "at": "2026-10-24T00:00:00.000Z"
-        },
-        {
-          "action": "tested",
-          "from": "preview",
-          "to": "tested",
-          "digest": "15def7c4e99aefe931835c57203b01a7e9a948945c7960cf3c02a8de3319ddaf",
-          "at": "2026-10-24T00:00:00.000Z"
-        },
-        {
-          "action": "published",
-          "from": "tested",
-          "to": "published",
-          "digest": "15def7c4e99aefe931835c57203b01a7e9a948945c7960cf3c02a8de3319ddaf",
-          "at": "2026-10-24T00:00:00.000Z"
-        }
-      ]
-    },
-    "challenge:harvest-totals@1.0.0": {
-      "kind": "challenge",
-      "id": "harvest-totals",
-      "version": "1.0.0",
-      "content": {
-        "assessment_version": "1.0.0",
-        "difficulty": "hard",
-        "expected": [
-          7,
-          0
-        ],
-        "hints": [],
-        "id": "harvest-totals",
-        "inputs": [
-          [
-            [
-              [
-                2,
-                3
-              ],
-              [
-                3,
-                4
-              ],
-              [
-                4,
-                5
-              ]
-            ],
-            5
+            100
           ],
           [
             [],
-            3
+            99
+          ],
+          [
+            [
+              5
+            ],
+            99
           ]
         ],
-        "kind": "feature",
-        "language": "cpp",
-        "number": 4,
+        "kind": "performance",
+        "language": "rust",
+        "number": 2,
         "skills": [
-          "dynamic-programming"
+          "sorting",
+          "statistics"
         ],
-        "summary": "Choose crops to fill the rooftop for the biggest yield.",
-        "task": "Write bestYield(crops, area): each crop has an area and a yield and can be planted once. Return the largest total yield within the area.",
-        "title": "Pick crops for the biggest harvest",
+        "summary": "Compute nearest-rank percentiles for the metrics endpoint.",
+        "task": "percentile(samples, p) returns the nearest-rank percentile: sort the samples and take the value at rank ceil(p / 100 × n), counting from 1. Return null when there are no samples.",
+        "title": "p99 latency panel times out in busy hours",
         "version": "1.0.0"
       },
-      "digest": "74a1b837038860ab3cc138c5efef5e81e89b35b6ee871a99184a143d23a9769d",
+      "digest": "27071dfd5eed018b4d516e6b06039c876fbc7288c6c3af13d93c4ff084c4dbc2",
       "state": "published",
       "testResult": {
-        "digest": "74a1b837038860ab3cc138c5efef5e81e89b35b6ee871a99184a143d23a9769d",
-        "fixtures": 2,
+        "digest": "27071dfd5eed018b4d516e6b06039c876fbc7288c6c3af13d93c4ff084c4dbc2",
+        "fixtures": 4,
         "at": "2026-10-24T00:00:00.000Z"
       },
       "history": [
@@ -776,74 +1307,131 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "74a1b837038860ab3cc138c5efef5e81e89b35b6ee871a99184a143d23a9769d",
+          "digest": "27071dfd5eed018b4d516e6b06039c876fbc7288c6c3af13d93c4ff084c4dbc2",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "74a1b837038860ab3cc138c5efef5e81e89b35b6ee871a99184a143d23a9769d",
+          "digest": "27071dfd5eed018b4d516e6b06039c876fbc7288c6c3af13d93c4ff084c4dbc2",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "74a1b837038860ab3cc138c5efef5e81e89b35b6ee871a99184a143d23a9769d",
+          "digest": "27071dfd5eed018b4d516e6b06039c876fbc7288c6c3af13d93c4ff084c4dbc2",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "74a1b837038860ab3cc138c5efef5e81e89b35b6ee871a99184a143d23a9769d",
+          "digest": "27071dfd5eed018b4d516e6b06039c876fbc7288c6c3af13d93c4ff084c4dbc2",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
     },
-    "challenge:seed-labels@1.0.0": {
+    "challenge:lru-cache@1.0.0": {
       "kind": "challenge",
-      "id": "seed-labels",
+      "id": "lru-cache",
       "version": "1.0.0",
       "content": {
         "assessment_version": "1.0.0",
         "comments": [
           {
-            "author": "Ada N",
-            "body": "Screen readers announce it as one long string right now. A plain list is all we need.",
-            "role": "Frontend"
+            "author": "Mateo O",
+            "body": "Hit rate dropped to 12% after the last deploy. I think get() stopped refreshing recency.",
+            "role": "Backend"
           }
         ],
-        "difficulty": "warm-up",
+        "difficulty": "hard",
         "expected": [
-          "<ul><li>basil</li><li>mint</li></ul>"
-        ],
-        "hints": [],
-        "id": "seed-labels",
-        "inputs": [
           [
-            "basil",
-            "mint"
+            1,
+            -1,
+            1
+          ],
+          [
+            -1
           ]
         ],
-        "kind": "refactor",
-        "language": "html",
-        "number": 1,
-        "skills": [
-          "semantics",
-          "accessibility"
+        "hints": [
+          "Pair a hash map with a doubly linked list ordered by last use."
         ],
-        "summary": "Mark up the seed list so every reader can use it.",
-        "task": "Render the seed names as an unordered list with one item per seed.",
-        "title": "Clean up the seed list markup",
+        "id": "lru-cache",
+        "inputs": [
+          [
+            2,
+            [
+              [
+                "put",
+                1,
+                1
+              ],
+              [
+                "put",
+                2,
+                2
+              ],
+              [
+                "get",
+                1
+              ],
+              [
+                "put",
+                3,
+                3
+              ],
+              [
+                "get",
+                2
+              ],
+              [
+                "get",
+                1
+              ]
+            ]
+          ],
+          [
+            1,
+            [
+              [
+                "put",
+                1,
+                1
+              ],
+              [
+                "put",
+                2,
+                2
+              ],
+              [
+                "get",
+                1
+              ]
+            ]
+          ]
+        ],
+        "kind": "bug",
+        "language": "cpp",
+        "number": 3,
+        "skills": [
+          "caching",
+          "linked-lists",
+          "maps"
+        ],
+        "summary": "Reads must refresh recency in the LRU cache.",
+        "task": "Simulate an LRU cache with the given capacity over operations [\"put\", key, value] and [\"get\", key]. Return the results of the gets in order, -1 for a miss. A get counts as a use.",
+        "title": "Cache evicts entries that were just used",
         "version": "1.0.0"
       },
-      "digest": "3b7c441527b305e44dd2d68485a3d5992bbf3b909d0c1a835ef263ef981fb97e",
+      "digest": "c84d2b060e5135ae83f8aed7db9332f77996ea1e21a4306f3724c6b893a30882",
       "state": "published",
       "testResult": {
-        "digest": "3b7c441527b305e44dd2d68485a3d5992bbf3b909d0c1a835ef263ef981fb97e",
-        "fixtures": 1,
+        "digest": "c84d2b060e5135ae83f8aed7db9332f77996ea1e21a4306f3724c6b893a30882",
+        "fixtures": 2,
         "at": "2026-10-24T00:00:00.000Z"
       },
       "history": [
@@ -851,38 +1439,197 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "3b7c441527b305e44dd2d68485a3d5992bbf3b909d0c1a835ef263ef981fb97e",
+          "digest": "c84d2b060e5135ae83f8aed7db9332f77996ea1e21a4306f3724c6b893a30882",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "3b7c441527b305e44dd2d68485a3d5992bbf3b909d0c1a835ef263ef981fb97e",
+          "digest": "c84d2b060e5135ae83f8aed7db9332f77996ea1e21a4306f3724c6b893a30882",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "3b7c441527b305e44dd2d68485a3d5992bbf3b909d0c1a835ef263ef981fb97e",
+          "digest": "c84d2b060e5135ae83f8aed7db9332f77996ea1e21a4306f3724c6b893a30882",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "3b7c441527b305e44dd2d68485a3d5992bbf3b909d0c1a835ef263ef981fb97e",
+          "digest": "c84d2b060e5135ae83f8aed7db9332f77996ea1e21a4306f3724c6b893a30882",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
     },
-    "adventure:night-shift@1.0.0": {
+    "challenge:parse-duration@1.0.0": {
+      "kind": "challenge",
+      "id": "parse-duration",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Sam R",
+            "body": "Somebody set idle_timeout = 3600 meaning minutes. Let people write 1h.",
+            "role": "SRE"
+          }
+        ],
+        "difficulty": "easy",
+        "expected": [
+          5400,
+          45,
+          7200,
+          null,
+          null,
+          null
+        ],
+        "hints": [],
+        "id": "parse-duration",
+        "inputs": [
+          "1h30m",
+          "45s",
+          "2h",
+          "1h1h",
+          "90",
+          ""
+        ],
+        "kind": "feature",
+        "language": "rust",
+        "number": 4,
+        "skills": [
+          "parsing",
+          "config"
+        ],
+        "summary": "Accept durations like 1h30m in config files.",
+        "task": "parse_duration(text) turns strings like \"1h30m\", \"45s\" or \"2h\" into seconds. Units are h, m and s, each at most once and in that order; return null for anything else.",
+        "title": "Timeouts in config must be written in seconds",
+        "version": "1.0.0"
+      },
+      "digest": "4a0bd14992b070c484bdff6b0f7c88ee2c18a84a4cd8ac48110dd00a64154dcc",
+      "state": "published",
+      "testResult": {
+        "digest": "4a0bd14992b070c484bdff6b0f7c88ee2c18a84a4cd8ac48110dd00a64154dcc",
+        "fixtures": 6,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "4a0bd14992b070c484bdff6b0f7c88ee2c18a84a4cd8ac48110dd00a64154dcc",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "4a0bd14992b070c484bdff6b0f7c88ee2c18a84a4cd8ac48110dd00a64154dcc",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "4a0bd14992b070c484bdff6b0f7c88ee2c18a84a4cd8ac48110dd00a64154dcc",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "4a0bd14992b070c484bdff6b0f7c88ee2c18a84a4cd8ac48110dd00a64154dcc",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "adventure:storefront@1.0.0": {
       "kind": "adventure",
-      "id": "night-shift",
+      "id": "storefront",
       "version": "1.0.0",
       "content": {
         "challenges": [
+          [
+            "format-price",
+            "1.0.0"
+          ],
+          [
+            "discount-codes",
+            "1.0.0"
+          ],
+          [
+            "filter-form-labels",
+            "1.0.0"
+          ],
+          [
+            "debounce-search",
+            "1.0.0"
+          ]
+        ],
+        "id": "storefront",
+        "key": "SHOP",
+        "presentation": "demo-text-v1",
+        "story": "The online shop: product pages, a cart and checkout, server-rendered with a layer of TypeScript. Conversion dipped after the last redesign, and the backlog is a mix of polish, accessibility and checkout bugs.",
+        "summary": "Frontend: the customer-facing shop, cart and checkout.",
+        "title": "Storefront",
+        "version": "1.0.0"
+      },
+      "digest": "dd79368478f82a1ef3c2cc3ea85a1d0df3d675b0ac8bf6a201995167297e93a7",
+      "state": "published",
+      "testResult": {
+        "digest": "dd79368478f82a1ef3c2cc3ea85a1d0df3d675b0ac8bf6a201995167297e93a7",
+        "fixtures": 14,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "dd79368478f82a1ef3c2cc3ea85a1d0df3d675b0ac8bf6a201995167297e93a7",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "dd79368478f82a1ef3c2cc3ea85a1d0df3d675b0ac8bf6a201995167297e93a7",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "dd79368478f82a1ef3c2cc3ea85a1d0df3d675b0ac8bf6a201995167297e93a7",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "dd79368478f82a1ef3c2cc3ea85a1d0df3d675b0ac8bf6a201995167297e93a7",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "adventure:accounts-api@1.0.0": {
+      "kind": "adventure",
+      "id": "accounts-api",
+      "version": "1.0.0",
+      "content": {
+        "challenges": [
+          [
+            "pagination-params",
+            "1.0.0"
+          ],
+          [
+            "reset-link-expiry",
+            "1.0.0"
+          ],
           [
             "rate-limiter",
             "1.0.0"
@@ -890,25 +1637,21 @@
           [
             "parse-log-line",
             "1.0.0"
-          ],
-          [
-            "top-customers",
-            "1.0.0"
           ]
         ],
-        "id": "night-shift",
-        "key": "NS",
+        "id": "accounts-api",
+        "key": "API",
         "presentation": "demo-text-v1",
-        "story": "The on-call phone buzzes at 02:14. Traffic is spiking, logs are scrolling and the shop must stay up until morning.",
-        "summary": "Keep a small web shop running through a long night.",
-        "title": "Night shift",
+        "story": "The Go and PHP service every client talks to for accounts, sessions and password resets. It mostly works; the on-call channel has opinions.",
+        "summary": "Backend: sign-up, login and account endpoints behind every app.",
+        "title": "Accounts API",
         "version": "1.0.0"
       },
-      "digest": "39818fd2692ad067f695feeced76dcea87bd9195ab34879857efa8dfe12241f0",
+      "digest": "3df24dce937feb2173ff3444779a627b20d8699c3d11b699a52c6c945761be81",
       "state": "published",
       "testResult": {
-        "digest": "39818fd2692ad067f695feeced76dcea87bd9195ab34879857efa8dfe12241f0",
-        "fixtures": 6,
+        "digest": "3df24dce937feb2173ff3444779a627b20d8699c3d11b699a52c6c945761be81",
+        "fixtures": 13,
         "at": "2026-10-24T00:00:00.000Z"
       },
       "history": [
@@ -916,64 +1659,137 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "39818fd2692ad067f695feeced76dcea87bd9195ab34879857efa8dfe12241f0",
+          "digest": "3df24dce937feb2173ff3444779a627b20d8699c3d11b699a52c6c945761be81",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "39818fd2692ad067f695feeced76dcea87bd9195ab34879857efa8dfe12241f0",
+          "digest": "3df24dce937feb2173ff3444779a627b20d8699c3d11b699a52c6c945761be81",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "39818fd2692ad067f695feeced76dcea87bd9195ab34879857efa8dfe12241f0",
+          "digest": "3df24dce937feb2173ff3444779a627b20d8699c3d11b699a52c6c945761be81",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "39818fd2692ad067f695feeced76dcea87bd9195ab34879857efa8dfe12241f0",
+          "digest": "3df24dce937feb2173ff3444779a627b20d8699c3d11b699a52c6c945761be81",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
     },
-    "adventure:lighthouse@1.0.0": {
+    "adventure:data-platform@1.0.0": {
       "kind": "adventure",
-      "id": "lighthouse",
+      "id": "data-platform",
       "version": "1.0.0",
       "content": {
         "challenges": [
           [
-            "morse-decoder",
+            "csv-quoted-fields",
             "1.0.0"
           ],
+          [
+            "dedupe-customers",
+            "1.0.0"
+          ],
+          [
+            "top-customers",
+            "1.0.0"
+          ],
+          [
+            "unpaid-orders",
+            "1.0.0"
+          ]
+        ],
+        "id": "data-platform",
+        "key": "DATA",
+        "presentation": "demo-text-v1",
+        "story": "Partners drop CSV exports in a bucket every night. A pipeline cleans them, loads the warehouse and feeds the reports people actually read on Monday morning.",
+        "summary": "Data: nightly partner imports, cleaning and the reports finance relies on.",
+        "title": "Data platform",
+        "version": "1.0.0"
+      },
+      "digest": "ea2f0f4fb279a979fc5cf8c6dfb0575619094722ad7af86e60a3abc1381243f6",
+      "state": "published",
+      "testResult": {
+        "digest": "ea2f0f4fb279a979fc5cf8c6dfb0575619094722ad7af86e60a3abc1381243f6",
+        "fixtures": 8,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "ea2f0f4fb279a979fc5cf8c6dfb0575619094722ad7af86e60a3abc1381243f6",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "ea2f0f4fb279a979fc5cf8c6dfb0575619094722ad7af86e60a3abc1381243f6",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "ea2f0f4fb279a979fc5cf8c6dfb0575619094722ad7af86e60a3abc1381243f6",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "ea2f0f4fb279a979fc5cf8c6dfb0575619094722ad7af86e60a3abc1381243f6",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "adventure:edge-proxy@1.0.0": {
+      "kind": "adventure",
+      "id": "edge-proxy",
+      "version": "1.0.0",
+      "content": {
+        "challenges": [
           [
             "ring-buffer",
             "1.0.0"
           ],
           [
-            "word-wrap",
+            "p99-latency",
+            "1.0.0"
+          ],
+          [
+            "lru-cache",
+            "1.0.0"
+          ],
+          [
+            "parse-duration",
             "1.0.0"
           ]
         ],
-        "id": "lighthouse",
-        "key": "LH",
+        "id": "edge-proxy",
+        "key": "EDGE",
         "presentation": "demo-text-v1",
-        "story": "The keeper has left, but the lamp still blinks and the logbook is full. Piece together the last week on the rock.",
-        "summary": "Signals, logs and a keeper who writes everything down.",
-        "title": "The lighthouse",
+        "story": "A small proxy in C, C++ and Rust that terminates connections, caches hot responses and exports metrics. Every allocation shows up on a flame graph.",
+        "summary": "Systems: the low-latency proxy in front of everything.",
+        "title": "Edge proxy",
         "version": "1.0.0"
       },
-      "digest": "a798e0ac18bf22d6c2f2c3d18c6c6363ad3b06e9ec64a0d6e752b8372d6d084f",
+      "digest": "35b3b80c35507c04b0e58746b20fef6ab7a37c3a32a3c514c67cea89694421df",
       "state": "published",
       "testResult": {
-        "digest": "a798e0ac18bf22d6c2f2c3d18c6c6363ad3b06e9ec64a0d6e752b8372d6d084f",
-        "fixtures": 6,
+        "digest": "35b3b80c35507c04b0e58746b20fef6ab7a37c3a32a3c514c67cea89694421df",
+        "fixtures": 14,
         "at": "2026-10-24T00:00:00.000Z"
       },
       "history": [
@@ -981,97 +1797,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "a798e0ac18bf22d6c2f2c3d18c6c6363ad3b06e9ec64a0d6e752b8372d6d084f",
+          "digest": "35b3b80c35507c04b0e58746b20fef6ab7a37c3a32a3c514c67cea89694421df",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "a798e0ac18bf22d6c2f2c3d18c6c6363ad3b06e9ec64a0d6e752b8372d6d084f",
+          "digest": "35b3b80c35507c04b0e58746b20fef6ab7a37c3a32a3c514c67cea89694421df",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "a798e0ac18bf22d6c2f2c3d18c6c6363ad3b06e9ec64a0d6e752b8372d6d084f",
+          "digest": "35b3b80c35507c04b0e58746b20fef6ab7a37c3a32a3c514c67cea89694421df",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "a798e0ac18bf22d6c2f2c3d18c6c6363ad3b06e9ec64a0d6e752b8372d6d084f",
-          "at": "2026-10-24T00:00:00.000Z"
-        }
-      ]
-    },
-    "adventure:rooftop-garden@1.0.0": {
-      "kind": "adventure",
-      "id": "rooftop-garden",
-      "version": "1.0.0",
-      "content": {
-        "challenges": [
-          [
-            "seed-labels",
-            "1.0.0"
-          ],
-          [
-            "plant-schedule",
-            "1.0.0"
-          ],
-          [
-            "garden-grid",
-            "1.0.0"
-          ],
-          [
-            "harvest-totals",
-            "1.0.0"
-          ]
-        ],
-        "id": "rooftop-garden",
-        "key": "RG",
-        "presentation": "demo-text-v1",
-        "story": "A co-op is turning an empty roof into a garden. They have seeds, a sketch of the beds and a lot of enthusiasm.",
-        "summary": "Plan, water and harvest a garden above the city.",
-        "title": "Rooftop garden",
-        "version": "1.0.0"
-      },
-      "digest": "ea926db7e7dd06cd4ab0953f5b9e5b79d556b5ebdeb3b5a4c33ecfba8798ea17",
-      "state": "published",
-      "testResult": {
-        "digest": "ea926db7e7dd06cd4ab0953f5b9e5b79d556b5ebdeb3b5a4c33ecfba8798ea17",
-        "fixtures": 6,
-        "at": "2026-10-24T00:00:00.000Z"
-      },
-      "history": [
-        {
-          "action": "drafted",
-          "from": null,
-          "to": "draft",
-          "digest": "ea926db7e7dd06cd4ab0953f5b9e5b79d556b5ebdeb3b5a4c33ecfba8798ea17",
-          "at": "2026-10-24T00:00:00.000Z"
-        },
-        {
-          "action": "previewed",
-          "from": "draft",
-          "to": "preview",
-          "digest": "ea926db7e7dd06cd4ab0953f5b9e5b79d556b5ebdeb3b5a4c33ecfba8798ea17",
-          "at": "2026-10-24T00:00:00.000Z"
-        },
-        {
-          "action": "tested",
-          "from": "preview",
-          "to": "tested",
-          "digest": "ea926db7e7dd06cd4ab0953f5b9e5b79d556b5ebdeb3b5a4c33ecfba8798ea17",
-          "at": "2026-10-24T00:00:00.000Z"
-        },
-        {
-          "action": "published",
-          "from": "tested",
-          "to": "published",
-          "digest": "ea926db7e7dd06cd4ab0953f5b9e5b79d556b5ebdeb3b5a4c33ecfba8798ea17",
+          "digest": "35b3b80c35507c04b0e58746b20fef6ab7a37c3a32a3c514c67cea89694421df",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]

@@ -42,7 +42,7 @@ export interface ProjectRef {
   slug: string;
   title: string;
   key: string;
-  /** Index into the theme's project colours; stable for a slug. */
+  /** Index into the theme's project colours, by catalog position. */
   hue: number;
 }
 
@@ -108,12 +108,6 @@ export function keyFromSlug(slug: string): string {
           .join("")
       : slug.slice(0, 3)
   ).toUpperCase();
-}
-
-export function hueFor(slug: string): number {
-  let hash = 0;
-  for (const char of slug) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return hash % HUES;
 }
 
 function toIssue(
@@ -198,11 +192,12 @@ export function library(catalog: Catalog): Library {
     ).values(),
   ];
   const refs = adventures.map(
-    (a): ProjectRef => ({
+    (a, i): ProjectRef => ({
       slug: a.id,
       title: a.title ?? titleFromSlug(a.id),
       key: a.key ?? keyFromSlug(a.id),
-      hue: hueFor(a.id),
+      // Spread by position so neighbouring projects never share a colour.
+      hue: (i * 3) % HUES,
     }),
   );
   const ownerOf = (slug: string) =>

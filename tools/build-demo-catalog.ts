@@ -1,7 +1,9 @@
 /**
- * Synthetic demo catalog for designing discovery against a realistic shape. Never shipped as
- * real content: the web app merges it only when NEXT_PUBLIC_DEMO_CATALOG=1. Authored through
- * the same lifecycle as the reference catalog, so it obeys the same validation.
+ * Synthetic demo catalog for designing the issue tracker against realistic work: four projects,
+ * one per engineering area (frontend, backend, data, systems), with the kind of issues people
+ * meet in a normal job. Never shipped as real content: the web app merges it only in builds
+ * made with DEMO_CATALOG=1. Authored through the same lifecycle as the reference catalog, so it
+ * obeys the same validation.
  */
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -14,6 +16,8 @@ import {
   verifyCatalog,
   type ContentRef,
 } from "../packages/catalog/catalog";
+
+type Comment = { author: string; role?: string; body: string };
 
 const challenge = (
   id: string,
@@ -28,7 +32,7 @@ const challenge = (
     inputs: unknown[];
     expected: unknown[];
     hints?: string[];
-    comments?: { author: string; role?: string; body: string }[];
+    comments?: Comment[];
   },
 ) => ({
   id,
@@ -38,22 +42,174 @@ const challenge = (
   ...fields,
 });
 
+// Recurring teammates, so threads read like one team.
+const ada = (body: string): Comment => ({
+  author: "Ada N",
+  role: "Frontend",
+  body,
+});
+const lena = (body: string): Comment => ({
+  author: "Lena M",
+  role: "Product",
+  body,
+});
+const mateo = (body: string): Comment => ({
+  author: "Mateo O",
+  role: "Backend",
+  body,
+});
+const priya = (body: string): Comment => ({
+  author: "Priya K",
+  role: "Data",
+  body,
+});
+const sam = (body: string): Comment => ({ author: "Sam R", role: "SRE", body });
+const jo = (body: string): Comment => ({
+  author: "Jo T",
+  role: "Support",
+  body,
+});
+const rui = (body: string): Comment => ({
+  author: "Rui F",
+  role: "Finance",
+  body,
+});
+
 const challenges = [
-  challenge("rate-limiter", {
-    title: "Rate-limit the checkout endpoint",
-    kind: "feature",
+  // Storefront: frontend
+  challenge("format-price", {
+    title: "Cart shows prices as raw cents",
+    summary: "Format amounts as dollars with separators, including refunds.",
+    kind: "bug",
+    difficulty: "warm-up",
+    language: "javascript",
+    skills: ["formatting", "strings", "numbers"],
+    task: 'Write formatPrice(cents): return the amount in dollars with two decimals and comma thousands separators, e.g. 123456 → "$1,234.56". Negative amounts are refunds and get a leading minus: -500 → "-$5.00".',
+    inputs: [123456, 5, 0, -500, 100000000],
+    expected: ["$1,234.56", "$0.05", "$0.00", "-$5.00", "$1,000,000.00"],
     comments: [
-      {
-        author: "Sam R",
-        role: "SRE",
-        body: "We got hammered by a retry storm last night. Keep it simple, a sliding window is fine.",
-      },
+      ada(
+        "Design wants the minus before the dollar sign for refunds, same as on the receipts.",
+      ),
     ],
-    summary: "Allow at most n requests in any sliding window.",
+  }),
+  challenge("discount-codes", {
+    title: "Discount codes fail when typed in lowercase",
+    summary: "Match promo codes case-insensitively and ignore stray spaces.",
+    kind: "bug",
+    difficulty: "easy",
+    language: "typescript",
+    skills: ["strings", "validation"],
+    task: "applyDiscount(totalCents, code, codes) returns the total after the matching code's percentage off, rounded down to whole cents. Codes match case-insensitively and ignoring surrounding spaces; an unknown code leaves the total unchanged.",
+    inputs: [
+      [10000, "save10", { SAVE10: 10 }],
+      [10000, " SAVE10 ", { SAVE10: 10 }],
+      [999, "HALF", { HALF: 50 }],
+      [5000, "NOPE", { SAVE10: 10 }],
+    ],
+    expected: [9000, 9000, 499, 5000],
+    comments: [
+      jo(
+        "40 tickets this morning. People type codes the way they read them in the email.",
+      ),
+      lena("Black Friday is in two weeks, so this one jumps the queue."),
+    ],
+  }),
+  challenge("filter-form-labels", {
+    title: "Product filter checkboxes have no labels",
+    summary: "Tie every filter checkbox to a label so it is accessible.",
+    kind: "refactor",
+    difficulty: "warm-up",
+    language: "html",
+    skills: ["accessibility", "forms", "semantics"],
+    task: 'Render the product filter form: for each filter name, a <label for="filter-NAME"> with the name as text, followed by <input type="checkbox" id="filter-NAME" name="NAME">, all inside a <form>.',
+    inputs: [["in-stock", "on-sale"], []],
+    expected: [
+      '<form><label for="filter-in-stock">in-stock</label><input type="checkbox" id="filter-in-stock" name="in-stock"><label for="filter-on-sale">on-sale</label><input type="checkbox" id="filter-on-sale" name="on-sale"></form>',
+      "<form></form>",
+    ],
+    comments: [
+      ada(
+        "The accessibility audit flagged every checkbox here. Clicking the text should toggle the box.",
+      ),
+    ],
+  }),
+  challenge("debounce-search", {
+    title: "Search box sends a request on every keystroke",
+    summary:
+      "Debounce search-as-you-type so the API sees one request per pause.",
+    kind: "performance",
+    difficulty: "medium",
+    language: "typescript",
+    skills: ["timing", "events"],
+    task: "debounceTimes(keystrokes, waitMs): given keystroke times in milliseconds, return the times at which the debounced search fires. It fires waitMs after a keystroke unless another keystroke comes first.",
+    inputs: [
+      [[0, 100, 200, 1000], 300],
+      [[], 300],
+      [[0, 500], 300],
+    ],
+    expected: [[500, 1300], [], [300, 800]],
+    hints: [
+      "Each keystroke cancels the pending request if it arrives before the timer fires.",
+    ],
+    comments: [
+      sam(
+        "Search API gets about eight requests per query. 300 ms after the last keystroke is plenty.",
+      ),
+    ],
+  }),
+
+  // Accounts API: backend
+  challenge("pagination-params", {
+    title: "List endpoints accept any page size",
+    summary: "Parse page and per_page with defaults and a hard cap.",
+    kind: "bug",
+    difficulty: "easy",
+    language: "go",
+    skills: ["parsing", "validation", "http"],
+    task: "ParsePage(query) reads page and per_page from a URL query string. Defaults are page 1 and 20 per page, per_page is capped at 100, and missing, zero, negative or non-numeric values fall back to the default.",
+    inputs: ["page=2&per_page=50", "", "per_page=500", "page=-1&per_page=abc"],
+    expected: [
+      { page: 2, perPage: 50 },
+      { page: 1, perPage: 20 },
+      { page: 1, perPage: 100 },
+      { page: 1, perPage: 20 },
+    ],
+    comments: [
+      mateo(
+        "The mobile app sends per_page=500 to fetch everything in one go. Cap it, don't error.",
+      ),
+    ],
+  }),
+  challenge("reset-link-expiry", {
+    title: "Password reset links expire after a minute",
+    summary: "The TTL is in minutes but the check compares seconds.",
+    kind: "bug",
+    difficulty: "easy",
+    language: "php",
+    skills: ["time", "units"],
+    task: "isExpired(issuedAt, now, ttlMinutes) with Unix timestamps in seconds. A link issued at t stays valid until t + ttlMinutes × 60, inclusive.",
+    inputs: [
+      [1000, 1059, 60],
+      [1000, 4600, 60],
+      [1000, 4601, 60],
+      [1000, 1000, 0],
+    ],
+    expected: [false, false, true, false],
+    comments: [
+      jo(
+        "Customers say reset emails 'never work'. They do, if you click within a minute.",
+      ),
+    ],
+  }),
+  challenge("rate-limiter", {
+    title: "Rate-limit login attempts",
+    summary: "Allow at most n attempts in any sliding window.",
+    kind: "feature",
     difficulty: "medium",
     language: "typescript",
     skills: ["sliding-window", "queues"],
-    task: "Write allow(times, limit, windowMs): for each request time, return whether it is allowed when at most `limit` requests may fall inside any window of `windowMs`.",
+    task: "Write allow(times, limit, windowMs): for each login attempt time, return whether it is allowed when at most `limit` attempts may fall inside any window of `windowMs`.",
     inputs: [
       [[0, 1, 2, 3], 3, 10],
       [[], 1, 10],
@@ -61,23 +217,16 @@ const challenges = [
     ],
     expected: [[true, true, true, false], [], [true, true, true]],
     hints: ["Keep only the timestamps still inside the window."],
+    comments: [
+      sam(
+        "Credential-stuffing bot again last night. A sliding window per IP, nothing fancy.",
+      ),
+    ],
   }),
   challenge("parse-log-line", {
-    title: "Log parser drops fields on 5xx lines",
-    kind: "bug",
-    comments: [
-      {
-        author: "Sam R",
-        role: "SRE",
-        body: "Alerting is blind to the 502s because duration and status come back empty.",
-      },
-      {
-        author: "Priya K",
-        role: "Data",
-        body: "Durations are always whole milliseconds, suffixed with ms.",
-      },
-    ],
+    title: "Access log parser drops fields on 5xx lines",
     summary: "Turn an access log line into a structured record.",
+    kind: "bug",
     difficulty: "easy",
     language: "go",
     skills: ["parsing", "strings"],
@@ -87,18 +236,69 @@ const challenges = [
       { method: "GET", path: "/cart", status: 200, ms: 12 },
       { method: "POST", path: "/pay", status: 502, ms: 1300 },
     ],
+    comments: [
+      sam(
+        "Alerting is blind to the 502s because duration and status come back empty.",
+      ),
+      priya("Durations are always whole milliseconds, suffixed with ms."),
+    ],
+  }),
+
+  // Data platform: imports, cleaning and reports
+  challenge("csv-quoted-fields", {
+    title: "CSV import splits company names on commas",
+    summary: "Respect quoted fields when parsing partner exports.",
+    kind: "bug",
+    difficulty: "easy",
+    language: "python",
+    skills: ["parsing", "strings", "csv"],
+    task: 'parse_csv_line(line) splits a CSV line on commas, except inside double quotes. Quotes are removed, and a doubled quote inside a quoted field is a literal quote: "say ""hi""" → say "hi".',
+    inputs: ["a,b,c", '"Acme, Inc.",42,"NY"', '"say ""hi""",x', ""],
+    expected: [
+      ["a", "b", "c"],
+      ["Acme, Inc.", "42", "NY"],
+      ['say "hi"', "x"],
+      [""],
+    ],
+    comments: [
+      priya(
+        "Every customer with a comma in their company name lands in the wrong column. 'Acme, Inc.' is our biggest account.",
+      ),
+    ],
+  }),
+  challenge("dedupe-customers", {
+    title: "Deduplicate customer records by email",
+    summary: "Keep the first record per email before the newsletter sync.",
+    kind: "feature",
+    difficulty: "medium",
+    language: "python",
+    skills: ["maps", "data-cleaning"],
+    task: "dedupe(records) keeps the first record for each email, comparing emails case-insensitively and ignoring surrounding spaces. Keep the original order.",
+    inputs: [
+      [
+        { id: 1, email: "Ann@x.io" },
+        { id: 2, email: " ann@x.io" },
+        { id: 3, email: "bo@x.io" },
+      ],
+      [],
+    ],
+    expected: [
+      [
+        { id: 1, email: "Ann@x.io" },
+        { id: 3, email: "bo@x.io" },
+      ],
+      [],
+    ],
+    comments: [
+      lena(
+        "Marketing sent last week's newsletter three times to some people. They were not thrilled.",
+      ),
+    ],
   }),
   challenge("top-customers", {
-    title: "Top customers report for stand-up",
+    title: "Revenue by customer for the monthly report",
+    summary: "Total each customer's orders, biggest first.",
     kind: "feature",
-    comments: [
-      {
-        author: "Lena M",
-        role: "Product",
-        body: "Just the totals per customer, biggest first. No need for a chart.",
-      },
-    ],
-    summary: "Rank customers by what they spent tonight.",
     difficulty: "easy",
     language: "sql",
     skills: ["aggregation", "sorting"],
@@ -118,11 +318,41 @@ const challenges = [
         ["bo", 10],
       ],
     ],
+    comments: [
+      rui("Just the totals per customer, biggest first. The chart is my job."),
+    ],
   }),
-  challenge("ring-buffer", {
-    title: "Keep only the latest lamp readings",
+  challenge("unpaid-orders", {
+    title: "Find orders with no matching payment",
+    summary: "Reconcile orders against payments before month-end close.",
     kind: "feature",
-    summary: "A fixed-size log that overwrites its oldest entry.",
+    difficulty: "medium",
+    language: "sql",
+    skills: ["joins", "reconciliation"],
+    task: "Given orders(id, customer) and payments(order_id, amount), select the ids of orders that have no payment, smallest first.",
+    inputs: [
+      {
+        orders: [
+          [1, "ana"],
+          [2, "bo"],
+          [3, "cy"],
+        ],
+        payments: [
+          [1, 30],
+          [3, 12],
+        ],
+      },
+    ],
+    expected: [[[2]]],
+    hints: ["A LEFT JOIN keeps orders even when no payment matches."],
+    comments: [rui("Month-end close is Friday. I need this list before then.")],
+  }),
+
+  // Edge proxy: systems and performance
+  challenge("ring-buffer", {
+    title: "Keep the last N request latencies in memory",
+    summary: "A fixed-size buffer that overwrites its oldest entry.",
+    kind: "feature",
     difficulty: "medium",
     language: "c",
     skills: ["arrays", "modular-arithmetic"],
@@ -132,159 +362,138 @@ const challenges = [
       [2, []],
     ],
     expected: [[2, 3, 4], []],
-  }),
-  challenge("morse-decoder", {
-    title: "Morse decoder merges separate words",
-    kind: "bug",
     comments: [
-      {
-        author: "Mateo O",
-        role: "Backend",
-        body: "Three spaces between words, one between letters. The old code treated both the same.",
-      },
+      sam("No malloc on the hot path. Fixed-size array, overwrite the oldest."),
     ],
-    summary: "Read the keeper's signal lamp.",
-    difficulty: "easy",
-    language: "rust",
-    skills: ["maps", "strings"],
-    task: "Write decode(signal): letters are separated by one space and words by three. Return the uppercase text.",
-    inputs: ["... --- ...", ".... ..   - .... . .-. ."],
-    expected: ["SOS", "HI THERE"],
   }),
-  challenge("word-wrap", {
-    title: "Logbook lines overflow the printer",
-    kind: "bug",
-    summary: "Fit the logbook onto a narrow page.",
-    difficulty: "easy",
-    language: "python",
-    skills: ["strings", "greedy"],
-    task: "Write wrap(text, width): break text into lines of at most width characters without splitting words.",
-    inputs: [
-      ["the light is on", 7],
-      ["", 5],
-    ],
-    expected: [["the", "light", "is on"], []],
-  }),
-  challenge("plant-schedule", {
-    title: "Watering schedule for the co-op",
-    kind: "feature",
-    comments: [
-      {
-        author: "Lena M",
-        role: "Product",
-        body: "Day 0 counts. Basil on a 2-day cycle gets watered on day 0, 2 and 4.",
-      },
-    ],
-    summary: "List the days each plant needs water.",
-    difficulty: "warm-up",
-    language: "php",
-    skills: ["iteration", "dates"],
-    task: "Write schedule(plants, days): each plant waters every `every` days starting on day 0. Return the watering days per plant within `days`.",
-    inputs: [[[{ name: "basil", every: 2 }], 5]],
-    expected: [{ basil: [0, 2, 4] }],
-  }),
-  challenge("garden-grid", {
-    title: "Path finder times out on big gardens",
+  challenge("p99-latency", {
+    title: "p99 latency panel times out in busy hours",
+    summary: "Compute nearest-rank percentiles for the metrics endpoint.",
     kind: "performance",
-    comments: [
-      {
-        author: "Sam R",
-        role: "SRE",
-        body: "The current version tries every route. A breadth-first search should be plenty.",
-      },
-    ],
-    summary: "Find the shortest path between two beds.",
     difficulty: "medium",
-    language: "javascript",
-    skills: ["grids", "breadth-first-search"],
-    task: "Write shortestPath(grid, from, to) over a grid of '.' paths and '#' beds. Return the number of steps, or -1.",
+    language: "rust",
+    skills: ["sorting", "statistics"],
+    task: "percentile(samples, p) returns the nearest-rank percentile: sort the samples and take the value at rank ceil(p / 100 × n), counting from 1. Return null when there are no samples.",
     inputs: [
-      [
-        ["..#", "...", "#.."],
-        [0, 0],
-        [2, 2],
-      ],
-      [
-        [".#", "#."],
-        [0, 0],
-        [1, 1],
-      ],
+      [[15, 20, 35, 40, 50], 30],
+      [[15, 20, 35, 40, 50], 100],
+      [[], 99],
+      [[5], 99],
     ],
-    expected: [4, -1],
+    expected: [20, 50, null, 5],
+    comments: [
+      sam(
+        "The current version re-sorts every sample for every percentile. Busy hours have two million samples.",
+      ),
+    ],
   }),
-  challenge("harvest-totals", {
-    title: "Pick crops for the biggest harvest",
-    kind: "feature",
-    summary: "Choose crops to fill the rooftop for the biggest yield.",
+  challenge("lru-cache", {
+    title: "Cache evicts entries that were just used",
+    summary: "Reads must refresh recency in the LRU cache.",
+    kind: "bug",
     difficulty: "hard",
     language: "cpp",
-    skills: ["dynamic-programming"],
-    task: "Write bestYield(crops, area): each crop has an area and a yield and can be planted once. Return the largest total yield within the area.",
+    skills: ["caching", "linked-lists", "maps"],
+    task: 'Simulate an LRU cache with the given capacity over operations ["put", key, value] and ["get", key]. Return the results of the gets in order, -1 for a miss. A get counts as a use.',
     inputs: [
       [
+        2,
         [
-          [2, 3],
-          [3, 4],
-          [4, 5],
+          ["put", 1, 1],
+          ["put", 2, 2],
+          ["get", 1],
+          ["put", 3, 3],
+          ["get", 2],
+          ["get", 1],
         ],
-        5,
       ],
-      [[], 3],
+      [
+        1,
+        [
+          ["put", 1, 1],
+          ["put", 2, 2],
+          ["get", 1],
+        ],
+      ],
     ],
-    expected: [7, 0],
-  }),
-  challenge("seed-labels", {
-    title: "Clean up the seed list markup",
-    kind: "refactor",
+    expected: [[1, -1, 1], [-1]],
+    hints: ["Pair a hash map with a doubly linked list ordered by last use."],
     comments: [
-      {
-        author: "Ada N",
-        role: "Frontend",
-        body: "Screen readers announce it as one long string right now. A plain list is all we need.",
-      },
+      mateo(
+        "Hit rate dropped to 12% after the last deploy. I think get() stopped refreshing recency.",
+      ),
     ],
-    summary: "Mark up the seed list so every reader can use it.",
-    difficulty: "warm-up",
-    language: "html",
-    skills: ["semantics", "accessibility"],
-    task: "Render the seed names as an unordered list with one item per seed.",
-    inputs: [["basil", "mint"]],
-    expected: ["<ul><li>basil</li><li>mint</li></ul>"],
+  }),
+  challenge("parse-duration", {
+    title: "Timeouts in config must be written in seconds",
+    summary: "Accept durations like 1h30m in config files.",
+    kind: "feature",
+    difficulty: "easy",
+    language: "rust",
+    skills: ["parsing", "config"],
+    task: 'parse_duration(text) turns strings like "1h30m", "45s" or "2h" into seconds. Units are h, m and s, each at most once and in that order; return null for anything else.',
+    inputs: ["1h30m", "45s", "2h", "1h1h", "90", ""],
+    expected: [5400, 45, 7200, null, null, null],
+    comments: [
+      sam(
+        "Somebody set idle_timeout = 3600 meaning minutes. Let people write 1h.",
+      ),
+    ],
   }),
 ];
 
 const adventures = [
   {
-    id: "night-shift",
-    key: "NS",
-    title: "Night shift",
-    summary: "Keep a small web shop running through a long night.",
+    id: "storefront",
+    key: "SHOP",
+    title: "Storefront",
+    summary: "Frontend: the customer-facing shop, cart and checkout.",
     story:
-      "The on-call phone buzzes at 02:14. Traffic is spiking, logs are scrolling and the shop must stay up until morning.",
-    challenges: ["rate-limiter", "parse-log-line", "top-customers"],
-  },
-  {
-    id: "lighthouse",
-    key: "LH",
-    title: "The lighthouse",
-    summary: "Signals, logs and a keeper who writes everything down.",
-    story:
-      "The keeper has left, but the lamp still blinks and the logbook is full. Piece together the last week on the rock.",
-    challenges: ["morse-decoder", "ring-buffer", "word-wrap"],
-  },
-  {
-    id: "rooftop-garden",
-    key: "RG",
-    title: "Rooftop garden",
-    summary: "Plan, water and harvest a garden above the city.",
-    story:
-      "A co-op is turning an empty roof into a garden. They have seeds, a sketch of the beds and a lot of enthusiasm.",
+      "The online shop: product pages, a cart and checkout, server-rendered with a layer of TypeScript. Conversion dipped after the last redesign, and the backlog is a mix of polish, accessibility and checkout bugs.",
     challenges: [
-      "seed-labels",
-      "plant-schedule",
-      "garden-grid",
-      "harvest-totals",
+      "format-price",
+      "discount-codes",
+      "filter-form-labels",
+      "debounce-search",
     ],
+  },
+  {
+    id: "accounts-api",
+    key: "API",
+    title: "Accounts API",
+    summary: "Backend: sign-up, login and account endpoints behind every app.",
+    story:
+      "The Go and PHP service every client talks to for accounts, sessions and password resets. It mostly works; the on-call channel has opinions.",
+    challenges: [
+      "pagination-params",
+      "reset-link-expiry",
+      "rate-limiter",
+      "parse-log-line",
+    ],
+  },
+  {
+    id: "data-platform",
+    key: "DATA",
+    title: "Data platform",
+    summary:
+      "Data: nightly partner imports, cleaning and the reports finance relies on.",
+    story:
+      "Partners drop CSV exports in a bucket every night. A pipeline cleans them, loads the warehouse and feeds the reports people actually read on Monday morning.",
+    challenges: [
+      "csv-quoted-fields",
+      "dedupe-customers",
+      "top-customers",
+      "unpaid-orders",
+    ],
+  },
+  {
+    id: "edge-proxy",
+    key: "EDGE",
+    title: "Edge proxy",
+    summary: "Systems: the low-latency proxy in front of everything.",
+    story:
+      "A small proxy in C, C++ and Rust that terminates connections, caches hot responses and exports metrics. Every allocation shows up on a flame graph.",
+    challenges: ["ring-buffer", "p99-latency", "lru-cache", "parse-duration"],
   },
 ].map(({ challenges: ids, ...adventure }) => ({
   ...adventure,

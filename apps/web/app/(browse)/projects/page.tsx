@@ -41,7 +41,7 @@ export default async function ProjectsPage({
         <Toolbar
           path="/projects"
           query={query}
-          placeholder="lang:rust lighthouse …"
+          placeholder="lang:rust proxy …"
           filters={[
             {
               key: "language",
