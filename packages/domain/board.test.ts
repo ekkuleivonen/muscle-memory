@@ -17,9 +17,9 @@ const base = {
   data: {
     issueKey: "API-2",
     from: "backlog" as const,
-    to: "todo" as const,
+    to: "in-progress" as const,
     via: "keyboard" as const,
-    todoBefore: 3,
+    onBoardBefore: 3,
     nudged: true,
   },
 };
@@ -50,10 +50,13 @@ test("malformed moves are refused rather than stored", () => {
     bad({ data: { ...base.data, issueKey: "api-2" } }),
     /issue key/,
   );
-  assert.throws(bad({ data: { ...base.data, to: "backlog" } }), /between/);
+  assert.throws(
+    bad({ data: { ...base.data, from: "in-progress" } }),
+    /between/,
+  );
   assert.throws(bad({ data: { ...base.data, to: "done" } }), /between/);
-  assert.throws(bad({ data: { ...base.data, via: "drag" } }), /way/);
-  assert.throws(bad({ data: { ...base.data, todoBefore: -1 } }), /count/);
+  assert.throws(bad({ data: { ...base.data, via: "button" } }), /way/);
+  assert.throws(bad({ data: { ...base.data, onBoardBefore: -1 } }), /count/);
 });
 
 test("records are canonical, stable and found again for export", () => {

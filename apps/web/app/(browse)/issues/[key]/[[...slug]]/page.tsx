@@ -24,7 +24,7 @@ import {
   StatusIcon,
 } from "../../../_components/icons";
 import { Sep, Topbar } from "../../../_components/topbar";
-import { StatusField, TodoButton } from "../../../_components/board";
+import { StatusMenu } from "../../../_components/board";
 
 type Props = {
   params: Promise<{ key: string; slug?: string[] }>;
@@ -76,24 +76,7 @@ export default async function IssuePage(props: Props) {
   const { project } = issue;
   return (
     <>
-      <Topbar
-        actions={
-          <>
-            <TodoButton
-              issue={{
-                key: issue.key,
-                slug: issue.slug,
-                version: issue.version,
-              }}
-            />
-            {issue.runnable && (
-              <Link className="btn primary" href={workspaceHref(issue)}>
-                <PlayIcon /> Start work
-              </Link>
-            )}
-          </>
-        }
-      >
+      <Topbar>
         {project ? (
           <Link href={`/projects/${project.slug}`}>
             <ProjectSquare project={project} /> {project.title}
@@ -181,19 +164,10 @@ function workspaceHref(issue: Issue) {
 function Properties({ issue }: { issue: Issue }) {
   return (
     <aside className="props" aria-label="Properties">
-      {issue.runnable ? (
-        <Link className="btn primary start" href={workspaceHref(issue)}>
-          <PlayIcon /> Start work
-        </Link>
-      ) : (
-        <p className="note">
-          Read-only for now: only Python runs in the browser so far.
-        </p>
-      )}
       <dl>
         <dt>Status</dt>
         <dd>
-          <StatusField
+          <StatusMenu
             issue={{ key: issue.key, slug: issue.slug, version: issue.version }}
           />
         </dd>
@@ -231,6 +205,15 @@ function Properties({ issue }: { issue: Issue }) {
         <dt>Version</dt>
         <dd className="mono faint">{issue.version}</dd>
       </dl>
+      {issue.runnable ? (
+        <Link className="btn start" href={workspaceHref(issue)}>
+          <PlayIcon /> Start work
+        </Link>
+      ) : (
+        <p className="note">
+          Read-only for now: only Python runs in the browser so far.
+        </p>
+      )}
     </aside>
   );
 }

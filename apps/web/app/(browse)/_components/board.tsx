@@ -1,23 +1,31 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
-  BOARD_KEY,
-  moveToBacklog,
-  moveToTodo,
-  parseBoard,
-  serializeBoard,
-  STATUS_LABELS,
-  statusOf,
-  todoFull,
-  type BoardItem,
-} from "../../../lib/board";
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { BoardMoveVia } from "../../../../../packages/domain/board";
 import { ACTIVITY_KEY, parseConsent } from "../../../lib/activity-log";
+import {
+  BOARD_KEY,
+  boardFull,
+  parseBoard,
+  serializeBoard,
+  setStatus,
+  STATUS_LABELS,
+  statusOf,
+  type BoardItem,
+  type ManualStatus,
+  type Status,
+} from "../../../lib/board";
 import { logBoardMove } from "./board-log";
 import { StatusIcon } from "./icons";
 
 const CHANGE = "muscle-memory:board";
+const OPTIONS: readonly Status[] = ["backlog", "todo", "in-progress", "done"];
 
 /** What a move needs to know about the issue: its key and the exact content shown. */
 export interface IssueRef {
@@ -43,32 +51,31 @@ export function useBoard() {
     () => null,
   );
   const items = useMemo(() => parseBoard(raw), [raw]);
-  const save = (next: BoardItem[]) => {
-    localStorage.setItem(BOARD_KEY, serializeBoard(next));
-    window.dispatchEvent(new Event(CHANGE));
-  };
-  /** Moves an issue and, if the activity log is on, records how it moved. */
+  /** Sets a status by hand and, if the activity log is on, records the move. */
   const move = (
     issue: IssueRef,
-    to: "todo" | "backlog",
+    to: ManualStatus,
     via: BoardMoveVia,
     nudged = false,
   ) => {
-    const onBoard = items.some((i) => i.key === issue.key);
-    if (onBoard === (to === "todo")) return;
-    save(
-      to === "todo"
-        ? moveToTodo(items, issue.key, new Date().toISOString())
-        : moveToBacklog(items, issue.key),
+    const from = statusOf(items, issue.key);
+    if (from === to || from === "done") return;
+    const next: BoardItem[] = setStatus(
+      items,
+      issue.key,
+      to,
+      new Date().toISOString(),
     );
+    localStorage.setItem(BOARD_KEY, serializeBoard(next));
+    window.dispatchEvent(new Event(CHANGE));
     void logBoardMove(
       { id: issue.slug, version: issue.version },
       {
         issueKey: issue.key,
-        from: to === "todo" ? "backlog" : "todo",
+        from,
         to,
         via,
-        todoBefore: items.length,
+        onBoardBefore: items.length,
         nudged,
       },
     );
@@ -92,25 +99,45 @@ const typing = (target: EventTarget | null) =>
     /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
 
 /**
- * The one status anyone sets by hand: backlog ↔ Todo. `t` toggles it from the keyboard.
- * Over the soft limit it asks once instead of refusing.
+ * Linear-style status dropdown: Backlog, Todo and In progress are yours to set; Done comes
+ * from passing every check. `s` opens it, arrows move, Enter picks, Escape closes. Taking an
+ * issue off the backlog over the soft limit asks once instead of refusing.
  */
-export function TodoButton({ issue }: { issue: IssueRef }) {
+export function StatusMenu({ issue }: { issue: IssueRef }) {
   const { items, move } = useBoard();
-  const [confirming, setConfirming] = useState<BoardMoveVia | null>(null);
-  const onBoard = items.some((i) => i.key === issue.key);
+  const status = statusOf(items, issue.key);
+  const [open, setOpen] = useState(false);
+  const [cursor, setCursor] = useState(0);
+  const [pending, setPending] = useState<ManualStatus | null>(null);
+  const via = useRef<BoardMoveVia>("pointer");
+  const root = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLUListElement>(null);
 
-  function toggle(via: BoardMoveVia) {
-    if (onBoard) return move(issue, "backlog", via);
-    if (todoFull(items) && !confirming) return setConfirming(via);
-    setConfirming(null);
-    move(issue, "todo", confirming ?? via, !!confirming);
+  function show(by: BoardMoveVia) {
+    via.current = by;
+    setPending(null);
+    setCursor(Math.max(0, OPTIONS.indexOf(status)));
+    setOpen(true);
   }
+
+  function choose(to: Status, confirmed = false) {
+    if (to === "done") return;
+    const leavingBacklog = status === "backlog" && to !== "backlog";
+    if (leavingBacklog && boardFull(items) && !confirmed) return setPending(to);
+    move(issue, to, via.current, confirmed);
+    setPending(null);
+    setOpen(false);
+  }
+
+  useEffect(() => {
+    if (open) list.current?.focus();
+  }, [open]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (
-        event.key !== "t" ||
+        open ||
+        event.key !== "s" ||
         event.metaKey ||
         event.ctrlKey ||
         event.altKey ||
@@ -118,77 +145,118 @@ export function TodoButton({ issue }: { issue: IssueRef }) {
       )
         return;
       event.preventDefault();
-      toggle("keyboard");
+      show("keyboard");
+    }
+    function onClick(event: MouseEvent) {
+      if (open && !root.current?.contains(event.target as Node)) setOpen(false);
     }
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.addEventListener("click", onClick);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("click", onClick);
+    };
   });
 
-  return (
-    <span className="todo-wrap">
-      <button
-        type="button"
-        className={onBoard ? "btn todo-btn" : "btn todo-btn primary-outline"}
-        aria-pressed={onBoard}
-        onClick={() => toggle("button")}
-        title={`${onBoard ? "Back to backlog" : "Move to Todo"} (t)`}
-      >
-        <StatusIcon status={onBoard ? "todo" : "backlog"} />
-        {onBoard ? "In Todo · back to backlog" : "Move to Todo"}
-      </button>
-      {confirming && (
-        <span className="nudge" role="alert">
-          <span>
-            You already have {items.length} in Todo. Finish one first?
-          </span>
-          <span className="nudge-actions">
-            <Link className="btn" href="/board">
-              Open board
-            </Link>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => toggle("button")}
-            >
-              Add anyway
-            </button>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => setConfirming(null)}
-            >
-              Cancel
-            </button>
-          </span>
-        </span>
-      )}
-    </span>
-  );
-}
+  function onListKey(event: React.KeyboardEvent) {
+    via.current = "keyboard";
+    if (event.key === "Escape") setOpen(false);
+    else if (event.key === "ArrowDown" || event.key === "j")
+      setCursor((c) => Math.min(OPTIONS.length - 1, c + 1));
+    else if (event.key === "ArrowUp" || event.key === "k")
+      setCursor((c) => Math.max(0, c - 1));
+    else if (event.key === "Enter" || event.key === " ")
+      pending ? choose(pending, true) : choose(OPTIONS[cursor]);
+    else return;
+    event.preventDefault();
+  }
 
-/** Status in the properties panel, with the same backlog ↔ Todo switch. */
-export function StatusField({ issue }: { issue: IssueRef }) {
-  const { items, move } = useBoard();
-  const status = statusOf(items, issue.key);
   return (
-    <>
-      <StatusIcon status={status} /> {STATUS_LABELS[status]}
+    <div className="status-menu" ref={root}>
       <button
         type="button"
-        className="link-btn"
-        onClick={() =>
-          move(issue, status === "backlog" ? "todo" : "backlog", "status-field")
-        }
+        className="status-trigger"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        title="Change status (s)"
+        onClick={() => (open ? setOpen(false) : show("pointer"))}
       >
-        {status === "backlog" ? "Move to Todo" : "Back to backlog"}
+        <StatusIcon status={status} /> {STATUS_LABELS[status]}
+        <span className="caret" aria-hidden>
+          ▾
+        </span>
       </button>
-    </>
+      {open && (
+        <div className="menu-pop status-pop">
+          {pending ? (
+            <div className="nudge-inline" role="alert">
+              <p>
+                You already have {items.length} on your board. Finish one first?
+              </p>
+              <div className="nudge-actions">
+                <button
+                  className="btn"
+                  type="button"
+                  onClick={() => {
+                    via.current = "pointer";
+                    choose(pending, true);
+                  }}
+                >
+                  Move anyway
+                </button>
+                <Link className="btn" href="/board">
+                  Open board
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <ul
+              ref={list}
+              role="listbox"
+              aria-label="Status"
+              aria-activedescendant={`status-${OPTIONS[cursor]}`}
+              tabIndex={-1}
+              onKeyDown={onListKey}
+            >
+              {OPTIONS.map((option, index) => (
+                <li
+                  key={option}
+                  id={`status-${option}`}
+                  role="option"
+                  aria-selected={option === status}
+                  aria-disabled={option === "done"}
+                  className={
+                    index === cursor ? "menu-item current" : "menu-item"
+                  }
+                  onMouseEnter={() => setCursor(index)}
+                  onClick={() => {
+                    via.current = "pointer";
+                    choose(option);
+                  }}
+                >
+                  <StatusIcon status={option} />
+                  <span>{STATUS_LABELS[option]}</span>
+                  {option === "done" ? (
+                    <span className="faint auto">automatic</span>
+                  ) : (
+                    option === status && <span className="check">✓</span>
+                  )}
+                </li>
+              ))}
+              <li className="menu-note" role="presentation">
+                Done is set when every acceptance check passes.
+              </li>
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
 const noop = () => () => {};
 
-/** Whether board moves are being recorded, always visible where moves happen. */
+/** Whether status changes are being recorded, always visible where they happen. */
 export function ActivityLogNote() {
   const on = useSyncExternalStore(
     subscribe,
@@ -205,8 +273,8 @@ export function ActivityLogNote() {
     <p className="hint">
       Activity log: <b>{on ? "on" : "off"}</b>.{" "}
       {on
-        ? "Moves between the backlog and Todo are recorded in this browser only. "
-        : "Moves are not recorded. "}
+        ? "Status changes are recorded in this browser only. "
+        : "Status changes are not recorded. "}
       <Link href="/onboarding">
         {on ? "Turn it off in Setup (log off)" : "Turn it on in Setup (log on)"}
       </Link>

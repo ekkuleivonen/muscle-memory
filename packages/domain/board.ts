@@ -1,5 +1,6 @@
 /**
- * Raw observations of personal-board moves: an issue moving between the backlog and Todo.
+ * Raw observations of personal-board moves: an issue's status set by hand (Backlog, Todo,
+ * In progress) from its Status menu.
  * Recorded only after explicit, device-local consent; nothing here reads anything beyond the
  * move itself and the board at that moment.
  */
@@ -7,8 +8,13 @@ import { canonical, type Json } from "./assessment";
 import { safeIdentifier } from "./events";
 import type { WorkspaceRecord } from "./workspace";
 
-export const BOARD_CAPTURE_VERSION = "board-capture-1.0.0";
-export const BOARD_CONSENT_VERSION = "board-activity-device-v1";
+/**
+ * 1.1.0 adds In progress and records the Status menu input (pointer or keyboard); 1.0.0
+ * covered backlog <-> Todo via button, Status field or shortcut. Stored records keep theirs.
+ */
+export const BOARD_CAPTURE_VERSION = "board-capture-1.1.0";
+/** v2 discloses In progress moves; consent to v1 does not carry over. */
+export const BOARD_CONSENT_VERSION = "board-activity-device-v2";
 /** What this capture does not record. Absence is a gap, not evidence of no activity. */
 export const BOARD_CAPTURE_GAPS = [
   "issue-views",
@@ -17,17 +23,17 @@ export const BOARD_CAPTURE_GAPS = [
   "activity-outside-board-moves",
 ] as const;
 
-export type BoardColumn = "backlog" | "todo";
-/** How the move was made: the topbar button, the Status field or the `t` shortcut. */
-export type BoardMoveVia = "button" | "status-field" | "keyboard";
+export type BoardColumn = "backlog" | "todo" | "in-progress";
+/** How the Status menu was used: pointer, or keyboard (`s`, arrows, Enter). */
+export type BoardMoveVia = "pointer" | "keyboard";
 
 export interface BoardMoveData {
   readonly issueKey: string;
   readonly from: BoardColumn;
   readonly to: BoardColumn;
   readonly via: BoardMoveVia;
-  /** Issues in Todo just before the move. */
-  readonly todoBefore: number;
+  /** Issues on the board (Todo and In progress) just before the move. */
+  readonly onBoardBefore: number;
   /** Whether the soft limit asked "finish one first?" before this move. */
   readonly nudged: boolean;
 }
@@ -54,8 +60,8 @@ export interface BoardObservation {
 
 const ISSUE_KEY = /^[A-Z][A-Z0-9]{1,4}-[1-9]\d{0,3}$/;
 const VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
-const COLUMNS: readonly BoardColumn[] = ["backlog", "todo"];
-const VIAS: readonly BoardMoveVia[] = ["button", "status-field", "keyboard"];
+const COLUMNS: readonly BoardColumn[] = ["backlog", "todo", "in-progress"];
+const VIAS: readonly BoardMoveVia[] = ["pointer", "keyboard"];
 
 export function boardMove(input: {
   participantId: string;
@@ -82,11 +88,11 @@ export function boardMove(input: {
     !COLUMNS.includes(data.to) ||
     data.from === data.to
   )
-    throw new Error("A move goes between the backlog and Todo.");
+    throw new Error("A move goes between Backlog, Todo and In progress.");
   if (!VIAS.includes(data.via))
     throw new Error("Unknown way of moving an issue.");
-  if (!Number.isSafeInteger(data.todoBefore) || data.todoBefore < 0)
-    throw new Error("Todo count must be a whole number.");
+  if (!Number.isSafeInteger(data.onBoardBefore) || data.onBoardBefore < 0)
+    throw new Error("Board count must be a whole number.");
   if (typeof data.nudged !== "boolean")
     throw new Error("nudged is true or false.");
   const observationId = `${sourceId}.${sequence}`;
@@ -109,7 +115,7 @@ export function boardMove(input: {
       from: data.from,
       to: data.to,
       via: data.via,
-      todoBefore: data.todoBefore,
+      onBoardBefore: data.onBoardBefore,
       nudged: data.nudged,
     },
   };

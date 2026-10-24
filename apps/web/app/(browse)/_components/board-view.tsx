@@ -17,9 +17,8 @@ import { IssueRows } from "./issue-list";
 /** Columns after Todo fill themselves from workspace evidence; nobody moves cards. */
 const EMPTY: Record<Status, string> = {
   backlog: "",
-  todo: "Move an issue to Todo and it appears here.",
-  "in-progress":
-    "Issues move here on their own once you start editing in the workspace.",
+  todo: "Set an issue's status to Todo and it appears here.",
+  "in-progress": "Set an issue to In progress when you start on it.",
   done: "Issues land here on their own when every acceptance check passes.",
 };
 
@@ -39,8 +38,8 @@ export function Board({
       <div className="empty">
         <p>Your board is empty.</p>
         <p className="dim">
-          Open an issue and press <kbd>t</kbd> or <b>Move to Todo</b>. These are
-          a good start:
+          Open an issue and set its status (<kbd>s</kbd>) to Todo. These are a
+          good start:
         </p>
         <Suggestions issues={issues} />
       </div>
@@ -135,7 +134,8 @@ export function Dashboard({ issues }: { issues: Issue[] }) {
           <IssueRows issues={onBoard.map((b) => b.issue)} standalone />
         ) : (
           <p className="dim">
-            Nothing in Todo yet. Open an issue and press <kbd>t</kbd>.
+            Nothing on your board yet. Open an issue and set its status with{" "}
+            <kbd>s</kbd>.
           </p>
         )}
       </section>

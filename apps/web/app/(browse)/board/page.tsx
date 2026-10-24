@@ -43,8 +43,8 @@ export default async function BoardPage({
       <main className="content">
         <Board issues={issues.map(summarize)} view={view} />
         <p className="hint board-hint">
-          Moving an issue from the backlog to Todo is the only thing you do by
-          hand. It moves to In progress and Done on its own as you work.
+          Set Backlog, Todo or In progress from an issue's Status menu (s). Done
+          is set for you when every acceptance check passes.
         </p>
         <ActivityLogNote />
       </main>

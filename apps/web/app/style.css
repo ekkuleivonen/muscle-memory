@@ -624,11 +624,6 @@ kbd {
   position: sticky;
   top: 62px;
 }
-.props .start {
-  width: 100%;
-  justify-content: center;
-  height: 32px;
-}
 .props dl {
   margin: 16px 0 0;
   display: grid;
@@ -792,45 +787,85 @@ kbd {
   }
 }
 
-/* Board: backlog ↔ Todo is the only manual status */
-.avatar.me {
-  width: 20px;
-  height: 20px;
-  font-size: 8.5px;
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.btn.primary-outline {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.btn.todo-btn[aria-pressed="true"] {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-}
-.todo-wrap {
+/* Status dropdown, Linear-style: a quiet property that opens a menu */
+.status-menu {
   position: relative;
 }
-.nudge {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 20;
-  width: 340px;
-  display: grid;
-  gap: 8px;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--amber);
-  background: color-mix(in srgb, var(--amber) 10%, var(--panel));
+.status-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: -3px -6px;
+  padding: 3px 6px;
+  border: 0;
   border-radius: var(--radius);
-  padding: 8px 10px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+.status-trigger:hover,
+.status-trigger[aria-expanded="true"] {
+  background: var(--hover);
+}
+.status-trigger .caret {
+  color: var(--faint);
+  font-size: 10px;
+}
+.status-pop {
+  /* The properties panel sits at the right edge, so open towards the left. */
+  left: auto;
+  right: -6px;
+  min-width: 230px;
+}
+.status-pop ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  outline: none;
+}
+.status-pop .menu-item {
+  cursor: pointer;
+}
+.status-pop .menu-item.current {
+  background: var(--hover);
+}
+.status-pop .menu-item[aria-disabled="true"] {
+  cursor: default;
+  color: var(--faint);
+}
+.status-pop .menu-item .check,
+.status-pop .menu-item .auto {
+  margin-left: auto;
+  width: auto;
+}
+.menu-note {
+  margin: 4px 8px 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+  font-size: 11.5px;
+  color: var(--faint);
+}
+.nudge-inline {
+  padding: 8px;
   font-size: 13px;
-  max-width: 340px;
+}
+.nudge-inline p {
+  margin: 0 0 8px;
 }
 .nudge-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+.props .start {
+  width: 100%;
+  justify-content: center;
+  height: 32px;
+  margin-top: 20px;
+}
+.props .note {
+  margin-top: 20px;
 }
 .segmented {
   display: inline-flex;
