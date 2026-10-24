@@ -200,6 +200,17 @@ test("filters combine across qualifiers and match any value within one", () => {
     "SHOP-2",
   ]);
   assert.deepEqual(keys("project:field-notes"), ["FN-1"]);
+  // Projects go by their key, as in their URL; the older id form still works.
+  assert.deepEqual(keys("project:shop"), [
+    "SHOP-1",
+    "SHOP-2",
+    "SHOP-3",
+    "SHOP-4",
+  ]);
+  assert.deepEqual(
+    keys("project:SHOP,fn"),
+    keys("project:storefront,field-notes"),
+  );
   assert.deepEqual(keys("API-4"), ["API-4"]);
   assert.deepEqual(keys("parser"), ["API-4"]);
   assert.deepEqual(keys("rust hard"), []);

@@ -1,6 +1,6 @@
 /**
  * GitHub-style search for issues and projects: one `q` string with qualifiers such as
- * `kind:bug lang:python,go difficulty:easy project:night-shift label:maps is:runnable`, plus
+ * `kind:bug lang:python,go difficulty:easy project:shop label:maps is:runnable`, plus
  * free text. Commas mean "any of"; different qualifiers must all match. Unknown qualifiers
  * and values are kept as plain text rather than rejected, so hand-typed queries still work.
  */
@@ -11,6 +11,7 @@ import type {
 import { STATUS_LABELS, type Status } from "./board";
 import { LANGUAGES, type LanguageId } from "./languages";
 import {
+  projectFilterValue,
   DIFFICULTIES,
   KINDS,
   languageLabel,
@@ -280,7 +281,10 @@ export function filterIssues(
         within(query.kind, issue.kind) &&
         within(query.difficulty, issue.difficulty) &&
         (query.project.length === 0 ||
-          (!!issue.project && query.project.includes(issue.project.slug))) &&
+          // The project's key (project:shop); its id (project:storefront) from older links.
+          (!!issue.project &&
+            (query.project.includes(projectFilterValue(issue.project)) ||
+              query.project.includes(issue.project.slug)))) &&
         (query.label.length === 0 ||
           issue.labels.some((l) => query.label.includes(l))) &&
         (!query.runnable || issue.runnable) &&

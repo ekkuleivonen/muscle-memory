@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { requireOnboarding } from "../../../../lib/gate";
 import {
+  projectFilterValue,
   difficultyRange,
   languageLabel,
   languagesOf,
@@ -53,7 +54,7 @@ export default async function ProjectPage(props: Props) {
             className="btn"
             href={href("/issues", {
               ...emptyIssueQuery(),
-              project: [project.slug],
+              project: [projectFilterValue(project)],
             })}
           >
             <FilterIcon /> View in issues

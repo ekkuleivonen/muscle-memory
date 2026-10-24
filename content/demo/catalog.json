@@ -1960,13 +1960,13 @@
         "presentation": "demo-text-v1",
         "story": "The online shop customers actually see: product listings, filters, the cart and a three-step checkout. Pages are server-rendered, with a thin layer of TypeScript for the interactive parts.\n\nConversion dipped after the last redesign. Support is fielding tickets about prices, promo codes and a search box that feels sluggish, and an accessibility audit came back with a long list.\n\n## What you'll work on\n\n- Formatting money and other values the way customers expect to read them\n- Form behaviour, validation and accessible markup\n- Small performance fixes in the browser, like debouncing input\n\n## Good fit if you\n\n- Build user interfaces, or want to get sharper at the details that make one feel solid\n- Are comfortable with **JavaScript**, **TypeScript** or plain **HTML**\n- Care what a bug looks like from the customer's side of the screen\n\nStack: TypeScript, JavaScript, HTML.",
         "summary": "Frontend: the customer-facing shop, cart and checkout.",
-        "title": "Storefront",
+        "title": "Shop",
         "version": "1.0.0"
       },
-      "digest": "977b70bedc1686d9a3c476a469c6bf34327d3bd2bfc7a4bfb6e87dc17cedd6ea",
+      "digest": "95a9dd1e27c1bf110b48e83eb3b8747919d25cc4f88452c49a3e96e790fc6278",
       "state": "published",
       "testResult": {
-        "digest": "977b70bedc1686d9a3c476a469c6bf34327d3bd2bfc7a4bfb6e87dc17cedd6ea",
+        "digest": "95a9dd1e27c1bf110b48e83eb3b8747919d25cc4f88452c49a3e96e790fc6278",
         "fixtures": 16,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1975,28 +1975,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "977b70bedc1686d9a3c476a469c6bf34327d3bd2bfc7a4bfb6e87dc17cedd6ea",
+          "digest": "95a9dd1e27c1bf110b48e83eb3b8747919d25cc4f88452c49a3e96e790fc6278",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "977b70bedc1686d9a3c476a469c6bf34327d3bd2bfc7a4bfb6e87dc17cedd6ea",
+          "digest": "95a9dd1e27c1bf110b48e83eb3b8747919d25cc4f88452c49a3e96e790fc6278",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "977b70bedc1686d9a3c476a469c6bf34327d3bd2bfc7a4bfb6e87dc17cedd6ea",
+          "digest": "95a9dd1e27c1bf110b48e83eb3b8747919d25cc4f88452c49a3e96e790fc6278",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "977b70bedc1686d9a3c476a469c6bf34327d3bd2bfc7a4bfb6e87dc17cedd6ea",
+          "digest": "95a9dd1e27c1bf110b48e83eb3b8747919d25cc4f88452c49a3e96e790fc6278",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]

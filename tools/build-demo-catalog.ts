@@ -872,7 +872,7 @@ const adventures = [
   {
     id: "storefront",
     key: "SHOP",
-    title: "Storefront",
+    title: "Shop",
     summary: "Frontend: the customer-facing shop, cart and checkout.",
     story: `The online shop customers actually see: product listings, filters, the cart and a three-step checkout. Pages are server-rendered, with a thin layer of TypeScript for the interactive parts.
 

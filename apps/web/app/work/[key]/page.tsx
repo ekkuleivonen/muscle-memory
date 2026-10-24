@@ -1,3 +1,4 @@
+import { projectFilterValue } from "../../../lib/library";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -82,7 +83,12 @@ export default async function WorkPage({ params, searchParams }: Props) {
       }}
       project={
         project
-          ? { slug: project.slug, title: project.title, story: project.story }
+          ? {
+              // The repo's folder is the project's key, as in project:shop and /projects/SHOP.
+              slug: projectFilterValue(project),
+              title: project.title,
+              story: project.story,
+            }
           : undefined
       }
     />
