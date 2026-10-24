@@ -332,6 +332,21 @@ function Feed({
                   </>
                 ))}
               {entry.kind === "opened" && <>Opened {ref} in the IDE</>}
+              {entry.kind === "pull-request" &&
+                (entry.result === "merged" ? (
+                  <>
+                    Merged pull request #{entry.number} for {ref}
+                  </>
+                ) : (
+                  <>
+                    Pull request #{entry.number} for {ref}:{" "}
+                    {entry.result === "checks-failed"
+                      ? `checks failed (${entry.passed}/${entry.total})`
+                      : entry.result === "cancelled"
+                        ? "closed"
+                        : "checks errored"}
+                  </>
+                ))}
               {entry.kind === "ran" && (
                 <>
                   Ran {ref}

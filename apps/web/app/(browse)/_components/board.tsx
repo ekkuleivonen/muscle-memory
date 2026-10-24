@@ -89,10 +89,13 @@ export function useBoard() {
     );
   };
   /**
-   * A run passed every check: the issue moves to Done and the move is recorded with that
-   * run. Reads the stored board, not this render's, since a run finishes much later.
+   * A pull request merged: the issue moves to Done, recorded with the pull request and the
+   * run that checked it. Reads the stored board, not this render's: checks finish later.
    */
-  const complete = (issue: IssueRef, runId: string) => {
+  const complete = (
+    issue: IssueRef,
+    pullRequest: { number: number; runId: string },
+  ) => {
     const current = parseBoard(localStorage.getItem(BOARD_KEY));
     const from = statusOf(current, issue.key);
     if (from === "done") return;
@@ -108,10 +111,11 @@ export function useBoard() {
         from,
         to: "done",
         via: "automatic",
-        trigger: "checks-passed",
+        trigger: "pull-request-merged",
         onBoardBefore: activeCount(current),
         nudged: false,
-        runId,
+        pullRequest: pullRequest.number,
+        runId: pullRequest.runId,
       },
     );
   };

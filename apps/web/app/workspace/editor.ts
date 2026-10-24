@@ -173,6 +173,7 @@ export function editorFeatures(language: FileLanguage, keys: Keymap) {
       "bracket-match-highlight",
       "line-numbers",
       "mod-enter-runs",
+      "mod-shift-enter-opens-pull-request",
       keys === "vim" ? "vim-keybindings" : "standard-keybindings",
     ],
   };
@@ -182,6 +183,7 @@ export interface EditorHooks {
   /** Called once per document-changing transaction, after it is applied. */
   onChange(transaction: Transaction, view: EditorView): void;
   onRun(): void;
+  onPullRequest?(): void;
   /** Vim mode changes: normal, insert, visual, replace. */
   onVimMode?(mode: string): void;
 }
@@ -209,6 +211,13 @@ export function createEditor(
             key: "Mod-Enter",
             run: () => {
               hooks.onRun();
+              return true;
+            },
+          },
+          {
+            key: "Mod-Shift-Enter",
+            run: () => {
+              hooks.onPullRequest?.();
               return true;
             },
           },

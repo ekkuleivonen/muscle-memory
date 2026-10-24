@@ -25,6 +25,11 @@ import {
   type CaseResult,
 } from "../../../../packages/runner/runner";
 import { readProfile } from "../../lib/account";
+import {
+  pullRequestHistory,
+  timeAgo,
+  type PullRequestRecord,
+} from "../../lib/activity";
 import { statusOf } from "../../lib/board";
 import { languageLabel } from "../../lib/library";
 import type { LanguageId } from "../../lib/languages";
@@ -120,7 +125,9 @@ export function Ide({
     testsFile.path,
   ]);
   const [active, setActive] = useState(repo.solution.path);
-  const [panel, setPanel] = useState<"tests" | "output">("tests");
+  const [panel, setPanel] = useState<"tests" | "output" | "pulls">("tests");
+  /** This person's pull requests for the issue, newest first, across sessions. */
+  const [pulls, setPulls] = useState<PullRequestRecord[]>([]);
   const [opening, setOpening] = useState<Opening>({ state: "opening" });
   const [message, setMessage] = useState("");
   const [runtime, setRuntime] = useState<Runtime>(
@@ -182,15 +189,18 @@ export function Ide({
       setKeymap(keys);
       store.current ??= await openPracticeStore();
       const participantId = await store.current.participantId();
+      const records = await store.current.workspaceRecords();
       const recovered: RecoveredCode | null = latestSavedCode(
-        await store.current.workspaceRecords(),
+        records,
         participantId,
         contentArtifactId("challenge", challenge.id, challenge.version),
       );
+      const history = pullRequestHistory(records, participantId, challenge.id);
       const host = hosts.current.get(repo.solution.path);
       // A superseded open must not create a session or record anything.
       if (!host || !current()) return;
       if (recovered) setMessage(recoveryMessage(recovered));
+      setPulls(history);
       session.current = new WorkspaceSession({
         participantId,
         consentVersion: `terms-${account?.accepted?.version ?? "unknown"}`,
@@ -202,15 +212,33 @@ export function Ide({
         keymap: keys,
         mediaType: mediaTypeOf(issue.language),
         runtime: issue.runnable ? RUNTIME : null,
+        pullRequestsBefore: history[0]?.number ?? 0,
         // Read at use time, so a runtime reloaded with Retry is the one that runs.
         runner: () => runner.current!,
         onRun: (next) => {
           setRun(next);
           setStale(next.revision !== session.current?.currentRevision);
-          if (passesEverything(challenge, next, session.current))
+          const pr = next.pullRequest;
+          if (!pr) return;
+          // Opening shows the pull request at once; its checks fill in when they finish.
+          setPulls((current) => [
+            {
+              number: pr.number,
+              runId: pr.runId,
+              revision: pr.revision,
+              result: pr.result ?? "running",
+              passed: pr.passed ?? 0,
+              total: pr.total ?? challenge.inputs.length,
+              at: pr.at,
+            },
+            ...current.filter((p) => p.number !== pr.number),
+          ]);
+          if (next.status === "queued") setPanel("pulls");
+          // A merged pull request is what moves the issue to Done.
+          if (pr.result === "merged")
             boardRef.current.complete(
               { key: issue.key, slug: issue.slug, version: issue.version },
-              next.runId,
+              { number: pr.number, runId: pr.runId },
             );
         },
         onEditedAfterRun: () => setStale(true),
@@ -286,6 +314,7 @@ export function Ide({
   }
 
   const running = run?.status === "queued" || run?.status === "running";
+  const ready = runtime.state === "ready" && opening.state === "open";
 
   return (
     <div className="ide">
@@ -312,25 +341,37 @@ export function Ide({
                 className="ide-run cancel"
                 onClick={() => session.current?.cancel()}
               >
-                ■ Cancel
+                ■ Cancel {run?.purpose === "pull-request" ? "checks" : "run"}
               </button>
             ) : (
-              <button
-                type="button"
-                className="ide-run"
-                disabled={runtime.state !== "ready" || opening.state !== "open"}
-                onClick={() => void session.current?.run()}
-                title="Run the tests (Ctrl/⌘-Enter)"
-              >
-                ▶ Run tests <kbd>⌘⏎</kbd>
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="ide-run secondary"
+                  disabled={!ready}
+                  onClick={() => void session.current?.run()}
+                  title="Run the tests on your code (Ctrl/⌘-Enter). Nothing else happens."
+                >
+                  ▶ Run tests <kbd>⌘⏎</kbd>
+                </button>
+                <button
+                  type="button"
+                  className="ide-run"
+                  disabled={!ready}
+                  onClick={() => void session.current?.pullRequest()}
+                  title="Open a pull request: CI checks this exact code, and merges it when every check passes (Ctrl/⌘-Shift-Enter)"
+                >
+                  ⇡ {done ? "Open another PR" : "Open pull request"}{" "}
+                  <kbd>⌘⇧⏎</kbd>
+                </button>
+              </>
             )
           ) : (
             <span
               className="ide-run disabled"
-              title={`Running ${languageLabel(issue.language)} in the browser isn't available yet`}
+              title={`CI can't run ${languageLabel(issue.language)} yet`}
             >
-              ▶ Run tests
+              ⇡ Open pull request
             </span>
           )}
         </span>
@@ -450,13 +491,30 @@ export function Ide({
             >
               Output
             </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={panel === "pulls"}
+              onClick={() => setPanel("pulls")}
+            >
+              Pull requests{" "}
+              {pulls.length > 0 && (
+                <span className="ide-count">{pulls.length}</span>
+              )}
+            </button>
             {message && <span className="ide-message faint">{message}</span>}
           </div>
           <div className="ide-panel-body">
-            {panel === "tests" ? (
+            {panel === "pulls" ? (
+              <PullRequests
+                pulls={pulls}
+                issue={issue}
+                done={done}
+                runnable={issue.runnable}
+              />
+            ) : panel === "tests" ? (
               <Tests
                 challenge={challenge}
-                done={done}
                 run={run}
                 stale={stale}
                 issue={issue}
@@ -496,19 +554,6 @@ export function Ide({
       <div ref={sandboxHost} hidden />
     </div>
   );
-}
-
-/** A finished run of the current code whose every case passed. */
-function passesEverything(
-  challenge: Executable,
-  run: RunView,
-  session: WorkspaceSession | null,
-): boolean {
-  const o = run.outcome;
-  if (!o || o.status !== "completed" || o.phase !== "tests") return false;
-  if (run.revision !== session?.currentRevision) return false;
-  const feedback = runFeedback(challenge, o.cases);
-  return feedback.total > 0 && feedback.correct === feedback.total;
 }
 
 function runtimeLabel(runtime: Runtime): string {
@@ -635,7 +680,6 @@ function Ticket({
 
 function Tests({
   challenge,
-  done,
   run,
   stale,
   issue,
@@ -644,7 +688,6 @@ function Tests({
   onRetry,
 }: {
   challenge: Executable;
-  done: boolean;
   run: RunView | null;
   stale: boolean;
   issue: IdeIssue;
@@ -701,6 +744,12 @@ function Tests({
   const failed = feedback.total - feedback.correct;
   return (
     <div>
+      <p className="ide-run-label faint">
+        {run.pullRequest
+          ? `Checks for pull request #${run.pullRequest.number}`
+          : "Local run"}{" "}
+        · revision {run.revision}
+      </p>
       <p className={`ide-summary ${failed ? "fail" : "pass"}`}>
         {failed ? "✘" : "✔"} {feedback.correct} passed
         {failed > 0 && `, ${failed} failed`} · {o.durationMs} ms
@@ -711,13 +760,6 @@ function Tests({
           </span>
         )}
       </p>
-      {!failed && !stale && done && (
-        <p className="ide-done">
-          All checks pass. {issue.key} is <b>Done</b>.{" "}
-          <Link href="/">Back to your dashboard</Link> or{" "}
-          <Link href="/issues">pick the next one</Link>.
-        </p>
-      )}
       <ol className="ide-cases">
         {challenge.inputs.map((input, index) => (
           <Case
@@ -781,6 +823,82 @@ function Case({
       </span>
       <span className="ide-case-index faint">#{index + 1}</span>
     </li>
+  );
+}
+
+const PR_RESULTS: Record<
+  string,
+  { mark: string; label: string; tone: string }
+> = {
+  running: { mark: "●", label: "Checks running…", tone: "busy" },
+  merged: { mark: "✔", label: "Merged", tone: "pass" },
+  "checks-failed": { mark: "✘", label: "Checks failed", tone: "fail" },
+  "checks-errored": { mark: "!", label: "Checks errored", tone: "fail" },
+  cancelled: { mark: "–", label: "Closed", tone: "faint" },
+};
+
+function PullRequests({
+  pulls,
+  issue,
+  done,
+  runnable,
+}: {
+  pulls: PullRequestRecord[];
+  issue: IdeIssue;
+  done: boolean;
+  runnable: boolean;
+}) {
+  const now = new Date();
+  const merged = pulls.find((p) => p.result === "merged");
+  return (
+    <div>
+      {done && merged && (
+        <p className="ide-done">
+          Pull request #{merged.number} merged. {issue.key} is <b>Done</b>.{" "}
+          <Link href="/">Back to your dashboard</Link> or{" "}
+          <Link href="/issues">pick the next one</Link>.
+        </p>
+      )}
+      {pulls.length === 0 ? (
+        <p className="faint">
+          {runnable ? (
+            <>
+              When your code is ready, open a pull request (<kbd>⌘⇧⏎</kbd>). CI
+              runs every check on that exact code and merges it when they all
+              pass, which moves {issue.key} to Done. Run the tests (
+              <kbd>⌘⏎</kbd>) as often as you like before that.
+            </>
+          ) : (
+            <>
+              CI can&apos;t run {languageLabel(issue.language)} yet, so pull
+              requests open once a runner exists. Your edits are saved.
+            </>
+          )}
+        </p>
+      ) : (
+        <ol className="ide-pulls">
+          {pulls.map((pr) => {
+            const shown = PR_RESULTS[pr.result] ?? PR_RESULTS["checks-errored"];
+            return (
+              <li key={pr.number} className={shown.tone}>
+                <span className="ide-pr-mark">{shown.mark}</span>
+                <span className="mono">#{pr.number}</span>
+                <span className="ide-pr-label">{shown.label}</span>
+                <span className="faint">
+                  {pr.result === "running"
+                    ? `${pr.total} checks`
+                    : `${pr.passed}/${pr.total} checks`}{" "}
+                  · revision {pr.revision}
+                </span>
+                <time className="faint" dateTime={pr.at}>
+                  {timeAgo(pr.at, now)}
+                </time>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </div>
   );
 }
 

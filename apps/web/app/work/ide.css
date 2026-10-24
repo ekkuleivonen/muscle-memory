@@ -101,6 +101,14 @@
   opacity: 0.45;
   cursor: default;
 }
+.ide-run.secondary {
+  background: none;
+  color: var(--fg);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+.ide-run.secondary:hover:not(:disabled) {
+  background: var(--hover);
+}
 .ide-run.cancel {
   background: var(--red);
   color: #fff;
@@ -520,4 +528,50 @@
   .ide-side {
     display: none;
   }
+}
+
+/* Pull requests */
+.ide-count {
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--hover);
+  color: var(--dim);
+  font-size: 11px;
+  letter-spacing: 0;
+}
+.ide-run-label {
+  margin: 4px 0 0 !important;
+  font-size: 12px;
+}
+.ide-pulls {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.ide-pulls li {
+  display: grid;
+  grid-template-columns: 18px 36px 130px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: baseline;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+}
+.ide-pr-mark {
+  font-weight: 700;
+}
+.ide-pr-label {
+  font-weight: 600;
+}
+.ide-pulls .pass .ide-pr-mark,
+.ide-pulls .pass .ide-pr-label {
+  color: var(--green);
+}
+.ide-pulls .fail .ide-pr-mark,
+.ide-pulls .fail .ide-pr-label {
+  color: var(--red);
+}
+.ide-pulls .busy .ide-pr-mark,
+.ide-pulls .busy .ide-pr-label {
+  color: var(--amber);
 }

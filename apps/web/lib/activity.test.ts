@@ -8,6 +8,7 @@ import {
   dayOf,
   greeting,
   heatmap,
+  pullRequestHistory,
   recentActivity,
   timeAgo,
 } from "./activity";
@@ -107,4 +108,57 @@ test("times read like a feed", () => {
   assert.equal(timeAgo("2026-10-20T10:00:00.000Z", now), "4d ago");
   assert.equal(greeting(new Date(2026, 9, 24, 9)), "Good morning");
   assert.equal(greeting(new Date(2026, 9, 24, 2)), "Burning the midnight oil");
+});
+
+test("pull requests read back per person and Challenge, newest first", () => {
+  const pr = (
+    participantId: string,
+    id: string,
+    number: number,
+    result: string,
+  ) =>
+    record({
+      type: "observation.workspace.pull-request",
+      participantId,
+      occurredAt: `2026-10-24T10:0${number}:00.000Z`,
+      challengeArtifactId: `challenge.${id}.2.1.0`,
+      data: {
+        number,
+        runId: `run-${number}`,
+        revision: number * 4,
+        result,
+        passed: 3,
+        total: 4,
+      },
+    });
+  const prs = [
+    pr("p", "frequency-map", 1, "checks-failed"),
+    pr("p", "frequency-map", 2, "merged"),
+    pr("q", "frequency-map", 9, "merged"),
+    pr("p", "dedupe", 3, "merged"),
+  ];
+  assert.deepEqual(
+    pullRequestHistory(prs, "p", "frequency-map").map((p) => [
+      p.number,
+      p.result,
+    ]),
+    [
+      [2, "merged"],
+      [1, "checks-failed"],
+    ],
+  );
+  // The feed shows pull requests, and their checks are not repeated as runs.
+  const feed = recentActivity([
+    ...prs.slice(0, 1),
+    record({
+      type: "observation.workspace.run",
+      occurredAt: "2026-10-24T10:01:00.000Z",
+      challengeArtifactId: "challenge.frequency-map.2.1.0",
+      data: { status: "result", purpose: "pull-request" },
+    }),
+  ]);
+  assert.deepEqual(
+    feed.map((e) => e.kind),
+    ["pull-request"],
+  );
 });

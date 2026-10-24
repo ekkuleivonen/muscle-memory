@@ -16,7 +16,10 @@ import {
   codeRevision,
   type CodeRevisionArtifact,
   EDIT_CHANGES_LIMIT_BYTES,
+  pullRequestResult,
   toRecord,
+  type PullRequestResult,
+  type RunPurpose,
   WORKSPACE_CAPTURE_GAPS,
   type RunStatus,
 } from "../../../../packages/domain/workspace";
@@ -36,6 +39,19 @@ export interface RunView {
   readonly revision: number;
   readonly status: RunStatus;
   readonly outcome?: RunOutcome;
+  readonly purpose: RunPurpose;
+  /** For a pull request's checks: its number, and its result once they finish. */
+  readonly pullRequest?: PullRequestView;
+}
+
+export interface PullRequestView {
+  readonly number: number;
+  readonly runId: string;
+  readonly revision: number;
+  readonly result?: PullRequestResult;
+  readonly passed?: number;
+  readonly total?: number;
+  readonly at: string;
 }
 
 export interface SessionOptions {
@@ -52,6 +68,8 @@ export interface SessionOptions {
   /** Null when this language cannot run yet: edits are still recorded, Run is not. */
   readonly runtime?: typeof RUNTIME | null;
   readonly onVimMode?: (mode: string) => void;
+  /** Pull requests opened for this Challenge in earlier sessions, so numbers continue. */
+  readonly pullRequestsBefore?: number;
   /** The page's current runner; it changes when the runtime is reloaded. */
   readonly runner: () => PythonRunner;
   readonly onRun: (run: RunView) => void;
@@ -83,8 +101,10 @@ export class WorkspaceSession {
   private unsafeAt = 0;
   private unsafeReason = "";
   private statusKey = "";
+  private pullRequests = 0;
 
   constructor(private readonly options: SessionOptions) {
+    this.pullRequests = options.pullRequestsBefore ?? 0;
     const challengeArtifact = contentArtifact("challenge", options.challenge);
     this.recorder = new CaptureRecorder({
       participantId: options.participantId,
@@ -147,6 +167,7 @@ export class WorkspaceSession {
       {
         onChange: (transaction) => this.recordEdit(transaction),
         onRun: () => void this.run(),
+        onPullRequest: () => void this.pullRequest(),
         onVimMode: this.options.onVimMode,
       },
       {
@@ -171,18 +192,33 @@ export class WorkspaceSession {
     return this.options.runtime !== null;
   }
 
-  async run(): Promise<void> {
+  /** Opens a pull request: this exact code, checked by a run of every case. */
+  pullRequest(): Promise<void> {
+    return this.run("pull-request");
+  }
+
+  async run(purpose: RunPurpose = "local"): Promise<void> {
     if (!this.view || !this.runnable || this.options.runner().running) return;
     const revision = this.revision;
     const code = this.artifact(this.view.state.doc.toString());
     const runId = randomId();
     const base = {
       runId,
+      purpose,
       revision,
       codeArtifactId: code.artifactId,
       runtime: RUNTIME,
       timeoutMs: RUN_TIMEOUT_MS,
     };
+    const pullRequest =
+      purpose === "pull-request"
+        ? {
+            number: ++this.pullRequests,
+            runId,
+            revision,
+            at: new Date().toISOString(),
+          }
+        : undefined;
     this.snapshot(code, "run");
     this.editsSinceSnapshot = 0;
     const update = (status: RunStatus, outcome?: RunOutcome) => {
@@ -191,7 +227,7 @@ export class WorkspaceSession {
         status,
         ...(outcome ? { outcome: outcome as unknown as Json } : {}),
       });
-      this.lastRun = { runId, revision, status, outcome };
+      this.lastRun = { runId, revision, status, outcome, purpose, pullRequest };
       this.staleNotified = revision !== this.revision;
       this.options.onRun(this.lastRun);
     };
@@ -206,6 +242,17 @@ export class WorkspaceSession {
       () => update("running"),
     );
     // The outcome belongs to `revision`, even if the editor has moved on since.
+    if (pullRequest) {
+      const verdict = pullRequestResult(this.options.challenge, outcome);
+      Object.assign(pullRequest, verdict);
+      this.recorder.observe("observation.workspace.pull-request", {
+        number: pullRequest.number,
+        runId,
+        revision,
+        codeArtifactId: code.artifactId,
+        ...verdict,
+      });
+    }
     update(statusOf(outcome), outcome);
   }
 

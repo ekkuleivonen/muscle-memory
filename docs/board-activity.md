@@ -1,6 +1,6 @@
 # Board activity
 
-Setting an issue's status by hand (Backlog, Todo or In progress, from its Status menu) is recorded as raw evidence of what people choose to work on. Done is never set by hand: a run in the IDE that passes every acceptance check for the current code moves the issue to Done, for good, and that move is recorded too. There is no separate switch: every account records moves under the [Terms and Privacy Notice](legal.md) it accepted during onboarding, and each move carries that version. Records made before this (`board-activity-device-v1` to `v3`, under the old opt-in) stay as stored.
+Setting an issue's status by hand (Backlog, Todo or In progress, from its Status menu) is recorded as raw evidence of what people choose to work on. Done is never set by hand: a pull request in the IDE whose checks all pass is merged, which moves the issue to Done for good, and that move is recorded too. There is no separate switch: every account records moves under the [Terms and Privacy Notice](legal.md) it accepted during onboarding, and each move carries that version. Records made before this (`board-activity-device-v1` to `v3`, under the old opt-in) stay as stored.
 
 ## What is recorded
 
@@ -8,7 +8,7 @@ Setting an issue's status by hand (Backlog, Todo or In progress, from its Status
 
 - `issueKey` (`API-2`), `from` and `to` (`backlog`, `todo`, `in-progress`)
 - `via`: `pointer` or `keyboard` (the Status menu opened with `s` and driven by arrows, or Enter on Start work), or `automatic` for the move to Done
-- `trigger`: `status-menu`; `start-work` when Start work on an issue moved it to In progress on the way to the IDE; or `checks-passed` for the move to Done, which also carries the `runId` of the workspace run that passed, so the move links to its evidence
+- `trigger`: `status-menu`; `start-work` when Start work on an issue moved it to In progress on the way to the IDE; or `pull-request-merged` for the move to Done, which also carries the `pullRequest` number and the `runId` of the run that checked it, so the move links to its evidence
 - `onBoardBefore`: how many issues were on the board (Todo and In progress) just before
 - `nudged`: whether the soft limit asked "finish one first?" first
 

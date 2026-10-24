@@ -83,25 +83,29 @@ test("records are canonical, stable and found again for export", () => {
   assert.deepEqual(JSON.parse(record.payload).data, base.data);
 });
 
-test("only a run that passes every check moves an issue to Done", () => {
+test("only a merged pull request moves an issue to Done", () => {
   const done = {
     ...base.data,
     from: "in-progress" as const,
     to: "done" as const,
     via: "automatic" as const,
-    trigger: "checks-passed" as const,
+    trigger: "pull-request-merged" as const,
+    pullRequest: 3,
     runId: "7f3c9a2e-41b8-4d0e-9a51-2c6f0e8b1d44",
   };
   const move = boardMove({ ...base, data: done });
   assert.equal(move.data.to, "done");
   assert.equal(move.data.runId, done.runId);
-  // Manual moves never carry a run ID.
+  assert.equal(move.data.pullRequest, 3);
+  // Manual moves never carry a pull request or run.
   assert.equal("runId" in boardMove(base).data, false);
+  assert.equal("pullRequest" in boardMove(base).data, false);
   const bad = (change: object) => () =>
     boardMove({ ...base, data: { ...done, ...change } });
   assert.throws(bad({ trigger: "status-menu" }), /Done/);
   assert.throws(bad({ via: "pointer" }), /Done/);
   assert.throws(bad({ runId: undefined }), /Done/);
+  assert.throws(bad({ pullRequest: 0 }), /Done/);
   assert.throws(bad({ from: "done", to: "todo" }), /on to Done/);
   // Nothing but Done is automatic.
   assert.throws(

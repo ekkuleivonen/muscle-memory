@@ -10,8 +10,9 @@ import { safeIdentifier } from "./events";
 import type { WorkspaceRecord } from "./workspace";
 
 /**
- * 1.4.0 adds the automatic move to Done when a run passes every check (`via: "automatic"`,
- * `trigger: "checks-passed"`, with that run's ID); 1.3.0 adds `trigger`: the Status menu, or Start work (which moves an issue to In progress);
+ * 1.4.0 adds the automatic move to Done when a pull request merges (`via: "automatic"`,
+ * `trigger: "pull-request-merged"`, with the pull request's number and the run that checked
+ * it); 1.3.0 adds `trigger`: the Status menu, or Start work (which moves an issue to In progress);
  * 1.2.0 records every account's moves, with the accepted Terms version as `consentVersion`
  * instead of a separate opt-in; 1.1.0 added In progress and the Status menu input; 1.0.0
  * covered backlog <-> Todo. Stored records keep theirs.
@@ -28,11 +29,14 @@ export const BOARD_CAPTURE_GAPS = [
 export type BoardColumn = "backlog" | "todo" | "in-progress" | "done";
 /**
  * How the move was made: pointer, or keyboard (`s`, arrows, Enter; Enter on a link), or
- * automatic when passing every check moved the issue to Done.
+ * automatic when a merged pull request moved the issue to Done.
  */
 export type BoardMoveVia = "pointer" | "keyboard" | "automatic";
-/** What made the move: choosing a status, starting work, or a run passing every check. */
-export type BoardMoveTrigger = "status-menu" | "start-work" | "checks-passed";
+/** What made the move: choosing a status, starting work, or a pull request merging. */
+export type BoardMoveTrigger =
+  | "status-menu"
+  | "start-work"
+  | "pull-request-merged";
 
 export interface BoardMoveData {
   readonly issueKey: string;
@@ -44,7 +48,8 @@ export interface BoardMoveData {
   readonly onBoardBefore: number;
   /** Whether the soft limit asked "finish one first?" before this move. */
   readonly nudged: boolean;
-  /** For checks-passed: the workspace run whose outcome passed every check. */
+  /** For pull-request-merged: the pull request, and the workspace run that checked it. */
+  readonly pullRequest?: number;
   readonly runId?: string;
 }
 
@@ -81,7 +86,7 @@ const VIAS: readonly BoardMoveVia[] = ["pointer", "keyboard", "automatic"];
 const TRIGGERS: readonly BoardMoveTrigger[] = [
   "status-menu",
   "start-work",
-  "checks-passed",
+  "pull-request-merged",
 ];
 
 export function boardMove(input: {
@@ -128,17 +133,18 @@ export function boardMove(input: {
     throw new Error("Unknown way of moving an issue.");
   if (!TRIGGERS.includes(data.trigger))
     throw new Error("Unknown trigger for a move.");
-  // Done comes only from a run that passed every check, and nothing else is automatic.
-  const passed = data.trigger === "checks-passed";
+  // Done comes only from a merged pull request, and nothing else is automatic.
+  const merged = data.trigger === "pull-request-merged";
   if (
-    (data.to === "done") !== passed ||
-    (data.via === "automatic") !== passed ||
-    (passed && typeof data.runId !== "string")
+    (data.to === "done") !== merged ||
+    (data.via === "automatic") !== merged ||
+    (merged &&
+      (typeof data.runId !== "string" ||
+        !Number.isSafeInteger(data.pullRequest) ||
+        data.pullRequest! < 1))
   )
-    throw new Error(
-      "Only a run that passes every check moves an issue to Done.",
-    );
-  if (passed) safeIdentifier(data.runId!);
+    throw new Error("Only a merged pull request moves an issue to Done.");
+  if (merged) safeIdentifier(data.runId!);
   if (!Number.isSafeInteger(data.onBoardBefore) || data.onBoardBefore < 0)
     throw new Error("Board count must be a whole number.");
   if (typeof data.nudged !== "boolean")
@@ -166,7 +172,7 @@ export function boardMove(input: {
       trigger: data.trigger,
       onBoardBefore: data.onBoardBefore,
       nudged: data.nudged,
-      ...(passed ? { runId: data.runId } : {}),
+      ...(merged ? { pullRequest: data.pullRequest, runId: data.runId } : {}),
     },
   };
 }
