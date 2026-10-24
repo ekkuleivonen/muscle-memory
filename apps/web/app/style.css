@@ -2116,10 +2116,7 @@ kbd {
   text-decoration: underline;
 }
 
-/* The result card on a merged pull request: a CI-style receipt, dark in either theme. */
-.result-card {
-  margin-top: 20px;
-}
+/* The receipt on a shared result's page (/r): CI-style, dark in either theme. */
 .receipt {
   background: #0f1117;
   color: #e7e9ee;
@@ -2189,52 +2186,6 @@ kbd {
 .receipt-row dd.good {
   color: #4ade80;
 }
-.receipt-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 16px;
-}
-.receipt-ask {
-  font-family: var(--font);
-  font-size: 15px;
-  font-weight: 600;
-  color: #fff;
-}
-.receipt-share {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.receipt-share button {
-  font: inherit;
-  font-size: 13px;
-  border: 1px solid #39404f;
-  border-radius: 6px;
-  padding: 7px 12px;
-  background: transparent;
-  color: #e7e9ee;
-  cursor: pointer;
-}
-.receipt-share button:hover {
-  border-color: #b69cff;
-}
-.receipt-share button.primary {
-  background: #6e56cf;
-  border-color: #6e56cf;
-  color: #fff;
-}
-.result-next {
-  margin: 14px 0 0;
-  font-size: 13px;
-  color: var(--dim);
-}
-.result-next a {
-  color: var(--accent);
-}
-
 /* /consent: the Terms in four points, then one button. */
 .consent-points {
   margin-top: 8px;
@@ -2326,7 +2277,7 @@ button.home-cta:disabled {
 .result-card.shared {
   margin: 8px 0 48px;
 }
-.result-card .ask {
+.pull-ask {
   margin-top: 16px;
 }
 .dashboard-ask {
@@ -2346,4 +2297,95 @@ button.home-cta:disabled {
 }
 .issue-ask .ask-choices small {
   display: none;
+}
+
+/* Sharing a merged pull request's result: the button, then a preview of the post. */
+.share-open {
+  flex: none;
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: #8250df;
+  border: 0;
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.share-open:hover {
+  filter: brightness(1.08);
+}
+.share-dialog {
+  width: min(560px, calc(100vw - 32px));
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--fg);
+  box-shadow: var(--shadow);
+}
+.share-dialog::backdrop {
+  background: #0008;
+}
+.share-body {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px 18px;
+}
+.share-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.share-close {
+  font: inherit;
+  font-size: 20px;
+  line-height: 1;
+  padding: 2px 6px;
+  border: 0;
+  background: none;
+  color: var(--dim);
+  cursor: pointer;
+}
+.share-preview {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1200 / 630;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #0f1117;
+}
+.share-text {
+  margin: 0;
+  font-size: 14px;
+}
+.share-note {
+  margin: -6px 0 0;
+  font-size: 12.5px;
+}
+.share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.share-actions button {
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+.share-actions button:hover {
+  border-color: var(--accent);
+}
+.share-actions button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+.result-compare {
+  color: var(--green);
+  font-weight: 500;
 }

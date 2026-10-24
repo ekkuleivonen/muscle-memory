@@ -26,7 +26,8 @@ import { useBoard } from "./board";
 import { logReply, logResult, setIssueContext } from "./board-log";
 import { metricsOf } from "../../../lib/result";
 import { Markdown } from "./markdown";
-import { ResultCard } from "./result-card";
+import { Ask } from "./ask";
+import { ResultFacts, ShareResult, useResult } from "./result-card";
 import { useNow, useRecords } from "./records";
 import { feedbackOf, openBlocking, type Thread } from "../../../lib/feedback";
 
@@ -234,6 +235,27 @@ export function PullView({
     () => (records ? feedbackOf(records, issue.slug) : { released: [], threads: [] }),
     [records, issue.slug],
   );
+  const merged = mergedNow ?? (detail?.pull.state === "merged" ? detail.pull.mergedAt : null);
+  const language = detail ? revisions[detail.pull.issueRevision]?.workspace.language : undefined;
+  const resultInput = useMemo(
+    () =>
+      records && detail && merged && language
+        ? {
+            issue: {
+              key: issue.key,
+              slug: issue.slug,
+              title: issue.title,
+              revision: detail.pull.issueRevision,
+            },
+            language,
+            records,
+            mergedAt: merged,
+            revisions,
+          }
+        : null,
+    [records, detail, merged, language, issue.key, issue.slug, issue.title, revisions],
+  );
+  const result = useResult(resultInput);
   if (!records) return null;
   if (!detail)
     return (
@@ -361,20 +383,17 @@ export function PullView({
           issue={issue}
           blocking={blocking.length}
           onMerge={merge}
+          share={result && resultInput && <ShareResult state={result} issue={resultInput.issue} />}
         />
-        {pull.state === "merged" && revision && (
-          <ResultCard
-            issue={{
-              key: issue.key,
-              slug: issue.slug,
-              title: issue.title,
-              revision: pull.issueRevision,
+        {pull.state === "merged" && (
+          <Ask
+            className="pull-ask"
+            ids={["experience", "aiUse"]}
+            from="result"
+            why={{
+              experience: "So a time like yours means something next to everyone else's.",
+              aiUse: "So we can tell how unaided work changes with how much AI people use.",
             }}
-            language={revision.workspace.language}
-            records={records}
-            mergedAt={pull.mergedAt ?? new Date().toISOString()}
-            pullRequest={pull.number}
-            revisions={revisions}
           />
         )}
       </article>
@@ -396,8 +415,14 @@ export function PullView({
           <dd title="Wall-clock time from the first recorded activity to the pull request; breaks included.">
             {duration(detail.stats.startedAt, detail.openedAt)}
           </dd>
-          <dt>Test runs</dt>
-          <dd>{detail.stats.runs}</dd>
+          {result ? (
+            <ResultFacts state={result} />
+          ) : (
+            <>
+              <dt>Test runs</dt>
+              <dd>{detail.stats.runs}</dd>
+            </>
+          )}
           <dt>Edits</dt>
           <dd>{detail.stats.edits}</dd>
           <dt>Revision</dt>
@@ -912,20 +937,24 @@ function MergeBox({
   issue,
   blocking,
   onMerge,
+  share,
 }: {
   pull: PullSummary;
   issue: PullIssue;
   /** Open blocking review threads. */
   blocking: number;
   onMerge: (via: BoardMoveVia) => void;
+  /** Shown once merged: sharing the result. */
+  share?: React.ReactNode;
 }) {
   if (pull.state === "merged")
     return (
       <div className="merge-box merged">
         <PullIcon state="merged" size={18} />
-        <div>
+        <div className="merge-text">
           <b>Merged.</b> {issue.key} is Done.
         </div>
+        {share}
       </div>
     );
   if (pull.otherMerged)

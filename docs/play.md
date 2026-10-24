@@ -16,9 +16,9 @@ Accepting the current Terms is the only thing any page requires (`requireConsent
 - Someone who has not (a deep link, or the Terms changed since) is sent to `/consent`: the Terms in four points, one button, then on to the page they were heading for. `/play` does the same inline.
 - "Start your first day" on the landing page goes to the dashboard (through `/consent`). There is no onboarding: the profile questions are asked in place, one at a time, and can always wait ([profile](profile.md)).
 
-## The result card
+## The result
 
-Merging a pull request shows a receipt of what happened, computed in the browser from the person's own records (`metricsOf` in `apps/web/lib/result.ts`, metrics version 2):
+A merged pull request's Details list what happened, next to the facts already there, computed in the browser from the person's own records (`metricsOf` in `apps/web/lib/result.ts`, metrics version 2):
 
 - **active time**: gaps between activity (keys, edits, cursor, scrolling, runs, navigation), each counted up to a minute;
 - **read before typing**: from first opening the issue to the first edit;
@@ -28,9 +28,9 @@ Merging a pull request shows a receipt of what happened, computed in the browser
 - **test runs**, and which one first passed every case ("green first try");
 - **hints**, **pastes** and **left the tab** (times the page was hidden).
 
-The fix itself is never shown, so a friend still gets a fair go. The same numbers are recorded at the merge as a `result` event, so aggregates use exactly the definitions people see. Under the receipt, the experience and AI-use questions are asked while open, one tap each, recorded as `profile` with `from: "result"`.
+The fix itself is never shown, so a friend still gets a fair go. The same numbers are recorded at the merge as a `result` event, so aggregates use exactly the definitions people see. Under the merge, the experience and AI-use questions are asked while open, one tap each, recorded as `profile` with `from: "result"`.
 
-Sharing (copy link, X, LinkedIn, or the system share sheet) makes a link `/r/<card>`: the numbers, base64url-encoded in the path, plus this device's **referral code**, a random code separate from the participant ID. The link is a brag, not a record: anyone could edit it, so nothing trusts it.
+**Share result** in the merge box opens a preview of exactly what a post or chat will show (the shared link's image and text), then copy link, X, LinkedIn or the system share sheet. The link is `/r/<card>`: the numbers, base64url-encoded in the path, plus this device's **referral code**, a random code separate from the participant ID. The link is a brag, not a record: anyone could edit it, so nothing trusts it.
 
 ## Comparing with everyone else
 

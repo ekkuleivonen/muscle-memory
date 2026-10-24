@@ -1,6 +1,5 @@
 "use client";
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { openPracticeStore } from "../../../../../packages/browser/practice-store";
 import type { Revision } from "../../../../../packages/content/model";
 import type { Json } from "../../../../../packages/domain/json";
@@ -19,7 +18,6 @@ import {
   type Metrics,
   type Result,
 } from "../../../lib/result";
-import { Ask } from "./ask";
 import { logShare } from "./board-log";
 
 type Channel = "copy" | "x" | "linkedin" | "native";
@@ -82,40 +80,43 @@ export function Receipt({
   );
 }
 
-/**
- * What a merged pull request adds up to, from the person's own recorded keystrokes and runs,
- * and a way to share it. The fix itself is never shown, so a friend still gets a fair go.
- */
-export function ResultCard({
-  issue,
-  language,
-  records,
-  mergedAt,
-  pullRequest,
-  revisions,
-}: {
+export interface ResultInput {
   issue: { key: string; slug: string; title: string; revision: string };
   language: string;
   records: readonly WorkspaceRecord[];
   mergedAt: string;
-  pullRequest: number;
   revisions: Record<string, Revision>;
-}) {
+}
+
+export interface ResultState {
+  metrics: Metrics;
+  /** The card a shared link carries; null until this device's referral code is read. */
+  result: Result | null;
+  /** "Faster than 72% of people who fixed it in Python.", or null. */
+  comparison: string | null;
+  label: string;
+}
+
+/**
+ * What a merged pull request adds up to, from the person's own recorded keystrokes and runs,
+ * plus the comparison with everyone else (none for stealth players) and the card to share.
+ */
+export function useResult(input: ResultInput | null): ResultState | null {
+  const key = input?.issue.key;
   const [code, setCode] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [aggregate, setAggregate] = useState<Aggregate | undefined>();
   useEffect(() => {
     // Stealth players are left out of the aggregates and see no comparisons.
-    if (!INGEST_URL || readProfile()?.stealth) return;
+    if (!key || !INGEST_URL || readProfile()?.stealth) return;
     let live = true;
     fetch(`${INGEST_URL}/v1/aggregates`, { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((body) => live && setAggregate(body?.issues?.[issue.key]))
+      .then((body) => live && key && setAggregate(body?.issues?.[key]))
       .catch(() => undefined);
     return () => {
       live = false;
     };
-  }, [issue.key]);
+  }, [key]);
   useEffect(() => {
     let live = true;
     openPracticeStore()
@@ -133,26 +134,67 @@ export function ResultCard({
     };
   }, []);
   const metrics = useMemo(
-    () => metricsOf(records, issue.slug, mergedAt, (id) => revisions[id]),
-    [records, issue.slug, mergedAt, revisions],
+    () =>
+      input &&
+      metricsOf(input.records, input.issue.slug, input.mergedAt, (id) => input.revisions[id]),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the inputs, not their wrapper
+    [input?.records, input?.issue.slug, input?.mergedAt, input?.revisions],
   );
-  if (!code) return null;
+  if (!input || !metrics) return null;
+  const { issue, language } = input;
   const label = LANGUAGES.find((l) => l.id === language)?.label ?? language;
   const { fasterThan, people } = compare(aggregate, metrics.t);
-  const result: Result = {
-    v: 2,
-    k: issue.key,
-    l: language,
-    c: code,
-    ...metrics,
-    ...(aggregate ? { fn: people, ...(fasterThan !== undefined ? { fp: fasterThan } : {}) } : {}),
-  };
-  const url = `${location.origin}/r/${encodeResult(result)}`;
-  const text = `${sentence(result, label)} Can you still code without it?`;
+  const comparison = aggregate
+    ? { fn: people, ...(fasterThan !== undefined ? { fp: fasterThan } : {}) }
+    : {};
+  const result: Result | null = code
+    ? { v: 2, k: issue.key, l: language, c: code, ...metrics, ...comparison }
+    : null;
+  return { metrics, result, comparison: comparisonLine(comparison, label), label };
+}
+
+/** The result as rows for the pull request's Details: the same numbers a shared card shows. */
+export function ResultFacts({ state }: { state: ResultState }) {
+  return (
+    <>
+      {state.comparison && (
+        <>
+          <dt>Compared</dt>
+          <dd className="result-compare">{state.comparison}</dd>
+        </>
+      )}
+      {receiptLines(state.metrics).map(([label, value]) => (
+        <Fragment key={label}>
+          <dt>{label[0].toUpperCase() + label.slice(1)}</dt>
+          <dd>{value}</dd>
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
+/**
+ * Share, with a preview of exactly what a post or chat will show (the shared link's image),
+ * then copy, X, LinkedIn or the system share sheet. The fix itself is never shared.
+ */
+export function ShareResult({
+  state,
+  issue,
+}: {
+  state: ResultState;
+  issue: ResultInput["issue"];
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [copied, setCopied] = useState(false);
+  const { result } = state;
+  if (!result) return null;
+  const segment = encodeResult(result);
+  const url = `${location.origin}/r/${segment}`;
+  const text = `${sentence(result, state.label)} Can you still code without it?`;
   const share = async (channel: Channel) => {
     void logShare(
       { id: issue.slug, revision: issue.revision },
-      { issueKey: issue.key, channel, ref: code, card: result as unknown as Json },
+      { issueKey: issue.key, channel, ref: result.c, card: result as unknown as Json },
     );
     if (channel === "copy") {
       await navigator.clipboard.writeText(`${text} ${url}`);
@@ -168,17 +210,37 @@ export function ResultCard({
     else await navigator.share?.({ text, url }).catch(() => undefined);
   };
   return (
-    <section className="result-card" aria-label="Your result">
-      <Receipt
-        top={`muscle memory · pull request #${pullRequest}`}
-        headline="I fixed a real bug without AI."
-        detail={`“${issue.title}”, in ${label}, from memory, with no autocomplete.`}
-        metrics={metrics}
-        comparison={comparisonLine(result, label)}
+    <>
+      <button type="button" className="share-open" onClick={() => dialog.current?.showModal()}>
+        Share result
+      </button>
+      <dialog
+        ref={dialog}
+        className="share-dialog"
+        aria-label="Share your result"
+        onClick={(event) => event.target === dialog.current && dialog.current?.close()}
+        onClose={() => setCopied(false)}
       >
-        <div className="receipt-foot">
-          <span className="receipt-ask">Can your friends still do it?</span>
-          <span className="receipt-share">
+        <div className="share-body">
+          <div className="share-head">
+            <b>Share your result</b>
+            <button type="button" className="share-close" aria-label="Close" onClick={() => dialog.current?.close()}>
+              ×
+            </button>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element -- the generated preview, as posted */}
+          <img
+            className="share-preview"
+            src={`/r/${segment}/opengraph-image`}
+            alt={text}
+            width={1200}
+            height={630}
+          />
+          <p className="share-text">{text}</p>
+          <p className="faint share-note">
+            Your numbers and a link to try the same bug. Never your code.
+          </p>
+          <div className="share-actions">
             <button type="button" className="primary" onClick={() => void share("copy")}>
               {copied ? "Copied" : "Copy link"}
             </button>
@@ -188,26 +250,14 @@ export function ResultCard({
             <button type="button" onClick={() => void share("linkedin")}>
               LinkedIn
             </button>
-            {typeof navigator !== "undefined" && "share" in navigator && (
+            {"share" in navigator && (
               <button type="button" onClick={() => void share("native")}>
                 Share…
               </button>
             )}
-          </span>
+          </div>
         </div>
-      </Receipt>
-      <Ask
-        ids={["experience", "aiUse"]}
-        from="result"
-        why={{
-          experience: "So a time like yours means something next to everyone else's.",
-          aiUse: "So we can tell how unaided work changes with how much AI people use.",
-        }}
-      />
-      <p className="result-next">
-        Every number comes from your own keystrokes and runs; typos are estimated from quick
-        backspaces. <Link href="/dashboard">Look around your desk →</Link>
-      </p>
-    </section>
+      </dialog>
+    </>
   );
 }
