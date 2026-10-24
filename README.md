@@ -17,7 +17,7 @@ npm ci
 npm run dev
 ```
 
-Open http://localhost:3000. The practice flow is session-only by default, with optional [device-local history](docs/device-local-practice.md). No practice records are uploaded, and submitted code is never executed.
+Open http://localhost:3000. The practice flow is session-only by default, with optional [device-local history](docs/device-local-practice.md). No practice records are uploaded. The [Python workspace preview](docs/workspace.md) at `/workspace` runs submitted Python only inside a network-denied browser sandbox, never on a server.
 
 ```sh
 npm test
@@ -45,6 +45,8 @@ The demo uses synthetic JSON answers. It validates the content → encounter →
 - `packages/catalog`: versioned authoring lifecycle and application eligibility gates.
 - `packages/browser`: optional private device-local history.
 - `packages/storage`: local transactional event store and retryable archive adapter.
+- `packages/runner`: sandboxed in-browser Python runtime (pinned Pyodide, opaque-origin iframe, network denied).
+- `packages/capture`: bounded, ordered capture of workspace observations with retry and gap disclosure.
 - `packages/core/muscle_memory`: portable immutable contracts and pure assessment logic.
 - `content/adventures`: story, presentation and pinned Challenge sequence.
 - `content/challenges`: tasks, fixtures, hints, skills and assessment versions.

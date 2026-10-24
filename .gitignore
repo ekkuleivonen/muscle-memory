@@ -13,3 +13,4 @@ node_modules/
 .wrangler/
 .dev.vars*
 *.tsbuildinfo
+apps/web/public/runtime/

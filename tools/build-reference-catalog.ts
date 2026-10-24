@@ -15,6 +15,10 @@ const root = resolve("content");
 const challenge = JSON.parse(
   await readFile(resolve(root, "challenges/frequency-map.v1.json"), "utf8"),
 );
+// Executable Python version; the published JSON-output version 1.0.0 stays unchanged.
+const executable = JSON.parse(
+  await readFile(resolve(root, "challenges/frequency-map.v2.json"), "utf8"),
+);
 const adventure = JSON.parse(
   await readFile(resolve(root, "adventures/field-notes.v1.json"), "utf8"),
 );
@@ -22,6 +26,7 @@ const at = "2026-10-23T00:00:00.000Z"; // Synthetic reference-release timestamp;
 let catalog = emptyCatalog();
 for (const [kind, content] of [
   ["challenge", challenge],
+  ["challenge", executable],
   ["adventure", adventure],
 ] as const) {
   const ref: ContentRef = { kind, id: content.id, version: content.version };

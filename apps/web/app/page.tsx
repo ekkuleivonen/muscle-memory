@@ -336,6 +336,11 @@ export default function Home() {
           </p>
         </section>
       )}
+      <p className="note">
+        Preview: write and run Python in the{" "}
+        <a href="/workspace">frequency map workspace</a>, sandboxed in this
+        browser.
+      </p>
       <footer>
         <p>Practice, not a verdict.</p>
         <p>

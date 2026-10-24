@@ -1,0 +1,18 @@
+{
+  "runtime": "pyodide",
+  "version": "314.0.7",
+  "python": "3.14.2",
+  "basePath": "/runtime/pyodide-314.0.7/",
+  "lockInfo": {
+    "abi_version": "2026_0",
+    "arch": "wasm32",
+    "platform": "emscripten_5_0_3",
+    "python": "3.14.2"
+  },
+  "files": {
+    "pyodide.mjs": "sha256-bx1g979Sm+swDw9HmDySHTmCNjZAuiCvDjjv3dvGYQk=",
+    "pyodide.asm.mjs": "sha256-983I7OgGeM63EvjmXr5tOoMgOhgMOZhl9JYSoFFpNjU=",
+    "pyodide.asm.wasm": "sha256-zDbjyrBP38mmP/E+tS6uK5Eb9GwCXMeygfOUvT3h1eY=",
+    "python_stdlib.zip": "sha256-+hlX5XdwaPxPdDf5bYYK4vvpwZcyugbITgBOwW3X3Xo="
+  }
+}

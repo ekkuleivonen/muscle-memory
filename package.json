@@ -14,11 +14,14 @@
     "demo:evidence": "node --experimental-sqlite --import tsx tools/reference-evidence.ts",
     "delete:participant": "node --experimental-sqlite --import tsx tools/delete-participant.ts",
     "demo:authoring": "node --import tsx tools/authoring/cli.ts demo",
-    "build:reference-catalog": "node --import tsx tools/build-reference-catalog.ts"
+    "build:reference-catalog": "node --import tsx tools/build-reference-catalog.ts",
+    "test:browser": "node tools/browser/sandbox-check.mjs && node tools/browser/workspace-check.mjs"
   },
   "devDependencies": {
     "@types/node": "22.19.0",
+    "esbuild": "0.25.12",
     "fake-indexeddb": "6.2.6",
+    "playwright": "1.64.1",
     "prettier": "3.6.2",
     "tsx": "4.20.6",
     "typescript": "5.9.3"
