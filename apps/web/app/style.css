@@ -196,3 +196,29 @@ footer p:first-child {
     letter-spacing: -2px;
   }
 }
+.workspace .editor {
+  border: 1px solid #182e2650;
+  background: #fffdf7;
+  min-height: 240px;
+  font-size: 15px;
+}
+.workspace .editor .cm-editor {
+  min-height: 240px;
+}
+.workspace .editor .cm-editor.cm-focused {
+  outline: 2px solid var(--accent);
+}
+.workspace .toolbar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin: 12px 0;
+}
+.workspace pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #182e260d;
+  padding: 8px 12px;
+  max-height: 320px;
+  overflow: auto;
+}

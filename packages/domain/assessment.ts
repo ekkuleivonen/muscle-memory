@@ -54,6 +54,8 @@ export function canonical(value: Json): string {
     return (
       "{" +
       Object.keys(value)
+        // Like JSON.stringify, an undefined property is absent rather than invalid JSON.
+        .filter((key) => value[key] !== undefined)
         .sort()
         .map((key) => JSON.stringify(key) + ":" + canonical(value[key]))
         .join(",") +
@@ -62,6 +64,7 @@ export function canonical(value: Json): string {
   }
   if (typeof value === "number" && !Number.isFinite(value))
     throw new Error("Numbers must be finite.");
+  if (value === undefined) throw new Error("Values must be JSON.");
   return JSON.stringify(value);
 }
 export function snapshot(challenge: Challenge): string {
@@ -95,6 +98,18 @@ export function parseOutputs(text: string): Json[] {
   canonical(value);
   return value;
 }
+/** Assessment 1.0.0 formula: each output must equal its expected value as canonical JSON. */
+export function fixtureVerdicts(
+  challenge: Challenge,
+  outputs: readonly Json[],
+): boolean[] {
+  return challenge.expected.map(
+    (expected, index) =>
+      index < outputs.length &&
+      canonical(outputs[index]) === canonical(expected),
+  );
+}
+
 export function assess(challenge: Challenge, attempt: Attempt) {
   if (challenge.assessment_version !== "1.0.0")
     throw new Error("Unsupported assessment version.");
@@ -130,9 +145,7 @@ export function assess(challenge: Challenge, attempt: Attempt) {
     attempt.outputs.length !== challenge.expected.length
   )
     throw new Error("Submit exactly one output per fixture.");
-  const passed = attempt.outputs.map(
-    (value, index) => canonical(value) === canonical(challenge.expected[index]),
-  );
+  const passed = fixtureVerdicts(challenge, attempt.outputs);
   return {
     schemaVersion: "1.0.0",
     assessmentVersion: challenge.assessment_version,

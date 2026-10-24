@@ -12,6 +12,8 @@ npm run build:cloudflare
 npm run preview --workspace apps/web
 ```
 
+The app's `prebuild` step copies the pinned Pyodide runtime (about 13 MB, hash-verified) into `public/runtime/`; it is served as static assets and never fetched from a CDN. See [workspace](workspace.md).
+
 The adapter build invokes Next with the standalone output it needs. A regular Next build alone is not sufficient input for `--skipNextBuild`; use the complete adapter command above.
 
 No deploy/upload script is provided. There are no remote database, R2 bucket or credential bindings. This app keeps practice state in the browser: session memory by default, optional IndexedDB after explicit local-storage consent. The local SQLite stores and retryable archive export in `packages/storage` are Node-only development tools and are not imported by the app; this is not a hosted multi-user application.

@@ -88,3 +88,9 @@ test("parses bounded JSON outputs and canonical object keys", () => {
   assert.throws(() => parseOutputs("bad"), /valid JSON/);
   assert.throws(() => parseOutputs(" ".repeat(65537)), /64 KiB/);
 });
+
+test("canonical JSON omits undefined properties and rejects other undefined values", () => {
+  assert.equal(canonical({ b: 1, a: undefined } as never), '{"b":1}');
+  assert.throws(() => canonical([undefined] as never), /JSON/);
+  assert.throws(() => canonical(undefined as never), /JSON/);
+});

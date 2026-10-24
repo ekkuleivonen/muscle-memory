@@ -1,0 +1,308 @@
+/**
+ * Bounded, asynchronous capture buffer for workspace observations. Recording never waits for
+ * storage: observations get a source position and stable ID immediately and are written in
+ * ordered batches later. Failed writes retry with backoff. When the buffer is full the
+ * observation is dropped, its position stays consumed, and an explicit capture-gap
+ * observation records the lost range once there is room again.
+ */
+import {
+  toRecord,
+  WORKSPACE_CAPTURE_VERSION,
+  type CodeRevisionArtifact,
+  type ObservationData,
+  type ObservationType,
+  type WorkspaceObservation,
+  type WorkspaceRecord,
+} from "../domain/workspace";
+import { safeIdentifier } from "../domain/events";
+
+export type WriteOutcome = "written" | "duplicate" | "conflict";
+
+/** Durable or session storage. Identical records deduplicate; a changed payload is a conflict. */
+export interface CaptureSink {
+  write(records: readonly WorkspaceRecord[]): Promise<WriteOutcome[]>;
+}
+
+export interface RecorderOptions {
+  readonly participantId: string;
+  readonly sourceId: string;
+  readonly consentVersion: string;
+  readonly challengeArtifactId: string;
+  readonly sink: CaptureSink;
+  readonly maxRecords?: number;
+  readonly maxBytes?: number;
+  readonly batchSize?: number;
+  readonly flushDelayMs?: number;
+  readonly retryBaseMs?: number;
+  readonly now?: () => Date;
+}
+
+export interface CaptureStatus {
+  readonly buffered: number;
+  readonly bufferedBytes: number;
+  readonly persisted: number;
+  readonly lastSequence: number;
+  /** Positions dropped and not yet disclosed by a stored gap observation. */
+  readonly undisclosedDrops: number;
+  readonly gaps: number;
+  readonly artifactConflicts: number;
+  readonly retrying: boolean;
+  readonly lastError: string | null;
+}
+
+interface Entry {
+  readonly record: WorkspaceRecord;
+  readonly bytes: number;
+  readonly sequence?: number;
+}
+
+export class CaptureRecorder {
+  private sequence = 0;
+  private readonly queue: Entry[] = [];
+  private queuedBytes = 0;
+  private persisted = 0;
+  private gaps = 0;
+  private readonly artifacts = new Set<string>();
+  private conflicts = 0;
+  private dropped: {
+    from: number;
+    to: number;
+    reason: "buffer-full" | "write-conflict";
+  }[] = [];
+  private timer: ReturnType<typeof setTimeout> | undefined;
+  private flushing: Promise<void> | undefined;
+  private failures = 0;
+  private lastError: string | null = null;
+  private stopped = false;
+  private readonly maxRecords: number;
+  private readonly maxBytes: number;
+
+  constructor(private readonly options: RecorderOptions) {
+    safeIdentifier(options.participantId);
+    safeIdentifier(options.sourceId);
+    this.maxRecords = options.maxRecords ?? 1000;
+    this.maxBytes = options.maxBytes ?? 4 * 1024 * 1024;
+  }
+
+  /**
+   * Records one observation with any artifacts it references. Returns the observation, or
+   * null when it was dropped (its position becomes an explicit gap).
+   */
+  observe<T extends ObservationType>(
+    type: T,
+    data: ObservationData[T],
+    artifacts: readonly CodeRevisionArtifact[] = [],
+  ): WorkspaceObservation<T> | null {
+    if (this.stopped) return null;
+    const sequence = ++this.sequence;
+    const observation: WorkspaceObservation<T> = {
+      schemaVersion: "1.0.0",
+      type,
+      observationId: `${this.options.sourceId}.${sequence}`,
+      participantId: this.options.participantId,
+      source: { id: this.options.sourceId, sequence },
+      occurredAt: (this.options.now?.() ?? new Date()).toISOString(),
+      serverReceipt: { status: "absent", reason: "local-only" },
+      captureVersion: WORKSPACE_CAPTURE_VERSION,
+      consentVersion: this.options.consentVersion,
+      researchConsent: false,
+      challengeArtifactId: this.options.challengeArtifactId,
+      data,
+    };
+    // An artifact (one code revision) is stored once, however many observations cite it.
+    const fresh = artifacts.filter(
+      (artifact) => !this.artifacts.has(artifact.artifactId),
+    );
+    const entries: Entry[] = [
+      ...fresh.map((artifact) => entry(toRecord(artifact))),
+      entry(toRecord(observation), sequence),
+    ];
+    // One slot and some bytes stay reserved so a gap can always be disclosed.
+    if (!this.fits(entries, 1, 1024)) {
+      this.drop(sequence, "buffer-full");
+      return null;
+    }
+    for (const artifact of fresh) this.artifacts.add(artifact.artifactId);
+    this.enqueue(entries);
+    this.schedule(this.options.flushDelayMs ?? 250);
+    return observation;
+  }
+
+  /** Stores a record that is not participant activity, such as shared content. */
+  include(record: WorkspaceRecord): void {
+    if (this.stopped) return;
+    this.enqueue([entry(record)]);
+    this.schedule(this.options.flushDelayMs ?? 250);
+  }
+
+  status(): CaptureStatus {
+    return {
+      buffered: this.queue.length,
+      bufferedBytes: this.queuedBytes,
+      persisted: this.persisted,
+      lastSequence: this.sequence,
+      undisclosedDrops: this.dropped.reduce(
+        (sum, range) => sum + range.to - range.from + 1,
+        0,
+      ),
+      gaps: this.gaps,
+      artifactConflicts: this.conflicts,
+      retrying: this.failures > 0,
+      lastError: this.lastError,
+    };
+  }
+
+  /** Writes everything buffered now; resolves when the buffer is empty or a write fails. */
+  async flush(): Promise<void> {
+    clearTimeout(this.timer);
+    this.timer = undefined;
+    while (!this.stopped) {
+      // One batch in flight at a time, so batches stay in source order.
+      while (this.flushing) await this.flushing;
+      if (!this.queue.length || this.stopped) return;
+      this.flushing = this.writeBatch().finally(
+        () => (this.flushing = undefined),
+      );
+      await this.flushing;
+      if (this.failures) return;
+    }
+  }
+
+  /** Stops capture and discards the buffer, after any write already in flight settles. */
+  async stop(): Promise<void> {
+    this.stopped = true;
+    clearTimeout(this.timer);
+    await this.flushing?.catch(() => undefined);
+    this.queue.length = 0;
+    this.queuedBytes = 0;
+    this.dropped = [];
+  }
+
+  private async writeBatch(): Promise<void> {
+    const batch = this.queue.slice(0, this.options.batchSize ?? 100);
+    let outcomes: WriteOutcome[];
+    try {
+      outcomes = await this.options.sink.write(
+        batch.map((item) => item.record),
+      );
+      if (outcomes.length !== batch.length)
+        throw new Error("Storage returned an incomplete result.");
+    } catch (error) {
+      this.failures++;
+      this.lastError = error instanceof Error ? error.message : String(error);
+      // Exponential backoff, capped; records keep their IDs, so a retry deduplicates.
+      this.schedule(
+        Math.min((this.options.retryBaseMs ?? 250) * 2 ** this.failures, 8000),
+      );
+      return;
+    }
+    if (this.stopped) return;
+    this.failures = 0;
+    this.lastError = null;
+    batch.forEach((item, index) => {
+      this.queuedBytes -= item.bytes;
+      if (outcomes[index] !== "conflict") this.persisted++;
+      else if (item.sequence) this.drop(item.sequence, "write-conflict");
+      else {
+        // An artifact ID already holds different content: keep the stored one, say so.
+        this.conflicts++;
+        this.lastError = `${item.record.recordId} already exists with different content.`;
+      }
+    });
+    this.queue.splice(0, batch.length);
+    this.discloseGaps();
+    if (this.queue.length) this.schedule(0);
+  }
+
+  private discloseGaps(): void {
+    while (this.dropped.length) {
+      const range = this.dropped[0];
+      const sequence = ++this.sequence;
+      const gap = toRecord({
+        schemaVersion: "1.0.0",
+        type: "observation.workspace.capture-gap",
+        observationId: `${this.options.sourceId}.${sequence}`,
+        participantId: this.options.participantId,
+        source: { id: this.options.sourceId, sequence },
+        occurredAt: (this.options.now?.() ?? new Date()).toISOString(),
+        serverReceipt: { status: "absent", reason: "local-only" },
+        captureVersion: WORKSPACE_CAPTURE_VERSION,
+        consentVersion: this.options.consentVersion,
+        researchConsent: false,
+        challengeArtifactId: this.options.challengeArtifactId,
+        data: {
+          fromSequence: range.from,
+          toSequence: range.to,
+          reason: range.reason,
+        },
+      });
+      const item = entry(gap, sequence);
+      if (!this.fits([item], 0, 0)) {
+        this.sequence--;
+        return;
+      }
+      this.dropped.shift();
+      this.gaps++;
+      this.enqueue([item]);
+    }
+  }
+
+  private drop(
+    sequence: number,
+    reason: "buffer-full" | "write-conflict",
+  ): void {
+    const last = this.dropped.at(-1);
+    if (last && last.reason === reason && last.to === sequence - 1)
+      last.to = sequence;
+    else this.dropped.push({ from: sequence, to: sequence, reason });
+  }
+
+  private fits(
+    entries: readonly Entry[],
+    reserveRecords: number,
+    reserveBytes: number,
+  ): boolean {
+    const bytes = entries.reduce((sum, item) => sum + item.bytes, 0);
+    return (
+      this.queue.length + entries.length + reserveRecords <= this.maxRecords &&
+      this.queuedBytes + bytes + reserveBytes <= this.maxBytes
+    );
+  }
+
+  private enqueue(entries: readonly Entry[]): void {
+    for (const item of entries) {
+      this.queue.push(item);
+      this.queuedBytes += item.bytes;
+    }
+  }
+
+  private schedule(delayMs: number): void {
+    if (this.stopped || this.timer !== undefined) return;
+    this.timer = setTimeout(() => {
+      this.timer = undefined;
+      this.flush().catch(() => undefined);
+    }, delayMs);
+  }
+}
+
+function entry(record: WorkspaceRecord, sequence?: number): Entry {
+  return { record, bytes: record.payload.length * 2, sequence };
+}
+
+/** Session-only default: records live in this page's memory and vanish when it closes. */
+export class MemorySink implements CaptureSink {
+  readonly records = new Map<string, WorkspaceRecord>();
+  async write(records: readonly WorkspaceRecord[]): Promise<WriteOutcome[]> {
+    return records.map((record) => {
+      const existing = this.records.get(record.recordId);
+      if (!existing) {
+        this.records.set(record.recordId, record);
+        return "written";
+      }
+      return existing.payload === record.payload ? "duplicate" : "conflict";
+    });
+  }
+  clear(): void {
+    this.records.clear();
+  }
+}
