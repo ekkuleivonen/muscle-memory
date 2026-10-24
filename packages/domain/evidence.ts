@@ -12,6 +12,7 @@ import {
   type Json,
 } from "./assessment";
 import { assertEncounter, safeIdentifier } from "./events";
+import { assertSourcePosition } from "./source-order";
 
 /** Declares what this capture records and its size boundary. A new boundary needs a new version. */
 export const CAPTURE_VERSION = "synthetic-submission-capture-1.0.0";
@@ -165,9 +166,7 @@ export function captureSubmission(input: SubmissionInput): CapturedSubmission {
       `Observation IDs are at most ${MAX_OBSERVATION_ID_LENGTH} characters.`,
     );
   safeIdentifier(input.participantId);
-  safeIdentifier(input.source.id);
-  if (!Number.isSafeInteger(input.source.sequence) || input.source.sequence < 1)
-    throw new Error("Source sequence must be a positive integer.");
+  assertSourcePosition(input.source);
   if (typeof input.text !== "string")
     throw new Error("Capture the submission as text.");
   if (!input.consentVersion) throw new Error("Consent is required.");
@@ -238,6 +237,7 @@ export function verifyCapture(captured: CapturedSubmission): void {
   const { artifacts, submission, observation } = captured;
   safeIdentifier(observation.observationId);
   safeIdentifier(observation.participantId);
+  assertSourcePosition(observation.source);
   safeIdentifier(submission.artifactId);
   if (
     observation.schemaVersion !== "1.0.0" ||

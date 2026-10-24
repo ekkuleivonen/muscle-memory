@@ -15,6 +15,11 @@ import {
   type SubmissionObservation,
 } from "../domain/evidence";
 import type { AssessmentProjection, Evidence } from "../domain/projection";
+import {
+  orderSource,
+  type SourcePosition,
+  type SourceStream,
+} from "../domain/source-order";
 import type {
   EventOutbox,
   ParticipantDeletionStore,
@@ -55,6 +60,13 @@ export class SqliteEvidenceStore
         payload TEXT NOT NULL,
         export_state TEXT NOT NULL DEFAULT 'pending' CHECK(export_state IN ('pending','exported'))
       );
+      -- Source position lookups. Not UNIQUE: records stored before position checks may share a
+      -- position, and they stay as evidence and are reported as conflicts rather than dropped.
+      CREATE INDEX IF NOT EXISTS observation_source_position ON evidence_records(
+        participant_id,
+        json_extract(payload, '$.source.id'),
+        json_extract(payload, '$.source.sequence')
+      ) WHERE kind = 'observation.submission';
       CREATE TABLE IF NOT EXISTS deleted_participants (
         participant_id TEXT PRIMARY KEY
       );
@@ -77,6 +89,7 @@ export class SqliteEvidenceStore
     const { observation, submission } = captured;
     return this.transaction(() => {
       this.assertWritable(observation.participantId);
+      this.assertPositionFree(observation);
       for (const artifact of captured.artifacts)
         this.put(artifact.artifactId, artifact.type, null, artifact);
       this.put(
@@ -153,6 +166,22 @@ export class SqliteEvidenceStore
         )
         .all(observationId) as { payload: string }[]
     ).map((row) => JSON.parse(row.payload));
+  }
+
+  /** One participant's one source, in sequence order, with missing-range diagnostics. */
+  sourceStream(
+    participantId: string,
+    sourceId: string,
+    maxRanges?: number,
+  ): SourceStream {
+    safeIdentifier(participantId);
+    safeIdentifier(sourceId);
+    const positions = this.db
+      .prepare(
+        "SELECT record_id AS observationId, json_extract(payload, '$.source.sequence') AS sequence FROM evidence_records WHERE kind = 'observation.submission' AND participant_id = ? AND json_extract(payload, '$.source.id') = ?",
+      )
+      .all(participantId, sourceId) as unknown as SourcePosition[];
+    return orderSource(participantId, sourceId, positions, maxRanges);
   }
 
   get(recordId: string): StoredEvent | undefined {
@@ -242,6 +271,24 @@ export class SqliteEvidenceStore
       )
       .run(recordId, kind, participantId, payload);
     return false;
+  }
+
+  /** A different observation may not claim a position already taken in the same stream. */
+  private assertPositionFree(observation: SubmissionObservation): void {
+    const claimed = this.db
+      .prepare(
+        "SELECT record_id AS observationId FROM evidence_records WHERE kind = 'observation.submission' AND participant_id = ? AND json_extract(payload, '$.source.id') = ? AND json_extract(payload, '$.source.sequence') = ? AND record_id != ?",
+      )
+      .get(
+        observation.participantId,
+        observation.source.id,
+        observation.source.sequence,
+        observation.observationId,
+      ) as { observationId: string } | undefined;
+    if (claimed)
+      throw new Error(
+        `Source position ${observation.source.id}#${observation.source.sequence} is already claimed by ${claimed.observationId}.`,
+      );
   }
 
   private assertWritable(participantId: string): void {
