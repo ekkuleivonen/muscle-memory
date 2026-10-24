@@ -1061,8 +1061,40 @@ function countWords(string $text): int
     language: "python",
     skills: ["iteration", "maps", "edge-cases"],
     task: "Write `frequency_map(items)`: count each exact, case-sensitive string and return a dict of string to integer count. Empty input returns `{}`.",
-    inputs: [["a", "b", "a"], [], ["A", "a", "A"], ["__proto__", "__proto__", "x"]],
-    expected: [{ a: 2, b: 1 }, {}, { A: 2, a: 1 }, JSON.parse('{"__proto__":2,"x":1}')],
+    inputs: [
+      ["a", "b", "a"],
+      [],
+      ["A", "a", "A"],
+      ["__proto__", "__proto__", "x"],
+      ["x"],
+      ["a", "a", "a", "a"],
+      ["b", "a", "b", "c", "a", "b"],
+      ["Hello", "hello", "HELLO"],
+      ["", "", " "],
+      ["a ", "a", " a"],
+      ["constructor", "toString", "hasOwnProperty", "constructor"],
+      ["__proto__"],
+      ["1", "1", "2"],
+      ["null", "None", "true", "None"],
+      ["é", "e", "é"],
+    ],
+    expected: [
+      { a: 2, b: 1 },
+      {},
+      { A: 2, a: 1 },
+      JSON.parse('{"__proto__":2,"x":1}'),
+      { x: 1 },
+      { a: 4 },
+      { b: 3, a: 2, c: 1 },
+      { Hello: 1, hello: 1, HELLO: 1 },
+      { "": 2, " ": 1 },
+      { "a ": 1, a: 1, " a": 1 },
+      { constructor: 2, toString: 1, hasOwnProperty: 1 },
+      JSON.parse('{"__proto__":1}'),
+      { "1": 2, "2": 1 },
+      { null: 1, None: 2, true: 1 },
+      { "é": 2, e: 1 },
+    ],
     hints: [
       "A dict can hold one counter for each distinct string.",
       {
@@ -1145,13 +1177,50 @@ function countWords(string $text): int
     language: "javascript",
     skills: ["formatting", "strings", "numbers"],
     task: 'Write `formatPrice(cents)`: return the amount in dollars with two decimals and comma thousands separators, e.g. `123456` → `"$1,234.56"`. Negative amounts are refunds and get a leading minus: `-500` → `"-$5.00"`.',
-    inputs: [123456, 5, 0, -500, 100000000],
-    expected: ["$1,234.56", "$0.05", "$0.00", "-$5.00", "$1,000,000.00"],
+    inputs: [
+      123456, 5, 0, -500, 100000000, 1, 10, 99, 100, 1050, 99999, 100000, 123456789,
+      12345678901, -1, -99, -123456, -100000000,
+    ],
+    expected: [
+      "$1,234.56",
+      "$0.05",
+      "$0.00",
+      "-$5.00",
+      "$1,000,000.00",
+      "$0.01",
+      "$0.10",
+      "$0.99",
+      "$1.00",
+      "$10.50",
+      "$999.99",
+      "$1,000.00",
+      "$1,234,567.89",
+      "$123,456,789.01",
+      "-$0.01",
+      "-$0.99",
+      "-$1,234.56",
+      "-$1,000,000.00",
+    ],
+    hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
     comments: [
       ada(
         "Design wants the minus before the dollar sign for refunds, same as on the receipts.",
       ),
     ],
+    private: {
+      reference: { "src/format-price.js": `/**
+ * Formats an amount in cents for the cart: 123456 → "$1,234.56".
+ * Refunds are negative and keep the minus first: -500 → "-$5.00".
+ */
+export function formatPrice(cents) {
+  const sign = cents < 0 ? "-" : "";
+  const amount = Math.abs(cents);
+  const dollars = String(Math.floor(amount / 100)).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",");
+  const rest = String(amount % 100).padStart(2, "0");
+  return \`\${sign}$\${dollars}.\${rest}\`;
+}
+` },
+    },
   }),
   challenge("discount-codes", {
     parameters: ["totalCents", "code", "codes"],
@@ -1167,14 +1236,46 @@ function countWords(string $text): int
       [10000, " SAVE10 ", { SAVE10: 10 }],
       [999, "HALF", { HALF: 50 }],
       [5000, "NOPE", { SAVE10: 10 }],
+      [10000, "Save10", { SAVE10: 10 }],
+      [10000, "   save10   ", { SAVE10: 10 }],
+      [10000, "SAVE 10", { SAVE10: 10 }],
+      [10000, "SAVE1", { SAVE10: 10 }],
+      [10000, "", { SAVE10: 10 }],
+      [10000, "   ", { SAVE10: 10 }],
+      [10000, "save20", { SAVE10: 10, SAVE20: 20 }],
+      [10000, "SPRING25", { Spring25: 25 }],
+      [10000, "constructor", { SAVE10: 10 }],
+      [0, "SAVE10", { SAVE10: 10 }],
+      [1, "half", { HALF: 50 }],
+      [3333, "save10", { SAVE10: 10 }],
+      [12345, " save15", { SAVE15: 15 }],
+      [10000, "free", { FREE: 100 }],
+      [10000, "zero", { ZERO: 0 }],
     ],
-    expected: [9000, 9000, 499, 5000],
+    expected: [
+      9000, 9000, 499, 5000, 9000, 9000, 10000, 10000, 10000, 10000, 8000, 7500, 10000, 0, 0,
+      2999, 10493, 0, 10000,
+    ],
+    hidden: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
     comments: [
       jo(
         "40 tickets this morning. People type codes the way they read them in the email.",
       ),
       lena("Black Friday is in two weeks, so this one jumps the queue."),
     ],
+    private: {
+      reference: { "src/apply-discount.ts": `/** Percent off per promo code, as configured in the admin: { SAVE10: 10 }. */
+export type Codes = Record<string, number>;
+
+/** The total after the matching code's discount, rounded down to whole cents. */
+export function applyDiscount(totalCents: number, code: string, codes: Codes): number {
+  const typed = code.trim().toUpperCase();
+  const match = Object.keys(codes).find((name) => name.toUpperCase() === typed);
+  if (match === undefined) return totalCents;
+  return Math.floor(totalCents * (100 - codes[match]) / 100);
+}
+` },
+    },
   }),
   challenge("filter-form-labels", {
     parameters: ["selector", "read"],
@@ -1190,18 +1291,56 @@ function countWords(string $text): int
       ["form input[type=checkbox]", "id"],
       ["form input[type=checkbox]", "label"],
       ["form label", "text"],
+      ["form", "count"],
+      ["input[type=checkbox]", "count"],
+      ["label", "count"],
+      ["form input[type=checkbox]", "type"],
+      ["form label", "for"],
+      ["#filter-in-stock", "name"],
+      ["#filter-on-sale", "name"],
+      ["#filter-in-stock", "label"],
+      ["#filter-on-sale", "label"],
+      ["label[for=filter-in-stock]", "text"],
+      ["label[for=filter-on-sale]", "text"],
+      ["form #filter-in-stock, form #filter-on-sale", "count"],
     ],
     expected: [
       ["in-stock", "on-sale"],
       ["filter-in-stock", "filter-on-sale"],
       ["in-stock", "on-sale"],
       ["in-stock", "on-sale"],
+      1,
+      2,
+      2,
+      ["checkbox", "checkbox"],
+      ["filter-in-stock", "filter-on-sale"],
+      ["in-stock"],
+      ["on-sale"],
+      ["in-stock"],
+      ["on-sale"],
+      ["in-stock"],
+      ["on-sale"],
+      2,
     ],
+    hidden: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     comments: [
       ada(
         "The accessibility audit flagged every checkbox here. Clicking the text should toggle the box.",
       ),
     ],
+    private: {
+      reference: { "templates/filter-form-labels.html": `<!--
+  Product filters on the category page. The accessibility audit flagged these
+  checkboxes: each needs a label tied to it.
+-->
+<form>
+  <input type="checkbox" name="in-stock" id="filter-in-stock">
+  <label for="filter-in-stock">in-stock</label>
+  <input type="checkbox" name="on-sale" id="filter-on-sale">
+  <label for="filter-on-sale">on-sale</label>
+</form>
+` },
+    },
   }),
   challenge("debounce-search", {
     parameters: ["keystrokes", "waitMs"],
@@ -1217,8 +1356,41 @@ function countWords(string $text): int
       [[0, 100, 200, 1000], 300],
       [[], 300],
       [[0, 500], 300],
+      [[0], 300],
+      [[1000], 300],
+      [[0, 299], 300],
+      [[0, 301], 300],
+      [[0, 50, 100, 150, 200], 100],
+      [[0, 1000, 2000], 300],
+      [[0, 100, 200, 1000, 1100, 1200], 300],
+      [[100, 200, 250, 900, 1250], 300],
+      [[0, 299, 598, 1000], 300],
+      [[0, 0, 0], 300],
+      [[0, 10, 20], 1000],
+      [[0, 500], 0],
+      [[1700000000000, 1700000000100], 300],
+      [[0, 5000], 10000],
     ],
-    expected: [[500, 1300], [], [300, 800]],
+    expected: [
+      [500, 1300],
+      [],
+      [300, 800],
+      [300],
+      [1300],
+      [599],
+      [300, 601],
+      [300],
+      [300, 1300, 2300],
+      [500, 1500],
+      [550, 1200, 1550],
+      [898, 1300],
+      [300],
+      [1020],
+      [0, 500],
+      [1700000000400],
+      [15000],
+    ],
+    hidden: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
     hints: [
       "Each keystroke cancels the pending request if it arrives before the timer fires.",
     ],
@@ -1227,6 +1399,18 @@ function countWords(string $text): int
         "Search API gets about eight requests per query. 300 ms after the last keystroke is plenty.",
       ),
     ],
+    private: {
+      reference: { "src/debounce-times.ts": `/**
+ * When the search request fires for the given keystroke times (ms): waitMs after
+ * a keystroke, unless another keystroke comes first.
+ */
+export function debounceTimes(keystrokes: number[], waitMs: number): number[] {
+  return keystrokes
+    .filter((time, i) => i === keystrokes.length - 1 || keystrokes[i + 1] - time > waitMs)
+    .map((time) => time + waitMs);
+}
+` },
+    },
   }),
 
   challenge("refund-totals", {
@@ -1311,9 +1495,38 @@ export function allocate(code, lines) {
       { code: { percent: 20 }, lines: [{ sku: "mug", price: 1000, quantity: 3, discount: 600 }] },
       { code: { percent: 10 }, lines: [] },
       { code: { amount: 500 }, lines: [{ sku: "gift-wrap", price: 0, quantity: 1, discount: 0 }] },
+      { code: { percent: 10 }, lines: [{ sku: "tee", price: 2500, quantity: 2, discount: 500 }] },
+      { code: { amount: 1000 }, lines: [{ sku: "boots", price: 3000, quantity: 1, discount: 600 }] },
+      { code: { percent: 15 }, lines: [{ sku: "pin-a", price: 333, quantity: 1, discount: 50 }] },
+      { code: { amount: 100 }, lines: [{ sku: "card-c", price: 1000, quantity: 1, discount: 34 }] },
+      { code: { amount: 5000 }, lines: [{ sku: "belt", price: 3000, quantity: 1, discount: 3000 }] },
+      { code: { percent: 5 }, lines: [{ sku: "socks", price: 799, quantity: 12, discount: 479 }] },
+      {
+        code: { percent: 25 },
+        lines: [
+          { sku: "hoodie", price: 4000, quantity: 1, discount: 1000 },
+          { sku: "beanie", price: 1200, quantity: 2, discount: 600 },
+        ],
+      },
+      { code: { percent: 10 }, lines: [{ sku: "rain-jacket", price: 5000, quantity: 2, discount: 1000 }] },
+      {
+        code: null,
+        lines: [
+          { sku: "poster", price: 1999, quantity: 1, discount: 0 },
+          { sku: "sticker", price: 1, quantity: 3, discount: 0 },
+        ],
+      },
+      {
+        code: { percent: 33 },
+        lines: [
+          { sku: "lamp", price: 4999, quantity: 1, discount: 1649 },
+          { sku: "shade", price: 1250, quantity: 1, discount: 414 },
+        ],
+      },
+      { code: { percent: 33 }, lines: [{ sku: "bulb", price: 350, quantity: 4, discount: 461 }] },
     ],
-    expected: [-5000, -4500, -4000, -2400, 0, 0],
-    hidden: [3, 4, 5],
+    expected: [-5000, -4500, -4000, -2400, 0, 0, -4500, -2400, -283, -966, 0, -9109, -4800, -9000, -2002, -4186, -939],
+    hidden: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
     comments: [
       jo("40 tickets about this since Monday. Every one of them used a promo code."),
     ],
@@ -1677,18 +1890,76 @@ final class Adapter {
     language: "python",
     skills: ["parsing", "strings", "csv"],
     task: '`parse_csv_line(line)` splits a CSV line on commas, except inside double quotes. Quotes are removed, and a doubled quote inside a quoted field is a literal quote: `"say ""hi"""` → `say "hi"`.',
-    inputs: ["a,b,c", '"Acme, Inc.",42,"NY"', '"say ""hi""",x', ""],
+    inputs: [
+      "a,b,c",
+      '"Acme, Inc.",42,"NY"',
+      '"say ""hi""",x',
+      "",
+      "a",
+      "a,,b",
+      ",",
+      "a,",
+      ",a",
+      '""',
+      '"",""',
+      '"a,b,c"',
+      '""""',
+      '"x"",""y"',
+      " a , b ",
+      '"Acme, Inc.","Smith, John",""',
+      '"line1\nline2",x',
+      '"Café, Ltd",€5',
+    ],
     expected: [
       ["a", "b", "c"],
       ["Acme, Inc.", "42", "NY"],
       ['say "hi"', "x"],
       [""],
+      ["a"],
+      ["a", "", "b"],
+      ["", ""],
+      ["a", ""],
+      ["", "a"],
+      [""],
+      ["", ""],
+      ["a,b,c"],
+      ['"'],
+      ['x","y'],
+      [" a ", " b "],
+      ["Acme, Inc.", "Smith, John", ""],
+      ["line1\nline2", "x"],
+      ["Café, Ltd", "€5"],
     ],
+    hidden: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
     comments: [
       priya(
         "Every customer with a comma in their company name lands in the wrong column. 'Acme, Inc.' is our biggest account.",
       ),
     ],
+    private: {
+      reference: { "parse_csv_line.py": `def parse_csv_line(line):
+    """Split a partner CSV line on commas, except inside double quotes.
+
+    Quotes are removed, and a doubled quote inside a quoted field is a literal quote.
+    """
+    fields, field, quoted, i = [], [], False, 0
+    while i < len(line):
+        char = line[i]
+        if quoted and char == '"' and line[i + 1 : i + 2] == '"':
+            field.append('"')
+            i += 1
+        elif char == '"':
+            quoted = not quoted
+        elif char == "," and not quoted:
+            fields.append("".join(field))
+            field = []
+        else:
+            field.append(char)
+        i += 1
+    fields.append("".join(field))
+    return fields
+` },
+    },
   }),
   challenge("dedupe-customers", {
     title: "Deduplicate customer records by email",
@@ -1705,6 +1976,19 @@ final class Adapter {
         { id: 3, email: "bo@x.io" },
       ],
       [],
+      [{ id: 1, email: "ann@x.io" }],
+      [{ id: 1, email: "ann@x.io" }, { id: 2, email: "bo@x.io" }, { id: 3, email: "cy@x.io" }],
+      [{ id: 1, email: "ANN@X.IO" }, { id: 2, email: "ann@x.io" }, { id: 3, email: "Ann@X.io" }],
+      [{ id: 1, email: "bo@x.io  " }, { id: 2, email: "  BO@x.io" }, { id: 3, email: "bo@x.io" }],
+      [{ id: 1, email: " Ann@x.io " }, { id: 2, email: "ann@x.io" }],
+      [{ id: 1, email: "a@x.io" }, { id: 2, email: "b@x.io" }, { id: 3, email: "A@x.io" }, { id: 4, email: "c@x.io" }, { id: 5, email: "B@X.IO" }],
+      [{ id: 1, email: "ann@x.io" }, { id: 2, email: "ann@x.com" }, { id: 3, email: "ann@y.io" }],
+      [{ id: 7, email: "ann@x.io" }, { id: 7, email: "bo@x.io" }],
+      [{ id: 1, email: "ann@x.io", name: "Ann", plan: "pro" }, { id: 2, email: "ANN@x.io", name: "Ann B", plan: "free" }],
+      [{ id: 1, email: "bo@x.io" }, { id: 2, email: "cy@x.io" }, { id: 3, email: "dee@x.io" }, { id: 4, email: " DEE@x.io" }],
+      [{ id: 1, email: "ÅSA@x.io" }, { id: 2, email: "åsa@x.io" }],
+      [{ id: 3, email: "cy@x.io" }, { id: 1, email: "ann@x.io" }, { id: 2, email: "CY@x.io" }],
+      [{ id: 1, email: "ann@x.io" }, { id: 2, email: "Ann@x.io" }, { id: 3, email: "bo@x.io" }, { id: 4, email: "ANN@X.IO " }, { id: 5, email: " bo@x.io" }, { id: 6, email: "cy@x.io" }],
     ],
     expected: [
       [
@@ -1712,12 +1996,42 @@ final class Adapter {
         { id: 3, email: "bo@x.io" },
       ],
       [],
+      [{ id: 1, email: "ann@x.io" }],
+      [{ id: 1, email: "ann@x.io" }, { id: 2, email: "bo@x.io" }, { id: 3, email: "cy@x.io" }],
+      [{ id: 1, email: "ANN@X.IO" }],
+      [{ id: 1, email: "bo@x.io  " }],
+      [{ id: 1, email: " Ann@x.io " }],
+      [{ id: 1, email: "a@x.io" }, { id: 2, email: "b@x.io" }, { id: 4, email: "c@x.io" }],
+      [{ id: 1, email: "ann@x.io" }, { id: 2, email: "ann@x.com" }, { id: 3, email: "ann@y.io" }],
+      [{ id: 7, email: "ann@x.io" }, { id: 7, email: "bo@x.io" }],
+      [{ id: 1, email: "ann@x.io", name: "Ann", plan: "pro" }],
+      [{ id: 1, email: "bo@x.io" }, { id: 2, email: "cy@x.io" }, { id: 3, email: "dee@x.io" }],
+      [{ id: 1, email: "ÅSA@x.io" }],
+      [{ id: 3, email: "cy@x.io" }, { id: 1, email: "ann@x.io" }],
+      [{ id: 1, email: "ann@x.io" }, { id: 3, email: "bo@x.io" }, { id: 6, email: "cy@x.io" }],
     ],
+    hidden: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
     comments: [
       lena(
         "Marketing sent last week's newsletter three times to some people. They were not thrilled.",
       ),
     ],
+    private: {
+      reference: { "dedupe.py": `def dedupe(records):
+    """Keep the first record for each email before the newsletter sync.
+
+    Emails compare case-insensitively, ignoring surrounding spaces. Order is kept.
+    """
+    seen = set()
+    kept = []
+    for record in records:
+        key = record["email"].strip().lower()
+        if key not in seen:
+            seen.add(key)
+            kept.append(record)
+    return kept
+` },
+    },
   }),
   challenge("late-fee-rounding", {
     parameters: ["balance", "daysLate"],
@@ -1735,8 +2049,23 @@ final class Adapter {
       [250.0, 30],
       [99.9, 3],
       [80.0, 0],
+      [5.0, 1],
+      [9.0, 1],
+      [21.0, 1],
+      [33.3, 1],
+      [10.1, 1],
+      [100.0, 20],
+      [100.0, 21],
+      [5.05, 20],
+      [5.05, 30],
+      [80.0, -3],
+      [0.0, 10],
+      [1234.5, 7],
+      [1000000.0, 365],
+      [0.01, 1],
     ],
-    expected: [0.5, 0.51, 0.01, 25, 1.5, 0],
+    expected: [0.5, 0.51, 0.01, 25, 1.5, 0, 0.03, 0.05, 0.11, 0.17, 0.05, 10, 10, 0.51, 0.51, 0, 0, 43.21, 100000, 0],
+    hidden: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
     hints: [
       "Math.Round on a decimal rounds halves to the nearest even digit unless told otherwise.",
     ],
@@ -1745,6 +2074,24 @@ final class Adapter {
         "Customers keep emailing about a one-cent difference between the invoice and the reminder. Finance's spreadsheet rounds 0.505 up.",
       ),
     ],
+    private: {
+      reference: { "src/LateFees.cs": `namespace Billing;
+
+public static class LateFees
+{
+    /// <summary>
+    /// The late fee on an overdue invoice: 0.5% of the balance per day late, at most 10% of
+    /// the balance, in cents. Finance rounds halves away from zero.
+    /// </summary>
+    public static decimal LateFee(decimal balance, int daysLate)
+    {
+        if (daysLate <= 0) return 0;
+        var fee = balance * 0.005m * daysLate;
+        return Math.Round(Math.Min(fee, balance * 0.10m), 2, MidpointRounding.AwayFromZero);
+    }
+}
+` },
+    },
   }),
   challenge("top-customers", {
     schema: "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  customer text NOT NULL,\n  total integer NOT NULL\n);",
@@ -1763,16 +2110,52 @@ final class Adapter {
           [3, "ana", 5],
         ],
       },
+      { orders: [] },
+      { orders: [[1, "ana", 30]] },
+      { orders: [[1, "ana", 10], [2, "ana", 20], [3, "ana", 5]] },
+      { orders: [[1, "ana", 40], [2, "bo", 15], [3, "bo", 15], [4, "bo", 15]] },
+      { orders: [[1, "ana", 5], [2, "bo", 20], [3, "cy", 12], [4, "dee", 30]] },
+      { orders: [[1, "cy", 7], [2, "ana", 3], [3, "bo", 9], [4, "cy", 1], [5, "ana", 10], [6, "bo", 1]] },
+      { orders: [[1, "ana", 25], [2, "bo", 0]] },
+      { orders: [[1, "ana", 50], [2, "bo", 20], [3, "bo", -30]] },
+      { orders: [[1, "a", 9], [2, "b", 100], [3, "c", 10]] },
+      { orders: [[1, "ana", 100], [2, "bo", 1], [3, "bo", 1], [4, "bo", 1]] },
+      { orders: [[1, "o'brien", 12], [2, "Acme, Inc.", 30], [3, "o'brien", 20]] },
+      { orders: [[1, "ana", 1500000000], [2, "ana", 1500000000], [3, "bo", 2000000000]] },
+      { orders: [[1, "f", 6], [2, "b", 2], [3, "h", 8], [4, "d", 4], [5, "a", 1], [6, "g", 7], [7, "c", 3], [8, "e", 5], [9, "a", 10]] },
     ],
     expected: [
       [
         ["ana", 35],
         ["bo", 10],
       ],
+      [],
+      [["ana", 30]],
+      [["ana", 35]],
+      [["bo", 45], ["ana", 40]],
+      [["dee", 30], ["bo", 20], ["cy", 12], ["ana", 5]],
+      [["ana", 13], ["bo", 10], ["cy", 8]],
+      [["ana", 25], ["bo", 0]],
+      [["ana", 50], ["bo", -10]],
+      [["b", 100], ["c", 10], ["a", 9]],
+      [["ana", 100], ["bo", 3]],
+      [["o'brien", 32], ["Acme, Inc.", 30]],
+      [["ana", 3000000000], ["bo", 2000000000]],
+      [["a", 11], ["h", 8], ["g", 7], ["f", 6], ["e", 5], ["d", 4], ["c", 3], ["b", 2]],
     ],
+    hidden: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
     comments: [
       rui("Just the totals per customer, biggest first. The chart is my job."),
     ],
+    private: {
+      reference: { "queries/top-customers.sql": `-- Monthly report: revenue by customer, biggest first.
+-- orders(id, customer, total)
+SELECT customer, SUM(total) AS revenue
+FROM orders
+GROUP BY customer
+ORDER BY revenue DESC;
+` },
+    },
   }),
   challenge("unpaid-orders", {
     schema: "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  customer text NOT NULL\n);\n\nCREATE TABLE payments (\n  order_id integer NOT NULL REFERENCES orders (id),\n  amount integer NOT NULL\n);",
@@ -1795,10 +2178,47 @@ final class Adapter {
           [3, 12],
         ],
       },
+      { orders: [], payments: [] },
+      { orders: [[1, "ana"], [2, "bo"]], payments: [] },
+      { orders: [[1, "ana"], [2, "bo"]], payments: [[1, 30], [2, 12]] },
+      { orders: [[1, "ana"], [2, "bo"], [3, "cy"]], payments: [[1, 10], [1, 20], [1, 5]] },
+      { orders: [[5, "ana"], [2, "bo"], [9, "cy"], [1, "dee"]], payments: [[9, 10]] },
+      { orders: [[1, "ana"], [2, "ana"], [3, "bo"]], payments: [[1, 30]] },
+      { orders: [[100, "ana"], [10, "bo"], [9, "cy"], [50, "dee"]], payments: [[50, 5]] },
+      { orders: [[1, "ana"]], payments: [] },
+      { orders: [[1, "ana"]], payments: [[1, 30]] },
+      { orders: [[2147483647, "ana"], [1, "bo"]], payments: [[1, 8]] },
+      { orders: [[4, "ana"], [5, "bo"], [6, "cy"]], payments: [[4, 10], [4, 15], [6, 3], [6, 3]] },
+      { orders: [[1, "c1"], [2, "c2"], [3, "c3"], [4, "c4"], [5, "c5"], [6, "c6"], [7, "c7"], [8, "c8"], [9, "c9"], [10, "c10"]], payments: [[2, 20], [4, 40], [6, 60], [8, 80], [10, 100]] },
     ],
-    expected: [[[2]]],
+    expected: [
+      [[2]],
+      [],
+      [[1], [2]],
+      [],
+      [[2], [3]],
+      [[1], [2], [5]],
+      [[2], [3]],
+      [[9], [10], [100]],
+      [[1]],
+      [],
+      [[2147483647]],
+      [[5]],
+      [[1], [3], [5], [7], [9]],
+    ],
+    hidden: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     hints: ["A LEFT JOIN keeps orders even when no payment matches."],
     comments: [rui("Month-end close is Friday. I need this list before then.")],
+    private: {
+      reference: { "queries/unpaid-orders.sql": `-- Month-end close: orders that have no matching payment, smallest id first.
+-- orders(id, customer), payments(order_id, amount)
+SELECT o.id
+FROM orders o
+LEFT JOIN payments p ON p.order_id = o.id
+WHERE p.order_id IS NULL
+ORDER BY o.id;
+` },
+    },
   }),
 
   // Edge proxy: systems and performance
