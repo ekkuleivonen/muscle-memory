@@ -29,7 +29,10 @@ export function Sidebar({
           width={22}
           height={22}
         />
-        muscle memory
+        <span className="company">
+          <span className="company-name">Muscle Memory Inc.</span>
+          <span className="company-slogan">Hand-typed code since 1999</span>
+        </span>
       </Link>
       <Link
         className="side-link"
