@@ -148,17 +148,20 @@ export default async function IssuePage(props: Props) {
             </div>
           </section>
         </article>
-        <Properties issue={issue} />
+        <Properties issue={issue} latest={latest.version} />
       </main>
     </>
   );
 }
 
-function workspaceHref(issue: Issue) {
-  return `/workspace?challenge=${encodeURIComponent(`${issue.slug}@${issue.version}`)}`;
+/** The IDE for this issue; an older version keeps its ?version. */
+function workHref(issue: Issue, latest: string) {
+  return issue.version === latest
+    ? `/work/${issue.key}`
+    : `/work/${issue.key}?version=${issue.version}`;
 }
 
-function Properties({ issue }: { issue: Issue }) {
+function Properties({ issue, latest }: { issue: Issue; latest: string }) {
   return (
     <aside className="props" aria-label="Properties">
       <dl>
@@ -202,15 +205,21 @@ function Properties({ issue }: { issue: Issue }) {
         <dt>Version</dt>
         <dd className="mono faint">{issue.version}</dd>
       </dl>
-      {issue.runnable ? (
-        <StartWork
-          issue={{ key: issue.key, slug: issue.slug, version: issue.version }}
-          href={workspaceHref(issue)}
-        />
+      {issue.workable ? (
+        <>
+          <StartWork
+            issue={{ key: issue.key, slug: issue.slug, version: issue.version }}
+            href={workHref(issue, latest)}
+          />
+          {!issue.runnable && (
+            <p className="note">
+              Opens in the IDE; running it in the browser isn&apos;t available
+              yet, only Python runs so far.
+            </p>
+          )}
+        </>
       ) : (
-        <p className="note">
-          Read-only for now: only Python runs in the browser so far.
-        </p>
+        <p className="note">This version has no starter code to work on.</p>
       )}
     </aside>
   );

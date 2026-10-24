@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { runFeedback } from "./workspace";
+import { pullRequestResult, runFeedback } from "./workspace";
 import type { Challenge } from "./assessment";
 
 const challenge = JSON.parse(
@@ -26,4 +26,40 @@ test("feedback scores raw outputs as canonical JSON, never Python equality", () 
   assert.equal(feedback.correct, 2);
   // Missing cases (for example after a user error) are unscorable, not correct.
   assert.deepEqual(runFeedback(challenge, []).unscorable, [0, 1, 2, 3]);
+});
+
+test("a pull request merges only when every case passes", () => {
+  const out = (text: string) => ({ output: { text, truncated: false } });
+  const all = challenge.expected.map((value) => out(JSON.stringify(value)));
+  assert.deepEqual(
+    pullRequestResult(challenge, {
+      status: "completed",
+      phase: "tests",
+      cases: all,
+    }),
+    { result: "merged", passed: all.length, total: all.length },
+  );
+  const oneWrong = [out("{}"), ...all.slice(1)];
+  assert.deepEqual(
+    pullRequestResult(challenge, {
+      status: "completed",
+      phase: "tests",
+      cases: oneWrong,
+    }),
+    { result: "checks-failed", passed: all.length - 1, total: all.length },
+  );
+  for (const outcome of [
+    { status: "user-error", phase: "compile", cases: [] },
+    { status: "timeout" },
+    { status: "runner-error", phase: "execution" },
+  ])
+    assert.equal(
+      pullRequestResult(challenge, outcome).result,
+      "checks-errored",
+      outcome.status,
+    );
+  assert.equal(
+    pullRequestResult(challenge, { status: "cancelled" }).result,
+    "cancelled",
+  );
 });

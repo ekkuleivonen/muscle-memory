@@ -1,5 +1,5 @@
 /**
- * Raw observations from the Python Challenge workspace: editor transactions, recovery
+ * Raw observations from the Challenge workspace (the IDE): editor transactions, recovery
  * snapshots and run lifecycle. Disclosed, local-only and scoped to the editor; nothing here
  * listens to the keyboard, clipboard or anything outside the workspace.
  */
@@ -12,7 +12,14 @@ import {
 import { boundText, CAPTURE_LIMIT_BYTES } from "./evidence";
 import { safeIdentifier } from "./events";
 
-export const WORKSPACE_CAPTURE_VERSION = "workspace-capture-1.0.0";
+/**
+ * 1.2.0: runs say whether they were local or a pull request's checks, and each pull request
+ * is recorded with its result. 1.1.0: code revisions in any language (the media type follows the file), the editor's
+ * keymap among its features, and a null runtime for languages that cannot run yet.
+ * 1.0.0 was Python only. Stored records keep theirs.
+ */
+export const WORKSPACE_CAPTURE_VERSION = "workspace-capture-1.2.0";
+export const PYTHON_MEDIA_TYPE = "text/x-python; charset=utf-8";
 /** An edit whose change set is larger than this is recorded without it, plus a snapshot. */
 export const EDIT_CHANGES_LIMIT_BYTES = 16384;
 /** What this capture version does not record. Absence is a gap, not evidence of no activity. */
@@ -66,6 +73,8 @@ export interface ObservationData {
   };
   "observation.workspace.run": {
     readonly runId: string;
+    /** Run tests (local), or the checks of a pull request. Absent before 1.2.0: local. */
+    readonly purpose?: RunPurpose;
     readonly revision: number;
     readonly codeArtifactId: string;
     readonly status: RunStatus;
@@ -73,6 +82,20 @@ export interface ObservationData {
     readonly timeoutMs: number;
     /** Raw, bounded runner outcome for terminal statuses. */
     readonly outcome?: Json;
+  };
+  /**
+   * A pull request: the code at one revision, checked by one run. Recorded once its checks
+   * finish. Merged means every check passed, which is what moves the issue to Done.
+   */
+  "observation.workspace.pull-request": {
+    /** 1, 2, 3, … per person and Challenge, across sessions. */
+    readonly number: number;
+    readonly runId: string;
+    readonly revision: number;
+    readonly codeArtifactId: string;
+    readonly result: PullRequestResult;
+    readonly passed: number;
+    readonly total: number;
   };
   "observation.workspace.capture-gap": {
     /** Inclusive source positions whose observations were not stored. */
@@ -82,6 +105,13 @@ export interface ObservationData {
   };
 }
 export type ObservationType = keyof ObservationData;
+export type RunPurpose = "local" | "pull-request";
+/** Checks failed: some case did not pass. Errored: the code never got to the cases. */
+export type PullRequestResult =
+  | "merged"
+  | "checks-failed"
+  | "checks-errored"
+  | "cancelled";
 
 export interface WorkspaceObservation<
   T extends ObservationType = ObservationType,
@@ -110,7 +140,8 @@ export interface CodeRevisionArtifact {
   readonly owner: "participant";
   readonly participantId: string;
   readonly revision: number;
-  readonly mediaType: "text/x-python; charset=utf-8";
+  /** text/x-python, text/x-go, text/html, ...; always UTF-8. */
+  readonly mediaType: string;
   readonly text: string;
   readonly capture: {
     readonly captureVersion: string;
@@ -135,6 +166,7 @@ export function codeRevision(
   sourceId: string,
   revision: number,
   code: string,
+  mediaType: string = PYTHON_MEDIA_TYPE,
 ): CodeRevisionArtifact {
   const bounded = boundText(code);
   const artifactId = `${sourceId}.code.${revision}`;
@@ -146,7 +178,7 @@ export function codeRevision(
     owner: "participant",
     participantId,
     revision,
-    mediaType: "text/x-python; charset=utf-8",
+    mediaType,
     text: bounded.text,
     capture: {
       captureVersion: WORKSPACE_CAPTURE_VERSION,
@@ -208,5 +240,37 @@ export function runFeedback(
     correct: passed.filter(Boolean).length,
     total: passed.length,
     unscorable,
+  };
+}
+
+/**
+ * A pull request's result from its run outcome. Merged needs a completed test phase in which
+ * every case passed; a compile or runtime error, timeout or runner failure means the checks
+ * errored before reaching the cases.
+ */
+export function pullRequestResult(
+  challenge: Challenge,
+  outcome:
+    | {
+        status: string;
+        phase?: string;
+        cases?: readonly { output?: { text: string; truncated: boolean } }[];
+      }
+    | undefined,
+): { result: PullRequestResult; passed: number; total: number } {
+  const total = challenge.expected.length;
+  if (!outcome || outcome.status === "cancelled")
+    return { result: "cancelled", passed: 0, total };
+  if (
+    (outcome.status !== "completed" && outcome.status !== "user-error") ||
+    outcome.phase !== "tests" ||
+    !outcome.cases
+  )
+    return { result: "checks-errored", passed: 0, total };
+  const { correct } = runFeedback(challenge, outcome.cases);
+  return {
+    result: correct === total && total > 0 ? "merged" : "checks-failed",
+    passed: correct,
+    total,
   };
 }

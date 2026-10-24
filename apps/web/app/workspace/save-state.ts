@@ -27,3 +27,14 @@ export function recoveryMessage(recovered: RecoveredCode): string {
     return `Restored your latest saved code${from} (revision ${recovered.revision}).`;
   return `Restored revision ${recovered.revision}${from}, the latest code that could be recovered exactly. Later saved changes (up to revision ${recovered.latestRevision}) were not recovered: ${recovered.reason}.`;
 }
+
+/** A few words for the IDE's status bar; saveState() gives the full story as its tooltip. */
+export function saveBadge(status: SaveStatus): {
+  label: string;
+  tone: "ok" | "busy" | "warn";
+} {
+  if (!status.recoverable) return { label: "Not fully saved", tone: "warn" };
+  if (status.retrying) return { label: "Save failing, retrying", tone: "warn" };
+  if (status.buffered) return { label: "Saving…", tone: "busy" };
+  return { label: "Saved", tone: "ok" };
+}

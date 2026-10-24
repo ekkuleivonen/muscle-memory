@@ -7,10 +7,20 @@ import type { WorkspaceRecord } from "../../../packages/domain/workspace";
 export type ActivityEntry =
   | { kind: "moved"; at: string; key: string; from: string; to: string }
   | { kind: "opened"; at: string; challengeId: string }
-  | { kind: "ran"; at: string; challengeId: string; status: string };
+  | { kind: "ran"; at: string; challengeId: string; status: string }
+  | {
+      kind: "pull-request";
+      at: string;
+      challengeId: string;
+      number: number;
+      result: string;
+      passed: number;
+      total: number;
+    };
 
 interface Observation {
   type?: string;
+  participantId?: string;
   occurredAt?: string;
   challengeArtifactId?: string;
   data?: Record<string, unknown>;
@@ -53,9 +63,25 @@ export function recentActivity(
     else if (o.type === "observation.workspace.opened" && challengeId)
       entries.push({ kind: "opened", at, challengeId });
     else if (
+      o.type === "observation.workspace.pull-request" &&
+      challengeId &&
+      o.data
+    )
+      entries.push({
+        kind: "pull-request",
+        at,
+        challengeId,
+        number: Number(o.data.number),
+        result: String(o.data.result),
+        passed: Number(o.data.passed),
+        total: Number(o.data.total),
+      });
+    // A pull request's own checks show as the pull request, not as a run.
+    else if (
       o.type === "observation.workspace.run" &&
       challengeId &&
       o.data &&
+      o.data.purpose !== "pull-request" &&
       o.data.status !== "started"
     )
       entries.push({
@@ -66,6 +92,42 @@ export function recentActivity(
       });
   }
   return entries.sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
+}
+
+export interface PullRequestRecord {
+  number: number;
+  runId: string;
+  revision: number;
+  result: string;
+  passed: number;
+  total: number;
+  at: string;
+}
+
+/** This person's pull requests for a Challenge (any version), newest first. */
+export function pullRequestHistory(
+  records: readonly WorkspaceRecord[],
+  participantId: string,
+  challengeId: string,
+): PullRequestRecord[] {
+  return observations(records)
+    .filter(
+      (o) =>
+        o.type === "observation.workspace.pull-request" &&
+        o.participantId === participantId &&
+        challengeIdOf(o.challengeArtifactId) === challengeId &&
+        o.data,
+    )
+    .map((o) => ({
+      number: Number(o.data!.number),
+      runId: String(o.data!.runId),
+      revision: Number(o.data!.revision),
+      result: String(o.data!.result),
+      passed: Number(o.data!.passed),
+      total: Number(o.data!.total),
+      at: o.occurredAt!,
+    }))
+    .sort((a, b) => b.number - a.number);
 }
 
 /** Local calendar day, so a late-night session counts where the person was. */

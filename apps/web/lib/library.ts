@@ -62,7 +62,10 @@ export interface Issue {
   criteria: { input: Json; expected: Json }[];
   hints: number;
   comments: readonly IssueComment[];
+  /** Runs in this browser: Python with an entry point and starter. */
   runnable: boolean;
+  /** Opens in the IDE: any language with an entry point and starter. */
+  workable: boolean;
   /** The project whose latest version includes this issue; content allows only one. */
   project?: ProjectRef;
 }
@@ -135,6 +138,10 @@ function toIssue(
   key: string,
 ): Issue {
   const language = LANGUAGES.find((l) => l.id === content.language)?.id;
+  const workable =
+    !!language &&
+    typeof content.entrypoint === "string" &&
+    typeof content.starter === "string";
   return {
     slug: content.id,
     key,
@@ -153,11 +160,8 @@ function toIssue(
     })),
     hints: content.hints.length,
     comments: content.comments ?? [],
-    runnable:
-      !!language &&
-      RUNNABLE.includes(language) &&
-      typeof content.entrypoint === "string" &&
-      typeof content.starter === "string",
+    runnable: !!language && RUNNABLE.includes(language) && workable,
+    workable,
     project,
   };
 }

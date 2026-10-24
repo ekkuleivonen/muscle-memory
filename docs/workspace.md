@@ -1,6 +1,10 @@
-# Python workspace preview
+# The IDE
 
-`/workspace` lets a player write `frequency_map` in Python, run it against the fixtures and see practice feedback. It opens the Challenge named by `?challenge=id@version` (an issue's **Start work** button builds that link), defaulting to `frequency-map@2.1.0`; only published Python Challenges with an entry point and starter open, anything else shows why not. `frequency-map@2.0.0` (and 2.1.0, which only adds issue metadata) has the same fixtures as the published JSON-output version `1.0.0`, which stays unchanged, plus a Python runtime, entry point and starter code. Scoring uses assessment `1.0.0`: each returned value must equal the expected output as canonical JSON. There is no Adventure story change, no account and no upload.
+`/work/<KEY>` (for example `/work/FN-1`, or `?version=` for an older published version) opens an issue in a VS Code-style IDE: a title bar with the issue's status and **Run tests**, an activity bar switching between the ticket and the file explorer, editor tabs, a bottom panel with **Tests** and **Output**, and a status bar with the branch, save state, Vim mode and runtime. An issue's **Start work** button links here and moves the issue to In progress.
+
+**Run tests** (⌘⏎) runs every case against your code and changes nothing else; run as often as you like. **Open pull request** (⌘⇧⏎) is the deliberate step: CI checks that exact code revision with a run of every case and, when every check passes, the pull request is **Merged**, which moves the issue to Done. Open as many as you need; the Pull requests tab lists them (number, result, checks passed, revision), across sessions. Until a runner server exists the checks are the same cases Run tests uses: expected outputs ship to the browser, so hidden cases would only be hidden visually. Old `/workspace?challenge=id@version` links redirect.
+
+Each issue opens as a small repo (`apps/web/lib/repo.ts`), generated from the Challenge so content needs only an entry point and starter: the file you work in (the only editable and recorded one), a read-only test file holding the acceptance criteria in that language's usual style (pytest, Vitest, a Go table test, PHPUnit, Rust integration tests, SQL fixtures, expected HTML) and the project README. Every demo issue has a starter; Python ones with a runtime run in the browser, the others open for editing with Run unavailable until a runner exists for their language. Scoring uses assessment `1.0.0`: each returned value must equal the expected output as canonical JSON. Nothing is uploaded.
 
 ## Runtime isolation
 
@@ -23,7 +27,7 @@ Submitted code never runs in the app's JavaScript context, in Node or on a serve
   - It also probes the frame document directly.
   - Two local servers must receive no request, while a positive-control normal worker does reach them.
   - It also covers timeout, cancel, clean reruns, output flooding and tampered assets.
-- `tools/browser/workspace-check.mjs` drives the built app through a Workers preview:
+- `tools/browser/workspace-check.mjs` drives the built app through a Workers preview (it still targets the pre-IDE workspace page and needs updating for `/work/<KEY>`):
   - Edits, a normal run, syntax and runtime errors, truncation, timeout and cancel followed by reruns, an edit during a run (stale result), undo/redo/selection and typing responsiveness.
   - Device persistence: lifecycle order, correlation, no gaps, injected IndexedDB failures with retry, buffer overflow with a disclosed gap, recovery after reload and clear.
   - A tampered runtime.
@@ -39,19 +43,22 @@ Limits:
 ## Editor
 
 CodeMirror 6 with an explicit extension list (`apps/web/app/workspace/editor.ts`):
-- Python highlighting and indentation, Tab indenting 4 spaces, undo/redo history, bracket-match highlighting, line numbers, and Mod-Enter to run.
+- Highlighting and indentation for the issue's language (Python, JavaScript, TypeScript, Go, Rust, C, C++, PHP, SQL, HTML; Markdown for the README), Tab indenting, undo/redo history, bracket-match highlighting, line numbers, and Mod-Enter to run.
+- Vim keybindings (`@replit/codemirror-vim`) when setup chose Vim; the status bar shows the mode.
+- Syntax colours come from CSS variables, so the IDE follows light and dark mode.
 - No autocompletion, auto-closing brackets, linting or AI assistance.
 
 The editor owns its document, so typing does not re-render React, and work survives runs, errors, timeouts and cancels.
 
 ## Captured activity
 
-Opening the workspace shows what is recorded and needs explicit acknowledgement. There are no global keyboard, clipboard or page listeners. Capture comes from CodeMirror transactions and the run lifecycle only. Contracts live in `packages/domain/workspace.ts`.
+Recording runs under the Terms and Privacy Notice accepted at onboarding ([legal.md](legal.md)), always on this device; each observation carries `terms-<version>` as its consent version. There are no global keyboard, clipboard or page listeners. Capture comes from CodeMirror transactions and the run lifecycle only. Contracts live in `packages/domain/workspace.ts`.
 
-- **Stream.** A page load is one source stream, `workspace-<uuid>`; a reload starts a new one. Each observation has a stable ID `<source>.<sequence>`, client `occurredAt`, an explicit absent server receipt, the capture version `workspace-capture-1.0.0`, a consent version, `researchConsent: false` and the Challenge artifact ID.
-- **`opened`.** Records the editor feature list, the runtime version and declared capture gaps: selection-only changes, focus and scroll, activity outside the editor, timing within a transaction, and active time.
+- **Stream.** A page load is one source stream, `workspace-<uuid>`; a reload starts a new one. Each observation has a stable ID `<source>.<sequence>`, client `occurredAt`, an explicit absent server receipt, the capture version `workspace-capture-1.2.0` (earlier records stay as stored), a consent version, `researchConsent: false` and the Challenge artifact ID.
+- **`opened`.** Records the editor feature list (including the keymap, `vim-keybindings` or `standard-keybindings`), the runtime version (null for languages that cannot run yet) and declared capture gaps: selection-only changes, focus and scroll, activity outside the editor, timing within a transaction, and active time.
 - **`edit`.** One per document-changing transaction, with the CodeMirror change set (up to 16 KiB), the user event (`input.type`, `input.paste`, `undo`, ...), the selection and the document length. Text pasted into the editor is part of the change; the clipboard itself is never read.
-- **`snapshot`.** References a participant-owned `artifact.code-revision` (bounded to 64 KiB with byte counts and truncation). Snapshots are taken on open, every 25 edits, after an oversize edit and on every run.
+- **`snapshot`.** References a participant-owned `artifact.code-revision` (bounded to 64 KiB with byte counts and truncation; its media type follows the file, `text/x-python`, `text/x-go`, `text/html`, ...). Snapshots are taken on open, every 25 edits, after an oversize edit and on every run.
+- **`pull-request`.** One per pull request once its checks finish: its number (1, 2, 3, … per person and Challenge, continuing across sessions), the run that checked it, the code revision and artifact, the result (`merged`, `checks-failed`, `checks-errored`, `cancelled`) and checks passed out of total. Its run carries `purpose: "pull-request"`; Run tests carries `purpose: "local"`.
 - **`run`.** Records `queued`, `running`, then `result`, `user-error`, `runner-error`, `timeout` or `cancelled`. Each carries the run ID, the exact code revision and its artifact, runtime and timeout. The terminal status holds the raw bounded outcome. A result for an earlier revision is shown as stale and never as feedback for the current code.
 - **`capture-gap`.** Records an explicit lost position range (`buffer-full` or `write-conflict`).
 

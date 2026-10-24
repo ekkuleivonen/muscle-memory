@@ -1,7 +1,7 @@
 /**
  * The personal board. Every issue starts in the backlog. People set Backlog, Todo or In
- * progress from an issue's Status menu; Done is never set by hand and will follow from
- * workspace evidence (every acceptance check passing). Stored on this device only.
+ * progress from an issue's Status menu; Done is never set by hand: a run that passes every
+ * acceptance check puts the issue there, for good. Stored on this device only.
  */
 import type { IssueSummary as Issue } from "./library";
 
@@ -25,7 +25,9 @@ export interface BoardItem {
   key: string;
   /** When it left the backlog. */
   addedAt: string;
-  status: Exclude<ManualStatus, "backlog">;
+  status: Exclude<Status, "backlog">;
+  /** When every check first passed. */
+  doneAt?: string;
 }
 /** Board columns, left to right. The backlog is the issue list itself. */
 export const COLUMNS: readonly Status[] = ["todo", "in-progress", "done"];
@@ -53,7 +55,8 @@ export function parseBoard(raw: string | null): BoardItem[] {
           typeof item.addedAt === "string" &&
           (item.status === undefined ||
             item.status === "todo" ||
-            item.status === "in-progress") &&
+            item.status === "in-progress" ||
+            (item.status === "done" && typeof item.doneAt === "string")) &&
           !seen.has(item.key);
         if (ok) seen.add(item.key);
         return ok;
@@ -63,6 +66,7 @@ export function parseBoard(raw: string | null): BoardItem[] {
         addedAt: item.addedAt,
         // Boards saved before statuses existed only held Todo.
         status: item.status ?? "todo",
+        ...(item.status === "done" ? { doneAt: item.doneAt } : {}),
       }));
   } catch {
     return [];
@@ -73,7 +77,10 @@ export function serializeBoard(items: readonly BoardItem[]): string {
   return JSON.stringify({ version: 1, items });
 }
 
-/** Sets a status by hand. Backlog takes the issue off the board; Done is refused. */
+/**
+ * Sets a status by hand. Backlog takes the issue off the board; Done is refused, and a done
+ * issue stays done.
+ */
 export function setStatus(
   items: readonly BoardItem[],
   key: string,
@@ -82,16 +89,36 @@ export function setStatus(
 ): BoardItem[] {
   if (!MANUAL_STATUSES.includes(status))
     throw new Error("Done is set by passing every acceptance check.");
-  if (status === "backlog") return items.filter((i) => i.key !== key);
   const existing = items.find((i) => i.key === key);
+  if (existing?.status === "done") return [...items];
+  if (status === "backlog") return items.filter((i) => i.key !== key);
   return existing
     ? items.map((i) => (i.key === key ? { ...i, status } : i))
     : [...items, { key, addedAt: at, status }];
 }
 
+/** Every check passed: the issue moves to Done, wherever it was. Done stays done. */
+export function complete(
+  items: readonly BoardItem[],
+  key: string,
+  at: string,
+): BoardItem[] {
+  const existing = items.find((i) => i.key === key);
+  if (existing?.status === "done") return [...items];
+  const done = { status: "done" as const, doneAt: at };
+  return existing
+    ? items.map((i) => (i.key === key ? { ...i, ...done } : i))
+    : [...items, { key, addedAt: at, ...done }];
+}
+
+/** Issues being worked on: Todo and In progress, not Done. */
+export function activeCount(items: readonly BoardItem[]): number {
+  return items.filter((i) => i.status !== "done").length;
+}
+
 /** Whether taking one more off the backlog would go over the soft limit. */
 export function boardFull(items: readonly BoardItem[]): boolean {
-  return items.length >= TODO_LIMIT;
+  return activeCount(items) >= TODO_LIMIT;
 }
 
 export function statusOf(items: readonly BoardItem[], key: string): Status {

@@ -3,8 +3,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import type { Catalog } from "../../../packages/catalog/catalog";
 import {
+  activeCount,
   boardIssues,
   boardFull,
+  complete,
   parseBoard,
   serializeBoard,
   setStatus,
@@ -105,17 +107,60 @@ test("the board keeps the order issues were added and skips ones that no longer 
 });
 
 test("suggestions prefer runnable, then the person's stack, then easier issues", () => {
+  // The three Python issues run in the browser, so they come first, easiest first.
   assert.deepEqual(
     suggestions(issues, [], ["rust"]).map((i) => i.key),
-    ["FN-1", "EDGE-4", "EDGE-2"],
+    ["FN-1", "DATA-1", "DATA-2"],
+  );
+  const runnableOnBoard = ["FN-1", "DATA-1", "DATA-2"].map((key) => ({
+    key,
+    addedAt: "t",
+    status: "todo" as const,
+  }));
+  assert.deepEqual(
+    suggestions(issues, runnableOnBoard, ["rust"]).map((i) => i.key),
+    ["EDGE-4", "EDGE-2", "SHOP-1"],
   );
   assert.deepEqual(
-    suggestions(
-      issues,
-      [{ key: "FN-1", addedAt: "t", status: "todo" }],
-      ["go"],
-      2,
-    ).map((i) => i.key),
+    suggestions(issues, runnableOnBoard, ["go"], 2).map((i) => i.key),
     ["API-1", "API-4"],
   );
+});
+
+test("a run passing every check moves an issue to Done, for good", () => {
+  const items = setStatus([], "FN-1", "in-progress", "t1");
+  const done = complete(items, "FN-1", "t2");
+  assert.deepEqual(done, [
+    { key: "FN-1", addedAt: "t1", status: "done", doneAt: "t2" },
+  ]);
+  // Done straight from the backlog joins the board as done.
+  assert.deepEqual(complete([], "API-2", "t3"), [
+    { key: "API-2", addedAt: "t3", status: "done", doneAt: "t3" },
+  ]);
+  // It stays done: passing again, or choosing a status by hand, changes nothing.
+  assert.deepEqual(complete(done, "FN-1", "t9"), done);
+  assert.deepEqual(setStatus(done, "FN-1", "todo", "t9"), done);
+  assert.deepEqual(setStatus(done, "FN-1", "backlog", "t9"), done);
+  assert.equal(statusOf(done, "FN-1"), "done");
+  // Stored and read back, including when it was done.
+  assert.deepEqual(parseBoard(serializeBoard(done)), done);
+  assert.deepEqual(
+    parseBoard(
+      JSON.stringify({
+        items: [{ key: "FN-1", addedAt: "t", status: "done" }],
+      }),
+    ),
+    [],
+  );
+});
+
+test("done issues leave the queue: they never count toward the soft limit", () => {
+  let items = ["SHOP-1", "SHOP-2", "SHOP-3"].reduce(
+    (acc, key) => setStatus(acc, key, "todo", "t"),
+    [] as ReturnType<typeof setStatus>,
+  );
+  assert.equal(boardFull(items), true);
+  items = complete(items, "SHOP-1", "t2");
+  assert.equal(activeCount(items), 2);
+  assert.equal(boardFull(items), false);
 });
