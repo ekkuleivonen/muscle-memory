@@ -5,6 +5,7 @@ import { LANGUAGES } from "../../../lib/languages";
 import { getLibrary } from "../../../lib/load";
 import { decodeResult, sentence } from "../../../lib/result";
 import { Arrived } from "./arrived";
+import { Receipt } from "../../(browse)/_components/result-card";
 
 type Props = { params: Promise<{ card: string }> };
 
@@ -51,24 +52,12 @@ export default async function SharedResult(props: Props) {
       <Arrived referral={result.c} />
       <main className="legal-body home-body">
         <section className="result-card shared">
-          <p className="result-kicker">Shipped without AI</p>
-          <h2>
-            {issue.key} <span className="dim">· {issue.title}</span>
-          </h2>
-          <ul className="result-stats">
-            <li>
-              <b>{result.m}</b> {result.m === 1 ? "minute" : "minutes"}
-            </li>
-            <li>
-              <b>{result.r}</b> {result.r === 1 ? "test run" : "test runs"}
-            </li>
-            <li>
-              <b>{result.h || "No"}</b> {result.h === 1 ? "hint" : "hints"}
-            </li>
-            <li>
-              <b>{label}</b>
-            </li>
-          </ul>
+          <Receipt
+            top="muscle memory · shared result"
+            headline="Someone fixed a real bug without AI."
+            detail={`“${issue.title}”, in ${label}, from memory, with no autocomplete.`}
+            metrics={result}
+          />
         </section>
         <section className="home-hero">
           <h1>

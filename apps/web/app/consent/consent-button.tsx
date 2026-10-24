@@ -2,18 +2,29 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { acceptConsent, readProfile } from "../../lib/account";
+import { acceptsCurrent } from "../../lib/legal";
 import { logArrival, noteArrival } from "../(browse)/_components/board-log";
 
-/** Accepts the current Terms and goes on; says so when it is a renewal after a change. */
+/**
+ * Accepts the current Terms and goes on; says so when the Terms changed since the last
+ * acceptance, and skips the click when this browser already accepted these ones.
+ */
 export function ConsentButton({ next }: { next: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [renewal, setRenewal] = useState(false);
   useEffect(() => {
+    const accepted = readProfile()?.accepted;
+    // Already accepted these Terms in this browser (the cookie was only missing): go on.
+    if (accepted && acceptsCurrent(accepted)) {
+      acceptConsent();
+      router.replace(next);
+      return;
+    }
     // The page they were heading for is where they landed; /consent is only on the way.
     noteArrival(null, next);
-    setRenewal(Boolean(readProfile()?.accepted));
-  }, [next]);
+    setRenewal(Boolean(accepted));
+  }, [next, router]);
   const accept = async () => {
     setBusy(true);
     acceptConsent();

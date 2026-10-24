@@ -21,6 +21,7 @@ Every page of the app is recorded as it is shown (`TrackerActivity` in the root 
 - `observation.board.profile`: the onboarding and settings answers (experience, how often they code with AI, languages, goal, editor, stealth) each time they are saved, and the language picked for the five-minute test (`from: "play"`).
 - `observation.board.arrived`: once per browser, after the Terms are accepted: the first landing page and when, and the referral code of the shared result that brought them ([the five-minute test](play.md)).
 - `observation.board.shared`: a result card shared, with the channel, the card and this device's referral code.
+- `observation.board.result`: a merged pull request's result card numbers (metrics version 2, see [the five-minute test](play.md)), the source of the aggregate percentiles.
 
 Every board observation has `elapsedMs`, a monotonic clock from the page load. Declared gaps: visits before the Terms are accepted, keystrokes in text fields (a search is recorded as its query, a reply as the text sent), pointer movement and hovering, menus opened without a choice, activity in other tabs and apps, and writes cut short when the page closes. A missing source position was not recorded; it is not evidence that nothing happened.
 

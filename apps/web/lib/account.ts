@@ -134,6 +134,18 @@ export function playLanguage(language: LanguageId): Profile {
   return profile;
 }
 
+/**
+ * Answers to some setup questions outside onboarding (the result card's two): merged into the
+ * profile; the rest stay pending. Returns the profile as it now stands.
+ */
+export function answerQuestions(answers: Partial<Profile>): Profile | null {
+  const stored = readProfile();
+  if (!stored) return null;
+  const profile = { ...stored.profile, ...answers };
+  write({ ...stored, profile });
+  return profile;
+}
+
 /** Records acceptance of the current Terms on an existing account. */
 export function acceptTerms() {
   const stored = readProfile();

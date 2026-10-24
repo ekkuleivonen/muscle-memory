@@ -13,6 +13,7 @@ import { randomId } from "../../../../../packages/browser/random-id";
 import {
   boardArrival,
   boardMove,
+  boardResult,
   boardShare,
   boardPage,
   boardProfile,
@@ -22,6 +23,7 @@ import {
   type BoardBase,
   type BoardArrivalData,
   type BoardMoveData,
+  type BoardResultData,
   type BoardShareData,
   type BoardObservation,
   type BoardPageData,
@@ -92,6 +94,13 @@ export async function logArrival(): Promise<void> {
   const { ref, landing, landedAt } = arrival;
   localStorage.setItem(ARRIVAL_KEY, JSON.stringify({ ...arrival, recorded: true }));
   await log((base) => boardArrival({ ...base, data: { ref, landing, landedAt } }), "Arrival");
+}
+
+export function logResult(
+  issue: { id: string; revision: string },
+  data: BoardResultData,
+): Promise<void> {
+  return log((base) => boardResult({ ...base, issue, data }), "Result");
 }
 
 export function logShare(

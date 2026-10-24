@@ -2,28 +2,96 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { openPracticeStore } from "../../../../../packages/browser/practice-store";
+import type { Revision } from "../../../../../packages/content/model";
 import type { Json } from "../../../../../packages/domain/json";
 import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
+import { answerQuestions, readProfile } from "../../../lib/account";
 import { LANGUAGES } from "../../../lib/languages";
-import { encodeResult, resultOf, sentence, type Result } from "../../../lib/result";
-import { logShare } from "./board-log";
+import type { Profile } from "../../../lib/onboarding";
+import {
+  duration,
+  encodeResult,
+  metricsOf,
+  sentence,
+  type Metrics,
+  type Result,
+} from "../../../lib/result";
+import { logProfile, logShare } from "./board-log";
 
 type Channel = "copy" | "x" | "linkedin" | "native";
 
+/** The receipt's lines, shared by the card here and the shared page. */
+export function receiptLines(m: Metrics): [string, string, boolean?][] {
+  return [
+    ["active time", duration(m.t)],
+    ["read before typing", duration(m.rd)],
+    ["keystrokes", String(m.ks)],
+    ["typos fixed (est.)", String(m.ty)],
+    ["peak speed", m.w ? `${m.w} wpm` : "–"],
+    [
+      "test runs",
+      m.g === 1 ? `${m.r} · green first try` : m.g ? `${m.r} · green on run ${m.g}` : String(m.r),
+      m.g === 1,
+    ],
+    ["hints", m.h ? String(m.h) : "none"],
+    ["pastes", String(m.ps)],
+    ["left the tab", m.lt ? `${m.lt}×` : "never"],
+  ];
+}
+
+export function Receipt({
+  headline,
+  detail,
+  metrics,
+  top,
+  children,
+}: {
+  headline: string;
+  detail: string;
+  metrics: Metrics;
+  top: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="receipt">
+      <div className="receipt-top">
+        <span>{top}</span>
+        <span className="receipt-merged">✔ merged</span>
+      </div>
+      <p className="receipt-head">{headline}</p>
+      <p className="receipt-sub">{detail}</p>
+      <dl className="receipt-rows">
+        {receiptLines(metrics).map(([label, value, good]) => (
+          <div key={label} className="receipt-row">
+            <dt>{label}</dt>
+            <span aria-hidden className="receipt-dots" />
+            <dd className={good ? "good" : undefined}>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      {children}
+    </div>
+  );
+}
+
 /**
- * What a merged pull request adds up to, and a way to share it: the issue, the language, the
- * minutes and runs it took and whether hints were needed. Nothing that ranks anyone.
+ * What a merged pull request adds up to, from the person's own recorded keystrokes and runs,
+ * and a way to share it. The fix itself is never shown, so a friend still gets a fair go.
  */
 export function ResultCard({
   issue,
   language,
   records,
   mergedAt,
+  pullRequest,
+  revisions,
 }: {
   issue: { key: string; slug: string; title: string; revision: string };
   language: string;
   records: readonly WorkspaceRecord[];
   mergedAt: string;
+  pullRequest: number;
+  revisions: Record<string, Revision>;
 }) {
   const [code, setCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -43,13 +111,13 @@ export function ResultCard({
       live = false;
     };
   }, []);
-  const numbers = useMemo(
-    () => resultOf(records, issue.slug, mergedAt),
-    [records, issue.slug, mergedAt],
+  const metrics = useMemo(
+    () => metricsOf(records, issue.slug, mergedAt, (id) => revisions[id]),
+    [records, issue.slug, mergedAt, revisions],
   );
   if (!code) return null;
   const label = LANGUAGES.find((l) => l.id === language)?.label ?? language;
-  const result: Result = { k: issue.key, l: language, ...numbers, c: code };
+  const result: Result = { v: 2, k: issue.key, l: language, c: code, ...metrics };
   const url = `${location.origin}/r/${encodeResult(result)}`;
   const text = `${sentence(result, label)} Can you still code without it?`;
   const share = async (channel: Channel) => {
@@ -61,11 +129,7 @@ export function ResultCard({
       await navigator.clipboard.writeText(`${text} ${url}`);
       setCopied(true);
     } else if (channel === "x")
-      window.open(
-        `https://x.com/intent/post?${new URLSearchParams({ text, url })}`,
-        "_blank",
-        "noopener",
-      );
+      window.open(`https://x.com/intent/post?${new URLSearchParams({ text, url })}`, "_blank", "noopener");
     else if (channel === "linkedin")
       window.open(
         `https://www.linkedin.com/sharing/share-offsite/?${new URLSearchParams({ url })}`,
@@ -76,50 +140,92 @@ export function ResultCard({
   };
   return (
     <section className="result-card" aria-label="Your result">
-      <p className="result-kicker">Shipped without AI</p>
-      <h2>
-        {issue.key} <span className="dim">· {issue.title}</span>
-      </h2>
-      <ul className="result-stats">
-        <li>
-          <b>{numbers.m}</b> {numbers.m === 1 ? "minute" : "minutes"}
-        </li>
-        <li>
-          <b>{numbers.r}</b> {numbers.r === 1 ? "test run" : "test runs"}
-        </li>
-        <li>
-          <b>{numbers.p}</b> {numbers.p === 1 ? "push" : "pushes"}
-        </li>
-        <li>
-          <b>{numbers.h || "No"}</b> {numbers.h === 1 ? "hint" : "hints"}
-        </li>
-        <li>
-          <b>{label}</b>
-        </li>
-      </ul>
-      <p className="result-share-label">
-        Share it, and see whether your friends still can.
-      </p>
-      <div className="result-share">
-        <button type="button" onClick={() => void share("copy")}>
-          {copied ? "Copied" : "Copy link"}
-        </button>
-        <button type="button" onClick={() => void share("x")}>
-          Post on X
-        </button>
-        <button type="button" onClick={() => void share("linkedin")}>
-          LinkedIn
-        </button>
-        {typeof navigator !== "undefined" && "share" in navigator && (
-          <button type="button" onClick={() => void share("native")}>
-            Share…
-          </button>
-        )}
-      </div>
+      <Receipt
+        top={`muscle memory · pull request #${pullRequest}`}
+        headline="I fixed a real bug without AI."
+        detail={`“${issue.title}”, in ${label}, from memory, with no autocomplete.`}
+        metrics={metrics}
+      >
+        <div className="receipt-foot">
+          <span className="receipt-ask">Can your friends still do it?</span>
+          <span className="receipt-share">
+            <button type="button" className="primary" onClick={() => void share("copy")}>
+              {copied ? "Copied" : "Copy link"}
+            </button>
+            <button type="button" onClick={() => void share("x")}>
+              Post on X
+            </button>
+            <button type="button" onClick={() => void share("linkedin")}>
+              LinkedIn
+            </button>
+            {typeof navigator !== "undefined" && "share" in navigator && (
+              <button type="button" onClick={() => void share("native")}>
+                Share…
+              </button>
+            )}
+          </span>
+        </div>
+      </Receipt>
+      <QuickQuestions />
       <p className="result-next">
-        Minutes are the ones you spent typing, reading or testing.{" "}
-        <Link href="/dashboard">The full workday is next →</Link>
+        Every number comes from your own keystrokes and runs; typos are estimated from quick
+        backspaces. <Link href="/dashboard">Look around your desk →</Link>
       </p>
     </section>
+  );
+}
+
+const EXPERIENCE: [NonNullable<Profile["experience"]>, string][] = [
+  ["new", "Under a year"],
+  ["some", "1–3 years"],
+  ["professional", "3–10 years"],
+  ["veteran", "10+ years"],
+];
+const AI_USE: [NonNullable<Profile["aiUse"]>, string][] = [
+  ["daily", "Every day"],
+  ["weekly", "Most weeks"],
+  ["rarely", "Now and then"],
+  ["never", "Never"],
+];
+
+/** Two of the setup questions, one tap each, while they are unanswered. Optional. */
+function QuickQuestions() {
+  const [profile, setProfile] = useState<Profile | null>(null);
+  useEffect(() => setProfile(readProfile()?.profile ?? null), []);
+  if (!profile || (profile.experience && profile.aiUse)) return null;
+  const answer = (answers: Partial<Profile>) => {
+    const next = answerQuestions(answers);
+    if (!next) return;
+    setProfile(next);
+    void logProfile({ from: "result", answers: { ...next } as Json });
+  };
+  return (
+    <div className="quick-questions">
+      <p>Two quick questions, so numbers like these mean something. Optional.</p>
+      {!profile.experience && (
+        <div className="quick-question">
+          <span>How long have you been writing code?</span>
+          <div>
+            {EXPERIENCE.map(([value, label]) => (
+              <button key={value} type="button" onClick={() => answer({ experience: value })}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {!profile.aiUse && (
+        <div className="quick-question">
+          <span>How often do you code with AI help?</span>
+          <div>
+            {AI_USE.map(([value, label]) => (
+              <button key={value} type="button" onClick={() => answer({ aiUse: value })}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

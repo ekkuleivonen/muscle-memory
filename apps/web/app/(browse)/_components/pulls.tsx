@@ -23,7 +23,8 @@ import {
 import type { BoardMoveVia } from "../../../../../packages/domain/board";
 import { LanguageTag } from "./bits";
 import { useBoard } from "./board";
-import { logReply, setIssueContext } from "./board-log";
+import { logReply, logResult, setIssueContext } from "./board-log";
+import { metricsOf } from "../../../lib/result";
 import { Markdown } from "./markdown";
 import { ResultCard } from "./result-card";
 import { useNow, useRecords } from "./records";
@@ -272,6 +273,18 @@ export function PullView({
     setVersion((v) => v + 1);
   };
   const merge = (via: BoardMoveVia) => {
+    // The result card's numbers as they stand at the merge: what the aggregates are made of.
+    if (revision)
+      void logResult(
+        { id: issue.slug, revision: pull.issueRevision },
+        {
+          issueKey: issue.key,
+          pullRequest: pull.number,
+          language: revision.workspace.language,
+          metrics: 2,
+          values: metricsOf(records, issue.slug, new Date().toISOString(), (id) => revisions[id]) as unknown as Json,
+        },
+      );
     board.complete(
       { key: issue.key, slug: issue.slug, revision: issue.revision ?? pull.issueRevision },
       { number: pull.number, runId: pull.runId },
@@ -360,6 +373,8 @@ export function PullView({
             language={revision.workspace.language}
             records={records}
             mergedAt={pull.mergedAt ?? new Date().toISOString()}
+            pullRequest={pull.number}
+            revisions={revisions}
           />
         )}
       </article>

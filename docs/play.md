@@ -18,13 +18,23 @@ Accepting the current Terms is the only thing any page requires (`requireConsent
 
 ## The result card
 
-Merging a pull request shows what happened: the issue, the language, the minutes the person was typing, reading or testing (distinct active minutes), the test runs, pushes and hints. Nothing ranks anyone. `apps/web/lib/result.ts` computes it from this browser's records.
+Merging a pull request shows a receipt of what happened, computed in the browser from the person's own records (`metricsOf` in `apps/web/lib/result.ts`, metrics version 2):
 
-Sharing (copy link, X, LinkedIn, or the system share sheet) makes a link `/r/<card>`: the card, base64url-encoded in the path, plus this device's **referral code**, a random code separate from the participant ID. The link is a brag, not a record: anyone could edit it, so nothing trusts it.
+- **active time**: gaps between activity (keys, edits, cursor, scrolling, runs, navigation), each counted up to a minute;
+- **read before typing**: from first opening the issue to the first edit;
+- **keystrokes**: keys pressed in the editors, modifier keys alone not counted;
+- **typos fixed**, an estimate: runs of Backspace or Delete starting within two seconds of typing a character;
+- **peak speed**: the most characters typed in any ten seconds, as words (5 characters) per minute, once at least 15 were typed;
+- **test runs**, and which one first passed every case ("green first try");
+- **hints**, **pastes** and **left the tab** (times the page was hidden).
+
+The fix itself is never shown, so a friend still gets a fair go. The same numbers are recorded at the merge as a `result` event, so aggregates use exactly the definitions people see. Under the receipt, two of the setup questions (experience, AI use) are offered as one-tap answers while unanswered, recorded as `profile` with `from: "result"`.
+
+Sharing (copy link, X, LinkedIn, or the system share sheet) makes a link `/r/<card>`: the numbers, base64url-encoded in the path, plus this device's **referral code**, a random code separate from the participant ID. The link is a brag, not a record: anyone could edit it, so nothing trusts it.
 
 ## The shared page (`/r/<card>`)
 
-Public. It shows the card, a preview image for posts and chats (`opengraph-image.tsx`, 1200×630), and "Your turn", which leads to `/play?ref=<code>&lang=<language>`. A link that does not decode to a card we would have made goes to `/play`.
+Public. It shows the receipt, a preview image (the headline sentence and keystrokes, typos, speed and pastes) for posts and chats (`opengraph-image.tsx`, 1200×630), and "Your turn", which leads to `/play?ref=<code>&lang=<language>`. A link that does not decode to a card we would have made goes to `/play`.
 
 ## Measuring the loop
 
