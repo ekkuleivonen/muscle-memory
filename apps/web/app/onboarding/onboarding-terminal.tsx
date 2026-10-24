@@ -25,7 +25,13 @@ import {
  * `next` is where the person was heading, already checked to be same-site.
  */
 export function OnboardingTerminal({ next }: { next: string | null }) {
-  return <Terminal title="new hire setup" run={(t) => onboard(t, next)} />;
+  return (
+    <Terminal
+      title="new hire setup"
+      screen=">_"
+      run={(t) => onboard(t, next)}
+    />
+  );
 }
 
 async function onboard(t: TerminalApi, next: string | null) {

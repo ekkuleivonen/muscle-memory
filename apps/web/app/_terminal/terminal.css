@@ -104,3 +104,15 @@
   font: inherit;
   caret-color: var(--t-accent);
 }
+.t-banner {
+  line-height: 1.25;
+  margin-bottom: 4px;
+}
+.t-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

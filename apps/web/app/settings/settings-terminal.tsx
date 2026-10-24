@@ -21,7 +21,7 @@ import {
 
 /** Settings as terminal commands: pick one, it runs, and the menu comes back. */
 export function SettingsTerminal() {
-  return <Terminal title="settings" run={settings} />;
+  return <Terminal title="settings" screen="~/.config" run={settings} />;
 }
 
 /** What a command leaves behind: the menu again, or nothing because it navigated away. */

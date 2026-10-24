@@ -57,9 +57,12 @@ export interface TerminalApi {
  */
 export function Terminal({
   title,
+  screen,
   run,
 }: {
   title: string;
+  /** What the little laptop in the banner shows, up to 10 characters. */
+  screen: string;
   run: (terminal: TerminalApi) => Promise<void>;
 }) {
   const router = useRouter();
@@ -130,10 +133,7 @@ export function Terminal({
     // Strict Mode mounts twice in development; boot once.
     if (booted.current) return;
     booted.current = true;
-    print(
-      <span className="t-brand">muscle memory</span>,
-      <span className="t-dim">{title}</span>,
-    );
+    print(<Banner title={title} screen={screen} />);
     void run({ print, ask, go, back });
   }, []);
 
@@ -170,6 +170,33 @@ export function Terminal({
         />
       )}
       <div ref={bottom} />
+    </div>
+  );
+}
+
+/** A small laptop with the name beside it; screen readers get the words only. */
+function Banner({ title, screen }: { title: string; screen: string }) {
+  const frame = (text: string) => <span className="t-dim">{text}</span>;
+  return (
+    <div className="t-banner">
+      <span className="t-sr">muscle memory, {title}</span>
+      <span aria-hidden>
+        {frame(" .------------.")}
+        {"\n"}
+        {frame(" | ")}
+        <span className="t-accent">{screen.slice(0, 10).padEnd(10)}</span>
+        {frame(" |")}
+        {"   "}
+        <span className="t-brand">muscle memory</span>
+        {"\n"}
+        {frame(" |            |")}
+        {"   "}
+        <span className="t-dim">{title}</span>
+        {"\n"}
+        {frame(" '------------'")}
+        {"\n"}
+        {frame("/______________\\")}
+      </span>
     </div>
   );
 }
