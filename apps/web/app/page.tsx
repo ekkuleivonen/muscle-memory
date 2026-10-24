@@ -1,4 +1,5 @@
 "use client";
+import "./workspace/legacy.css";
 import { useRef, useState } from "react";
 import { useLocalPractice } from "./use-local-practice";
 import {
@@ -150,205 +151,208 @@ export default function Home() {
     }
   }
   return (
-    <main>
-      <header>
-        <a href="/" className="brand">
-          muscle memory<span>KEEP YOUR CRAFT</span>
-        </a>
-        <a href="https://github.com/ekkuleivonen/muscle-memory">
-          Open source ↗
-        </a>
-      </header>
-      <section className="intro">
-        <p className="eyebrow">A LITTLE PRACTICE. ALL YOURS.</p>
-        <h1>
-          You still have
-          <br />
-          it in you.
-        </h1>
-        <p>
-          AI can share the workday. Take a few minutes to enjoy writing code
-          yourself.
-        </p>
-      </section>
-      <section className="adventure">
-        <div className="chapter">
-          ADVENTURE 001 <span>MAPS · ITERATION · EDGE CASES</span>
-        </div>
-        <h2>Field notes</h2>
-        <p>{adventure.story}</p>
-        {!startedAt ? (
-          <div>
-            <p className="note">
-              Session-only by default. You can optionally save practice on this
-              device. No account, server upload or research data collection.
-            </p>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={saveLocally}
-                onChange={(event) => setSaveLocally(event.target.checked)}
-              />{" "}
-              Save practice history on this device (optional).
-            </label>
-            {saveLocally && (
-              <p className="note">
-                Saved events include your answers, assistance disclosure and
-                task context. They remain on this browser until you clear them.
-                Research sharing stays off.
-              </p>
-            )}
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={consent}
-                onChange={(e) => setConsent(e.target.checked)}
-              />{" "}
-              I understand and want to practice locally.
-            </label>
-            <button disabled={!consent || busy} onClick={begin}>
-              Open the notebook →
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={submit}>
-            <h3>Your Challenge</h3>
-            <p>{challenge.task}</p>
-            <ol>
-              {challenge.inputs.map((input, i) => (
-                <li key={i}>
-                  <code>{JSON.stringify(input)}</code>
-                </li>
-              ))}
-            </ol>
-            <button
-              disabled={busy}
-              type="button"
-              className="secondary"
-              onClick={() => {
-                setHint(true);
-                pending.current = null;
-              }}
-            >
-              Show a hint
-            </button>
-            {hint && <p className="note">{challenge.hints[0]}</p>}
-            <label htmlFor="answers">Your outputs, in fixture order</label>
-            <textarea
-              disabled={busy}
-              id="answers"
-              value={answer}
-              onChange={(e) => {
-                setAnswer(e.target.value);
-                setResult(null);
-                pending.current = null;
-              }}
-              placeholder='[{"a":2,"b":1}, {}, ...]'
-              spellCheck={false}
-            />
-            <label htmlFor="assistance">How did you approach this?</label>
-            <select
-              disabled={busy}
-              id="assistance"
-              value={assistance}
-              onChange={(e) => {
-                setAssistance(e.target.value as Attempt["assistance"]);
-                pending.current = null;
-              }}
-            >
-              <option value="undisclosed">Prefer not to say</option>
-              <option value="unaided">By myself</option>
-              <option value="assisted">With assistance</option>
-            </select>
-            <button type="submit" disabled={busy}>
-              {busy
-                ? "Saving…"
-                : pending.current
-                  ? "Retry saving this attempt"
-                  : "Check my outputs →"}
-            </button>
-            {result && (
-              <section aria-live="polite" className="result">
-                <h3>Your notebook, checked.</h3>
-                <p>{result.feedback}</p>
-                <ol>
-                  {result.passed.map((pass, i) => (
-                    <li key={i}>
-                      Fixture {i + 1}: {pass ? "Correct" : "Try again"}
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            )}
-          </form>
-        )}
-      </section>
-      {error && (
-        <p role="alert" className="error">
-          {error}
-        </p>
-      )}
-      {savedMessage && (
-        <p role="status" className="note">
-          {savedMessage}
-        </p>
-      )}
-      {saveLocally && (
-        <section
-          className="local-history"
-          aria-labelledby="local-history-title"
-        >
-          <h3 id="local-history-title">Your device-local practice</h3>
+    <div className="workspace-page">
+      <main>
+        <header>
+          <a href="/" className="brand">
+            muscle memory<span>KEEP YOUR CRAFT</span>
+          </a>
+          <a href="https://github.com/ekkuleivonen/muscle-memory">
+            Open source ↗
+          </a>
+        </header>
+        <section className="intro">
+          <p className="eyebrow">A LITTLE PRACTICE. ALL YOURS.</p>
+          <h1>
+            You still have
+            <br />
+            it in you.
+          </h1>
           <p>
-            {local.saved.length} saved attempt(s). Nothing is shared for
-            research.
-          </p>
-          {local.error && <p role="alert">{local.error}</p>}
-          <ul>
-            {local.saved
-              .slice(-5)
-              .reverse()
-              .map((record) => (
-                <li key={record.eventId}>{record.assessment.feedback}</li>
-              ))}
-          </ul>
-          <button
-            className="secondary"
-            disabled={busy || !local.saved.length}
-            onClick={() =>
-              local.download().catch((cause) => setError(cause.message))
-            }
-          >
-            Download local events
-          </button>{" "}
-          <button
-            className="secondary"
-            disabled={busy || !local.saved.length}
-            onClick={clearSaved}
-          >
-            Clear saved practice and identity
-          </button>
-          <p className="note">
-            Downloads stay retryable because this browser cannot confirm a file
-            was saved. Clearing removes local events and pending exports;
-            downloaded copies need separate deletion. Browser storage may also
-            be cleared by your browser.
+            AI can share the workday. Take a few minutes to enjoy writing code
+            yourself.
           </p>
         </section>
-      )}
-      <p className="note">
-        Preview: write and run Python in the{" "}
-        <a href="/workspace">frequency map workspace</a>, sandboxed in this
-        browser.
-      </p>
-      <footer>
-        <p>Practice, not a verdict.</p>
-        <p>
-          We’re also curious about how developer skills evolve and compare with
-          coding models. Any future research participation will be voluntary,
-          with private individual results and public aggregates.
+        <section className="adventure">
+          <div className="chapter">
+            ADVENTURE 001 <span>MAPS · ITERATION · EDGE CASES</span>
+          </div>
+          <h2>Field notes</h2>
+          <p>{adventure.story}</p>
+          {!startedAt ? (
+            <div>
+              <p className="note">
+                Session-only by default. You can optionally save practice on
+                this device. No account, server upload or research data
+                collection.
+              </p>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={saveLocally}
+                  onChange={(event) => setSaveLocally(event.target.checked)}
+                />{" "}
+                Save practice history on this device (optional).
+              </label>
+              {saveLocally && (
+                <p className="note">
+                  Saved events include your answers, assistance disclosure and
+                  task context. They remain on this browser until you clear
+                  them. Research sharing stays off.
+                </p>
+              )}
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                />{" "}
+                I understand and want to practice locally.
+              </label>
+              <button disabled={!consent || busy} onClick={begin}>
+                Open the notebook →
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={submit}>
+              <h3>Your Challenge</h3>
+              <p>{challenge.task}</p>
+              <ol>
+                {challenge.inputs.map((input, i) => (
+                  <li key={i}>
+                    <code>{JSON.stringify(input)}</code>
+                  </li>
+                ))}
+              </ol>
+              <button
+                disabled={busy}
+                type="button"
+                className="secondary"
+                onClick={() => {
+                  setHint(true);
+                  pending.current = null;
+                }}
+              >
+                Show a hint
+              </button>
+              {hint && <p className="note">{challenge.hints[0]}</p>}
+              <label htmlFor="answers">Your outputs, in fixture order</label>
+              <textarea
+                disabled={busy}
+                id="answers"
+                value={answer}
+                onChange={(e) => {
+                  setAnswer(e.target.value);
+                  setResult(null);
+                  pending.current = null;
+                }}
+                placeholder='[{"a":2,"b":1}, {}, ...]'
+                spellCheck={false}
+              />
+              <label htmlFor="assistance">How did you approach this?</label>
+              <select
+                disabled={busy}
+                id="assistance"
+                value={assistance}
+                onChange={(e) => {
+                  setAssistance(e.target.value as Attempt["assistance"]);
+                  pending.current = null;
+                }}
+              >
+                <option value="undisclosed">Prefer not to say</option>
+                <option value="unaided">By myself</option>
+                <option value="assisted">With assistance</option>
+              </select>
+              <button type="submit" disabled={busy}>
+                {busy
+                  ? "Saving…"
+                  : pending.current
+                    ? "Retry saving this attempt"
+                    : "Check my outputs →"}
+              </button>
+              {result && (
+                <section aria-live="polite" className="result">
+                  <h3>Your notebook, checked.</h3>
+                  <p>{result.feedback}</p>
+                  <ol>
+                    {result.passed.map((pass, i) => (
+                      <li key={i}>
+                        Fixture {i + 1}: {pass ? "Correct" : "Try again"}
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              )}
+            </form>
+          )}
+        </section>
+        {error && (
+          <p role="alert" className="error">
+            {error}
+          </p>
+        )}
+        {savedMessage && (
+          <p role="status" className="note">
+            {savedMessage}
+          </p>
+        )}
+        {saveLocally && (
+          <section
+            className="local-history"
+            aria-labelledby="local-history-title"
+          >
+            <h3 id="local-history-title">Your device-local practice</h3>
+            <p>
+              {local.saved.length} saved attempt(s). Nothing is shared for
+              research.
+            </p>
+            {local.error && <p role="alert">{local.error}</p>}
+            <ul>
+              {local.saved
+                .slice(-5)
+                .reverse()
+                .map((record) => (
+                  <li key={record.eventId}>{record.assessment.feedback}</li>
+                ))}
+            </ul>
+            <button
+              className="secondary"
+              disabled={busy || !local.saved.length}
+              onClick={() =>
+                local.download().catch((cause) => setError(cause.message))
+              }
+            >
+              Download local events
+            </button>{" "}
+            <button
+              className="secondary"
+              disabled={busy || !local.saved.length}
+              onClick={clearSaved}
+            >
+              Clear saved practice and identity
+            </button>
+            <p className="note">
+              Downloads stay retryable because this browser cannot confirm a
+              file was saved. Clearing removes local events and pending exports;
+              downloaded copies need separate deletion. Browser storage may also
+              be cleared by your browser.
+            </p>
+          </section>
+        )}
+        <p className="note">
+          Preview: write and run Python in the{" "}
+          <a href="/workspace">frequency map workspace</a>, sandboxed in this
+          browser.
         </p>
-      </footer>
-    </main>
+        <footer>
+          <p>Practice, not a verdict.</p>
+          <p>
+            We’re also curious about how developer skills evolve and compare
+            with coding models. Any future research participation will be
+            voluntary, with private individual results and public aggregates.
+          </p>
+        </footer>
+      </main>
+    </div>
   );
 }

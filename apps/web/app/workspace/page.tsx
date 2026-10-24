@@ -1,4 +1,5 @@
 "use client";
+import "./legacy.css";
 import { useEffect, useRef, useState } from "react";
 import catalogData from "../../../../content/catalog/reference.v1.json";
 import type { Catalog } from "../../../../packages/catalog/catalog";
@@ -191,208 +192,214 @@ export default function Workspace() {
       ? runFeedback(challenge, run.outcome.cases)
       : null;
   return (
-    <main className="workspace">
-      <header>
-        <a href="/" className="brand">
-          muscle memory<span>KEEP YOUR CRAFT</span>
-        </a>
-        <span className="note">
-          Python {RUNTIME.python} · Pyodide {RUNTIME.version} · runs in your
-          browser
-        </span>
-      </header>
-      <section className="adventure">
-        <div className="chapter">
-          WORKSPACE PREVIEW{" "}
-          <span>
-            PYTHON · {challenge.id}@{challenge.version}
+    <div className="workspace-page">
+      <main className="workspace">
+        <header>
+          <a href="/" className="brand">
+            muscle memory<span>KEEP YOUR CRAFT</span>
+          </a>
+          <span className="note">
+            Python {RUNTIME.python} · Pyodide {RUNTIME.version} · runs in your
+            browser
           </span>
-        </div>
-        <h2>Frequency map</h2>
-        <p>{challenge.task}</p>
-        {!open ? (
-          <div>
-            <p className="note">
-              While the workspace is open it records your edits inside the
-              editor (including text you paste into it), code revisions, runs
-              and their output. It does not watch your keyboard or clipboard
-              outside the editor, and nothing is uploaded. By default records
-              stay in this tab&apos;s memory and disappear when you close it.
-              Research sharing is off.
-            </p>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={saveOnDevice}
-                onChange={(event) => setSaveOnDevice(event.target.checked)}
-              />{" "}
-              Save workspace activity and code on this device (optional).
-            </label>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={understood}
-                onChange={(event) => setUnderstood(event.target.checked)}
-              />{" "}
-              I understand what is recorded and want to practice locally.
-            </label>
-            <button disabled={!understood || opening} onClick={begin}>
-              {opening ? "Opening…" : "Open the workspace →"}
-            </button>
+        </header>
+        <section className="adventure">
+          <div className="chapter">
+            WORKSPACE PREVIEW{" "}
+            <span>
+              PYTHON · {challenge.id}@{challenge.version}
+            </span>
           </div>
-        ) : (
-          <div>
-            <div ref={editorHost} className="editor" />
-            <div className="toolbar">
-              {session.current?.running ||
-              run?.status === "queued" ||
-              run?.status === "running" ? (
-                <button
-                  className="secondary"
-                  onClick={() => session.current?.cancel()}
-                >
-                  Cancel run
-                </button>
-              ) : (
-                <button
-                  disabled={runtime.state !== "ready"}
-                  onClick={() => void session.current?.run()}
-                >
-                  Run ▸ <span className="note">(Ctrl/⌘-Enter)</span>
-                </button>
-              )}
-              <span role="status" className="note">
-                {runtime.state === "loading" && "Loading Python…"}
-                {runtime.state === "ready" && "Python ready."}
-              </span>
-            </div>
-            {runtime.state === "unavailable" && (
-              <p role="alert" className="error">
-                Run is unavailable: {runtime.message}{" "}
-                <button className="secondary" onClick={startRuntime}>
-                  Retry loading Python
-                </button>
+          <h2>Frequency map</h2>
+          <p>{challenge.task}</p>
+          {!open ? (
+            <div>
+              <p className="note">
+                While the workspace is open it records your edits inside the
+                editor (including text you paste into it), code revisions, runs
+                and their output. It does not watch your keyboard or clipboard
+                outside the editor, and nothing is uploaded. By default records
+                stay in this tab&apos;s memory and disappear when you close it.
+                Research sharing is off.
               </p>
-            )}
-            {run && (
-              <section aria-live="polite" className="result">
-                <h3>
-                  Run {run.status}
-                  {stale &&
-                    ` · for revision ${run.revision}; you have edited since`}
-                </h3>
-                {run.outcome?.status === "timeout" && (
-                  <p>
-                    Stopped after {run.outcome.timeoutMs / 1000} s. Check for a
-                    loop that never ends.
-                  </p>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={saveOnDevice}
+                  onChange={(event) => setSaveOnDevice(event.target.checked)}
+                />{" "}
+                Save workspace activity and code on this device (optional).
+              </label>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={understood}
+                  onChange={(event) => setUnderstood(event.target.checked)}
+                />{" "}
+                I understand what is recorded and want to practice locally.
+              </label>
+              <button disabled={!understood || opening} onClick={begin}>
+                {opening ? "Opening…" : "Open the workspace →"}
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div ref={editorHost} className="editor" />
+              <div className="toolbar">
+                {session.current?.running ||
+                run?.status === "queued" ||
+                run?.status === "running" ? (
+                  <button
+                    className="secondary"
+                    onClick={() => session.current?.cancel()}
+                  >
+                    Cancel run
+                  </button>
+                ) : (
+                  <button
+                    disabled={runtime.state !== "ready"}
+                    onClick={() => void session.current?.run()}
+                  >
+                    Run ▸ <span className="note">(Ctrl/⌘-Enter)</span>
+                  </button>
                 )}
-                {run.outcome?.status === "cancelled" && (
-                  <p>Run cancelled. Your code is unchanged.</p>
-                )}
-                {run.outcome?.status === "runner-error" && (
-                  <p>
-                    The Python runtime failed ({run.outcome.phase}), not your
-                    code: {run.outcome.message}
-                  </p>
-                )}
-                {run.outcome && "error" in run.outcome && run.outcome.error && (
-                  <pre>
-                    {run.outcome.error.traceback.text ||
-                      `${run.outcome.error.type}: ${run.outcome.error.message}`}
-                  </pre>
-                )}
-                {feedback &&
-                  run.outcome &&
-                  "cases" in run.outcome &&
-                  run.outcome.phase === "tests" && (
-                    <>
-                      <p>
-                        {feedback.correct}/{feedback.total} fixtures correct.
-                        Practice feedback, not a skill ranking.
-                      </p>
-                      <ol>
-                        {challenge.inputs.map((input, index) => {
-                          const result =
-                            run.outcome && "cases" in run.outcome
-                              ? run.outcome.cases[index]
-                              : undefined;
-                          return (
-                            <li key={index}>
-                              <code>{JSON.stringify(input)}</code> →{" "}
-                              {feedback.passed[index] ? "correct" : "not yet"}
-                              {result?.error ? (
-                                <pre>{result.error.traceback.text}</pre>
-                              ) : (
-                                <span className="note">
-                                  {" "}
-                                  returned {result?.repr?.text ?? "nothing"}
-                                  {result?.unserializable &&
-                                    ` (not JSON: ${result.unserializable})`}
-                                  {result?.conversionError && (
-                                    <pre>
-                                      {result.conversionError.traceback.text ||
-                                        `${result.conversionError.type}: ${result.conversionError.message}`}
-                                    </pre>
-                                  )}
-                                </span>
-                              )}
-                            </li>
-                          );
-                        })}
-                      </ol>
-                    </>
+                <span role="status" className="note">
+                  {runtime.state === "loading" && "Loading Python…"}
+                  {runtime.state === "ready" && "Python ready."}
+                </span>
+              </div>
+              {runtime.state === "unavailable" && (
+                <p role="alert" className="error">
+                  Run is unavailable: {runtime.message}{" "}
+                  <button className="secondary" onClick={startRuntime}>
+                    Retry loading Python
+                  </button>
+                </p>
+              )}
+              {run && (
+                <section aria-live="polite" className="result">
+                  <h3>
+                    Run {run.status}
+                    {stale &&
+                      ` · for revision ${run.revision}; you have edited since`}
+                  </h3>
+                  {run.outcome?.status === "timeout" && (
+                    <p>
+                      Stopped after {run.outcome.timeoutMs / 1000} s. Check for
+                      a loop that never ends.
+                    </p>
                   )}
-                {run.outcome &&
-                  "stdout" in run.outcome &&
-                  (run.outcome.stdout.bytes > 0 ||
-                    run.outcome.stderr.bytes > 0) && (
-                    <>
-                      <h4>Output</h4>
+                  {run.outcome?.status === "cancelled" && (
+                    <p>Run cancelled. Your code is unchanged.</p>
+                  )}
+                  {run.outcome?.status === "runner-error" && (
+                    <p>
+                      The Python runtime failed ({run.outcome.phase}), not your
+                      code: {run.outcome.message}
+                    </p>
+                  )}
+                  {run.outcome &&
+                    "error" in run.outcome &&
+                    run.outcome.error && (
                       <pre>
-                        {run.outcome.stdout.text + run.outcome.stderr.text}
+                        {run.outcome.error.traceback.text ||
+                          `${run.outcome.error.type}: ${run.outcome.error.message}`}
                       </pre>
-                      {(run.outcome.stdout.truncated ||
-                        run.outcome.stderr.truncated) && (
-                        <p className="note">
-                          Output truncated: showing the first 64 KiB of{" "}
-                          {run.outcome.stdout.bytes + run.outcome.stderr.bytes}{" "}
-                          bytes.
+                    )}
+                  {feedback &&
+                    run.outcome &&
+                    "cases" in run.outcome &&
+                    run.outcome.phase === "tests" && (
+                      <>
+                        <p>
+                          {feedback.correct}/{feedback.total} fixtures correct.
+                          Practice feedback, not a skill ranking.
                         </p>
-                      )}
-                    </>
-                  )}
-              </section>
-            )}
-            <p className="note" role="status">
-              {capture &&
-                `${capture.persisted} records ${saveOnDevice ? "saved on this device" : "kept in this tab"}, ${capture.buffered} waiting` +
-                  (capture.retrying
-                    ? `, retrying (${capture.lastError})`
-                    : "") +
-                  (capture.gaps || capture.undisclosedDrops
-                    ? `, ${capture.gaps + (capture.undisclosedDrops ? 1 : 0)} capture gap(s) recorded`
-                    : "")}
-            </p>
-            <button className="secondary" onClick={clearActivity}>
-              {saveOnDevice
-                ? "Clear all device-local practice, workspace activity and identity"
-                : "Clear workspace activity"}
-            </button>
-          </div>
+                        <ol>
+                          {challenge.inputs.map((input, index) => {
+                            const result =
+                              run.outcome && "cases" in run.outcome
+                                ? run.outcome.cases[index]
+                                : undefined;
+                            return (
+                              <li key={index}>
+                                <code>{JSON.stringify(input)}</code> →{" "}
+                                {feedback.passed[index] ? "correct" : "not yet"}
+                                {result?.error ? (
+                                  <pre>{result.error.traceback.text}</pre>
+                                ) : (
+                                  <span className="note">
+                                    {" "}
+                                    returned {result?.repr?.text ?? "nothing"}
+                                    {result?.unserializable &&
+                                      ` (not JSON: ${result.unserializable})`}
+                                    {result?.conversionError && (
+                                      <pre>
+                                        {result.conversionError.traceback
+                                          .text ||
+                                          `${result.conversionError.type}: ${result.conversionError.message}`}
+                                      </pre>
+                                    )}
+                                  </span>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ol>
+                      </>
+                    )}
+                  {run.outcome &&
+                    "stdout" in run.outcome &&
+                    (run.outcome.stdout.bytes > 0 ||
+                      run.outcome.stderr.bytes > 0) && (
+                      <>
+                        <h4>Output</h4>
+                        <pre>
+                          {run.outcome.stdout.text + run.outcome.stderr.text}
+                        </pre>
+                        {(run.outcome.stdout.truncated ||
+                          run.outcome.stderr.truncated) && (
+                          <p className="note">
+                            Output truncated: showing the first 64 KiB of{" "}
+                            {run.outcome.stdout.bytes +
+                              run.outcome.stderr.bytes}{" "}
+                            bytes.
+                          </p>
+                        )}
+                      </>
+                    )}
+                </section>
+              )}
+              <p className="note" role="status">
+                {capture &&
+                  `${capture.persisted} records ${saveOnDevice ? "saved on this device" : "kept in this tab"}, ${capture.buffered} waiting` +
+                    (capture.retrying
+                      ? `, retrying (${capture.lastError})`
+                      : "") +
+                    (capture.gaps || capture.undisclosedDrops
+                      ? `, ${capture.gaps + (capture.undisclosedDrops ? 1 : 0)} capture gap(s) recorded`
+                      : "")}
+              </p>
+              <button className="secondary" onClick={clearActivity}>
+                {saveOnDevice
+                  ? "Clear all device-local practice, workspace activity and identity"
+                  : "Clear workspace activity"}
+              </button>
+            </div>
+          )}
+        </section>
+        <div ref={sandboxHost} />
+        {error && (
+          <p role="alert" className="error">
+            {error}
+          </p>
         )}
-      </section>
-      <div ref={sandboxHost} />
-      {error && (
-        <p role="alert" className="error">
-          {error}
-        </p>
-      )}
-      {message && (
-        <p role="status" className="note">
-          {message}
-        </p>
-      )}
-    </main>
+        {message && (
+          <p role="status" className="note">
+            {message}
+          </p>
+        )}
+      </main>
+    </div>
   );
 }
