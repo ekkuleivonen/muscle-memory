@@ -80,6 +80,13 @@ const ENGINES = {
       "transpiler.js": await bundle(`export { transform } from "sucrase";`),
     }),
   },
+  html: {
+    package: "linkedom",
+    license: (v) => `linkedom ${v} (ISC), https://github.com/WebReflection/linkedom\n`,
+    files: async () => ({
+      "dom.js": await bundle(`export { parseHTML } from "linkedom";`),
+    }),
+  },
   pglite: {
     package: "@electric-sql/pglite",
     license: (v) =>

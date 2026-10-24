@@ -89,6 +89,7 @@ test("issues run when their language has an engine; project summaries span their
       "frequency-map",
       "format-price",
       "discount-codes",
+      "filter-form-labels",
       "debounce-search",
       "rate-limiter",
       "csv-quoted-fields",
@@ -99,7 +100,7 @@ test("issues run when their language has an engine; project summaries span their
   );
   const edge = merged.projects.find((c) => c.slug === "edge-proxy")!;
   assert.equal(difficultyRange(edge.issues), "easy–hard");
-  assert.deepEqual(languagesOf(edge.issues), ["c", "cpp", "rust"]);
+  assert.deepEqual(languagesOf(edge.issues), ["go", "c", "cpp"]);
 });
 
 test("issue keys come from the project key, or one derived from its id", () => {
@@ -164,6 +165,7 @@ test("filters combine across qualifiers and match any value within one", () => {
     "FN-1",
     "SHOP-1",
     "SHOP-2",
+    "SHOP-3",
     "SHOP-4",
   ]);
   assert.deepEqual(keys("label:strings"), [

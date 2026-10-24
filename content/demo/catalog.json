@@ -212,39 +212,68 @@
           }
         ],
         "difficulty": "warm-up",
-        "entrypoint": "render",
+        "entrypoint": "page",
         "expected": [
-          "<form><label for=\"filter-in-stock\">in-stock</label><input type=\"checkbox\" id=\"filter-in-stock\" name=\"in-stock\"><label for=\"filter-on-sale\">on-sale</label><input type=\"checkbox\" id=\"filter-on-sale\" name=\"on-sale\"></form>",
-          "<form></form>"
+          [
+            "in-stock",
+            "on-sale"
+          ],
+          [
+            "filter-in-stock",
+            "filter-on-sale"
+          ],
+          [
+            "in-stock",
+            "on-sale"
+          ],
+          [
+            "in-stock",
+            "on-sale"
+          ]
         ],
         "hints": [],
         "id": "filter-form-labels",
         "inputs": [
           [
-            "in-stock",
-            "on-sale"
+            "form input[type=checkbox]",
+            "name"
           ],
-          []
+          [
+            "form input[type=checkbox]",
+            "id"
+          ],
+          [
+            "form input[type=checkbox]",
+            "label"
+          ],
+          [
+            "form label",
+            "text"
+          ]
         ],
         "kind": "refactor",
         "language": "html",
         "number": 3,
+        "parameters": [
+          "selector",
+          "read"
+        ],
         "skills": [
           "accessibility",
           "forms",
           "semantics"
         ],
-        "starter": "<!--\n  Product filters on the category page. Render one checkbox per filter name,\n  each with a label tied to it, all inside the form.\n-->\n<form>\n  <input type=\"checkbox\" name=\"in-stock\"> in-stock\n  <input type=\"checkbox\" name=\"on-sale\"> on-sale\n</form>\n",
+        "starter": "<!--\n  Product filters on the category page. The accessibility audit flagged these\n  checkboxes: each needs a label tied to it.\n-->\n<form>\n  <input type=\"checkbox\" name=\"in-stock\"> in-stock\n  <input type=\"checkbox\" name=\"on-sale\"> on-sale\n</form>\n",
         "summary": "Tie every filter checkbox to a label so it is accessible.",
-        "task": "Render the product filter form: for each filter name, a `<label for=\"filter-NAME\">` with the name as text, followed by `<input type=\"checkbox\" id=\"filter-NAME\" name=\"NAME\">`, all inside a `<form>`.",
+        "task": "The category page's filter form has two checkboxes, `in-stock` and `on-sale`, with bare text next to them, so screen readers announce \"checkbox\" and nothing else. Give each checkbox the id `filter-NAME` and a `<label for=\"filter-NAME\">` with its name as the text. Keep the `name` attributes, and keep everything inside the `<form>`. The checks query the page like the frontend tests do: each one is a CSS selector and what to read from the matches (their count, text, accessible label or an attribute).",
         "title": "Product filter checkboxes have no labels",
         "version": "1.0.0"
       },
-      "digest": "a21cbc29ea79647b6658722612d0ec33cb97f97e755f1a4a02974015194e3c5a",
+      "digest": "78be8cafd5398593787694a6f051a74d772c84dbf3b81683966e6019cf0ed183",
       "state": "published",
       "testResult": {
-        "digest": "a21cbc29ea79647b6658722612d0ec33cb97f97e755f1a4a02974015194e3c5a",
-        "fixtures": 2,
+        "digest": "78be8cafd5398593787694a6f051a74d772c84dbf3b81683966e6019cf0ed183",
+        "fixtures": 4,
         "at": "2026-10-24T00:00:00.000Z"
       },
       "history": [
@@ -252,28 +281,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "a21cbc29ea79647b6658722612d0ec33cb97f97e755f1a4a02974015194e3c5a",
+          "digest": "78be8cafd5398593787694a6f051a74d772c84dbf3b81683966e6019cf0ed183",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "a21cbc29ea79647b6658722612d0ec33cb97f97e755f1a4a02974015194e3c5a",
+          "digest": "78be8cafd5398593787694a6f051a74d772c84dbf3b81683966e6019cf0ed183",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "a21cbc29ea79647b6658722612d0ec33cb97f97e755f1a4a02974015194e3c5a",
+          "digest": "78be8cafd5398593787694a6f051a74d772c84dbf3b81683966e6019cf0ed183",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "a21cbc29ea79647b6658722612d0ec33cb97f97e755f1a4a02974015194e3c5a",
+          "digest": "78be8cafd5398593787694a6f051a74d772c84dbf3b81683966e6019cf0ed183",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -1294,7 +1323,7 @@
           }
         ],
         "difficulty": "medium",
-        "entrypoint": "percentile",
+        "entrypoint": "Percentile",
         "expected": [
           20,
           50,
@@ -1336,7 +1365,7 @@
           ]
         ],
         "kind": "performance",
-        "language": "rust",
+        "language": "go",
         "number": 2,
         "parameters": [
           "samples",
@@ -1346,16 +1375,16 @@
           "sorting",
           "statistics"
         ],
-        "starter": "/// Nearest-rank percentile of the samples: sort them and take the value at\n/// rank ceil(p / 100 × n), counting from 1. None when there are no samples.\npub fn percentile(samples: &[u32], p: f64) -> Option<u32> {\n    let _ = (samples, p);\n    None\n}\n",
+        "starter": "package metrics\n\nimport \"sort\"\n\n// Percentile returns the nearest-rank percentile of the samples: sort them and\n// take the value at rank ceil(p / 100 × n), counting from 1. ok is false when\n// there are no samples.\nfunc Percentile(samples []int, p float64) (value int, ok bool) {\n\tsorted := append([]int(nil), samples...)\n\tsort.Ints(sorted)\n\treturn 0, false\n}\n",
         "summary": "Compute nearest-rank percentiles for the metrics endpoint.",
-        "task": "`percentile(samples, p)` returns the nearest-rank percentile: sort the samples and take the value at rank `ceil(p / 100 × n)`, counting from 1. Return `null` when there are no samples.",
+        "task": "`Percentile(samples, p)` returns the nearest-rank percentile: sort the samples and take the value at rank `ceil(p / 100 × n)`, counting from 1. With no samples, `ok` is false (shown as `null` in the checks).",
         "title": "p99 latency panel times out in busy hours",
         "version": "1.0.0"
       },
-      "digest": "f6bb263e0b5d3910fda639356c4d8fbbcb5db75786d84cdc4046fbeeaaf4bc8b",
+      "digest": "5cc01561b03e8425339069de9c107b70510e76f83b3cbcc22c30d99877d25a24",
       "state": "published",
       "testResult": {
-        "digest": "f6bb263e0b5d3910fda639356c4d8fbbcb5db75786d84cdc4046fbeeaaf4bc8b",
+        "digest": "5cc01561b03e8425339069de9c107b70510e76f83b3cbcc22c30d99877d25a24",
         "fixtures": 4,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1364,28 +1393,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "f6bb263e0b5d3910fda639356c4d8fbbcb5db75786d84cdc4046fbeeaaf4bc8b",
+          "digest": "5cc01561b03e8425339069de9c107b70510e76f83b3cbcc22c30d99877d25a24",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "f6bb263e0b5d3910fda639356c4d8fbbcb5db75786d84cdc4046fbeeaaf4bc8b",
+          "digest": "5cc01561b03e8425339069de9c107b70510e76f83b3cbcc22c30d99877d25a24",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "f6bb263e0b5d3910fda639356c4d8fbbcb5db75786d84cdc4046fbeeaaf4bc8b",
+          "digest": "5cc01561b03e8425339069de9c107b70510e76f83b3cbcc22c30d99877d25a24",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "f6bb263e0b5d3910fda639356c4d8fbbcb5db75786d84cdc4046fbeeaaf4bc8b",
+          "digest": "5cc01561b03e8425339069de9c107b70510e76f83b3cbcc22c30d99877d25a24",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -1542,7 +1571,7 @@
           }
         ],
         "difficulty": "easy",
-        "entrypoint": "parse_duration",
+        "entrypoint": "ParseDuration",
         "expected": [
           5400,
           45,
@@ -1562,22 +1591,22 @@
           ""
         ],
         "kind": "feature",
-        "language": "rust",
+        "language": "go",
         "number": 4,
         "skills": [
           "parsing",
           "config"
         ],
-        "starter": "/// Parses durations like \"1h30m\", \"45s\" or \"2h\" into seconds. Units are h, m\n/// and s, each at most once and in that order; anything else is None.\npub fn parse_duration(text: &str) -> Option<u64> {\n    let _ = text;\n    None\n}\n",
+        "starter": "package config\n\nimport \"errors\"\n\n// ParseDuration turns durations like \"1h30m\", \"45s\" or \"2h\" into seconds.\n// Units are h, m and s, each at most once and in that order; anything else\n// is an error.\nfunc ParseDuration(text string) (int, error) {\n\treturn 0, errors.New(\"not implemented\")\n}\n",
         "summary": "Accept durations like 1h30m in config files.",
-        "task": "`parse_duration(text)` turns strings like `\"1h30m\"`, `\"45s\"` or `\"2h\"` into seconds. Units are `h`, `m` and `s`, each at most once and in that order; return `null` for anything else.",
+        "task": "`ParseDuration(text)` turns strings like `\"1h30m\"`, `\"45s\"` or `\"2h\"` into seconds. Units are `h`, `m` and `s`, each at most once and in that order; anything else returns an error (shown as `null` in the checks).",
         "title": "Timeouts in config must be written in seconds",
         "version": "1.0.0"
       },
-      "digest": "ae39c049b5c800543c930a08a9d4c6dd94ad7d58d61b4f27d11f91424bb20963",
+      "digest": "b18355707f93ca42025ed15440823b5f9c1e754bad685a1a24654009af9bd41b",
       "state": "published",
       "testResult": {
-        "digest": "ae39c049b5c800543c930a08a9d4c6dd94ad7d58d61b4f27d11f91424bb20963",
+        "digest": "b18355707f93ca42025ed15440823b5f9c1e754bad685a1a24654009af9bd41b",
         "fixtures": 6,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1586,28 +1615,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "ae39c049b5c800543c930a08a9d4c6dd94ad7d58d61b4f27d11f91424bb20963",
+          "digest": "b18355707f93ca42025ed15440823b5f9c1e754bad685a1a24654009af9bd41b",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "ae39c049b5c800543c930a08a9d4c6dd94ad7d58d61b4f27d11f91424bb20963",
+          "digest": "b18355707f93ca42025ed15440823b5f9c1e754bad685a1a24654009af9bd41b",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "ae39c049b5c800543c930a08a9d4c6dd94ad7d58d61b4f27d11f91424bb20963",
+          "digest": "b18355707f93ca42025ed15440823b5f9c1e754bad685a1a24654009af9bd41b",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "ae39c049b5c800543c930a08a9d4c6dd94ad7d58d61b4f27d11f91424bb20963",
+          "digest": "b18355707f93ca42025ed15440823b5f9c1e754bad685a1a24654009af9bd41b",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -1647,7 +1676,7 @@
       "state": "published",
       "testResult": {
         "digest": "977b70bedc1686d9a3c476a469c6bf34327d3bd2bfc7a4bfb6e87dc17cedd6ea",
-        "fixtures": 14,
+        "fixtures": 16,
         "at": "2026-10-24T00:00:00.000Z"
       },
       "history": [
@@ -1845,15 +1874,15 @@
         "id": "edge-proxy",
         "key": "EDGE",
         "presentation": "demo-text-v1",
-        "story": "A small proxy in front of everything: it terminates connections, caches hot responses and exports latency metrics. It's written in C, C++ and Rust, depending on who wrote which part and when.\n\nEvery allocation shows up on a flame graph here. The backlog is about doing more with fixed memory, measuring the right thing, and keeping configuration readable for whoever is paged.\n\n## What you'll work on\n\n- Fixed-size data structures such as ring buffers and LRU caches\n- Latency percentiles and the metrics behind dashboards\n- Small, strict configuration formats\n\n## Good fit if you\n\n- Do systems or performance work, or want to get closer to the metal\n- Think about memory, ordering and what happens under load\n- Know **C**, **C++** or **Rust**, or are learning one of them\n\nStack: C, C++, Rust.",
+        "story": "A small proxy in front of everything: it terminates connections, caches hot responses and exports latency metrics. The hot path is C and C++; the control plane and metrics are Go.\n\nEvery allocation shows up on a flame graph here. The backlog is about doing more with fixed memory, measuring the right thing, and keeping configuration readable for whoever is paged.\n\n## What you'll work on\n\n- Fixed-size data structures such as ring buffers and LRU caches\n- Latency percentiles and the metrics behind dashboards\n- Small, strict configuration formats\n\n## Good fit if you\n\n- Do systems or performance work, or want to get closer to the metal\n- Think about memory, ordering and what happens under load\n- Know **C**, **C++** or **Go**, or are learning one of them\n\nStack: C, C++, Go.",
         "summary": "Systems: the low-latency proxy in front of everything.",
         "title": "Edge proxy",
         "version": "1.0.0"
       },
-      "digest": "e8d1f6b0f81f3ab224872ca1501c36aade282ccfaaecbd6994fe2d86dc34f754",
+      "digest": "1dff9d31d52f5d612bfb0781c5972666ce3c45e180392a641daf75012ca4903f",
       "state": "published",
       "testResult": {
-        "digest": "e8d1f6b0f81f3ab224872ca1501c36aade282ccfaaecbd6994fe2d86dc34f754",
+        "digest": "1dff9d31d52f5d612bfb0781c5972666ce3c45e180392a641daf75012ca4903f",
         "fixtures": 14,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1862,28 +1891,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "e8d1f6b0f81f3ab224872ca1501c36aade282ccfaaecbd6994fe2d86dc34f754",
+          "digest": "1dff9d31d52f5d612bfb0781c5972666ce3c45e180392a641daf75012ca4903f",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "e8d1f6b0f81f3ab224872ca1501c36aade282ccfaaecbd6994fe2d86dc34f754",
+          "digest": "1dff9d31d52f5d612bfb0781c5972666ce3c45e180392a641daf75012ca4903f",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "e8d1f6b0f81f3ab224872ca1501c36aade282ccfaaecbd6994fe2d86dc34f754",
+          "digest": "1dff9d31d52f5d612bfb0781c5972666ce3c45e180392a641daf75012ca4903f",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "e8d1f6b0f81f3ab224872ca1501c36aade282ccfaaecbd6994fe2d86dc34f754",
+          "digest": "1dff9d31d52f5d612bfb0781c5972666ce3c45e180392a641daf75012ca4903f",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]

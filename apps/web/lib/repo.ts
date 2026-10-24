@@ -379,11 +379,52 @@ function sqlTests(src: RepoSource): string {
   return `${header("--", src.key)}\n\n${blocks.join("\n\n")}\n`;
 }
 
-function htmlTests(src: RepoSource): string {
-  const blocks = src.criteria.map(
-    (c, i) => `<!-- Case ${i + 1}: ${json(c.input)} -->\n${String(c.expected)}`,
-  );
-  return `<!-- ${header("", src.key).trim()} -->\n\n${blocks.join("\n\n")}\n`;
+/** HTML is checked by querying the page, so its tests are a DOM test in JavaScript. */
+function htmlTests(src: RepoSource, page: string): string {
+  const cases = src.criteria
+    .map((c) => {
+      const [selector, how] = c.input as [string, string];
+      return `  [${json(selector)}, ${json(how)}, ${json(c.expected)}],`;
+    })
+    .join("\n");
+  return `${header("//", src.key)}
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+import { JSDOM } from "jsdom";
+
+const { document } = new JSDOM(readFileSync("${page}", "utf8")).window;
+const squash = (text) => (text ?? "").replace(/\\s+/g, " ").trim();
+
+/** The name a screen reader announces: aria-labelledby, aria-label, then the label. */
+function label(element) {
+  const ids = element.getAttribute("aria-labelledby");
+  if (ids) return squash(ids.split(/\\s+/).map((id) => document.getElementById(id)?.textContent).join(" "));
+  if (element.hasAttribute("aria-label")) return squash(element.getAttribute("aria-label"));
+  const tied = element.id && document.querySelector(\`label[for="\${element.id}"]\`);
+  const owner = tied || element.closest("label");
+  return owner ? squash(owner.textContent) : null;
+}
+
+function read(selector, how) {
+  const matches = [...document.querySelectorAll(selector)];
+  if (how === "count") return matches.length;
+  if (how === "text") return matches.map((element) => squash(element.textContent));
+  if (how === "label") return matches.map(label);
+  return matches.map((element) => element.getAttribute(how));
+}
+
+// [selector, what to read, expected]: "count", "text", "label" (the accessible
+// name a screen reader announces) or an attribute name.
+const cases = [
+${cases}
+];
+
+describe("${page}", () => {
+  it.each(cases)("%s → %s", (selector, how, expected) => {
+    expect(read(selector, how)).toEqual(expected);
+  });
+});
+`;
 }
 
 function readme(src: RepoSource): RepoFile {
@@ -399,6 +440,8 @@ function layout(src: RepoSource): {
   solution: string;
   tests: string;
   text: string;
+  /** When the tests are written in another language than the solution. */
+  testsLanguage?: FileLanguage;
 } {
   const e = src.entrypoint;
   switch (src.language) {
@@ -477,14 +520,15 @@ function layout(src: RepoSource): {
     case "html":
       return {
         solution: `templates/${src.slug}.html`,
-        tests: `tests/${src.slug}.expected.html`,
-        text: htmlTests(src),
+        tests: `tests/${src.slug}.test.js`,
+        text: htmlTests(src, `templates/${src.slug}.html`),
+        testsLanguage: "javascript",
       };
   }
 }
 
 export function repoFor(src: RepoSource): Repo {
-  const { solution: solutionPath, tests, text } = layout(src);
+  const { solution: solutionPath, tests, text, testsLanguage } = layout(src);
   const solution: RepoFile = {
     path: solutionPath,
     language: src.language,
@@ -494,7 +538,12 @@ export function repoFor(src: RepoSource): Repo {
   const files: RepoFile[] = [
     readme(src),
     solution,
-    { path: tests, language: src.language, text, role: "tests" },
+    {
+      path: tests,
+      language: testsLanguage ?? src.language,
+      text,
+      role: "tests",
+    },
   ];
   if (src.schema)
     files.push({

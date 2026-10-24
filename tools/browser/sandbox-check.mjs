@@ -623,6 +623,21 @@ export function applyDiscount() { return 0; }`,
     );
     results.sqlError = await sql("SELECT 1 / (total - total) FROM orders;");
     results.sqlFixture = await sql("SELECT 1;", { inputs: [{ nope: [[1]] }] });
+    results.html = await run("html", {
+      code: `<form><label for="a">In <b>stock</b></label><input type="checkbox" id="a" name="x">
+<label>On sale <input type="checkbox" name="y"></label><input type="checkbox" aria-label="Clearance">
+<input type="checkbox" name="bare"><img src="${OUT}/html-img"><script src="${OUT}/html-script.js"></script></form>`,
+      inputs: [
+        ["input[type=checkbox]", "label"],
+        ["input", "name"],
+        ["label", "count"],
+        ["label", "text"],
+      ],
+      filename: "templates/form.html",
+      language: "html",
+      entrypoint: "page",
+      parameters: ["selector", "read"],
+    });
     results.frames = document.querySelectorAll("iframe").length;
     return results;
   }, OUT);
@@ -675,6 +690,11 @@ export function applyDiscount() { return 0; }`,
     ),
     "sql: broken fixtures are a runner error, not the person's":
       report.sqlFixture.status === "runner-error",
+    "html: labels, attributes, counts and text read like a DOM test":
+      out(report.html) === '["In stock","On sale","Clearance",null]' &&
+      out(report.html, 1) === '["x","y",null,"bare"]' &&
+      out(report.html, 2) === "2" &&
+      out(report.html, 3) === '["In stock","On sale"]',
     "no request from any engine reached either server":
       hits.app.length === 0 && hits.outside.length === 0,
     "no sandbox frames left behind": report.frames === 0,
@@ -711,7 +731,7 @@ for (const name of process.env.ONLY_AUTH
 }
 if (!process.env.PREVIEW_URL && !process.env.ONLY_AUTH)
   for (const name of requested.length ? requested : ["chromium"]) {
-    console.log(`\n=== ${name}: JavaScript, TypeScript and SQL ===`);
+    console.log(`\n=== ${name}: JavaScript, TypeScript, SQL and HTML ===`);
     for (const [label, pass] of Object.entries(
       await enginesCheck(engines[name]),
     )) {

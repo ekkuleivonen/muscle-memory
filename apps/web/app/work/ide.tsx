@@ -69,6 +69,7 @@ type Executable = Challenge & {
   parameters?: string[];
   /** SQL: the tables each case's rows go into. */
   schema?: string;
+  language?: string;
 };
 
 /** How a case reads in the panel: the call, or for SQL the rows it starts with. */
@@ -80,6 +81,8 @@ function caseLabel(challenge: Executable, input: unknown): string {
           `${table}: ${rows.length} row${rows.length === 1 ? "" : "s"}`,
       )
       .join(", ");
+  if (challenge.language === "html" && Array.isArray(input))
+    return `${input[0]} → ${input[1]}`;
   const args = challenge.parameters ? (input as unknown[]) : [input];
   return `${challenge.entrypoint}(${args.map((arg) => JSON.stringify(arg)).join(", ")})`;
 }

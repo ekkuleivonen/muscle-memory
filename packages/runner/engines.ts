@@ -4,6 +4,7 @@
  * all of them run inside the same sandbox. Adding a language means adding an engine here.
  */
 import manifest from "./runtime-manifest.json";
+import { HTML_WORKER } from "./workers/html";
 import { JAVASCRIPT_WORKER } from "./workers/javascript";
 import { PYTHON_WORKER } from "./workers/python";
 import { SQL_WORKER } from "./workers/sql";
@@ -29,7 +30,7 @@ export interface Engine {
   readonly worker: string;
 }
 
-const { pyodide, javascript, pglite } = manifest;
+const { pyodide, javascript, pglite, html } = manifest;
 
 export const ENGINES: Record<EngineId, Engine> = {
   pyodide: {
@@ -74,6 +75,16 @@ export const ENGINES: Record<EngineId, Engine> = {
     config: {},
     worker: SQL_WORKER,
   },
+  html: {
+    id: "html",
+    label: "DOM checks",
+    runtime: { id: "linkedom", version: html.version },
+    basePath: html.basePath,
+    files: html.files,
+    sizes: html.sizes,
+    config: {},
+    worker: HTML_WORKER,
+  },
 };
 
 const BY_LANGUAGE: Record<string, EngineId> = {
@@ -81,6 +92,7 @@ const BY_LANGUAGE: Record<string, EngineId> = {
   javascript: "javascript",
   typescript: "javascript",
   sql: "pglite",
+  html: "html",
 };
 
 /** The engine that runs a language, if any does yet. */

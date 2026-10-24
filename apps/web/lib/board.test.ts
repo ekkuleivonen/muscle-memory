@@ -110,7 +110,7 @@ test("suggestions prefer runnable, then the person's stack, then easier issues",
   // Issues that run in the browser come first, easiest first.
   assert.deepEqual(
     suggestions(issues, [], ["rust"]).map((i) => i.key),
-    ["FN-1", "SHOP-1", "SHOP-2"],
+    ["FN-1", "SHOP-1", "SHOP-3"],
   );
   const runnable = issues.filter((i) => i.runnable).map((i) => i.key);
   const runnableOnBoard = runnable.map((key) => ({
@@ -119,8 +119,8 @@ test("suggestions prefer runnable, then the person's stack, then easier issues",
     status: "todo" as const,
   }));
   assert.deepEqual(
-    suggestions(issues, runnableOnBoard, ["rust"]).map((i) => i.key),
-    ["EDGE-4", "EDGE-2", "SHOP-3"],
+    suggestions(issues, runnableOnBoard, ["cpp"]).map((i) => i.key),
+    ["EDGE-3", "API-1", "API-2"],
   );
   assert.deepEqual(
     suggestions(issues, runnableOnBoard, ["go"], 2).map((i) => i.key),

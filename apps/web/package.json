@@ -28,6 +28,7 @@
     "@electric-sql/pglite": "0.5.11",
     "@lezer/highlight": "1.2.5",
     "@replit/codemirror-vim": "6.4.0",
+    "linkedom": "0.18.14",
     "next": "16.4.3",
     "pyodide": "314.0.7",
     "react": "19.3.1",

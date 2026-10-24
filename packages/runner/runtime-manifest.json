@@ -48,5 +48,15 @@
       "initdb.wasm": 395242,
       "pglite.data": 6291000
     }
+  },
+  "html": {
+    "version": "0.18.14",
+    "basePath": "/runtime/html-0.18.14/",
+    "files": {
+      "dom.js": "sha256-y9wPaSDP0a7O2FEJlLut5oREm8+glKGV3tKiEpDRKbE="
+    },
+    "sizes": {
+      "dom.js": 323787
+    }
   }
 }

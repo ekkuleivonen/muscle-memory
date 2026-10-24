@@ -78,10 +78,10 @@ export function applyDiscount(totalCents: number, code: string, codes: Codes): n
 `,
   },
   "filter-form-labels": {
-    entrypoint: "render",
+    entrypoint: "page",
     starter: `<!--
-  Product filters on the category page. Render one checkbox per filter name,
-  each with a label tied to it, all inside the form.
+  Product filters on the category page. The accessibility audit flagged these
+  checkboxes: each needs a label tied to it.
 -->
 <form>
   <input type="checkbox" name="in-stock"> in-stock
@@ -217,12 +217,18 @@ size_t ring_buffer(size_t capacity, const int *values, size_t count, int *out)
 `,
   },
   "p99-latency": {
-    entrypoint: "percentile",
-    starter: `/// Nearest-rank percentile of the samples: sort them and take the value at
-/// rank ceil(p / 100 × n), counting from 1. None when there are no samples.
-pub fn percentile(samples: &[u32], p: f64) -> Option<u32> {
-    let _ = (samples, p);
-    None
+    entrypoint: "Percentile",
+    starter: `package metrics
+
+import "sort"
+
+// Percentile returns the nearest-rank percentile of the samples: sort them and
+// take the value at rank ceil(p / 100 × n), counting from 1. ok is false when
+// there are no samples.
+func Percentile(samples []int, p float64) (value int, ok bool) {
+	sorted := append([]int(nil), samples...)
+	sort.Ints(sorted)
+	return 0, false
 }
 `,
   },
@@ -247,12 +253,16 @@ std::vector<int> simulate(int capacity, const std::vector<Op>& ops) {
 `,
   },
   "parse-duration": {
-    entrypoint: "parse_duration",
-    starter: `/// Parses durations like "1h30m", "45s" or "2h" into seconds. Units are h, m
-/// and s, each at most once and in that order; anything else is None.
-pub fn parse_duration(text: &str) -> Option<u64> {
-    let _ = text;
-    None
+    entrypoint: "ParseDuration",
+    starter: `package config
+
+import "errors"
+
+// ParseDuration turns durations like "1h30m", "45s" or "2h" into seconds.
+// Units are h, m and s, each at most once and in that order; anything else
+// is an error.
+func ParseDuration(text string) (int, error) {
+	return 0, errors.New("not implemented")
 }
 `,
   },
@@ -333,17 +343,25 @@ const challenges = [
     ],
   }),
   challenge("filter-form-labels", {
+    parameters: ["selector", "read"],
     title: "Product filter checkboxes have no labels",
     summary: "Tie every filter checkbox to a label so it is accessible.",
     kind: "refactor",
     difficulty: "warm-up",
     language: "html",
     skills: ["accessibility", "forms", "semantics"],
-    task: 'Render the product filter form: for each filter name, a `<label for="filter-NAME">` with the name as text, followed by `<input type="checkbox" id="filter-NAME" name="NAME">`, all inside a `<form>`.',
-    inputs: [["in-stock", "on-sale"], []],
+    task: 'The category page\'s filter form has two checkboxes, `in-stock` and `on-sale`, with bare text next to them, so screen readers announce "checkbox" and nothing else. Give each checkbox the id `filter-NAME` and a `<label for="filter-NAME">` with its name as the text. Keep the `name` attributes, and keep everything inside the `<form>`. The checks query the page like the frontend tests do: each one is a CSS selector and what to read from the matches (their count, text, accessible label or an attribute).',
+    inputs: [
+      ["form input[type=checkbox]", "name"],
+      ["form input[type=checkbox]", "id"],
+      ["form input[type=checkbox]", "label"],
+      ["form label", "text"],
+    ],
     expected: [
-      '<form><label for="filter-in-stock">in-stock</label><input type="checkbox" id="filter-in-stock" name="in-stock"><label for="filter-on-sale">on-sale</label><input type="checkbox" id="filter-on-sale" name="on-sale"></form>',
-      "<form></form>",
+      ["in-stock", "on-sale"],
+      ["filter-in-stock", "filter-on-sale"],
+      ["in-stock", "on-sale"],
+      ["in-stock", "on-sale"],
     ],
     comments: [
       ada(
@@ -595,9 +613,9 @@ const challenges = [
     summary: "Compute nearest-rank percentiles for the metrics endpoint.",
     kind: "performance",
     difficulty: "medium",
-    language: "rust",
+    language: "go",
     skills: ["sorting", "statistics"],
-    task: "`percentile(samples, p)` returns the nearest-rank percentile: sort the samples and take the value at rank `ceil(p / 100 × n)`, counting from 1. Return `null` when there are no samples.",
+    task: "`Percentile(samples, p)` returns the nearest-rank percentile: sort the samples and take the value at rank `ceil(p / 100 × n)`, counting from 1. With no samples, `ok` is false (shown as `null` in the checks).",
     inputs: [
       [[15, 20, 35, 40, 50], 30],
       [[15, 20, 35, 40, 50], 100],
@@ -654,9 +672,9 @@ const challenges = [
     summary: "Accept durations like 1h30m in config files.",
     kind: "feature",
     difficulty: "easy",
-    language: "rust",
+    language: "go",
     skills: ["parsing", "config"],
-    task: '`parse_duration(text)` turns strings like `"1h30m"`, `"45s"` or `"2h"` into seconds. Units are `h`, `m` and `s`, each at most once and in that order; return `null` for anything else.',
+    task: '`ParseDuration(text)` turns strings like `"1h30m"`, `"45s"` or `"2h"` into seconds. Units are `h`, `m` and `s`, each at most once and in that order; anything else returns an error (shown as `null` in the checks).',
     inputs: ["1h30m", "45s", "2h", "1h1h", "90", ""],
     expected: [5400, 45, 7200, null, null, null],
     comments: [
@@ -761,7 +779,7 @@ Stack: Python, SQL.`,
     key: "EDGE",
     title: "Edge proxy",
     summary: "Systems: the low-latency proxy in front of everything.",
-    story: `A small proxy in front of everything: it terminates connections, caches hot responses and exports latency metrics. It's written in C, C++ and Rust, depending on who wrote which part and when.
+    story: `A small proxy in front of everything: it terminates connections, caches hot responses and exports latency metrics. The hot path is C and C++; the control plane and metrics are Go.
 
 Every allocation shows up on a flame graph here. The backlog is about doing more with fixed memory, measuring the right thing, and keeping configuration readable for whoever is paged.
 
@@ -775,9 +793,9 @@ Every allocation shows up on a flame graph here. The backlog is about doing more
 
 - Do systems or performance work, or want to get closer to the metal
 - Think about memory, ordering and what happens under load
-- Know **C**, **C++** or **Rust**, or are learning one of them
+- Know **C**, **C++** or **Go**, or are learning one of them
 
-Stack: C, C++, Rust.`,
+Stack: C, C++, Go.`,
     challenges: ["ring-buffer", "p99-latency", "lru-cache", "parse-duration"],
   },
 ].map(({ challenges: ids, ...adventure }) => ({

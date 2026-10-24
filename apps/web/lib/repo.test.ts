@@ -121,8 +121,8 @@ test("each language uses its usual layout and test style", () => {
   assert.match(testText("reset-link-expiry"), /class IsExpiredTest/);
   assert.deepEqual(paths("p99-latency"), [
     "README.md",
-    "src/lib.rs",
-    "tests/percentile.rs",
+    "percentile.go",
+    "percentile_test.go",
   ]);
   assert.deepEqual(paths("top-customers"), [
     "README.md",
@@ -140,7 +140,15 @@ test("each language uses its usual layout and test style", () => {
   assert.match(testText("reset-link-expiry"), /isExpired\(\.\.\.\$args\)/);
   assert.match(testText("dedupe-customers"), /dedupe\(given\) == expected/);
   assert.match(testText("top-customers"), /--\s+\('ana', 35\)/);
-  assert.match(testText("filter-form-labels"), /<label for="filter-in-stock">/);
+  assert.deepEqual(paths("filter-form-labels"), [
+    "README.md",
+    "templates/filter-form-labels.html",
+    "tests/filter-form-labels.test.js",
+  ]);
+  assert.match(
+    testText("filter-form-labels"),
+    /\["form input\[type=checkbox\]", "label", \["in-stock","on-sale"\]\]/,
+  );
   assert.equal(bySlug.get("lru-cache")!.branch, "lru-cache-lru-cache");
 });
 
