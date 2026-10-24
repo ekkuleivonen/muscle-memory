@@ -8,8 +8,8 @@ import {
   type Status,
 } from "../../../lib/board";
 import { issueHref, type IssueSummary as Issue } from "../../../lib/library";
-import { PROFILE_KEY, type StoredProfile } from "../../../lib/onboarding";
 import { useBoard } from "./board";
+import { useAccount } from "./profile-menu";
 import { Estimate, LanguageTag } from "./bits";
 import { KindIcon, StatusIcon } from "./icons";
 import { IssueRows } from "./issue-list";
@@ -94,55 +94,10 @@ export function Board({
   );
 }
 
-function profileLanguages(): string[] {
-  try {
-    const stored = JSON.parse(
-      localStorage.getItem(PROFILE_KEY) ?? "null",
-    ) as StoredProfile | null;
-    return stored?.profile.languages ?? [];
-  } catch {
-    return [];
-  }
-}
-
 export function Suggestions({ issues }: { issues: Issue[] }) {
   const { items } = useBoard();
-  const picks = suggestions(
-    issues,
-    items,
-    typeof window === "undefined" ? [] : profileLanguages(),
-  );
+  // Read through the store hook, so hydration sees the same (empty) profile as the server.
+  const languages = useAccount()?.profile.languages ?? [];
+  const picks = suggestions(issues, items, languages);
   return picks.length ? <IssueRows issues={picks} standalone /> : null;
-}
-
-/** Home: what is on your board, then something to move to Todo. */
-export function Dashboard({ issues }: { issues: Issue[] }) {
-  const { items } = useBoard();
-  const onBoard = boardIssues(items, issues);
-  return (
-    <>
-      <section className="section">
-        <h2>
-          On your board <span className="count">{onBoard.length}</span>
-          {onBoard.length > 0 && (
-            <Link className="see-all" href="/board">
-              Open board →
-            </Link>
-          )}
-        </h2>
-        {onBoard.length ? (
-          <IssueRows issues={onBoard.map((b) => b.issue)} standalone />
-        ) : (
-          <p className="dim">
-            Nothing on your board yet. Open an issue and set its status with{" "}
-            <kbd>s</kbd>.
-          </p>
-        )}
-      </section>
-      <section className="section">
-        <h2>Suggested from the backlog</h2>
-        <Suggestions issues={issues} />
-      </section>
-    </>
-  );
 }
