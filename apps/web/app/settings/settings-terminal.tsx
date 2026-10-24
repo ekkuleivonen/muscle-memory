@@ -146,7 +146,7 @@ async function theme(t: TerminalApi): Promise<Outcome> {
     {
       kind: "select",
       id: "theme",
-      message: "Theme for the app (this terminal stays dark)",
+      message: "Theme",
       choices: THEMES.map(({ value, label, hint }) => ({
         value,
         label,
