@@ -418,6 +418,15 @@
 .ide-summary.fail {
   color: var(--red);
 }
+.ide-done {
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--green) 45%, var(--line));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--green) 10%, transparent);
+}
+.ide-done a {
+  color: var(--accent);
+}
 .ide-cases {
   list-style: none;
   margin: 8px 0 0;

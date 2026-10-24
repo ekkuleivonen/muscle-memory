@@ -56,7 +56,8 @@ test("malformed moves are refused rather than stored", () => {
     bad({ data: { ...base.data, from: "in-progress" } }),
     /between/,
   );
-  assert.throws(bad({ data: { ...base.data, to: "done" } }), /between/);
+  // Done by hand is refused: only a passing run gets there.
+  assert.throws(bad({ data: { ...base.data, to: "done" } }), /Done/);
   assert.throws(bad({ data: { ...base.data, via: "button" } }), /way/);
   assert.throws(bad({ data: { ...base.data, trigger: "magic" } }), /trigger/);
   assert.throws(bad({ data: { ...base.data, onBoardBefore: -1 } }), /count/);
@@ -80,4 +81,35 @@ test("records are canonical, stable and found again for export", () => {
     [record.payload],
   );
   assert.deepEqual(JSON.parse(record.payload).data, base.data);
+});
+
+test("only a run that passes every check moves an issue to Done", () => {
+  const done = {
+    ...base.data,
+    from: "in-progress" as const,
+    to: "done" as const,
+    via: "automatic" as const,
+    trigger: "checks-passed" as const,
+    runId: "7f3c9a2e-41b8-4d0e-9a51-2c6f0e8b1d44",
+  };
+  const move = boardMove({ ...base, data: done });
+  assert.equal(move.data.to, "done");
+  assert.equal(move.data.runId, done.runId);
+  // Manual moves never carry a run ID.
+  assert.equal("runId" in boardMove(base).data, false);
+  const bad = (change: object) => () =>
+    boardMove({ ...base, data: { ...done, ...change } });
+  assert.throws(bad({ trigger: "status-menu" }), /Done/);
+  assert.throws(bad({ via: "pointer" }), /Done/);
+  assert.throws(bad({ runId: undefined }), /Done/);
+  assert.throws(bad({ from: "done", to: "todo" }), /on to Done/);
+  // Nothing but Done is automatic.
+  assert.throws(
+    () =>
+      boardMove({
+        ...base,
+        data: { ...base.data, via: "automatic" as const },
+      }),
+    /Done/,
+  );
 });

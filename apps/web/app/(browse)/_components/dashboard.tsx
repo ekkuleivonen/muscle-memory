@@ -70,7 +70,11 @@ export function Dashboard({ issues }: { issues: Issue[] }) {
     onBoard.filter((b) => b.status === status).map((b) => b.issue);
   const inProgress = inStatus("in-progress");
   const todo = inStatus("todo");
-  const points = onBoard.reduce((sum, b) => sum + (b.issue.estimate ?? 0), 0);
+  const doneCount = inStatus("done").length;
+  // Points still to deliver: Done issues have left the queue.
+  const points = onBoard
+    .filter((b) => b.status !== "done")
+    .reduce((sum, b) => sum + (b.issue.estimate ?? 0), 0);
   const counts = useMemo(
     () => (records ? actionsPerDay(records) : new Map<string, number>()),
     [records],
@@ -112,9 +116,11 @@ export function Dashboard({ issues }: { issues: Issue[] }) {
         <Stat label="Todo" value={todo.length} status="todo" />
         <Stat
           label="Done"
-          value={0}
+          value={doneCount}
           status="done"
-          hint="lands when every check passes"
+          hint={
+            doneCount ? "every check passed" : "lands when every check passes"
+          }
         />
         <Stat label="Points on your board" value={points} />
         <Stat
@@ -317,12 +323,15 @@ function Feed({
               <span className="feed-dot" aria-hidden />
             )}
             <span className="feed-text">
-              {entry.kind === "moved" && (
-                <>
-                  Moved {ref} {MOVED_TO[entry.to] ?? `to ${entry.to}`}
-                </>
-              )}
-              {entry.kind === "opened" && <>Opened {ref} in the workspace</>}
+              {entry.kind === "moved" &&
+                (entry.to === "done" ? (
+                  <>Finished {ref}: every check passed</>
+                ) : (
+                  <>
+                    Moved {ref} {MOVED_TO[entry.to] ?? `to ${entry.to}`}
+                  </>
+                ))}
+              {entry.kind === "opened" && <>Opened {ref} in the IDE</>}
               {entry.kind === "ran" && (
                 <>
                   Ran {ref}

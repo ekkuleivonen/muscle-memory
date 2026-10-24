@@ -25,6 +25,7 @@ import {
   type CaseResult,
 } from "../../../../packages/runner/runner";
 import { readProfile } from "../../lib/account";
+import { statusOf } from "../../lib/board";
 import { languageLabel } from "../../lib/library";
 import type { LanguageId } from "../../lib/languages";
 import {
@@ -36,7 +37,7 @@ import {
 } from "../../lib/repo";
 import { currentCatalog } from "../current-catalog";
 import { LanguageDot } from "../(browse)/_components/bits";
-import { StatusMenu } from "../(browse)/_components/board";
+import { StatusMenu, useBoard } from "../(browse)/_components/board";
 import { Markdown } from "../(browse)/_components/markdown";
 import { createViewer, type Keymap } from "../workspace/editor";
 import { recoveryMessage, saveBadge, saveState } from "../workspace/save-state";
@@ -132,6 +133,12 @@ export function Ide({
   const [vimMode, setVimMode] = useState("normal");
   const [edited, setEdited] = useState(false);
 
+  const board = useBoard();
+  // The session's callbacks outlive renders; they read the latest board through this.
+  const boardRef = useRef(board);
+  boardRef.current = board;
+  const done = statusOf(board.items, issue.key) === "done";
+
   const hosts = useRef(new Map<string, HTMLDivElement>());
   const viewers = useRef(new Map<string, EditorView>());
   const sandboxHost = useRef<HTMLDivElement>(null);
@@ -200,6 +207,11 @@ export function Ide({
         onRun: (next) => {
           setRun(next);
           setStale(next.revision !== session.current?.currentRevision);
+          if (passesEverything(challenge, next, session.current))
+            boardRef.current.complete(
+              { key: issue.key, slug: issue.slug, version: issue.version },
+              next.runId,
+            );
         },
         onEditedAfterRun: () => setStale(true),
         onSaveStatus: setCapture,
@@ -444,6 +456,7 @@ export function Ide({
             {panel === "tests" ? (
               <Tests
                 challenge={challenge}
+                done={done}
                 run={run}
                 stale={stale}
                 issue={issue}
@@ -483,6 +496,19 @@ export function Ide({
       <div ref={sandboxHost} hidden />
     </div>
   );
+}
+
+/** A finished run of the current code whose every case passed. */
+function passesEverything(
+  challenge: Executable,
+  run: RunView,
+  session: WorkspaceSession | null,
+): boolean {
+  const o = run.outcome;
+  if (!o || o.status !== "completed" || o.phase !== "tests") return false;
+  if (run.revision !== session?.currentRevision) return false;
+  const feedback = runFeedback(challenge, o.cases);
+  return feedback.total > 0 && feedback.correct === feedback.total;
 }
 
 function runtimeLabel(runtime: Runtime): string {
@@ -609,6 +635,7 @@ function Ticket({
 
 function Tests({
   challenge,
+  done,
   run,
   stale,
   issue,
@@ -617,6 +644,7 @@ function Tests({
   onRetry,
 }: {
   challenge: Executable;
+  done: boolean;
   run: RunView | null;
   stale: boolean;
   issue: IdeIssue;
@@ -683,6 +711,13 @@ function Tests({
           </span>
         )}
       </p>
+      {!failed && !stale && done && (
+        <p className="ide-done">
+          All checks pass. {issue.key} is <b>Done</b>.{" "}
+          <Link href="/">Back to your dashboard</Link> or{" "}
+          <Link href="/issues">pick the next one</Link>.
+        </p>
+      )}
       <ol className="ide-cases">
         {challenge.inputs.map((input, index) => (
           <Case

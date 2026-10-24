@@ -12,9 +12,11 @@ import type {
   BoardMoveVia,
 } from "../../../../../packages/domain/board";
 import {
+  activeCount,
   BOARD_CHANGE as CHANGE,
   BOARD_KEY,
   boardFull,
+  complete as complete_,
   parseBoard,
   serializeBoard,
   setStatus,
@@ -81,12 +83,39 @@ export function useBoard() {
         to,
         via,
         trigger,
-        onBoardBefore: items.length,
+        onBoardBefore: activeCount(items),
         nudged,
       },
     );
   };
-  return { items, move };
+  /**
+   * A run passed every check: the issue moves to Done and the move is recorded with that
+   * run. Reads the stored board, not this render's, since a run finishes much later.
+   */
+  const complete = (issue: IssueRef, runId: string) => {
+    const current = parseBoard(localStorage.getItem(BOARD_KEY));
+    const from = statusOf(current, issue.key);
+    if (from === "done") return;
+    localStorage.setItem(
+      BOARD_KEY,
+      serializeBoard(complete_(current, issue.key, new Date().toISOString())),
+    );
+    window.dispatchEvent(new Event(CHANGE));
+    void logBoardMove(
+      { id: issue.slug, version: issue.version },
+      {
+        issueKey: issue.key,
+        from,
+        to: "done",
+        via: "automatic",
+        trigger: "checks-passed",
+        onBoardBefore: activeCount(current),
+        nudged: false,
+        runId,
+      },
+    );
+  };
+  return { items, move, complete };
 }
 
 export function IssueStatus({ issueKey }: { issueKey: string }) {
@@ -94,9 +123,11 @@ export function IssueStatus({ issueKey }: { issueKey: string }) {
   return <StatusIcon status={statusOf(items, issueKey)} />;
 }
 
+/** Issues being worked on; Done ones have left the queue. */
 export function BoardCount() {
   const { items } = useBoard();
-  return items.length ? <span className="count">{items.length}</span> : null;
+  const active = activeCount(items);
+  return active ? <span className="count">{active}</span> : null;
 }
 
 const typing = (target: EventTarget | null) =>
