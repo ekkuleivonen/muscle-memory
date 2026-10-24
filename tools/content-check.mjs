@@ -19,6 +19,22 @@ function requireValue(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+export const difficulties = ['warm-up', 'easy', 'medium', 'hard'];
+/** Issue kinds; each implies how a Challenge starts (stub, broken code, slow code, messy code). */
+export const issueKinds = ['feature', 'bug', 'performance', 'refactor'];
+
+function boundedText(value, limit) {
+  return typeof value === 'string' && value.trim() !== '' && value.length <= limit;
+}
+
+/** Optional display metadata; older published versions have none. */
+function validateDisplay(content, label) {
+  for (const [key, limit] of [['title', 60], ['summary', 160]]) {
+    if (content[key] === undefined) continue;
+    requireValue(boundedText(content[key], limit), `${label} ${key} must be 1-${limit} characters`);
+  }
+}
+
 export function validateChallenge(challenge) {
   requireValue(challenge && safeId(challenge.id), 'Challenge needs a safe id');
   requireValue(pinnedVersion(challenge.version), 'Challenge needs an explicit version');
@@ -29,6 +45,19 @@ export function validateChallenge(challenge) {
   }
   requireValue(Array.isArray(challenge.inputs) && challenge.inputs.length > 0, 'Challenge needs input fixtures');
   requireValue(Array.isArray(challenge.expected) && challenge.expected.length === challenge.inputs.length, 'Every input needs one expected output');
+  validateDisplay(challenge, 'Challenge');
+  if (challenge.difficulty !== undefined)
+    requireValue(difficulties.includes(challenge.difficulty), `Challenge difficulty must be one of ${difficulties.join(', ')}`);
+  if (challenge.kind !== undefined)
+    requireValue(issueKinds.includes(challenge.kind), `Challenge kind must be one of ${issueKinds.join(', ')}`);
+  if (challenge.comments !== undefined) {
+    requireValue(Array.isArray(challenge.comments), 'Challenge comments must be a list');
+    for (const comment of challenge.comments)
+      requireValue(
+        comment && boundedText(comment.author, 40) && (comment.role === undefined || boundedText(comment.role, 40)) && boundedText(comment.body, 1000),
+        'Each comment needs an author (up to 40 characters), an optional role and a body (up to 1000)',
+      );
+  }
   return challenge;
 }
 
@@ -43,6 +72,8 @@ export function validateAdventure(adventure, challenges) {
     requireValue(Array.isArray(ref) && ref.length === 2 && safeId(ref[0]) && pinnedVersion(ref[1]), 'Adventure references must pin [id, version]');
     requireValue(challenges.has(`${ref[0]}@${ref[1]}`), `Missing Challenge ${ref[0]}@${ref[1]}`);
   }
+  requireValue(adventure.difficulty === undefined, 'Adventure difficulty comes from its Challenges');
+  validateDisplay(adventure, 'Adventure');
   return adventure;
 }
 

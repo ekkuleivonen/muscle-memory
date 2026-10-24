@@ -16,6 +16,20 @@ export interface Challenge {
   readonly hints: readonly string[];
   readonly inputs: readonly Json[];
   readonly expected: readonly Json[];
+  /** Display metadata, optional because older published versions predate it. */
+  readonly title?: string;
+  readonly summary?: string;
+  readonly difficulty?: Difficulty;
+  readonly kind?: IssueKind;
+  /** Authored context from the fictional team; not participant comments. */
+  readonly comments?: readonly IssueComment[];
+}
+export type Difficulty = "warm-up" | "easy" | "medium" | "hard";
+export type IssueKind = "feature" | "bug" | "performance" | "refactor";
+export interface IssueComment {
+  readonly author: string;
+  readonly role?: string;
+  readonly body: string;
 }
 export interface Adventure {
   readonly id: string;
@@ -23,6 +37,8 @@ export interface Adventure {
   readonly story: string;
   readonly presentation: string;
   readonly challenges: readonly Reference[];
+  readonly title?: string;
+  readonly summary?: string;
 }
 export interface Encounter {
   readonly adventureId: string;

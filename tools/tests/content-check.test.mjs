@@ -18,6 +18,22 @@ test('validates pinned content and rejects missing versions', () => {
   assert.throws(() => validateChallenge({ ...challenge, version: 1 }), /explicit version/);
 });
 
+test('accepts optional display metadata and rejects malformed values', () => {
+  const titled = { ...challenge, title: 'Tally', summary: 'Count labels exactly.', difficulty: 'warm-up' };
+  assert.equal(validateChallenge(titled), titled);
+  assert.throws(() => validateChallenge({ ...challenge, title: ' ' }), /title/);
+  assert.throws(() => validateChallenge({ ...challenge, summary: 'x'.repeat(161) }), /summary/);
+  assert.throws(() => validateChallenge({ ...challenge, difficulty: 'trivial' }), /difficulty/);
+  const issue = { ...titled, kind: 'bug', comments: [{ author: 'Priya K', role: 'Data', body: 'Case matters.' }] };
+  assert.equal(validateChallenge(issue), issue);
+  assert.throws(() => validateChallenge({ ...challenge, kind: 'chore' }), /kind/);
+  assert.throws(() => validateChallenge({ ...challenge, comments: {} }), /comments/);
+  assert.throws(() => validateChallenge({ ...challenge, comments: [{ author: 'Priya K', body: '' }] }), /comment/);
+  const catalog = new Map([['tally@1.0.0', challenge]]);
+  assert.ok(validateAdventure({ ...adventure, title: 'Notebook' }, catalog));
+  assert.throws(() => validateAdventure({ ...adventure, difficulty: 'easy' }, catalog), /comes from its Challenges/);
+});
+
 test('rejects duplicate content identities across files', async () => {
   const root = await mkdtemp(join(tmpdir(), 'muscle-memory-content-'));
   try {

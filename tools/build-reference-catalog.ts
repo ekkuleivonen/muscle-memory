@@ -22,12 +22,21 @@ const executable = JSON.parse(
 const adventure = JSON.parse(
   await readFile(resolve(root, "adventures/field-notes.v1.json"), "utf8"),
 );
+// Same assessment as 2.0.0 plus display metadata; field-notes 2.0.0 sequences it.
+const titled = JSON.parse(
+  await readFile(resolve(root, "challenges/frequency-map.v2.1.json"), "utf8"),
+);
+const titledAdventure = JSON.parse(
+  await readFile(resolve(root, "adventures/field-notes.v2.json"), "utf8"),
+);
 const at = "2026-10-23T00:00:00.000Z"; // Synthetic reference-release timestamp; deterministic across builds.
 let catalog = emptyCatalog();
 for (const [kind, content] of [
   ["challenge", challenge],
   ["challenge", executable],
   ["adventure", adventure],
+  ["challenge", titled],
+  ["adventure", titledAdventure],
 ] as const) {
   const ref: ContentRef = { kind, id: content.id, version: content.version };
   catalog = saveDraft(catalog, kind, content, at);
