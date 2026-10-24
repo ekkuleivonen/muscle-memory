@@ -13,8 +13,8 @@ import type { WorkspaceRecord } from "./workspace";
  * covered backlog <-> Todo via button, Status field or shortcut. Stored records keep theirs.
  */
 export const BOARD_CAPTURE_VERSION = "board-capture-1.1.0";
-/** v2 discloses In progress moves; consent to v1 does not carry over. */
-export const BOARD_CONSENT_VERSION = "board-activity-device-v2";
+/** v2 disclosed In progress moves; v3 points to Settings instead of terminal commands. Consent to earlier versions does not carry over. */
+export const BOARD_CONSENT_VERSION = "board-activity-device-v3";
 /** What this capture does not record. Absence is a gap, not evidence of no activity. */
 export const BOARD_CAPTURE_GAPS = [
   "issue-views",

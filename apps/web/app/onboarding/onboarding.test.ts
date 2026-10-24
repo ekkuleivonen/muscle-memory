@@ -1,6 +1,5 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { complete, parseCommand } from "./commands";
 import { describeProfile, QUESTIONS, toProfile } from "./questions";
 import {
   choose,
@@ -117,26 +116,4 @@ test("answers become a profile; skipped questions are left out", () => {
     ["goal", "skipped"],
     ["editor", "skipped"],
   ]);
-});
-
-test("commands parse case-insensitively and Tab completes commands and subcommands", () => {
-  assert.deepEqual(parseCommand("  HELP  me "), {
-    name: "help",
-    args: ["me"],
-  });
-  assert.equal(parseCommand("   "), null);
-  assert.deepEqual(complete("he"), { line: "help ", options: [] });
-  assert.deepEqual(complete("data e"), { line: "data export ", options: [] });
-  assert.equal(complete("").options.length, 9);
-  assert.deepEqual(complete("logi"), { line: "login ", options: [] });
-  assert.deepEqual(complete("log o"), {
-    line: "log o",
-    options: ["on", "off"],
-  });
-  assert.deepEqual(complete("se"), { line: "setup ", options: [] });
-  assert.deepEqual(complete("data "), {
-    line: "data ",
-    options: ["export", "clear"],
-  });
-  assert.deepEqual(complete("zz"), { line: "zz", options: [] });
 });

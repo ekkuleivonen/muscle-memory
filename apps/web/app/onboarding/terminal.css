@@ -50,9 +50,6 @@
   color: var(--t-dim);
 }
 .t-accent,
-.t-ps1 {
-  color: var(--t-accent);
-}
 .t-ok {
   color: var(--t-ok);
 }
@@ -68,23 +65,6 @@
 }
 .term .t-cmd:focus-visible {
   outline: 1px solid var(--t-accent);
-}
-.term .t-shell {
-  display: flex;
-  margin: 0;
-  font-weight: inherit;
-}
-.t-shell input {
-  flex: 1;
-  margin-left: 1ch;
-  padding: 0;
-  border: 0;
-  outline: none;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  caret-color: var(--t-accent);
-  caret-shape: block;
 }
 .term [data-focus]:focus-visible {
   outline: none;

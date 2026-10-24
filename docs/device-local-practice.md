@@ -1,6 +1,6 @@
 # Optional device-local practice
 
-The JSON-answer practice page described below has been retired; its records stay in the same database. In the onboarding terminal (`/onboarding`), `data export` downloads them and `data clear` clears them together with workspace records, the local identity and the onboarding profile.
+The JSON-answer practice page described below has been retired; its records stay in the same database. In Settings (`/settings`), **Export data** downloads them; **Reset progress** clears them together with workspace records and the local identity, and **Delete account** also removes the profile and handle.
 
 Practice stays session-only unless the player explicitly checks **Save practice history on this device**. Enabling it opens local IndexedDB; it does not send records to an application server, researcher or analytics service. A separate session consent checkbox starts practice. Saved events use `device-local-practice-v1` as their operational consent scope and keep research consent false.
 

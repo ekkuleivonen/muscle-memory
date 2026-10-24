@@ -15,7 +15,7 @@ export interface ActivityConsent {
 /** The disclosure shown before asking, word for word what the consent version covers. */
 export const ACTIVITY_DISCLOSURE = [
   "Keep a private activity log? Each time you change an issue's status (Backlog, Todo, In progress), it records which issue, from and to, when, whether you used the mouse or keyboard, how many issues were on your board and whether you were nudged.",
-  "It stays in this browser's storage under a random ID. Nothing is uploaded and research sharing is off. log off stops it; data clear deletes it.",
+  "It stays in this browser's storage under a random ID. Nothing is uploaded and research sharing is off. Turn it off or delete it any time in Settings.",
 ] as const;
 
 export function parseConsent(raw: string | null): ActivityConsent | null {

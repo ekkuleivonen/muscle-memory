@@ -2,7 +2,11 @@
  * The account as it exists so far: a profile and handle in this browser's storage, and a
  * cookie that stands in for a session. Browser-only; the server sees just the cookie.
  */
-import { openPracticeStore } from "../../../packages/browser/practice-store";
+import {
+  encodePendingExport,
+  openPracticeStore,
+} from "../../../packages/browser/practice-store";
+import { boardPayloads } from "../../../packages/domain/board";
 import { ACTIVITY_KEY } from "./activity-log";
 import { BOARD_CHANGE, BOARD_KEY } from "./board";
 import { HANDLE_PATTERN, randomHandle } from "./handle";
@@ -80,6 +84,36 @@ export function hasSession(): boolean {
 /** Ends the session; profile, board and history stay in this browser. */
 export function logOut() {
   document.cookie = `${ONBOARDING_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+}
+
+function download(name: string, text: string) {
+  const url = URL.createObjectURL(
+    new Blob([text], { type: "application/x-ndjson" }),
+  );
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
+ * Downloads saved practice events and board moves as JSON Lines. A download is no proof of a
+ * write, so records stay and export stays repeatable.
+ */
+export async function exportData(): Promise<{ events: number; moves: number }> {
+  const store = await openPracticeStore();
+  try {
+    const events = await store.pending();
+    const moves = boardPayloads(await store.workspaceRecords());
+    if (events.length)
+      download("muscle-memory-local-events.jsonl", encodePendingExport(events));
+    if (moves.length)
+      download("muscle-memory-board-activity.jsonl", moves.join("\n") + "\n");
+    return { events: events.length, moves: moves.length };
+  } finally {
+    store.close();
+  }
 }
 
 /** Board, saved practice and recorded activity. Profile, handle and settings stay. */

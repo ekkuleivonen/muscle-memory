@@ -5,6 +5,7 @@ import { useState, useSyncExternalStore } from "react";
 import {
   ACCOUNT_CHANGE,
   deleteAccount,
+  exportData,
   resetProgress,
   saveProfile,
 } from "../../../lib/account";
@@ -133,13 +134,14 @@ function Settings({ handle, initial }: { handle: string; initial: Profile }) {
 
       <ActivityLog />
 
+      <ExportData />
+
       <section className="settings-section">
         <h2>Terminal setup</h2>
         <p className="dim">
-          The same questions, answered in the setup terminal. It also exports
-          everything saved on this device.
+          Go through the setup questions again in the terminal you started in.
         </p>
-        <Link className="btn" href="/onboarding">
+        <Link className="btn" href="/onboarding?again=1">
           <TerminalIcon /> Open terminal setup
         </Link>
       </section>
@@ -179,6 +181,41 @@ function ActivityLog() {
           {line}
         </p>
       ))}
+    </section>
+  );
+}
+
+function ExportData() {
+  const [result, setResult] = useState<string | null>(null);
+  return (
+    <section className="settings-section">
+      <h2>Your data</h2>
+      <p className="dim">
+        Download what this browser has saved: practice events and, if the
+        activity log is on, your board moves, as JSON Lines. Nothing is
+        uploaded.
+      </p>
+      <div className="form-actions">
+        <button
+          className="btn"
+          type="button"
+          onClick={async () => {
+            const { events, moves } = await exportData();
+            setResult(
+              events || moves
+                ? `Downloaded ${events} practice event(s) and ${moves} board move(s).`
+                : "Nothing saved in this browser yet.",
+            );
+          }}
+        >
+          Export data
+        </button>
+        {result && (
+          <span className="hint" role="status">
+            {result}
+          </span>
+        )}
+      </div>
     </section>
   );
 }
