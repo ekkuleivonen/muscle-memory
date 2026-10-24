@@ -4,7 +4,7 @@ Setting an issue's status by hand (Backlog, Todo or In progress, from its Status
 
 ## What is recorded
 
-`observation.board.moved` (`packages/domain/board.ts`), capture version `board-capture-3.0.0`, in the same envelope as [workspace observations](workspace.md): stable ID `<source>.<sequence>`, one source stream per page load (`board-<uuid>`), client `occurredAt`, an explicit absent server receipt, `consentVersion` set to the accepted Terms version (`terms-2026-10-24`), `researchConsent: false`, and the issue with the revision live at the time (`issue`, `issueRevision`). Data:
+`observation.board.moved` (`packages/domain/board.ts`), capture version `board-capture-4.0.0`, in the same envelope as [workspace observations](workspace.md): stable ID `<source>.<sequence>`, one source stream per page load (`board-<uuid>`), client `occurredAt`, an explicit absent server receipt, `consentVersion` set to the accepted Terms version (`terms-2026-10-24`), `researchConsent: false`, and the issue with the revision live at the time (`issue`, `issueRevision`). Data:
 
 - `issueKey` (`API-2`), `from` and `to` (`backlog`, `todo`, `in-progress`)
 - `via`: `pointer` or `keyboard` (the Status menu opened with `s` and driven by arrows, Enter on Start work, or the Merge button)
@@ -14,7 +14,13 @@ Setting an issue's status by hand (Backlog, Todo or In progress, from its Status
 
 `observation.board.replied`, in the same envelope, records a reply to a review comment on a pull request's page: `issueKey`, `pullRequest`, the `comment` id (in the revision the observation names), the reply's `text` bounded to 8 KiB at a character boundary, `textBytes` and `truncated`. A reply resolves a blocking thread.
 
-Declared gaps: issue views, searches and filters, time on page, and anything other than board moves and replies. A missing source position was not recorded; it is not evidence that nothing happened.
+Every page of the app is recorded as it is shown (`TrackerActivity` in the root layout):
+
+- `observation.board.viewed`: the `path`, its `query` (searches and filters are GET forms and links, so they arrive here), and the `previous` page in this tab. A page about one issue (the issue page, a pull request, the IDE) names the issue and its live revision; other pages have `issue: null`.
+- `observation.board.page`, outside the IDE (which records its own): the page becoming visible or hidden, focused or not, or resized.
+- `observation.board.profile`: the onboarding and settings answers (experience, languages, goal, editor, stealth) each time they are saved.
+
+Every board observation has `elapsedMs`, a monotonic clock from the page load. Declared gaps: keystrokes in text fields (a search is recorded as its query, a reply as the text sent), pointer movement and hovering, menus opened without a choice, activity in other tabs and apps, and writes cut short when the page closes. A missing source position was not recorded; it is not evidence that nothing happened.
 
 ## Storage and deletion
 

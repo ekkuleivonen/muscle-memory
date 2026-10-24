@@ -29,7 +29,11 @@ That's the gist. The rest is the detail, which the law (reasonably) wants writte
 **What you do here**
 
 - **Status changes**: which issue, from and to which status, when, whether you used the mouse or keyboard, how many issues were on your board, and whether we nudged you first.
-- **Work on issues**: the code you write and run, test results, which hints you saw, and timings.
+- **Pages you view**: which page, its search and filters, the page before it, and when the page is visible, hidden, focused or resized. We can tell you switched away, never to what.
+- **How you work on issues, keystroke by keystroke**: every key you press in the IDE's editors with its exact timing (arrows and shortcuts too), every edit, pastes as the text they add, cursor moves, scrolling, copies and cuts (where in the code, never your clipboard), which files and panels you open, the type errors and type hints the editor showed you, every run with its output and test results, your pull requests, the teammate comments and hints you received, and your replies.
+- **Your setup answers**, each time you save them.
+
+Keys are heard only inside the IDE's editors, never anywhere else on the page or outside it, and we never read your clipboard. Typing rhythm can tell people apart, the way handwriting can. We record it to study how people work, not to identify anyone, and we won't use it for that.
 - **A random ID** for your browser, so records from the same person stay together without saying who that person is.
 
 **Once accounts sync to our servers**

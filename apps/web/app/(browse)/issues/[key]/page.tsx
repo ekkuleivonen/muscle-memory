@@ -14,6 +14,7 @@ import {
 } from "../../_components/bits";
 import { KIND_LABELS, KindIcon } from "../../_components/icons";
 import { IssueThread } from "../../_components/issue-thread";
+import { IssueContext } from "../../_components/tracker-activity";
 import { Sep, Topbar } from "../../_components/topbar";
 import { StartWork, StatusMenu } from "../../_components/board";
 import { Markdown } from "../../_components/markdown";
@@ -63,6 +64,7 @@ export default async function IssuePage(props: Props) {
         <Sep />
         <span className="mono">{issue.key}</span>
       </Topbar>
+      <IssueContext issue={{ id: issue.slug, revision: issue.revision }} />
       <main className="content issue">
         <article>
           <h1>{issue.title}</h1>

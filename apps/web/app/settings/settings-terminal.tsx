@@ -10,6 +10,8 @@ import {
 } from "../../lib/account";
 import { LEGAL_UPDATED } from "../../lib/legal";
 import type { Profile } from "../../lib/onboarding";
+import type { Json } from "../../../../packages/domain/json";
+import { logProfile } from "../(browse)/_components/board-log";
 import type { Answer, Prompt } from "../_terminal/prompts";
 import { QUESTIONS, toProfile } from "../_terminal/questions";
 import {
@@ -125,7 +127,8 @@ async function profile(t: TerminalApi): Promise<Outcome> {
     const answer = await t.ask(prompt, { skipped: "unchanged" });
     if (answer !== null) answers[question.id] = answer;
   }
-  saveProfile(toProfile(answers));
+  const saved = saveProfile(toProfile(answers));
+  void logProfile({ from: "settings", answers: { ...saved.profile, stealth: saved.stealth ?? false } as Json });
   t.print(<span className="t-ok">Saved.</span>);
   return "menu";
 }
@@ -172,6 +175,9 @@ async function privacy(t: TerminalApi): Promise<Outcome> {
   );
   if (share === null) return "menu";
   setStealth(!share);
+  const after = readProfile();
+  if (after)
+    void logProfile({ from: "settings", answers: { ...after.profile, stealth: after.stealth ?? false } as Json });
   t.print(
     <span className="t-dim">
       {share

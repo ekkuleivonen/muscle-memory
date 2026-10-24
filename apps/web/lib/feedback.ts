@@ -28,6 +28,14 @@ interface Observation {
 }
 
 const TERMINAL = new Set(["result", "user-error", "runner-error", "timeout", "cancelled"]);
+/** What a person does in the IDE, reading included: each makes its minute an active one. */
+const ACTIVE = new Set([
+  "observation.workspace.edit",
+  "observation.workspace.keys",
+  "observation.workspace.selection",
+  "observation.workspace.scroll",
+  "observation.workspace.clipboard",
+]);
 
 /** One issue's observations, oldest first, and the code artifacts by id. */
 function read(records: readonly WorkspaceRecord[], issue: string) {
@@ -114,7 +122,8 @@ export function pushesOf(
 /**
  * Behaviour since the last progress: a run or push that passed a larger share of the cases it
  * ran than any before (a local run runs fewer cases than CI). Active minutes are distinct
- * minutes with an edit or a run, so a break never counts.
+ * minutes in which the person typed, edited, ran, moved the cursor, scrolled, copied or opened
+ * something, so reading counts and a break never does.
  */
 export function behaviourOf(
   records: readonly WorkspaceRecord[],
@@ -144,7 +153,7 @@ export function behaviourOf(
     if (o.occurredAt <= since) continue;
     const run = o.type === "observation.workspace.run" && TERMINAL.has(String(o.data.status));
     if (run && o.data.purpose !== "pull-request") runs++;
-    if (run || o.type === "observation.workspace.edit")
+    if (run || ACTIVE.has(o.type) || (o.type === "observation.workspace.navigated" && o.data.via !== "app"))
       minutes.add(Math.floor(Date.parse(o.occurredAt) / 60000));
   }
   return {

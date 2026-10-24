@@ -203,6 +203,95 @@ export function editorFeatures(
   };
 }
 
+/**
+ * What an editor reports besides text changes, so a session can record it: every key and IME
+ * composition, cursor and selection moves, the lines in view, focus, copy and cut ranges, and
+ * the help the editor showed. The clipboard itself is never read.
+ */
+export interface ActivityHooks {
+  onKey(
+    kind: "down" | "up" | "compose-start" | "compose-end",
+    key: string,
+    modifiers: string,
+    repeat: boolean,
+  ): void;
+  onSelection(selection: unknown, userEvent: string | null): void;
+  onScroll(fromLine: number, toLine: number): void;
+  onFocus(focused: boolean): void;
+  onClipboard(
+    kind: "copy" | "cut",
+    ranges: { from: number; to: number }[],
+    wholeLines: boolean,
+  ): void;
+  onAssist?(kind: "diagnostics" | "hover", items: unknown): void;
+}
+
+/** Selection moves that change no text; text changes are reported with their transaction. */
+function selections(hooks: ActivityHooks): Extension {
+  return EditorView.updateListener.of((update) => {
+    for (const transaction of update.transactions)
+      if (!transaction.docChanged && transaction.selection)
+        hooks.onSelection(
+          transaction.newSelection.toJSON(),
+          transaction.annotation(Transaction.userEvent) ?? null,
+        );
+  });
+}
+
+/**
+ * Listens on the editor's own elements only. Keys are heard in the capture phase, so keys an
+ * editor command consumes (Vim's normal mode, shortcuts) are heard too.
+ */
+function watch(view: EditorView, hooks: ActivityHooks): void {
+  const modifiers = (e: KeyboardEvent) =>
+    (e.ctrlKey ? "C" : "") + (e.altKey ? "A" : "") + (e.shiftKey ? "S" : "") + (e.metaKey ? "M" : "");
+  // With nothing selected, CodeMirror copies or cuts the cursors' whole lines.
+  const clipboard = (kind: "copy" | "cut") => {
+    const { ranges } = view.state.selection;
+    const wholeLines = ranges.every((r) => r.empty);
+    hooks.onClipboard(
+      kind,
+      ranges.map((r) => {
+        if (!wholeLines) return { from: r.from, to: r.to };
+        const line = view.state.doc.lineAt(r.head);
+        return { from: line.from, to: line.to };
+      }).filter((r) => wholeLines || r.from !== r.to),
+      wholeLines,
+    );
+  };
+  const lines = (): [number, number] => {
+    const visible = view.visibleRanges;
+    if (!visible.length) return [1, 1];
+    return [
+      view.state.doc.lineAt(visible[0].from).number,
+      view.state.doc.lineAt(visible[visible.length - 1].to).number,
+    ];
+  };
+  view.dom.addEventListener(
+    "keydown",
+    (e) => hooks.onKey("down", e.key, modifiers(e), e.repeat),
+    true,
+  );
+  view.dom.addEventListener("keyup", (e) => hooks.onKey("up", e.key, modifiers(e), false), true);
+  view.dom.addEventListener(
+    "compositionstart",
+    (e) => hooks.onKey("compose-start", e.data ?? "", "", false),
+    true,
+  );
+  view.dom.addEventListener(
+    "compositionend",
+    (e) => hooks.onKey("compose-end", e.data ?? "", "", false),
+    true,
+  );
+  view.dom.addEventListener("copy", () => clipboard("copy"), true);
+  view.dom.addEventListener("cut", () => clipboard("cut"), true);
+  view.contentDOM.addEventListener("focus", () => hooks.onFocus(true));
+  view.contentDOM.addEventListener("blur", () => hooks.onFocus(false));
+  view.scrollDOM.addEventListener("scroll", () => hooks.onScroll(...lines()), {
+    passive: true,
+  });
+}
+
 export interface EditorHooks {
   /** Called once per document-changing transaction, after it is applied. */
   onChange(transaction: Transaction, view: EditorView): void;
@@ -222,6 +311,7 @@ export function createEditor(
     label: string;
     /** Squiggles and hover types, for languages that have them. */
     types?: TypeChecker;
+    activity?: ActivityHooks;
   },
 ): EditorView {
   const view = new EditorView({
@@ -257,7 +347,8 @@ export function createEditor(
           ...defaultKeymap,
         ]),
         EditorView.contentAttributes.of({ "aria-label": options.label }),
-        options.types ? typeHints(options.types) : [],
+        options.types ? typeHints(options.types, options.activity) : [],
+        options.activity ? selections(options.activity) : [],
         EditorView.updateListener.of((update) => {
           for (const transaction of update.transactions)
             if (transaction.docChanged)
@@ -266,6 +357,7 @@ export function createEditor(
       ],
     }),
   });
+  if (options.activity) watch(view, options.activity);
   if (options.keymap === "vim" && hooks.onVimMode) {
     hooks.onVimMode("normal");
     getCM(view)?.on("vim-mode-change", (event: { mode: string }) =>
@@ -276,18 +368,26 @@ export function createEditor(
 }
 
 /** Errors as squiggles (after a pause in typing) and the type under the pointer. */
-function typeHints(types: TypeChecker): Extension {
+function typeHints(types: TypeChecker, activity?: ActivityHooks): Extension {
+  let shown = "";
   return [
     linter(
       async (view) => {
         const length = view.state.doc.length;
         try {
-          return (await types.check(view.state.doc.toString())).map((d) => ({
+          const found = (await types.check(view.state.doc.toString())).map((d) => ({
             from: Math.min(d.from, length),
             to: Math.min(Math.max(d.to, d.from), length),
             severity: d.severity,
             message: d.message,
           }));
+          // Recorded when what the editor shows changes, not on every check.
+          const key = JSON.stringify(found);
+          if (key !== shown) {
+            shown = key;
+            activity?.onAssist?.("diagnostics", found);
+          }
+          return found;
         } catch {
           return []; // The checker failing never gets in the way of editing.
         }
@@ -299,6 +399,7 @@ function typeHints(types: TypeChecker): Extension {
         .hover(view.state.doc.toString(), position)
         .catch(() => null);
       if (!hint) return null;
+      activity?.onAssist?.("hover", { from: hint.from, to: hint.to, type: hint.type });
       return {
         pos: hint.from,
         end: hint.to,
@@ -319,13 +420,13 @@ function typeHints(types: TypeChecker): Extension {
   ];
 }
 
-/** Tests and README: highlighted and selectable, never editable or recorded. */
+/** Tests, README and read-only source: highlighted and selectable, never editable. */
 export function createViewer(
   parent: HTMLElement,
   doc: string,
-  options: { language: FileLanguage; label: string },
+  options: { language: FileLanguage; label: string; activity?: ActivityHooks },
 ): EditorView {
-  return new EditorView({
+  const view = new EditorView({
     parent,
     state: EditorState.create({
       doc,
@@ -333,7 +434,10 @@ export function createViewer(
         ...shared(options.language),
         EditorState.readOnly.of(true),
         EditorView.contentAttributes.of({ "aria-label": options.label }),
+        options.activity ? selections(options.activity) : [],
       ],
     }),
   });
+  if (options.activity) watch(view, options.activity);
+  return view;
 }

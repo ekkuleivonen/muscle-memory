@@ -5,7 +5,10 @@ import {
   boardMove,
   boardPayloads,
   boardRecord,
+  boardPage,
+  boardProfile,
   boardReply,
+  boardView,
   REPLY_LIMIT_BYTES,
 } from "./board";
 
@@ -14,6 +17,7 @@ const base = {
   sourceId: "board-4f1c",
   sequence: 1,
   occurredAt: "2026-10-24T10:00:00.000Z",
+  elapsedMs: 1234.5,
   termsVersion: "2026-10-24",
   issue: { id: "reset-link-expiry", revision: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
   data: {
@@ -40,7 +44,9 @@ test("a board move is a versioned, local-only observation of exactly what moved"
   });
   assert.equal(move.issue, "reset-link-expiry");
   assert.equal(move.issueRevision, base.issue.revision);
-  assert.ok(move.captureGaps.includes("issue-views"));
+  assert.equal(move.elapsedMs, 1234.5);
+  assert.ok(move.captureGaps.includes("keystrokes-in-text-fields"));
+  assert.ok(!move.captureGaps.includes("issue-views"));
   assert.deepEqual(move.data, base.data);
 });
 
@@ -143,4 +149,45 @@ test("a reply to a review comment is recorded on the board, its text bounded", (
     { issueKey: "API-2", pullRequest: 3, comment: "ada-abs", text: "  " },
   ])
     assert.throws(() => boardReply({ ...base, data }));
+});
+
+test("page views, page state and profile answers; only views may name an issue", () => {
+  const { issue: _, data: __, ...common } = base;
+  const view = boardView({
+    ...common,
+    issue: null,
+    data: { path: "/issues", query: "q=kind%3Abug", previous: "/board" },
+  });
+  assert.equal(view.type, "observation.board.viewed");
+  assert.equal(view.issue, null);
+  assert.equal(view.issueRevision, null);
+  assert.deepEqual(view.data, { path: "/issues", query: "q=kind%3Abug", previous: "/board" });
+  const onIssue = boardView({
+    ...common,
+    issue: base.issue,
+    data: { path: "/issues/API-2", query: "", previous: "/issues?q=kind%3Abug" },
+  });
+  assert.equal(onIssue.issue, "reset-link-expiry");
+  assert.throws(
+    () =>
+      boardView({
+        ...common,
+        issue: null,
+        data: { path: "https://elsewhere.example/x", query: "", previous: null },
+      }),
+    /app paths/,
+  );
+  const page = boardPage({
+    ...common,
+    data: { visible: false, focused: false, width: 1280.4, height: 800 },
+  });
+  assert.deepEqual(page.data, { visible: false, focused: false, width: 1280, height: 800 });
+  const profile = boardProfile({
+    ...common,
+    data: { from: "onboarding", answers: { experience: "some", languages: ["python"] } },
+  });
+  assert.equal(profile.type, "observation.board.profile");
+  assert.equal(profile.issue, null);
+  assert.equal(boardPayloads([boardRecord(view), boardRecord(page), boardRecord(profile)]).length, 3);
+  assert.throws(() => boardPage({ ...common, elapsedMs: -1, data: page.data }), /elapsed/);
 });

@@ -7,7 +7,7 @@
 import type { Trigger } from "./model";
 
 export interface Behaviour {
-  /** Distinct minutes with an edit or a run since the last progress. */
+  /** Distinct minutes with any activity in the IDE (reading included) since the last progress. */
   readonly activeMinutesWithoutProgress: number;
   /** Local runs since the last progress. */
   readonly runsWithoutProgress: number;

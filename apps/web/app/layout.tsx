@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { TrackerActivity } from "./(browse)/_components/tracker-activity";
 import "./style.css";
 export const metadata: Metadata = {
   title: "Muscle Memory — keep your craft",
@@ -12,7 +14,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* Reads the URL's query, which needs a boundary on statically rendered pages. */}
+        <Suspense fallback={null}>
+          <TrackerActivity />
+        </Suspense>
+      </body>
     </html>
   );
 }

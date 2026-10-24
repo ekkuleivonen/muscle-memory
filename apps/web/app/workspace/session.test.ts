@@ -23,7 +23,7 @@ function session(sink: MemorySink) {
         mediaType: "text/x-python; charset=utf-8",
       },
     },
-    runner: () => ({ running: false }) as unknown as Runner,
+    runner: () => ({ running: false, cancel: () => undefined }) as unknown as Runner,
     onRun: () => undefined,
     onEditedAfterRun: () => undefined,
   });
@@ -98,4 +98,80 @@ test("an oversize edit inside a batch is snapshotted at its own revision", async
     );
   assert.equal(edit.data.changes, null);
   assert.equal(edit.data.changesTruncated, true);
+});
+
+const observations = (sink: MemorySink) =>
+  [...sink.records.values()]
+    .map((record) => JSON.parse(record.payload))
+    .filter((record) => record.observationId)
+    .sort((a, b) => a.source.sequence - b.source.sequence);
+
+test("keys are batched with their own times; cursor bursts merge and are written before what follows", async () => {
+  const sink = new MemorySink();
+  const workspace = session(sink);
+  const hooks = workspace.activity(fixture.path);
+  hooks.onFocus(true);
+  hooks.onKey("down", "a", "", false);
+  hooks.onKey("up", "a", "", false);
+  hooks.onKey("down", "Escape", "", false);
+  // A burst of cursor moves, then an edit: the moves are written first, as one observation.
+  hooks.onSelection({ ranges: [{ anchor: 1, head: 1 }], main: 0 }, "select.pointer");
+  hooks.onSelection({ ranges: [{ anchor: 2, head: 2 }], main: 0 }, "select.pointer");
+  hooks.onSelection({ ranges: [{ anchor: 3, head: 3 }], main: 0 }, "select.pointer");
+  workspace.recordEdit(fixture.path, transactions(["x"])[0]);
+  hooks.onScroll(1, 20);
+  hooks.onScroll(5, 24);
+  hooks.onClipboard("copy", [{ from: 0, to: 1 }], false);
+  workspace.navigated("panel", "show", "output", "pointer");
+  workspace.page({ visible: false, focused: false, width: 800, height: 600 });
+  await workspace.close();
+  const all = observations(sink);
+  const types = all.map((o) => o.type.replace("observation.workspace.", ""));
+  assert.deepEqual(types, [
+    "opened",
+    "focus",
+    "selection",
+    "edit",
+    "scroll",
+    "clipboard",
+    "navigated",
+    "page",
+    "keys",
+    "closed",
+  ]);
+  const selection = all.find((o) => o.type === "observation.workspace.selection");
+  assert.equal(selection.data.moves, 3);
+  assert.deepEqual(selection.data.selection.ranges, [{ anchor: 3, head: 3 }]);
+  assert.deepEqual(
+    all.find((o) => o.type === "observation.workspace.scroll").data,
+    { file: fixture.path, fromLine: 5, toLine: 24 },
+  );
+  const keys = all.find((o) => o.type === "observation.workspace.keys").data.keys;
+  assert.deepEqual(
+    keys.map((k: unknown[]) => k.slice(1)),
+    [
+      ["down", "a", "", false],
+      ["up", "a", "", false],
+      ["down", "Escape", "", false],
+    ],
+  );
+  // Every observation has a monotonic time, and they never go backwards.
+  const times = all.map((o) => o.elapsedMs);
+  assert.ok(times.every((t, i) => typeof t === "number" && (i === 0 || t >= times[i - 1])));
+  assert.ok(keys.every((k: number[]) => k[0] <= all.at(-1).elapsedMs));
+});
+
+test("closing writes what is still buffered; discarding does not", async () => {
+  const kept = new MemorySink();
+  const one = session(kept);
+  one.activity(fixture.path).onKey("down", "b", "", false);
+  await one.close();
+  assert.ok(observations(kept).some((o) => o.type === "observation.workspace.keys"));
+  assert.equal(observations(kept).at(-1).data.reason, "left");
+
+  const dropped = new MemorySink();
+  const two = session(dropped);
+  two.activity(fixture.path).onKey("down", "b", "", false);
+  await two.close(true);
+  assert.ok(!observations(dropped).some((o) => o.type === "observation.workspace.keys"));
 });

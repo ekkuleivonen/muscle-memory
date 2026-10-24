@@ -1,5 +1,6 @@
 /**
- * Records board moves and replies to review comments on this device for accounts that accepted the current Terms, stamped
+ * Records tracker activity (page views, the page's visibility, board moves, replies to review
+ * comments, profile answers) on this device for accounts that accepted the current Terms, stamped
  * with that version. Nothing is uploaded yet. One source
  * stream per page load; positions are assigned in call order and writes retry with the same
  * IDs, so retried records deduplicate.
@@ -11,10 +12,17 @@ import {
 import { randomId } from "../../../../../packages/browser/random-id";
 import {
   boardMove,
+  boardPage,
+  boardProfile,
   boardRecord,
   boardReply,
+  boardView,
+  type BoardBase,
   type BoardMoveData,
   type BoardObservation,
+  type BoardPageData,
+  type BoardProfileData,
+  type BoardViewData,
 } from "../../../../../packages/domain/board";
 import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
 import { readProfile } from "../../../lib/account";
@@ -24,6 +32,9 @@ const sourceId = `board-${randomId()}`;
 let sequence = 0;
 let store: Promise<PracticeStore> | null = null;
 const pending: WorkspaceRecord[] = [];
+
+/** The app page before the current one in this tab, for the IDE's `entry` (client navigation leaves document.referrer stale). */
+export const PREVIOUS_PATH_KEY = "muscle-memory.previous-path";
 
 export function logBoardMove(
   issue: { id: string; revision: string },
@@ -40,14 +51,42 @@ export function logReply(
   return log((base) => boardReply({ ...base, issue, data }), "Reply");
 }
 
+export function logView(
+  issue: { id: string; revision: string } | null,
+  data: BoardViewData,
+): Promise<void> {
+  return log((base) => boardView({ ...base, issue, data }), "Page view");
+}
+
+export function logPage(data: BoardPageData): Promise<void> {
+  return log((base) => boardPage({ ...base, data }), "Page state");
+}
+
+export function logProfile(data: BoardProfileData): Promise<void> {
+  return log((base) => boardProfile({ ...base, data }), "Profile answers");
+}
+
+/**
+ * The issue the page on screen is about, set by that page so its view names the issue and the
+ * revision live at the time. Children's effects run before the layout's, so it is set by the
+ * time the view is recorded.
+ */
+let context: { path: string; issue: { id: string; revision: string } } | null = null;
+
+export function setIssueContext(issue: { id: string; revision: string } | null): () => void {
+  const path = location.pathname;
+  context = issue ? { path, issue } : null;
+  return () => {
+    if (context?.path === path) context = null;
+  };
+}
+
+export function issueContext(path: string): { id: string; revision: string } | null {
+  return context?.path === path ? context.issue : null;
+}
+
 async function log(
-  build: (base: {
-    participantId: string;
-    sourceId: string;
-    sequence: number;
-    occurredAt: string;
-    termsVersion: string;
-  }) => BoardObservation,
+  build: (base: BoardBase) => BoardObservation,
   what: string,
 ): Promise<void> {
   const accepted = readProfile()?.accepted;
@@ -56,6 +95,8 @@ async function log(
   // Claim the position and time now, so order matches what the person did.
   const position = ++sequence;
   const occurredAt = new Date().toISOString();
+  // performance.now() counts from this page load, which is this source stream.
+  const elapsedMs = Math.round(performance.now() * 10) / 10;
   try {
     store ??= openPracticeStore();
     const opened = await store;
@@ -66,6 +107,7 @@ async function log(
           sourceId,
           sequence: position,
           occurredAt,
+          elapsedMs,
           termsVersion: accepted.version,
         }),
       ),

@@ -16,6 +16,10 @@ import {
   codeRevision,
   type CodeRevisionArtifact,
   EDIT_CHANGES_LIMIT_BYTES,
+  type KeyEvent,
+  type ObservationData,
+  type ObservationType,
+  type ViewTarget,
   pullRequestResult,
   type PullRequestResult,
   type RunPurpose,
@@ -30,7 +34,12 @@ import {
 } from "../../../../packages/runner/runner";
 import type { Release } from "../../lib/feedback";
 import type { FileLanguage } from "../../lib/repo";
-import { createEditor, editorFeatures, type Keymap } from "./editor";
+import {
+  createEditor,
+  editorFeatures,
+  type ActivityHooks,
+  type Keymap,
+} from "./editor";
 import type { TypeChecker } from "./type-checker";
 
 export const RUN_TIMEOUT_MS = 5000;
@@ -97,7 +106,17 @@ export interface SessionOptions {
   readonly onEditedAfterRun: () => void;
   /** Called only when the save status shown to the player may have changed. */
   readonly onSaveStatus?: (status: SaveStatus) => void;
+  /** The app page the IDE was opened from, and the window size, for `opened`. */
+  readonly entry?: string | null;
+  readonly viewport?: { width: number; height: number } | null;
 }
+
+/** Keys are written about once a second, or sooner when this many are waiting. */
+const KEYS_EVERY_MS = 1000;
+const KEYS_AT_MOST = 200;
+/** Bursts of cursor moves and of scrolling merge into one observation within these windows. */
+const SELECTION_MERGE_MS = 100;
+const SCROLL_MERGE_MS = 250;
 
 export interface EditableFile {
   readonly text: string;
@@ -132,6 +151,14 @@ export class WorkspaceSession {
   private unsafeReason = "";
   private statusKey = "";
   private pullRequests = 0;
+  /** Key events waiting to be written, by file. */
+  private readonly keys = new Map<string, KeyEvent[]>();
+  private keysTimer: ReturnType<typeof setTimeout> | undefined;
+  /** A burst being merged (selection or scroll in one file), written when it settles. */
+  private burst:
+    | { key: string; emit: () => void; timer: ReturnType<typeof setTimeout> }
+    | undefined;
+  private closed = false;
 
   private get runtime(): Engine["runtime"] | null {
     return this.options.runtime === undefined
@@ -154,11 +181,13 @@ export class WorkspaceSession {
       this.docs.set(path, Text.of(file.text.split(/\r\n?|\n/)));
     const code = this.artifact();
     this.markCopy(
-      this.recorder.observe(
+      this.record(
         "observation.workspace.opened",
         {
           revision: 0,
           codeArtifactId: code.artifactId,
+          entry: options.entry ?? null,
+          viewport: options.viewport ?? null,
           editor: editorFeatures(
             options.language ?? "python",
             options.keymap ?? "standard",
@@ -207,8 +236,8 @@ export class WorkspaceSession {
       this.docs.get(path)!.toString(),
       {
         onChange: (transaction) => this.recordEdit(path, transaction),
-        onRun: () => void this.run(),
-        onPullRequest: () => void this.pullRequest(),
+        onRun: () => void this.run("local", "keyboard"),
+        onPullRequest: () => void this.pullRequest("keyboard"),
         onVimMode: this.options.onVimMode,
       },
       {
@@ -217,6 +246,7 @@ export class WorkspaceSession {
         label: `Code editor: ${path}`,
         // The type checker knows one file: the entry file.
         types: path === this.options.executable.entry ? this.options.types : undefined,
+        activity: this.activity(path),
       },
     );
     this.views.set(path, view);
@@ -252,11 +282,14 @@ export class WorkspaceSession {
    * Opens a pull request, or pushes to the open one: this exact code, checked by a run of
    * every case.
    */
-  pullRequest(): Promise<void> {
-    return this.run("pull-request");
+  pullRequest(via: "pointer" | "keyboard" = "pointer"): Promise<void> {
+    return this.run("pull-request", via);
   }
 
-  async run(purpose: RunPurpose = "local"): Promise<void> {
+  async run(
+    purpose: RunPurpose = "local",
+    via: "pointer" | "keyboard" = "pointer",
+  ): Promise<void> {
     if (!this.views.size || !this.runnable || this.options.runner().running)
       return;
     const revision = this.revision;
@@ -267,6 +300,7 @@ export class WorkspaceSession {
     const runId = randomId();
     const base = {
       runId,
+      via,
       purpose,
       revision,
       codeArtifactId: code.artifactId,
@@ -289,7 +323,7 @@ export class WorkspaceSession {
     this.snapshot(code, "run");
     this.editsSinceSnapshot = 0;
     const update = (status: RunStatus, outcome?: RunOutcome) => {
-      this.recorder.observe("observation.workspace.run", {
+      this.record("observation.workspace.run", {
         ...base,
         status,
         ...(outcome ? { outcome: outcome as unknown as Json } : {}),
@@ -326,7 +360,7 @@ export class WorkspaceSession {
     if (pullRequest) {
       const verdict = pullRequestResult(this.options.executable.cases, outcome);
       Object.assign(pullRequest, verdict);
-      this.recorder.observe("observation.workspace.pull-request", {
+      this.record("observation.workspace.pull-request", {
         number: pullRequest.number,
         push: pullRequest.push,
         runId,
@@ -346,7 +380,7 @@ export class WorkspaceSession {
   release(releases: readonly Release[]): void {
     for (const r of releases)
       if (r.kind === "comment")
-        this.recorder.observe("observation.workspace.comment", {
+        this.record("observation.workspace.comment", {
           comment: r.comment.id,
           where: r.comment.where,
           severity: r.comment.severity,
@@ -354,12 +388,12 @@ export class WorkspaceSession {
           ...(r.pullRequest ? { pullRequest: r.pullRequest, push: r.push } : {}),
         });
       else if (r.kind === "hint")
-        this.recorder.observe("observation.workspace.hint", {
+        this.record("observation.workspace.hint", {
           hint: r.hint.id,
           level: r.hint.level,
         });
       else
-        this.recorder.observe("observation.workspace.thread-resolved", {
+        this.record("observation.workspace.thread-resolved", {
           comment: r.comment,
           pullRequest: r.pullRequest,
           push: r.push,
@@ -367,13 +401,136 @@ export class WorkspaceSession {
         });
   }
 
-  /** Stops capture after in-flight writes settle; the caller then clears storage. */
-  async close(): Promise<void> {
+  /**
+   * Records that the IDE was left, writes everything still buffered, then stops capture.
+   * `discard` stops at once without writing, for when the caller is about to delete the data.
+   */
+  async close(discard = false): Promise<void> {
     // The IDE may already have dropped its runner when it unmounts.
     this.options.runner()?.cancel();
+    if (!discard && !this.closed) {
+      this.closed = true;
+      this.settle();
+      this.writeKeys();
+      this.record("observation.workspace.closed", { reason: "left" });
+      await this.recorder.flush().catch(() => undefined);
+    }
     for (const view of this.views.values()) view.destroy();
     this.views.clear();
     await this.recorder.stop();
+  }
+
+  /**
+   * The page is being hidden and may be unloaded: write what is buffered now. Best effort; the
+   * browser may stop the page before the writes finish (a declared gap).
+   */
+  pageHidden(): void {
+    if (this.closed) return;
+    this.settle();
+    this.writeKeys();
+    this.record("observation.workspace.closed", { reason: "page-hidden-for-unload" });
+    void this.recorder.flush().catch(() => undefined);
+  }
+
+  /** The page became visible or hidden, gained or lost focus, or was resized. */
+  page(state: { visible: boolean; focused: boolean; width: number; height: number }): void {
+    this.record("observation.workspace.page", state);
+  }
+
+  /** A file, side bar view or panel opened, shown or closed. */
+  navigated(
+    target: ViewTarget,
+    action: "open" | "show" | "close",
+    value: string,
+    via: "pointer" | "keyboard" | "app",
+  ): void {
+    this.record("observation.workspace.navigated", { target, action, value, via });
+  }
+
+  runtimeState(state: "loading" | "ready" | "unavailable", message?: string): void {
+    this.record("observation.workspace.runtime", {
+      state,
+      ...(message ? { message } : {}),
+    });
+  }
+
+  /** What one file's editor reports besides its edits; read-only files too. */
+  activity(file: string): ActivityHooks {
+    return {
+      onKey: (kind, key, modifiers, repeat) => {
+        if (this.closed) return;
+        const waiting = this.keys.get(file) ?? [];
+        waiting.push([this.recorder.elapsed(), kind, key, modifiers, repeat]);
+        this.keys.set(file, waiting);
+        if (waiting.length >= KEYS_AT_MOST) this.writeKeys();
+        else this.keysTimer ??= setTimeout(() => this.writeKeys(), KEYS_EVERY_MS);
+      },
+      onSelection: (selection, userEvent) => {
+        const key = `selection:${file}`;
+        const moves = this.burst?.key === key ? (this.merging as number) + 1 : 1;
+        this.merge(key, SELECTION_MERGE_MS, moves, () =>
+          this.record("observation.workspace.selection", {
+            file,
+            selection: selection as Json,
+            userEvent,
+            moves,
+          }),
+        );
+      },
+      onScroll: (fromLine, toLine) =>
+        this.merge(`scroll:${file}`, SCROLL_MERGE_MS, 0, () =>
+          this.record("observation.workspace.scroll", { file, fromLine, toLine }),
+        ),
+      onFocus: (focused) => this.record("observation.workspace.focus", { file, focused }),
+      onClipboard: (kind, ranges, wholeLines) =>
+        this.record("observation.workspace.clipboard", { file, kind, ranges, wholeLines }),
+      onAssist: (kind, items) =>
+        this.record("observation.workspace.assist", { file, kind, items: items as Json }),
+    };
+  }
+
+  /** Moves merged so far in the current selection burst. */
+  private merging = 0;
+
+  /** Holds the latest of a burst until it settles; a different burst settles this one first. */
+  private merge(key: string, ms: number, count: number, emit: () => void): void {
+    if (this.closed) return;
+    if (this.burst && this.burst.key !== key) this.settle();
+    if (this.burst) clearTimeout(this.burst.timer);
+    this.merging = count;
+    this.burst = { key, emit, timer: setTimeout(() => this.settle(), ms) };
+  }
+
+  /** Writes the burst being merged, if any. */
+  private settle(): void {
+    const burst = this.burst;
+    if (!burst) return;
+    clearTimeout(burst.timer);
+    this.burst = undefined;
+    this.merging = 0;
+    burst.emit();
+  }
+
+  /** Writes waiting key events, one observation per file. */
+  private writeKeys(): void {
+    clearTimeout(this.keysTimer);
+    this.keysTimer = undefined;
+    for (const [file, keys] of this.keys)
+      if (keys.length) this.recorder.observe("observation.workspace.keys", { file, keys });
+    this.keys.clear();
+  }
+
+  /**
+   * Every observation but keys goes through here, so a merged burst is written before what
+   * follows it and source order matches what happened. Keys carry their own times instead.
+   */
+  private record<T extends ObservationType>(
+    type: T,
+    data: ObservationData[T],
+    artifacts?: readonly CodeRevisionArtifact[],
+  ) {
+    this.settle();
+    return this.recorder.observe(type, data, artifacts);
   }
 
   /** Records one applied transaction in one file. Exposed for tests; the editor calls it per change. */
@@ -386,7 +543,7 @@ export class WorkspaceSession {
       JSON.stringify(changes),
     ).length;
     const oversize = changesBytes > EDIT_CHANGES_LIMIT_BYTES;
-    const edit = this.recorder.observe("observation.workspace.edit", {
+    const edit = this.record("observation.workspace.edit", {
       file,
       revision: this.revision,
       changes: oversize ? null : changes,
@@ -424,7 +581,7 @@ export class WorkspaceSession {
     reason: "restored" | "run" | "periodic" | "oversize-edit",
   ): void {
     this.markCopy(
-      this.recorder.observe(
+      this.record(
         "observation.workspace.snapshot",
         { revision: code.revision, codeArtifactId: code.artifactId, reason },
         [code],

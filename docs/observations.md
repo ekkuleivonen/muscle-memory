@@ -5,7 +5,7 @@ How Muscle Memory records practice. Two primitives underpin the data model:
 - **Immutable content.** Every issue revision a player works against is stored once under the SHA-256 of its content, with its repo, cases, teammate comments and hints ([issue model](issue-model.md)). Recorded data names the revision, so it can always be read against exactly what the player saw.
 - **Ordered observations** of disclosed activity inside the IDE and on the board. Each observation has a stable ID, schema version, source sequence, client occurrence time and (once there is a server) a receipt time. Gaps, dropped capture and truncation are explicit.
 
-What the [workspace](workspace.md) and the [board](board-activity.md) record today: opening an issue, editor transactions with recovery snapshots, code revisions, runs with their raw bounded outcomes, pull requests and their pushes, teammate comments, review threads and hints as they are released, replies to review comments, and board moves, including merging. All of it stays on the device; nothing is uploaded yet.
+What the [workspace](workspace.md) and the [board](board-activity.md) record today: every key pressed in the IDE's editors with its timing, editor transactions with recovery snapshots, cursor moves, scrolling, focus, copies and cuts, the type help shown, files and panels opened, page visibility, the runtime, runs with their raw bounded outcomes, pull requests and their pushes, teammate comments, review threads and hints as they are released, every page of the tracker viewed with its search and filters, replies to review comments, profile answers, and board moves, including merging. All of it stays on the device; nothing is uploaded yet.
 
 ## Capture boundary
 
@@ -23,4 +23,4 @@ A source stream is one participant's one source ID: one page load of the IDE (`w
 
 ## Remaining gaps
 
-No server receipt yet, no keystroke timing within a transaction, no selection-only changes, and no active time. Source streams carry no clock-based ordering across sources. Review the instrumentation and consent boundary before any collection beyond this device.
+No server receipt yet. Not recorded: pointer movement and hovering (except type tooltips), layout resizing, keystrokes in the tracker's text fields (their results are), menus opened without a choice, and anything in other tabs or apps (only that the page was hidden or lost focus). Writes still buffered when a page closes can be lost. Each stream's `elapsedMs` orders its own events exactly; across streams only the wall clock (`occurredAt`) lines them up. Review the instrumentation and consent boundary before any collection beyond this device.

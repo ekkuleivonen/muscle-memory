@@ -1,15 +1,22 @@
 /**
- * Raw observations from the tracker: personal-board moves (an issue's status set by hand from
- * its Status menu, or Done by merging a pull request) and replies to review comments.
- * Recorded for every account under the Terms and Privacy Notice it accepted, whose version
- * each move carries; nothing here reads anything beyond the move itself and the board at
- * that moment.
+ * Raw observations from the tracker, every page outside the IDE: pages viewed (with their
+ * search and filters), the page becoming visible, hidden, focused or resized, personal-board
+ * moves (an issue's status set by hand, or Done by merging a pull request), replies to review
+ * comments and the onboarding and settings answers. Recorded for every account under the Terms
+ * and Privacy Notice it accepted, whose version each observation carries. Typing in text
+ * fields is not recorded key by key: a search is recorded as the query it produced, a reply as
+ * the text sent.
  */
 import { boundText, safeIdentifier } from "./capture";
 import { canonical, type Json } from "./json";
 import type { WorkspaceRecord } from "./workspace";
 
 /**
+ * 4.0.0: everything in the tracker. Every observation has `elapsedMs`, a monotonic clock from
+ * the start of its source stream (a page load). New: `viewed` (each page, with its query and
+ * the page before it), `page` (visible, focused, size) and `profile` (the onboarding and
+ * settings answers when saved). `issue` and `issueRevision` are null on pages that are not
+ * about one issue.
  * 3.0.0: replies. `observation.board.replied` records a reply to a teammate's review comment
  * on a pull request, with its bounded text; a reply resolves a blocking thread.
  * 2.0.0: moves name the `issue` and its live `issueRevision` (SHA-256 of the revision's
@@ -17,13 +24,14 @@ import type { WorkspaceRecord } from "./workspace";
  * issue to Done (`trigger: "pull-request-merged"`, by pointer or keyboard). Earlier versions
  * were never released.
  */
-export const BOARD_CAPTURE_VERSION = "board-capture-3.0.0";
+export const BOARD_CAPTURE_VERSION = "board-capture-4.0.0";
 /** What this capture does not record. Absence is a gap, not evidence of no activity. */
 export const BOARD_CAPTURE_GAPS = [
-  "issue-views",
-  "searches-and-filters",
-  "time-on-page",
-  "activity-outside-board-moves-and-replies",
+  "keystrokes-in-text-fields",
+  "pointer-movement-and-hover",
+  "menus-opened-without-a-choice",
+  "activity-in-other-tabs-and-apps",
+  "writes-cut-short-by-closing-the-page",
 ] as const;
 
 export type BoardColumn = "backlog" | "todo" | "in-progress" | "done";
@@ -61,9 +69,32 @@ export interface BoardReplyData {
   readonly truncated: boolean;
 }
 
+/** A page of the app was shown: its path, its query string, and the app page before it. */
+export interface BoardViewData {
+  readonly path: string;
+  readonly query: string;
+  readonly previous: string | null;
+}
+
+export interface BoardPageData {
+  readonly visible: boolean;
+  readonly focused: boolean;
+  readonly width: number;
+  readonly height: number;
+}
+
+/** The answers given in onboarding or settings, as saved. */
+export interface BoardProfileData {
+  readonly from: "onboarding" | "settings";
+  readonly answers: Json;
+}
+
 interface BoardData {
   "observation.board.moved": BoardMoveData;
   "observation.board.replied": BoardReplyData;
+  "observation.board.viewed": BoardViewData;
+  "observation.board.page": BoardPageData;
+  "observation.board.profile": BoardProfileData;
 }
 
 export interface BoardObservation<
@@ -75,6 +106,8 @@ export interface BoardObservation<
   readonly participantId: string;
   readonly source: { readonly id: string; readonly sequence: number };
   readonly occurredAt: string;
+  /** Milliseconds since the page load started its source stream, on a monotonic clock. */
+  readonly elapsedMs: number;
   readonly serverReceipt: {
     readonly status: "absent";
     readonly reason: "local-only";
@@ -84,9 +117,9 @@ export interface BoardObservation<
   /** The Terms and Privacy Notice version the account accepted, e.g. terms-2026-10-24. */
   readonly consentVersion: string;
   readonly researchConsent: false;
-  /** As in workspace observations: the issue and the revision live at the time. */
-  readonly issue: string;
-  readonly issueRevision: string;
+  /** As in workspace observations: the issue and the revision live at the time; null when not about one. */
+  readonly issue: string | null;
+  readonly issueRevision: string | null;
   readonly data: BoardData[T];
 }
 
@@ -110,6 +143,7 @@ export function boardMove(input: {
   sourceId: string;
   sequence: number;
   occurredAt: string;
+  elapsedMs: number;
   /** The accepted Terms and Privacy Notice version. */
   termsVersion: string;
   issue: { id: string; revision: string };
@@ -165,6 +199,7 @@ export function boardReply(input: {
   sourceId: string;
   sequence: number;
   occurredAt: string;
+  elapsedMs: number;
   termsVersion: string;
   issue: { id: string; revision: string };
   data: { issueKey: string; pullRequest: number; comment: string; text: string };
@@ -193,18 +228,22 @@ function envelope<T extends keyof BoardData>(
     sourceId: string;
     sequence: number;
     occurredAt: string;
+    elapsedMs: number;
     termsVersion: string;
-    issue: { id: string; revision: string };
+    issue: { id: string; revision: string } | null;
   },
   data: BoardData[T],
 ): BoardObservation<T> {
-  const { participantId, sourceId, sequence, occurredAt, termsVersion, issue } = input;
+  const { participantId, sourceId, sequence, occurredAt, elapsedMs, termsVersion, issue } =
+    input;
   safeIdentifier(participantId);
   safeIdentifier(sourceId);
-  safeIdentifier(issue.id);
+  if (issue) safeIdentifier(issue.id);
   if (!Number.isSafeInteger(sequence) || sequence < 1)
     throw new Error("Source positions are positive whole numbers.");
-  if (!REVISION.test(issue.revision))
+  if (!Number.isFinite(elapsedMs) || elapsedMs < 0)
+    throw new Error("Board observations need their elapsed time.");
+  if (issue && !REVISION.test(issue.revision))
     throw new Error("Board observations name the issue's exact revision.");
   if (Number.isNaN(Date.parse(occurredAt)))
     throw new Error("Board observations need a time.");
@@ -219,15 +258,61 @@ function envelope<T extends keyof BoardData>(
     participantId,
     source: { id: sourceId, sequence },
     occurredAt,
+    elapsedMs,
     serverReceipt: { status: "absent", reason: "local-only" },
     captureVersion: BOARD_CAPTURE_VERSION,
     captureGaps: [...BOARD_CAPTURE_GAPS],
     consentVersion: `terms-${termsVersion}`,
     researchConsent: false,
-    issue: issue.id,
-    issueRevision: issue.revision,
+    issue: issue?.id ?? null,
+    issueRevision: issue?.revision ?? null,
     data,
   };
+}
+
+/** The common fields of a board observation before its data. */
+export interface BoardBase {
+  participantId: string;
+  sourceId: string;
+  sequence: number;
+  occurredAt: string;
+  elapsedMs: number;
+  termsVersion: string;
+}
+
+const PAGE_PATH = /^\/[\w\-./%~]*$/;
+
+export function boardView(
+  input: BoardBase & { issue: { id: string; revision: string } | null; data: BoardViewData },
+): BoardObservation<"observation.board.viewed"> {
+  const { path, query, previous } = input.data;
+  if (!PAGE_PATH.test(path) || (previous !== null && !PAGE_PATH.test(previous.split("?")[0])))
+    throw new Error("A page view names app paths.");
+  return envelope("observation.board.viewed", input, {
+    path,
+    query: boundText(query, 2048).text,
+    previous,
+  });
+}
+
+export function boardPage(
+  input: BoardBase & { data: BoardPageData },
+): BoardObservation<"observation.board.page"> {
+  const { visible, focused, width, height } = input.data;
+  return envelope("observation.board.page", { ...input, issue: null }, {
+    visible: Boolean(visible),
+    focused: Boolean(focused),
+    width: Math.round(width),
+    height: Math.round(height),
+  });
+}
+
+export function boardProfile(
+  input: BoardBase & { data: BoardProfileData },
+): BoardObservation<"observation.board.profile"> {
+  if (!["onboarding", "settings"].includes(input.data.from))
+    throw new Error("Profile answers come from onboarding or settings.");
+  return envelope("observation.board.profile", { ...input, issue: null }, input.data);
 }
 
 /** Stored like workspace observations: one canonical payload per stable ID. */

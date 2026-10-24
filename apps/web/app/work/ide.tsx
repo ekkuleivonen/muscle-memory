@@ -56,9 +56,10 @@ import {
 } from "../../lib/repo";
 import { LanguageDot } from "../(browse)/_components/bits";
 import { StatusMenu, useBoard } from "../(browse)/_components/board";
+import { PREVIOUS_PATH_KEY, setIssueContext } from "../(browse)/_components/board-log";
 import { Markdown } from "../(browse)/_components/markdown";
 import { pullHref } from "../(browse)/_components/pulls";
-import { createViewer, type Keymap } from "../workspace/editor";
+import { createViewer, type ActivityHooks, type Keymap } from "../workspace/editor";
 import { checksTypes, TypeChecker } from "../workspace/type-checker";
 import { PANEL, panelMax, SIDE, Splitter, useIdeLayout } from "./splitter";
 import { caseLabel, transcript, type Executable } from "./transcript";
@@ -383,12 +384,20 @@ export function Ide({
         onEditedAfterRun: () => setStale(true),
         onSaveStatus: setCapture,
         onVimMode: setVimMode,
+        entry: entryPath(),
+        viewport: { width: window.innerWidth, height: window.innerHeight },
       });
       // The home file mounts last, so it has the focus.
       for (const file of editable)
         if (file.path !== home)
           session.current.mount(file.path, hosts.current.get(file.path)!);
       session.current.mount(home, homeHost);
+      session.current.page({
+        visible: document.visibilityState === "visible",
+        focused: document.hasFocus(),
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
       setOpening({ state: "open" });
       review();
     } catch (cause) {
@@ -436,6 +445,95 @@ export function Ide({
     };
   }, []);
 
+  /** The last input, so a navigation can say whether a person or the app made it. */
+  const input = useRef<{ kind: "pointer" | "keyboard"; at: number } | null>(null);
+  const via = (): "pointer" | "keyboard" | "app" =>
+    input.current && performance.now() - input.current.at < 1000 ? input.current.kind : "app";
+  /** Activity hooks that reach whichever session is open when the event happens. */
+  function forward(path: string): ActivityHooks {
+    const to = () => session.current?.activity(path);
+    return {
+      onKey: (...a) => to()?.onKey(...a),
+      onSelection: (...a) => to()?.onSelection(...a),
+      onScroll: (...a) => to()?.onScroll(...a),
+      onFocus: (...a) => to()?.onFocus(...a),
+      onClipboard: (...a) => to()?.onClipboard(...a),
+    };
+  }
+
+  useEffect(
+    () => setIssueContext({ id: issue.slug, revision: issue.revision }),
+    [issue.slug, issue.revision],
+  );
+
+  // The page: visible or hidden, focused or not, its size, and its last moments.
+  useEffect(() => {
+    const noteInput = (kind: "pointer" | "keyboard") => () =>
+      (input.current = { kind, at: performance.now() });
+    const pointer = noteInput("pointer");
+    const keyboard = noteInput("keyboard");
+    let resize: ReturnType<typeof setTimeout> | undefined;
+    const page = () =>
+      session.current?.page({
+        visible: document.visibilityState === "visible",
+        focused: document.hasFocus(),
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    const resized = () => {
+      clearTimeout(resize);
+      resize = setTimeout(page, 250);
+    };
+    const hidden = () => session.current?.pageHidden();
+    window.addEventListener("pointerdown", pointer, true);
+    window.addEventListener("keydown", keyboard, true);
+    document.addEventListener("visibilitychange", page);
+    window.addEventListener("focus", page);
+    window.addEventListener("blur", page);
+    window.addEventListener("resize", resized);
+    window.addEventListener("pagehide", hidden);
+    return () => {
+      clearTimeout(resize);
+      window.removeEventListener("pointerdown", pointer, true);
+      window.removeEventListener("keydown", keyboard, true);
+      document.removeEventListener("visibilitychange", page);
+      window.removeEventListener("focus", page);
+      window.removeEventListener("blur", page);
+      window.removeEventListener("resize", resized);
+      window.removeEventListener("pagehide", hidden);
+    };
+  }, []);
+
+  // What was open: tabs opened and closed, the file shown, the side bar and the panel.
+  const shownTabs = useRef<string[]>([]);
+  const isOpen = opening.state === "open";
+  useEffect(() => {
+    const current = session.current;
+    if (!isOpen || !current) return;
+    const before = shownTabs.current;
+    for (const path of tabs)
+      if (!before.includes(path)) current.navigated("file", "open", path, via());
+    for (const path of before)
+      if (!tabs.includes(path)) current.navigated("file", "close", path, via());
+    shownTabs.current = tabs;
+  }, [tabs, isOpen]);
+  useEffect(() => {
+    if (isOpen) session.current?.navigated("file", "show", active, via());
+  }, [active, isOpen]);
+  useEffect(() => {
+    if (isOpen) session.current?.navigated("side", "show", view, via());
+  }, [view, isOpen]);
+  useEffect(() => {
+    if (isOpen) session.current?.navigated("panel", "show", panel, via());
+  }, [panel, isOpen]);
+  useEffect(() => {
+    if (!isOpen || runtime.state === "none") return;
+    session.current?.runtimeState(
+      runtime.state,
+      runtime.state === "unavailable" ? runtime.message : undefined,
+    );
+  }, [runtime.state, isOpen]);
+
   // Read-only files get a viewer the first time they are shown.
   useEffect(() => {
     const file = repo.files.find((f) => f.path === active);
@@ -448,6 +546,7 @@ export function Ide({
         createViewer(host, file.text, {
           language: file.language,
           label: `${file.path} (read-only)`,
+          activity: forward(file.path),
         }),
       );
   }, [active, tabs, repo]);
@@ -516,7 +615,9 @@ export function Ide({
                   type="button"
                   className="ide-run secondary"
                   disabled={!ready}
-                  onClick={() => void session.current?.run()}
+                  onClick={(event) =>
+                    void session.current?.run("local", event.detail === 0 ? "keyboard" : "pointer")
+                  }
                   title="Run the tests on your code (Ctrl/⌘-Enter). Nothing else happens."
                 >
                   ▶ Run tests <kbd>⌘⏎</kbd>
@@ -525,7 +626,9 @@ export function Ide({
                   type="button"
                   className="ide-run"
                   disabled={!ready}
-                  onClick={() => void session.current?.pullRequest()}
+                  onClick={(event) =>
+                    void session.current?.pullRequest(event.detail === 0 ? "keyboard" : "pointer")
+                  }
                   title={
                     openPull
                       ? `Push this code to pull request #${openPull.number}: CI checks it again (Ctrl/⌘-Shift-Enter)`
@@ -1213,6 +1316,24 @@ function PullRequests({
       )}
     </div>
   );
+}
+
+/** The app page the IDE was opened from, if it was one of ours. */
+function entryPath(): string | null {
+  // Client navigation leaves document.referrer at the first page loaded; the tracker notes
+  // the page before this one.
+  try {
+    const previous = sessionStorage.getItem(PREVIOUS_PATH_KEY);
+    if (previous && !previous.startsWith("/work/")) return previous;
+  } catch {
+    // Fall back to the referrer.
+  }
+  try {
+    const from = new URL(document.referrer);
+    return from.origin === location.origin ? from.pathname + from.search : null;
+  } catch {
+    return null;
+  }
 }
 
 function comments(count: number): string {

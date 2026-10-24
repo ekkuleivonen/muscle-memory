@@ -1,12 +1,24 @@
 /**
- * Raw observations from the issue workspace (the IDE): editor transactions, recovery
- * snapshots, runs and pull requests. Disclosed, local-only and scoped to the editor; nothing
- * here listens to the keyboard, clipboard or anything outside the workspace.
+ * Raw observations from the issue workspace (the IDE): every key pressed in its editors, editor
+ * transactions, selections, scrolling, focus, copy and cut, the help the editor showed, which
+ * files and panels were open, whether the page was visible, the runtime, runs, pull requests
+ * and teammate feedback. Disclosed and local-only. Keys are heard only inside the IDE's
+ * editors; the clipboard is never read (a paste is recorded as the edit it makes).
  */
 import { boundText, CAPTURE_LIMIT_BYTES, safeIdentifier } from "./capture";
 import { canonical, type Json } from "./json";
 
 /**
+ * 5.0.0: everything that happens in the IDE, as finely as it happens. Every observation has
+ * `elapsedMs`, a monotonic clock from the start of its source stream, for exact intervals.
+ * New: `keys` (every key down and up and IME composition in an editor, batched about once a
+ * second), `selection` (cursor and selection moves that change no text, merged within 100 ms),
+ * `scroll` (the lines in view, merged within 250 ms), `focus`, `clipboard` (copy and cut
+ * ranges), `assist` (type errors shown and hover types opened), `navigated` (files opened,
+ * shown and closed, the side bar and panel), `page` (visible, focused, size), `runtime` (the
+ * runtime loading, ready or failing) and `closed`. Read-only files report keys, selection,
+ * scrolling, focus and copies too. A run says how it was started (`via`), and `opened` says
+ * where the IDE was opened from and the window size.
  * 4.0.0: teammate feedback. `comment` records a teammate comment released by its trigger,
  * `hint` a hint, and `thread-resolved` a blocking review thread that a later push no longer
  * triggers. The ticket's own thread (comments on the `opened` event) is part of the ticket and
@@ -22,17 +34,26 @@ import { canonical, type Json } from "./json";
  * `number` with `push` 2, 3, …, and `result` reports only that run's checks. Earlier versions
  * were never released.
  */
-export const WORKSPACE_CAPTURE_VERSION = "workspace-capture-4.0.0";
+export const WORKSPACE_CAPTURE_VERSION = "workspace-capture-5.0.0";
 /** An edit whose change set is larger than this is recorded without it, plus a snapshot. */
 export const EDIT_CHANGES_LIMIT_BYTES = 16384;
 /** What this capture version does not record. Absence is a gap, not evidence of no activity. */
 export const WORKSPACE_CAPTURE_GAPS = [
-  "selection-only-changes",
-  "focus-and-scroll",
-  "activity-outside-the-editor",
-  "keystroke-timing-within-a-transaction",
-  "active-time",
+  "pointer-movement-and-hover-without-a-tooltip",
+  "layout-resizing",
+  "activity-in-other-tabs-and-apps",
+  "writes-cut-short-by-closing-the-page",
 ] as const;
+
+/** A key event in an editor: elapsedMs, kind, the key, modifiers held (C, A, S, M), repeat. */
+export type KeyEvent = readonly [
+  elapsedMs: number,
+  kind: "down" | "up" | "compose-start" | "compose-end",
+  key: string,
+  modifiers: string,
+  repeat: boolean,
+];
+export type ViewTarget = "file" | "side" | "panel";
 
 export type RunStatus =
   | "queued"
@@ -47,6 +68,9 @@ export interface ObservationData {
   "observation.workspace.opened": {
     readonly revision: number;
     readonly codeArtifactId: string;
+    /** The app page the IDE was opened from (same-origin path), or null. */
+    readonly entry: string | null;
+    readonly viewport: { readonly width: number; readonly height: number } | null;
     readonly editor: {
       readonly name: string;
       readonly features: readonly string[];
@@ -78,6 +102,8 @@ export interface ObservationData {
   };
   "observation.workspace.run": {
     readonly runId: string;
+    /** How it was started: a button, or a keyboard shortcut. */
+    readonly via?: "pointer" | "keyboard";
     /** Run tests (local), or the checks of a pull request. Absent before 1.2.0: local. */
     readonly purpose?: RunPurpose;
     readonly revision: number;
@@ -133,6 +159,66 @@ export interface ObservationData {
     readonly push: number;
     readonly by: "code";
   };
+  /** Key events in one file's editor, in order, about a second at a time. */
+  "observation.workspace.keys": {
+    readonly file: string;
+    readonly keys: readonly KeyEvent[];
+  };
+  /** The cursor or selection moved without changing text; bursts merge within 100 ms. */
+  "observation.workspace.selection": {
+    readonly file: string;
+    /** CodeMirror EditorSelection JSON after the last move. */
+    readonly selection: Json;
+    readonly userEvent: string | null;
+    /** Moves merged into this one, itself included. */
+    readonly moves: number;
+  };
+  /** The lines in view after scrolling; bursts merge within 250 ms. */
+  "observation.workspace.scroll": {
+    readonly file: string;
+    readonly fromLine: number;
+    readonly toLine: number;
+  };
+  "observation.workspace.focus": {
+    readonly file: string;
+    readonly focused: boolean;
+  };
+  /** Text copied or cut in an editor: where, never the clipboard. */
+  "observation.workspace.clipboard": {
+    readonly file: string;
+    readonly kind: "copy" | "cut";
+    readonly ranges: readonly { readonly from: number; readonly to: number }[];
+    /** Nothing was selected, so the editor took the cursors' whole lines. */
+    readonly wholeLines: boolean;
+  };
+  /** Help the editor showed: type errors after a pause in typing, or a hover type. */
+  "observation.workspace.assist": {
+    readonly file: string;
+    readonly kind: "diagnostics" | "hover";
+    readonly items: Json;
+  };
+  /** A file, side bar view or panel opened, shown or closed. */
+  "observation.workspace.navigated": {
+    readonly target: ViewTarget;
+    readonly action: "open" | "show" | "close";
+    readonly value: string;
+    readonly via: "pointer" | "keyboard" | "app";
+  };
+  /** The page became visible or hidden, gained or lost focus, or was resized. */
+  "observation.workspace.page": {
+    readonly visible: boolean;
+    readonly focused: boolean;
+    readonly width: number;
+    readonly height: number;
+  };
+  "observation.workspace.runtime": {
+    readonly state: "loading" | "ready" | "unavailable";
+    readonly message?: string;
+  };
+  /** The IDE was left: navigating away in the app, or the page being closed. */
+  "observation.workspace.closed": {
+    readonly reason: "left" | "page-hidden-for-unload";
+  };
   "observation.workspace.capture-gap": {
     /** Inclusive source positions whose observations were not stored. */
     readonly fromSequence: number;
@@ -158,6 +244,8 @@ export interface WorkspaceObservation<
   readonly participantId: string;
   readonly source: { readonly id: string; readonly sequence: number };
   readonly occurredAt: string;
+  /** Milliseconds since the source stream started, on a monotonic clock (0.1 ms steps). */
+  readonly elapsedMs: number;
   readonly serverReceipt: {
     readonly status: "absent";
     readonly reason: "local-only";

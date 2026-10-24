@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   editableFiles,
   type Case,
@@ -23,7 +23,7 @@ import {
 import type { BoardMoveVia } from "../../../../../packages/domain/board";
 import { LanguageTag } from "./bits";
 import { useBoard } from "./board";
-import { logReply } from "./board-log";
+import { logReply, setIssueContext } from "./board-log";
 import { Markdown } from "./markdown";
 import { useNow, useRecords } from "./records";
 import { feedbackOf, openBlocking, type Thread } from "../../../lib/feedback";
@@ -206,6 +206,11 @@ export function PullView({
   /** Every published revision of the issue by id, as JSON: fixtures may hold a "__proto__" key. */
   revisionsJson: string;
 }) {
+  useEffect(
+    () =>
+      issue.revision ? setIssueContext({ id: issue.slug, revision: issue.revision }) : undefined,
+    [issue.slug, issue.revision],
+  );
   /** Bumped after a reply is recorded, so the records are read again. */
   const [version, setVersion] = useState(0);
   const records = useRecords(version);

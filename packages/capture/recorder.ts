@@ -43,6 +43,8 @@ export interface RecorderOptions {
    */
   readonly onTransition?: () => void;
   readonly now?: () => Date;
+  /** A monotonic clock in milliseconds; performance.now() by default. */
+  readonly monotonic?: () => number;
 }
 
 export interface CaptureStatus {
@@ -90,7 +92,10 @@ export class CaptureRecorder {
   private readonly maxRecords: number;
   private readonly maxBytes: number;
 
+  private readonly origin: number;
+
   constructor(private readonly options: RecorderOptions) {
+    this.origin = this.clock();
     safeIdentifier(options.participantId);
     safeIdentifier(options.sourceId);
     this.maxRecords = options.maxRecords ?? 1000;
@@ -115,6 +120,7 @@ export class CaptureRecorder {
       participantId: this.options.participantId,
       source: { id: this.options.sourceId, sequence },
       occurredAt: (this.options.now?.() ?? new Date()).toISOString(),
+      elapsedMs: this.elapsed(),
       serverReceipt: { status: "absent", reason: "local-only" },
       captureVersion: WORKSPACE_CAPTURE_VERSION,
       consentVersion: this.options.consentVersion,
@@ -142,6 +148,15 @@ export class CaptureRecorder {
     this.schedule(this.options.flushDelayMs ?? 250);
     this.transition();
     return observation;
+  }
+
+  /** Milliseconds since this source stream started, on the monotonic clock. */
+  elapsed(): number {
+    return Math.round((this.clock() - this.origin) * 10) / 10;
+  }
+
+  private clock(): number {
+    return this.options.monotonic?.() ?? performance.now();
   }
 
   /** Stores a record that is not participant activity, such as shared content. */
@@ -271,6 +286,7 @@ export class CaptureRecorder {
         participantId: this.options.participantId,
         source: { id: this.options.sourceId, sequence },
         occurredAt: (this.options.now?.() ?? new Date()).toISOString(),
+        elapsedMs: this.elapsed(),
         serverReceipt: { status: "absent", reason: "local-only" },
         captureVersion: WORKSPACE_CAPTURE_VERSION,
         consentVersion: this.options.consentVersion,
