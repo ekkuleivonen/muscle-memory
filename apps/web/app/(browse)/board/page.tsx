@@ -43,7 +43,7 @@ export default async function BoardPage({
         <Board issues={issues.map(summarize)} view={view} />
         <p className="hint board-hint">
           Set Backlog, Todo or In progress from an issue's Status menu (s). Done
-          is set for you when every acceptance check passes.
+          is set when you merge a pull request.
         </p>
       </main>
     </>

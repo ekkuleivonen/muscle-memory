@@ -47,6 +47,7 @@ test("onboarding returns to the page someone was heading for, otherwise home", (
   );
   for (const home of [
     "/",
+    "/dashboard",
     "/onboarding",
     "/onboarding?next=/issues",
     "https://evil.example/",

@@ -89,12 +89,14 @@ export function useBoard() {
     );
   };
   /**
-   * A pull request merged: the issue moves to Done, recorded with the pull request and the
-   * run that checked it. Reads the stored board, not this render's: checks finish later.
+   * The person merged a pull request (only one whose checks all passed): the issue moves to
+   * Done, recorded with the pull request and the run that checked it. Reads the stored board,
+   * not this render's, in case another tab moved the issue.
    */
   const complete = (
     issue: IssueRef,
     pullRequest: { number: number; runId: string },
+    via: BoardMoveVia,
   ) => {
     const current = parseBoard(localStorage.getItem(BOARD_KEY));
     const from = statusOf(current, issue.key);
@@ -110,7 +112,7 @@ export function useBoard() {
         issueKey: issue.key,
         from,
         to: "done",
-        via: "automatic",
+        via,
         trigger: "pull-request-merged",
         onBoardBefore: activeCount(current),
         nudged: false,
@@ -278,14 +280,14 @@ export function StatusMenu({ issue }: { issue: IssueRef }) {
                   <StatusIcon status={option} />
                   <span>{STATUS_LABELS[option]}</span>
                   {option === "done" ? (
-                    <span className="faint auto">automatic</span>
+                    <span className="faint auto">on merge</span>
                   ) : (
                     option === status && <span className="check">✓</span>
                   )}
                 </li>
               ))}
               <li className="menu-note" role="presentation">
-                Done is set when every acceptance check passes.
+                Done is set when you merge a pull request.
               </li>
             </ul>
           )}

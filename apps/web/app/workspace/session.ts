@@ -48,6 +48,8 @@ export interface RunView {
 
 export interface PullRequestView {
   readonly number: number;
+  /** 1 when opened, 2+ for pushes to it. */
+  readonly push: number;
   readonly runId: string;
   readonly revision: number;
   readonly result?: PullRequestResult;
@@ -84,6 +86,11 @@ export interface SessionOptions {
   readonly onVimMode?: (mode: string) => void;
   /** Pull requests opened for this Challenge in earlier sessions, so numbers continue. */
   readonly pullRequestsBefore?: number;
+  /**
+   * The open pull request for this Challenge, if any, read when the person opens one: new work
+   * is pushed to it instead of opening another.
+   */
+  readonly openPullRequest?: () => { number: number; pushes: number } | null;
   /** The page's current runner; it changes when the runtime is reloaded. */
   readonly runner: () => Runner;
   readonly onRun: (run: RunView) => void;
@@ -214,7 +221,10 @@ export class WorkspaceSession {
     return this.runtime !== null;
   }
 
-  /** Opens a pull request: this exact code, checked by a run of every case. */
+  /**
+   * Opens a pull request, or pushes to the open one: this exact code, checked by a run of
+   * every case.
+   */
   pullRequest(): Promise<void> {
     return this.run("pull-request");
   }
@@ -232,10 +242,14 @@ export class WorkspaceSession {
       runtime: this.runtime,
       timeoutMs: this.options.runner().timeoutMs ?? RUN_TIMEOUT_MS,
     };
+    const open =
+      purpose === "pull-request" ? this.options.openPullRequest?.() : null;
+    if (open) this.pullRequests = Math.max(this.pullRequests, open.number);
     const pullRequest =
       purpose === "pull-request"
         ? {
-            number: ++this.pullRequests,
+            number: open ? open.number : ++this.pullRequests,
+            push: open ? open.pushes + 1 : 1,
             runId,
             revision,
             at: new Date().toISOString(),
@@ -280,6 +294,7 @@ export class WorkspaceSession {
       Object.assign(pullRequest, verdict);
       this.recorder.observe("observation.workspace.pull-request", {
         number: pullRequest.number,
+        push: pullRequest.push,
         runId,
         revision,
         codeArtifactId: code.artifactId,
@@ -295,7 +310,8 @@ export class WorkspaceSession {
 
   /** Stops capture after in-flight writes settle; the caller then clears storage. */
   async close(): Promise<void> {
-    this.options.runner().cancel();
+    // The IDE may already have dropped its runner when it unmounts.
+    this.options.runner()?.cancel();
     this.view?.destroy();
     this.view = undefined;
     await this.recorder.stop();

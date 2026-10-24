@@ -7,6 +7,7 @@ import {
   SORTS,
   toggle,
   type ProjectQuery,
+  type PullQuery,
   type Group,
   type IssueQuery,
   type ListKey,
@@ -32,7 +33,7 @@ function Check({ on }: { on: boolean }) {
  * Search box that understands qualifiers, plus filter and display menus that rewrite the
  * same query. Every state is a plain link, so it works without JavaScript and can be shared.
  */
-export function Toolbar<Q extends IssueQuery | ProjectQuery>({
+export function Toolbar<Q extends IssueQuery | ProjectQuery | PullQuery>({
   path,
   query,
   group,
@@ -47,7 +48,7 @@ export function Toolbar<Q extends IssueQuery | ProjectQuery>({
 }) {
   const selected = (key: ListKey) =>
     ((query as unknown as Record<string, string[]>)[key] ?? []) as string[];
-  const isIssues = "kind" in query;
+  const isIssues = "status" in query;
   return (
     <>
       <div className="toolbar">
@@ -146,7 +147,7 @@ export function Toolbar<Q extends IssueQuery | ProjectQuery>({
   );
 }
 
-function ActiveFilters<Q extends IssueQuery | ProjectQuery>({
+function ActiveFilters<Q extends IssueQuery | ProjectQuery | PullQuery>({
   path,
   query,
   group,
@@ -204,7 +205,17 @@ function ActiveFilters<Q extends IssueQuery | ProjectQuery>({
   );
 }
 
-function clearFilters(query: IssueQuery | ProjectQuery) {
+function clearFilters(query: IssueQuery | ProjectQuery | PullQuery) {
+  if ("state" in query)
+    return {
+      state: [],
+      checks: [],
+      language: [],
+      kind: [],
+      difficulty: [],
+      project: [],
+      label: [],
+    };
   return "kind" in query
     ? {
         language: [],

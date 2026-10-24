@@ -18,7 +18,7 @@ export const QUESTIONS = [
   {
     kind: "multiselect",
     id: "languages",
-    message: "Which languages should we install on your laptop?",
+    message: "Which languages will you be working with?",
     choices: OFFERED.map((id) => ({
       value: id,
       label: LANGUAGES.find((l) => l.id === id)!.label,

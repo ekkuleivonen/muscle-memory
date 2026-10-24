@@ -5,7 +5,15 @@
 import type { WorkspaceRecord } from "../../../packages/domain/workspace";
 
 export type ActivityEntry =
-  | { kind: "moved"; at: string; key: string; from: string; to: string }
+  | {
+      kind: "moved";
+      at: string;
+      key: string;
+      from: string;
+      to: string;
+      /** The merged pull request, for a move to Done. */
+      pullRequest?: number;
+    }
   | { kind: "opened"; at: string; challengeId: string }
   | { kind: "ran"; at: string; challengeId: string; status: string }
   | {
@@ -59,6 +67,9 @@ export function recentActivity(
         key: String(o.data.issueKey),
         from: String(o.data.from),
         to: String(o.data.to),
+        ...(typeof o.data.pullRequest === "number"
+          ? { pullRequest: o.data.pullRequest }
+          : {}),
       });
     else if (o.type === "observation.workspace.opened" && challengeId)
       entries.push({ kind: "opened", at, challengeId });
@@ -96,6 +107,8 @@ export function recentActivity(
 
 export interface PullRequestRecord {
   number: number;
+  /** How many times it has been checked: opened, then each push. */
+  pushes: number;
   runId: string;
   revision: number;
   result: string;
@@ -104,13 +117,16 @@ export interface PullRequestRecord {
   at: string;
 }
 
-/** This person's pull requests for a Challenge (any version), newest first. */
+/**
+ * This person's pull requests for a Challenge (any version), newest first, each as of its
+ * latest push.
+ */
 export function pullRequestHistory(
   records: readonly WorkspaceRecord[],
   participantId: string,
   challengeId: string,
 ): PullRequestRecord[] {
-  return observations(records)
+  const checked = observations(records)
     .filter(
       (o) =>
         o.type === "observation.workspace.pull-request" &&
@@ -120,6 +136,7 @@ export function pullRequestHistory(
     )
     .map((o) => ({
       number: Number(o.data!.number),
+      pushes: 1,
       runId: String(o.data!.runId),
       revision: Number(o.data!.revision),
       result: String(o.data!.result),
@@ -127,7 +144,14 @@ export function pullRequestHistory(
       total: Number(o.data!.total),
       at: o.occurredAt!,
     }))
-    .sort((a, b) => b.number - a.number);
+    .sort((a, b) => b.number - a.number || b.at.localeCompare(a.at));
+  const latest = new Map<number, PullRequestRecord>();
+  for (const pull of checked) {
+    const seen = latest.get(pull.number);
+    if (seen) seen.pushes += 1;
+    else latest.set(pull.number, pull);
+  }
+  return [...latest.values()];
 }
 
 /** Local calendar day, so a late-night session counts where the person was. */

@@ -1156,7 +1156,601 @@ kbd {
   margin-top: 6px;
 }
 
-/* Home dashboard */
+/* Public home page. Text below the headline uses --dim, never --faint, to keep AA contrast. */
+.home-body {
+  padding-top: 72px;
+}
+.home-kicker {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0 0 16px;
+}
+.home-hero h1 {
+  font-size: 44px;
+  text-wrap: balance;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  margin: 0 0 20px;
+}
+.home-punch {
+  color: var(--accent);
+}
+.home-lede {
+  font-size: 19px;
+  line-height: 1.6;
+  color: var(--dim);
+  max-width: 34em;
+  margin: 0;
+}
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin-top: 32px;
+}
+.home-cta {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 12px 22px;
+  border-radius: 8px;
+}
+.home-cta:hover {
+  color: #fff;
+  filter: brightness(1.08);
+}
+/* Dark mode's lighter accent is too pale behind white text; deepen it to keep AA. */
+@media (prefers-color-scheme: dark) {
+  .home-cta {
+    background: color-mix(in srgb, var(--accent), #000 25%);
+  }
+}
+.home-cta:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.home-note {
+  color: var(--dim);
+  font-size: 14px;
+}
+.home-section {
+  margin-top: 80px;
+  font-size: 16px;
+  line-height: 1.65;
+}
+.home-section h2 {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin: 0 0 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.home-section > p {
+  margin: 0 0 24px;
+  max-width: 38em;
+}
+.home-section .home-fine {
+  margin: 20px 0 0;
+  font-size: 14px;
+  color: var(--dim);
+}
+.home-section a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--fg) 30%, transparent);
+  text-underline-offset: 3px;
+}
+.home-section a:hover {
+  text-decoration-color: currentColor;
+}
+.home-section a.home-cta {
+  color: #fff;
+  text-decoration: none;
+}
+/* Each item: a bold title on its own line, the explanation under it. */
+.home-promises {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 20px;
+}
+.home-promises strong {
+  display: block;
+  font-size: 16px;
+  margin-bottom: 2px;
+}
+.home-promises li {
+  color: var(--dim);
+}
+.home-promises li strong {
+  color: var(--fg);
+}
+.home-schedule {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.home-schedule li {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 16px;
+  padding: 12px 0;
+  color: var(--dim);
+}
+.home-schedule li + li {
+  border-top: 1px solid var(--line);
+}
+.home-schedule strong {
+  color: var(--fg);
+}
+.home-schedule time {
+  color: var(--accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.home-invite {
+  text-align: center;
+  background: var(--bg-subtle);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 48px 32px;
+}
+.home-invite h2 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  color: var(--fg);
+  border: 0;
+  padding: 0;
+  margin: 0 0 12px;
+}
+.home-invite > p {
+  color: var(--dim);
+  margin: 0 auto;
+}
+.home-invite .home-actions {
+  justify-content: center;
+  margin-top: 24px;
+}
+@media (max-width: 600px) {
+  .home-body {
+    padding-top: 40px;
+  }
+  .home-hero h1 {
+    font-size: 34px;
+  }
+  .home-lede {
+    font-size: 17px;
+  }
+  .home-section {
+    margin-top: 56px;
+  }
+  .home-schedule li {
+    grid-template-columns: 52px 1fr;
+    gap: 12px;
+  }
+  .home-invite {
+    padding: 36px 20px;
+  }
+}
+
+/* Pull requests: the record of each attempt */
+.pull-icon.merged {
+  color: #8250df;
+}
+.pull-icon.open {
+  color: var(--green);
+}
+.pull-filter,
+.pull-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+}
+.pull-filter {
+  border: 1px solid var(--line);
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--bg-subtle);
+  padding: 6px 8px;
+}
+.pull-filter a,
+.pull-tabs button {
+  font: inherit;
+  font-size: 13px;
+  color: var(--dim);
+  background: none;
+  border: 0;
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.pull-filter a:hover,
+.pull-tabs button:hover {
+  color: var(--fg);
+  background: var(--hover);
+}
+.pull-filter a[aria-selected="true"] {
+  color: var(--fg);
+  font-weight: 600;
+}
+.pull-filter .count,
+.pull-tabs .count {
+  color: var(--dim);
+  font-weight: 400;
+  margin-left: 2px;
+}
+.pull-row .meta {
+  font-size: 12.5px;
+}
+.pull-filter a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.pull-filter + .rows,
+.pull-empty {
+  margin-bottom: 14px;
+}
+.pull-empty {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-top: 0;
+}
+.pull {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 32px;
+  max-width: 1040px;
+}
+.pull h1 {
+  font-size: 22px;
+  letter-spacing: -0.2px;
+  margin: 4px 0 10px;
+}
+.pull-continue {
+  display: block;
+  margin: 16px 0 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  color: var(--dim);
+  font-size: 13px;
+  text-align: center;
+}
+.pull-continue:hover {
+  color: var(--fg);
+  background: var(--hover);
+}
+.pull-continue:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.pull-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  margin: 0 0 20px;
+}
+.pull-state a {
+  color: var(--fg);
+}
+.pull-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  color: #fff;
+}
+.pull-badge .pull-icon {
+  color: inherit;
+}
+.pull-badge.merged {
+  background: #8250df;
+}
+.pull-badge.open {
+  background: #1a7f37;
+}
+.pull-tabs {
+  margin-bottom: 20px;
+}
+.pull-tabs button {
+  border-radius: 0;
+  padding: 8px 12px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+}
+.pull-tabs button:hover {
+  background: none;
+}
+.pull-tabs button[aria-selected="true"] {
+  color: var(--fg);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
+.pull-tabs .add,
+.diff-head .add {
+  color: var(--green);
+}
+.pull-tabs .del,
+.diff-head .del {
+  color: var(--red);
+}
+.pull-summary {
+  font-size: 13.5px;
+  margin: 0 0 16px;
+}
+.pull-timeline ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+/* The thread the entries hang on. */
+.pull-timeline ol::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 10px;
+  bottom: 10px;
+  width: 1px;
+  background: var(--line-strong);
+}
+.pull-timeline li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 11px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 7px 0;
+  font-size: 13.5px;
+}
+.pull-timeline .dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 2px solid var(--line-strong);
+}
+.pull-timeline .pass .dot {
+  background: var(--green);
+  border-color: var(--green);
+}
+.pull-timeline .fail .dot {
+  background: var(--red);
+  border-color: var(--red);
+}
+.pull-timeline .merged .dot {
+  background: #8250df;
+  border-color: #8250df;
+}
+.pull-timeline .accent .dot {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.pull-timeline .dim .text {
+  color: var(--dim);
+}
+.pull-timeline .merged .text,
+.pull-timeline .pass .text,
+.pull-timeline .fail .text,
+.pull-timeline .accent .text {
+  font-weight: 500;
+}
+.pull-timeline time {
+  color: var(--dim);
+  font: 12px var(--mono);
+}
+.pull-timeline a {
+  color: var(--accent);
+}
+.pull-checks ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.pull-checks li {
+  display: flex;
+  gap: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.pull-checks li + li {
+  border-top: 1px solid var(--line);
+}
+.pull-checks .mark {
+  flex: none;
+  width: 14px;
+  font-weight: 700;
+}
+.pull-checks .pass .mark {
+  color: var(--green);
+}
+.pull-checks .fail .mark {
+  color: var(--red);
+}
+.pull-checks code,
+.pull-error pre,
+.pull-output pre {
+  font: 12.5px var(--mono);
+  overflow-wrap: anywhere;
+}
+.pull-checks .got {
+  color: var(--red);
+}
+.pull-error {
+  border: 1px solid color-mix(in srgb, var(--red) 40%, var(--line));
+  background: color-mix(in srgb, var(--red) 6%, transparent);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+.pull-error pre,
+.pull-output pre {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+}
+.pull-output {
+  margin-top: 12px;
+  font-size: 13px;
+}
+.pull-output summary {
+  cursor: pointer;
+  color: var(--dim);
+}
+.pull-duration {
+  font-size: 12.5px;
+  margin-top: 10px;
+}
+.diff {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.diff-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.diff table {
+  width: 100%;
+  border-collapse: collapse;
+  font: 12.5px/1.6 var(--mono);
+}
+.diff td {
+  padding: 0 8px;
+  vertical-align: top;
+}
+.diff .ln {
+  width: 1%;
+  min-width: 36px;
+  text-align: right;
+  color: var(--dim);
+  user-select: none;
+}
+.diff .code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.diff .sign {
+  display: inline-block;
+  width: 1.2em;
+  user-select: none;
+}
+.diff tr.add {
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+}
+.diff tr.del {
+  background: color-mix(in srgb, var(--red) 12%, transparent);
+}
+.diff .hunk td {
+  color: var(--dim);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  padding: 4px 12px;
+}
+.diff-empty {
+  padding: 16px 12px;
+  margin: 0;
+  font-size: 13px;
+}
+/* Review and merge, under the pull request. */
+.merge-box {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 24px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.merge-box.ready {
+  border-color: color-mix(in srgb, var(--green) 50%, var(--line));
+  background: color-mix(in srgb, var(--green) 6%, transparent);
+}
+.merge-box.blocked {
+  background: var(--bg-subtle);
+}
+.merge-box.merged {
+  border-color: color-mix(in srgb, #8250df 45%, var(--line));
+  background: color-mix(in srgb, #8250df 7%, transparent);
+}
+.merge-box.merged .pull-icon {
+  color: #8250df;
+}
+.merge-mark {
+  flex: none;
+  width: 18px;
+  text-align: center;
+  font-weight: 700;
+}
+.merge-box.ready .merge-mark {
+  color: var(--green);
+}
+.merge-box.blocked .merge-mark {
+  color: var(--red);
+}
+.merge-text {
+  flex: 1;
+}
+.merge-box a {
+  color: var(--accent);
+}
+.merge-button {
+  flex: none;
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: #1a7f37;
+  border: 0;
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.merge-button:hover {
+  filter: brightness(1.08);
+}
+.merge-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.merge-button:disabled {
+  color: var(--dim);
+  background: var(--hover);
+  cursor: not-allowed;
+  filter: none;
+}
+@media (max-width: 900px) {
+  .pull {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Dashboard */
 .dash-head h1 {
   font-size: 22px;
   letter-spacing: -0.2px;

@@ -441,6 +441,17 @@
 .ide-done a {
   color: var(--accent);
 }
+.ide-review {
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  margin-bottom: 10px;
+}
+.ide-review a {
+  color: var(--accent);
+  font-weight: 600;
+}
 .ide-cases {
   list-style: none;
   margin: 8px 0 0;
@@ -589,6 +600,10 @@
 .ide-pulls .fail .ide-pr-mark,
 .ide-pulls .fail .ide-pr-label {
   color: var(--red);
+}
+.ide-pulls .merged .ide-pr-mark,
+.ide-pulls .merged .ide-pr-label {
+  color: #8250df;
 }
 .ide-pulls .busy .ide-pr-mark,
 .ide-pulls .busy .ide-pr-label {

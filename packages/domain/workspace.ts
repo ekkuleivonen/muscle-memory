@@ -13,6 +13,12 @@ import { boundText, CAPTURE_LIMIT_BYTES } from "./evidence";
 import { safeIdentifier } from "./events";
 
 /**
+ * 1.4.0: pull requests no longer merge or close themselves. A pull request stays open, whatever
+ * its checks say, until the person merges it (a board move, board capture 1.5.0; only passing
+ * checks can be merged). While one is open, further work is pushed to it: each push records the
+ * same `number` with `push` 2, 3, … and its own run. `result` reports only that run's checks
+ * (`checks-passed` replaces `merged`). Before 1.4.0 every observation was a new pull request,
+ * and `merged` meant every check passed and it merged automatically.
  * 1.3.0: JavaScript, TypeScript, SQL, HTML, PHP, Ruby, Go, C, C++, C# and Java run too; the runtime names the engine that ran the
  * code (pyodide, browser-javascript, pglite, linkedom, php-wasm, ruby.wasm, yaegi, yowasp-clang, dotnet-roslyn or teavm-javac), and cases may list several arguments.
  * 1.2.0: runs say whether they were local or a pull request's checks, and each pull request
@@ -20,7 +26,7 @@ import { safeIdentifier } from "./events";
  * keymap among its features, and a null runtime for languages that cannot run yet.
  * 1.0.0 was Python only. Stored records keep theirs.
  */
-export const WORKSPACE_CAPTURE_VERSION = "workspace-capture-1.3.0";
+export const WORKSPACE_CAPTURE_VERSION = "workspace-capture-1.4.0";
 export const PYTHON_MEDIA_TYPE = "text/x-python; charset=utf-8";
 /** An edit whose change set is larger than this is recorded without it, plus a snapshot. */
 export const EDIT_CHANGES_LIMIT_BYTES = 16384;
@@ -86,12 +92,15 @@ export interface ObservationData {
     readonly outcome?: Json;
   };
   /**
-   * A pull request: the code at one revision, checked by one run. Recorded once its checks
-   * finish. Merged means every check passed, which is what moves the issue to Done.
+   * A pull request opened, or pushed to: the code at one revision, checked by one run.
+   * Recorded once its checks finish; it stays open for the person to review and merge (a
+   * board move to Done).
    */
   "observation.workspace.pull-request": {
     /** 1, 2, 3, … per person and Challenge, across sessions. */
     readonly number: number;
+    /** 1 when opened, then 2, 3, … for each push to the open pull request. Absent before 1.4.0. */
+    readonly push?: number;
     readonly runId: string;
     readonly revision: number;
     readonly codeArtifactId: string;
@@ -108,8 +117,12 @@ export interface ObservationData {
 }
 export type ObservationType = keyof ObservationData;
 export type RunPurpose = "local" | "pull-request";
-/** Checks failed: some case did not pass. Errored: the code never got to the cases. */
+/**
+ * What a pull request's checks said. Failed: some case did not pass. Errored: the code never
+ * got to the cases. `merged` appears only before capture 1.4.0, when passing checks merged.
+ */
 export type PullRequestResult =
+  | "checks-passed"
   | "merged"
   | "checks-failed"
   | "checks-errored"
@@ -246,8 +259,8 @@ export function runFeedback(
 }
 
 /**
- * A pull request's result from its run outcome. Merged needs a completed test phase in which
- * every case passed; a compile or runtime error, timeout or runner failure means the checks
+ * A pull request's checks result from its run outcome. Passed needs a completed test phase in
+ * which every case passed; a compile or runtime error, timeout or runner failure means the checks
  * errored before reaching the cases.
  */
 export function pullRequestResult(
@@ -271,7 +284,7 @@ export function pullRequestResult(
     return { result: "checks-errored", passed: 0, total };
   const { correct } = runFeedback(challenge, outcome.cases);
   return {
-    result: correct === total && total > 0 ? "merged" : "checks-failed",
+    result: correct === total && total > 0 ? "checks-passed" : "checks-failed",
     passed: correct,
     total,
   };

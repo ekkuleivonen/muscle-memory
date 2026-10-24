@@ -57,13 +57,39 @@ export interface ProjectQuery {
   text: string[];
 }
 
+/** Pull request states and checks results as search terms: is:open, checks:failed. */
+export const PULL_STATES = ["open", "merged"] as const;
+export type PullState = (typeof PULL_STATES)[number];
+export const PULL_CHECKS = ["passed", "failed", "errored", "cancelled"] as const;
+export type PullChecks = (typeof PULL_CHECKS)[number];
+export const PULL_SORTS = ["newest", "oldest"] as const;
+export type PullSort = (typeof PULL_SORTS)[number];
+
+/**
+ * Pull requests: their own state and checks, plus the issue qualifiers (kind, lang,
+ * difficulty, project, label) about the issue each one belongs to.
+ */
+export interface PullQuery {
+  state: PullState[];
+  checks: PullChecks[];
+  language: LanguageId[];
+  kind: IssueKind[];
+  difficulty: Difficulty[];
+  project: string[];
+  label: string[];
+  sort: PullSort;
+  text: string[];
+}
+
 export type ListKey =
   | "language"
   | "kind"
   | "difficulty"
   | "project"
   | "label"
-  | "status";
+  | "status"
+  | "state"
+  | "checks";
 
 const LANGUAGE_IDS = LANGUAGES.map((l) => l.id);
 /** Qualifier names people type, mapped to the filter they set. */
@@ -142,12 +168,50 @@ export function parseIssueQuery(q: string): IssueQuery {
       const value = raw.trim();
       const allowed = ALLOWED[key];
       if (allowed ? allowed.includes(value) : SLUG.test(value))
-        add(query[key] as string[], value);
+        add((query as unknown as Record<string, string[]>)[key], value);
     }
   }
   query.text = query.text.filter(Boolean);
   query.status = STATUSES.filter((st) => query.status.includes(st));
   return query;
+}
+
+export const emptyPullQuery = (): PullQuery => ({
+  state: [],
+  checks: [],
+  language: [],
+  kind: [],
+  difficulty: [],
+  project: [],
+  label: [],
+  sort: "newest",
+  text: [],
+});
+
+/** is:open,merged and checks:failed are the pull request's own; the rest are the issue's. */
+export function parsePullQuery(q: string): PullQuery {
+  const query = emptyPullQuery();
+  const rest: string[] = [];
+  for (const token of tokens(q)) {
+    const match = /^([a-z]+):(.+)$/i.exec(token);
+    const name = match?.[1].toLowerCase();
+    const values = (match?.[2] ?? "").toLowerCase().split(",").map((v) => v.trim());
+    if (name === "is") {
+      for (const value of values)
+        if (PULL_STATES.includes(value as PullState)) add(query.state, value as PullState);
+    } else if (name === "checks") {
+      for (const value of values)
+        if (PULL_CHECKS.includes(value as PullChecks)) add(query.checks, value as PullChecks);
+    } else if (name === "sort" && PULL_SORTS.includes(values[0] as PullSort)) {
+      query.sort = values[0] as PullSort;
+    } else rest.push(token);
+  }
+  const { language, kind, difficulty, project, label, text } = parseIssueQuery(
+    rest.join(" "),
+  );
+  query.state = PULL_STATES.filter((s) => query.state.includes(s));
+  query.checks = PULL_CHECKS.filter((c) => query.checks.includes(c));
+  return { ...query, language, kind, difficulty, project, label, text };
 }
 
 export function parseProjectQuery(q: string): ProjectQuery {
@@ -156,8 +220,12 @@ export function parseProjectQuery(q: string): ProjectQuery {
 }
 
 /** The canonical query string: qualifiers first, in a fixed order, then free text. */
-export function formatQuery(query: IssueQuery | ProjectQuery): string {
+export function formatQuery(query: IssueQuery | ProjectQuery | PullQuery): string {
   const parts: string[] = [];
+  if ("state" in query) {
+    if (query.state.length) parts.push(`is:${query.state.join(",")}`);
+    if (query.checks.length) parts.push(`checks:${query.checks.join(",")}`);
+  }
   if ("status" in query && query.status.length)
     parts.push(
       `is:${STATUSES.filter((s) => query.status.includes(s)).join(",")}`,
@@ -174,13 +242,14 @@ export function formatQuery(query: IssueQuery | ProjectQuery): string {
       : [["lang", query.language]];
   for (const [name, values] of lists)
     if (values.length) parts.push(`${name}:${values.join(",")}`);
-  if ("sort" in query && query.sort !== "key") parts.push(`sort:${query.sort}`);
+  if ("sort" in query && query.sort !== "key" && query.sort !== "newest")
+    parts.push(`sort:${query.sort}`);
   parts.push(...query.text.map((t) => (/\s/.test(t) ? `"${t}"` : t)));
   return parts.join(" ");
 }
 
 /** The same query with one filter value switched on or off. */
-export function toggle<Q extends IssueQuery | ProjectQuery>(
+export function toggle<Q extends IssueQuery | ProjectQuery | PullQuery>(
   query: Q,
   key: ListKey,
   value: string,
@@ -204,7 +273,7 @@ export function parseGroup(params: SearchParams): Group {
 /** A list URL; the default grouping is left out to keep links short. */
 export function href(
   path: string,
-  query: IssueQuery | ProjectQuery,
+  query: IssueQuery | ProjectQuery | PullQuery,
   group: Group = "project",
 ): string {
   const params = new URLSearchParams();
@@ -358,4 +427,61 @@ export function groupIssues<T extends GroupableIssue>(
     issues: issues.filter((i) => (valueOf(i) ?? "") === g.id),
   }));
   return groups.filter((g) => g.issues.length > 0);
+}
+
+/** What a pull request is matched on: its own facts and its issue's. */
+export interface PullFacts {
+  number: number;
+  state: PullState;
+  /** Its latest checks: checks-passed, checks-failed, … (`merged` before capture 1.4.0). */
+  result: string;
+  at: string;
+  issue?: Pick<
+    Issue,
+    "key" | "title" | "kind" | "difficulty" | "language" | "labels" | "project"
+  >;
+}
+
+const checksOf = (result: string): PullChecks | undefined =>
+  result === "merged" ? "passed" : (result.replace(/^checks-/, "") as PullChecks);
+
+/** Every filter must match (any value within one); every text term must appear. */
+export function filterPulls<T extends PullFacts>(
+  pulls: readonly T[],
+  query: PullQuery,
+): T[] {
+  const within = <V>(selected: readonly V[], value: V | undefined) =>
+    selected.length === 0 || (value !== undefined && selected.includes(value));
+  return pulls
+    .filter(({ issue, ...pull }) => {
+      const project = issue?.project;
+      return (
+        within(query.state, pull.state) &&
+        within(query.checks, checksOf(pull.result)) &&
+        within(query.language, issue?.language) &&
+        within(query.kind, issue?.kind) &&
+        within(query.difficulty, issue?.difficulty) &&
+        (query.project.length === 0 ||
+          (!!project &&
+            (query.project.includes(projectFilterValue(project)) ||
+              query.project.includes(project.slug)))) &&
+        (query.label.length === 0 ||
+          !!issue?.labels.some((l) => query.label.includes(l))) &&
+        matchesText(
+          [
+            `#${pull.number}`,
+            issue?.key ?? "",
+            issue?.title ?? "",
+            issue?.language ?? "",
+            languageLabel(issue?.language),
+            project?.title ?? "",
+            ...(issue?.labels ?? []),
+          ],
+          query.text,
+        )
+      );
+    })
+    .sort((a, b) =>
+      query.sort === "oldest" ? a.at.localeCompare(b.at) : b.at.localeCompare(a.at),
+    );
 }
