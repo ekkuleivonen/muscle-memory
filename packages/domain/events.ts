@@ -1,4 +1,4 @@
-/** Versioned private event envelope. Content snapshots make historical replay explicit. */
+/** Legacy `attempt.assessed` envelope. Content snapshots make historical replay explicit. */
 import {
   assess,
   canonical,
@@ -6,6 +6,7 @@ import {
   type Adventure,
   type Challenge,
   type Attempt,
+  type Encounter,
   type Json,
 } from "./assessment";
 
@@ -33,14 +34,10 @@ export function safeIdentifier(value: string): void {
   }
 }
 
-export function createAttemptEvent(
+export function assertEncounter(
   adventure: Adventure,
-  challenge: Challenge,
-  attempt: Attempt,
-): AttemptEvent {
-  safeIdentifier(attempt.id);
-  safeIdentifier(attempt.participantId);
-  const context = attempt.encounter;
+  context: Encounter,
+): void {
   if (
     context.adventureId !== adventure.id ||
     context.adventureVersion !== adventure.version ||
@@ -52,6 +49,20 @@ export function createAttemptEvent(
       "Encounter must preserve the exact Adventure version, presentation and order.",
     );
   }
+}
+
+/**
+ * Legacy assessed snapshot: scoring runs before this envelope exists, so it is not raw
+ * evidence. Capture-first submissions use `evidence.ts` and `projection.ts` instead.
+ */
+export function createAttemptEvent(
+  adventure: Adventure,
+  challenge: Challenge,
+  attempt: Attempt,
+): AttemptEvent {
+  safeIdentifier(attempt.id);
+  safeIdentifier(attempt.participantId);
+  assertEncounter(adventure, attempt.encounter);
   if (attempt.challengeSnapshot !== snapshot(challenge))
     throw new Error("Challenge content does not match.");
   const event: AttemptEvent = {
