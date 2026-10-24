@@ -17,4 +17,4 @@ Declared gaps: issue views, searches and filters, time on page, and anything oth
 
 ## Storage and deletion
 
-Records go to the device-local IndexedDB database used by the workspace, under the same random pseudonym, with the same write rules: identical retries deduplicate and a different payload under an existing ID is refused. A failed write is retried with the next move and otherwise leaves a gap. Settings' **Reset progress** and **Delete account** delete them with the rest of the device data. Nothing is sent to a server yet.
+Records go to the device-local IndexedDB database used by the workspace, under the same random pseudonym, with the same write rules: identical retries deduplicate and a different payload under an existing ID is refused. A failed write is retried with the next move and otherwise leaves a gap. The `reset` and `delete` commands in Settings delete them with the rest of the device data. Nothing is sent to a server yet.

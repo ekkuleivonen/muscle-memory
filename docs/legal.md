@@ -22,4 +22,4 @@ The Terms also grant a licence to submitted code (needed to publish solutions), 
 - Lawyer review of both pages; fill in the [bracketed] placeholders (company, contact, retention periods, processors, region, governing law); set `LEGAL_DRAFT` to false.
 - Anonymisation review before the first record-level release: new random IDs per dataset, coarsened times, no free text, small groups suppressed.
 - Honour `excludeFromPublishedData` in every export pipeline, including for data collected before opting out.
-- Once data syncs to servers: access, portability and deletion requests (by email at first), and server-side deletion on **Delete account**.
+- Once data syncs to servers: access, portability and deletion requests (by email at first), and server-side deletion on `delete` in Settings.

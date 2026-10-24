@@ -7,6 +7,7 @@ import {
   formatAnswer,
   initialList,
   listKey,
+  startState,
   type ListResult,
   type ListState,
   type Prompt,
@@ -116,4 +117,25 @@ test("answers become a profile; skipped questions are left out", () => {
     ["goal", "skipped"],
     ["editor", "skipped"],
   ]);
+});
+
+test("prompts can start from the current answer, as settings does", () => {
+  assert.deepEqual(startState({ ...select, initial: 2 }), {
+    cursor: 2,
+    picked: [],
+    error: "",
+  });
+  assert.deepEqual(startState({ ...multi, initialPicked: [2, 0] }), {
+    cursor: 0,
+    picked: [0, 2],
+    error: "",
+  });
+  assert.equal(startState(select).cursor, 0);
+  assert.equal(
+    formatAnswer(
+      { kind: "text", id: "t", message: "Type it" },
+      "Quiet-Compiler-4821",
+    ),
+    "Quiet-Compiler-4821",
+  );
 });

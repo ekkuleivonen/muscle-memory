@@ -8,8 +8,15 @@ export interface Choice {
   hint?: string;
 }
 
-export type Prompt =
-  | { kind: "select"; id: string; message: string; choices: readonly Choice[] }
+export type Prompt = (
+  | {
+      kind: "select";
+      id: string;
+      message: string;
+      choices: readonly Choice[];
+      /** Index highlighted at first, e.g. the current answer. */
+      initial?: number;
+    }
   | {
       kind: "multiselect";
       id: string;
@@ -17,8 +24,15 @@ export type Prompt =
       choices: readonly Choice[];
       /** Fewest choices Enter accepts. */
       min: number;
+      /** Indexes ticked at first, e.g. the current answer. */
+      initialPicked?: readonly number[];
     }
-  | { kind: "confirm"; id: string; message: string; initial: boolean };
+  | { kind: "confirm"; id: string; message: string; initial: boolean }
+  | { kind: "text"; id: string; message: string }
+) & {
+  /** What Esc does, for the hint line: "skips" unless told otherwise. */
+  escape?: string;
+};
 
 export type Answer = string | string[] | boolean;
 
@@ -29,6 +43,17 @@ export interface ListState {
 }
 
 export const initialList: ListState = { cursor: 0, picked: [], error: "" };
+
+/** Where a list prompt starts: the highlighted and ticked answers it was given. */
+export function startState(prompt: Prompt): ListState {
+  if (prompt.kind === "select")
+    return { ...initialList, cursor: prompt.initial ?? 0 };
+  if (prompt.kind === "multiselect") {
+    const picked = [...(prompt.initialPicked ?? [])].sort((a, b) => a - b);
+    return { ...initialList, cursor: picked[0] ?? 0, picked };
+  }
+  return initialList;
+}
 
 export type ListResult =
   | { type: "state"; state: ListState }
@@ -136,6 +161,7 @@ export function confirmKey(
 /** How an answer reads once the prompt is done. */
 export function formatAnswer(prompt: Prompt, answer: Answer): string {
   if (prompt.kind === "confirm") return answer ? "yes" : "no";
+  if (prompt.kind === "text") return String(answer);
   const label = (value: string) =>
     prompt.choices.find((choice) => choice.value === value)?.label ?? value;
   return Array.isArray(answer)

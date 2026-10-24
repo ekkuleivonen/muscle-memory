@@ -18,7 +18,7 @@ These Terms are an agreement between you and **[Company name]** ("we", "us"). By
 - You get a random handle. It's yours, and you can't pick another one (that's rather the point).
 - One person per account, please.
 - **Right now your account lives in your browser.** Clear your storage or switch devices and it's gone. We're working on that.
-- You can delete your account any time in **Settings → Danger zone**.
+- You can delete your account any time with \`delete\` in **Settings**.
 
 ## Playing fair
 

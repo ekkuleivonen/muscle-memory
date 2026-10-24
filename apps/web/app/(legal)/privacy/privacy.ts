@@ -90,7 +90,7 @@ Depending on where you live (the EU and UK in particular), you can ask us to:
 
 Email **[privacy@example.com]**. We'll reply within a month. You can also complain to your data protection authority. We'd rather you talked to us first, but it's your call.
 
-Today you can do most of this yourself: **Settings → Danger zone** resets your progress or deletes your account, and clearing your browser storage does the same, rather less politely.
+Today you can do most of this yourself: \`reset\` and \`delete\` in **Settings** reset your progress or delete your account, and clearing your browser storage does the same, rather less politely.
 
 ## Where it's stored
 

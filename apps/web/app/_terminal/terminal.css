@@ -1,4 +1,4 @@
-/* Onboarding terminal. */
+/* Terminal: onboarding and settings. */
 .term {
   --t-bg: #0f1012;
   --t-fg: #e5e6e9;
@@ -86,4 +86,21 @@
   .t-caret {
     animation: none;
   }
+}
+.t-text {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5ch;
+  font-weight: inherit;
+}
+.t-text input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  caret-color: var(--t-accent);
 }
