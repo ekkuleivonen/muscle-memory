@@ -71,6 +71,7 @@ export class CaptureRecorder {
   private persisted = 0;
   private gaps = 0;
   private lastLoss = 0;
+  private readonly conflicted = new Set<string>();
   private transitionKey = "";
   private readonly artifacts = new Set<string>();
   private conflicts = 0;
@@ -148,6 +149,15 @@ export class CaptureRecorder {
     this.transition();
   }
 
+  /**
+   * True when this artifact ID was found holding different stored content. The stored
+   * payload is kept, and the artifact is never written again, so later references to it
+   * still point at the conflicting record.
+   */
+  artifactConflicted(artifactId: string): boolean {
+    return this.conflicted.has(artifactId);
+  }
+
   status(): CaptureStatus {
     return {
       buffered: this.queue.length,
@@ -222,6 +232,7 @@ export class CaptureRecorder {
         // An artifact ID already holds different content: keep the stored one, say so.
         // Conservatively, everything recorded so far may depend on it.
         this.conflicts++;
+        this.conflicted.add(item.record.recordId);
         this.lastLoss = Math.max(this.lastLoss, this.sequence);
         this.lastError = `${item.record.recordId} already exists with different content.`;
       }

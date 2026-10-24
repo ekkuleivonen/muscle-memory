@@ -184,3 +184,46 @@ test("failing writes are reported, and saved returns only after they succeed", a
   await settle(editor);
   assert.match(editor.label(), SAVED);
 });
+
+test("a later snapshot that only references a conflicted artifact never clears the warning", async () => {
+  const sink = new MemorySink();
+  const editor = workspace(sink);
+  // A different payload already holds the ID the next code revision will use.
+  const id = `${editor.session.sourceId}.code.1`;
+  sink.records.set(id, {
+    recordId: id,
+    kind: "artifact",
+    participantId: P,
+    payload: "{}",
+  });
+  // Oversize change set (not stored), with a complete snapshot that conflicts on write.
+  editor.type("q".repeat(20000));
+  await settle(editor);
+  assert.equal(editor.session.saveStatus().artifactConflicts, 1);
+  assert.equal(editor.session.saveStatus().recoverable, false);
+  // Run twice at the same revision: each snapshot only references the conflicted artifact.
+  for (let repeat = 0; repeat < 2; repeat++) {
+    await editor.session.run();
+    await settle(editor);
+    assert.equal(editor.session.saveStatus().recoverable, false);
+    assert.match(
+      editor.label(),
+      /cannot be fully restored: |conflicts with an existing record/,
+    );
+    assert.doesNotMatch(editor.label(), SAVED);
+  }
+  // The conflicting payload is kept, never overwritten.
+  assert.equal(sink.records.get(id)!.payload, "{}");
+  const stuck = latestSavedCode([...sink.records.values()], P, CHALLENGE)!;
+  assert.notEqual(stuck.text, editor.text());
+  assert.equal(stuck.complete, false);
+  // A genuinely new complete copy, stored without conflict, makes the code safe again.
+  editor.type("!");
+  await editor.session.run();
+  await settle(editor);
+  assert.equal(editor.session.saveStatus().recoverable, true);
+  assert.match(editor.label(), SAVED);
+  const recovered = latestSavedCode([...sink.records.values()], P, CHALLENGE)!;
+  assert.equal(recovered.text, editor.text());
+  assert.equal(recovered.complete, true);
+});

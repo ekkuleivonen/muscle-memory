@@ -68,7 +68,9 @@ export class WorkspaceSession {
   private staleNotified = true;
   // Source position of the latest stored complete copy of the code, and of the latest
   // point after which the code could not be rebuilt from saved records.
-  private safeStart = 0;
+  // Complete copies by source position; one is a safe point only if its artifact was
+  // stored without conflict. Few per session (opening, every 25 edits, each Run).
+  private readonly copies: { sequence: number; artifactId: string }[] = [];
   private unsafeAt = 0;
   private unsafeReason = "";
   private statusKey = "";
@@ -105,16 +107,21 @@ export class WorkspaceSession {
   /** What a refresh could bring back right now, with the capture status. */
   saveStatus(): SaveStatus {
     const status = this.recorder.status();
+    const safeStart = this.safePoint();
     // Replay starts from the latest stored complete copy; anything lost or unreplayable
     // at or after it means a refresh cannot rebuild the current code exactly.
     const lost =
-      status.lastLossSequence > 0 && status.lastLossSequence >= this.safeStart;
-    const unsafe = this.unsafeAt > 0 && this.unsafeAt >= this.safeStart;
+      status.lastLossSequence > 0 && status.lastLossSequence >= safeStart;
+    const unsafe = this.unsafeAt > 0 && this.unsafeAt >= safeStart;
     return {
       ...status,
       recoverable: !lost && !unsafe,
       ...(lost
-        ? { unrecoverableReason: "some activity was not saved (capture gap)" }
+        ? {
+            unrecoverableReason: status.artifactConflicts
+              ? "a saved copy of your code conflicts with an existing record"
+              : "some activity was not saved (capture gap)",
+          }
         : unsafe
           ? { unrecoverableReason: this.unsafeReason }
           : {}),
@@ -247,16 +254,32 @@ export class WorkspaceSession {
     code: CodeRevisionArtifact,
   ): void {
     if (!observation) return; // Dropped: the recorder records the loss.
+    const safeStart = this.safePoint();
     if (!code.capture.truncated)
-      this.safeStart = Math.max(this.safeStart, observation.source.sequence);
+      this.copies.push({
+        sequence: observation.source.sequence,
+        artifactId: code.artifactId,
+      });
     // A truncated copy only matters when there is no exact replay to fall back on:
     // at opening, or right after an edit that had no change set.
-    else if (this.safeStart === 0 || this.unsafeAt >= this.safeStart)
+    else if (safeStart === 0 || this.unsafeAt >= safeStart)
       this.markUnsafe(
         observation.source.sequence,
         "the code is larger than 64 KiB, too large to save a complete copy",
       );
     this.notify();
+  }
+
+  /**
+   * The latest complete copy whose artifact is not known to conflict. A snapshot that only
+   * references an already-conflicted artifact (for example a repeated Run at the same
+   * revision) therefore never counts as a safe point.
+   */
+  private safePoint(): number {
+    for (let index = this.copies.length - 1; index >= 0; index--)
+      if (!this.recorder.artifactConflicted(this.copies[index].artifactId))
+        return this.copies[index].sequence;
+    return 0;
   }
 
   private markUnsafe(sequence: number, reason: string): void {
