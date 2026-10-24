@@ -176,7 +176,7 @@ From these, every attempt can say when it stopped being unaided, which feedback 
   - `src/cart/money.js` and `src/cart/discounts.js` (read): `lineTotal` already takes off each line's share of the discount, which checkout allocates;
   - `src/cart/totals.test.js` (tests, visible cases only);
   - `README.md`.
-- **Checks:** six cases, three of them hidden: a refund without a code, with a percentage and with a fixed amount, a larger percentage, an empty refund and a free item.
+- **Checks:** seventeen cases, three visible and fourteen hidden: a refund without a code, with a percentage and with a fixed amount, then the edge cases only CI runs (larger percentages, empty and free lines, partial refunds, the line that got the leftover cent of an allocation).
 - **Team:**
   - *Jo T (Support), the ticket's thread:* "40 tickets about this since Monday. Every one of them used a promo code."
   - *Ada N (Frontend), review, blocking, pattern* `Math\.abs\(` *in* `totals.js`: "Taking the absolute value hides the sign we need for refunds. Can we keep refunds negative all the way through?"

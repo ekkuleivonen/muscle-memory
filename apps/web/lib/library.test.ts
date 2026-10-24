@@ -48,11 +48,11 @@ test("issues are live metadata over their live revisions, grouped into projects"
   assert.deepEqual(
     merged.projects.map((p) => [p.slug, p.issues.length]),
     [
-      ["field-notes", 1],
-      ["storefront", 5],
-      ["accounts-api", 6],
-      ["data-platform", 5],
-      ["edge-proxy", 4],
+      ["field-notes", 5],
+      ["storefront", 8],
+      ["accounts-api", 9],
+      ["data-platform", 8],
+      ["edge-proxy", 7],
     ],
   );
 });
@@ -68,7 +68,7 @@ test("retired issues leave lists, but every published revision still resolves", 
   assert.equal(retired.findIssue("EDGE-3"), undefined);
   assert.deepEqual(
     retired.findProject("EDGE")!.issues.map((i) => i.key),
-    ["EDGE-1", "EDGE-2", "EDGE-4"],
+    ["EDGE-1", "EDGE-2", "EDGE-4", "EDGE-5", "EDGE-6", "EDGE-7"],
   );
   // Recorded work names the revision it ran against; it stays readable.
   assert.equal(retired.revision(meta.revision)?.issue, "lru-cache");
@@ -77,7 +77,7 @@ test("retired issues leave lists, but every published revision still resolves", 
 
 test("issues run when their language has an engine; project summaries span their issues", () => {
   // Every seed issue's language has an engine, with what that engine needs.
-  assert.equal(merged.issues.length, 21);
+  assert.equal(merged.issues.length, 37);
   assert.ok(merged.issues.every((i) => i.runnable));
   const edge = merged.projects.find((c) => c.slug === "edge-proxy")!;
   assert.equal(difficultyRange(edge.issues), "easy–hard");
@@ -127,19 +127,32 @@ test("filters combine across qualifiers and match any value within one", () => {
     "API-4",
     "API-5",
     "API-6",
+    "API-7",
+    "API-9",
     "DATA-1",
     "DATA-5",
+    "DATA-6",
+    "DATA-7",
+    "DATA-8",
     "EDGE-3",
+    "EDGE-5",
+    "EDGE-7",
+    "FN-3",
+    "FN-4",
     "SHOP-1",
     "SHOP-2",
     "SHOP-5",
+    "SHOP-7",
+    "SHOP-8",
   ]);
   assert.deepEqual(keys("kind:bug lang:go"), ["API-1", "API-4"]);
   assert.deepEqual(keys("lang:rust,go"), [
     "API-1",
     "API-4",
+    "API-8",
     "EDGE-2",
     "EDGE-4",
+    "EDGE-6",
   ]);
   // Every issue runs, and an old is:runnable link still shows them all.
   assert.equal(keys("is:runnable").length, merged.issues.length);
@@ -147,11 +160,14 @@ test("filters combine across qualifiers and match any value within one", () => {
     "API-4",
     "API-5",
     "API-6",
+    "API-8",
     "DATA-1",
+    "EDGE-5",
+    "FN-2",
     "SHOP-1",
     "SHOP-2",
   ]);
-  assert.deepEqual(keys("project:field-notes"), ["FN-1"]);
+  assert.deepEqual(keys("project:field-notes"), ["FN-1", "FN-2", "FN-3", "FN-4", "FN-5"]);
   // Projects go by their key, as in their URL; the older id form still works.
   assert.deepEqual(keys("project:shop"), [
     "SHOP-1",
@@ -159,6 +175,9 @@ test("filters combine across qualifiers and match any value within one", () => {
     "SHOP-3",
     "SHOP-4",
     "SHOP-5",
+    "SHOP-6",
+    "SHOP-7",
+    "SHOP-8",
   ]);
   assert.deepEqual(
     keys("project:SHOP,fn"),
@@ -173,9 +192,12 @@ test("filters combine across qualifiers and match any value within one", () => {
     "EDGE-2",
     "EDGE-3",
     "EDGE-4",
+    "EDGE-5",
+    "EDGE-6",
+    "EDGE-7",
   ]);
   assert.equal(keys("sort:difficulty")[0], "FN-1");
-  assert.equal(keys("sort:difficulty").at(-1), "EDGE-3");
+  assert.equal(keys("sort:difficulty").at(-1), "SHOP-8");
 });
 
 test("groups keep their declared order and drop empty ones", () => {
@@ -189,17 +211,17 @@ test("groups keep their declared order and drop empty ones", () => {
       g.issues.length,
     ]),
     [
-      ["bug", 11],
+      ["bug", 22],
       ["performance", 2],
     ],
   );
   assert.deepEqual(
     groupIssues(issues, "project", merged.projects).map((g) => g.id),
-    ["storefront", "accounts-api", "data-platform", "edge-proxy"],
+    ["field-notes", "storefront", "accounts-api", "data-platform", "edge-proxy"],
   );
   assert.equal(
     groupIssues(issues, "none", merged.projects)[0].issues.length,
-    13,
+    24,
   );
 });
 
@@ -254,7 +276,7 @@ test("keys come from issue numbers, not from list position", () => {
   });
   assert.equal(reordered.findIssue("API-1")?.slug, "pagination-params");
   assert.equal(reordered.findIssue("API-4")?.slug, "parse-log-line");
-  assert.equal(reordered.findProject("API")!.issues[0].key, "API-6");
+  assert.equal(reordered.findProject("API")!.issues[0].key, "API-9");
 });
 
 test("summaries for client components leave out fixtures and long text", () => {

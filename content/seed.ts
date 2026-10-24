@@ -1095,6 +1095,7 @@ function countWords(string $text): int
       { null: 1, None: 2, true: 1 },
       { "é": 2, e: 1 },
     ],
+    hidden: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
     hints: [
       "A dict can hold one counter for each distinct string.",
       {
