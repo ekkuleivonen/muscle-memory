@@ -22,7 +22,7 @@ export default async function PullPage({ params }: Props) {
   await requireConsent(`/pulls/${key}/${number}`);
   const n = Number(number);
   if (!Number.isInteger(n) || n < 1) notFound();
-  const { findIssue, revisionsOf } = await getLibrary();
+  const { findIssue, revisionsOf, issues } = await getLibrary();
   const issue = findIssue(decodeURIComponent(key));
   if (!issue) notFound();
   if (key !== issue.key) permanentRedirect(`/pulls/${issue.key}/${n}`);
@@ -43,6 +43,7 @@ export default async function PullPage({ params }: Props) {
             title: issue.title,
             revision: issue.revision,
           }}
+          candidates={issues}
           number={n}
           revisionsJson={JSON.stringify(revisionsOf(issue.slug))}
         />

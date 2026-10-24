@@ -39,7 +39,7 @@ export function Estimate({ points }: { points?: number }) {
   return points ? (
     <span
       className="estimate"
-      title={`Estimate: ${points} point${points === 1 ? "" : "s"}`}
+      title={`Estimate: ${points} point${points === 1 ? "" : "s"} (relative complexity, not minutes)`}
     >
       {points}
     </span>

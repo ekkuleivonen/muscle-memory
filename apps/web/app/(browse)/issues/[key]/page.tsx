@@ -70,6 +70,9 @@ export default async function IssuePage(props: Props) {
         <article>
           <h1>{issue.title}</h1>
           {issue.summary && <p className="lede">{issue.summary}</p>}
+          <div className="mobile-start">
+            <StartWork issue={issue} href={`/work/${issue.key}`} />
+          </div>
           <section className="section">
             <h2>Description</h2>
             <Markdown source={issue.task} />
@@ -131,7 +134,11 @@ function Properties({ issue }: { issue: Issue }) {
         <dt>Status</dt>
         <dd>
           <StatusMenu
-            issue={{ key: issue.key, slug: issue.slug, revision: issue.revision }}
+            issue={{
+              key: issue.key,
+              slug: issue.slug,
+              revision: issue.revision,
+            }}
           />
         </dd>
         <dt>Kind</dt>
@@ -174,7 +181,10 @@ function Properties({ issue }: { issue: Issue }) {
         className="issue-ask"
         ids={["editor"]}
         from="issue"
-        why={{ editor: "Before you start: the editor opens with the keys you're used to." }}
+        why={{
+          editor:
+            "Before you start: the editor opens with the keys you're used to.",
+        }}
       />
       {!issue.runnable && (
         <p className="note">

@@ -8,6 +8,7 @@ import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
  * changes (after this page records something); null while first loading.
  */
 export function useRecords(version = 0): WorkspaceRecord[] | null {
+  const [error, setError] = useState<Error | null>(null);
   const [records, setRecords] = useState<WorkspaceRecord[] | null>(null);
   useEffect(() => {
     let live = true;
@@ -20,11 +21,20 @@ export function useRecords(version = 0): WorkspaceRecord[] | null {
           store.close();
         }
       })
-      .catch(() => live && setRecords([]));
+      .catch(
+        () =>
+          live &&
+          setError(
+            new Error(
+              "Your saved practice could not be read from this browser. Your history has not been cleared. Check that browser storage is available, then try again.",
+            ),
+          ),
+      );
     return () => {
       live = false;
     };
   }, [version]);
+  if (error) throw error;
   return records;
 }
 

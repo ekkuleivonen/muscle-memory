@@ -24,24 +24,32 @@ const EMPTY: Record<Status, string> = {
 
 export function Board({
   issues,
+  discoverable,
   view,
 }: {
   issues: Issue[];
+  discoverable: Issue[];
   view: "board" | "list";
 }) {
-  const { items } = useBoard();
+  const { items, hydrated } = useBoard();
   const onBoard = boardIssues(items, issues);
   const inColumn = (status: Status) =>
     onBoard.filter((b) => b.status === status).map((b) => b.issue);
+  if (!hydrated)
+    return (
+      <p className="loading-state" role="status">
+        Reading your board…
+      </p>
+    );
   if (!onBoard.length)
     return (
       <div className="empty">
         <p>Your board is empty.</p>
         <p className="dim">
-          Open an issue and set its status (<kbd>s</kbd>) to Todo. These are a
-          good start:
+          Start an issue to put it here, or save one for later with its Status
+          menu. These are a good start:
         </p>
-        <Suggestions issues={issues} />
+        <Suggestions issues={discoverable} />
       </div>
     );
   if (view === "list")

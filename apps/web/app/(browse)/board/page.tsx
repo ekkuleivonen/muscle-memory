@@ -18,7 +18,7 @@ export default async function BoardPage({
   const params = await searchParams;
   await requireConsent(pathWithQuery("/board", params));
   const view = params.view === "list" ? "list" : "board";
-  const { issues } = await getLibrary();
+  const { issues, allIssues } = await getLibrary();
   return (
     <>
       <Topbar
@@ -40,7 +40,11 @@ export default async function BoardPage({
         <span>Board</span>
       </Topbar>
       <main className="content">
-        <Board issues={issues.map(summarize)} view={view} />
+        <Board
+          issues={allIssues.map(summarize)}
+          discoverable={issues.map(summarize)}
+          view={view}
+        />
         <p className="hint board-hint">
           Set Backlog, Todo or In progress from an issue's Status menu (s). Done
           is set when you merge a pull request.
