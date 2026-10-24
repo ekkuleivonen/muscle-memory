@@ -240,6 +240,172 @@
           "at": "2026-10-23T00:00:00.000Z"
         }
       ]
+    },
+    "challenge:frequency-map@2.1.0": {
+      "kind": "challenge",
+      "id": "frequency-map",
+      "version": "2.1.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Priya K",
+            "body": "Heads up: the scanner sometimes emits odd labels like __proto__. Please don't special-case anything; every label is just a string.",
+            "role": "Data"
+          }
+        ],
+        "difficulty": "warm-up",
+        "entrypoint": "frequency_map",
+        "expected": [
+          {
+            "a": 2,
+            "b": 1
+          },
+          {},
+          {
+            "A": 2,
+            "a": 1
+          },
+          {
+            "__proto__": 2,
+            "x": 1
+          }
+        ],
+        "hints": [
+          "A dict can hold one counter for each distinct string."
+        ],
+        "id": "frequency-map",
+        "inputs": [
+          [
+            "a",
+            "b",
+            "a"
+          ],
+          [],
+          [
+            "A",
+            "a",
+            "A"
+          ],
+          [
+            "__proto__",
+            "__proto__",
+            "x"
+          ]
+        ],
+        "kind": "feature",
+        "language": "python",
+        "number": 1,
+        "runtime": {
+          "id": "pyodide",
+          "python": "3.14.2",
+          "version": "314.0.7"
+        },
+        "skills": [
+          "iteration",
+          "maps",
+          "edge-cases"
+        ],
+        "starter": "def frequency_map(items):\n    counts = {}\n    # Count each item.\n    return counts\n",
+        "summary": "Count every exact, case-sensitive label in a list.",
+        "task": "Write frequency_map(items) in Python: count each exact, case-sensitive string and return a dict of string to integer count. Empty input returns {}. Run executes your function against the fixtures in an isolated Python sandbox in this browser.",
+        "title": "Frequency map",
+        "version": "2.1.0"
+      },
+      "digest": "645a19b6be00dacae58d80fe458f1ed88dd205fd000b545bda11f3eb7b266994",
+      "state": "published",
+      "testResult": {
+        "digest": "645a19b6be00dacae58d80fe458f1ed88dd205fd000b545bda11f3eb7b266994",
+        "fixtures": 4,
+        "at": "2026-10-23T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "645a19b6be00dacae58d80fe458f1ed88dd205fd000b545bda11f3eb7b266994",
+          "at": "2026-10-23T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "645a19b6be00dacae58d80fe458f1ed88dd205fd000b545bda11f3eb7b266994",
+          "at": "2026-10-23T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "645a19b6be00dacae58d80fe458f1ed88dd205fd000b545bda11f3eb7b266994",
+          "at": "2026-10-23T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "645a19b6be00dacae58d80fe458f1ed88dd205fd000b545bda11f3eb7b266994",
+          "at": "2026-10-23T00:00:00.000Z"
+        }
+      ]
+    },
+    "adventure:field-notes@2.0.0": {
+      "kind": "adventure",
+      "id": "field-notes",
+      "version": "2.0.0",
+      "content": {
+        "challenges": [
+          [
+            "frequency-map",
+            "2.1.0"
+          ]
+        ],
+        "id": "field-notes",
+        "key": "FN",
+        "presentation": "field-notes-text-v1",
+        "story": "A field researcher needs an exact tally of specimen labels. Recover the frequency map from the notebook.",
+        "summary": "Help a field researcher make sense of a messy notebook.",
+        "title": "Field notes",
+        "version": "2.0.0"
+      },
+      "digest": "e6b2966f3822583507299579c0ff75739162af3a02c3df7f3eb75a51bab50b8c",
+      "state": "published",
+      "testResult": {
+        "digest": "e6b2966f3822583507299579c0ff75739162af3a02c3df7f3eb75a51bab50b8c",
+        "fixtures": 4,
+        "at": "2026-10-23T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "e6b2966f3822583507299579c0ff75739162af3a02c3df7f3eb75a51bab50b8c",
+          "at": "2026-10-23T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "e6b2966f3822583507299579c0ff75739162af3a02c3df7f3eb75a51bab50b8c",
+          "at": "2026-10-23T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "e6b2966f3822583507299579c0ff75739162af3a02c3df7f3eb75a51bab50b8c",
+          "at": "2026-10-23T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "e6b2966f3822583507299579c0ff75739162af3a02c3df7f3eb75a51bab50b8c",
+          "at": "2026-10-23T00:00:00.000Z"
+        }
+      ]
     }
   }
 }

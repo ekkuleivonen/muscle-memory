@@ -1,5 +1,7 @@
 # Optional device-local practice
 
+The JSON-answer practice page described below has been retired; its records stay in the same database. In the settings terminal (`/settings`), `reset` clears them together with workspace records and the local identity, and `delete` also removes the profile and handle.
+
 Practice stays session-only unless the player explicitly checks **Save practice history on this device**. Enabling it opens local IndexedDB; it does not send records to an application server, researcher or analytics service. A separate session consent checkbox starts practice. Saved events use `device-local-practice-v1` as their operational consent scope and keep research consent false.
 
 The browser adapter stores complete versioned `attempt.assessed` envelopes with task/context snapshots, answers, assistance disclosure, timestamps and provisional feedback. It creates a random device-local pseudonym only when saving is requested. It acknowledges an append only after the IndexedDB transaction commits. Identical retries deduplicate; conflicting payloads under the same event ID fail. A failed UI save retains the same event for retry until the player changes answers or context.

@@ -1,6 +1,6 @@
 # Python workspace preview
 
-`/workspace` lets a player write `frequency_map` in Python, run it against the fixtures and see practice feedback. It uses Challenge `frequency-map@2.0.0`: the same fixtures as the published JSON-output version `1.0.0`, which stays unchanged, plus a Python runtime, entry point and starter code. Scoring uses assessment `1.0.0`: each returned value must equal the expected output as canonical JSON. There is no Adventure story change, no account and no upload.
+`/workspace` lets a player write `frequency_map` in Python, run it against the fixtures and see practice feedback. It opens the Challenge named by `?challenge=id@version` (an issue's **Start work** button builds that link), defaulting to `frequency-map@2.1.0`; only published Python Challenges with an entry point and starter open, anything else shows why not. `frequency-map@2.0.0` (and 2.1.0, which only adds issue metadata) has the same fixtures as the published JSON-output version `1.0.0`, which stays unchanged, plus a Python runtime, entry point and starter code. Scoring uses assessment `1.0.0`: each returned value must equal the expected output as canonical JSON. There is no Adventure story change, no account and no upload.
 
 ## Runtime isolation
 

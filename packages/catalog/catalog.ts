@@ -20,6 +20,8 @@ import {
   type Json,
 } from "../domain/assessment";
 import {
+  requireSingleOwner,
+  requireStableIdentity,
   validateAdventure,
   validateChallenge,
 } from "../../tools/content-check.mjs";
@@ -101,7 +103,21 @@ function validateSource(
   kind: ContentKind,
   content: unknown,
 ): Adventure | Challenge {
-  if (kind === "challenge") return validateChallenge(content) as Challenge;
+  const versionsOf = (k: ContentKind, id: string) =>
+    Object.values(catalog.entries).filter((e) => e.kind === k && e.id === id);
+  if (kind === "challenge") {
+    const challenge = validateChallenge(content) as Challenge;
+    // An issue keeps its number across every version, whatever their state.
+    requireStableIdentity(
+      [],
+      new Map(
+        [...versionsOf("challenge", challenge.id), { content: challenge }].map(
+          ({ content: c }, i) => [`${i}`, c as Challenge],
+        ),
+      ),
+    );
+    return challenge;
+  }
   // Disabled Challenges cannot be referenced by new or edited Adventures.
   const challenges = new Map<string, Challenge>();
   for (const entry of Object.values(catalog.entries)) {
@@ -111,7 +127,35 @@ function validateSource(
         entry.content as Challenge,
       );
   }
-  return validateAdventure(content, challenges) as Adventure;
+  const adventure = validateAdventure(content, challenges) as Adventure;
+  // Retired and disabled Adventures no longer own their Challenges.
+  requireSingleOwner([
+    ...Object.values(catalog.entries)
+      .filter(
+        (e) =>
+          e.kind === "adventure" &&
+          e.id !== adventure.id &&
+          e.state !== "retired" &&
+          e.state !== "disabled",
+      )
+      .map((e) => e.content as Adventure),
+    adventure,
+  ]);
+  // Keys and issue numbers stay fixed across every version of this Adventure.
+  const all = new Map<string, Challenge>();
+  for (const e of Object.values(catalog.entries))
+    if (e.kind === "challenge")
+      all.set(`${e.id}@${e.version}`, e.content as Challenge);
+  requireStableIdentity(
+    [
+      ...versionsOf("adventure", adventure.id).map(
+        (e) => e.content as Adventure,
+      ),
+      adventure,
+    ],
+    all,
+  );
+  return adventure;
 }
 
 function withEntry(catalog: Catalog, entry: CatalogEntry): Catalog {

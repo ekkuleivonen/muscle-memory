@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "predev": "node ../../tools/copy-python-runtime.mjs",
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "prebuild": "node ../../tools/copy-python-runtime.mjs",
     "build": "next build --webpack",
     "build:cloudflare": "opennextjs-cloudflare build",

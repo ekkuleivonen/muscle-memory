@@ -19,6 +19,22 @@ function requireValue(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+export const difficulties = ['warm-up', 'easy', 'medium', 'hard'];
+/** Issue kinds; each implies how a Challenge starts (stub, broken code, slow code, messy code). */
+export const issueKinds = ['feature', 'bug', 'performance', 'refactor'];
+
+function boundedText(value, limit) {
+  return typeof value === 'string' && value.trim() !== '' && value.length <= limit;
+}
+
+/** Optional display metadata; older published versions have none. */
+function validateDisplay(content, label) {
+  for (const [key, limit] of [['title', 60], ['summary', 160]]) {
+    if (content[key] === undefined) continue;
+    requireValue(boundedText(content[key], limit), `${label} ${key} must be 1-${limit} characters`);
+  }
+}
+
 export function validateChallenge(challenge) {
   requireValue(challenge && safeId(challenge.id), 'Challenge needs a safe id');
   requireValue(pinnedVersion(challenge.version), 'Challenge needs an explicit version');
@@ -29,7 +45,84 @@ export function validateChallenge(challenge) {
   }
   requireValue(Array.isArray(challenge.inputs) && challenge.inputs.length > 0, 'Challenge needs input fixtures');
   requireValue(Array.isArray(challenge.expected) && challenge.expected.length === challenge.inputs.length, 'Every input needs one expected output');
+  validateDisplay(challenge, 'Challenge');
+  if (challenge.difficulty !== undefined)
+    requireValue(difficulties.includes(challenge.difficulty), `Challenge difficulty must be one of ${difficulties.join(', ')}`);
+  if (challenge.kind !== undefined)
+    requireValue(issueKinds.includes(challenge.kind), `Challenge kind must be one of ${issueKinds.join(', ')}`);
+  // Issue number within its project (RG-4). Fixed for good once published.
+  if (challenge.number !== undefined)
+    requireValue(Number.isInteger(challenge.number) && challenge.number >= 1 && challenge.number <= 9999, 'Challenge number must be a whole number from 1 to 9999');
+  if (challenge.comments !== undefined) {
+    requireValue(Array.isArray(challenge.comments), 'Challenge comments must be a list');
+    for (const comment of challenge.comments)
+      requireValue(
+        comment && boundedText(comment.author, 40) && (comment.role === undefined || boundedText(comment.role, 40)) && boundedText(comment.body, 1000),
+        'Each comment needs an author (up to 40 characters), an optional role and a body (up to 1000)',
+      );
+  }
   return challenge;
+}
+
+/**
+ * An issue belongs to one project: across Adventure ids, each Challenge id is pinned by at
+ * most one. Versions of the same Adventure may keep pinning it.
+ */
+export function requireSingleOwner(adventures) {
+  const owners = new Map();
+  for (const adventure of adventures)
+    for (const [id] of adventure.challenges ?? []) {
+      const owner = owners.get(id);
+      requireValue(!owner || owner === adventure.id, `Challenge ${id} is pinned by both ${owner} and ${adventure.id}; an issue belongs to one project`);
+      owners.set(id, adventure.id);
+    }
+}
+
+/**
+ * The issue-key prefix an Adventure id implies when it sets no `key`:
+ * "night-shift" → "NS"; a single word keeps its first three letters.
+ * @param {string} id
+ * @returns {string}
+ */
+export function keyFromId(id) {
+  const words = id.split('-').filter(Boolean);
+  return (words.length > 1 ? words.slice(0, 3).map((w) => w[0]).join('') : id.slice(0, 3)).toUpperCase();
+}
+
+/**
+ * Issue keys such as RG-4 appear in URLs and must never change meaning. Across every version:
+ * a project keeps its key, an issue keeps its number, and a number within a project always
+ * means the same issue. Within one Adventure version numbers are all set or all absent, and
+ * distinct. A key, set or derived from the id, names one project, since /projects/RG and
+ * /issues/RG-4 resolve by it. `challenges` maps `id@version` to content.
+ */
+export function requireStableIdentity(adventures, challenges) {
+  const agree = (map, id, value, what) => {
+    if (value === undefined) return;
+    const seen = map.get(id);
+    requireValue(seen === undefined || seen === value, `${what} changed from ${seen} to ${value}; published keys and numbers are permanent`);
+    map.set(id, value);
+  };
+  const keys = new Map();
+  const numbers = new Map();
+  for (const challenge of challenges.values()) agree(numbers, challenge.id, challenge.number, `Challenge ${challenge.id} number`);
+  const issueAt = new Map();
+  for (const adventure of adventures) {
+    agree(keys, adventure.id, adventure.key, `Adventure ${adventure.id} key`);
+    const pinned = (adventure.challenges ?? []).map(([id, version]) => challenges.get(`${id}@${version}`)).filter(Boolean);
+    const numbered = pinned.filter((c) => c.number !== undefined);
+    requireValue(numbered.length === 0 || numbered.length === pinned.length, `Adventure ${adventure.id}@${adventure.version} numbers all of its Challenges or none`);
+    requireValue(new Set(numbered.map((c) => c.number)).size === numbered.length, `Adventure ${adventure.id}@${adventure.version} uses an issue number twice`);
+    for (const c of numbered) agree(issueAt, `${adventure.id}#${c.number}`, c.id, `${adventure.id} issue ${c.number}`);
+    if (!keys.has(adventure.id)) keys.set(adventure.id, undefined);
+  }
+  const owners = new Map();
+  for (const [id, key] of keys) {
+    const effective = key ?? keyFromId(id);
+    const owner = owners.get(effective);
+    requireValue(owner === undefined, `Projects ${owner} and ${id} both use key ${effective}; project keys must be unique`);
+    owners.set(effective, id);
+  }
 }
 
 export function validateAdventure(adventure, challenges) {
@@ -43,6 +136,13 @@ export function validateAdventure(adventure, challenges) {
     requireValue(Array.isArray(ref) && ref.length === 2 && safeId(ref[0]) && pinnedVersion(ref[1]), 'Adventure references must pin [id, version]');
     requireValue(challenges.has(`${ref[0]}@${ref[1]}`), `Missing Challenge ${ref[0]}@${ref[1]}`);
   }
+  const ids = adventure.challenges.map(([id]) => id);
+  requireValue(new Set(ids).size === ids.length, 'An Adventure pins each Challenge once');
+  requireValue(adventure.difficulty === undefined, 'Adventure difficulty comes from its Challenges');
+  // Prefix for issue keys such as NS-2.
+  if (adventure.key !== undefined)
+    requireValue(typeof adventure.key === 'string' && /^[A-Z][A-Z0-9]{1,4}$/.test(adventure.key), 'Adventure key must be 2-5 uppercase letters or digits, starting with a letter');
+  validateDisplay(adventure, 'Adventure');
   return adventure;
 }
 
@@ -67,6 +167,8 @@ export async function checkContent(root) {
     adventures.set(key, value);
   }
   requireValue(challenges.size > 0 && adventures.size > 0, 'Content needs at least one Adventure and Challenge');
+  requireSingleOwner(adventures.values());
+  requireStableIdentity(adventures.values(), challenges);
   return { challenges: challenges.size, adventures: adventures.size };
 }
 

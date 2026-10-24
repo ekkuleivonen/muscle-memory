@@ -1,0 +1,1827 @@
+{
+  "schemaVersion": "1.0.0",
+  "entries": {
+    "challenge:format-price@1.0.0": {
+      "kind": "challenge",
+      "id": "format-price",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Ada N",
+            "body": "Design wants the minus before the dollar sign for refunds, same as on the receipts.",
+            "role": "Frontend"
+          }
+        ],
+        "difficulty": "warm-up",
+        "expected": [
+          "$1,234.56",
+          "$0.05",
+          "$0.00",
+          "-$5.00",
+          "$1,000,000.00"
+        ],
+        "hints": [],
+        "id": "format-price",
+        "inputs": [
+          123456,
+          5,
+          0,
+          -500,
+          100000000
+        ],
+        "kind": "bug",
+        "language": "javascript",
+        "number": 1,
+        "skills": [
+          "formatting",
+          "strings",
+          "numbers"
+        ],
+        "summary": "Format amounts as dollars with separators, including refunds.",
+        "task": "Write `formatPrice(cents)`: return the amount in dollars with two decimals and comma thousands separators, e.g. `123456` → `\"$1,234.56\"`. Negative amounts are refunds and get a leading minus: `-500` → `\"-$5.00\"`.",
+        "title": "Cart shows prices as raw cents",
+        "version": "1.0.0"
+      },
+      "digest": "bf272a8cc4eb8a073f26b7f1a43541c4d3e1f48a803aba7f43d082d54f9499aa",
+      "state": "published",
+      "testResult": {
+        "digest": "bf272a8cc4eb8a073f26b7f1a43541c4d3e1f48a803aba7f43d082d54f9499aa",
+        "fixtures": 5,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "bf272a8cc4eb8a073f26b7f1a43541c4d3e1f48a803aba7f43d082d54f9499aa",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "bf272a8cc4eb8a073f26b7f1a43541c4d3e1f48a803aba7f43d082d54f9499aa",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "bf272a8cc4eb8a073f26b7f1a43541c4d3e1f48a803aba7f43d082d54f9499aa",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "bf272a8cc4eb8a073f26b7f1a43541c4d3e1f48a803aba7f43d082d54f9499aa",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:discount-codes@1.0.0": {
+      "kind": "challenge",
+      "id": "discount-codes",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Jo T",
+            "body": "40 tickets this morning. People type codes the way they read them in the email.",
+            "role": "Support"
+          },
+          {
+            "author": "Lena M",
+            "body": "Black Friday is in two weeks, so this one jumps the queue.",
+            "role": "Product"
+          }
+        ],
+        "difficulty": "easy",
+        "expected": [
+          9000,
+          9000,
+          499,
+          5000
+        ],
+        "hints": [],
+        "id": "discount-codes",
+        "inputs": [
+          [
+            10000,
+            "save10",
+            {
+              "SAVE10": 10
+            }
+          ],
+          [
+            10000,
+            " SAVE10 ",
+            {
+              "SAVE10": 10
+            }
+          ],
+          [
+            999,
+            "HALF",
+            {
+              "HALF": 50
+            }
+          ],
+          [
+            5000,
+            "NOPE",
+            {
+              "SAVE10": 10
+            }
+          ]
+        ],
+        "kind": "bug",
+        "language": "typescript",
+        "number": 2,
+        "skills": [
+          "strings",
+          "validation"
+        ],
+        "summary": "Match promo codes case-insensitively and ignore stray spaces.",
+        "task": "`applyDiscount(totalCents, code, codes)` returns the total after the matching code's percentage off, rounded down to whole cents. Codes match case-insensitively and ignoring surrounding spaces; an unknown code leaves the total unchanged.",
+        "title": "Discount codes fail when typed in lowercase",
+        "version": "1.0.0"
+      },
+      "digest": "4cddde99cdcf76135c9dfd545ec02232f380d12a5050111d22dda8099077deb0",
+      "state": "published",
+      "testResult": {
+        "digest": "4cddde99cdcf76135c9dfd545ec02232f380d12a5050111d22dda8099077deb0",
+        "fixtures": 4,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "4cddde99cdcf76135c9dfd545ec02232f380d12a5050111d22dda8099077deb0",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "4cddde99cdcf76135c9dfd545ec02232f380d12a5050111d22dda8099077deb0",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "4cddde99cdcf76135c9dfd545ec02232f380d12a5050111d22dda8099077deb0",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "4cddde99cdcf76135c9dfd545ec02232f380d12a5050111d22dda8099077deb0",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:filter-form-labels@1.0.0": {
+      "kind": "challenge",
+      "id": "filter-form-labels",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Ada N",
+            "body": "The accessibility audit flagged every checkbox here. Clicking the text should toggle the box.",
+            "role": "Frontend"
+          }
+        ],
+        "difficulty": "warm-up",
+        "expected": [
+          "<form><label for=\"filter-in-stock\">in-stock</label><input type=\"checkbox\" id=\"filter-in-stock\" name=\"in-stock\"><label for=\"filter-on-sale\">on-sale</label><input type=\"checkbox\" id=\"filter-on-sale\" name=\"on-sale\"></form>",
+          "<form></form>"
+        ],
+        "hints": [],
+        "id": "filter-form-labels",
+        "inputs": [
+          [
+            "in-stock",
+            "on-sale"
+          ],
+          []
+        ],
+        "kind": "refactor",
+        "language": "html",
+        "number": 3,
+        "skills": [
+          "accessibility",
+          "forms",
+          "semantics"
+        ],
+        "summary": "Tie every filter checkbox to a label so it is accessible.",
+        "task": "Render the product filter form: for each filter name, a `<label for=\"filter-NAME\">` with the name as text, followed by `<input type=\"checkbox\" id=\"filter-NAME\" name=\"NAME\">`, all inside a `<form>`.",
+        "title": "Product filter checkboxes have no labels",
+        "version": "1.0.0"
+      },
+      "digest": "5875e3ee0b86549c40fc23c273585d70733fdfca46659699e7a48eacc56db2c9",
+      "state": "published",
+      "testResult": {
+        "digest": "5875e3ee0b86549c40fc23c273585d70733fdfca46659699e7a48eacc56db2c9",
+        "fixtures": 2,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "5875e3ee0b86549c40fc23c273585d70733fdfca46659699e7a48eacc56db2c9",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "5875e3ee0b86549c40fc23c273585d70733fdfca46659699e7a48eacc56db2c9",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "5875e3ee0b86549c40fc23c273585d70733fdfca46659699e7a48eacc56db2c9",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "5875e3ee0b86549c40fc23c273585d70733fdfca46659699e7a48eacc56db2c9",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:debounce-search@1.0.0": {
+      "kind": "challenge",
+      "id": "debounce-search",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Sam R",
+            "body": "Search API gets about eight requests per query. 300 ms after the last keystroke is plenty.",
+            "role": "SRE"
+          }
+        ],
+        "difficulty": "medium",
+        "expected": [
+          [
+            500,
+            1300
+          ],
+          [],
+          [
+            300,
+            800
+          ]
+        ],
+        "hints": [
+          "Each keystroke cancels the pending request if it arrives before the timer fires."
+        ],
+        "id": "debounce-search",
+        "inputs": [
+          [
+            [
+              0,
+              100,
+              200,
+              1000
+            ],
+            300
+          ],
+          [
+            [],
+            300
+          ],
+          [
+            [
+              0,
+              500
+            ],
+            300
+          ]
+        ],
+        "kind": "performance",
+        "language": "typescript",
+        "number": 4,
+        "skills": [
+          "timing",
+          "events"
+        ],
+        "summary": "Debounce search-as-you-type so the API sees one request per pause.",
+        "task": "`debounceTimes(keystrokes, waitMs)`: given keystroke times in milliseconds, return the times at which the debounced search fires. It fires `waitMs` after a keystroke unless another keystroke comes first.",
+        "title": "Search box sends a request on every keystroke",
+        "version": "1.0.0"
+      },
+      "digest": "3b7ea2e4c7bf151d846b5aa4aa208c3bc84ba76fd101ff26f92e697ab84f3a9c",
+      "state": "published",
+      "testResult": {
+        "digest": "3b7ea2e4c7bf151d846b5aa4aa208c3bc84ba76fd101ff26f92e697ab84f3a9c",
+        "fixtures": 3,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "3b7ea2e4c7bf151d846b5aa4aa208c3bc84ba76fd101ff26f92e697ab84f3a9c",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "3b7ea2e4c7bf151d846b5aa4aa208c3bc84ba76fd101ff26f92e697ab84f3a9c",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "3b7ea2e4c7bf151d846b5aa4aa208c3bc84ba76fd101ff26f92e697ab84f3a9c",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "3b7ea2e4c7bf151d846b5aa4aa208c3bc84ba76fd101ff26f92e697ab84f3a9c",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:pagination-params@1.0.0": {
+      "kind": "challenge",
+      "id": "pagination-params",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Mateo O",
+            "body": "The mobile app sends per_page=500 to fetch everything in one go. Cap it, don't error.",
+            "role": "Backend"
+          }
+        ],
+        "difficulty": "easy",
+        "expected": [
+          {
+            "page": 2,
+            "perPage": 50
+          },
+          {
+            "page": 1,
+            "perPage": 20
+          },
+          {
+            "page": 1,
+            "perPage": 100
+          },
+          {
+            "page": 1,
+            "perPage": 20
+          }
+        ],
+        "hints": [],
+        "id": "pagination-params",
+        "inputs": [
+          "page=2&per_page=50",
+          "",
+          "per_page=500",
+          "page=-1&per_page=abc"
+        ],
+        "kind": "bug",
+        "language": "go",
+        "number": 1,
+        "skills": [
+          "parsing",
+          "validation",
+          "http"
+        ],
+        "summary": "Parse page and per_page with defaults and a hard cap.",
+        "task": "`ParsePage(query)` reads `page` and `per_page` from a URL query string. Defaults are page 1 and 20 per page, `per_page` is capped at 100, and missing, zero, negative or non-numeric values fall back to the default.",
+        "title": "List endpoints accept any page size",
+        "version": "1.0.0"
+      },
+      "digest": "f0e3acb30e381c80c4dc16775f57f9d12d2f8d2148e004ecb47c580ca7840954",
+      "state": "published",
+      "testResult": {
+        "digest": "f0e3acb30e381c80c4dc16775f57f9d12d2f8d2148e004ecb47c580ca7840954",
+        "fixtures": 4,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "f0e3acb30e381c80c4dc16775f57f9d12d2f8d2148e004ecb47c580ca7840954",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "f0e3acb30e381c80c4dc16775f57f9d12d2f8d2148e004ecb47c580ca7840954",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "f0e3acb30e381c80c4dc16775f57f9d12d2f8d2148e004ecb47c580ca7840954",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "f0e3acb30e381c80c4dc16775f57f9d12d2f8d2148e004ecb47c580ca7840954",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:reset-link-expiry@1.0.0": {
+      "kind": "challenge",
+      "id": "reset-link-expiry",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Jo T",
+            "body": "Customers say reset emails 'never work'. They do, if you click within a minute.",
+            "role": "Support"
+          }
+        ],
+        "difficulty": "easy",
+        "expected": [
+          false,
+          false,
+          true,
+          false
+        ],
+        "hints": [],
+        "id": "reset-link-expiry",
+        "inputs": [
+          [
+            1000,
+            1059,
+            60
+          ],
+          [
+            1000,
+            4600,
+            60
+          ],
+          [
+            1000,
+            4601,
+            60
+          ],
+          [
+            1000,
+            1000,
+            0
+          ]
+        ],
+        "kind": "bug",
+        "language": "php",
+        "number": 2,
+        "skills": [
+          "time",
+          "units"
+        ],
+        "summary": "The TTL is in minutes but the check compares seconds.",
+        "task": "`isExpired(issuedAt, now, ttlMinutes)` with Unix timestamps in seconds. A link issued at t stays valid until `t + ttlMinutes × 60`, inclusive.",
+        "title": "Password reset links expire after a minute",
+        "version": "1.0.0"
+      },
+      "digest": "0f116a5ab92cd0985c693849a700520a595e914cefb9d090455ad38e0f7e8a17",
+      "state": "published",
+      "testResult": {
+        "digest": "0f116a5ab92cd0985c693849a700520a595e914cefb9d090455ad38e0f7e8a17",
+        "fixtures": 4,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "0f116a5ab92cd0985c693849a700520a595e914cefb9d090455ad38e0f7e8a17",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "0f116a5ab92cd0985c693849a700520a595e914cefb9d090455ad38e0f7e8a17",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "0f116a5ab92cd0985c693849a700520a595e914cefb9d090455ad38e0f7e8a17",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "0f116a5ab92cd0985c693849a700520a595e914cefb9d090455ad38e0f7e8a17",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:rate-limiter@1.0.0": {
+      "kind": "challenge",
+      "id": "rate-limiter",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Sam R",
+            "body": "Credential-stuffing bot again last night. A sliding window per IP, nothing fancy.",
+            "role": "SRE"
+          }
+        ],
+        "difficulty": "medium",
+        "expected": [
+          [
+            true,
+            true,
+            true,
+            false
+          ],
+          [],
+          [
+            true,
+            true,
+            true
+          ]
+        ],
+        "hints": [
+          "Keep only the timestamps still inside the window."
+        ],
+        "id": "rate-limiter",
+        "inputs": [
+          [
+            [
+              0,
+              1,
+              2,
+              3
+            ],
+            3,
+            10
+          ],
+          [
+            [],
+            1,
+            10
+          ],
+          [
+            [
+              0,
+              10,
+              20
+            ],
+            1,
+            10
+          ]
+        ],
+        "kind": "feature",
+        "language": "typescript",
+        "number": 3,
+        "skills": [
+          "sliding-window",
+          "queues"
+        ],
+        "summary": "Allow at most n attempts in any sliding window.",
+        "task": "Write `allow(times, limit, windowMs)`: for each login attempt time, return whether it is allowed when at most `limit` attempts may fall inside any window of `windowMs` milliseconds.",
+        "title": "Rate-limit login attempts",
+        "version": "1.0.0"
+      },
+      "digest": "e79cfdbe811020b08a1fe8decf20c8347688ace2e29122ed969f73f4206623e3",
+      "state": "published",
+      "testResult": {
+        "digest": "e79cfdbe811020b08a1fe8decf20c8347688ace2e29122ed969f73f4206623e3",
+        "fixtures": 3,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "e79cfdbe811020b08a1fe8decf20c8347688ace2e29122ed969f73f4206623e3",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "e79cfdbe811020b08a1fe8decf20c8347688ace2e29122ed969f73f4206623e3",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "e79cfdbe811020b08a1fe8decf20c8347688ace2e29122ed969f73f4206623e3",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "e79cfdbe811020b08a1fe8decf20c8347688ace2e29122ed969f73f4206623e3",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:parse-log-line@1.0.0": {
+      "kind": "challenge",
+      "id": "parse-log-line",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Sam R",
+            "body": "Alerting is blind to the 502s because duration and status come back empty.",
+            "role": "SRE"
+          },
+          {
+            "author": "Priya K",
+            "body": "Durations are always whole milliseconds, suffixed with ms.",
+            "role": "Data"
+          }
+        ],
+        "difficulty": "easy",
+        "expected": [
+          {
+            "method": "GET",
+            "ms": 12,
+            "path": "/cart",
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "ms": 1300,
+            "path": "/pay",
+            "status": 502
+          }
+        ],
+        "hints": [],
+        "id": "parse-log-line",
+        "inputs": [
+          "GET /cart 200 12ms",
+          "POST /pay 502 1300ms"
+        ],
+        "kind": "bug",
+        "language": "go",
+        "number": 4,
+        "skills": [
+          "parsing",
+          "strings"
+        ],
+        "summary": "Turn an access log line into a structured record.",
+        "task": "Write `ParseLine(line)` for lines like `GET /cart 200 12ms`, returning method, path, status and duration in milliseconds.",
+        "title": "Access log parser drops fields on 5xx lines",
+        "version": "1.0.0"
+      },
+      "digest": "f93f2aece38341855fe56209429cc8e4180a3e4639e095e0bc1dbd12642b4a71",
+      "state": "published",
+      "testResult": {
+        "digest": "f93f2aece38341855fe56209429cc8e4180a3e4639e095e0bc1dbd12642b4a71",
+        "fixtures": 2,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "f93f2aece38341855fe56209429cc8e4180a3e4639e095e0bc1dbd12642b4a71",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "f93f2aece38341855fe56209429cc8e4180a3e4639e095e0bc1dbd12642b4a71",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "f93f2aece38341855fe56209429cc8e4180a3e4639e095e0bc1dbd12642b4a71",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "f93f2aece38341855fe56209429cc8e4180a3e4639e095e0bc1dbd12642b4a71",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:csv-quoted-fields@1.0.0": {
+      "kind": "challenge",
+      "id": "csv-quoted-fields",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Priya K",
+            "body": "Every customer with a comma in their company name lands in the wrong column. 'Acme, Inc.' is our biggest account.",
+            "role": "Data"
+          }
+        ],
+        "difficulty": "easy",
+        "expected": [
+          [
+            "a",
+            "b",
+            "c"
+          ],
+          [
+            "Acme, Inc.",
+            "42",
+            "NY"
+          ],
+          [
+            "say \"hi\"",
+            "x"
+          ],
+          [
+            ""
+          ]
+        ],
+        "hints": [],
+        "id": "csv-quoted-fields",
+        "inputs": [
+          "a,b,c",
+          "\"Acme, Inc.\",42,\"NY\"",
+          "\"say \"\"hi\"\"\",x",
+          ""
+        ],
+        "kind": "bug",
+        "language": "python",
+        "number": 1,
+        "skills": [
+          "parsing",
+          "strings",
+          "csv"
+        ],
+        "summary": "Respect quoted fields when parsing partner exports.",
+        "task": "`parse_csv_line(line)` splits a CSV line on commas, except inside double quotes. Quotes are removed, and a doubled quote inside a quoted field is a literal quote: `\"say \"\"hi\"\"\"` → `say \"hi\"`.",
+        "title": "CSV import splits company names on commas",
+        "version": "1.0.0"
+      },
+      "digest": "b2b30a11c556900a04b07d13ad2134c8bc0cbb8a0f7272ce681f7a2b7f5f6582",
+      "state": "published",
+      "testResult": {
+        "digest": "b2b30a11c556900a04b07d13ad2134c8bc0cbb8a0f7272ce681f7a2b7f5f6582",
+        "fixtures": 4,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "b2b30a11c556900a04b07d13ad2134c8bc0cbb8a0f7272ce681f7a2b7f5f6582",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "b2b30a11c556900a04b07d13ad2134c8bc0cbb8a0f7272ce681f7a2b7f5f6582",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "b2b30a11c556900a04b07d13ad2134c8bc0cbb8a0f7272ce681f7a2b7f5f6582",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "b2b30a11c556900a04b07d13ad2134c8bc0cbb8a0f7272ce681f7a2b7f5f6582",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:dedupe-customers@1.0.0": {
+      "kind": "challenge",
+      "id": "dedupe-customers",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Lena M",
+            "body": "Marketing sent last week's newsletter three times to some people. They were not thrilled.",
+            "role": "Product"
+          }
+        ],
+        "difficulty": "medium",
+        "expected": [
+          [
+            {
+              "email": "Ann@x.io",
+              "id": 1
+            },
+            {
+              "email": "bo@x.io",
+              "id": 3
+            }
+          ],
+          []
+        ],
+        "hints": [],
+        "id": "dedupe-customers",
+        "inputs": [
+          [
+            {
+              "email": "Ann@x.io",
+              "id": 1
+            },
+            {
+              "email": " ann@x.io",
+              "id": 2
+            },
+            {
+              "email": "bo@x.io",
+              "id": 3
+            }
+          ],
+          []
+        ],
+        "kind": "feature",
+        "language": "python",
+        "number": 2,
+        "skills": [
+          "maps",
+          "data-cleaning"
+        ],
+        "summary": "Keep the first record per email before the newsletter sync.",
+        "task": "`dedupe(records)` keeps the first record for each email, comparing emails case-insensitively and ignoring surrounding spaces. Keep the original order.",
+        "title": "Deduplicate customer records by email",
+        "version": "1.0.0"
+      },
+      "digest": "c593efc2737f33c2524e91a77e8eddc0e260eb6d05baccfbc08cda5ecf266d73",
+      "state": "published",
+      "testResult": {
+        "digest": "c593efc2737f33c2524e91a77e8eddc0e260eb6d05baccfbc08cda5ecf266d73",
+        "fixtures": 2,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "c593efc2737f33c2524e91a77e8eddc0e260eb6d05baccfbc08cda5ecf266d73",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "c593efc2737f33c2524e91a77e8eddc0e260eb6d05baccfbc08cda5ecf266d73",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "c593efc2737f33c2524e91a77e8eddc0e260eb6d05baccfbc08cda5ecf266d73",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "c593efc2737f33c2524e91a77e8eddc0e260eb6d05baccfbc08cda5ecf266d73",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:top-customers@1.0.0": {
+      "kind": "challenge",
+      "id": "top-customers",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Rui F",
+            "body": "Just the totals per customer, biggest first. The chart is my job.",
+            "role": "Finance"
+          }
+        ],
+        "difficulty": "easy",
+        "expected": [
+          [
+            [
+              "ana",
+              35
+            ],
+            [
+              "bo",
+              10
+            ]
+          ]
+        ],
+        "hints": [],
+        "id": "top-customers",
+        "inputs": [
+          {
+            "orders": [
+              [
+                1,
+                "ana",
+                30
+              ],
+              [
+                2,
+                "bo",
+                10
+              ],
+              [
+                3,
+                "ana",
+                5
+              ]
+            ]
+          }
+        ],
+        "kind": "feature",
+        "language": "sql",
+        "number": 3,
+        "skills": [
+          "aggregation",
+          "sorting"
+        ],
+        "summary": "Total each customer's orders, biggest first.",
+        "task": "Given `orders(id, customer, total)`, select each customer and the sum of their totals, highest first.",
+        "title": "Revenue by customer for the monthly report",
+        "version": "1.0.0"
+      },
+      "digest": "a1c0b2316864458ba6d8784a4ec29a2b86953f9cc8df5bff8017de7348b00338",
+      "state": "published",
+      "testResult": {
+        "digest": "a1c0b2316864458ba6d8784a4ec29a2b86953f9cc8df5bff8017de7348b00338",
+        "fixtures": 1,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "a1c0b2316864458ba6d8784a4ec29a2b86953f9cc8df5bff8017de7348b00338",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "a1c0b2316864458ba6d8784a4ec29a2b86953f9cc8df5bff8017de7348b00338",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "a1c0b2316864458ba6d8784a4ec29a2b86953f9cc8df5bff8017de7348b00338",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "a1c0b2316864458ba6d8784a4ec29a2b86953f9cc8df5bff8017de7348b00338",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:unpaid-orders@1.0.0": {
+      "kind": "challenge",
+      "id": "unpaid-orders",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Rui F",
+            "body": "Month-end close is Friday. I need this list before then.",
+            "role": "Finance"
+          }
+        ],
+        "difficulty": "medium",
+        "expected": [
+          [
+            [
+              2
+            ]
+          ]
+        ],
+        "hints": [
+          "A LEFT JOIN keeps orders even when no payment matches."
+        ],
+        "id": "unpaid-orders",
+        "inputs": [
+          {
+            "orders": [
+              [
+                1,
+                "ana"
+              ],
+              [
+                2,
+                "bo"
+              ],
+              [
+                3,
+                "cy"
+              ]
+            ],
+            "payments": [
+              [
+                1,
+                30
+              ],
+              [
+                3,
+                12
+              ]
+            ]
+          }
+        ],
+        "kind": "feature",
+        "language": "sql",
+        "number": 4,
+        "skills": [
+          "joins",
+          "reconciliation"
+        ],
+        "summary": "Reconcile orders against payments before month-end close.",
+        "task": "Given `orders(id, customer)` and `payments(order_id, amount)`, select the ids of orders that have no payment, smallest first.",
+        "title": "Find orders with no matching payment",
+        "version": "1.0.0"
+      },
+      "digest": "d21fd6747aabbf9eefa6f7f24841c628f073d846aa9bd8d74693969cb7b4c5c1",
+      "state": "published",
+      "testResult": {
+        "digest": "d21fd6747aabbf9eefa6f7f24841c628f073d846aa9bd8d74693969cb7b4c5c1",
+        "fixtures": 1,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "d21fd6747aabbf9eefa6f7f24841c628f073d846aa9bd8d74693969cb7b4c5c1",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "d21fd6747aabbf9eefa6f7f24841c628f073d846aa9bd8d74693969cb7b4c5c1",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "d21fd6747aabbf9eefa6f7f24841c628f073d846aa9bd8d74693969cb7b4c5c1",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "d21fd6747aabbf9eefa6f7f24841c628f073d846aa9bd8d74693969cb7b4c5c1",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:ring-buffer@1.0.0": {
+      "kind": "challenge",
+      "id": "ring-buffer",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Sam R",
+            "body": "No malloc on the hot path. Fixed-size array, overwrite the oldest.",
+            "role": "SRE"
+          }
+        ],
+        "difficulty": "medium",
+        "expected": [
+          [
+            2,
+            3,
+            4
+          ],
+          []
+        ],
+        "hints": [],
+        "id": "ring-buffer",
+        "inputs": [
+          [
+            3,
+            [
+              1,
+              2,
+              3,
+              4
+            ]
+          ],
+          [
+            2,
+            []
+          ]
+        ],
+        "kind": "feature",
+        "language": "c",
+        "number": 1,
+        "skills": [
+          "arrays",
+          "modular-arithmetic"
+        ],
+        "summary": "A fixed-size buffer that overwrites its oldest entry.",
+        "task": "Implement a ring buffer of capacity `n`. Given a sequence of pushes, return the contents oldest first.",
+        "title": "Keep the last N request latencies in memory",
+        "version": "1.0.0"
+      },
+      "digest": "dec94b07f090261be6add1289e3468ef0e90b35a9af6a5dcfeb85d40dd1ebe8a",
+      "state": "published",
+      "testResult": {
+        "digest": "dec94b07f090261be6add1289e3468ef0e90b35a9af6a5dcfeb85d40dd1ebe8a",
+        "fixtures": 2,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "dec94b07f090261be6add1289e3468ef0e90b35a9af6a5dcfeb85d40dd1ebe8a",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "dec94b07f090261be6add1289e3468ef0e90b35a9af6a5dcfeb85d40dd1ebe8a",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "dec94b07f090261be6add1289e3468ef0e90b35a9af6a5dcfeb85d40dd1ebe8a",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "dec94b07f090261be6add1289e3468ef0e90b35a9af6a5dcfeb85d40dd1ebe8a",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:p99-latency@1.0.0": {
+      "kind": "challenge",
+      "id": "p99-latency",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Sam R",
+            "body": "The current version re-sorts every sample for every percentile. Busy hours have two million samples.",
+            "role": "SRE"
+          }
+        ],
+        "difficulty": "medium",
+        "expected": [
+          20,
+          50,
+          null,
+          5
+        ],
+        "hints": [],
+        "id": "p99-latency",
+        "inputs": [
+          [
+            [
+              15,
+              20,
+              35,
+              40,
+              50
+            ],
+            30
+          ],
+          [
+            [
+              15,
+              20,
+              35,
+              40,
+              50
+            ],
+            100
+          ],
+          [
+            [],
+            99
+          ],
+          [
+            [
+              5
+            ],
+            99
+          ]
+        ],
+        "kind": "performance",
+        "language": "rust",
+        "number": 2,
+        "skills": [
+          "sorting",
+          "statistics"
+        ],
+        "summary": "Compute nearest-rank percentiles for the metrics endpoint.",
+        "task": "`percentile(samples, p)` returns the nearest-rank percentile: sort the samples and take the value at rank `ceil(p / 100 × n)`, counting from 1. Return `null` when there are no samples.",
+        "title": "p99 latency panel times out in busy hours",
+        "version": "1.0.0"
+      },
+      "digest": "98233316f4cbcd5c8f8ff2c1444777d2fbadf78b6dd8cd9287678227b18774f2",
+      "state": "published",
+      "testResult": {
+        "digest": "98233316f4cbcd5c8f8ff2c1444777d2fbadf78b6dd8cd9287678227b18774f2",
+        "fixtures": 4,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "98233316f4cbcd5c8f8ff2c1444777d2fbadf78b6dd8cd9287678227b18774f2",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "98233316f4cbcd5c8f8ff2c1444777d2fbadf78b6dd8cd9287678227b18774f2",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "98233316f4cbcd5c8f8ff2c1444777d2fbadf78b6dd8cd9287678227b18774f2",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "98233316f4cbcd5c8f8ff2c1444777d2fbadf78b6dd8cd9287678227b18774f2",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:lru-cache@1.0.0": {
+      "kind": "challenge",
+      "id": "lru-cache",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Mateo O",
+            "body": "Hit rate dropped to 12% after the last deploy. I think get() stopped refreshing recency.",
+            "role": "Backend"
+          }
+        ],
+        "difficulty": "hard",
+        "expected": [
+          [
+            1,
+            -1,
+            1
+          ],
+          [
+            -1
+          ]
+        ],
+        "hints": [
+          "Pair a hash map with a doubly linked list ordered by last use."
+        ],
+        "id": "lru-cache",
+        "inputs": [
+          [
+            2,
+            [
+              [
+                "put",
+                1,
+                1
+              ],
+              [
+                "put",
+                2,
+                2
+              ],
+              [
+                "get",
+                1
+              ],
+              [
+                "put",
+                3,
+                3
+              ],
+              [
+                "get",
+                2
+              ],
+              [
+                "get",
+                1
+              ]
+            ]
+          ],
+          [
+            1,
+            [
+              [
+                "put",
+                1,
+                1
+              ],
+              [
+                "put",
+                2,
+                2
+              ],
+              [
+                "get",
+                1
+              ]
+            ]
+          ]
+        ],
+        "kind": "bug",
+        "language": "cpp",
+        "number": 3,
+        "skills": [
+          "caching",
+          "linked-lists",
+          "maps"
+        ],
+        "summary": "Reads must refresh recency in the LRU cache.",
+        "task": "Simulate an LRU cache with the given capacity over operations `[\"put\", key, value]` and `[\"get\", key]`. Return the results of the gets in order, `-1` for a miss. A get counts as a use.",
+        "title": "Cache evicts entries that were just used",
+        "version": "1.0.0"
+      },
+      "digest": "500a8dda29a677406faff72fac1001bece93cad05a59045c91dcb64cd37742f3",
+      "state": "published",
+      "testResult": {
+        "digest": "500a8dda29a677406faff72fac1001bece93cad05a59045c91dcb64cd37742f3",
+        "fixtures": 2,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "500a8dda29a677406faff72fac1001bece93cad05a59045c91dcb64cd37742f3",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "500a8dda29a677406faff72fac1001bece93cad05a59045c91dcb64cd37742f3",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "500a8dda29a677406faff72fac1001bece93cad05a59045c91dcb64cd37742f3",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "500a8dda29a677406faff72fac1001bece93cad05a59045c91dcb64cd37742f3",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:parse-duration@1.0.0": {
+      "kind": "challenge",
+      "id": "parse-duration",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Sam R",
+            "body": "Somebody set idle_timeout = 3600 meaning minutes. Let people write 1h.",
+            "role": "SRE"
+          }
+        ],
+        "difficulty": "easy",
+        "expected": [
+          5400,
+          45,
+          7200,
+          null,
+          null,
+          null
+        ],
+        "hints": [],
+        "id": "parse-duration",
+        "inputs": [
+          "1h30m",
+          "45s",
+          "2h",
+          "1h1h",
+          "90",
+          ""
+        ],
+        "kind": "feature",
+        "language": "rust",
+        "number": 4,
+        "skills": [
+          "parsing",
+          "config"
+        ],
+        "summary": "Accept durations like 1h30m in config files.",
+        "task": "`parse_duration(text)` turns strings like `\"1h30m\"`, `\"45s\"` or `\"2h\"` into seconds. Units are `h`, `m` and `s`, each at most once and in that order; return `null` for anything else.",
+        "title": "Timeouts in config must be written in seconds",
+        "version": "1.0.0"
+      },
+      "digest": "0071701a80fd5f8e4bd9d8291deeebd56e77273499706cb1c2ba7c00543b9c83",
+      "state": "published",
+      "testResult": {
+        "digest": "0071701a80fd5f8e4bd9d8291deeebd56e77273499706cb1c2ba7c00543b9c83",
+        "fixtures": 6,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "0071701a80fd5f8e4bd9d8291deeebd56e77273499706cb1c2ba7c00543b9c83",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "0071701a80fd5f8e4bd9d8291deeebd56e77273499706cb1c2ba7c00543b9c83",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "0071701a80fd5f8e4bd9d8291deeebd56e77273499706cb1c2ba7c00543b9c83",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "0071701a80fd5f8e4bd9d8291deeebd56e77273499706cb1c2ba7c00543b9c83",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "adventure:storefront@1.0.0": {
+      "kind": "adventure",
+      "id": "storefront",
+      "version": "1.0.0",
+      "content": {
+        "challenges": [
+          [
+            "format-price",
+            "1.0.0"
+          ],
+          [
+            "discount-codes",
+            "1.0.0"
+          ],
+          [
+            "filter-form-labels",
+            "1.0.0"
+          ],
+          [
+            "debounce-search",
+            "1.0.0"
+          ]
+        ],
+        "id": "storefront",
+        "key": "SHOP",
+        "presentation": "demo-text-v1",
+        "story": "The online shop customers actually see: product listings, filters, the cart and a three-step checkout. Pages are server-rendered, with a thin layer of TypeScript for the interactive parts.\n\nConversion dipped after the last redesign. Support is fielding tickets about prices, promo codes and a search box that feels sluggish, and an accessibility audit came back with a long list.\n\n## What you'll work on\n\n- Formatting money and other values the way customers expect to read them\n- Form behaviour, validation and accessible markup\n- Small performance fixes in the browser, like debouncing input\n\n## Good fit if you\n\n- Build user interfaces, or want to get sharper at the details that make one feel solid\n- Are comfortable with **JavaScript**, **TypeScript** or plain **HTML**\n- Care what a bug looks like from the customer's side of the screen\n\nStack: TypeScript, JavaScript, HTML.",
+        "summary": "Frontend: the customer-facing shop, cart and checkout.",
+        "title": "Storefront",
+        "version": "1.0.0"
+      },
+      "digest": "977b70bedc1686d9a3c476a469c6bf34327d3bd2bfc7a4bfb6e87dc17cedd6ea",
+      "state": "published",
+      "testResult": {
+        "digest": "977b70bedc1686d9a3c476a469c6bf34327d3bd2bfc7a4bfb6e87dc17cedd6ea",
+        "fixtures": 14,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "977b70bedc1686d9a3c476a469c6bf34327d3bd2bfc7a4bfb6e87dc17cedd6ea",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "977b70bedc1686d9a3c476a469c6bf34327d3bd2bfc7a4bfb6e87dc17cedd6ea",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "977b70bedc1686d9a3c476a469c6bf34327d3bd2bfc7a4bfb6e87dc17cedd6ea",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "977b70bedc1686d9a3c476a469c6bf34327d3bd2bfc7a4bfb6e87dc17cedd6ea",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "adventure:accounts-api@1.0.0": {
+      "kind": "adventure",
+      "id": "accounts-api",
+      "version": "1.0.0",
+      "content": {
+        "challenges": [
+          [
+            "pagination-params",
+            "1.0.0"
+          ],
+          [
+            "reset-link-expiry",
+            "1.0.0"
+          ],
+          [
+            "rate-limiter",
+            "1.0.0"
+          ],
+          [
+            "parse-log-line",
+            "1.0.0"
+          ]
+        ],
+        "id": "accounts-api",
+        "key": "API",
+        "presentation": "demo-text-v1",
+        "story": "The service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, and the login gateway in front is TypeScript.\n\nIt mostly works, and the on-call channel has opinions about the rest: list endpoints that accept any page size, reset links that expire too soon, and logs that are hard to search during an incident.\n\n## What you'll work on\n\n- Parsing and validating request parameters with sensible defaults\n- Time and expiry logic, where off-by-one and unit mix-ups hide\n- Rate limiting and log handling for the people on call\n\n## Good fit if you\n\n- Write backend services, or want practice with the bugs they actually get\n- Like **input validation**, edge cases and reading a stack trace at 2am\n- Know **Go**, **PHP** or **TypeScript**, or want to try one of them on familiar problems\n\nStack: Go, PHP, TypeScript.",
+        "summary": "Backend: sign-up, login and account endpoints behind every app.",
+        "title": "Accounts API",
+        "version": "1.0.0"
+      },
+      "digest": "1b7351fc7f1fd85ef7b619f993ce7b7ee90a39d557a96c6f240dc4110d605ee3",
+      "state": "published",
+      "testResult": {
+        "digest": "1b7351fc7f1fd85ef7b619f993ce7b7ee90a39d557a96c6f240dc4110d605ee3",
+        "fixtures": 13,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "1b7351fc7f1fd85ef7b619f993ce7b7ee90a39d557a96c6f240dc4110d605ee3",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "1b7351fc7f1fd85ef7b619f993ce7b7ee90a39d557a96c6f240dc4110d605ee3",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "1b7351fc7f1fd85ef7b619f993ce7b7ee90a39d557a96c6f240dc4110d605ee3",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "1b7351fc7f1fd85ef7b619f993ce7b7ee90a39d557a96c6f240dc4110d605ee3",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "adventure:data-platform@1.0.0": {
+      "kind": "adventure",
+      "id": "data-platform",
+      "version": "1.0.0",
+      "content": {
+        "challenges": [
+          [
+            "csv-quoted-fields",
+            "1.0.0"
+          ],
+          [
+            "dedupe-customers",
+            "1.0.0"
+          ],
+          [
+            "top-customers",
+            "1.0.0"
+          ],
+          [
+            "unpaid-orders",
+            "1.0.0"
+          ]
+        ],
+        "id": "data-platform",
+        "key": "DATA",
+        "presentation": "demo-text-v1",
+        "story": "Partners drop CSV exports in a bucket every night. A pipeline cleans them, loads the warehouse and feeds the reports finance reads on Monday morning.\n\nThe exports are messier than anyone admits: quoted commas in company names, duplicate customers with slightly different emails, and orders that never got paid. When the numbers look wrong, this is where people come asking.\n\n## What you'll work on\n\n- Parsing awkward input files without losing data\n- Cleaning and deduplicating records before they reach the warehouse\n- SQL for the reports and reconciliations people rely on\n\n## Good fit if you\n\n- Work with data, or are the person on your team who ends up writing the SQL\n- Enjoy turning messy input into something you can trust\n- Know **Python** and **SQL**, or want more practice with both\n\nStack: Python, SQL.",
+        "summary": "Data: nightly partner imports, cleaning and the reports finance relies on.",
+        "title": "Data platform",
+        "version": "1.0.0"
+      },
+      "digest": "1b47b124c04c2bedcd61f072327dec6ffb94027db553fababf304a3b4dd2455d",
+      "state": "published",
+      "testResult": {
+        "digest": "1b47b124c04c2bedcd61f072327dec6ffb94027db553fababf304a3b4dd2455d",
+        "fixtures": 8,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "1b47b124c04c2bedcd61f072327dec6ffb94027db553fababf304a3b4dd2455d",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "1b47b124c04c2bedcd61f072327dec6ffb94027db553fababf304a3b4dd2455d",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "1b47b124c04c2bedcd61f072327dec6ffb94027db553fababf304a3b4dd2455d",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "1b47b124c04c2bedcd61f072327dec6ffb94027db553fababf304a3b4dd2455d",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "adventure:edge-proxy@1.0.0": {
+      "kind": "adventure",
+      "id": "edge-proxy",
+      "version": "1.0.0",
+      "content": {
+        "challenges": [
+          [
+            "ring-buffer",
+            "1.0.0"
+          ],
+          [
+            "p99-latency",
+            "1.0.0"
+          ],
+          [
+            "lru-cache",
+            "1.0.0"
+          ],
+          [
+            "parse-duration",
+            "1.0.0"
+          ]
+        ],
+        "id": "edge-proxy",
+        "key": "EDGE",
+        "presentation": "demo-text-v1",
+        "story": "A small proxy in front of everything: it terminates connections, caches hot responses and exports latency metrics. It's written in C, C++ and Rust, depending on who wrote which part and when.\n\nEvery allocation shows up on a flame graph here. The backlog is about doing more with fixed memory, measuring the right thing, and keeping configuration readable for whoever is paged.\n\n## What you'll work on\n\n- Fixed-size data structures such as ring buffers and LRU caches\n- Latency percentiles and the metrics behind dashboards\n- Small, strict configuration formats\n\n## Good fit if you\n\n- Do systems or performance work, or want to get closer to the metal\n- Think about memory, ordering and what happens under load\n- Know **C**, **C++** or **Rust**, or are learning one of them\n\nStack: C, C++, Rust.",
+        "summary": "Systems: the low-latency proxy in front of everything.",
+        "title": "Edge proxy",
+        "version": "1.0.0"
+      },
+      "digest": "e8d1f6b0f81f3ab224872ca1501c36aade282ccfaaecbd6994fe2d86dc34f754",
+      "state": "published",
+      "testResult": {
+        "digest": "e8d1f6b0f81f3ab224872ca1501c36aade282ccfaaecbd6994fe2d86dc34f754",
+        "fixtures": 14,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "e8d1f6b0f81f3ab224872ca1501c36aade282ccfaaecbd6994fe2d86dc34f754",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "e8d1f6b0f81f3ab224872ca1501c36aade282ccfaaecbd6994fe2d86dc34f754",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "e8d1f6b0f81f3ab224872ca1501c36aade282ccfaaecbd6994fe2d86dc34f754",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "e8d1f6b0f81f3ab224872ca1501c36aade282ccfaaecbd6994fe2d86dc34f754",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    }
+  }
+}
