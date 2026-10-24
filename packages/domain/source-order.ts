@@ -114,6 +114,7 @@ export function orderSource(
   };
 }
 
-function isPosition(value: unknown): value is number {
+/** A valid source position: a positive safe integer of JSON number type. */
+export function isPosition(value: unknown): value is number {
   return Number.isSafeInteger(value) && (value as number) >= 1;
 }

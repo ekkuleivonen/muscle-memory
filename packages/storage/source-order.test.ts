@@ -8,7 +8,7 @@ import { SqliteEvidenceStore } from "./evidence-sqlite";
 import { exportPending } from "./export";
 import { deleteParticipant } from "./deletion";
 import { referenceSubmission } from "./reference-fixture";
-import { captureSubmission } from "../domain/evidence";
+import { captureSubmission, encodeRecord } from "../domain/evidence";
 import { orderSource } from "../domain/source-order";
 
 async function temporary(run: (root: string) => Promise<void>) {
@@ -218,6 +218,136 @@ test("records stored before position checks are kept and reported, not dropped",
         () => store.capture(capture(A, "a-new", 1)),
         /already claimed/,
       );
+    } finally {
+      store.close();
+    }
+  }));
+
+/** Rewrites a stored observation's sequence as an earlier local version could have stored it. */
+function storeLegacySequence(database: string, id: string, sequence: unknown) {
+  const raw = new DatabaseSync(database);
+  try {
+    const { payload } = raw
+      .prepare("SELECT payload FROM evidence_records WHERE record_id = ?")
+      .get(id) as { payload: string };
+    const record = JSON.parse(payload);
+    record.source.sequence = sequence;
+    raw
+      .prepare("UPDATE evidence_records SET payload = ? WHERE record_id = ?")
+      .run(encodeRecord(record), id);
+  } finally {
+    raw.close();
+  }
+}
+
+/** The capture that produced a stored observation, rebuilt from its stored records. */
+function storedCapture(store: SqliteEvidenceStore, id: string) {
+  const { observation, submission, adventure, challenge } = store.evidence(id);
+  return { artifacts: [adventure, challenge], submission, observation };
+}
+
+test("unchanged retries of legacy records sharing a position deduplicate", async () =>
+  temporary(async (root) => {
+    const database = join(root, "evidence.sqlite");
+    let store = new SqliteEvidenceStore(database);
+    store.capture(capture(A, "a-x", 1));
+    store.capture(capture(A, "a-y", 2));
+    store.close();
+    storeLegacySequence(database, "a-y", 1);
+
+    store = new SqliteEvidenceStore(database);
+    try {
+      const payloads = [store.get("a-x")!.payload, store.get("a-y")!.payload];
+      const pending = store.pending();
+      for (const id of ["a-x", "a-y"])
+        assert.equal(store.capture(storedCapture(store, id)).duplicate, true);
+      assert.deepEqual(
+        [store.get("a-x")!.payload, store.get("a-y")!.payload],
+        payloads,
+      );
+      assert.deepEqual(store.pending(), pending);
+      // A new ID still cannot claim the position, and changed content under a stored ID fails.
+      assert.throws(
+        () => store.capture(capture(A, "a-new", 1)),
+        /already claimed/,
+      );
+      const changed = storedCapture(store, "a-y");
+      assert.throws(
+        () =>
+          store.capture({
+            ...changed,
+            observation: {
+              ...changed.observation,
+              occurredAt: "2026-01-02T00:00:00Z",
+            },
+          }),
+        /different content/,
+      );
+      assert.deepEqual(store.pending(), pending);
+    } finally {
+      store.close();
+    }
+  }));
+
+test("legacy booleans and unsafe integers are reported as unordered and never occupy positions", async () =>
+  temporary(async (root) => {
+    const database = join(root, "evidence.sqlite");
+    const archive = join(root, "exports");
+    let store = new SqliteEvidenceStore(database);
+    store.capture(capture(A, "a-bool", 1));
+    store.capture(capture(A, "a-unsafe", 2));
+    store.capture(capture(A, "a-three", 3));
+    store.close();
+    storeLegacySequence(database, "a-bool", true);
+    storeLegacySequence(database, "a-unsafe", Number.MAX_SAFE_INTEGER + 1);
+
+    store = new SqliteEvidenceStore(database);
+    try {
+      // Original bytes are kept, including the unsafe integer's exact digits.
+      assert.match(
+        store.get("a-unsafe")!.payload,
+        /"sequence":9007199254740992/,
+      );
+      assert.match(store.get("a-bool")!.payload, /"sequence":true/);
+      const before = store.sourceStream(A, "synthetic-cli");
+      assert.deepEqual(before.unordered, ["a-bool", "a-unsafe"]);
+      assert.deepEqual(before.missing.ranges, [{ from: 1, to: 2 }]);
+      // `true` is not position 1: a legitimate numeric claim succeeds beside it.
+      assert.equal(store.capture(capture(A, "a-one", 1)).duplicate, false);
+      assert.equal(store.capture(capture(A, "a-two", 2)).duplicate, false);
+      // New captures stay strict.
+      const forged = capture(A, "a-forged", 4);
+      assert.throws(
+        () =>
+          store.capture({
+            ...forged,
+            observation: {
+              ...forged.observation,
+              source: { id: "synthetic-cli", sequence: true as never },
+            },
+          }),
+        /positive integer/,
+      );
+      const stream = store.sourceStream(A, "synthetic-cli");
+      assert.deepEqual(
+        stream.observations.map((entry) => entry.observationId),
+        ["a-one", "a-two", "a-three"],
+      );
+      assert.deepEqual(stream.unordered, ["a-bool", "a-unsafe"]);
+      assert.deepEqual(stream.conflicts, []);
+      assert.equal(stream.missing.rangeCount, 0);
+
+      await exportPending(store, archive);
+      const exported = [];
+      for (const name of await readdir(archive)) {
+        const record = JSON.parse(await readFile(join(archive, name), "utf8"));
+        if (record.type === "observation.submission")
+          exported.push({
+            observationId: record.observationId,
+            sequence: record.source.sequence,
+          });
+      }
+      assert.deepEqual(orderSource(A, "synthetic-cli", exported), stream);
     } finally {
       store.close();
     }
