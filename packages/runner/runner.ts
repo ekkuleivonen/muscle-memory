@@ -228,12 +228,10 @@ export class Runner {
     frame.hidden = true;
     frame.title = `${this.engine.label} sandbox`;
     let listener: ((event: MessageEvent) => void) | undefined;
-    let destroyed = false;
     const sandbox: Sandbox = {
       frame,
       ready: Promise.resolve(),
       destroy() {
-        destroyed = true;
         if (listener) removeEventListener("message", listener);
         frame.remove();
       },
@@ -285,11 +283,8 @@ export class Runner {
     });
     ready.catch(() => undefined);
     (sandbox as { ready: Promise<void> }).ready = ready;
-    sandboxDocument().then((html) => {
-      if (destroyed) return;
-      frame.srcdoc = html;
-      this.host.append(frame);
-    });
+    frame.srcdoc = sandboxDocument();
+    this.host.append(frame);
     return sandbox;
   }
 }

@@ -61,12 +61,15 @@ export const SANDBOX_CSP = (bootHash: string) =>
     "form-action 'none'",
   ].join("; ");
 
+/**
+ * The boot script's hash, pinned rather than computed: crypto.subtle exists only in secure
+ * contexts, and the runners must also work over plain HTTP (a dev server on the LAN).
+ * sandbox.test.ts fails if the script changes without this.
+ */
+export const BOOT_SCRIPT_HASH =
+  "sha256-cFmdYeqXzlIUR/9YJ7qvEorS8J5kz1F1iJacj6WGGdY=";
+
 /** The srcdoc for one sandbox. The inline boot script is allowed only by its exact hash. */
-export async function sandboxDocument(): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(BOOT_SCRIPT),
-  );
-  const hash = "sha256-" + btoa(String.fromCharCode(...new Uint8Array(digest)));
-  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${SANDBOX_CSP(hash)}"></head><body><script>${BOOT_SCRIPT}</script></body></html>`;
+export function sandboxDocument(): string {
+  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${SANDBOX_CSP(BOOT_SCRIPT_HASH)}"></head><body><script>${BOOT_SCRIPT}</script></body></html>`;
 }

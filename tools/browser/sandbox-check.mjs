@@ -292,8 +292,9 @@ async function check(browserType) {
           [],
         ),
       );
-      results.frames = document.querySelectorAll("iframe").length;
+      // The runner keeps one spare sandbox ready; disposing it must leave none.
       runner.dispose();
+      results.frames = document.querySelectorAll("iframe").length;
       const tampered = window.makeRunner({
         timeoutMs: 4000,
         assetBase: BAD_ASSETS,
