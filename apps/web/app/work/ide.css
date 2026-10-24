@@ -18,7 +18,7 @@
   position: fixed;
   inset: 0;
   display: grid;
-  grid-template-columns: 48px 280px minmax(0, 1fr);
+  grid-template-columns: 48px var(--side-w, 280px) minmax(0, 1fr);
   grid-template-rows: 40px minmax(0, 1fr) 24px;
   grid-template-areas:
     "title title title"
@@ -255,7 +255,11 @@
 .ide-main {
   grid-area: main;
   display: grid;
-  grid-template-rows: 36px 24px minmax(0, 1fr) minmax(140px, 34%);
+  /* The editor keeps at least 120px; the panel takes what was dragged. */
+  grid-template-rows: 36px 24px minmax(120px, 1fr) minmax(
+      0,
+      var(--panel-h, 260px)
+    );
   min-width: 0;
 }
 .ide-tabs {
@@ -372,6 +376,7 @@
 
 /* Bottom panel */
 .ide-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -525,7 +530,8 @@
     grid-template-columns: 0 0 minmax(0, 1fr);
   }
   .ide-activity,
-  .ide-side {
+  .ide-side,
+  .ide-side-splitter {
     display: none;
   }
 }
@@ -574,4 +580,43 @@
 .ide-pulls .busy .ide-pr-mark,
 .ide-pulls .busy .ide-pr-label {
   color: var(--amber);
+}
+
+/* Drag handles: invisible until hovered or dragged, like VS Code's sashes. */
+.ide-splitter {
+  z-index: 5;
+  touch-action: none;
+  background: transparent;
+  transition: background 0.1s 0.15s;
+}
+.ide-splitter:hover,
+.ide-splitter.dragging,
+.ide-splitter:focus-visible {
+  background: var(--accent);
+  outline: none;
+}
+.ide-splitter.x {
+  grid-area: side;
+  justify-self: end;
+  width: 4px;
+  margin-right: -2px;
+  cursor: col-resize;
+}
+.ide-splitter.y {
+  position: absolute;
+  top: -2px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  cursor: row-resize;
+}
+/* No accidental text selection while dragging. */
+.ide:has(.ide-splitter.dragging) {
+  user-select: none;
+}
+.ide:has(.ide-splitter.x.dragging) {
+  cursor: col-resize;
+}
+.ide:has(.ide-splitter.y.dragging) {
+  cursor: row-resize;
 }

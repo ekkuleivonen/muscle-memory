@@ -1,6 +1,13 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import type { EditorView } from "@codemirror/view";
 import {
   openPracticeStore,
@@ -45,6 +52,7 @@ import { LanguageDot } from "../(browse)/_components/bits";
 import { StatusMenu, useBoard } from "../(browse)/_components/board";
 import { Markdown } from "../(browse)/_components/markdown";
 import { createViewer, type Keymap } from "../workspace/editor";
+import { PANEL, panelMax, SIDE, Splitter, useIdeLayout } from "./splitter";
 import { recoveryMessage, saveBadge, saveState } from "../workspace/save-state";
 import {
   RUN_TIMEOUT_MS,
@@ -140,6 +148,8 @@ export function Ide({
   const [vimMode, setVimMode] = useState("normal");
   const [edited, setEdited] = useState(false);
 
+  const layout = useIdeLayout();
+  const mainRef = useRef<HTMLElement>(null);
   const board = useBoard();
   // The session's callbacks outlive renders; they read the latest board through this.
   const boardRef = useRef(board);
@@ -317,7 +327,15 @@ export function Ide({
   const ready = runtime.state === "ready" && opening.state === "open";
 
   return (
-    <div className="ide">
+    <div
+      className="ide"
+      style={
+        {
+          "--side-w": `${layout.side}px`,
+          "--panel-h": `${layout.panel}px`,
+        } as CSSProperties
+      }
+    >
       <header className="ide-title">
         <Link
           href={`/issues/${issue.key}`}
@@ -413,7 +431,18 @@ export function Ide({
         )}
       </aside>
 
-      <main className="ide-main">
+      <Splitter
+        axis="x"
+        className="ide-side-splitter"
+        label="Resize the side bar"
+        value={layout.side}
+        min={SIDE.min}
+        max={() => SIDE.max}
+        initial={SIDE.initial}
+        onChange={layout.setSide}
+      />
+
+      <main className="ide-main" ref={mainRef}>
         <div className="ide-tabs" role="tablist" aria-label="Open files">
           {tabs.map((path) => {
             const file = repo.files.find((f) => f.path === path)!;
@@ -474,6 +503,16 @@ export function Ide({
         </div>
 
         <section className="ide-panel">
+          <Splitter
+            axis="y"
+            className="ide-panel-splitter"
+            label="Resize the panel"
+            value={layout.panel}
+            min={PANEL.min}
+            max={() => panelMax(mainRef.current?.clientHeight ?? 600)}
+            initial={PANEL.initial}
+            onChange={layout.setPanel}
+          />
           <div className="ide-panel-tabs" role="tablist">
             <button
               type="button"
