@@ -384,6 +384,7 @@ async function javaRunner() {
   const key = createHash("sha256")
     .update(JDK_IMAGE)
     .update(TEAVM_JAVAC.commit)
+    .update("single-processor")
     .digest("hex")
     .slice(0, 16);
   const cache = join(
@@ -433,6 +434,10 @@ async function javaRunner() {
         "HOME=/tmp",
         "-e",
         "GRADLE_USER_HOME=/gradle",
+        // One processor: TeaVM's output otherwise depends on the machine's core count, and
+        // the bytes must match the pins on every machine.
+        "-e",
+        "JAVA_TOOL_OPTIONS=-XX:ActiveProcessorCount=1",
         "-v",
         `${src}:/src`,
         "-v",
@@ -442,6 +447,7 @@ async function javaRunner() {
         JDK_IMAGE,
         "./gradlew",
         "--no-daemon",
+        "--max-workers=1",
         "-q",
         ":compiler:createDist",
       ],

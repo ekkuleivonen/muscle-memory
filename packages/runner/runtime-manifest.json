@@ -273,13 +273,13 @@
     "basePath": "/runtime/java-208d4c9/",
     "files": {
       "teavm.js": "sha256-1PwDW0EPRE959J44kGQ7i/1kSgLc/Fl+P8qooHuvygg=",
-      "compiler.wasm.gz": "sha256-2xpq7LQkyiTtNeOfiGKlX//WG+2FLXdf0Q+bBxCJ2Vk=",
+      "compiler.wasm.gz": "sha256-2cWdRCQtnpm1gPcQwmQoevZ+pDFWqsEMTEl2AmP78LM=",
       "compile-classlib.bin.gz": "sha256-Ifg3JcH9rJlrZwW7wWUZvRQ8HbpOi6sAzJ0tGdAd6Sw=",
       "runtime-classlib.bin.gz": "sha256-Iv0ys+oy8AfufzCz3Fr7yeWGkF4MOKeo+F7xmU2bmEY="
     },
     "sizes": {
       "teavm.js": 16425,
-      "compiler.wasm.gz": 1846191,
+      "compiler.wasm.gz": 1846188,
       "compile-classlib.bin.gz": 213897,
       "runtime-classlib.bin.gz": 2296260
     }
