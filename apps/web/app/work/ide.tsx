@@ -55,6 +55,7 @@ import { Markdown } from "../(browse)/_components/markdown";
 import { createViewer, type Keymap } from "../workspace/editor";
 import { checksTypes, TypeChecker } from "../workspace/type-checker";
 import { PANEL, panelMax, SIDE, Splitter, useIdeLayout } from "./splitter";
+import { caseLabel, transcript, type Executable } from "./transcript";
 import { recoveryMessage, saveBadge, saveState } from "../workspace/save-state";
 import {
   RUN_TIMEOUT_MS,
@@ -62,33 +63,6 @@ import {
   type RunView,
   type SaveStatus,
 } from "../workspace/session";
-
-type Executable = Challenge & {
-  entrypoint: string;
-  starter: string;
-  /** Named when each case lists several arguments. */
-  parameters?: string[];
-  /** SQL: the tables each case's rows go into. */
-  schema?: string;
-  /** C and C++: turns a case's JSON arguments into the function's types. */
-  adapter?: string;
-  language?: string;
-};
-
-/** How a case reads in the panel: the call, or for SQL the rows it starts with. */
-function caseLabel(challenge: Executable, input: unknown): string {
-  if (challenge.schema && input && typeof input === "object")
-    return Object.entries(input as Record<string, unknown[]>)
-      .map(
-        ([table, rows]) =>
-          `${table}: ${rows.length} row${rows.length === 1 ? "" : "s"}`,
-      )
-      .join(", ");
-  if (challenge.language === "html" && Array.isArray(input))
-    return `${input[0]} → ${input[1]}`;
-  const args = challenge.parameters ? (input as unknown[]) : [input];
-  return `${challenge.entrypoint}(${args.map((arg) => JSON.stringify(arg)).join(", ")})`;
-}
 
 export interface IdeIssue {
   key: string;
@@ -618,7 +592,11 @@ export function Ide({
                 onRetry={startRuntime}
               />
             ) : (
-              <Output run={run} />
+              <Output
+                run={run}
+                challenge={challenge}
+                runtime={engine?.label ?? languageLabel(issue.language)}
+              />
             )}
           </div>
         </section>
@@ -1022,27 +1000,32 @@ function PullRequests({
   );
 }
 
-function Output({ run }: { run: RunView | null }) {
-  const o = run?.outcome;
-  if (!o || !("stdout" in o))
+/** The run as a terminal shows it: printed output, errors with traces, cases, summary. */
+function Output({
+  run,
+  challenge,
+  runtime,
+}: {
+  run: RunView | null;
+  challenge: Executable;
+  runtime: string;
+}) {
+  const log = transcript(run, challenge, runtime);
+  if (!log.length)
     return (
-      <p className="faint">print() output from your last run shows here.</p>
+      <p className="faint">
+        Everything your last run printed, raised or returned shows here.
+      </p>
     );
-  const text = o.stdout.text + o.stderr.text;
   return (
-    <div>
-      {text ? (
-        <pre className="ide-output">{text}</pre>
-      ) : (
-        <p className="faint">No output.</p>
-      )}
-      {(o.stdout.truncated || o.stderr.truncated) && (
-        <p className="faint">
-          Output truncated: showing the first 64 KiB of{" "}
-          {o.stdout.bytes + o.stderr.bytes} bytes.
-        </p>
-      )}
-    </div>
+    <pre className="ide-output">
+      {log.map((line, index) => (
+        <span key={index} className={`ide-line ${line.tone}`}>
+          {line.text}
+          {"\n"}
+        </span>
+      ))}
+    </pre>
   );
 }
 

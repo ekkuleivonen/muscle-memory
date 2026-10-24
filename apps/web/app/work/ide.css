@@ -494,6 +494,16 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.ide-line.err,
+.ide-line.fail {
+  color: var(--red, #d14343);
+}
+.ide-line.pass {
+  color: var(--green);
+}
+.ide-line.dim {
+  color: var(--faint);
+}
 .ide .error {
   color: var(--red);
 }
