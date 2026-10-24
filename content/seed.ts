@@ -495,40 +495,10 @@ func ParseDuration(text string) (int, error) {
   },
 };
 
-// Recurring teammates, so threads read like one team.
-const ada = (body: string): Comment => ({
-  author: "Ada N",
-  role: "Frontend",
-  body,
-});
-const lena = (body: string): Comment => ({
-  author: "Lena M",
-  role: "Product",
-  body,
-});
-const mateo = (body: string): Comment => ({
-  author: "Mateo O",
-  role: "Backend",
-  body,
-});
-const priya = (body: string): Comment => ({
-  author: "Priya K",
-  role: "Data",
-  body,
-});
-const sam = (body: string): Comment => ({ author: "Sam R", role: "SRE", body });
-const jo = (body: string): Comment => ({
-  author: "Jo T",
-  role: "Support",
-  body,
-});
-const rui = (body: string): Comment => ({
-  author: "Rui F",
-  role: "Finance",
-  body,
-});
+import { ada, jo, lena, mateo, priya, rui, sam } from "./team";
+import { MORE } from "./more";
 
-export const SEED_ISSUES: SeedIssue[] = [
+const BASE_ISSUES: SeedIssue[] = [
   // Quick fixes: five-minute bugs, one per language, for /play
   challenge("word-count-python", {
     title: "The composer says 1 word when the post is empty",
@@ -1815,7 +1785,7 @@ mm_value *mm_call(const mm_value *args) {
   }),
 ];
 
-export const SEED_PROJECTS: SeedProject[] = [
+const BASE_PROJECTS: SeedProject[] = [
   {
     id: "quick-fixes",
     key: "QUICK",
@@ -1950,3 +1920,12 @@ Stack: C, C++, Go.`,
     issues: ["ring-buffer", "p99-latency", "lru-cache", "parse-duration"],
   },
 ];
+
+/** Every issue: the ones above, then each project's later issues (content/more). */
+export const SEED_ISSUES: SeedIssue[] = [...BASE_ISSUES, ...Object.values(MORE).flat()];
+
+/** Later issues go after a project's first ones, so existing keys never change. */
+export const SEED_PROJECTS: SeedProject[] = BASE_PROJECTS.map((project) => ({
+  ...project,
+  issues: [...project.issues, ...(MORE[project.id] ?? []).map((issue) => issue.id)],
+}));
