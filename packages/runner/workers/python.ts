@@ -29,8 +29,10 @@ def __mm_text(error, limit):
 def __mm_error(error, limit):
     try:
         lines = traceback.format_exception(error)
-        # Drop the harness's own frames so tracebacks point at the solution file.
+        # Drop the harness's own frames so tracebacks point at the solution file, and name
+        # the repo's other files by their repo path, as the entry file is.
         text = "".join(line for line in lines if '"<exec>"' not in line)
+        text = text.replace('File "' + REPO + '/', 'File "')
     except BaseException:
         text = type(error).__name__ + ": " + __mm_text(error, 2000) + "\\n"
     return {"type": type(error).__name__, "message": __mm_text(error, 2000),
