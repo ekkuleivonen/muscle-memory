@@ -2,11 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { requireOnboarding } from "../../../../../lib/gate";
-import {
-  issueHref,
-  projectHref,
-  type Issue,
-} from "../../../../../lib/library";
+import { issueHref, projectHref, type Issue } from "../../../../../lib/library";
 import { getLibrary } from "../../../../../lib/load";
 import { pathWithQuery } from "../../../../../lib/onboarding";
 import {
@@ -21,14 +17,9 @@ import {
   LabelPill,
   LanguageTag,
 } from "../../../_components/bits";
-import {
-  KIND_LABELS,
-  KindIcon,
-  PlayIcon,
-  StatusIcon,
-} from "../../../_components/icons";
+import { KIND_LABELS, KindIcon, StatusIcon } from "../../../_components/icons";
 import { Sep, Topbar } from "../../../_components/topbar";
-import { StatusMenu } from "../../../_components/board";
+import { StartWork, StatusMenu } from "../../../_components/board";
 import { Markdown } from "../../../_components/markdown";
 
 type Props = {
@@ -212,9 +203,10 @@ function Properties({ issue }: { issue: Issue }) {
         <dd className="mono faint">{issue.version}</dd>
       </dl>
       {issue.runnable ? (
-        <Link className="btn start" href={workspaceHref(issue)}>
-          <PlayIcon /> Start work
-        </Link>
+        <StartWork
+          issue={{ key: issue.key, slug: issue.slug, version: issue.version }}
+          href={workspaceHref(issue)}
+        />
       ) : (
         <p className="note">
           Read-only for now: only Python runs in the browser so far.

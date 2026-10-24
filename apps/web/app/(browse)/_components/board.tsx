@@ -7,7 +7,10 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import type { BoardMoveVia } from "../../../../../packages/domain/board";
+import type {
+  BoardMoveTrigger,
+  BoardMoveVia,
+} from "../../../../../packages/domain/board";
 import {
   BOARD_CHANGE as CHANGE,
   BOARD_KEY,
@@ -22,7 +25,7 @@ import {
   type Status,
 } from "../../../lib/board";
 import { logBoardMove } from "./board-log";
-import { StatusIcon } from "./icons";
+import { PlayIcon, StatusIcon } from "./icons";
 
 const OPTIONS: readonly Status[] = ["backlog", "todo", "in-progress", "done"];
 
@@ -50,12 +53,15 @@ export function useBoard() {
     () => null,
   );
   const items = useMemo(() => parseBoard(raw), [raw]);
-  /** Sets a status by hand and, if the activity log is on, records the move. */
+  /** Sets a status by hand and records the move. */
   const move = (
     issue: IssueRef,
     to: ManualStatus,
     via: BoardMoveVia,
-    nudged = false,
+    {
+      nudged = false,
+      trigger = "status-menu",
+    }: { nudged?: boolean; trigger?: BoardMoveTrigger } = {},
   ) => {
     const from = statusOf(items, issue.key);
     if (from === to || from === "done") return;
@@ -74,6 +80,7 @@ export function useBoard() {
         from,
         to,
         via,
+        trigger,
         onBoardBefore: items.length,
         nudged,
       },
@@ -123,7 +130,7 @@ export function StatusMenu({ issue }: { issue: IssueRef }) {
     if (to === "done") return;
     const leavingBacklog = status === "backlog" && to !== "backlog";
     if (leavingBacklog && boardFull(items) && !confirmed) return setPending(to);
-    move(issue, to, via.current, confirmed);
+    move(issue, to, via.current, { nudged: confirmed });
     setPending(null);
     setOpen(false);
   }
@@ -250,5 +257,33 @@ export function StatusMenu({ issue }: { issue: IssueRef }) {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Opens the workspace and, since that is starting, moves the issue to In progress on the way.
+ * Already in progress (or done) stays as is.
+ */
+export function StartWork({ issue, href }: { issue: IssueRef; href: string }) {
+  const { items, move } = useBoard();
+  const status = statusOf(items, issue.key);
+  return (
+    <Link
+      className="btn start"
+      href={href}
+      onClick={(event) =>
+        // detail is 0 when a key, not a pointer, activated the link.
+        move(
+          issue,
+          "in-progress",
+          event.detail === 0 ? "keyboard" : "pointer",
+          {
+            trigger: "start-work",
+          },
+        )
+      }
+    >
+      <PlayIcon /> {status === "in-progress" ? "Continue work" : "Start work"}
+    </Link>
   );
 }

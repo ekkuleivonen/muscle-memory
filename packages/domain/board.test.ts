@@ -19,6 +19,7 @@ const base = {
     from: "backlog" as const,
     to: "in-progress" as const,
     via: "keyboard" as const,
+    trigger: "status-menu" as const,
     onBoardBefore: 3,
     nudged: true,
   },
@@ -57,6 +58,7 @@ test("malformed moves are refused rather than stored", () => {
   );
   assert.throws(bad({ data: { ...base.data, to: "done" } }), /between/);
   assert.throws(bad({ data: { ...base.data, via: "button" } }), /way/);
+  assert.throws(bad({ data: { ...base.data, trigger: "magic" } }), /trigger/);
   assert.throws(bad({ data: { ...base.data, onBoardBefore: -1 } }), /count/);
 });
 
