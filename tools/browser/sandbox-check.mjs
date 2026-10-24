@@ -24,7 +24,10 @@ const bundle = (
   })
 ).outputFiles[0].text;
 
-const hits = { app: [], outside: [] };
+const hits = { app: [], outside: [], outsideCookies: [], assets: [] };
+// Synthetic stand-in for an HttpOnly Cloudflare Access cookie. Never a real token.
+const AUTH_COOKIE = "CF_Authorization";
+const AUTH_VALUE = "synthetic-signed-in";
 const page = `<!doctype html><meta charset="utf-8"><body><div id="host"></div>
 <script src="/runner.js"></script>
 <script>
@@ -49,6 +52,16 @@ const app = createServer(async (request, response) => {
       .writeHead(200, { "content-type": "text/javascript" })
       .end(bundle);
   if (path.startsWith("/runtime/") || path.startsWith("/tampered/")) {
+    // Like the Access-protected preview: runtime files need the site's sign-in cookie,
+    // otherwise the request is redirected to a sign-in page on another origin.
+    const signedIn = (request.headers.cookie ?? "").includes(
+      `${AUTH_COOKIE}=${AUTH_VALUE}`,
+    );
+    hits.assets.push({ path, signedIn });
+    if (!signedIn)
+      return response
+        .writeHead(302, { location: `${OUT}/cdn-cgi/access/login` })
+        .end();
     try {
       let bytes = await readFile(
         join(runtimeDir, path.replace(/^\/tampered\//, "/runtime/")),
@@ -70,6 +83,7 @@ const app = createServer(async (request, response) => {
 });
 const outside = createServer((request, response) => {
   hits.outside.push(`${request.method} ${request.url}`);
+  if (request.headers.cookie) hits.outsideCookies.push(request.headers.cookie);
   response.writeHead(200, { "access-control-allow-origin": "*" }).end("leak");
 });
 outside.on("upgrade", (request, socket) => {
@@ -163,10 +177,24 @@ for name, outcome in attempts.items():
     print(name, "=>", outcome)
 `;
 
-async function check(browserType) {
-  hits.app.length = hits.outside.length = 0;
-  const browser = await browserType.launch();
+function resetHits() {
+  for (const list of Object.values(hits)) list.length = 0;
+}
+
+async function signedInContext(browser, value = AUTH_VALUE) {
   const context = await browser.newContext();
+  await context.addCookies([
+    { name: AUTH_COOKIE, value, url: APP, httpOnly: true, sameSite: "Lax" },
+  ]);
+  return context;
+}
+
+async function check(browserType) {
+  resetHits();
+  const browser = await browserType.launch();
+  const context = process.env.PREVIEW_URL
+    ? await browser.newContext()
+    : await signedInContext(browser);
   const tab = await context.newPage();
   const violations = [];
   tab.on("console", (message) => {
@@ -324,11 +352,87 @@ async function check(browserType) {
   };
 }
 
+/**
+ * Runtime files behind the site's sign-in: the page must send its own same-origin cookie,
+ * fail closed (without following the sign-in redirect) when it is missing or expired, and
+ * never send it anywhere else. The sandbox itself still makes no requests.
+ */
+async function authCheck(browserType) {
+  const browser = await browserType.launch();
+  const attempt = async (cookie, options = {}) => {
+    resetHits();
+    const context = cookie
+      ? await signedInContext(browser, cookie)
+      : await browser.newContext();
+    const tab = await context.newPage();
+    await tab.goto(APP + "/");
+    const outcome = await tab.evaluate(
+      async ({ SOLUTION, options }) => {
+        let runner;
+        try {
+          runner = window.makeRunner({ timeoutMs: 4000, ...options });
+        } catch (error) {
+          return { status: "constructor-error", message: error.message };
+        }
+        const result = await runner.run({
+          runId: "auth",
+          code: SOLUTION,
+          inputs: [["a", "b", "a"]],
+          functionName: "frequency_map",
+        });
+        runner.dispose();
+        return result;
+      },
+      { SOLUTION, options },
+    );
+    await new Promise((done) => setTimeout(done, 500));
+    await context.close();
+    return { outcome, hits: structuredClone(hits) };
+  };
+  const signedIn = await attempt(AUTH_VALUE);
+  const signedOut = await attempt(null);
+  const expired = await attempt("expired-session");
+  const foreign = await attempt(AUTH_VALUE, {
+    assetBase: OUT + "/runtime/pyodide-314.0.7/",
+  });
+  const tampered = await attempt(AUTH_VALUE, {
+    assetBase: "/tampered/pyodide-314.0.7/",
+  });
+  await browser.close();
+  const failedClosed = ({ outcome, hits }) =>
+    outcome.status === "runner-error" &&
+    outcome.phase === "bootstrap" &&
+    hits.outside.length === 0;
+  return {
+    "signed in: runtime files are requested with the site cookie":
+      signedIn.hits.assets.length === 4 &&
+      signedIn.hits.assets.every((asset) => asset.signedIn),
+    "signed in: bootstrap and a synthetic run succeed":
+      signedIn.outcome.status === "completed" &&
+      signedIn.outcome.cases[0]?.output?.text === '{"a": 2, "b": 1}',
+    "signed in: the cookie never reaches another origin":
+      signedIn.hits.outsideCookies.length === 0 &&
+      signedIn.hits.outside.length === 0,
+    "signed out: fails closed without following the sign-in redirect":
+      failedClosed(signedOut),
+    "expired sign-in: fails closed without following the redirect":
+      failedClosed(expired),
+    "expired sign-in: the error suggests reloading to sign in":
+      /reload the page/.test(expired.outcome.message ?? ""),
+    "asset base on another origin is refused before any request":
+      foreign.outcome.status === "constructor-error" &&
+      foreign.hits.outside.length === 0 &&
+      foreign.hits.assets.length === 0,
+    "tampered runtime file fails closed even when signed in":
+      failedClosed(tampered),
+  };
+}
+
 function verdicts({ report, frameProbe, hits }) {
   const solved = (outcome) =>
     outcome.status === "completed" &&
     outcome.cases.every((result) => result.output);
-  const escapes = report.escapes.stdout.text;
+  const escapes = report.escapes.stdout?.text ?? "";
   const blocked = (name, pattern = "") =>
     new RegExp(`${name} => blocked${pattern}`).test(escapes);
   return {
@@ -395,7 +499,12 @@ function verdicts({ report, frameProbe, hits }) {
 const requested = process.argv.slice(2);
 const engines = { chromium, firefox, webkit };
 let failures = 0;
-for (const name of requested.length ? requested : ["chromium"]) {
+// ONLY_AUTH=1 runs just the sign-in section.
+for (const name of process.env.ONLY_AUTH
+  ? []
+  : requested.length
+    ? requested
+    : ["chromium"]) {
   const result = await check(engines[name]);
   console.log(`\n=== ${name} ===`);
   for (const [label, pass] of Object.entries(verdicts(result))) {
@@ -415,6 +524,16 @@ for (const name of requested.length ? requested : ["chromium"]) {
     );
   }
 }
+if (!process.env.PREVIEW_URL)
+  for (const name of requested.length ? requested : ["chromium"]) {
+    console.log(`\n=== ${name}: runtime files behind sign-in ===`);
+    for (const [label, pass] of Object.entries(
+      await authCheck(engines[name]),
+    )) {
+      if (!pass) failures++;
+      console.log(`${pass ? "ok  " : "FAIL"} ${label}`);
+    }
+  }
 if (failures) process.exitCode = 1;
 app.close();
 outside.close();
