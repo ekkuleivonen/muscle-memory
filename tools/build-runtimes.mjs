@@ -119,8 +119,11 @@ for (const [id, engine] of Object.entries(ENGINES)) {
   const target = join(root, "apps/web/public", pinned.basePath);
   await mkdir(target, { recursive: true });
   const hashes = {};
+  // Sizes let the page show download progress; they are checked along with the hashes.
+  const sizes = {};
   for (const [name, bytes] of Object.entries(files)) {
     hashes[name] = integrity(bytes);
+    sizes[name] = bytes.length;
     if (!update && pinned.files?.[name] !== hashes[name])
       throw new Error(
         `${id}/${name} hash ${hashes[name]} does not match pinned ${pinned.files?.[name]}.`,
@@ -132,7 +135,10 @@ for (const [id, engine] of Object.entries(ENGINES)) {
     Object.keys(pinned.files).length !== Object.keys(hashes).length
   )
     throw new Error(`${id}: the pinned file list does not match the build.`);
+  if (!update && JSON.stringify(pinned.sizes) !== JSON.stringify(sizes))
+    throw new Error(`${id}: the pinned file sizes do not match the build.`);
   pinned.files = hashes;
+  pinned.sizes = sizes;
   await writeFile(join(target, "LICENSE.txt"), engine.license(installed));
   console.log(`${id} ${installed} → ${target}`);
 }

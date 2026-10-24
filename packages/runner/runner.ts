@@ -52,6 +52,15 @@ export type RunOutcome =
       readonly message: string;
     };
 
+/** How far a runtime has got: downloading its files, then starting up. */
+export type LoadProgress =
+  | {
+      readonly phase: "download";
+      readonly loaded: number;
+      readonly total: number;
+    }
+  | { readonly phase: "start" };
+
 export interface RunRequest {
   readonly runId: string;
   readonly code: string;
@@ -89,7 +98,12 @@ export class Runner {
   constructor(
     readonly engine: Engine,
     private readonly host: HTMLElement,
-    private readonly options: { timeoutMs: number; assetBase?: string },
+    private readonly options: {
+      timeoutMs: number;
+      assetBase?: string;
+      /** Reported while the first sandbox loads; reruns reuse the files. */
+      onProgress?: (progress: LoadProgress) => void;
+    },
   ) {
     // Credentials are sent with asset requests, so they may only go to this page's origin.
     this.assetBase = new URL(
@@ -175,6 +189,43 @@ export class Runner {
     this.spare = undefined;
   }
 
+  private loaded = 0;
+
+  /** Reads a body while counting bytes; integrity is still checked by fetch at the end. */
+  private async read(response: Response): Promise<ArrayBuffer> {
+    const total = Object.values(this.engine.sizes).reduce((a, b) => a + b, 0);
+    const report = () =>
+      this.options.onProgress?.({
+        phase: "download",
+        loaded: Math.min(this.loaded, total),
+        total,
+      });
+    if (!response.body) {
+      const bytes = await response.arrayBuffer();
+      this.loaded += bytes.byteLength;
+      report();
+      return bytes;
+    }
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    const reader = response.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      size += value.byteLength;
+      this.loaded += value.byteLength;
+      report();
+    }
+    const bytes = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return bytes.buffer;
+  }
+
   private loadAssets(): Promise<Record<string, ArrayBuffer>> {
     // Only this trusted page fetches runtime files, and only from its own origin, so the
     // site's existing sign-in (such as a Cloudflare Access cookie) applies. The sandbox
@@ -199,7 +250,7 @@ export class Runner {
           throw new Error(
             `Runtime file ${name} is unavailable (${response.status}).`,
           );
-        return [name, await response.arrayBuffer()] as const;
+        return [name, await this.read(response)] as const;
       }),
     ).then(Object.fromEntries);
     this.assets.catch(() => (this.assets = undefined));
@@ -236,7 +287,8 @@ export class Runner {
         const data = event.data as { type?: unknown; message?: unknown };
         if (data?.type === "frame-ready") {
           this.loadAssets().then(
-            (assets) =>
+            (assets) => {
+              this.options.onProgress?.({ phase: "start" });
               frame.contentWindow?.postMessage(
                 {
                   type: "init",
@@ -245,7 +297,8 @@ export class Runner {
                   config: this.engine.config,
                 },
                 "*",
-              ),
+              );
+            },
             (error: Error) => reject(error),
           );
         } else if (data?.type === "ready") {

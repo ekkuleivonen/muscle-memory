@@ -14,6 +14,12 @@
       "pyodide.asm.mjs": "sha256-983I7OgGeM63EvjmXr5tOoMgOhgMOZhl9JYSoFFpNjU=",
       "pyodide.asm.wasm": "sha256-zDbjyrBP38mmP/E+tS6uK5Eb9GwCXMeygfOUvT3h1eY=",
       "python_stdlib.zip": "sha256-+hlX5XdwaPxPdDf5bYYK4vvpwZcyugbITgBOwW3X3Xo="
+    },
+    "sizes": {
+      "pyodide.mjs": 17931,
+      "pyodide.asm.mjs": 1250344,
+      "pyodide.asm.wasm": 9598218,
+      "python_stdlib.zip": 2545637
     }
   },
   "javascript": {
@@ -21,6 +27,9 @@
     "basePath": "/runtime/javascript-3.35.1/",
     "files": {
       "transpiler.js": "sha256-TwFtetl0wWEw+97itizWOwn72QKvbk0EJFSLY/uYiwQ="
+    },
+    "sizes": {
+      "transpiler.js": 206034
     }
   },
   "pglite": {
@@ -32,6 +41,12 @@
       "pglite.wasm": "sha256-aykHifiaq/AFKpde7gPPl0MPKggpOP4YE3skaq8RNrU=",
       "initdb.wasm": "sha256-mF2bbwcV6YUO+1eYzlH2Tn/YYp1wlw/Rph5117rgvec=",
       "pglite.data": "sha256-R/8pva3w39ivYLsBMTx/kYwiUY7kh3L8QO1JAoqBzMQ="
+    },
+    "sizes": {
+      "pglite.js": 624346,
+      "pglite.wasm": 10123263,
+      "initdb.wasm": 395242,
+      "pglite.data": 6291000
     }
   }
 }

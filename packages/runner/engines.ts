@@ -22,6 +22,8 @@ export interface Engine {
   readonly basePath: string;
   /** File name → SRI hash. */
   readonly files: Readonly<Record<string, string>>;
+  /** File name → size in bytes, for download progress. */
+  readonly sizes: Readonly<Record<string, number>>;
   /** Passed to the worker with its files. */
   readonly config: Readonly<Record<string, unknown>>;
   readonly worker: string;
@@ -40,6 +42,7 @@ export const ENGINES: Record<EngineId, Engine> = {
     },
     basePath: pyodide.basePath,
     files: pyodide.files,
+    sizes: pyodide.sizes,
     config: { lock: pyodide.lockInfo },
     worker: PYTHON_WORKER,
   },
@@ -53,6 +56,7 @@ export const ENGINES: Record<EngineId, Engine> = {
     },
     basePath: javascript.basePath,
     files: javascript.files,
+    sizes: javascript.sizes,
     config: {},
     worker: JAVASCRIPT_WORKER,
   },
@@ -66,6 +70,7 @@ export const ENGINES: Record<EngineId, Engine> = {
     },
     basePath: pglite.basePath,
     files: pglite.files,
+    sizes: pglite.sizes,
     config: {},
     worker: SQL_WORKER,
   },

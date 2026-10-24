@@ -30,6 +30,7 @@ import {
   engineFor,
   Runner,
   type CaseResult,
+  type LoadProgress,
 } from "../../../../packages/runner/runner";
 import { readProfile } from "../../lib/account";
 import {
@@ -100,7 +101,7 @@ export interface IdeIssue {
 
 type Runtime =
   | { state: "none" }
-  | { state: "loading" }
+  | { state: "loading"; progress?: LoadProgress }
   | { state: "ready" }
   | { state: "unavailable"; message: string };
 
@@ -169,6 +170,8 @@ export function Ide({
   const [keymap, setKeymap] = useState<Keymap>("standard");
   const [vimMode, setVimMode] = useState("normal");
   const [edited, setEdited] = useState(false);
+  /** The boot screen can be dismissed while only the runtime is still loading. */
+  const [booted, setBooted] = useState(false);
 
   const layout = useIdeLayout();
   const mainRef = useRef<HTMLElement>(null);
@@ -193,6 +196,13 @@ export function Ide({
     runner.current?.dispose();
     const next = new Runner(engine, sandboxHost.current!, {
       timeoutMs: RUN_TIMEOUT_MS,
+      onProgress: (progress) =>
+        runner.current === next &&
+        setRuntime((current) =>
+          current.state === "loading"
+            ? { state: "loading", progress }
+            : current,
+        ),
     });
     runner.current = next;
     setRuntime({ state: "loading" });
@@ -349,6 +359,10 @@ export function Ide({
 
   const running = run?.status === "queued" || run?.status === "running";
   const ready = runtime.state === "ready" && opening.state === "open";
+  const booting =
+    !booted &&
+    (opening.state === "opening" ||
+      (opening.state === "open" && runtime.state === "loading"));
 
   return (
     <div
@@ -467,6 +481,14 @@ export function Ide({
       />
 
       <main className="ide-main" ref={mainRef}>
+        {runtime.state === "loading" && !booting && (
+          <div
+            className="ide-progress"
+            role="progressbar"
+            aria-label={`Loading ${engine?.label ?? "the runtime"}`}
+            {...progressValue(runtime.progress)}
+          />
+        )}
         <div className="ide-tabs" role="tablist" aria-label="Open files">
           {tabs.map((path) => {
             const file = repo.files.find((f) => f.path === path)!;
@@ -516,9 +538,6 @@ export function Ide({
               }}
             />
           ))}
-          {opening.state === "opening" && (
-            <p className="ide-overlay faint">Opening {repo.solution.path}…</p>
-          )}
           {opening.state === "failed" && (
             <p className="ide-overlay error" role="alert">
               {opening.message}
@@ -614,13 +633,42 @@ export function Ide({
           </span>
         </span>
       </footer>
+      {booting && (
+        <Boot
+          issue={issue}
+          root={repo.root}
+          branch={repo.branch}
+          opening={opening}
+          runtime={runtime}
+          onSkip={() => setBooted(true)}
+        />
+      )}
       <div ref={sandboxHost} hidden />
     </div>
   );
 }
 
+/** Download share as aria values and a CSS variable; indeterminate while starting. */
+function progressValue(progress?: LoadProgress) {
+  if (progress?.phase !== "download" || !progress.total) return {};
+  const percent = Math.round((progress.loaded / progress.total) * 100);
+  return {
+    "aria-valuenow": percent,
+    style: { "--progress": `${percent}%` } as CSSProperties,
+  };
+}
+
+function megabytes(bytes: number): string {
+  return (bytes / 1_000_000).toFixed(bytes < 10_000_000 ? 1 : 0);
+}
+
 function runtimeLabel(runtime: Runtime): string {
-  if (runtime.state === "loading") return "loading…";
+  if (runtime.state === "loading") {
+    const p = runtime.progress;
+    if (p?.phase === "download" && p.loaded < p.total)
+      return `downloading ${Math.round((p.loaded / p.total) * 100)}%`;
+    return "starting…";
+  }
   if (runtime.state === "ready") return "ready";
   if (runtime.state === "unavailable") return "unavailable";
   return "";
@@ -1016,5 +1064,109 @@ function FilesIcon() {
       <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
       <path d="M14 3v5h5" />
     </svg>
+  );
+}
+
+/**
+ * What the IDE is doing while it opens: checking out the issue's repo, restoring saved work and
+ * installing the language's runtime, with download progress. Editing can start before the
+ * runtime is ready; only Run waits for it.
+ */
+function Boot({
+  issue,
+  root,
+  branch,
+  opening,
+  runtime,
+  onSkip,
+}: {
+  issue: IdeIssue;
+  root: string;
+  branch: string;
+  opening: Opening;
+  runtime: Runtime;
+  onSkip(): void;
+}) {
+  const engine = engineFor(issue.language);
+  const opened = opening.state === "open";
+  const progress = runtime.state === "loading" ? runtime.progress : undefined;
+  const downloading =
+    progress?.phase === "download" && progress.loaded < progress.total;
+  return (
+    <div className="ide-boot" role="status" aria-live="polite">
+      <div className="ide-boot-card">
+        <img src="/logo.svg" alt="" className="ide-boot-logo" />
+        <p className="ide-boot-title">
+          <span className="mono faint">{issue.key}</span> {issue.title}
+        </p>
+        <ol className="ide-boot-steps">
+          <BootStep state="done">
+            Cloned <b>{root}</b>
+          </BootStep>
+          <BootStep state={opened ? "done" : "busy"}>
+            {opened ? "Checked out " : "Checking out "}
+            <b className="mono">{branch}</b>
+            {!opened && " and restoring your saved work…"}
+          </BootStep>
+          {engine ? (
+            <BootStep state={runtime.state === "loading" ? "busy" : "done"}>
+              {downloading
+                ? `Installing ${engine.label}`
+                : runtime.state === "loading"
+                  ? `Starting ${engine.label}…`
+                  : `${engine.label} ready`}
+              {downloading && progress?.phase === "download" && (
+                <>
+                  <span className="faint">
+                    {" "}
+                    · {megabytes(progress.loaded)} of{" "}
+                    {megabytes(progress.total)} MB
+                  </span>
+                  <span
+                    className="ide-boot-bar"
+                    style={
+                      {
+                        "--progress": `${Math.round((progress.loaded / progress.total) * 100)}%`,
+                      } as CSSProperties
+                    }
+                  />
+                </>
+              )}
+            </BootStep>
+          ) : (
+            <BootStep state="skipped">
+              No runner for {languageLabel(issue.language)} yet; your edits are
+              still saved
+            </BootStep>
+          )}
+        </ol>
+        {opened && (
+          <button
+            type="button"
+            className="ide-link ide-boot-skip"
+            onClick={onSkip}
+          >
+            Start editing now; Run waits for the runtime
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BootStep({
+  state,
+  children,
+}: {
+  state: "done" | "busy" | "skipped";
+  children: ReactNode;
+}) {
+  return (
+    <li className={`ide-boot-step ${state}`}>
+      <span className="ide-boot-mark" aria-hidden>
+        {state === "done" ? "✔" : state === "busy" ? "" : "–"}
+      </span>
+      <span>{children}</span>
+    </li>
   );
 }
