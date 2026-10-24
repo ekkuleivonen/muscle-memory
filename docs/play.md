@@ -6,9 +6,15 @@ How people arrive from a shared link, and how a result gets shared. The goal is 
 
 - One small bug, the same in eight languages: the quick fixes project (`QUICK-1` to `QUICK-8`, "The composer says 1 word when the post is empty"), in Python, JavaScript, TypeScript, Go, Java, C#, Ruby and PHP. The project is **unlisted** (`listed: false` on the project, live metadata): it stays out of the platform's issue lists, suggestions and project index, and its issues open by key.
 - `/play` is public. It shows the ticket and a language picker; the language a shared link names (`?lang=go`) comes first.
-- **No setup questions.** Picking a language accepts the current Terms (the line above the buttons says so, including that every keystroke is recorded) and opens `/work/QUICK-n`. The acceptance is stored like any other, with a play-only profile, and the `mm_play` cookie lets its holder into the IDE and pull requests (`requireConsent`), not the platform (`requireOnboarding`).
+- **No setup questions.** Picking a language accepts the current Terms (the line above the buttons says so, including that every keystroke is recorded) and opens `/work/QUICK-n`.
 - **The language picked is the languages answer.** It is saved into the profile when the profile has none, so every IDE session's profile snapshot carries it, and recorded as a `profile` event with `from: "play"`, the same event onboarding records.
-- **Joining the platform later** (the dashboard, board or issues) goes through onboarding, which sees the signed Terms and asks only the questions. The answers then join the play sessions by participant ID.
+
+## Getting in, everywhere
+
+Accepting the current Terms is the only thing any page requires (`requireConsent`):
+
+- Someone who has not (a deep link, or the Terms changed since) is sent to `/consent`: the Terms in four points, one button, then on to the page they were heading for. `/play` does the same inline.
+- The setup questions are never required. They are offered: by "Start your first day" on the landing page (the full onboarding, a choice), by a dismissible card on the dashboard while they are unanswered, and in settings. Onboarding sees Terms already accepted and asks only the questions. Answers given later join earlier sessions by participant ID.
 
 ## The result card
 

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireOnboarding } from "../../../lib/gate";
+import { requireConsent } from "../../../lib/gate";
 import { LANGUAGES } from "../../../lib/languages";
 import {
   difficultyRange,
@@ -28,7 +28,7 @@ export default async function ProjectsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  await requireOnboarding(pathWithQuery("/projects", params));
+  await requireConsent(pathWithQuery("/projects", params));
   const query = parseProjectQuery(queryParam(params));
   const { projects, issues } = await getLibrary();
   const results = filterProjects(projects, query);

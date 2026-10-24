@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { isOnboarded, ONBOARDING_COOKIE } from "../lib/onboarding";
+import { CONSENT_COOKIE, hasConsent, ONBOARDING_COOKIE } from "../lib/onboarding";
 
 /**
  * The public front door: the question that brings people here, what they get, and why it
@@ -29,7 +29,12 @@ const SCHEDULE = [
 ];
 
 export default async function Home() {
-  const onboarded = isOnboarded((await cookies()).get(ONBOARDING_COOKIE)?.value);
+  const store = await cookies();
+  // Anyone who accepted the Terms has a desk, setup questions answered or not.
+  const onboarded = hasConsent(
+    store.get(ONBOARDING_COOKIE)?.value,
+    store.get(CONSENT_COOKIE)?.value,
+  );
   const start = onboarded ? (
     <Link className="home-cta" href="/dashboard">
       Back to your desk →

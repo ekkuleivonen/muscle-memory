@@ -1,20 +1,13 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { hasConsent, isOnboarded, ONBOARDING_COOKIE, PLAY_COOKIE } from "./onboarding";
-
-/** Sends people who have not finished onboarding there first, then back to `path`. */
-export async function requireOnboarding(path: string): Promise<void> {
-  const store = await cookies();
-  if (!isOnboarded(store.get(ONBOARDING_COOKIE)?.value))
-    redirect(`/onboarding?next=${encodeURIComponent(path)}`);
-}
+import { CONSENT_COOKIE, hasConsent, ONBOARDING_COOKIE } from "./onboarding";
 
 /**
- * The IDE and pull requests: open to anyone who accepted the current Terms, including through
- * the five-minute test, which skips the setup questions.
+ * Every app page needs the current Terms accepted, nothing more: without them it sends people
+ * to /consent (one click) and back to `path`. Onboarding's questions are never required.
  */
 export async function requireConsent(path: string): Promise<void> {
   const store = await cookies();
-  if (!hasConsent(store.get(ONBOARDING_COOKIE)?.value, store.get(PLAY_COOKIE)?.value))
-    redirect(`/onboarding?next=${encodeURIComponent(path)}`);
+  if (!hasConsent(store.get(ONBOARDING_COOKIE)?.value, store.get(CONSENT_COOKIE)?.value))
+    redirect(`/consent?next=${encodeURIComponent(path)}`);
 }

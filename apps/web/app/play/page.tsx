@@ -3,7 +3,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { languageLabel } from "../../lib/library";
 import { getLibrary } from "../../lib/load";
-import { hasConsent, ONBOARDING_COOKIE, PLAY_COOKIE } from "../../lib/onboarding";
+import { hasConsent, ONBOARDING_COOKIE, CONSENT_COOKIE } from "../../lib/onboarding";
 import { PlayStart } from "./play-start";
 
 export const metadata: Metadata = {
@@ -24,7 +24,7 @@ export default async function Play({ searchParams }: Props) {
   const store = await cookies();
   const consented = hasConsent(
     store.get(ONBOARDING_COOKIE)?.value,
-    store.get(PLAY_COOKIE)?.value,
+    store.get(CONSENT_COOKIE)?.value,
   );
   const { findProject } = await getLibrary();
   const quick = findProject("QUICK");

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { requireOnboarding } from "../../../../lib/gate";
+import { requireConsent } from "../../../../lib/gate";
 import { issueHref, projectHref, type Issue } from "../../../../lib/library";
 import { getLibrary } from "../../../../lib/load";
 import { formatQuery, emptyIssueQuery } from "../../../../lib/queries";
@@ -44,7 +44,7 @@ const labelHref = (label: string) =>
 
 export default async function IssuePage(props: Props) {
   const { key } = await props.params;
-  await requireOnboarding(`/issues/${key}`);
+  await requireConsent(`/issues/${key}`);
   const issue = await find(props);
   if (!issue) notFound();
   const { revisionsOf } = await getLibrary();

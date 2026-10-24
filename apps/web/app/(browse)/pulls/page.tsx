@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireOnboarding } from "../../../lib/gate";
+import { requireConsent } from "../../../lib/gate";
 import { LANGUAGES } from "../../../lib/languages";
 import {
   DIFFICULTIES,
@@ -41,7 +41,7 @@ export default async function PullsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  await requireOnboarding(pathWithQuery("/pulls", params));
+  await requireConsent(pathWithQuery("/pulls", params));
   const query = parsePullQuery(queryParam(params));
   const { issues, projects } = await getLibrary();
   return (

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Json } from "../../../../packages/domain/json";
-import { acceptForPlay, playLanguage } from "../../lib/account";
+import { acceptConsent, playLanguage } from "../../lib/account";
 import type { LanguageId } from "../../lib/languages";
 import { logArrival, logProfile, noteArrival } from "../(browse)/_components/board-log";
 
@@ -39,7 +39,7 @@ export function PlayStart({
   ];
   const start = async (choice: Choice) => {
     setStarting(choice.key);
-    if (!consented) acceptForPlay();
+    if (!consented) acceptConsent();
     // Recorded only now that the Terms are accepted: how they came (once per browser), and
     // the language they picked, as the same languages answer onboarding asks for.
     await logArrival().catch(() => undefined);

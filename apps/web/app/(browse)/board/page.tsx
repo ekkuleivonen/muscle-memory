@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireOnboarding } from "../../../lib/gate";
+import { requireConsent } from "../../../lib/gate";
 import { summarize } from "../../../lib/library";
 import { getLibrary } from "../../../lib/load";
 import { pathWithQuery } from "../../../lib/onboarding";
@@ -16,7 +16,7 @@ export default async function BoardPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  await requireOnboarding(pathWithQuery("/board", params));
+  await requireConsent(pathWithQuery("/board", params));
   const view = params.view === "list" ? "list" : "board";
   const { issues } = await getLibrary();
   return (

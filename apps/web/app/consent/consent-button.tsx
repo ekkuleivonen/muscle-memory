@@ -1,0 +1,33 @@
+"use client";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { acceptConsent, readProfile } from "../../lib/account";
+import { logArrival, noteArrival } from "../(browse)/_components/board-log";
+
+/** Accepts the current Terms and goes on; says so when it is a renewal after a change. */
+export function ConsentButton({ next }: { next: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [renewal, setRenewal] = useState(false);
+  useEffect(() => {
+    // The page they were heading for is where they landed; /consent is only on the way.
+    noteArrival(null, next);
+    setRenewal(Boolean(readProfile()?.accepted));
+  }, [next]);
+  const accept = async () => {
+    setBusy(true);
+    acceptConsent();
+    await logArrival().catch(() => undefined);
+    router.replace(next);
+  };
+  return (
+    <div className="home-actions">
+      <button type="button" className="home-cta" disabled={busy} onClick={() => void accept()}>
+        {busy ? "Opening…" : "I'm 16 or older and accept"}
+      </button>
+      <span className="home-note">
+        {renewal ? "The Terms changed since you last accepted them." : "No account, no email."}
+      </span>
+    </div>
+  );
+}

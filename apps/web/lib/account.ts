@@ -10,8 +10,8 @@ import type { LanguageId } from "./languages";
 import { LEGAL_VERSION, type Acceptance } from "./legal";
 import {
   ONBOARDING_COOKIE,
-  PLAY_COOKIE,
-  PLAY_VALUE,
+  CONSENT_COOKIE,
+  CONSENT_VALUE,
   ONBOARDING_VERSION,
   PROFILE_KEY,
   SESSION_VALUE,
@@ -61,7 +61,7 @@ export function saveProfile(
   accepted?: Acceptance,
 ): StoredProfile {
   const previous = readProfile();
-  const { playOnly: _, ...earlier } = previous ?? {};
+  const { questionsPending: _, ...earlier } = previous ?? {};
   const stored: StoredProfile = {
     ...(earlier as Partial<StoredProfile>),
     version: ONBOARDING_VERSION,
@@ -99,11 +99,11 @@ export function hasSession(): boolean {
 }
 
 /**
- * The five-minute test: accept the current Terms and nothing else. Keeps whatever this
- * browser already has; a newcomer gets a handle and an empty profile marked play-only, which
- * onboarding finishes later. Opens the IDE and pull requests, not the platform.
+ * Accept the current Terms and nothing else (/consent, /play). Keeps whatever this browser
+ * already has; a newcomer gets a handle and an empty profile with the questions pending, which
+ * onboarding, the dashboard or the result card can fill in later. Opens every page.
  */
-export function acceptForPlay(): StoredProfile {
+export function acceptConsent(): StoredProfile {
   const previous = readProfile();
   const stored: StoredProfile = previous
     ? { ...previous, accepted: acceptance() }
@@ -112,11 +112,11 @@ export function acceptForPlay(): StoredProfile {
         completedAt: new Date().toISOString(),
         handle: randomHandle(),
         accepted: acceptance(),
-        playOnly: true,
+        questionsPending: true,
         profile: {},
       };
   write(stored);
-  document.cookie = `${PLAY_COOKIE}=${PLAY_VALUE}; Path=/; Max-Age=${YEAR_SECONDS}; SameSite=Lax`;
+  document.cookie = `${CONSENT_COOKIE}=${CONSENT_VALUE}; Path=/; Max-Age=${YEAR_SECONDS}; SameSite=Lax`;
   return stored;
 }
 
@@ -148,7 +148,7 @@ export function setStealth(stealth: boolean) {
 /** Ends the session; profile, board and history stay in this browser. */
 export function logOut() {
   document.cookie = `${ONBOARDING_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
-  document.cookie = `${PLAY_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+  document.cookie = `${CONSENT_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
 }
 
 /**

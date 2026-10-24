@@ -45,7 +45,7 @@ async function onboard(t: TerminalApi, next: string | null) {
     return onward();
   }
   const handle = ensureHandle();
-  if (stored.playOnly) {
+  if (stored.questionsPending) {
     // Came in through the five-minute test: the Terms are signed (or get signed again if they
     // changed), only the questions are missing.
     t.print(

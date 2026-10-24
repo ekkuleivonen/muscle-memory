@@ -2151,3 +2151,53 @@ kbd {
 .result-next a {
   color: var(--accent);
 }
+
+/* /consent: the Terms in four points, then one button. */
+.consent-points {
+  margin-top: 8px;
+}
+button.home-cta {
+  font: inherit;
+  border: 0;
+  cursor: pointer;
+}
+button.home-cta:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+/* The dashboard's offer to answer the setup questions. */
+.setup-nudge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent) 5%, var(--bg));
+  font-size: 14px;
+}
+.setup-nudge-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.setup-nudge-actions a,
+.setup-nudge-actions button {
+  font: inherit;
+  font-size: 13.5px;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+  text-decoration: none;
+}
+.setup-nudge-actions .setup-nudge-go {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}

@@ -62,12 +62,15 @@ const ARRIVAL_KEY = "muscle-memory.arrival";
  * Remembers the first landing page and any referral code, before anything may be recorded.
  * Only the first landing counts; a later shared link does not overwrite it.
  */
-export function noteArrival(ref: string | null): void {
+export function noteArrival(
+  ref: string | null,
+  landing = location.pathname + location.search,
+): void {
   try {
     if (localStorage.getItem(ARRIVAL_KEY)) return;
     const arrival = {
       ref: ref && /^[a-z0-9]{6,32}$/.test(ref) ? ref : null,
-      landing: location.pathname + location.search,
+      landing,
       landedAt: new Date().toISOString(),
       recorded: false,
     };

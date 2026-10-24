@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireOnboarding } from "../../../lib/gate";
+import { requireConsent } from "../../../lib/gate";
 import { LANGUAGES } from "../../../lib/languages";
 import { STATUS_LABELS } from "../../../lib/board";
 import {
@@ -33,7 +33,7 @@ export default async function IssuesPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  await requireOnboarding(pathWithQuery("/issues", params));
+  await requireConsent(pathWithQuery("/issues", params));
   const query = parseIssueQuery(queryParam(params));
   const group = parseGroup(params);
   const { issues, projects } = await getLibrary();
