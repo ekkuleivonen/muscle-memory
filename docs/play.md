@@ -4,9 +4,9 @@ How people arrive from a shared link, and how a result gets shared. The goal is 
 
 ## The test (`/play`)
 
-- One small bug, the same in eight languages: the quick fixes project (`QUICK-1` to `QUICK-8`, "The composer says 1 word when the post is empty"), in Python, JavaScript, TypeScript, Go, Java, C#, Ruby and PHP. The project is **unlisted** (`listed: false` on the project, live metadata): it stays out of the platform's issue lists, suggestions and project index, and its issues open by key.
+- One small bug, the same in eight languages: the quick fixes project (`QUICK-1` to `QUICK-8`, "The composer says 1 word when the post is empty"), in Python, JavaScript, TypeScript, Go, Java, C#, Ruby and PHP. The project is **unlisted** (`listed: false` on the project, live metadata): it stays out of the platform's issue lists, suggestions and project index, and its issues open by key. Personal board, progress and pull-request metadata use the full catalog, so QUICK practice still counts.
 - `/play` is public. It shows the ticket and a language picker; the language a shared link names (`?lang=go`) comes first.
-- **No setup questions.** Picking a language accepts the current Terms (the line above the buttons says so, including that every keystroke is recorded) and opens `/work/QUICK-n`.
+- **No setup questions.** Picking a language accepts the current Terms (the line above the buttons says so, including that every keystroke is recorded) and opens `/work/QUICK-n`, recording the same start-work board move as the standard entry.
 - **The language picked is a first guess at the languages answer.** It is saved into the profile when the profile has none, so every IDE session's profile snapshot carries it, and recorded as a `profile` event with `from: "play"`. The languages question stays open until the person answers it ([profile](profile.md)).
 
 ## Getting in, everywhere
@@ -50,3 +50,7 @@ Nothing is recorded before the Terms are accepted, so visits that never start ar
 - `shared`: which card, through which channel, with the sharer's referral code.
 
 Joining `shared.ref` to `arrived.ref` gives shares, the arrivals each brought, and from those people's own records whether they started, finished and shared in turn.
+
+## Returning to practice
+
+Entry pages explain browser-local identity and saved work: uploads do not provide recovery or device sync. Five minutes is a guide, not a timer. A merged result leads to a deterministic unstarted issue (runnable, preferred language, then easier difficulty) and back to the desk, before optional sharing and questions. The dashboard prioritises unfinished work, then a quick start; optional language preferences sit beside suggestions.

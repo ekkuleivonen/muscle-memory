@@ -4,9 +4,9 @@
  */
 export const PRIVACY = `## The short version
 
-- Muscle Memory is practice that feels like a real job, and **recording how you work is the product**. It's how we pick your next issues, show how you compare with other people and LLMs, and figure out which issues are any good.
+- Muscle Memory is practice that feels like a real job, and **recording how you work is the product**. Your practice history and results are available now. Community comparisons appear only when published aggregate data is available. Model benchmarks and research publications are planned.
 - You get a random handle like \`Quiet-Compiler-4821\`. We don't ask for your name or email.
-- Other people never see your results next to your handle. They see you as part of the crowd: percentiles, averages, that sort of thing.
+- Other people never see your results next to your handle. Future community comparisons will use aggregates, such as percentiles and averages.
 - We may publish **anonymised** stats and datasets. Don't want to be in them? **Go stealth** in Settings, no questions asked. (Fair warning: stealth works both ways, so you won't see other people's stats either.)
 - We don't sell your personal data, and there are no ads.
 - **What you do here is sent to our servers as you go**, and a copy stays in your browser. Delete your account in Settings and it's deleted on both.
@@ -15,7 +15,7 @@ That's the gist. The rest is the detail, which the law (reasonably) wants writte
 
 ## Who we are
 
-**[Company name]**, **[address]**, is responsible for your data (the "controller", in GDPR-speak). Questions, requests and complaints go to **[privacy@example.com]**. A human reads it.
+**rowandreason.com**, **Otsu, Shiga, Japan 520-0801**, is responsible for your data (the "controller", in GDPR-speak). Questions, requests and complaints go to **support@rowandreason.com**. A human reads it.
 
 ## What we collect
 
@@ -47,13 +47,15 @@ We don't collect your name, email, location or contacts, and we don't run third-
 
 The law asks for a reason (a "legal basis") for everything. Here are ours:
 
-1. **Running the product.** Your board, your progress, suggesting what to work on next, and comparing you with others and with LLMs. This is the thing you signed up for. *Basis: performing our contract with you (GDPR Art. 6(1)(b)).*
+1. **Running the product.** Your board, your progress and suggestions for what to work on next. Community comparisons need published aggregate data; comparisons with LLMs are planned. This is the thing you signed up for. *Basis: performing our contract with you (GDPR Art. 6(1)(b)).*
 2. **Making better issues.** Which issues are too hard or too easy, where people get stuck, and what to write next. *Basis: our legitimate interest in improving Muscle Memory (Art. 6(1)(f)).*
 3. **Publishing anonymised data.** We think the world could use real data on how people solve engineering problems, and how that compares with LLMs. So we may publish aggregate stats and anonymised, record-level datasets. *Basis: legitimate interest (Art. 6(1)(f)), with an opt-out in Settings (going stealth).* More on how below.
 4. **Security and abuse.** Spotting bots, cheating and attacks. *Basis: legitimate interest (Art. 6(1)(f)).*
 5. **When the law makes us.** If we're legally required to keep or hand over something. *Basis: legal obligation (Art. 6(1)(c)).*
 
 ## Comparisons, and the LLMs
+
+**Community comparisons require published aggregate data. Model benchmarks are planned.** No comparison is shown when data is unavailable.
 
 When you compare yourself with other people, they're aggregates: "faster than 70% of people on this issue", never "faster than \`Sunny-Semicolon-7724\`".
 
@@ -95,13 +97,13 @@ Depending on where you live (the EU and UK in particular), you can ask us to:
 - stop using it for something, which you can call **objecting** (going stealth is the one-command version);
 - restrict what we do with it while we sort out a disagreement.
 
-Email **[privacy@example.com]**. We'll reply within a month. You can also complain to your data protection authority. We'd rather you talked to us first, but it's your call.
+Email **support@rowandreason.com**. We'll reply within a month. You can also complain to your data protection authority. We'd rather you talked to us first, but it's your call.
 
 You can do most of this yourself: \`delete\` in **Settings** deletes your account here and on our servers. \`reset\` only clears your progress in this browser; what was already sent stays until you delete your account. Clearing your browser storage throws away the secret that proves the records are yours, so delete your account first, or email us.
 
 ## Where it's stored
 
-In your browser, and on Cloudflare (our hosting and storage provider), in **[region]**. If data leaves the EU/EEA, we'll use the standard legal safeguards and say so here.
+In your browser, and on Cloudflare (our hosting and storage provider), in **[hosting region to be confirmed]**. Uploads do not provide account recovery, a backup or device sync. If data leaves the EU/EEA, we'll use the standard legal safeguards and say so here.
 
 ## Age
 
@@ -113,5 +115,5 @@ When this notice changes, the version at the top changes too, and you'll be aske
 
 ## Contact
 
-**[privacy@example.com]**, or by post to **[address]**.
+**support@rowandreason.com**, or by post to **Otsu, Shiga, Japan 520-0801**.
 `;

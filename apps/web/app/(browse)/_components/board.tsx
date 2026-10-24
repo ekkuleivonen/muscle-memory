@@ -48,8 +48,18 @@ function subscribe(onChange: () => void) {
   };
 }
 
+const noSubscription = () => () => {};
+export function useHydrated() {
+  return useSyncExternalStore(
+    noSubscription,
+    () => true,
+    () => false,
+  );
+}
+
 /** Your board on this device, shared by every component and kept in sync across tabs. */
 export function useBoard() {
+  const hydrated = useHydrated();
   const raw = useSyncExternalStore(
     subscribe,
     () => localStorage.getItem(BOARD_KEY),
@@ -122,7 +132,7 @@ export function useBoard() {
       },
     );
   };
-  return { items, move, complete };
+  return { items, move, complete, hydrated };
 }
 
 export function IssueStatus({ issueKey }: { issueKey: string }) {
@@ -132,8 +142,14 @@ export function IssueStatus({ issueKey }: { issueKey: string }) {
 
 /** Issues being worked on; Done ones have left the queue. */
 export function BoardCount() {
-  const { items } = useBoard();
+  const { items, hydrated } = useBoard();
   const active = activeCount(items);
+  if (!hydrated)
+    return (
+      <span className="count" aria-label="Loading board">
+        …
+      </span>
+    );
   return active ? <span className="count">{active}</span> : null;
 }
 

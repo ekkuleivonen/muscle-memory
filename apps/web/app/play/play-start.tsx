@@ -1,13 +1,20 @@
 "use client";
 import Link from "next/link";
+import { useBoard } from "../(browse)/_components/board";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { acceptConsent, playLanguage } from "../../lib/account";
 import type { LanguageId } from "../../lib/languages";
-import { logArrival, logProfile, noteArrival } from "../(browse)/_components/board-log";
+import {
+  logArrival,
+  logProfile,
+  noteArrival,
+} from "../(browse)/_components/board-log";
 
 interface Choice {
   key: string;
+  slug: string;
+  revision: string;
   language: string;
   label: string;
 }
@@ -30,46 +37,71 @@ export function PlayStart({
   preferred: string | null;
 }) {
   const router = useRouter();
+  const { move } = useBoard();
+  const [error, setError] = useState("");
   const [starting, setStarting] = useState<string | null>(null);
   useEffect(() => noteArrival(referral), [referral]);
   const ordered = [
     ...choices.filter((c) => c.language === preferred),
     ...choices.filter((c) => c.language !== preferred),
   ];
-  const start = async (choice: Choice) => {
+  const start = async (choice: Choice, via: "pointer" | "keyboard") => {
     setStarting(choice.key);
-    if (!consented) acceptConsent();
-    // Recorded only now that the Terms are accepted: how they came (once per browser), and
-    // the language they picked, as a first guess at the languages answer.
-    await logArrival().catch(() => undefined);
-    playLanguage(choice.language as LanguageId);
-    await logProfile("play").catch(() => undefined);
-    router.push(`/work/${choice.key}`);
+    setError("");
+    try {
+      if (!consented) acceptConsent();
+      // Recorded only now that the Terms are accepted: how they came (once per browser), and
+      // the language they picked, as a first guess at the languages answer.
+      await logArrival().catch(() => undefined);
+      playLanguage(choice.language as LanguageId);
+      await logProfile("play").catch(() => undefined);
+      move(choice, "in-progress", via, { trigger: "start-work" });
+      router.push(`/work/${choice.key}`);
+    } catch {
+      setStarting(null);
+      setError(
+        "Could not save your session. Allow browser storage and try again.",
+      );
+    }
   };
   return (
     <section className="play-start">
       <h2>Pick your language</h2>
+      {!consented && (
+        <p className="play-consent">
+          Starting means you&apos;re 16 or older and accept the{" "}
+          <Link href="/terms">Terms</Link> and{" "}
+          <Link href="/privacy">Privacy Notice</Link>. We record every keystroke
+          in the editor and send it to our servers, without your name. No email
+          needed. Your handle, code and progress stay in this browser; uploads
+          do not provide backup or device sync.
+        </p>
+      )}
+      {error && <p role="alert">{error}</p>}
+      <p className="play-consent">
+        You can exclude your activity from future publications with{" "}
+        <Link href="/settings#privacy">stealth in Settings</Link>. Recording
+        continues in stealth.
+      </p>
       <div className="play-langs">
         {ordered.map((choice) => (
           <button
             key={choice.key}
             type="button"
-            className={choice.language === preferred ? "play-lang preferred" : "play-lang"}
+            className={
+              choice.language === preferred
+                ? "play-lang preferred"
+                : "play-lang"
+            }
             disabled={starting !== null}
-            onClick={() => void start(choice)}
+            onClick={(event) =>
+              void start(choice, event.detail === 0 ? "keyboard" : "pointer")
+            }
           >
-            {starting === choice.key ? "Opening…" : choice.label}
+            {starting === choice.key ? "Opening…" : `Start in ${choice.label}`}
           </button>
         ))}
       </div>
-      {!consented && (
-        <p className="play-consent">
-          Starting means you&apos;re 16 or older and accept the{" "}
-          <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy Notice</Link>. We
-          record every keystroke in the editor and send it to our servers, without your name.
-          No account, no email.
-        </p>
-      )}
     </section>
   );
 }

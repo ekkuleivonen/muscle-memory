@@ -1,4 +1,7 @@
 "use client";
+import { tabKeys } from "../../../lib/tab-keys";
+import { suggestions } from "../../../lib/board";
+import { useAccount } from "./profile-menu";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -22,7 +25,7 @@ import {
 } from "../../../lib/pulls";
 import type { BoardMoveVia } from "../../../../../packages/domain/board";
 import { LanguageTag } from "./bits";
-import { useBoard } from "./board";
+import { StartWork, useBoard } from "./board";
 import { logReply, logResult, setIssueContext } from "./board-log";
 import { metricsOf } from "../../../lib/result";
 import { Markdown } from "./markdown";
@@ -58,7 +61,13 @@ export function pullHref(key: string, number: number) {
 }
 
 /** Open: a branch heading back. Merged: two branches joined. */
-export function PullIcon({ state, size = 16 }: { state: State; size?: number }) {
+export function PullIcon({
+  state,
+  size = 16,
+}: {
+  state: State;
+  size?: number;
+}) {
   return (
     <svg
       className={`pull-icon ${state}`}
@@ -109,7 +118,10 @@ export function PullList({
 }) {
   const records = useRecords();
   const now = useNow();
-  const bySlug = useMemo(() => new Map(issues.map((i) => [i.slug, i])), [issues]);
+  const bySlug = useMemo(
+    () => new Map(issues.map((i) => [i.slug, i])),
+    [issues],
+  );
   const pulls = useMemo(
     () =>
       (records ? allPullRequests(records) : []).map(
@@ -117,7 +129,12 @@ export function PullList({
       ),
     [records, bySlug],
   );
-  if (!records || !now) return null;
+  if (!records || !now)
+    return (
+      <p className="loading-state" role="status">
+        Reading your pull requests…
+      </p>
+    );
   if (!pulls.length)
     return (
       <p className="empty">
@@ -130,8 +147,13 @@ export function PullList({
   const shown = filterPulls(pulls, query);
   const tab = (state: State | null, label: string) => {
     const selected =
-      state === null ? query.state.length === 0 : query.state.length === 1 && query.state[0] === state;
-    const n = state === null ? others.length : others.filter((p) => p.state === state).length;
+      state === null
+        ? query.state.length === 0
+        : query.state.length === 1 && query.state[0] === state;
+    const n =
+      state === null
+        ? others.length
+        : others.filter((p) => p.state === state).length;
     return (
       <Link
         key={label}
@@ -154,7 +176,8 @@ export function PullList({
       </div>
       {shown.length === 0 ? (
         <p className="empty pull-empty">
-          No pull requests match this search. Remove a filter or try fewer words.
+          No pull requests match this search. Remove a filter or try fewer
+          words.
         </p>
       ) : (
         <ul className="rows">
@@ -162,14 +185,20 @@ export function PullList({
             const key = pull.issue?.key ?? pull.id;
             return (
               <li key={`${pull.id}#${pull.number}`}>
-                <Link className="row pull-row" href={pullHref(key, pull.number)} data-row>
+                <Link
+                  className="row pull-row"
+                  href={pullHref(key, pull.number)}
+                  data-row
+                >
                   <PullIcon state={pull.state} />
                   <span className="title">
                     {pull.issue?.title ?? pull.id}{" "}
                     <span className="faint">#{pull.number}</span>
                   </span>
                   <span className="meta dim">
-                    {pull.issue && <LanguageTag language={pull.issue.language} />}
+                    {pull.issue && (
+                      <LanguageTag language={pull.issue.language} />
+                    )}
                     <span className="mono">{key}</span> · {checksText(pull)} ·{" "}
                     <time dateTime={pull.at}>{timeAgo(pull.at, now)}</time>
                   </span>
@@ -203,15 +232,19 @@ export function PullView({
   issue,
   number,
   revisionsJson,
+  candidates,
 }: {
   issue: PullIssue;
+  candidates: IssueSummary[];
   number: number;
   /** Every published revision of the issue by id, as JSON: fixtures may hold a "__proto__" key. */
   revisionsJson: string;
 }) {
   useEffect(
     () =>
-      issue.revision ? setIssueContext({ id: issue.slug, revision: issue.revision }) : undefined,
+      issue.revision
+        ? setIssueContext({ id: issue.slug, revision: issue.revision })
+        : undefined,
     [issue.slug, issue.revision],
   );
   /** Bumped after a reply is recorded, so the records are read again. */
@@ -232,11 +265,16 @@ export function PullView({
     [records, issue.slug, number, revisions],
   );
   const feedback = useMemo(
-    () => (records ? feedbackOf(records, issue.slug) : { released: [], threads: [] }),
+    () =>
+      records ? feedbackOf(records, issue.slug) : { released: [], threads: [] },
     [records, issue.slug],
   );
-  const merged = mergedNow ?? (detail?.pull.state === "merged" ? detail.pull.mergedAt : null);
-  const language = detail ? revisions[detail.pull.issueRevision]?.workspace.language : undefined;
+  const merged =
+    mergedNow ??
+    (detail?.pull.state === "merged" ? detail.pull.mergedAt : null);
+  const language = detail
+    ? revisions[detail.pull.issueRevision]?.workspace.language
+    : undefined;
   const resultInput = useMemo(
     () =>
       records && detail && merged && language
@@ -253,10 +291,24 @@ export function PullView({
             revisions,
           }
         : null,
-    [records, detail, merged, language, issue.key, issue.slug, issue.title, revisions],
+    [
+      records,
+      detail,
+      merged,
+      language,
+      issue.key,
+      issue.slug,
+      issue.title,
+      revisions,
+    ],
   );
   const result = useResult(resultInput);
-  if (!records) return null;
+  if (!records)
+    return (
+      <p className="loading-state" role="status">
+        Reading this pull request…
+      </p>
+    );
   if (!detail)
     return (
       <p className="empty">
@@ -271,11 +323,18 @@ export function PullView({
   // Each editable file against the revision's starting version of it.
   const changes: FileChange[] =
     revision && detail.code
-      ? Object.entries(editableFiles(revision.workspace)).map(([path, start]) => {
-          const pushed = detail.code![path];
-          const diff = diffLines(start.text, pushed?.text ?? "");
-          return { path, diff, stats: diffStats(diff), truncated: !!pushed?.truncated };
-        })
+      ? Object.entries(editableFiles(revision.workspace)).map(
+          ([path, start]) => {
+            const pushed = detail.code![path];
+            const diff = diffLines(start.text, pushed?.text ?? "");
+            return {
+              path,
+              diff,
+              stats: diffStats(diff),
+              truncated: !!pushed?.truncated,
+            };
+          },
+        )
       : [];
   const stats = changes.reduce(
     (sum, c) => ({
@@ -290,7 +349,12 @@ export function PullView({
   const reply = async (thread: Thread, text: string) => {
     await logReply(
       { id: issue.slug, revision: thread.issueRevision },
-      { issueKey: issue.key, pullRequest: number, comment: thread.comment, text },
+      {
+        issueKey: issue.key,
+        pullRequest: number,
+        comment: thread.comment,
+        text,
+      },
     );
     setVersion((v) => v + 1);
   };
@@ -304,11 +368,20 @@ export function PullView({
           pullRequest: pull.number,
           language: revision.workspace.language,
           metrics: 2,
-          values: metricsOf(records, issue.slug, new Date().toISOString(), (id) => revisions[id]) as unknown as Json,
+          values: metricsOf(
+            records,
+            issue.slug,
+            new Date().toISOString(),
+            (id) => revisions[id],
+          ) as unknown as Json,
         },
       );
     board.complete(
-      { key: issue.key, slug: issue.slug, revision: issue.revision ?? pull.issueRevision },
+      {
+        key: issue.key,
+        slug: issue.slug,
+        revision: issue.revision ?? pull.issueRevision,
+      },
       { number: pull.number, runId: pull.runId },
       via,
     );
@@ -336,7 +409,15 @@ export function PullView({
             </Link>
           </span>
         </p>
-        <div className="pull-tabs" role="tablist">
+        {pull.state === "merged" && (
+          <NextPractice candidates={candidates} current={issue.key} />
+        )}
+        <div
+          className="pull-tabs"
+          role="tablist"
+          aria-label="Pull request details"
+          onKeyDown={tabKeys}
+        >
           <Tab id="timeline" tab={tab} setTab={setTab}>
             Timeline
           </Tab>
@@ -353,37 +434,47 @@ export function PullView({
             )}
           </Tab>
         </div>
-        {tab === "timeline" && (
-          <Timeline
-            detail={
-              mergedNow
-                ? {
-                    ...detail,
-                    timeline: [
-                      ...detail.timeline,
-                      { kind: "merged", at: mergedNow },
-                    ],
-                  }
-                : detail
-            }
-            issue={issue}
-            threads={threads}
-            revisions={revisions}
-            onReply={pull.state === "merged" ? undefined : reply}
-          />
-        )}
-        {tab === "checks" && (
-          <Checks outcome={detail.outcome} cases={revision?.checks.cases} />
-        )}
-        {tab === "files" && (
-          <Files saved={!!detail.code} changes={changes} />
-        )}
+        <div
+          role="tabpanel"
+          id={`pull-panel-${tab}`}
+          aria-labelledby={`pull-tab-${tab}`}
+          tabIndex={0}
+        >
+          {tab === "timeline" && (
+            <Timeline
+              detail={
+                mergedNow
+                  ? {
+                      ...detail,
+                      timeline: [
+                        ...detail.timeline,
+                        { kind: "merged", at: mergedNow },
+                      ],
+                    }
+                  : detail
+              }
+              issue={issue}
+              threads={threads}
+              revisions={revisions}
+              onReply={pull.state === "merged" ? undefined : reply}
+            />
+          )}
+          {tab === "checks" && (
+            <Checks outcome={detail.outcome} cases={revision?.checks.cases} />
+          )}
+          {tab === "files" && <Files saved={!!detail.code} changes={changes} />}
+        </div>
         <MergeBox
           pull={pull}
           issue={issue}
           blocking={blocking.length}
           onMerge={merge}
-          share={result && resultInput && <ShareResult state={result} issue={resultInput.issue} />}
+          share={
+            result &&
+            resultInput && (
+              <ShareResult state={result} issue={resultInput.issue} />
+            )
+          }
         />
         {pull.state === "merged" && (
           <Ask
@@ -391,8 +482,10 @@ export function PullView({
             ids={["experience", "aiUse"]}
             from="result"
             why={{
-              experience: "So a time like yours means something next to everyone else's.",
-              aiUse: "So we can tell how unaided work changes with how much AI people use.",
+              experience:
+                "So a time like yours means something next to everyone else's.",
+              aiUse:
+                "So we can tell how unaided work changes with how much AI people use.",
             }}
           />
         )}
@@ -465,7 +558,14 @@ function Tab<T extends string>({
   children: React.ReactNode;
 }) {
   return (
-    <button role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>
+    <button
+      role="tab"
+      id={`pull-tab-${id}`}
+      aria-controls={`pull-panel-${id}`}
+      tabIndex={tab === id ? 0 : -1}
+      aria-selected={tab === id}
+      onClick={() => setTab(id)}
+    >
       {children}
     </button>
   );
@@ -488,7 +588,9 @@ function Timeline({
     <div className="pull-timeline">
       <p className="pull-summary dim">
         {duration(stats.startedAt, detail.openedAt)} (wall clock) from{" "}
-        {previous ? `pull request #${previous.number}` : "first opening the issue"}{" "}
+        {previous
+          ? `pull request #${previous.number}`
+          : "first opening the issue"}{" "}
         to this pull request
         {stats.firstGreenAt && (
           <>
@@ -574,7 +676,9 @@ function Entry({
           : from?.team.find((c) => c.id === entry.id);
       if (!note) return null;
       const text =
-        "level" in note ? note.text : (note.text[entry.wording] ?? note.text[0]);
+        "level" in note
+          ? note.text
+          : (note.text[entry.wording] ?? note.text[0]);
       return (
         <TimelineRow at={entry.at} tone="dim">
           {note.author.name} commented on {issue.key}:
@@ -596,7 +700,9 @@ function Entry({
         <TimelineRow at={entry.at} tone="dim">
           Edited the code: {entry.count}{" "}
           {entry.count === 1 ? "change" : "changes"}
-          {entry.from !== entry.at && <> over {duration(entry.from, entry.at)}</>}
+          {entry.from !== entry.at && (
+            <> over {duration(entry.from, entry.at)}</>
+          )}
         </TimelineRow>
       );
     case "run":
@@ -608,7 +714,7 @@ function Entry({
           Ran the tests:{" "}
           {entry.tested
             ? `${entry.passed}/${entry.total} passing`
-            : RUN_STATUS[entry.status] ?? "didn't reach the tests"}
+            : (RUN_STATUS[entry.status] ?? "didn't reach the tests")}
         </TimelineRow>
       );
     case "pull-request":
@@ -625,7 +731,10 @@ function Entry({
       );
     case "checks":
       return (
-        <TimelineRow at={entry.at} tone={passed(entry.result) ? "pass" : "fail"}>
+        <TimelineRow
+          at={entry.at}
+          tone={passed(entry.result) ? "pass" : "fail"}
+        >
           {passed(entry.result)
             ? `CI: all ${entry.total} checks passed.`
             : entry.result === "checks-failed"
@@ -677,7 +786,11 @@ function Checks({
 }) {
   const outcome = raw as unknown as Outcome | null;
   if (!outcome || !cases)
-    return <p className="dim">This pull request&apos;s check run wasn&apos;t recorded.</p>;
+    return (
+      <p className="dim">
+        This pull request&apos;s check run wasn&apos;t recorded.
+      </p>
+    );
   if (outcome.status === "timeout")
     return (
       <p className="pull-error">
@@ -729,7 +842,10 @@ function Checks({
                     <div className="got">
                       {got?.error ? (
                         <>
-                          raised <code>{got.error.type}: {got.error.message}</code>
+                          raised{" "}
+                          <code>
+                            {got.error.type}: {got.error.message}
+                          </code>
                         </>
                       ) : got?.output ? (
                         <>
@@ -773,7 +889,9 @@ interface FileChange {
 function Files({ saved, changes }: { saved: boolean; changes: FileChange[] }) {
   if (!saved || !changes.length)
     return (
-      <p className="dim">The submitted code wasn&apos;t saved in this browser.</p>
+      <p className="dim">
+        The submitted code wasn&apos;t saved in this browser.
+      </p>
     );
   const changed = changes.filter((c) => c.stats.added || c.stats.removed);
   const same = changes.filter((c) => !c.stats.added && !c.stats.removed);
@@ -797,14 +915,17 @@ function Files({ saved, changes }: { saved: boolean; changes: FileChange[] }) {
           </table>
           {truncated && (
             <p className="dim diff-empty">
-              This file was longer than the capture limit; only its start was saved.
+              This file was longer than the capture limit; only its start was
+              saved.
             </p>
           )}
         </div>
       ))}
       {same.length > 0 && (
         <p className="dim">
-          {changed.length ? "Unchanged: " : "No changes from the starter code in "}
+          {changed.length
+            ? "Unchanged: "
+            : "No changes from the starter code in "}
           {same.map((c, i) => (
             <span key={c.path}>
               {i > 0 && ", "}
@@ -823,7 +944,8 @@ function HunkRows({ hunk }: { hunk: ReturnType<typeof hunks>[number] }) {
     <>
       <tr className="hunk">
         <td colSpan={3}>
-          @@ −{hunk.oldStart},{hunk.oldLines} +{hunk.newStart},{hunk.newLines} @@
+          @@ −{hunk.oldStart},{hunk.oldLines} +{hunk.newStart},{hunk.newLines}{" "}
+          @@
         </td>
       </tr>
       {hunk.lines.map((line, i) => (
@@ -868,14 +990,18 @@ function ReviewThread({
     }
   };
   return (
-    <li className={`review-thread ${blocking && !thread.resolved ? "open" : ""}`}>
+    <li
+      className={`review-thread ${blocking && !thread.resolved ? "open" : ""}`}
+    >
       <span className="dot" aria-hidden />
       <div className="review-card">
         <header>
           <b>{comment.author.name}</b>{" "}
           <span className="faint">· {comment.author.role}</span>{" "}
           {blocking ? (
-            <span className={`review-badge ${thread.resolved ? "resolved" : "blocking"}`}>
+            <span
+              className={`review-badge ${thread.resolved ? "resolved" : "blocking"}`}
+            >
               {thread.resolved ? "Resolved" : "Requested changes"}
             </span>
           ) : thread.severity === "nit" ? (
@@ -986,9 +1112,9 @@ function MergeBox({
               All {pull.total} checks passed, but {blocking} blocking review
               comment{blocking === 1 ? " is" : "s are"} open.
             </b>{" "}
-            Change the code in the <Link href={workHref(issue)}>IDE</Link> and push
-            to it (<kbd>⌘⇧⏎</kbd>), or reply to explain why it should stay as it
-            is.
+            Change the code in the <Link href={workHref(issue)}>IDE</Link> and
+            push to it (<kbd>⌘⇧⏎</kbd>), or reply to explain why it should stay
+            as it is.
           </>
         ) : green ? (
           <>
@@ -1010,10 +1136,48 @@ function MergeBox({
         className="merge-button"
         disabled={!green}
         // A click from the keyboard (Enter or Space) has no pointer position.
-        onClick={(event) => onMerge(event.detail === 0 ? "keyboard" : "pointer")}
+        onClick={(event) =>
+          onMerge(event.detail === 0 ? "keyboard" : "pointer")
+        }
       >
         Merge pull request
       </button>
     </div>
+  );
+}
+
+function NextPractice({
+  candidates,
+  current,
+}: {
+  candidates: IssueSummary[];
+  current: string;
+}) {
+  const { items } = useBoard();
+  const account = useAccount();
+  const next = suggestions(
+    candidates.filter((i) => i.key !== current),
+    items,
+    account?.profile.languages ?? [],
+  )[0];
+  return (
+    <section className="practice-next">
+      <h2>Fix merged. Nice work.</h2>
+      <p>Your code passed CI and this issue is now Done on your board.</p>
+      {next && (
+        <>
+          <p>
+            Try next: {next.title} · {next.difficulty}. An unstarted issue
+            selected from your language preferences, prioritising runnable
+            issues and easier difficulty.
+          </p>
+          <StartWork issue={next} href={`/work/${next.key}`} />
+        </>
+      )}
+      <p>
+        <Link href="/dashboard">Back to your desk →</Link> ·{" "}
+        <Link href="/issues">Browse issues</Link>
+      </p>
+    </section>
   );
 }

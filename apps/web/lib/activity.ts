@@ -18,6 +18,7 @@ export type ActivityEntry =
   | { kind: "ran"; at: string; issueId: string; status: string }
   | {
       kind: "pull-request";
+      push: number;
       at: string;
       issueId: string;
       number: number;
@@ -75,6 +76,7 @@ export function recentActivity(
     )
       entries.push({
         kind: "pull-request",
+        push: Number(o.data.push ?? 1),
         at,
         issueId,
         number: Number(o.data.number),
@@ -88,7 +90,9 @@ export function recentActivity(
       issueId &&
       o.data &&
       o.data.purpose !== "pull-request" &&
-      o.data.status !== "started"
+      ["result", "user-error", "runner-error", "timeout", "cancelled"].includes(
+        String(o.data.status),
+      )
     )
       entries.push({
         kind: "ran",

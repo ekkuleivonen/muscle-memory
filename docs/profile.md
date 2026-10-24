@@ -9,9 +9,9 @@ The questions live in `apps/web/lib/questions.ts` (experience, how often you cod
 | Where | Asks | `from` |
 | --- | --- | --- |
 | A merged pull request's result card | experience, AI use | `result` |
-| The dashboard | experience, AI use, languages, goal | `dashboard` |
+| The dashboard, beside suggestions | languages | `dashboard` |
 | An issue page, under Start work | editor keys (the IDE opens with them) | `issue` |
-| Settings (`profile`) | all of them, to change answers | `settings` |
+| Settings (individual controls or terminal `profile`) | all of them, to change answers | `settings` |
 
 A question is **open** while it has no answer and is not put off (`isOpen` in `apps/web/lib/profile.ts`). "Not now" puts it off on this device for three days (`SNOOZE_MS`), everywhere, and then it may come back; the place that asked stays quiet for the rest of that visit, so declining never brings on another question. Answering moves on to the next open one. The languages question stays open until the person answers it: the five-minute test's language seeds the answer as a guess (`from: "play"`) but does not close it.
 
@@ -23,4 +23,4 @@ Every answer records `observation.board.profile` ([board activity](board-activit
 
 ## Settings
 
-`/settings` is a terminal with commands: `theme` (light, dark or the system's; kept in this browser and applied before the first paint, see `apps/web/lib/theme.ts`), `profile`, `privacy` (going stealth), `logout`, `reset` and `delete`. Logging out keeps everything in the browser; the consent page then offers to sign back in as the same handle instead of doing it silently.
+`/settings` has direct controls for appearance, stealth and individual profile answers. Links can target `#languages`, `#editor`, `#privacy` or `#theme`. Changes save immediately and keep all unrelated answers. Session and deletion commands are kept in a separate section. The optional terminal at `/settings?view=terminal` has commands: `theme` (light, dark or the system's; kept in this browser and applied before the first paint, see `apps/web/lib/theme.ts`), `profile`, `privacy` (going stealth), `logout`, `reset` and `delete`. Logging out keeps everything in the browser; the consent page then offers to sign back in as the same handle instead of doing it silently.

@@ -8,7 +8,7 @@ import {
   logOut,
   parseStoredProfile,
 } from "../../../lib/account";
-import { PROFILE_KEY } from "../../../lib/profile";
+import { CONSENT_COOKIE, PROFILE_KEY } from "../../../lib/profile";
 import { Avatar } from "./bits";
 
 function subscribe(onChange: () => void) {
@@ -29,7 +29,12 @@ export function useAccount() {
   );
   useEffect(() => {
     // Profiles from before handles existed get one now.
-    ensureHandle();
+    if (!ensureHandle()) {
+      document.cookie = `${CONSENT_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+      window.location.replace(
+        `/consent?next=${encodeURIComponent(location.pathname + location.search)}`,
+      );
+    }
   }, []);
   return parseStoredProfile(raw);
 }
@@ -40,7 +45,7 @@ export function ProfileMenu() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
-  const handle = account?.handle ?? "Anonymous";
+  const handle = account?.handle ?? "Loading profile…";
 
   useEffect(() => {
     if (!open) return;
@@ -73,6 +78,7 @@ export function ProfileMenu() {
       <button
         type="button"
         className="side-link profile-trigger"
+        disabled={!account}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen(!open)}

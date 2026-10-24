@@ -46,7 +46,10 @@ function workspace(
     onEditedAfterRun: () => undefined,
   });
   // run() needs a mounted editor; the documents themselves come from the edits recorded.
-  (session as unknown as { views: Map<string, unknown> }).views.set(fixture.path, {});
+  (session as unknown as { views: Map<string, unknown> }).views.set(
+    fixture.path,
+    {},
+  );
   const dispatch = (transaction: Transaction) => {
     state = transaction.state;
     if (transaction.docChanged) session.recordEdit(fixture.path, transaction);
@@ -75,6 +78,34 @@ function workspace(
 const restore = (sink: MemorySink, participantId = P) =>
   latestSavedCode([...sink.records.values()], participantId, ISSUE);
 
+test("viewing or merging the issue in the tracker is not a newer workspace session", async () => {
+  const sink = new MemorySink();
+  const editor = workspace(sink);
+  editor.type("# saved");
+  await editor.session.recorder.flush();
+  const board: WorkspaceRecord = {
+    recordId: "board.1",
+    kind: "observation",
+    participantId: P,
+    payload: JSON.stringify({
+      observationId: "board.1",
+      type: "observation.board.moved",
+      issue: ISSUE,
+      source: { id: "board", sequence: 1 },
+      occurredAt: "2099-01-01T00:00:00.000Z",
+      data: { to: "done" },
+    }),
+  };
+  const recovered = latestSavedCode(
+    [...sink.records.values(), board],
+    P,
+    ISSUE,
+  )!;
+  assert.equal(recovered.complete, true);
+  assert.equal(recovered.fromEarlierSession, false);
+  assert.equal(recovered.files[fixture.path], editor.text());
+});
+
 test("1 to 24 ordinary edits since opening restore exactly", async () => {
   for (let edits = 1; edits <= 24; edits++) {
     const sink = new MemorySink();
@@ -83,7 +114,11 @@ test("1 to 24 ordinary edits since opening restore exactly", async () => {
       editor.type(index % 5 ? "x" : "\n    ");
     await editor.session.recorder.flush();
     const recovered = restore(sink)!;
-    assert.equal(recovered.files[fixture.path], editor.text(), `${edits} edits`);
+    assert.equal(
+      recovered.files[fixture.path],
+      editor.text(),
+      `${edits} edits`,
+    );
     assert.equal(recovered.revision, edits);
     assert.equal(recovered.complete, true);
   }
@@ -268,8 +303,16 @@ test("when the latest session has nothing recoverable, an earlier one is used an
 test("several editable files are recorded and restored together, each with its own edits", async () => {
   const sink = new MemorySink();
   const files = {
-    "src/a.js": { text: "a\n", language: "javascript", mediaType: "text/x-javascript" },
-    "src/b.js": { text: "b\n", language: "javascript", mediaType: "text/x-javascript" },
+    "src/a.js": {
+      text: "a\n",
+      language: "javascript",
+      mediaType: "text/x-javascript",
+    },
+    "src/b.js": {
+      text: "b\n",
+      language: "javascript",
+      mediaType: "text/x-javascript",
+    },
   } as const;
   const session = new WorkspaceSession({
     participantId: P,
@@ -279,7 +322,8 @@ test("several editable files are recorded and restored together, each with its o
     executable: fixture.executable,
     sink,
     files,
-    runner: () => ({ running: false, cancel: () => undefined }) as unknown as Runner,
+    runner: () =>
+      ({ running: false, cancel: () => undefined }) as unknown as Runner,
     onRun: () => undefined,
     onEditedAfterRun: () => undefined,
   });
