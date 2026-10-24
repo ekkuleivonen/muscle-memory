@@ -45,6 +45,19 @@ async function onboard(t: TerminalApi, next: string | null) {
     return onward();
   }
   const handle = ensureHandle();
+  if (stored.playOnly) {
+    // Came in through the five-minute test: the Terms are signed (or get signed again if they
+    // changed), only the questions are missing.
+    t.print(
+      <Banner
+        description="You've done the five-minute test. A few questions, then your desk."
+        status={`○ ${handle} · joining`}
+      />,
+    );
+    const accepted = acceptsCurrent(stored.accepted) ? undefined : await paperwork(t, true);
+    await setup(t, accepted);
+    return onward();
+  }
   if (!acceptsCurrent(stored.accepted)) {
     // An account from before the current Terms: sign the new ones, then carry on.
     t.print(

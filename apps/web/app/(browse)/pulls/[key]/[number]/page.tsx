@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { requireOnboarding } from "../../../../../lib/gate";
+import { requireConsent } from "../../../../../lib/gate";
 import { getLibrary } from "../../../../../lib/load";
 import { PullView } from "../../../_components/pulls";
 import { Sep, Topbar } from "../../../_components/topbar";
@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  */
 export default async function PullPage({ params }: Props) {
   const { key, number } = await params;
-  await requireOnboarding(`/pulls/${key}/${number}`);
+  await requireConsent(`/pulls/${key}/${number}`);
   const n = Number(number);
   if (!Number.isInteger(n) || n < 1) notFound();
   const { findIssue, revisionsOf } = await getLibrary();

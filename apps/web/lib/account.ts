@@ -6,9 +6,12 @@ import { openPracticeStore } from "../../../packages/browser/practice-store";
 import { eraseUploaded } from "./ingest";
 import { BOARD_CHANGE, BOARD_KEY } from "./board";
 import { HANDLE_PATTERN, randomHandle } from "./handle";
+import type { LanguageId } from "./languages";
 import { LEGAL_VERSION, type Acceptance } from "./legal";
 import {
   ONBOARDING_COOKIE,
+  PLAY_COOKIE,
+  PLAY_VALUE,
   ONBOARDING_VERSION,
   PROFILE_KEY,
   SESSION_VALUE,
@@ -58,8 +61,9 @@ export function saveProfile(
   accepted?: Acceptance,
 ): StoredProfile {
   const previous = readProfile();
+  const { playOnly: _, ...earlier } = previous ?? {};
   const stored: StoredProfile = {
-    ...previous,
+    ...(earlier as Partial<StoredProfile>),
     version: ONBOARDING_VERSION,
     completedAt: previous?.completedAt ?? new Date().toISOString(),
     handle: validHandle(previous?.handle) ?? randomHandle(),
@@ -94,6 +98,42 @@ export function hasSession(): boolean {
     .includes(`${ONBOARDING_COOKIE}=${SESSION_VALUE}`);
 }
 
+/**
+ * The five-minute test: accept the current Terms and nothing else. Keeps whatever this
+ * browser already has; a newcomer gets a handle and an empty profile marked play-only, which
+ * onboarding finishes later. Opens the IDE and pull requests, not the platform.
+ */
+export function acceptForPlay(): StoredProfile {
+  const previous = readProfile();
+  const stored: StoredProfile = previous
+    ? { ...previous, accepted: acceptance() }
+    : {
+        version: ONBOARDING_VERSION,
+        completedAt: new Date().toISOString(),
+        handle: randomHandle(),
+        accepted: acceptance(),
+        playOnly: true,
+        profile: {},
+      };
+  write(stored);
+  document.cookie = `${PLAY_COOKIE}=${PLAY_VALUE}; Path=/; Max-Age=${YEAR_SECONDS}; SameSite=Lax`;
+  return stored;
+}
+
+/**
+ * The language picked for the five-minute test, as the languages answer: saved when the
+ * profile has none yet, so every IDE session's profile snapshot carries it and onboarding
+ * starts from it. Returns the profile as it now stands.
+ */
+export function playLanguage(language: LanguageId): Profile {
+  const stored = readProfile();
+  if (!stored) return { languages: [language] };
+  if (stored.profile.languages?.length) return stored.profile;
+  const profile = { ...stored.profile, languages: [language] };
+  write({ ...stored, profile });
+  return profile;
+}
+
 /** Records acceptance of the current Terms on an existing account. */
 export function acceptTerms() {
   const stored = readProfile();
@@ -108,6 +148,7 @@ export function setStealth(stealth: boolean) {
 /** Ends the session; profile, board and history stay in this browser. */
 export function logOut() {
   document.cookie = `${ONBOARDING_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+  document.cookie = `${PLAY_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
 }
 
 /**

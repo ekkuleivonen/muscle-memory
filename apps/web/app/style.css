@@ -2022,3 +2022,132 @@ kbd {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* The five-minute test (/play). */
+.play-ticket {
+  margin: 8px 0 28px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-subtle);
+}
+.play-ticket-head {
+  margin: 0 0 6px;
+  font-size: 12.5px;
+  color: var(--dim);
+}
+.play-ticket-title {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 600;
+}
+.play-ticket-body {
+  margin: 0;
+  color: var(--dim);
+}
+.play-start h2 {
+  font-size: 15px;
+  margin: 0 0 12px;
+}
+.play-langs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+.play-lang {
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+.play-lang:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.play-lang.preferred {
+  border-color: var(--accent);
+}
+.play-lang:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.play-consent {
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: var(--dim);
+}
+.play-consent a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* The result card on a merged pull request. */
+.result-card {
+  margin-top: 20px;
+  padding: 20px 22px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent) 5%, var(--bg));
+}
+.result-kicker {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.result-card h2 {
+  margin: 0 0 14px;
+  font-size: 18px;
+}
+.result-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  color: var(--dim);
+}
+.result-stats b {
+  color: var(--fg);
+  font-size: 20px;
+  margin-right: 4px;
+}
+.result-share-label {
+  margin: 0 0 8px;
+  font-size: 13.5px;
+}
+.result-share {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.result-share button {
+  font: inherit;
+  font-size: 13.5px;
+  padding: 7px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+.result-share button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.result-next {
+  margin: 16px 0 0;
+  font-size: 13px;
+  color: var(--dim);
+}
+.result-next a {
+  color: var(--accent);
+}

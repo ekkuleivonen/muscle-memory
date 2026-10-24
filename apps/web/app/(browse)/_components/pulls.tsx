@@ -25,6 +25,7 @@ import { LanguageTag } from "./bits";
 import { useBoard } from "./board";
 import { logReply, setIssueContext } from "./board-log";
 import { Markdown } from "./markdown";
+import { ResultCard } from "./result-card";
 import { useNow, useRecords } from "./records";
 import { feedbackOf, openBlocking, type Thread } from "../../../lib/feedback";
 
@@ -348,6 +349,19 @@ export function PullView({
           blocking={blocking.length}
           onMerge={merge}
         />
+        {pull.state === "merged" && revision && (
+          <ResultCard
+            issue={{
+              key: issue.key,
+              slug: issue.slug,
+              title: issue.title,
+              revision: pull.issueRevision,
+            }}
+            language={revision.workspace.language}
+            records={records}
+            mergedAt={pull.mergedAt ?? new Date().toISOString()}
+          />
+        )}
       </article>
       <aside className="props" aria-label="Details">
         <dl>

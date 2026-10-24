@@ -5,8 +5,10 @@ import {
   boardMove,
   boardPayloads,
   boardRecord,
+  boardArrival,
   boardPage,
   boardProfile,
+  boardShare,
   boardReply,
   boardView,
   REPLY_LIMIT_BYTES,
@@ -190,4 +192,34 @@ test("page views, page state and profile answers; only views may name an issue",
   assert.equal(profile.issue, null);
   assert.equal(boardPayloads([boardRecord(view), boardRecord(page), boardRecord(profile)]).length, 3);
   assert.throws(() => boardPage({ ...common, elapsedMs: -1, data: page.data }), /elapsed/);
+});
+
+test("arrivals and shares carry a referral code, never anything that names a person", () => {
+  const { issue: _, data: __, ...common } = base;
+  const arrived = boardArrival({
+    ...common,
+    data: { ref: "ab12cd34ef56", landing: "/r/eyJr", landedAt: "2026-10-25T09:59:00.000Z" },
+  });
+  assert.equal(arrived.type, "observation.board.arrived");
+  assert.equal(arrived.issue, null);
+  assert.equal(boardArrival({ ...common, data: { ...arrived.data, ref: null } }).data.ref, null);
+  assert.throws(
+    () => boardArrival({ ...common, data: { ...arrived.data, ref: "Not A Code" } }),
+    /referral/,
+  );
+  const shared = boardShare({
+    ...common,
+    issue: base.issue,
+    data: { issueKey: "API-2", channel: "x", ref: "ab12cd34ef56", card: { m: 6 } },
+  });
+  assert.equal(shared.type, "observation.board.shared");
+  assert.equal(shared.issue, base.issue.id);
+  assert.throws(
+    () => boardShare({ ...common, issue: base.issue, data: { ...shared.data, channel: "fax" as never } }),
+    /channel/,
+  );
+  assert.equal(
+    boardProfile({ ...common, data: { from: "play", answers: { languages: ["go"] } } }).data.from,
+    "play",
+  );
 });

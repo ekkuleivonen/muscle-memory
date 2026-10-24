@@ -14,6 +14,13 @@ export const ONBOARDING_VERSION = "1";
  */
 export const SESSION_VALUE = `${ONBOARDING_VERSION}.${LEGAL_VERSION}`;
 export const PROFILE_KEY = "muscle-memory.profile";
+/**
+ * The five-minute test (/play) asks only for the Terms. This cookie says they were accepted,
+ * which opens the IDE and pull requests but not the rest of the platform: that still goes
+ * through onboarding, which then asks only the questions.
+ */
+export const PLAY_COOKIE = "mm_play";
+export const PLAY_VALUE = LEGAL_VERSION;
 
 export interface Profile {
   experience?: "new" | "some" | "professional" | "veteran";
@@ -36,11 +43,18 @@ export interface StoredProfile {
    * in return shown no one else's stats.
    */
   stealth?: boolean;
+  /** Accepted the Terms for the five-minute test but has not answered the setup questions. */
+  playOnly?: true;
   profile: Profile;
 }
 
 export function isOnboarded(cookieValue: string | undefined): boolean {
   return cookieValue === SESSION_VALUE;
+}
+
+/** Onboarded, or at least accepted the current Terms through the five-minute test. */
+export function hasConsent(setup: string | undefined, play: string | undefined): boolean {
+  return isOnboarded(setup) || play === PLAY_VALUE;
 }
 
 /**

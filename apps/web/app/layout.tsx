@@ -4,6 +4,8 @@ import { TrackerActivity } from "./(browse)/_components/tracker-activity";
 import { Uploads } from "./(browse)/_components/uploads";
 import "./style.css";
 export const metadata: Metadata = {
+  // Absolute links for shared previews (og:image); the production hostname unless set.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://musclememory.run"),
   title: "Muscle Memory — keep your craft",
   description:
     "A developer job from before AI: tickets, tests and pull requests, and nobody writing the code for you.",

@@ -4,7 +4,7 @@ Setting an issue's status by hand (Backlog, Todo or In progress, from its Status
 
 ## What is recorded
 
-`observation.board.moved` (`packages/domain/board.ts`), capture version `board-capture-4.0.0`, in the same envelope as [workspace observations](workspace.md): stable ID `<source>.<sequence>`, one source stream per page load (`board-<uuid>`), client `occurredAt`, an explicit absent server receipt, `consentVersion` set to the accepted Terms version (`terms-2026-10-24`), `researchConsent: false`, and the issue with the revision live at the time (`issue`, `issueRevision`). Data:
+`observation.board.moved` (`packages/domain/board.ts`), capture version `board-capture-5.0.0`, in the same envelope as [workspace observations](workspace.md): stable ID `<source>.<sequence>`, one source stream per page load (`board-<uuid>`), client `occurredAt`, an explicit absent server receipt, `consentVersion` set to the accepted Terms version (`terms-2026-10-24`), `researchConsent: false`, and the issue with the revision live at the time (`issue`, `issueRevision`). Data:
 
 - `issueKey` (`API-2`), `from` and `to` (`backlog`, `todo`, `in-progress`)
 - `via`: `pointer` or `keyboard` (the Status menu opened with `s` and driven by arrows, Enter on Start work, or the Merge button)
@@ -18,9 +18,11 @@ Every page of the app is recorded as it is shown (`TrackerActivity` in the root 
 
 - `observation.board.viewed`: the `path`, its `query` (searches and filters are GET forms and links, so they arrive here), and the `previous` page in this tab. A page about one issue (the issue page, a pull request, the IDE) names the issue and its live revision; other pages have `issue: null`.
 - `observation.board.page`, outside the IDE (which records its own): the page becoming visible or hidden, focused or not, or resized.
-- `observation.board.profile`: the onboarding and settings answers (experience, languages, goal, editor, stealth) each time they are saved.
+- `observation.board.profile`: the onboarding and settings answers (experience, how often they code with AI, languages, goal, editor, stealth) each time they are saved, and the language picked for the five-minute test (`from: "play"`).
+- `observation.board.arrived`: once per browser, after the Terms are accepted: the first landing page and when, and the referral code of the shared result that brought them ([the five-minute test](play.md)).
+- `observation.board.shared`: a result card shared, with the channel, the card and this device's referral code.
 
-Every board observation has `elapsedMs`, a monotonic clock from the page load. Declared gaps: keystrokes in text fields (a search is recorded as its query, a reply as the text sent), pointer movement and hovering, menus opened without a choice, activity in other tabs and apps, and writes cut short when the page closes. A missing source position was not recorded; it is not evidence that nothing happened.
+Every board observation has `elapsedMs`, a monotonic clock from the page load. Declared gaps: visits before the Terms are accepted, keystrokes in text fields (a search is recorded as its query, a reply as the text sent), pointer movement and hovering, menus opened without a choice, activity in other tabs and apps, and writes cut short when the page closes. A missing source position was not recorded; it is not evidence that nothing happened.
 
 ## Storage and deletion
 

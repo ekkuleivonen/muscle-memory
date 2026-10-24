@@ -40,7 +40,7 @@ async function setup() {
       source: { id: "board-x", sequence },
       occurredAt: "2026-10-25T10:00:00.000Z",
       elapsedMs: sequence,
-      captureVersion: "board-capture-4.0.0",
+      captureVersion: "board-capture-5.0.0",
       issue: null,
       data: { visible: true },
     };

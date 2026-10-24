@@ -35,8 +35,8 @@ export default async function Home() {
       Back to your desk →
     </Link>
   ) : (
-    <Link className="home-cta" href="/onboarding">
-      Start your first day →
+    <Link className="home-cta" href="/play">
+      Take the five-minute test →
     </Link>
   );
 
@@ -77,7 +77,10 @@ export default async function Home() {
           <div className="home-actions">
             {start}
             {!onboarded && (
-              <span className="home-note">No account, no email, no AI.</span>
+              <span className="home-note">
+                No account, no email, no AI. Or{" "}
+                <Link href="/onboarding">start your first day</Link>.
+              </span>
             )}
           </div>
         </section>
@@ -151,11 +154,18 @@ export default async function Home() {
         <section className="home-section home-invite">
           <h2>Your desk is ready.</h2>
           <p>
-            It&apos;s an early preview: your work stays in this browser for now,
-            and the tickets are still growing toward the messy, multi-file work
-            of a real job.
+            It&apos;s an early preview: the tickets are still growing toward the
+            messy, multi-file work of a real job. Start with the five-minute
+            test, or go straight to your first day.
           </p>
-          <div className="home-actions">{start}</div>
+          <div className="home-actions">
+            {start}
+            {!onboarded && (
+              <Link className="home-note" href="/onboarding">
+                Start your first day instead
+              </Link>
+            )}
+          </div>
         </section>
       </main>
     </div>

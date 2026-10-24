@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { requireOnboarding } from "../../../lib/gate";
+import { requireConsent } from "../../../lib/gate";
 import { projectFilterValue } from "../../../lib/library";
 import { getLibrary } from "../../../lib/load";
 import "../ide.css";
@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  */
 export default async function WorkPage({ params }: Props) {
   const { key } = await params;
-  await requireOnboarding(`/work/${key}`);
+  await requireConsent(`/work/${key}`);
   const { findIssue, revisionsOf } = await getLibrary();
   const issue = findIssue(decodeURIComponent(key));
   if (!issue) notFound();
