@@ -13,6 +13,7 @@ import type { Profile } from "../../lib/onboarding";
 import type { Answer, Prompt } from "../_terminal/prompts";
 import { QUESTIONS, toProfile } from "../_terminal/questions";
 import {
+  Banner,
   profileLines,
   TermLink,
   Terminal,
@@ -21,7 +22,7 @@ import {
 
 /** Settings as terminal commands: pick one, it runs, and the menu comes back. */
 export function SettingsTerminal() {
-  return <Terminal title="settings" screen="~/.config" run={settings} />;
+  return <Terminal run={settings} />;
 }
 
 /** What a command leaves behind: the menu again, or nothing because it navigated away. */
@@ -63,10 +64,15 @@ async function settings(t: TerminalApi) {
     return t.go("/onboarding", "setup");
   }
   t.print(
-    "",
-    <span>
-      Signed in as <span className="t-brand">{handle}</span>.
-    </span>,
+    <Banner
+      description="Settings. Pick a command; Esc takes you back to the app."
+      status={
+        <>
+          <span className="t-on">●</span> signed in as{" "}
+          <span className="t-brand">{handle}</span>
+        </>
+      }
+    />,
     "",
   );
   for (;;) {

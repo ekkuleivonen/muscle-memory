@@ -13,6 +13,7 @@ import type { Profile } from "../../lib/onboarding";
 import type { Answer } from "../_terminal/prompts";
 import { QUESTIONS, toProfile } from "../_terminal/questions";
 import {
+  Banner,
   profileLines,
   TermLink,
   Terminal,
@@ -25,20 +26,17 @@ import {
  * `next` is where the person was heading, already checked to be same-site.
  */
 export function OnboardingTerminal({ next }: { next: string | null }) {
-  return (
-    <Terminal
-      title="new hire setup"
-      screen=">_"
-      run={(t) => onboard(t, next)}
-    />
-  );
+  return <Terminal run={(t) => onboard(t, next)} />;
 }
 
 async function onboard(t: TerminalApi, next: string | null) {
   const onward = () => t.go(next ?? "/", next ?? "your dashboard");
   // Signed-in visits never get here: the server sends them on.
   const stored = readProfile();
+  const description =
+    "New hire setup: the paperwork, a few questions, then your laptop.";
   if (!stored) {
+    t.print(<Banner description={description} status="○ not signed in" />);
     const accepted = await paperwork(t);
     await setup(t, accepted);
     return onward();
@@ -47,10 +45,10 @@ async function onboard(t: TerminalApi, next: string | null) {
   if (!acceptsCurrent(stored.accepted)) {
     // An account from before the current Terms: sign the new ones, then carry on.
     t.print(
-      "",
-      <span>
-        Welcome back, <span className="t-brand">{handle}</span>.
-      </span>,
+      <Banner
+        description="Welcome back."
+        status={`○ ${handle} · waiting for your signature`}
+      />,
     );
     await paperwork(t, true);
     acceptTerms();
@@ -58,7 +56,12 @@ async function onboard(t: TerminalApi, next: string | null) {
     return onward();
   }
   // Back after logging out.
-  t.print("", <span>Welcome back.</span>);
+  t.print(
+    <Banner
+      description="Welcome back. Sign in, or go through setup again."
+      status={`○ ${handle} · signed out`}
+    />,
+  );
   const yes = await t.ask({
     kind: "confirm",
     id: "login",

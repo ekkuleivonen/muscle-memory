@@ -105,8 +105,34 @@
   caret-color: var(--t-accent);
 }
 .t-banner {
-  line-height: 1.25;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
+}
+.t-art {
+  white-space: pre;
+  line-height: 1.15;
+  color: var(--t-accent);
+}
+.t-art-wide {
+  /* Block letters: tight lines so the shading joins up. */
+  font-size: 11px;
+  line-height: 1.05;
+}
+.t-art-narrow {
+  display: none;
+}
+@media (max-width: 860px) {
+  .t-art-wide {
+    display: none;
+  }
+  .t-art-narrow {
+    display: block;
+  }
+}
+.t-banner-text {
+  margin-top: 12px;
+}
+.t-on {
+  color: var(--t-ok);
 }
 .t-sr {
   position: absolute;

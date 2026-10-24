@@ -56,13 +56,9 @@ export interface TerminalApi {
  * and ask prompts; every prompt works by keyboard and by pointer.
  */
 export function Terminal({
-  title,
-  screen,
   run,
 }: {
-  title: string;
-  /** What the little laptop in the banner shows, up to 10 characters. */
-  screen: string;
+  /** The script; it prints its own Banner first. */
   run: (terminal: TerminalApi) => Promise<void>;
 }) {
   const router = useRouter();
@@ -133,7 +129,6 @@ export function Terminal({
     // Strict Mode mounts twice in development; boot once.
     if (booted.current) return;
     booted.current = true;
-    print(<Banner title={title} screen={screen} />);
     void run({ print, ask, go, back });
   }, []);
 
@@ -174,29 +169,45 @@ export function Terminal({
   );
 }
 
-/** A small laptop with the name beside it; screen readers get the words only. */
-function Banner({ title, screen }: { title: string; screen: string }) {
-  const frame = (text: string) => <span className="t-dim">{text}</span>;
+/** The wordmark in figlet's ANSI Shadow font; Calvin S where that would not fit (phones). */
+const WORDMARK = [
+  "███╗   ███╗██╗   ██╗███████╗ ██████╗██╗     ███████╗    ███╗   ███╗███████╗███╗   ███╗ ██████╗ ██████╗ ██╗   ██╗",
+  "████╗ ████║██║   ██║██╔════╝██╔════╝██║     ██╔════╝    ████╗ ████║██╔════╝████╗ ████║██╔═══██╗██╔══██╗╚██╗ ██╔╝",
+  "██╔████╔██║██║   ██║███████╗██║     ██║     █████╗      ██╔████╔██║█████╗  ██╔████╔██║██║   ██║██████╔╝ ╚████╔╝",
+  "██║╚██╔╝██║██║   ██║╚════██║██║     ██║     ██╔══╝      ██║╚██╔╝██║██╔══╝  ██║╚██╔╝██║██║   ██║██╔══██╗  ╚██╔╝",
+  "██║ ╚═╝ ██║╚██████╔╝███████║╚██████╗███████╗███████╗    ██║ ╚═╝ ██║███████╗██║ ╚═╝ ██║╚██████╔╝██║  ██║   ██║",
+  "╚═╝     ╚═╝ ╚═════╝ ╚══════╝ ╚═════╝╚══════╝╚══════╝    ╚═╝     ╚═╝╚══════╝╚═╝     ╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝",
+].join("\n");
+const WORDMARK_NARROW = [
+  "┌┬┐┬ ┬┌─┐┌─┐┬  ┌─┐  ┌┬┐┌─┐┌┬┐┌─┐┬─┐┬ ┬",
+  "││││ │└─┐│  │  ├┤   │││├┤ ││││ │├┬┘└┬┘",
+  "┴ ┴└─┘└─┘└─┘┴─┘└─┘  ┴ ┴└─┘┴ ┴└─┘┴└─ ┴",
+].join("\n");
+
+/**
+ * The terminal header: the wordmark, what this terminal is for, and who is signed in.
+ * Screen readers get the words, not the drawing.
+ */
+export function Banner({
+  description,
+  status,
+}: {
+  description: string;
+  status: ReactNode;
+}) {
   return (
     <div className="t-banner">
-      <span className="t-sr">muscle memory, {title}</span>
-      <span aria-hidden>
-        {frame(" .------------.")}
-        {"\n"}
-        {frame(" | ")}
-        <span className="t-accent">{screen.slice(0, 10).padEnd(10)}</span>
-        {frame(" |")}
-        {"   "}
-        <span className="t-brand">muscle memory</span>
-        {"\n"}
-        {frame(" |            |")}
-        {"   "}
-        <span className="t-dim">{title}</span>
-        {"\n"}
-        {frame(" '------------'")}
-        {"\n"}
-        {frame("/______________\\")}
-      </span>
+      <h1 className="t-sr">muscle memory</h1>
+      <div className="t-art t-art-wide" aria-hidden>
+        {WORDMARK}
+      </div>
+      <div className="t-art t-art-narrow" aria-hidden>
+        {WORDMARK_NARROW}
+      </div>
+      <div className="t-banner-text">
+        <div>{description}</div>
+        <div className="t-dim">{status}</div>
+      </div>
     </div>
   );
 }
