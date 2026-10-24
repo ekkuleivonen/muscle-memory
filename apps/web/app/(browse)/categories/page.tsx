@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { requireOnboarding } from "../../../lib/gate";
+import { pathWithQuery } from "../../../lib/onboarding";
 import { getLibrary } from "../../../lib/load";
 import {
   difficultyRange,
@@ -21,7 +23,9 @@ export default async function CategoriesPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const query = parseCategoryQuery(await searchParams);
+  const params = await searchParams;
+  await requireOnboarding(pathWithQuery("/categories", params));
+  const query = parseCategoryQuery(params);
   const { categories, issues } = await getLibrary();
   const results = filterCategories(categories, query);
   return (

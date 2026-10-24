@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { requireOnboarding } from "../../../lib/gate";
+import { pathWithQuery } from "../../../lib/onboarding";
 import { getLibrary } from "../../../lib/load";
 import {
   DIFFICULTIES,
@@ -21,7 +23,9 @@ export default async function IssuesPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const query = parseIssueQuery(await searchParams);
+  const params = await searchParams;
+  await requireOnboarding(pathWithQuery("/issues", params));
+  const query = parseIssueQuery(params);
   const { issues, categories } = await getLibrary();
   const results = filterIssues(issues, query);
   return (

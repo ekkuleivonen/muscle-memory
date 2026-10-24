@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { requireOnboarding } from "../../../../lib/gate";
 import { getLibrary } from "../../../../lib/load";
 import { difficultyRange, languagesOf } from "../../../../lib/library";
 import { LanguageBadge } from "../../_components/badges";
@@ -28,6 +29,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 }
 
 export default async function CategoryPage(props: Props) {
+  await requireOnboarding(`/categories/${(await props.params).slug}`);
   const { category, latest } = await find(props);
   if (!category) notFound();
   const range = difficultyRange(category.issues);

@@ -17,7 +17,7 @@ npm ci
 npm run dev
 ```
 
-Open http://localhost:3000. The practice flow is session-only by default, with optional [device-local history](docs/device-local-practice.md). No practice records are uploaded. The [Python workspace preview](docs/workspace.md) at `/workspace` runs submitted Python only inside a network-denied browser sandbox, never on a server.
+Open http://localhost:3000. First visits go to `/onboarding`, a short terminal-style setup whose answers stay in the browser; a cookie holding only the setup version lets pages skip it afterwards. Then browse `/issues` and `/categories` (Challenges and Adventures, presented as issues and categories) with search and filters in the URL. The onboarding terminal's `data export` and `data clear` manage [device-local history](docs/device-local-practice.md). No practice records are uploaded. The [Python workspace preview](docs/workspace.md) at `/workspace` runs submitted Python only inside a network-denied browser sandbox, never on a server.
 
 ```sh
 npm test

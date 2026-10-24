@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { requireOnboarding } from "../../../../lib/gate";
+import { pathWithQuery } from "../../../../lib/onboarding";
 import { getLibrary } from "../../../../lib/load";
 import type { Issue } from "../../../../lib/library";
 import type { SearchParams } from "../../../../lib/queries";
@@ -46,6 +48,11 @@ const initials = (name: string) =>
 const show = (value: unknown) => JSON.stringify(value);
 
 export default async function IssuePage(props: Props) {
+  const [{ slug }, params] = await Promise.all([
+    props.params,
+    props.searchParams,
+  ]);
+  await requireOnboarding(pathWithQuery(`/issues/${slug}`, params));
   const { issue, latest } = await find(props);
   if (!issue) notFound();
   return (
