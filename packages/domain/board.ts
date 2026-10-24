@@ -5,22 +5,17 @@
  * each move carries; nothing here reads anything beyond the move itself and the board at
  * that moment.
  */
-import { canonical, type Json } from "./assessment";
-import { safeIdentifier } from "./events";
+import { safeIdentifier } from "./capture";
+import { canonical, type Json } from "./json";
 import type { WorkspaceRecord } from "./workspace";
 
 /**
- * 1.5.0: pull requests no longer merge themselves; the person merges one from its page, so the
- * move to Done comes `via` pointer or keyboard, never automatic. Only a pull request whose
- * checks all passed can be merged, as with branch protection.
- * 1.4.0 adds the automatic move to Done when a pull request merges (`via: "automatic"`,
- * `trigger: "pull-request-merged"`, with the pull request's number and the run that checked
- * it); 1.3.0 adds `trigger`: the Status menu, or Start work (which moves an issue to In progress);
- * 1.2.0 records every account's moves, with the accepted Terms version as `consentVersion`
- * instead of a separate opt-in; 1.1.0 added In progress and the Status menu input; 1.0.0
- * covered backlog <-> Todo. Stored records keep theirs.
+ * 2.0.0: moves name the `issue` and its live `issueRevision` (SHA-256 of the revision's
+ * content) instead of a versioned Challenge, and only a person merging a pull request moves an
+ * issue to Done (`trigger: "pull-request-merged"`, by pointer or keyboard). Earlier versions
+ * were never released.
  */
-export const BOARD_CAPTURE_VERSION = "board-capture-1.5.0";
+export const BOARD_CAPTURE_VERSION = "board-capture-2.0.0";
 /** What this capture does not record. Absence is a gap, not evidence of no activity. */
 export const BOARD_CAPTURE_GAPS = [
   "issue-views",
@@ -30,12 +25,9 @@ export const BOARD_CAPTURE_GAPS = [
 ] as const;
 
 export type BoardColumn = "backlog" | "todo" | "in-progress" | "done";
-/**
- * How the move was made: pointer, or keyboard (`s`, arrows, Enter; Enter on a link). Automatic
- * appears only before 1.5.0, when a pull request merged itself.
- */
-export type BoardMoveVia = "pointer" | "keyboard" | "automatic";
-/** What made the move: choosing a status, starting work, or a pull request merging. */
+/** How the move was made: pointer, or keyboard (`s`, arrows, Enter; Enter on a link). */
+export type BoardMoveVia = "pointer" | "keyboard";
+/** What made the move: choosing a status, starting work, or merging a pull request. */
 export type BoardMoveTrigger =
   | "status-menu"
   | "start-work"
@@ -72,13 +64,14 @@ export interface BoardObservation {
   /** The Terms and Privacy Notice version the account accepted, e.g. terms-2026-10-24. */
   readonly consentVersion: string;
   readonly researchConsent: false;
-  /** Exact content shown, as in workspace observations: challenge.<id>.<version>. */
-  readonly challengeArtifactId: string;
+  /** As in workspace observations: the issue and the revision live at the time. */
+  readonly issue: string;
+  readonly issueRevision: string;
   readonly data: BoardMoveData;
 }
 
 const ISSUE_KEY = /^[A-Z][A-Z0-9]{1,4}-[1-9]\d{0,3}$/;
-const VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+const REVISION = /^sha256:[0-9a-f]{64}$/;
 const COLUMNS: readonly BoardColumn[] = [
   "backlog",
   "todo",
@@ -99,7 +92,7 @@ export function boardMove(input: {
   occurredAt: string;
   /** The accepted Terms and Privacy Notice version. */
   termsVersion: string;
-  challenge: { id: string; version: string };
+  issue: { id: string; revision: string };
   data: BoardMoveData;
 }): BoardObservation {
   const {
@@ -108,16 +101,16 @@ export function boardMove(input: {
     sequence,
     occurredAt,
     termsVersion,
-    challenge,
+    issue,
     data,
   } = input;
   safeIdentifier(participantId);
   safeIdentifier(sourceId);
-  safeIdentifier(challenge.id);
+  safeIdentifier(issue.id);
   if (!Number.isSafeInteger(sequence) || sequence < 1)
     throw new Error("Source positions are positive whole numbers.");
-  if (!VERSION.test(challenge.version))
-    throw new Error("Board moves name an exact Challenge version.");
+  if (!REVISION.test(issue.revision))
+    throw new Error("Board moves name the issue's exact revision.");
   if (Number.isNaN(Date.parse(occurredAt)))
     throw new Error("Board moves need a time.");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(termsVersion))
@@ -165,7 +158,8 @@ export function boardMove(input: {
     captureGaps: [...BOARD_CAPTURE_GAPS],
     consentVersion: `terms-${termsVersion}`,
     researchConsent: false,
-    challengeArtifactId: `challenge.${challenge.id}.${challenge.version}`,
+    issue: issue.id,
+    issueRevision: issue.revision,
     data: {
       issueKey: data.issueKey,
       from: data.from,

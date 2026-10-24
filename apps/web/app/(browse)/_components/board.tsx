@@ -35,7 +35,8 @@ const OPTIONS: readonly Status[] = ["backlog", "todo", "in-progress", "done"];
 export interface IssueRef {
   key: string;
   slug: string;
-  version: string;
+  /** The live revision when the move happened. */
+  revision: string;
 }
 
 function subscribe(onChange: () => void) {
@@ -76,7 +77,7 @@ export function useBoard() {
     localStorage.setItem(BOARD_KEY, serializeBoard(next));
     window.dispatchEvent(new Event(CHANGE));
     void logBoardMove(
-      { id: issue.slug, version: issue.version },
+      { id: issue.slug, revision: issue.revision },
       {
         issueKey: issue.key,
         from,
@@ -107,7 +108,7 @@ export function useBoard() {
     );
     window.dispatchEvent(new Event(CHANGE));
     void logBoardMove(
-      { id: issue.slug, version: issue.version },
+      { id: issue.slug, revision: issue.revision },
       {
         issueKey: issue.key,
         from,

@@ -21,8 +21,8 @@ test("only the current setup and Terms versions count as onboarded", () => {
 test("next only ever leads to a path on this site, never back to onboarding", () => {
   const fallback = "/issues";
   assert.equal(
-    safeNext("/issues/frequency-map?version=2.1.0", fallback),
-    "/issues/frequency-map?version=2.1.0",
+    safeNext("/issues?q=lang%3Apython", fallback),
+    "/issues?q=lang%3Apython",
   );
   assert.equal(safeNext("/projects#top", fallback), "/projects#top");
   for (const bad of [

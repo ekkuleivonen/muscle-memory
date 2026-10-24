@@ -1,19 +1,21 @@
 /**
- * Read model for browsing published content as an issue tracker: Challenges are issues,
- * Adventures are projects. Pure, so pages, search and filters are testable without a server.
+ * Read model for browsing the catalog as an issue tracker: live issues with their live
+ * revisions, grouped into projects. Pure, so pages, search and filters are testable without a
+ * server.
  */
-import type { Catalog } from "../../../packages/catalog/catalog";
-import type {
-  Adventure,
-  Challenge,
-  Difficulty,
-  IssueComment,
-  IssueKind,
-  Json,
-} from "../../../packages/domain/assessment";
+import {
+  ESTIMATES,
+  type Catalog,
+  type Difficulty,
+  type IssueKind,
+  type IssueMetadata,
+  type Revision,
+} from "../../../packages/content/model";
+import type { Json } from "../../../packages/domain/json";
 import { engineFor } from "../../../packages/runner/engines";
 import { LANGUAGES, type LanguageId } from "./languages";
 
+export { ESTIMATES };
 export const DIFFICULTIES: readonly Difficulty[] = [
   "warm-up",
   "easy",
@@ -26,14 +28,6 @@ export const KINDS: readonly IssueKind[] = [
   "performance",
   "refactor",
 ];
-
-/** Story points shown as an estimate, in the 1-2-3-5 scale trackers use. */
-export const ESTIMATES: Record<Difficulty, number> = {
-  "warm-up": 1,
-  easy: 2,
-  medium: 3,
-  hard: 5,
-};
 /** Number of distinct project colours the theme defines (--hue-0 …). */
 export const HUES = 8;
 
@@ -45,28 +39,35 @@ export interface ProjectRef {
   hue: number;
 }
 
+/** A teammate's note in the issue's thread, shown when the issue is opened. */
+export interface IssueComment {
+  author: string;
+  role: string;
+  body: string;
+}
+
 export interface Issue {
+  /** The issue's permanent id, used in URLs before keys existed and in recorded data. */
   slug: string;
   /** Permanent identifier such as NS-2: project key and issue number. */
   key: string;
-  version: string;
+  /** The live revision: sha256:… of its content. */
+  revision: string;
   title: string;
-  summary?: string;
+  summary: string;
   task: string;
-  kind?: IssueKind;
-  difficulty?: Difficulty;
-  estimate?: number;
+  kind: IssueKind;
+  difficulty: Difficulty;
+  estimate: number;
   language?: LanguageId;
   labels: readonly string[];
+  /** The visible cases: hidden ones only run in CI. */
   criteria: { input: Json; expected: Json }[];
   hints: number;
   comments: readonly IssueComment[];
-  /** Runs in this browser: Python with an entry point and starter. */
+  /** Runs in this browser: its language has an engine and the issue has what the engine needs. */
   runnable: boolean;
-  /** Opens in the IDE: any language with an entry point and starter. */
-  workable: boolean;
-  /** The project whose latest version includes this issue; content allows only one. */
-  project?: ProjectRef;
+  project: ProjectRef;
 }
 
 /**
@@ -86,209 +87,128 @@ export function summarize({
 }
 
 export interface Project extends ProjectRef {
-  version: string;
-  summary?: string;
+  summary: string;
   story: string;
-  /** Exactly the issue versions this project pins, in its order. */
+  /** Its live issues, in board order. */
   issues: Issue[];
-}
-
-type Executable = Challenge & {
-  language?: string;
-  entrypoint?: string;
-  starter?: string;
-  /** SQL: the tables each case fills. Without it a SQL issue cannot run. */
-  schema?: string;
-  /** C and C++: the adapter from JSON arguments; without it they cannot run. */
-  adapter?: string;
-};
-
-export function compareVersions(a: string, b: string): number {
-  const [x, y] = [a, b].map((v) => v.split(".").map(Number));
-  for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i];
-  return 0;
-}
-
-/** "frequency-map" → "Frequency map", for content published before titles existed. */
-export function titleFromSlug(slug: string): string {
-  const words = slug.replace(/-/g, " ");
-  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 export function languageLabel(id: string | undefined): string {
   return LANGUAGES.find((l) => l.id === id)?.label ?? "Any language";
 }
 
-/**
- * "night-shift" → "NS"; a single word keeps its first three letters. Mirrors `keyFromId` in
- * tools/content-check.mjs, which this module cannot import because it reads the filesystem.
- */
-export function keyFromSlug(slug: string): string {
-  const words = slug.split("-").filter(Boolean);
+/** Whether the browser can run this revision's code: an engine, plus what that engine needs. */
+export function runnable(revision: Revision): boolean {
+  const { language, schema, adapter } = revision.workspace;
   return (
-    words.length > 1
-      ? words
-          .slice(0, 3)
-          .map((w) => w[0])
-          .join("")
-      : slug.slice(0, 3)
-  ).toUpperCase();
+    !!engineFor(language) &&
+    (language !== "sql" || typeof schema === "string") &&
+    // C, C++ and Java need the issue's adapter to call the function.
+    ((language !== "c" && language !== "cpp" && language !== "java") ||
+      typeof adapter === "string")
+  );
 }
 
 function toIssue(
-  content: Executable,
-  project: ProjectRef | undefined,
-  key: string,
+  meta: IssueMetadata,
+  revision: Revision,
+  project: ProjectRef,
 ): Issue {
-  const language = LANGUAGES.find((l) => l.id === content.language)?.id;
-  const workable =
-    !!language &&
-    typeof content.entrypoint === "string" &&
-    typeof content.starter === "string";
   return {
-    slug: content.id,
-    key,
-    version: content.version,
-    title: content.title ?? titleFromSlug(content.id),
-    summary: content.summary,
-    task: content.task,
-    kind: content.kind,
-    difficulty: content.difficulty,
-    estimate: content.difficulty && ESTIMATES[content.difficulty],
-    language,
-    labels: content.skills,
-    criteria: content.inputs.map((input, i) => ({
-      input,
-      expected: content.expected[i],
-    })),
-    hints: content.hints.length,
-    comments: content.comments ?? [],
-    runnable:
-      !!engineFor(language) &&
-      workable &&
-      (language !== "sql" || typeof content.schema === "string") &&
-      // C, C++ and Java need the issue's adapter to call the function.
-      ((language !== "c" && language !== "cpp" && language !== "java") ||
-        typeof content.adapter === "string"),
-    workable,
+    slug: meta.id,
+    key: `${project.key}-${meta.number}`,
+    revision: meta.revision,
+    title: meta.title,
+    summary: meta.summary,
+    task: revision.body,
+    kind: revision.kind,
+    difficulty: meta.difficulty,
+    estimate: meta.estimate,
+    language: LANGUAGES.find((l) => l.id === revision.workspace.language)?.id,
+    labels: meta.labels,
+    criteria: revision.checks.cases
+      .filter((c) => c.visible)
+      .map(({ input, expected }) => ({ input, expected })),
+    hints: revision.hints.length,
+    // Notes posted when the issue is opened read as the ticket's thread.
+    comments: revision.team
+      .filter(
+        (c) => c.where === "issue" && "event" in c.when && c.when.event === "opened",
+      )
+      .map((c) => ({ author: c.author.name, role: c.author.role, body: c.text[0] })),
+    runnable: runnable(revision),
     project,
   };
 }
 
-function latestBy<T extends { id: string; version: string }>(
-  items: readonly T[],
-): Map<string, T> {
-  const latest = new Map<string, T>();
-  for (const item of items) {
-    const current = latest.get(item.id);
-    if (!current || compareVersions(item.version, current.version) > 0)
-      latest.set(item.id, item);
-  }
-  return latest;
-}
-
 export interface Library {
-  /** The latest published version of every issue. */
+  /** Every live issue, by project and board order. */
   issues: Issue[];
-  /** The latest published version of every project. */
   projects: Project[];
-  /** A specific published version, e.g. one a project pins. */
-  issueVersion(slug: string, version: string): Issue | undefined;
-  /** The latest issue for a key (any case) or, for older links, a slug. */
+  /** An issue by key (any case) or its permanent id. */
   findIssue(ref: string): Issue | undefined;
-  /** A project by key (any case) or, for older links, its slug. */
+  /** A project by key (any case) or its permanent id. */
   findProject(ref: string): Project | undefined;
+  /** Any revision ever published, by id: recorded work names the revision it ran against. */
+  revision(id: string): Revision | undefined;
+  /** Every published revision of one issue, by id. */
+  revisionsOf(issue: string): Record<string, Revision>;
 }
 
-/** Canonical project URL: its key, unique across projects. */
 /** How the project qualifier names a project: its key, as typed, e.g. project:shop. */
 export function projectFilterValue(project: Pick<ProjectRef, "key">): string {
   return project.key.toLowerCase();
 }
 
+/** Canonical project URL: its key, unique across projects. */
 export function projectHref(project: Pick<ProjectRef, "key">): string {
   return `/projects/${project.key}`;
 }
 
-/** Canonical issue URL: the permanent key alone, plus ?version for an older one. */
-export function issueHref(
-  issue: Pick<IssueSummary, "key" | "version">,
-  latestVersion?: string,
-): string {
-  const path = `/issues/${issue.key}`;
-  return latestVersion && latestVersion !== issue.version
-    ? `${path}?version=${issue.version}`
-    : path;
+/** Canonical issue URL: its permanent key. */
+export function issueHref(issue: Pick<IssueSummary, "key">): string {
+  return `/issues/${issue.key}`;
 }
 
 export function library(catalog: Catalog): Library {
-  const published = Object.values(catalog.entries).filter(
-    (entry) => entry.state === "published",
-  );
-  const challenges = published
-    .filter((e) => e.kind === "challenge")
-    .map((e) => e.content as Executable);
-  const adventures = [
-    ...latestBy(
-      published
-        .filter((e) => e.kind === "adventure")
-        .map((e) => e.content as Adventure),
-    ).values(),
-  ];
-  const refs = adventures.map(
-    (a, i): ProjectRef => ({
-      slug: a.id,
-      title: a.title ?? titleFromSlug(a.id),
-      key: a.key ?? keyFromSlug(a.id),
+  const refs = new Map(
+    catalog.projects.map((p, i): [string, ProjectRef] => [
+      p.id,
       // Spread by position so neighbouring projects never share a colour.
-      hue: (i * 3) % HUES,
+      { slug: p.id, title: p.title, key: p.key, hue: (i * 3) % HUES },
+    ]),
+  );
+  const byId = new Map(
+    catalog.issues
+      .filter((meta) => meta.state === "live")
+      .map((meta) => [
+        meta.id,
+        toIssue(meta, catalog.revisions[meta.revision], refs.get(meta.project)!),
+      ]),
+  );
+  const projects = catalog.projects.map(
+    (p): Project => ({
+      ...refs.get(p.id)!,
+      summary: p.summary,
+      story: p.story,
+      issues: p.issues.flatMap((id) => byId.get(id) ?? []),
     }),
   );
-  const ownerOf = (slug: string) =>
-    adventures.findIndex((a) => a.challenges.some(([id]) => id === slug));
-  const projectOf = (slug: string): ProjectRef | undefined =>
-    refs[ownerOf(slug)];
-  const keyOf = (slug: string): string => {
-    const i = ownerOf(slug);
-    if (i < 0) return keyFromSlug(slug);
-    // Numbers are permanent across versions; unnumbered legacy content falls back to order.
-    const number =
-      challenges.find((c) => c.id === slug && c.number !== undefined)?.number ??
-      adventures[i].challenges.findIndex(([id]) => id === slug) + 1;
-    return `${refs[i].key}-${number}`;
-  };
-  const issueVersion = (slug: string, version: string) => {
-    const content = challenges.find(
-      (c) => c.id === slug && c.version === version,
-    );
-    return content && toIssue(content, projectOf(slug), keyOf(slug));
-  };
-  const issues = [...latestBy(challenges).values()].map((c) =>
-    toIssue(c, projectOf(c.id), keyOf(c.id)),
-  );
-  const projects = adventures.map(
-    (adventure, i): Project => ({
-      ...refs[i],
-      version: adventure.version,
-      summary: adventure.summary,
-      story: adventure.story,
-      // A pinned Challenge can be disabled after the Adventure was published; leave it out
-      // rather than list something that cannot start.
-      issues: adventure.challenges.flatMap(
-        ([id, version]) => issueVersion(id, version) ?? [],
-      ),
-    }),
-  );
+  const issues = projects.flatMap((p) => p.issues);
   return {
     issues,
     projects,
-    issueVersion,
     findIssue: (ref) =>
       issues.find((i) => i.key === ref.toUpperCase()) ??
       issues.find((i) => i.slug === ref),
     findProject: (ref) =>
       projects.find((p) => p.key === ref.toUpperCase()) ??
       projects.find((p) => p.slug === ref),
+    revision: (id) => catalog.revisions[id],
+    revisionsOf: (issue) =>
+      Object.fromEntries(
+        Object.entries(catalog.revisions).filter(([, r]) => r.issue === issue),
+      ),
   };
 }
 

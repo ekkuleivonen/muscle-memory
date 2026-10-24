@@ -1,7 +1,5 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import type { Catalog } from "../../../packages/catalog/catalog";
 import {
   activeCount,
   boardIssues,
@@ -15,17 +13,9 @@ import {
   type BoardItem,
 } from "./board";
 import { library, summarize } from "./library";
+import { catalog } from "./test-fixtures";
 
-const read = (path: string) =>
-  JSON.parse(
-    readFileSync(new URL(`../../../content/${path}`, import.meta.url), "utf8"),
-  ) as Catalog;
-const reference = read("catalog/reference.v1.json");
-const demo = read("demo/catalog.json");
-const issues = library({
-  ...reference,
-  entries: { ...reference.entries, ...demo.entries },
-}).issues.map(summarize);
+const issues = library(catalog).issues.map(summarize);
 
 test("statuses set by hand round-trip through storage; Done is refused", () => {
   let items = setStatus([], "API-2", "todo", "2026-10-24T10:00:00Z");

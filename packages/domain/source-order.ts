@@ -3,7 +3,7 @@
  * source ID; its positions start at 1 and never reset. A restarted source (new process,
  * device or tab) must use a new source ID rather than reusing positions.
  */
-import { safeIdentifier } from "./events";
+import { safeIdentifier } from "./capture";
 
 export const MAX_GAP_RANGES = 100;
 

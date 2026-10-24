@@ -27,21 +27,18 @@ function IssueRow({ issue, href }: { issue: Issue; href: string }) {
 
 export function IssueRows({
   issues,
-  latest,
   standalone = false,
 }: {
   issues: readonly Issue[];
-  /** Latest version per slug, so links to older pinned versions stay exact. */
-  latest?: ReadonlyMap<string, string>;
   standalone?: boolean;
 }) {
   return (
     <ul className={standalone ? "rows standalone" : "rows"}>
       {issues.map((issue) => (
         <IssueRow
-          key={`${issue.slug}@${issue.version}`}
+          key={issue.slug}
           issue={issue}
-          href={issueHref(issue, latest?.get(issue.slug))}
+          href={issueHref(issue)}
         />
       ))}
     </ul>

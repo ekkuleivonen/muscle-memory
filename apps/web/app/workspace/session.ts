@@ -3,21 +3,20 @@
  * feedback is derived from the stored run outcome. No React state is touched per keystroke.
  */
 import { randomId } from "../../../../packages/browser/random-id";
-import { Transaction } from "@codemirror/state";
+import { Text, Transaction } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { CaptureRecorder } from "../../../../packages/capture/recorder";
 import type {
   CaptureSink,
   CaptureStatus,
 } from "../../../../packages/capture/recorder";
-import type { Challenge, Json } from "../../../../packages/domain/assessment";
-import { contentArtifact } from "../../../../packages/domain/evidence";
+import type { Executable } from "../../../../packages/content/model";
+import type { Json } from "../../../../packages/domain/json";
 import {
   codeRevision,
   type CodeRevisionArtifact,
   EDIT_CHANGES_LIMIT_BYTES,
   pullRequestResult,
-  toRecord,
   type PullRequestResult,
   type RunPurpose,
   WORKSPACE_CAPTURE_GAPS,
@@ -61,21 +60,20 @@ export interface PullRequestView {
 export interface SessionOptions {
   readonly participantId: string;
   readonly consentVersion: string;
-  readonly challenge: Challenge & {
-    entrypoint: string;
-    parameters?: readonly string[];
-    schema?: string;
-    adapter?: string;
-  };
+  /** The issue and the revision worked against; recorded with every observation. */
+  readonly issue: string;
+  readonly issueRevision: string;
+  /** What CI runs: the entry point and the revision's cases. */
+  readonly executable: Executable;
   readonly sink: CaptureSink;
-  readonly initialCode: string;
+  /** Every editable file and the text it starts with (the revision's, or restored work). */
+  readonly files: Readonly<Record<string, EditableFile>>;
+  /** Source files the code may use but not change, by path; sent to CI with the edits. */
+  readonly sources?: Readonly<Record<string, string>>;
   readonly restoredFrom?: number;
-  /** The solution file's language, keymap and media type; Python unless told otherwise. */
+  /** The workspace's language, for the runtime and the editor features recorded; Python unless told otherwise. */
   readonly language?: FileLanguage;
-  /** The solution's path in the repo, used in error locations. */
-  readonly filename?: string;
   readonly keymap?: Keymap;
-  readonly mediaType?: string;
   /** Type hints (squiggles, hover types) for languages that have them. */
   readonly types?: TypeChecker;
   /**
@@ -84,10 +82,10 @@ export interface SessionOptions {
    */
   readonly runtime?: Engine["runtime"] | null;
   readonly onVimMode?: (mode: string) => void;
-  /** Pull requests opened for this Challenge in earlier sessions, so numbers continue. */
+  /** Pull requests opened for this issue in earlier sessions, so numbers continue. */
   readonly pullRequestsBefore?: number;
   /**
-   * The open pull request for this Challenge, if any, read when the person opens one: new work
+   * The open pull request for this issue, if any, read when the person opens one: new work
    * is pushed to it instead of opening another.
    */
   readonly openPullRequest?: () => { number: number; pushes: number } | null;
@@ -100,6 +98,12 @@ export interface SessionOptions {
   readonly onSaveStatus?: (status: SaveStatus) => void;
 }
 
+export interface EditableFile {
+  readonly text: string;
+  readonly language: FileLanguage;
+  readonly mediaType: string;
+}
+
 /** Capture status plus whether the current code could be rebuilt exactly after a refresh. */
 export interface SaveStatus extends CaptureStatus {
   readonly recoverable: boolean;
@@ -109,7 +113,11 @@ export interface SaveStatus extends CaptureStatus {
 export class WorkspaceSession {
   readonly recorder: CaptureRecorder;
   readonly sourceId = `workspace-${randomId()}`;
-  private view?: EditorView;
+  /** Editors by path, mounted when their tab is first shown. */
+  private readonly views = new Map<string, EditorView>();
+  /** Every editable file's current text, kept per transaction so snapshots never lag. */
+  private readonly docs = new Map<string, Text>();
+  private readonly edited = new Set<string>();
   private revision = 0;
   private editsSinceSnapshot = 0;
   private lastRun?: RunView;
@@ -132,17 +140,18 @@ export class WorkspaceSession {
 
   constructor(private readonly options: SessionOptions) {
     this.pullRequests = options.pullRequestsBefore ?? 0;
-    const challengeArtifact = contentArtifact("challenge", options.challenge);
     this.recorder = new CaptureRecorder({
       participantId: options.participantId,
       sourceId: this.sourceId,
       consentVersion: options.consentVersion,
-      challengeArtifactId: challengeArtifact.artifactId,
+      issue: options.issue,
+      issueRevision: options.issueRevision,
       sink: options.sink,
       onTransition: () => this.notify(),
     });
-    this.recorder.include(toRecord(challengeArtifact));
-    const code = this.artifact(options.initialCode);
+    for (const [path, file] of Object.entries(options.files))
+      this.docs.set(path, Text.of(file.text.split(/\r\n?|\n/)));
+    const code = this.artifact();
     this.markCopy(
       this.recorder.observe(
         "observation.workspace.opened",
@@ -188,24 +197,41 @@ export class WorkspaceSession {
     };
   }
 
-  mount(parent: HTMLElement): void {
-    this.view = createEditor(
+  /** Mounts the editor for one editable file; its edits are recorded under its path. */
+  mount(path: string, parent: HTMLElement): void {
+    const file = this.options.files[path];
+    if (!file || this.views.has(path)) return;
+    const view = createEditor(
       parent,
-      this.options.initialCode,
+      this.docs.get(path)!.toString(),
       {
-        onChange: (transaction) => this.recordEdit(transaction),
+        onChange: (transaction) => this.recordEdit(path, transaction),
         onRun: () => void this.run(),
         onPullRequest: () => void this.pullRequest(),
         onVimMode: this.options.onVimMode,
       },
       {
-        language: this.options.language ?? "python",
+        language: file.language,
         keymap: this.options.keymap ?? "standard",
-        label: "Code editor",
-        types: this.options.types,
+        label: `Code editor: ${path}`,
+        // The type checker knows one file: the entry file.
+        types: path === this.options.executable.entry ? this.options.types : undefined,
       },
     );
-    this.view.focus();
+    this.views.set(path, view);
+    view.focus();
+  }
+
+  /** Editable files changed in this session. */
+  editedFiles(): string[] {
+    return [...this.edited];
+  }
+
+  /** The editable files' current text, by path. */
+  code(): Record<string, string> {
+    return Object.fromEntries(
+      [...this.docs].map(([path, doc]) => [path, doc.toString()]),
+    );
   }
 
   get currentRevision(): number {
@@ -230,9 +256,13 @@ export class WorkspaceSession {
   }
 
   async run(purpose: RunPurpose = "local"): Promise<void> {
-    if (!this.view || !this.runnable || this.options.runner().running) return;
+    if (!this.views.size || !this.runnable || this.options.runner().running)
+      return;
     const revision = this.revision;
-    const code = this.artifact(this.view.state.doc.toString());
+    const code = this.artifact();
+    // The program: the entry file CI loads, and every other source file it may import.
+    const program = { ...this.options.sources, ...this.code() };
+    const { entry } = this.options.executable;
     const runId = randomId();
     const base = {
       runId,
@@ -271,26 +301,29 @@ export class WorkspaceSession {
     const outcome = await this.options.runner().run(
       {
         runId,
-        code: this.view.state.doc.sliceString(0),
-        filename: this.options.filename ?? "solution.py",
+        code: program[entry] ?? "",
+        filename: entry,
+        files: Object.fromEntries(
+          Object.entries(program).filter(([path]) => path !== entry),
+        ),
         language: this.options.language ?? "python",
-        entrypoint: this.options.challenge.entrypoint,
-        ...(this.options.challenge.parameters
-          ? { parameters: this.options.challenge.parameters }
+        entrypoint: this.options.executable.entrypoint,
+        ...(this.options.executable.parameters
+          ? { parameters: this.options.executable.parameters }
           : {}),
-        ...(this.options.challenge.schema
-          ? { setup: this.options.challenge.schema }
+        ...(this.options.executable.schema
+          ? { setup: this.options.executable.schema }
           : {}),
-        ...(this.options.challenge.adapter
-          ? { adapter: this.options.challenge.adapter }
+        ...(this.options.executable.adapter
+          ? { adapter: this.options.executable.adapter }
           : {}),
-        inputs: this.options.challenge.inputs,
+        inputs: this.options.executable.cases.map((c) => c.input),
       },
       () => update("running"),
     );
     // The outcome belongs to `revision`, even if the editor has moved on since.
     if (pullRequest) {
-      const verdict = pullRequestResult(this.options.challenge, outcome);
+      const verdict = pullRequestResult(this.options.executable.cases, outcome);
       Object.assign(pullRequest, verdict);
       this.recorder.observe("observation.workspace.pull-request", {
         number: pullRequest.number,
@@ -312,20 +345,23 @@ export class WorkspaceSession {
   async close(): Promise<void> {
     // The IDE may already have dropped its runner when it unmounts.
     this.options.runner()?.cancel();
-    this.view?.destroy();
-    this.view = undefined;
+    for (const view of this.views.values()) view.destroy();
+    this.views.clear();
     await this.recorder.stop();
   }
 
-  /** Records one applied transaction. Exposed for tests; the editor calls it per change. */
-  recordEdit(transaction: Transaction): void {
+  /** Records one applied transaction in one file. Exposed for tests; the editor calls it per change. */
+  recordEdit(file: string, transaction: Transaction): void {
     this.revision++;
+    this.docs.set(file, transaction.newDoc);
+    this.edited.add(file);
     const changes = transaction.changes.toJSON() as Json;
     const changesBytes = new TextEncoder().encode(
       JSON.stringify(changes),
     ).length;
     const oversize = changesBytes > EDIT_CHANGES_LIMIT_BYTES;
     const edit = this.recorder.observe("observation.workspace.edit", {
+      file,
       revision: this.revision,
       changes: oversize ? null : changes,
       changesBytes,
@@ -344,9 +380,9 @@ export class WorkspaceSession {
     // Recovery snapshots let the document be rebuilt from the stream; an oversize edit
     // has no change set, so it is followed by a snapshot immediately.
     if (oversize || ++this.editsSinceSnapshot >= SNAPSHOT_EVERY_EDITS) {
-      // This transaction's document, not the view's: one update can hold several
+      // This transaction's documents, not the views': one update can hold several
       // transactions, and the snapshot must match the revision it is labelled with.
-      const code = this.artifact(transaction.newDoc.toString());
+      const code = this.artifact();
       this.snapshot(code, oversize ? "oversize-edit" : "periodic");
       this.editsSinceSnapshot = 0;
     }
@@ -378,7 +414,7 @@ export class WorkspaceSession {
   ): void {
     if (!observation) return; // Dropped: the recorder records the loss.
     const safeStart = this.safePoint();
-    if (!code.capture.truncated)
+    if (!code.truncated)
       this.copies.push({
         sequence: observation.source.sequence,
         artifactId: code.artifactId,
@@ -425,13 +461,17 @@ export class WorkspaceSession {
     this.options.onSaveStatus(status);
   }
 
-  private artifact(code: string) {
+  private artifact() {
     return codeRevision(
       this.options.participantId,
       this.sourceId,
       this.revision,
-      code,
-      this.options.mediaType,
+      Object.fromEntries(
+        [...this.docs].map(([path, doc]) => [
+          path,
+          { text: doc.toString(), mediaType: this.options.files[path].mediaType },
+        ]),
+      ),
     );
   }
 }

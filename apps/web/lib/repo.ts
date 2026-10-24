@@ -1,8 +1,10 @@
 /**
  * The small repo an issue opens as in the IDE: the file you work in, a read-only test file
- * holding the acceptance criteria in that language's usual test style, and the project's
- * README. Generated from the Challenge, so content needs nothing more than a starter.
+ * holding the visible cases in that language's usual test style, and the project's README.
+ * `repoFor` generates it at authoring time into each revision's workspace (tools/build-content);
+ * `repoOf` turns a revision's workspace back into the IDE's view.
  */
+import type { FileRole, Workspace } from "../../../packages/content/model";
 import type { LanguageId } from "./languages";
 
 export type FileLanguage = LanguageId | "markdown";
@@ -11,8 +13,8 @@ export interface RepoFile {
   path: string;
   language: FileLanguage;
   text: string;
-  /** Only the solution is editable (and recorded). A schema is read-only, like the tests. */
-  role: "solution" | "tests" | "schema" | "readme";
+  /** Only the edit file is editable (and recorded). A schema is read-only, like the tests. */
+  role: FileRole;
 }
 
 export interface Repo {
@@ -431,7 +433,7 @@ function readme(src: RepoSource): RepoFile {
   const text = project
     ? `# ${project.title}\n\n${project.story ?? ""}\n`
     : `# ${src.slug}\n`;
-  return { path: "README.md", language: "markdown", text, role: "readme" };
+  return { path: "README.md", language: "markdown", text, role: "docs" };
 }
 
 /** Where each language keeps the code and its tests. */
@@ -536,7 +538,7 @@ export function repoFor(src: RepoSource): Repo {
     path: solutionPath,
     language: src.language,
     text: src.starter,
-    role: "solution",
+    role: "edit",
   };
   const files: RepoFile[] = [
     readme(src),
@@ -553,7 +555,7 @@ export function repoFor(src: RepoSource): Repo {
       path: "db/schema.sql",
       language: "sql",
       text: src.schema.endsWith("\n") ? src.schema : `${src.schema}\n`,
-      role: "schema",
+      role: "docs",
     });
   files.sort((a, b) => a.path.localeCompare(b.path));
   return {
@@ -561,6 +563,28 @@ export function repoFor(src: RepoSource): Repo {
     branch: `${src.key.toLowerCase()}-${src.slug}`,
     files,
     solution,
+  };
+}
+
+/** The IDE's view of a revision's workspace: its files by path, the repo's folder and branch. */
+export function repoOf(
+  workspace: Workspace,
+  issue: { key: string; slug: string },
+  root: string,
+): Repo {
+  const files: RepoFile[] = Object.entries(workspace.files)
+    .map(([path, file]) => ({
+      path,
+      role: file.role,
+      language: file.language as FileLanguage,
+      text: file.text,
+    }))
+    .sort((a, b) => a.path.localeCompare(b.path));
+  return {
+    root,
+    branch: `${issue.key.toLowerCase()}-${issue.slug}`,
+    files,
+    solution: files.find((f) => f.role === "edit")!,
   };
 }
 

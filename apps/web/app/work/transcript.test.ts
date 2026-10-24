@@ -3,18 +3,15 @@ import assert from "node:assert/strict";
 import type { RunView } from "../workspace/session";
 import { transcript, type Executable } from "./transcript";
 
-const challenge = {
-  id: "format-price",
-  version: "1.0.0",
-  assessment_version: "1.0.0",
-  task: "",
-  skills: [],
-  hints: [],
+const challenge: Executable = {
+  language: "javascript",
+  entry: "src/format-price.js",
   entrypoint: "formatPrice",
-  starter: "",
-  inputs: [123456, -500],
-  expected: ["$1,234.56", "-$5.00"],
-} as Executable;
+  cases: [
+    { id: "case-1", input: 123456, expected: "$1,234.56", visible: true },
+    { id: "case-2", input: -500, expected: "-$5.00", visible: true },
+  ],
+};
 
 const bounded = (text: string) => ({
   text,

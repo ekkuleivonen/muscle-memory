@@ -1671,6 +1671,10 @@ kbd {
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   padding: 4px 12px;
 }
+.pull-files {
+  display: grid;
+  gap: 14px;
+}
 .diff-empty {
   padding: 16px 12px;
   margin: 0;

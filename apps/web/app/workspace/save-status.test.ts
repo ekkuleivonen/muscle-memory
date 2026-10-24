@@ -1,32 +1,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { EditorState, type Transaction } from "@codemirror/state";
 import {
   MemorySink,
   type CaptureSink,
 } from "../../../../packages/capture/recorder";
 import { latestSavedCode } from "../../../../packages/capture/restore";
-import type { Challenge } from "../../../../packages/domain/assessment";
-import { contentArtifactId } from "../../../../packages/domain/evidence";
 import type { Runner } from "../../../../packages/runner/runner";
 import { saveState } from "./save-state";
+import { live } from "../../lib/test-fixtures";
 import { WorkspaceSession, type SaveStatus } from "./session";
 
-const challenge = JSON.parse(
-  readFileSync(
-    new URL(
-      "../../../../content/challenges/frequency-map.v2.json",
-      import.meta.url,
-    ),
-    "utf8",
-  ),
-) as Challenge & { entrypoint: string; starter: string };
-const CHALLENGE = contentArtifactId(
-  "challenge",
-  challenge.id,
-  challenge.version,
-);
+const fixture = live("frequency-map");
+const ISSUE = "frequency-map";
 const P = "synthetic-participant";
 const SAVED = /^All edits so far are saved on this device/;
 
@@ -36,9 +22,17 @@ function workspace(sink: CaptureSink, initialCode = "") {
   const session = new WorkspaceSession({
     participantId: P,
     consentVersion: "workspace-device-local-v1",
-    challenge,
+    issue: "frequency-map",
+    issueRevision: fixture.id,
+    executable: fixture.executable,
     sink,
-    initialCode,
+    files: {
+      [fixture.path]: {
+        text: initialCode,
+        language: "python",
+        mediaType: "text/x-python; charset=utf-8",
+      },
+    },
     runner: () =>
       ({
         running: false,
@@ -48,14 +42,11 @@ function workspace(sink: CaptureSink, initialCode = "") {
     onEditedAfterRun: () => undefined,
     onSaveStatus: (status) => updates.push(status),
   });
-  (session as unknown as { view: unknown }).view = {
-    get state() {
-      return state;
-    },
-  };
+  // run() needs a mounted editor; the documents themselves come from the edits recorded.
+  (session as unknown as { views: Map<string, unknown> }).views.set(fixture.path, {});
   const dispatch = (transaction: Transaction) => {
     state = transaction.state;
-    session.recordEdit(transaction);
+    session.recordEdit(fixture.path, transaction);
   };
   return {
     session,
@@ -111,7 +102,7 @@ test("a truncated large paste is never labelled saved until a complete copy is s
     /cannot be fully restored after a refresh: .*64 KiB/,
   );
   assert.equal(
-    latestSavedCode([...sink.records.values()], P, CHALLENGE)!.complete,
+    latestSavedCode([...sink.records.values()], P, ISSUE)!.complete,
     false,
   );
   // Removing the paste is a normal edit, but replay still has no exact starting point.
@@ -123,8 +114,8 @@ test("a truncated large paste is never labelled saved until a complete copy is s
   await settle(editor);
   assert.equal(editor.session.saveStatus().recoverable, true);
   assert.match(editor.label(), SAVED);
-  const recovered = latestSavedCode([...sink.records.values()], P, CHALLENGE)!;
-  assert.equal(recovered.text, editor.text());
+  const recovered = latestSavedCode([...sink.records.values()], P, ISSUE)!;
+  assert.equal(recovered.files[fixture.path], editor.text());
   assert.equal(recovered.complete, true);
 });
 
@@ -135,7 +126,7 @@ test("an oversize edit within 64 KiB is recoverable through its complete snapsho
   await settle(editor);
   assert.match(editor.label(), SAVED);
   assert.equal(
-    latestSavedCode([...sink.records.values()], P, CHALLENGE)!.text,
+    latestSavedCode([...sink.records.values()], P, ISSUE)!.files[fixture.path],
     editor.text(),
   );
 });
@@ -161,7 +152,7 @@ test("an artifact conflict is not labelled saved until a later complete copy is 
   await settle(editor);
   assert.match(editor.label(), SAVED);
   assert.equal(
-    latestSavedCode([...sink.records.values()], P, CHALLENGE)!.text,
+    latestSavedCode([...sink.records.values()], P, ISSUE)!.files[fixture.path],
     "ab",
   );
 });
@@ -214,8 +205,8 @@ test("a later snapshot that only references a conflicted artifact never clears t
   }
   // The conflicting payload is kept, never overwritten.
   assert.equal(sink.records.get(id)!.payload, "{}");
-  const stuck = latestSavedCode([...sink.records.values()], P, CHALLENGE)!;
-  assert.notEqual(stuck.text, editor.text());
+  const stuck = latestSavedCode([...sink.records.values()], P, ISSUE)!;
+  assert.notEqual(stuck.files[fixture.path], editor.text());
   assert.equal(stuck.complete, false);
   // A genuinely new complete copy, stored without conflict, makes the code safe again.
   editor.type("!");
@@ -223,7 +214,7 @@ test("a later snapshot that only references a conflicted artifact never clears t
   await settle(editor);
   assert.equal(editor.session.saveStatus().recoverable, true);
   assert.match(editor.label(), SAVED);
-  const recovered = latestSavedCode([...sink.records.values()], P, CHALLENGE)!;
-  assert.equal(recovered.text, editor.text());
+  const recovered = latestSavedCode([...sink.records.values()], P, ISSUE)!;
+  assert.equal(recovered.files[fixture.path], editor.text());
   assert.equal(recovered.complete, true);
 });

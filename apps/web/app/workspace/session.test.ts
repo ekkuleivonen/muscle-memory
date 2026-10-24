@@ -1,29 +1,28 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { EditorState, type Transaction } from "@codemirror/state";
 import { MemorySink } from "../../../../packages/capture/recorder";
-import type { Challenge } from "../../../../packages/domain/assessment";
 import type { Runner } from "../../../../packages/runner/runner";
+import { live } from "../../lib/test-fixtures";
 import { WorkspaceSession } from "./session";
 
-const challenge = JSON.parse(
-  readFileSync(
-    new URL(
-      "../../../../content/challenges/frequency-map.v2.json",
-      import.meta.url,
-    ),
-    "utf8",
-  ),
-) as Challenge & { entrypoint: string; starter: string };
+const fixture = live("frequency-map");
 
 function session(sink: MemorySink) {
   return new WorkspaceSession({
     participantId: "synthetic-participant",
     consentVersion: "workspace-session-v1",
-    challenge,
+    issue: "frequency-map",
+    issueRevision: fixture.id,
+    executable: fixture.executable,
     sink,
-    initialCode: "",
+    files: {
+      [fixture.path]: {
+        text: "",
+        language: "python",
+        mediaType: "text/x-python; charset=utf-8",
+      },
+    },
     runner: () => ({ running: false }) as unknown as Runner,
     onRun: () => undefined,
     onEditedAfterRun: () => undefined,
@@ -68,28 +67,28 @@ test("snapshots hold the exact text of the revision that triggered them, within 
     Array.from({ length: 30 }, (_, index) => `${index + 1};`),
   );
   // All 30 transactions belong to one editor update: the view already shows revision 30.
-  for (const transaction of batch) workspace.recordEdit(transaction);
+  for (const transaction of batch) workspace.recordEdit(fixture.path, transaction);
   await workspace.recorder.flush();
   const [periodic] = snapshots(sink).filter(
     (snapshot) => snapshot.reason === "periodic",
   );
   assert.equal(periodic.revision, 25);
   assert.equal(periodic.artifact.revision, 25);
-  assert.equal(periodic.artifact.text, batch[24].newDoc.toString());
-  assert.notEqual(periodic.artifact.text, batch[29].newDoc.toString());
+  assert.equal(periodic.artifact.files[fixture.path].text, batch[24].newDoc.toString());
+  assert.notEqual(periodic.artifact.files[fixture.path].text, batch[29].newDoc.toString());
 });
 
 test("an oversize edit inside a batch is snapshotted at its own revision", async () => {
   const sink = new MemorySink();
   const workspace = session(sink);
   const batch = transactions(["a", "x".repeat(20000), "b", "c"]);
-  for (const transaction of batch) workspace.recordEdit(transaction);
+  for (const transaction of batch) workspace.recordEdit(fixture.path, transaction);
   await workspace.recorder.flush();
   const [oversize] = snapshots(sink).filter(
     (snapshot) => snapshot.reason === "oversize-edit",
   );
   assert.equal(oversize.revision, 2);
-  assert.equal(oversize.artifact.text, batch[1].newDoc.toString());
+  assert.equal(oversize.artifact.files[fixture.path].text, batch[1].newDoc.toString());
   const edit = [...sink.records.values()]
     .map((record) => JSON.parse(record.payload))
     .find(

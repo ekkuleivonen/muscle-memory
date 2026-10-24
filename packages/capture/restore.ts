@@ -1,5 +1,6 @@
 /**
- * Recovers the latest code this participant saved on this device for one Challenge. Each
+ * Recovers every editable file this participant saved on this device for one issue, whichever
+ * revision it was written against. Each
  * source stream (one page load) is replayed on its own: start from a complete code artifact
  * (the opening document or a snapshot), then apply saved edit change sets in strict source
  * order. Replay stops at the first missing position, explicit gap, truncated or invalid
@@ -14,7 +15,8 @@ import type {
 } from "../domain/workspace";
 
 export interface RecoveredCode {
-  readonly text: string;
+  /** Every editable file, by path. */
+  readonly files: Readonly<Record<string, string>>;
   readonly revision: number;
   readonly sourceId: string;
   /** False when later saved activity in that stream could not be applied safely. */
@@ -27,14 +29,14 @@ export interface RecoveredCode {
 }
 
 interface Replayed {
-  readonly doc: Text;
+  readonly docs: ReadonlyMap<string, Text>;
   readonly revision: number;
 }
 
 interface StreamResult {
   readonly sourceId: string;
   readonly lastOccurredAt: string;
-  readonly best?: { text: string; revision: number };
+  readonly best?: { files: Record<string, string>; revision: number };
   readonly latestRevision: number;
   readonly reason?: string;
 }
@@ -42,7 +44,7 @@ interface StreamResult {
 export function latestSavedCode(
   records: readonly WorkspaceRecord[],
   participantId: string,
-  challengeArtifactId: string,
+  issue: string,
 ): RecoveredCode | null {
   const artifacts = new Map<string, CodeRevisionArtifact>();
   const streams = new Map<string, WorkspaceObservation[]>();
@@ -53,7 +55,7 @@ export function latestSavedCode(
       artifacts.set(value.artifactId, value);
     else if (
       value.observationId &&
-      value.challengeArtifactId === challengeArtifactId
+      value.issue === issue
     ) {
       const stream = streams.get(value.source.id) ?? [];
       stream.push(value);
@@ -68,7 +70,7 @@ export function latestSavedCode(
   for (const [index, result] of results.entries()) {
     if (!result.best) continue;
     return {
-      text: result.best.text,
+      files: result.best.files,
       revision: result.best.revision,
       sourceId: result.sourceId,
       complete: result.reason === undefined && index === 0,
@@ -91,7 +93,7 @@ function replay(
 ): StreamResult {
   observations.sort((a, b) => a.source.sequence - b.source.sequence);
   let current: Replayed | null = null;
-  let best: { text: string; revision: number } | undefined;
+  let best: { files: Record<string, string>; revision: number } | undefined;
   let reason: string | undefined;
   let latestRevision = 0;
   let previous = 0;
@@ -118,7 +120,7 @@ function replay(
         const usable =
           artifact &&
           artifact.participantId === participantId &&
-          !artifact.capture.truncated &&
+          !artifact.truncated &&
           artifact.revision === data.revision;
         if (!usable) {
           // A snapshot that cannot be used does not break an exact replay in progress.
@@ -127,7 +129,12 @@ function replay(
           break;
         }
         // A complete snapshot is exact: a new safe starting point after any earlier loss.
-        current = { doc: toText(artifact.text), revision: artifact.revision };
+        current = {
+          docs: new Map(
+            Object.entries(artifact.files).map(([path, f]) => [path, toText(f.text)]),
+          ),
+          revision: artifact.revision,
+        };
         reason = undefined;
         break;
       }
@@ -143,7 +150,12 @@ function replay(
         break;
     }
     if (current)
-      best = { text: current.doc.toString(), revision: current.revision };
+      best = {
+        files: Object.fromEntries(
+          [...current.docs].map(([path, doc]) => [path, doc.toString()]),
+        ),
+        revision: current.revision,
+      };
   }
   // Complete only if replay is still exact after the last stored record of the stream.
   return {
@@ -161,14 +173,17 @@ function apply(
   current: Replayed,
   data: Record<string, unknown>,
 ): Replayed | null {
-  if (data.revision !== current.revision + 1 || data.changes === null)
+  const before = current.docs.get(String(data.file));
+  if (!before || data.revision !== current.revision + 1 || data.changes === null)
     return null;
   try {
     const changes = ChangeSet.fromJSON(data.changes);
-    if (changes.length !== current.doc.length) return null;
-    const doc = changes.apply(current.doc);
+    if (changes.length !== before.length) return null;
+    const doc = changes.apply(before);
     if (doc.length !== data.docLength) return null;
-    return { doc, revision: current.revision + 1 };
+    const docs = new Map(current.docs);
+    docs.set(String(data.file), doc);
+    return { docs, revision: current.revision + 1 };
   } catch {
     return null;
   }

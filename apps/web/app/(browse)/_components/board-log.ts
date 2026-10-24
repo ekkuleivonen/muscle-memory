@@ -24,7 +24,7 @@ let store: Promise<PracticeStore> | null = null;
 const pending: WorkspaceRecord[] = [];
 
 export async function logBoardMove(
-  challenge: { id: string; version: string },
+  issue: { id: string; revision: string },
   data: BoardMoveData,
 ): Promise<void> {
   const accepted = readProfile()?.accepted;
@@ -44,7 +44,7 @@ export async function logBoardMove(
           sequence: position,
           occurredAt,
           termsVersion: accepted.version,
-          challenge,
+          issue,
           data,
         }),
       ),

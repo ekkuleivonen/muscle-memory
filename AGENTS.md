@@ -1,11 +1,12 @@
 # Agents
 
-Muscle Memory is practice that feels like a developer job before AI, and it records granular, raw practice data. Start with the README, then `docs/` (`workspace.md` for the IDE and runners). App-specific notes: `apps/web/AGENTS.md`.
+Muscle Memory is practice that feels like a developer job before AI, and it records granular, raw practice data. Start with the README, then `docs/` (`issue-model.md` for issues and content, `workspace.md` for the IDE and runners). App-specific notes: `apps/web/AGENTS.md`.
 
 ## Rules that are easy to break
 
-- **No AI in the product.** No completion from models, chat, suggestions or code generation, ever. Classic tooling (syntax highlighting, type errors, hover types) is fine and must be listed in `editorFeatures` so recorded data says what help was on. Autocomplete is undecided: ask first.
-- **Published content is immutable.** Add a new version instead of editing one (see CONTRIBUTING). Demo content is generated: edit `tools/build-demo-catalog.ts`, run `npm run build:demo-catalog`.
+- **No AI at runtime.** Nothing a model generates while someone plays reaches them: no completion, chat, suggestions, code generation or live review, and no player data goes to a model. Classic tooling (syntax highlighting, type errors, hover types) is fine and must be listed in `editorFeatures` so recorded data says what help was on. Autocomplete is undecided: ask first. AI may draft issues, teammate comments and hints offline; a person reviews them before publishing, and they fire at runtime only through deterministic triggers.
+- **CI is deterministic.** Checks are rule-driven (cases, static rules) and decide merging.
+- **Revisions are immutable.** An issue's revision is stored under the hash of its content and never edited; changing it adds a revision (see CONTRIBUTING and `docs/issue-model.md`). Content is seed data: edit `content/seed.ts`, run `npm run build:content`, and never edit `content/catalog.json` by hand.
 - **Recorded data keeps its meaning.** If what an observation records changes, bump the capture version in `packages/domain` and say what changed in its comment.
 - **Code runs only in the browser sandbox** (`packages/runner`): an opaque-origin iframe with a CSP that denies every connection, plus a worker. Never relax the CSP, run user code in the page, or fetch runtime files from anywhere but this origin. The one documented exception: the Java engine's frame allows `eval`, which TeaVM's loader needs (`allowEval`, see `docs/workspace.md`).
 

@@ -75,8 +75,12 @@ function convert(value) {
   return { repr, output: bounded(text) };
 }
 
-/** Rewrites runtime URLs in a stack so it points at the solution file. */
+/**
+ * Rewrites runtime URLs in a stack so it points at the source files: each entry of urls is
+ * a URL standing for filename, or a [url, path] pair for a program of several files.
+ */
 function codeError(error, filename, urls = []) {
+  const pairs = urls.map((u) => (Array.isArray(u) ? u : [u, filename]));
   const type = (error && error.name) || "Error";
   let message;
   try {
@@ -85,10 +89,10 @@ function codeError(error, filename, urls = []) {
     message = "<unprintable error>";
   }
   let stack = typeof (error && error.stack) === "string" ? error.stack : "";
-  const lines = stack.split("\n").filter((line) => urls.some((url) => line.includes(url)));
+  const lines = stack.split("\n").filter((line) => pairs.some(([url]) => line.includes(url)));
   let trace = lines.map((line) => {
     let out = line;
-    for (const url of urls) out = out.split(url).join(filename);
+    for (const [url, path] of pairs) out = out.split(url).join(path);
     return "  " + out.trim();
   });
   const text = type + ": " + message + "\n" + trace.join("\n");

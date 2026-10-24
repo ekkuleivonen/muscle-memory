@@ -1,7 +1,12 @@
 "use client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import type { Challenge, Json } from "../../../../../packages/domain/assessment";
+import {
+  editableFiles,
+  type Case,
+  type Revision,
+} from "../../../../../packages/content/model";
+import type { Json } from "../../../../../packages/domain/json";
 import { runFeedback } from "../../../../../packages/domain/workspace";
 import { timeAgo } from "../../../lib/activity";
 import type { IssueSummary } from "../../../lib/library";
@@ -15,7 +20,6 @@ import {
   type PullSummary,
   type TimelineEntry,
 } from "../../../lib/pulls";
-import type { LanguageId } from "../../../lib/languages";
 import type { BoardMoveVia } from "../../../../../packages/domain/board";
 import { LanguageTag } from "./bits";
 import { useBoard } from "./board";
@@ -25,26 +29,14 @@ export interface PullIssue {
   key: string;
   slug: string;
   title: string;
-  /** The latest published version; the list does not need it. */
-  version?: string;
+  /** The live revision; the list does not need it. */
+  revision?: string;
 }
 
-/** The IDE on the version the pull request was opened against, to keep working on it. */
-function workHref(issue: PullIssue, version: string) {
-  return !issue.version || issue.version === version
-    ? `/work/${issue.key}`
-    : `/work/${issue.key}?version=${version}`;
-}
+/** The IDE on the issue's live revision; pushes still go to the open pull request. */
+const workHref = (issue: PullIssue) => `/work/${issue.key}`;
 
-/** One published version of the issue, as the pull request saw it. */
-export interface PullVersion {
-  version: string;
-  /** A JSON string: React's serializer would drop a "__proto__" fixture key from an object. */
-  challengeJson: string;
-  starter: string;
-  path: string;
-  language?: LanguageId;
-}
+const shortRevision = (id: string) => id.replace(/^sha256:/, "").slice(0, 8);
 
 type State = PullSummary["state"];
 const STATE_LABELS: Record<State, string> = {
@@ -114,10 +106,9 @@ export function PullList({
   const bySlug = useMemo(() => new Map(issues.map((i) => [i.slug, i])), [issues]);
   const pulls = useMemo(
     () =>
-      (records ? allPullRequests(records) : []).map((pull) => ({
-        ...pull,
-        issue: bySlug.get(pull.challengeId),
-      })),
+      (records ? allPullRequests(records) : []).map(
+        ({ issue: id, ...pull }) => ({ ...pull, id, issue: bySlug.get(id) }),
+      ),
     [records, bySlug],
   );
   if (!records || !now) return null;
@@ -162,13 +153,13 @@ export function PullList({
       ) : (
         <ul className="rows">
           {shown.map((pull) => {
-            const key = pull.issue?.key ?? pull.challengeId;
+            const key = pull.issue?.key ?? pull.id;
             return (
-              <li key={`${pull.challengeId}#${pull.number}`}>
+              <li key={`${pull.id}#${pull.number}`}>
                 <Link className="row pull-row" href={pullHref(key, pull.number)} data-row>
                   <PullIcon state={pull.state} />
                   <span className="title">
-                    {pull.issue?.title ?? pull.challengeId}{" "}
+                    {pull.issue?.title ?? pull.id}{" "}
                     <span className="faint">#{pull.number}</span>
                   </span>
                   <span className="meta dim">
@@ -205,29 +196,27 @@ function dateTime(at: string) {
 export function PullView({
   issue,
   number,
-  versions,
+  revisionsJson,
 }: {
   issue: PullIssue;
   number: number;
-  versions: PullVersion[];
+  /** Every published revision of the issue by id, as JSON: fixtures may hold a "__proto__" key. */
+  revisionsJson: string;
 }) {
   const records = useRecords();
   const board = useBoard();
   const [tab, setTab] = useState<"timeline" | "checks" | "files">("timeline");
   /** Set when merged on this page, before the stored records are read again. */
   const [mergedNow, setMergedNow] = useState<string | null>(null);
-  const challenges = useMemo(
-    () =>
-      new Map(
-        versions.map((v) => [v.version, JSON.parse(v.challengeJson) as Challenge]),
-      ),
-    [versions],
+  const revisions = useMemo(
+    () => JSON.parse(revisionsJson) as Record<string, Revision>,
+    [revisionsJson],
   );
   const detail = useMemo(
     () =>
       records &&
-      pullRequestDetail(records, issue.slug, number, (v) => challenges.get(v)),
-    [records, issue.slug, number, challenges],
+      pullRequestDetail(records, issue.slug, number, (id) => revisions[id]),
+    [records, issue.slug, number, revisions],
   );
   if (!records) return null;
   if (!detail)
@@ -240,15 +229,27 @@ export function PullView({
   const pull: PullSummary = mergedNow
     ? { ...detail.pull, state: "merged", mergedAt: mergedNow }
     : detail.pull;
-  const version = versions.find((v) => v.version === pull.version);
-  const challenge = challenges.get(pull.version);
-  const diff =
-    version && detail.code ? diffLines(version.starter, detail.code.text) : [];
-  const stats = diffStats(diff);
+  const revision = revisions[pull.issueRevision];
+  // Each editable file against the revision's starting version of it.
+  const changes: FileChange[] =
+    revision && detail.code
+      ? Object.entries(editableFiles(revision.workspace)).map(([path, start]) => {
+          const pushed = detail.code![path];
+          const diff = diffLines(start.text, pushed?.text ?? "");
+          return { path, diff, stats: diffStats(diff), truncated: !!pushed?.truncated };
+        })
+      : [];
+  const stats = changes.reduce(
+    (sum, c) => ({
+      added: sum.added + c.stats.added,
+      removed: sum.removed + c.stats.removed,
+    }),
+    { added: 0, removed: 0 },
+  );
   const label = STATE_LABELS[pull.state];
   const merge = (via: BoardMoveVia) => {
     board.complete(
-      { key: issue.key, slug: issue.slug, version: pull.version },
+      { key: issue.key, slug: issue.slug, revision: issue.revision ?? pull.issueRevision },
       { number: pull.number, runId: pull.runId },
       via,
     );
@@ -310,10 +311,10 @@ export function PullView({
           />
         )}
         {tab === "checks" && (
-          <Checks outcome={detail.outcome} challenge={challenge} />
+          <Checks outcome={detail.outcome} cases={revision?.checks.cases} />
         )}
         {tab === "files" && (
-          <Files detail={detail} version={version} diff={diff} stats={stats} />
+          <Files saved={!!detail.code} changes={changes} />
         )}
         <MergeBox pull={pull} issue={issue} onMerge={merge} />
       </article>
@@ -327,7 +328,7 @@ export function PullView({
           </dd>
           <dt>Language</dt>
           <dd>
-            <LanguageTag language={version?.language} />
+            <LanguageTag language={revision?.workspace.language} />
           </dd>
           <dt>Checks</dt>
           <dd>{checksText(pull)}</dd>
@@ -339,13 +340,20 @@ export function PullView({
           <dd>{detail.stats.runs}</dd>
           <dt>Edits</dt>
           <dd>{detail.stats.edits}</dd>
-          <dt>Version</dt>
-          <dd className="mono">{pull.version}</dd>
+          <dt>Revision</dt>
+          <dd>
+            <span className="mono" title={pull.issueRevision}>
+              {shortRevision(pull.issueRevision)}
+            </span>
+            {issue.revision && issue.revision !== pull.issueRevision && (
+              <span className="dim">(issue updated since)</span>
+            )}
+          </dd>
         </dl>
         {pull.state !== "merged" && !pull.otherMerged && (
           <Link
             className="pull-continue"
-            href={workHref(issue, pull.version)}
+            href={workHref(issue)}
             title={`Back to the IDE to keep working; push to #${number} from there (⌘⇧⏎)`}
           >
             Continue in the IDE →
@@ -518,13 +526,13 @@ const show = (value: unknown) => JSON.stringify(value);
 
 function Checks({
   outcome: raw,
-  challenge,
+  cases,
 }: {
   outcome: Json | null;
-  challenge?: Challenge;
+  cases?: readonly Case[];
 }) {
   const outcome = raw as unknown as Outcome | null;
-  if (!outcome || !challenge)
+  if (!outcome || !cases)
     return <p className="dim">This pull request&apos;s check run wasn&apos;t recorded.</p>;
   if (outcome.status === "timeout")
     return (
@@ -539,7 +547,7 @@ function Checks({
     return <p className="dim">The checks were cancelled.</p>;
   const verdicts =
     outcome.phase === "tests" && outcome.cases
-      ? runFeedback(challenge, outcome.cases).passed
+      ? runFeedback(cases, outcome.cases).passed
       : null;
   return (
     <div className="pull-checks">
@@ -555,7 +563,7 @@ function Checks({
       )}
       {verdicts && (
         <ol>
-          {challenge.inputs.map((input, index) => {
+          {cases.map(({ input, expected }, index) => {
             const got = outcome.cases?.[index];
             const ok = verdicts[index];
             return (
@@ -565,7 +573,7 @@ function Checks({
                 </span>
                 <div>
                   <code>{show(input)}</code> <span className="dim">→</span>{" "}
-                  <code>{show(challenge.expected[index])}</code>
+                  <code>{show(expected)}</code>
                   {!ok && (
                     <div className="got">
                       {got?.error ? (
@@ -603,47 +611,56 @@ function Checks({
   );
 }
 
-function Files({
-  detail,
-  version,
-  diff,
-  stats,
-}: {
-  detail: PullDetail;
-  version?: PullVersion;
+interface FileChange {
+  path: string;
   diff: ReturnType<typeof diffLines>;
   stats: { added: number; removed: number };
-}) {
-  if (!detail.code || !version)
+  truncated: boolean;
+}
+
+/** Every editable file's diff from the starting code; unchanged files fold to one line. */
+function Files({ saved, changes }: { saved: boolean; changes: FileChange[] }) {
+  if (!saved || !changes.length)
     return (
       <p className="dim">The submitted code wasn&apos;t saved in this browser.</p>
     );
-  const parts = hunks(diff);
+  const changed = changes.filter((c) => c.stats.added || c.stats.removed);
+  const same = changes.filter((c) => !c.stats.added && !c.stats.removed);
   return (
     <div className="pull-files">
-      <div className="diff">
-        <div className="diff-head">
-          <span className="mono">{version.path}</span>
-          <span>
-            <span className="add">+{stats.added}</span>{" "}
-            <span className="del">−{stats.removed}</span>
-          </span>
-        </div>
-        {parts.length === 0 ? (
-          <p className="dim diff-empty">No changes from the starter code.</p>
-        ) : (
+      {changed.map(({ path, diff, stats, truncated }) => (
+        <div className="diff" key={path}>
+          <div className="diff-head">
+            <span className="mono">{path}</span>
+            <span>
+              <span className="add">+{stats.added}</span>{" "}
+              <span className="del">−{stats.removed}</span>
+            </span>
+          </div>
           <table>
             <tbody>
-              {parts.map((hunk, h) => (
+              {hunks(diff).map((hunk, h) => (
                 <HunkRows key={h} hunk={hunk} />
               ))}
             </tbody>
           </table>
-        )}
-      </div>
-      {detail.code.truncated && (
+          {truncated && (
+            <p className="dim diff-empty">
+              This file was longer than the capture limit; only its start was saved.
+            </p>
+          )}
+        </div>
+      ))}
+      {same.length > 0 && (
         <p className="dim">
-          The code was longer than the capture limit; only its start was saved.
+          {changed.length ? "Unchanged: " : "No changes from the starter code in "}
+          {same.map((c, i) => (
+            <span key={c.path}>
+              {i > 0 && ", "}
+              <span className="mono">{c.path}</span>
+            </span>
+          ))}
+          .
         </p>
       )}
     </div>
@@ -728,7 +745,7 @@ function MergeBox({
           <>
             <b>Merging is blocked: {checksText(pull)}.</b> Every check has to
             pass. The pull request stays open: keep working in the{" "}
-            <Link href={workHref(issue, pull.version)}>IDE</Link> and push to it (
+            <Link href={workHref(issue)}>IDE</Link> and push to it (
             <kbd>⌘⇧⏎</kbd>), and CI runs again.
           </>
         )}

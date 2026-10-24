@@ -3,7 +3,7 @@ import "./style.css";
 export const metadata: Metadata = {
   title: "Muscle Memory — keep your craft",
   description:
-    "Friendly coding Adventures to practice the craft of writing code.",
+    "A developer job from before AI: tickets, tests and pull requests, and nobody writing the code for you.",
 };
 export default function RootLayout({
   children,

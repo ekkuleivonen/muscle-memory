@@ -280,11 +280,11 @@ function Feed({
         const issue =
           entry.kind === "moved"
             ? byKey.get(entry.key)
-            : bySlug.get(entry.challengeId);
+            : bySlug.get(entry.issueId);
         const ref = issue ? (
           <Link href={issueHref(issue)}>{issue.key}</Link>
         ) : (
-          <span>{entry.kind === "moved" ? entry.key : entry.challengeId}</span>
+          <span>{entry.kind === "moved" ? entry.key : entry.issueId}</span>
         );
         return (
           <li key={index}>

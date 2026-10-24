@@ -13,18 +13,16 @@ import {
   openPracticeStore,
   type PracticeStore,
 } from "../../../../packages/browser/practice-store";
-import { findEntry } from "../../../../packages/catalog/gates";
 import {
   latestSavedCode,
   type RecoveredCode,
 } from "../../../../packages/capture/restore";
-import type {
-  Challenge,
-  Difficulty,
-  IssueComment,
-  IssueKind,
-} from "../../../../packages/domain/assessment";
-import { contentArtifactId } from "../../../../packages/domain/evidence";
+import {
+  executableOf,
+  type Difficulty,
+  type IssueKind,
+  type Revision,
+} from "../../../../packages/content/model";
 import { runFeedback } from "../../../../packages/domain/workspace";
 import {
   engineFor,
@@ -40,16 +38,15 @@ import {
 } from "../../lib/activity";
 import { statusOf } from "../../lib/board";
 import { mergedPullRequests } from "../../lib/pulls";
-import { languageLabel } from "../../lib/library";
+import { languageLabel, type IssueComment } from "../../lib/library";
 import type { LanguageId } from "../../lib/languages";
 import {
   mediaTypeOf,
-  repoFor,
+  repoOf,
   tree,
   type RepoFile,
   type TreeNode,
 } from "../../lib/repo";
-import { currentCatalog } from "../current-catalog";
 import { LanguageDot } from "../(browse)/_components/bits";
 import { StatusMenu, useBoard } from "../(browse)/_components/board";
 import { Markdown } from "../(browse)/_components/markdown";
@@ -69,7 +66,8 @@ import {
 export interface IdeIssue {
   key: string;
   slug: string;
-  version: string;
+  /** The live revision the IDE opens: sha256:… of its content. */
+  revision: string;
   title: string;
   task: string;
   kind?: IssueKind;
@@ -93,52 +91,46 @@ type Opening =
   | { state: "failed"; message: string };
 
 /**
- * One issue as a small repo in a VS Code-like IDE. The solution file is the only editable
- * one; its edits and runs are recorded on this device under the accepted Terms, exactly as
- * the workspace always has.
+ * One issue as a small repo in a VS Code-like IDE. The issue decides which files are editable;
+ * their edits and runs are recorded on this device under the accepted Terms. Everything else
+ * opens read-only.
  */
 export function Ide({
-  challengeJson,
+  revisionJson,
   issue,
-  project,
+  root,
 }: {
-  challengeJson: string;
+  /** The live revision as a JSON string: React's serializer would drop a "__proto__" fixture key. */
+  revisionJson: string;
   issue: IdeIssue;
-  project?: { slug: string; title: string; story: string };
+  /** The repo's folder: the project's key, as in project:shop. */
+  root: string;
 }) {
-  // JSON.parse keeps a "__proto__" fixture key as ordinary data.
-  const challenge = useMemo(
-    () => JSON.parse(challengeJson) as Executable,
-    [challengeJson],
+  const revision = useMemo(
+    () => JSON.parse(revisionJson) as Revision,
+    [revisionJson],
   );
+  const challenge = useMemo(() => executableOf(revision), [revision]);
   const repo = useMemo(
-    () =>
-      repoFor({
-        key: issue.key,
-        slug: issue.slug,
-        language: issue.language,
-        entrypoint: challenge.entrypoint,
-        starter: challenge.starter,
-        task: challenge.task,
-        parameters: challenge.parameters,
-        schema: challenge.schema,
-        adapter: challenge.adapter,
-        criteria: challenge.inputs.map((input, i) => ({
-          input,
-          expected: challenge.expected[i],
-        })),
-        project,
-      }),
-    [challenge, issue, project],
+    () => repoOf(revision.workspace, issue, root),
+    [revision, issue, root],
   );
   const testsFile = repo.files.find((f) => f.role === "tests")!;
+  const editable = useMemo(
+    () => repo.files.filter((f) => f.role === "edit"),
+    [repo],
+  );
+  /** Where the IDE opens: the entry file when it is editable, else the first editable one. */
+  const home =
+    editable.find((f) => f.path === challenge.entry)?.path ?? editable[0].path;
 
   const [view, setView] = useState<"explorer" | "ticket">("ticket");
   const [tabs, setTabs] = useState<string[]>([
-    repo.solution.path,
+    home,
+    ...editable.map((f) => f.path).filter((path) => path !== home),
     testsFile.path,
   ]);
-  const [active, setActive] = useState(repo.solution.path);
+  const [active, setActive] = useState(home);
   const [panel, setPanel] = useState<"tests" | "output" | "pulls">("tests");
   /** This person's pull requests for the issue, newest first, across sessions. */
   const [pulls, setPulls] = useState<PullRequestRecord[]>([]);
@@ -154,7 +146,8 @@ export function Ide({
   const [capture, setCapture] = useState<SaveStatus | null>(null);
   const [keymap, setKeymap] = useState<Keymap>("standard");
   const [vimMode, setVimMode] = useState("normal");
-  const [edited, setEdited] = useState(false);
+  /** Editable files changed in this session. */
+  const [edited, setEdited] = useState<ReadonlySet<string>>(new Set());
   /** The boot screen can be dismissed while only the runtime is still loading. */
   const [booted, setBooted] = useState(false);
 
@@ -209,17 +202,9 @@ export function Ide({
     );
   }
 
-  /** Opens the session on the solution file, restoring the latest saved code. */
+  /** Opens the session on the editable files, restoring the latest saved code. */
   async function open(current: () => boolean) {
     try {
-      const catalog = await currentCatalog();
-      const ref = {
-        kind: "challenge",
-        id: challenge.id,
-        version: challenge.version,
-      } as const;
-      if (findEntry(catalog, ref)?.state !== "published")
-        throw new Error("This issue is not available right now.");
       const account = readProfile();
       const keys: Keymap =
         account?.profile.editor === "vim" ? "vim" : "standard";
@@ -230,28 +215,40 @@ export function Ide({
       const recovered: RecoveredCode | null = latestSavedCode(
         records,
         participantId,
-        contentArtifactId("challenge", challenge.id, challenge.version),
+        issue.slug,
       );
-      const history = pullRequestHistory(records, participantId, challenge.id);
-      const mergedNumbers = mergedPullRequests(records, challenge.id);
-      const host = hosts.current.get(repo.solution.path);
+      const history = pullRequestHistory(records, participantId, issue.slug);
+      const mergedNumbers = mergedPullRequests(records, issue.slug);
+      const homeHost = hosts.current.get(home);
       // A superseded open must not create a session or record anything.
-      if (!host || !current()) return;
+      if (!homeHost || !current()) return;
       if (recovered) setMessage(recoveryMessage(recovered));
       setPulls(history);
       setMerged(mergedNumbers);
       session.current = new WorkspaceSession({
         participantId,
         consentVersion: `terms-${account?.accepted?.version ?? "unknown"}`,
-        challenge,
+        issue: issue.slug,
+        issueRevision: issue.revision,
+        executable: challenge,
         sink: store.current,
-        initialCode: recovered?.text ?? challenge.starter,
+        files: Object.fromEntries(
+          editable.map((f) => [
+            f.path,
+            {
+              text: recovered?.files[f.path] ?? f.text,
+              language: f.language,
+              mediaType: mediaTypeOf(f.language as LanguageId),
+            },
+          ]),
+        ),
+        sources: Object.fromEntries(
+          repo.files.filter((f) => f.role === "read").map((f) => [f.path, f.text]),
+        ),
         restoredFrom: recovered?.revision,
         language: issue.language,
         keymap: keys,
         types: types.current ?? undefined,
-        mediaType: mediaTypeOf(issue.language),
-        filename: repo.solution.path,
         runtime: issue.runnable && engine ? engine.runtime : null,
         pullRequestsBefore: history[0]?.number ?? 0,
         openPullRequest: () => {
@@ -274,7 +271,7 @@ export function Ide({
               revision: pr.revision,
               result: pr.result ?? "running",
               passed: pr.passed ?? 0,
-              total: pr.total ?? challenge.inputs.length,
+              total: pr.total ?? challenge.cases.length,
               at: pr.at,
             },
             ...current.filter((p) => p.number !== pr.number),
@@ -286,7 +283,11 @@ export function Ide({
         onSaveStatus: setCapture,
         onVimMode: setVimMode,
       });
-      session.current.mount(host);
+      // The home file mounts last, so it has the focus.
+      for (const file of editable)
+        if (file.path !== home)
+          session.current.mount(file.path, hosts.current.get(file.path)!);
+      session.current.mount(home, homeHost);
       setOpening({ state: "open" });
     } catch (cause) {
       if (current())
@@ -302,12 +303,17 @@ export function Ide({
     const attempt = ++generation.current;
     startRuntime();
     if (checksTypes(issue.language))
-      types.current = new TypeChecker(repo.solution.path);
+      types.current = new TypeChecker(challenge.entry);
     void open(() => attempt === generation.current);
     const timer = setInterval(() => {
       // Counts refresh each second; state changes arrive at once through onSaveStatus.
       setCapture(session.current?.saveStatus() ?? null);
-      setEdited((session.current?.currentRevision ?? 0) > 0);
+      const changed = session.current?.editedFiles() ?? [];
+      setEdited((before) =>
+        before.size === changed.length && changed.every((p) => before.has(p))
+          ? before
+          : new Set(changed),
+      );
     }, 1000);
     return () => {
       generation.current++;
@@ -328,7 +334,7 @@ export function Ide({
   // Read-only files get a viewer the first time they are shown.
   useEffect(() => {
     const file = repo.files.find((f) => f.path === active);
-    if (!file || file.role === "solution" || viewers.current.has(file.path))
+    if (!file || file.role === "edit" || viewers.current.has(file.path))
       return;
     const host = hosts.current.get(file.path);
     if (host)
@@ -349,11 +355,10 @@ export function Ide({
   }
 
   function closeTab(path: string) {
-    if (path === repo.solution.path) return;
+    if (editable.some((f) => f.path === path)) return;
     setTabs((current) => {
       const next = current.filter((p) => p !== path);
-      if (active === path)
-        setActive(next[next.length - 1] ?? repo.solution.path);
+      if (active === path) setActive(next[next.length - 1] ?? home);
       return next;
     });
   }
@@ -389,7 +394,7 @@ export function Ide({
         </span>
         <span className="ide-actions">
           <StatusMenu
-            issue={{ key: issue.key, slug: issue.slug, version: issue.version }}
+            issue={{ key: issue.key, slug: issue.slug, revision: issue.revision }}
           />
           {issue.runnable ? (
             running ? (
@@ -472,7 +477,7 @@ export function Ide({
         ) : (
           <Ticket
             issue={issue}
-            cases={challenge.inputs.length}
+            cases={challenge.cases.length}
             testsPath={testsFile.path}
             onOpenTests={() => openFile(testsFile.path)}
           />
@@ -512,8 +517,8 @@ export function Ide({
               >
                 <LanguageDot language={file.language} />
                 {path.split("/").pop()}
-                {file.role === "solution" ? (
-                  edited && <span className="ide-dot" title="Modified" />
+                {file.role === "edit" ? (
+                  edited.has(path) && <span className="ide-dot" title="Modified" />
                 ) : (
                   <button
                     type="button"
@@ -533,7 +538,7 @@ export function Ide({
         </div>
         <div className="ide-crumbs faint">
           {repo.root} › {active.split("/").join(" › ")}
-          {active !== repo.solution.path && (
+          {!editable.some((f) => f.path === active) && (
             <span className="ide-ro">read-only</span>
           )}
         </div>
@@ -724,7 +729,7 @@ function Explorer({
   root: string;
   files: RepoFile[];
   active: string;
-  edited: boolean;
+  edited: ReadonlySet<string>;
   onOpen(path: string): void;
 }) {
   const byPath = new Map(files.map((f) => [f.path, f]));
@@ -748,7 +753,7 @@ function Explorer({
           >
             <LanguageDot language={byPath.get(node.path)!.language} />
             {node.name}
-            {byPath.get(node.path)!.role === "solution" && edited && (
+            {edited.has(node.path) && (
               <span className="ide-git" title="Modified">
                 M
               </span>
@@ -826,7 +831,7 @@ function Tests({
       <p className="faint">
         Running {languageLabel(issue.language)} in the browser isn&apos;t
         available yet. Your edits are saved as you go; the{" "}
-        {challenge.inputs.length} cases are in {testsPath}.
+        {challenge.cases.length} cases are in {testsPath}.
       </p>
     );
   if (runtime.state === "unavailable")
@@ -842,7 +847,7 @@ function Tests({
     return (
       <p className="faint">
         Run the tests (<kbd>⌘⏎</kbd>) to check your code against{" "}
-        {challenge.inputs.length} cases.
+        {challenge.cases.length} cases.
       </p>
     );
   const o = run.outcome;
@@ -867,7 +872,7 @@ function Tests({
         {o.error.traceback.text || `${o.error.type}: ${o.error.message}`}
       </pre>
     );
-  const feedback = runFeedback(challenge, o.cases);
+  const feedback = runFeedback(challenge.cases, o.cases);
   const failed = feedback.total - feedback.correct;
   return (
     <div>
@@ -888,12 +893,12 @@ function Tests({
         )}
       </p>
       <ol className="ide-cases">
-        {challenge.inputs.map((input, index) => (
+        {challenge.cases.map(({ input, expected }, index) => (
           <Case
             key={index}
             index={index}
             label={caseLabel(challenge, input)}
-            expected={challenge.expected[index]}
+            expected={expected}
             passed={feedback.passed[index]}
             result={o.cases[index]}
           />

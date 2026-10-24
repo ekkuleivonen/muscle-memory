@@ -1,50 +1,54 @@
 /**
- * Synthetic demo catalog for designing the issue tracker against realistic work: four projects,
- * one per engineering area (frontend, backend, data, systems), with the kind of issues people
- * meet in a normal job. Never shipped as real content: the web app merges it only in builds
- * made with DEMO_CATALOG=1. Authored through the same lifecycle as the reference catalog, so it
- * obeys the same validation.
+ * Seed content: the projects and issues the app starts with, written the way the admin system
+ * will store them later. Five projects, one per engineering area plus a warm-up, with the kind
+ * of issues people meet in a normal job. tools/build-content.ts turns this into the catalog
+ * (content/catalog.json): it generates each issue's repo and hashes each revision.
  */
-import { readFile, mkdir, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
-import {
-  emptyCatalog,
-  saveDraft,
-  preview,
-  markTested,
-  publish,
-  verifyCatalog,
-  type ContentRef,
-} from "../packages/catalog/catalog";
+export type Comment = { author: string; role: string; body: string };
 
-type Comment = { author: string; role?: string; body: string };
+export interface SeedIssue {
+  id: string;
+  title: string;
+  summary: string;
+  difficulty: "warm-up" | "easy" | "medium" | "hard";
+  kind: "feature" | "bug" | "performance" | "refactor";
+  language: string;
+  skills: string[];
+  task: string;
+  inputs: unknown[];
+  expected: unknown[];
+  hints: string[];
+  comments: Comment[];
+  entrypoint: string;
+  starter: string;
+  /** Named when each input lists several arguments; otherwise it is the only one. */
+  parameters?: string[];
+  /** SQL: the tables each case's rows go into. */
+  schema?: string;
+  /** C, C++ and Java: turns a case's JSON arguments into the function's types. */
+  adapter?: string;
+}
+
+export interface SeedProject {
+  id: string;
+  key: string;
+  title: string;
+  summary: string;
+  story: string;
+  /** Issue ids in board order; an issue's number is its position here, from 1. */
+  issues: string[];
+}
 
 const challenge = (
   id: string,
-  fields: {
-    title: string;
-    summary: string;
-    difficulty: "warm-up" | "easy" | "medium" | "hard";
-    kind: "feature" | "bug" | "performance" | "refactor";
-    language: string;
-    skills: string[];
-    task: string;
-    inputs: unknown[];
-    expected: unknown[];
+  fields: Omit<SeedIssue, "id" | "hints" | "comments" | "entrypoint" | "starter"> & {
     hints?: string[];
     comments?: Comment[];
-    /** Named when each input lists several arguments; otherwise it is the only one. */
-    parameters?: string[];
-    /** SQL: the tables each case's rows go into. */
-    schema?: string;
-    /** C, C++ and Java: turns a case's JSON arguments into the function's types. */
-    adapter?: string;
   },
-) => ({
+): SeedIssue => ({
   id,
-  version: "1.0.0",
-  assessment_version: "1.0.0",
   hints: [],
+  comments: [],
   ...fields,
   ...STARTERS[id],
 });
@@ -55,6 +59,14 @@ const challenge = (
  * up to the app's runners, not the content.
  */
 const STARTERS: Record<string, { entrypoint: string; starter: string }> = {
+  "frequency-map": {
+    entrypoint: "frequency_map",
+    starter: `def frequency_map(items):
+    counts = {}
+    # Count each item.
+    return counts
+`,
+  },
   "password-policy": {
     entrypoint: "violations",
     starter: `package com.acme.accounts;
@@ -354,7 +366,25 @@ const rui = (body: string): Comment => ({
   body,
 });
 
-const challenges = [
+export const SEED_ISSUES: SeedIssue[] = [
+  // Field notes: a warm-up
+  challenge("frequency-map", {
+    title: "Frequency map",
+    summary: "Count every exact, case-sensitive label in a list.",
+    kind: "feature",
+    difficulty: "warm-up",
+    language: "python",
+    skills: ["iteration", "maps", "edge-cases"],
+    task: "Write `frequency_map(items)`: count each exact, case-sensitive string and return a dict of string to integer count. Empty input returns `{}`.",
+    inputs: [["a", "b", "a"], [], ["A", "a", "A"], ["__proto__", "__proto__", "x"]],
+    expected: [{ a: 2, b: 1 }, {}, { A: 2, a: 1 }, JSON.parse('{"__proto__":2,"x":1}')],
+    hints: ["A dict can hold one counter for each distinct string."],
+    comments: [
+      priya(
+        "Heads up: the scanner sometimes emits odd labels like __proto__. Please don't special-case anything; every label is just a string.",
+      ),
+    ],
+  }),
   // Storefront: frontend
   challenge("format-price", {
     title: "Cart shows prices as raw cents",
@@ -868,7 +898,15 @@ mm_value *mm_call(const mm_value *args) {
   }),
 ];
 
-const adventures = [
+export const SEED_PROJECTS: SeedProject[] = [
+  {
+    id: "field-notes",
+    key: "FN",
+    title: "Field notes",
+    summary: "Warm-up: help a field researcher make sense of a messy notebook.",
+    story: `A field researcher keeps specimen labels in a notebook and needs exact tallies. A good first ticket: small, in Python, with one surprise in the data.`,
+    issues: ["frequency-map"],
+  },
   {
     id: "storefront",
     key: "SHOP",
@@ -891,7 +929,7 @@ Conversion dipped after the last redesign. Support is fielding tickets about pri
 - Care what a bug looks like from the customer's side of the screen
 
 Stack: TypeScript, JavaScript, HTML.`,
-    challenges: [
+    issues: [
       "format-price",
       "discount-codes",
       "filter-form-labels",
@@ -920,7 +958,7 @@ It mostly works, and the on-call channel has opinions about the rest: list endpo
 - Know **Go**, **PHP**, **Ruby**, **Java** or **TypeScript**, or want to try one of them on familiar problems
 
 Stack: Go, PHP, Ruby, Java, TypeScript.`,
-    challenges: [
+    issues: [
       "pagination-params",
       "reset-link-expiry",
       "rate-limiter",
@@ -952,7 +990,7 @@ The exports are messier than anyone admits: quoted commas in company names, dupl
 - Know **Python**, **SQL** or **C#**, or want more practice with them
 
 Stack: Python, SQL, and C# for the billing jobs.`,
-    challenges: [
+    issues: [
       "csv-quoted-fields",
       "dedupe-customers",
       "top-customers",
@@ -982,43 +1020,6 @@ Every allocation shows up on a flame graph here. The backlog is about doing more
 - Know **C**, **C++** or **Go**, or are learning one of them
 
 Stack: C, C++, Go.`,
-    challenges: ["ring-buffer", "p99-latency", "lru-cache", "parse-duration"],
+    issues: ["ring-buffer", "p99-latency", "lru-cache", "parse-duration"],
   },
-].map(({ challenges: ids, ...adventure }) => ({
-  ...adventure,
-  version: "1.0.0",
-  presentation: "demo-text-v1",
-  challenges: ids.map((id) => [id, "1.0.0"]),
-}));
-
-const at = "2026-10-24T00:00:00.000Z"; // Synthetic, deterministic across builds.
-let catalog = emptyCatalog();
-// Issue numbers follow each project's order at first publication and never change.
-const numberOf = new Map(
-  adventures.flatMap((a) =>
-    a.challenges.map(([id], i) => [id, i + 1] as const),
-  ),
-);
-for (const [kind, content] of [
-  ...challenges.map(
-    (c) => ["challenge", { ...c, number: numberOf.get(c.id) }] as const,
-  ),
-  ...adventures.map((a) => ["adventure", a] as const),
-]) {
-  const ref: ContentRef = { kind, id: content.id, version: content.version };
-  catalog = saveDraft(catalog, kind, content, at);
-  catalog = publish(markTested(preview(catalog, ref, at), ref, at), ref, at);
-}
-verifyCatalog(catalog);
-const destination = resolve("content/demo/catalog.json");
-const text = JSON.stringify(catalog, null, 2) + "\n";
-if (process.argv.includes("--check")) {
-  if ((await readFile(destination, "utf8")) !== text)
-    throw new Error(
-      "Demo catalog is out of date. Run npm run build:demo-catalog.",
-    );
-  console.log("Demo catalog is current.");
-} else {
-  await mkdir(resolve("content/demo"), { recursive: true });
-  await writeFile(destination, text);
-}
+];

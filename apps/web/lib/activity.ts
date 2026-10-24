@@ -14,12 +14,12 @@ export type ActivityEntry =
       /** The merged pull request, for a move to Done. */
       pullRequest?: number;
     }
-  | { kind: "opened"; at: string; challengeId: string }
-  | { kind: "ran"; at: string; challengeId: string; status: string }
+  | { kind: "opened"; at: string; issueId: string }
+  | { kind: "ran"; at: string; issueId: string; status: string }
   | {
       kind: "pull-request";
       at: string;
-      challengeId: string;
+      issueId: string;
       number: number;
       result: string;
       passed: number;
@@ -30,7 +30,7 @@ interface Observation {
   type?: string;
   participantId?: string;
   occurredAt?: string;
-  challengeArtifactId?: string;
+  issue?: string;
   data?: Record<string, unknown>;
 }
 
@@ -46,11 +46,6 @@ function observations(records: readonly WorkspaceRecord[]): Observation[] {
   });
 }
 
-/** "challenge.frequency-map.2.1.0" → "frequency-map". */
-export function challengeIdOf(artifactId: string | undefined): string | null {
-  return /^challenge\.([^.]+)\./.exec(artifactId ?? "")?.[1] ?? null;
-}
-
 /** Things worth a line in a feed, newest first. Edits and snapshots only count as activity. */
 export function recentActivity(
   records: readonly WorkspaceRecord[],
@@ -59,7 +54,7 @@ export function recentActivity(
   const entries: ActivityEntry[] = [];
   for (const o of observations(records)) {
     const at = o.occurredAt!;
-    const challengeId = challengeIdOf(o.challengeArtifactId);
+    const issueId = o.issue ?? null;
     if (o.type === "observation.board.moved" && o.data)
       entries.push({
         kind: "moved",
@@ -71,17 +66,17 @@ export function recentActivity(
           ? { pullRequest: o.data.pullRequest }
           : {}),
       });
-    else if (o.type === "observation.workspace.opened" && challengeId)
-      entries.push({ kind: "opened", at, challengeId });
+    else if (o.type === "observation.workspace.opened" && issueId)
+      entries.push({ kind: "opened", at, issueId });
     else if (
       o.type === "observation.workspace.pull-request" &&
-      challengeId &&
+      issueId &&
       o.data
     )
       entries.push({
         kind: "pull-request",
         at,
-        challengeId,
+        issueId,
         number: Number(o.data.number),
         result: String(o.data.result),
         passed: Number(o.data.passed),
@@ -90,7 +85,7 @@ export function recentActivity(
     // A pull request's own checks show as the pull request, not as a run.
     else if (
       o.type === "observation.workspace.run" &&
-      challengeId &&
+      issueId &&
       o.data &&
       o.data.purpose !== "pull-request" &&
       o.data.status !== "started"
@@ -98,7 +93,7 @@ export function recentActivity(
       entries.push({
         kind: "ran",
         at,
-        challengeId,
+        issueId,
         status: String(o.data.status),
       });
   }
@@ -118,20 +113,20 @@ export interface PullRequestRecord {
 }
 
 /**
- * This person's pull requests for a Challenge (any version), newest first, each as of its
+ * This person's pull requests for an issue (any revision), newest first, each as of its
  * latest push.
  */
 export function pullRequestHistory(
   records: readonly WorkspaceRecord[],
   participantId: string,
-  challengeId: string,
+  issueId: string,
 ): PullRequestRecord[] {
   const checked = observations(records)
     .filter(
       (o) =>
         o.type === "observation.workspace.pull-request" &&
         o.participantId === participantId &&
-        challengeIdOf(o.challengeArtifactId) === challengeId &&
+        o.issue === issueId &&
         o.data,
     )
     .map((o) => ({

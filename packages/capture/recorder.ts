@@ -14,7 +14,7 @@ import {
   type WorkspaceObservation,
   type WorkspaceRecord,
 } from "../domain/workspace";
-import { safeIdentifier } from "../domain/events";
+import { safeIdentifier } from "../domain/capture";
 
 export type WriteOutcome = "written" | "duplicate" | "conflict";
 
@@ -27,7 +27,9 @@ export interface RecorderOptions {
   readonly participantId: string;
   readonly sourceId: string;
   readonly consentVersion: string;
-  readonly challengeArtifactId: string;
+  /** The issue and the revision this session works against. */
+  readonly issue: string;
+  readonly issueRevision: string;
   readonly sink: CaptureSink;
   readonly maxRecords?: number;
   readonly maxBytes?: number;
@@ -117,7 +119,8 @@ export class CaptureRecorder {
       captureVersion: WORKSPACE_CAPTURE_VERSION,
       consentVersion: this.options.consentVersion,
       researchConsent: false,
-      challengeArtifactId: this.options.challengeArtifactId,
+      issue: this.options.issue,
+      issueRevision: this.options.issueRevision,
       data,
     };
     // An artifact (one code revision) is stored once, however many observations cite it.
@@ -272,7 +275,8 @@ export class CaptureRecorder {
         captureVersion: WORKSPACE_CAPTURE_VERSION,
         consentVersion: this.options.consentVersion,
         researchConsent: false,
-        challengeArtifactId: this.options.challengeArtifactId,
+        issue: this.options.issue,
+      issueRevision: this.options.issueRevision,
         data: {
           fromSequence: range.from,
           toSequence: range.to,

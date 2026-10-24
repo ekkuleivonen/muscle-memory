@@ -13,7 +13,7 @@ const base = {
   sequence: 1,
   occurredAt: "2026-10-24T10:00:00.000Z",
   termsVersion: "2026-10-24",
-  challenge: { id: "reset-link-expiry", version: "1.0.0" },
+  issue: { id: "reset-link-expiry", revision: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
   data: {
     issueKey: "API-2",
     from: "backlog" as const,
@@ -36,7 +36,8 @@ test("a board move is a versioned, local-only observation of exactly what moved"
     status: "absent",
     reason: "local-only",
   });
-  assert.equal(move.challengeArtifactId, "challenge.reset-link-expiry.1.0.0");
+  assert.equal(move.issue, "reset-link-expiry");
+  assert.equal(move.issueRevision, base.issue.revision);
   assert.ok(move.captureGaps.includes("issue-views"));
   assert.deepEqual(move.data, base.data);
 });
@@ -45,7 +46,7 @@ test("malformed moves are refused rather than stored", () => {
   const bad = (change: object) => () => boardMove({ ...base, ...change });
   assert.throws(bad({ sequence: 0 }), /positive/);
   assert.throws(bad({ participantId: "ann@example.com" }), /opaque/);
-  assert.throws(bad({ challenge: { id: "x", version: "latest" } }), /exact/);
+  assert.throws(bad({ issue: { id: "x", revision: "latest" } }), /exact/);
   assert.throws(bad({ occurredAt: "yesterday" }), /time/);
   assert.throws(bad({ termsVersion: "" }), /Terms/);
   assert.throws(
@@ -108,6 +109,6 @@ test("only merging a pull request moves an issue to Done", () => {
   assert.throws(bad({ runId: undefined }), /Done/);
   assert.throws(bad({ pullRequest: 0 }), /Done/);
   assert.throws(bad({ from: "done", to: "todo" }), /on to Done/);
-  // Since 1.5.0 nothing is automatic, Done included.
+  // Nothing is automatic, Done included.
   assert.throws(bad({ via: "automatic" }), /Unknown way/);
 });

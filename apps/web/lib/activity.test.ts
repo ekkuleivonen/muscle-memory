@@ -4,7 +4,6 @@ import type { WorkspaceRecord } from "../../../packages/domain/workspace";
 import {
   actionsPerDay,
   activeDays,
-  challengeIdOf,
   dayOf,
   greeting,
   heatmap,
@@ -24,31 +23,31 @@ const records: WorkspaceRecord[] = [
   record({
     type: "observation.board.moved",
     occurredAt: "2026-10-24T09:00:00.000Z",
-    challengeArtifactId: "challenge.reset-link-expiry.1.0.0",
+    issue: "reset-link-expiry",
     data: { issueKey: "API-2", from: "backlog", to: "todo" },
   }),
   record({
     type: "observation.workspace.opened",
     occurredAt: "2026-10-23T09:00:00.000Z",
-    challengeArtifactId: "challenge.frequency-map.2.1.0",
+    issue: "frequency-map",
     data: {},
   }),
   record({
     type: "observation.workspace.edit",
     occurredAt: "2026-10-23T09:01:00.000Z",
-    challengeArtifactId: "challenge.frequency-map.2.1.0",
+    issue: "frequency-map",
     data: {},
   }),
   record({
     type: "observation.workspace.run",
     occurredAt: "2026-10-23T09:02:00.000Z",
-    challengeArtifactId: "challenge.frequency-map.2.1.0",
+    issue: "frequency-map",
     data: { status: "started" },
   }),
   record({
     type: "observation.workspace.run",
     occurredAt: "2026-10-23T09:03:00.000Z",
-    challengeArtifactId: "challenge.frequency-map.2.1.0",
+    issue: "frequency-map",
     data: { status: "result" },
   }),
   { recordId: "a", kind: "artifact", participantId: "p", payload: "{}" },
@@ -68,8 +67,6 @@ test("the feed lists moves, opens and finished runs, newest first", () => {
     to: "todo",
   });
   assert.equal(recentActivity(records, 1).length, 1);
-  assert.equal(challengeIdOf("challenge.frequency-map.2.1.0"), "frequency-map");
-  assert.equal(challengeIdOf("artifact.x"), null);
 });
 
 test("every observation counts towards its local day", () => {
@@ -121,7 +118,7 @@ test("pull requests read back per person and Challenge, newest first", () => {
       type: "observation.workspace.pull-request",
       participantId,
       occurredAt: `2026-10-24T10:0${number}:00.000Z`,
-      challengeArtifactId: `challenge.${id}.2.1.0`,
+      issue: id,
       data: {
         number,
         runId: `run-${number}`,
@@ -139,7 +136,7 @@ test("pull requests read back per person and Challenge, newest first", () => {
       type: "observation.workspace.pull-request",
       participantId: "p",
       occurredAt: "2026-10-24T10:05:00.000Z",
-      challengeArtifactId: "challenge.frequency-map.2.1.0",
+      issue: "frequency-map",
       data: { number: 1, push: 2, runId: "run-1b", revision: 9, result: "checks-passed", passed: 4, total: 4 },
     }),
     pr("q", "frequency-map", 9, "merged"),
@@ -162,7 +159,7 @@ test("pull requests read back per person and Challenge, newest first", () => {
     record({
       type: "observation.workspace.run",
       occurredAt: "2026-10-24T10:01:00.000Z",
-      challengeArtifactId: "challenge.frequency-map.2.1.0",
+      issue: "frequency-map",
       data: { status: "result", purpose: "pull-request" },
     }),
   ]);

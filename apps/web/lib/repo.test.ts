@@ -1,7 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import type { Catalog } from "../../../packages/catalog/catalog";
+import { SEED_ISSUES } from "../../../content/seed";
 import type { LanguageId } from "./languages";
 import {
   kebab,
@@ -14,39 +13,21 @@ import {
   type RepoSource,
 } from "./repo";
 
-const read = (path: string) =>
-  JSON.parse(
-    readFileSync(new URL(`../../../content/${path}`, import.meta.url), "utf8"),
-  ) as Catalog;
-const entries = {
-  ...read("catalog/reference.v1.json").entries,
-  ...read("demo/catalog.json").entries,
-};
-
-/** Every published Challenge with a starter, as the IDE would open it. */
+/** Every seed issue, as the content build turns it into a repo. */
 function sources(): RepoSource[] {
-  return Object.values(entries)
-    .filter((e) => e.kind === "challenge" && e.state === "published")
-    .map((e) => e.content as unknown as Record<string, unknown>)
-    .filter((c) => typeof c.starter === "string")
-    .map((c) => ({
-      key: String(c.id).toUpperCase(),
-      slug: String(c.id),
-      language: c.language as LanguageId,
-      entrypoint: String(c.entrypoint),
-      starter: String(c.starter),
-      task: String(c.task),
-      ...(Array.isArray(c.parameters)
-        ? { parameters: c.parameters as string[] }
-        : {}),
-      ...(typeof c.schema === "string" ? { schema: c.schema } : {}),
-      ...(typeof c.adapter === "string" ? { adapter: c.adapter } : {}),
-      criteria: (c.inputs as unknown[]).map((input, i) => ({
-        input,
-        expected: (c.expected as unknown[])[i],
-      })),
-      project: { slug: "proj", title: "Project", story: "About it." },
-    }));
+  return SEED_ISSUES.map((c) => ({
+    key: c.id.toUpperCase(),
+    slug: c.id,
+    language: c.language as LanguageId,
+    entrypoint: c.entrypoint,
+    starter: c.starter,
+    task: c.task,
+    ...(c.parameters ? { parameters: c.parameters } : {}),
+    ...(c.schema ? { schema: c.schema } : {}),
+    ...(c.adapter ? { adapter: c.adapter } : {}),
+    criteria: c.inputs.map((input, i) => ({ input, expected: c.expected[i] })),
+    project: { slug: "proj", title: "Project", story: "About it." },
+  }));
 }
 
 test("names convert between styles", () => {
@@ -68,7 +49,7 @@ test("python literals", () => {
   );
 });
 
-test("every issue with a starter opens as a repo: readme, solution, tests (and a schema)", () => {
+test("every seed issue opens as a repo: readme, the file to edit, tests (and a schema)", () => {
   const all = sources();
   assert.ok(all.length >= 17, `${all.length} starters`);
   for (const src of all) {
@@ -76,8 +57,8 @@ test("every issue with a starter opens as a repo: readme, solution, tests (and a
     assert.deepEqual(
       repo.files.map((f) => f.role).sort(),
       src.schema
-        ? ["readme", "schema", "solution", "tests"]
-        : ["readme", "solution", "tests"],
+        ? ["docs", "docs", "edit", "tests"]
+        : ["docs", "edit", "tests"],
       src.slug,
     );
     assert.equal(repo.solution.text, src.starter);
