@@ -15,7 +15,12 @@ import {
 } from "../../../../packages/browser/practice-store";
 import { PythonRunner, RUNTIME } from "../../../../packages/runner/runner";
 import { currentCatalog } from "../current-catalog";
-import { latestSavedCode } from "../../../../packages/capture/restore";
+import {
+  latestSavedCode,
+  type RecoveredCode,
+} from "../../../../packages/capture/restore";
+import { contentArtifactId } from "../../../../packages/domain/evidence";
+import { recoveryMessage, saveState } from "./save-state";
 import { RUN_TIMEOUT_MS, WorkspaceSession, type RunView } from "./session";
 
 type Executable = Challenge & { entrypoint: string; starter: string };
@@ -102,22 +107,23 @@ export default function Workspace() {
       let participantId = "local-session";
       let initialCode = challenge.starter;
       let restoredFrom: number | undefined;
+      let recovered: RecoveredCode | null = null;
       if (saveOnDevice) {
         store.current ??= await openPracticeStore();
         participantId = await store.current.participantId();
-        const saved = latestSavedCode(
+        recovered = latestSavedCode(
           await store.current.workspaceRecords(),
           participantId,
+          contentArtifactId("challenge", challenge.id, challenge.version),
         );
-        if (saved) {
-          initialCode = saved.text;
-          restoredFrom = saved.revision;
+        if (recovered) {
+          initialCode = recovered.text;
+          restoredFrom = recovered.revision;
         }
       }
       // A cleared or superseded open must not create a session or record anything.
       if (!current()) return;
-      if (restoredFrom !== undefined)
-        setMessage(`Restored your last saved code (revision ${restoredFrom}).`);
+      if (recovered) setMessage(recoveryMessage(recovered));
       session.current = new WorkspaceSession({
         participantId,
         consentVersion: saveOnDevice
@@ -365,14 +371,7 @@ export default function Workspace() {
               </section>
             )}
             <p className="note" role="status">
-              {capture &&
-                `${capture.persisted} records ${saveOnDevice ? "saved on this device" : "kept in this tab"}, ${capture.buffered} waiting` +
-                  (capture.retrying
-                    ? `, retrying (${capture.lastError})`
-                    : "") +
-                  (capture.gaps || capture.undisclosedDrops
-                    ? `, ${capture.gaps + (capture.undisclosedDrops ? 1 : 0)} capture gap(s) recorded`
-                    : "")}
+              {capture && saveState(capture, saveOnDevice)}
             </p>
             <button className="secondary" onClick={clearActivity}>
               {saveOnDevice
