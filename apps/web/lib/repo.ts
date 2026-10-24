@@ -277,33 +277,25 @@ end
 `;
 }
 
-/** Java and C# test against JSON too, so the cases read the same as everywhere else. */
+/**
+ * Java, like C and C++, calls the method through the issue's adapter (TeaVM keeps no
+ * reflection), so its test file is the adapter and the cases it runs against.
+ */
 function javaTests(src: RepoSource, name: string): string {
   const cases = src.criteria
-    // List.of takes no trailing comma.
-    .map(
-      (c) =>
-        `        ${json(json(c.input))} + " -> " + ${json(json(c.expected))}`,
-    )
-    .join(",\n");
+    .map((c) => `        {${json(json(c.input))}, ${json(json(c.expected))}},`)
+    .join("\n");
   return `${header("//", src.key)}
-import static org.junit.jupiter.api.Assertions.assertEquals;
+// Each case runs the program once: the arguments go to Adapter.call as JSON, and what it
+// returns is compared with the expected JSON.
 
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.FieldSource;
+${(src.adapter ?? "").trim()}
 
-class ${name}Test {
-    /** Input and expected output as JSON, separated by " -> ". */
-    static final java.util.List<String> CASES = java.util.List.of(
+final class ${name}Cases {
+    /** Arguments and expected result, as JSON. */
+    static final String[][] CASES = {
 ${cases}
-    );
-
-    @ParameterizedTest
-    @FieldSource("CASES")
-    void ${src.entrypoint}(String testCase) {
-        var parts = testCase.split(" -> ", 2);
-        assertEquals(Json.parse(parts[1]), Json.call(${name}::${src.entrypoint}, parts[0]));
-    }
+    };
 }
 `;
 }
@@ -512,12 +504,16 @@ function layout(src: RepoSource): {
         tests: `spec/${snake(e)}_spec.rb`,
         text: rubyTests(src, snake(e)),
       };
-    case "java":
+    case "java": {
+      // Where javac expects it: the package's folders, then the class.
+      const pkg = /^\s*package\s+([\w.]+)\s*;/m.exec(src.starter)?.[1];
+      const dir = pkg ? `${pkg.replace(/\./g, "/")}/` : "";
       return {
-        solution: `src/main/java/${pascal(e)}.java`,
-        tests: `src/test/java/${pascal(e)}Test.java`,
-        text: javaTests(src, pascal(e)),
+        solution: `src/main/java/${dir}${className(src)}.java`,
+        tests: `src/test/java/${dir}${className(src)}Test.java`,
+        text: javaTests(src, className(src)),
       };
+    }
     case "csharp":
       return {
         solution: `src/${className(src)}.cs`,

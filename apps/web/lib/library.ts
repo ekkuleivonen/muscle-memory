@@ -167,8 +167,8 @@ function toIssue(
       !!engineFor(language) &&
       workable &&
       (language !== "sql" || typeof content.schema === "string") &&
-      // C and C++ need the issue's adapter to call the function.
-      ((language !== "c" && language !== "cpp") ||
+      // C, C++ and Java need the issue's adapter to call the function.
+      ((language !== "c" && language !== "cpp" && language !== "java") ||
         typeof content.adapter === "string"),
     workable,
     project,
@@ -201,6 +201,11 @@ export interface Library {
 }
 
 /** Canonical project URL: its key, unique across projects. */
+/** How the project qualifier names a project: its key, as typed, e.g. project:shop. */
+export function projectFilterValue(project: Pick<ProjectRef, "key">): string {
+  return project.key.toLowerCase();
+}
+
 export function projectHref(project: Pick<ProjectRef, "key">): string {
   return `/projects/${project.key}`;
 }

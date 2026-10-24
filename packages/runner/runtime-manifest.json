@@ -266,5 +266,22 @@
       "dotnet.native.wasm": 2978728,
       "dotnet.runtime.js": 194767
     }
+  },
+  "java": {
+    "version": "208d4c9",
+    "java": "25",
+    "basePath": "/runtime/java-208d4c9/",
+    "files": {
+      "teavm.js": "sha256-1PwDW0EPRE959J44kGQ7i/1kSgLc/Fl+P8qooHuvygg=",
+      "compiler.wasm.gz": "sha256-2cWdRCQtnpm1gPcQwmQoevZ+pDFWqsEMTEl2AmP78LM=",
+      "compile-classlib.bin.gz": "sha256-0xSCaHdk0ohSkmVM12PNB604fYXYLhjjIh67s751uTg=",
+      "runtime-classlib.bin.gz": "sha256-UJID5jk5c8jdscEoUz1j4NAlFXln+Y5uhBW+4uSQ0vs="
+    },
+    "sizes": {
+      "teavm.js": 16425,
+      "compiler.wasm.gz": 1846188,
+      "compile-classlib.bin.gz": 213900,
+      "runtime-classlib.bin.gz": 2256733
+    }
   }
 }

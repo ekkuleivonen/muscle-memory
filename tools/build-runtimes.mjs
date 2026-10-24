@@ -16,7 +16,7 @@ const gzipSync = (bytes, { level }) =>
   Buffer.from(fflateGzip(bytes, { level, mtime: 0 }));
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -220,6 +220,13 @@ const ENGINES = {
       `Roslyn ${v} (MIT), https://github.com/dotnet/roslyn\n.NET runtime (MIT), https://github.com/dotnet/runtime\n`,
     files: csharpRunner,
   },
+  java: {
+    // Not an npm package: the teavm-javac commit is pinned above.
+    version: async () => TEAVM_JAVAC.commit.slice(0, 7),
+    license: (v) =>
+      `teavm-javac ${v} (Apache-2.0), https://github.com/konsoletyper/teavm-javac\nOpenJDK javac (GPL-2.0 with the Classpath Exception), https://openjdk.org/legal/gplv2+ce.html\nTeaVM (Apache-2.0), https://teavm.org\n`,
+    files: javaRunner,
+  },
   pglite: {
     package: "@electric-sql/pglite",
     license: (v) =>
@@ -359,6 +366,138 @@ async function csharpRunner() {
       names.map(async (name) => [name, await readFile(join(dir, name))]),
     ),
   );
+}
+
+/**
+ * The Java runner is teavm-javac (OpenJDK's javac and the TeaVM compiler, compiled to
+ * WebAssembly), built from a pinned commit in a digest-pinned JDK image and cached like the
+ * others. Its loader builds interop functions from source text, so the Java engine's
+ * sandbox allows eval (see SANDBOX_CSP).
+ */
+const TEAVM_JAVAC = {
+  repository: "https://github.com/konsoletyper/teavm-javac",
+  commit: "208d4c97a602ba0df055f16e6882059fb69d0122",
+};
+const JDK_IMAGE =
+  "eclipse-temurin:25-jdk@sha256:2d5d5e9b533342a565907c84f47a2ec298c40cde7b13a3ca85d4950fa456a641";
+async function javaRunner() {
+  const key = createHash("sha256")
+    .update(JDK_IMAGE)
+    .update(TEAVM_JAVAC.commit)
+    .update("single-processor, sorted walks")
+    .digest("hex")
+    .slice(0, 16);
+  const cache = join(
+    root,
+    "node_modules/.cache/muscle-memory-runtimes",
+    `java-${key}`,
+  );
+  // Only the four outputs are kept: the build tree (OpenJDK's sources, Gradle's cache) runs
+  // to gigabytes and is removed once they are copied out.
+  const out = join(cache, "out");
+  const outputs = {
+    "compiler.wasm-runtime.js":
+      "generated/teavm/wasm-gc/compiler.wasm-runtime.js",
+    "compiler.wasm": "generated/teavm/wasm-gc/compiler.wasm",
+    "compile-classlib-teavm.bin": "classlib/compile-classlib-teavm.bin",
+    "runtime-classlib-teavm.bin": "classlib/runtime-classlib-teavm.bin",
+  };
+  if (!Object.keys(outputs).every((name) => existsSync(join(out, name)))) {
+    const src = join(cache, "src");
+    const gradle = join(cache, "gradle");
+    await rm(src, { recursive: true, force: true });
+    // Made here, not by Docker, which would create it owned by root.
+    await mkdir(gradle, { recursive: true });
+    console.log(
+      "building the Java runner (teavm-javac, once per change, in Docker)…",
+    );
+    execFileSync("git", ["init", "-q", src]);
+    execFileSync("git", [
+      "-C",
+      src,
+      "fetch",
+      "-q",
+      "--depth",
+      "1",
+      TEAVM_JAVAC.repository,
+      TEAVM_JAVAC.commit,
+    ]);
+    execFileSync("git", ["-C", src, "checkout", "-q", "FETCH_HEAD"]);
+    // Its class libraries are built by walking directories, in whatever order the filesystem
+    // lists them, so other machines (CI) got other bytes. Sorted walks fix the order.
+    const sortedWalks = [
+      [
+        "compiler/src/main/java/org/teavm/javac/StdlibConverter.java",
+        "stream.forEach(path ->",
+        "stream.sorted().forEach(path ->",
+      ],
+      [
+        "compiler/src/main/java/org/teavm/javac/ArchiveBuilder.java",
+        "input.forEach(file ->",
+        "input.sorted().forEach(file ->",
+      ],
+    ];
+    for (const [file, from, to] of sortedWalks) {
+      const path = join(src, file);
+      const text = await readFile(path, "utf8");
+      if (text.split(from).length !== 2)
+        throw new Error(
+          `teavm-javac changed: update the sorted-walk patch for ${file}.`,
+        );
+      await writeFile(path, text.replace(from, to));
+    }
+    execFileSync(
+      "docker",
+      [
+        "run",
+        "--rm",
+        "-u",
+        `${process.getuid()}:${process.getgid()}`,
+        "-e",
+        "HOME=/tmp",
+        "-e",
+        "GRADLE_USER_HOME=/gradle",
+        // One processor: TeaVM's output otherwise depends on the machine's core count, and
+        // the bytes must match the pins on every machine.
+        "-e",
+        "JAVA_TOOL_OPTIONS=-XX:ActiveProcessorCount=1",
+        "-v",
+        `${src}:/src`,
+        "-v",
+        `${gradle}:/gradle`,
+        "-w",
+        "/src",
+        JDK_IMAGE,
+        "./gradlew",
+        "--no-daemon",
+        "--max-workers=1",
+        "-q",
+        ":compiler:createDist",
+      ],
+      { stdio: ["ignore", "ignore", "inherit"] },
+    );
+    await mkdir(out, { recursive: true });
+    for (const [name, path] of Object.entries(outputs))
+      await writeFile(
+        join(out, name),
+        await readFile(join(src, "compiler/build", path)),
+      );
+    await rm(src, { recursive: true, force: true });
+    await rm(gradle, { recursive: true, force: true });
+  }
+  const read = (name) => readFile(join(out, name));
+  return {
+    "teavm.js": await read("compiler.wasm-runtime.js"),
+    "compiler.wasm.gz": gzipSync(await read("compiler.wasm"), { level: 9 }),
+    "compile-classlib.bin.gz": gzipSync(
+      await read("compile-classlib-teavm.bin"),
+      { level: 9 },
+    ),
+    "runtime-classlib.bin.gz": gzipSync(
+      await read("runtime-classlib-teavm.bin"),
+      { level: 9 },
+    ),
+  };
 }
 
 const integrity = (bytes) =>

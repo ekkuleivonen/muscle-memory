@@ -45,10 +45,15 @@ export const BOOT_SCRIPT = String.raw`(() => {
   send({ type: "frame-ready" });
 })();`;
 
-export const SANDBOX_CSP = (bootHash: string) =>
+/**
+ * `allowEval` is for engines whose runtime builds functions from source text (TeaVM's Java
+ * interop). It adds nothing an attacker lacks: user JavaScript already runs in these frames,
+ * and the frame stays an opaque origin with every connection, storage and the parent denied.
+ */
+export const SANDBOX_CSP = (bootHash: string, allowEval = false) =>
   [
     "default-src 'none'",
-    `script-src '${bootHash}' blob: 'wasm-unsafe-eval'`,
+    `script-src '${bootHash}' blob: 'wasm-unsafe-eval'${allowEval ? " 'unsafe-eval'" : ""}`,
     "worker-src blob:",
     "connect-src 'none'",
     "img-src 'none'",
@@ -70,6 +75,6 @@ export const BOOT_SCRIPT_HASH =
   "sha256-cFmdYeqXzlIUR/9YJ7qvEorS8J5kz1F1iJacj6WGGdY=";
 
 /** The srcdoc for one sandbox. The inline boot script is allowed only by its exact hash. */
-export function sandboxDocument(): string {
-  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${SANDBOX_CSP(BOOT_SCRIPT_HASH)}"></head><body><script>${BOOT_SCRIPT}</script></body></html>`;
+export function sandboxDocument(allowEval = false): string {
+  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${SANDBOX_CSP(BOOT_SCRIPT_HASH, allowEval)}"></head><body><script>${BOOT_SCRIPT}</script></body></html>`;
 }

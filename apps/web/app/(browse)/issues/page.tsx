@@ -3,6 +3,7 @@ import { requireOnboarding } from "../../../lib/gate";
 import { LANGUAGES } from "../../../lib/languages";
 import { STATUS_LABELS } from "../../../lib/board";
 import {
+  projectFilterValue,
   DIFFICULTIES,
   KINDS,
   languagesOf,
@@ -90,7 +91,7 @@ export default async function IssuesPage({
               key: "project",
               label: "Project",
               options: projects.map((c) => ({
-                value: c.slug,
+                value: projectFilterValue(c),
                 label: c.title,
                 icon: <ProjectSquare project={c} />,
               })),

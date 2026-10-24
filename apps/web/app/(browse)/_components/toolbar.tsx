@@ -47,7 +47,7 @@ export function Toolbar<Q extends IssueQuery | ProjectQuery>({
 }) {
   const selected = (key: ListKey) =>
     ((query as unknown as Record<string, string[]>)[key] ?? []) as string[];
-  const isIssues = "runnable" in query;
+  const isIssues = "kind" in query;
   return (
     <>
       <div className="toolbar">
@@ -94,23 +94,6 @@ export function Toolbar<Q extends IssueQuery | ProjectQuery>({
             ))}
           </div>
         </details>
-        {isIssues && (
-          <Link
-            className="btn"
-            aria-pressed={(query as IssueQuery).runnable}
-            href={href(
-              path,
-              {
-                ...(query as IssueQuery),
-                runnable: !(query as IssueQuery).runnable,
-              },
-              group,
-            )}
-            scroll={false}
-          >
-            Runs in browser
-          </Link>
-        )}
         {isIssues && group && (
           <details className="menu right">
             <summary className="btn">

@@ -8,6 +8,7 @@ import { CLANG_WORKER } from "./workers/clang";
 import { CSHARP_WORKER } from "./workers/csharp";
 import { GO_WORKER } from "./workers/go";
 import { HTML_WORKER } from "./workers/html";
+import { JAVA_WORKER } from "./workers/java";
 import { JAVASCRIPT_WORKER } from "./workers/javascript";
 import { PHP_WORKER } from "./workers/php";
 import { PYTHON_WORKER } from "./workers/python";
@@ -41,10 +42,22 @@ export interface Engine {
    * worker's JavaScript realm (as a separate WebAssembly instance with WASI imports only).
    */
   readonly reusable?: boolean;
+  /** The runtime builds functions from source text; see SANDBOX_CSP. */
+  readonly allowEval?: boolean;
 }
 
-const { pyodide, javascript, pglite, html, php, ruby, go, clang, csharp } =
-  manifest;
+const {
+  pyodide,
+  javascript,
+  pglite,
+  html,
+  php,
+  ruby,
+  go,
+  clang,
+  csharp,
+  java,
+} = manifest;
 
 export const ENGINES: Record<EngineId, Engine> = {
   pyodide: {
@@ -157,6 +170,22 @@ export const ENGINES: Record<EngineId, Engine> = {
     // Roslyn compiles first; its first compile in a fresh sandbox takes a second or two.
     timeoutMs: 15_000,
   },
+  java: {
+    id: "java",
+    label: `Java ${java.java} (TeaVM)`,
+    runtime: { id: "teavm-javac", version: java.version, java: java.java },
+    basePath: java.basePath,
+    files: java.files,
+    sizes: java.sizes,
+    config: {},
+    worker: JAVA_WORKER,
+    // javac, then TeaVM to WebAssembly: about a second, more on a slow machine. Not
+    // reusable: TeaVM's interop classes could reach this worker's globals.
+    timeoutMs: 30_000,
+    // TeaVM's JavaScript interop (used by the compiler and Java's own class library) builds
+    // its glue functions from source text.
+    allowEval: true,
+  },
 };
 
 const BY_LANGUAGE: Record<string, EngineId> = {
@@ -171,6 +200,7 @@ const BY_LANGUAGE: Record<string, EngineId> = {
   c: "clang",
   cpp: "clang",
   csharp: "csharp",
+  java: "java",
 };
 
 /** The engine that runs a language, if any does yet. */

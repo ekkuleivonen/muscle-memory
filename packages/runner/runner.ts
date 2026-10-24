@@ -283,7 +283,7 @@ export class Runner {
     });
     ready.catch(() => undefined);
     (sandbox as { ready: Promise<void> }).ready = ready;
-    frame.srcdoc = sandboxDocument();
+    frame.srcdoc = sandboxDocument(this.engine.allowEval);
     this.host.append(frame);
     return sandbox;
   }
