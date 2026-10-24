@@ -153,3 +153,30 @@ test("without a stream (local development) rows land in the control bucket", asy
   assert.ok(key);
   assert.equal(JSON.parse(objects.get(key)!.trim()).record_id, "workspace-a.1");
 });
+
+test("too many requests from one participant or one address get 429, and the device keeps its records", async () => {
+  const { env, sent } = fakes();
+  const counts = new Map<string, number>();
+  const limiter = (max: number) => ({
+    limit: async ({ key }: { key: string }) => {
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+      return { success: counts.get(key)! <= max };
+    },
+  });
+  const limited: Env = { ...env, PER_PARTICIPANT: limiter(2), PER_ADDRESS: limiter(4) };
+  const me = await device();
+  const batch = { protocol: INGEST_PROTOCOL, participantId: me.participantId, proof: me.proof, records: [observation(me.participantId, 1)] };
+  const statuses = [];
+  for (let i = 0; i < 3; i++)
+    statuses.push((await handle(post("/ingest/v1/batches", batch, { "cf-connecting-ip": "203.0.113.7" }), limited)).status);
+  assert.deepEqual(statuses, [200, 200, 429]);
+  assert.equal(sent.length, 2);
+  // Another participant behind the same address still gets through, until the address limit.
+  const other = await device();
+  const theirs = { ...batch, participantId: other.participantId, proof: other.proof, records: [observation(other.participantId, 1)] };
+  const fourth = await handle(post("/ingest/v1/batches", theirs, { "cf-connecting-ip": "203.0.113.7" }), limited);
+  assert.equal(fourth.status, 200);
+  const fifth = await handle(post("/ingest/v1/batches", theirs, { "cf-connecting-ip": "203.0.113.7" }), limited);
+  assert.equal(fifth.status, 429);
+  assert.equal(fifth.headers.get("retry-after"), "60");
+});

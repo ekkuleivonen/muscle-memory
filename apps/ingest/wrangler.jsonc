@@ -12,6 +12,11 @@
   // The stream muscle_memory_events (docs/telemetry.md).
   "pipelines": [{ "binding": "EVENTS", "stream": "4ccd18f15b5845159747f7c4f42a5c5e" }],
   "vars": { "ALLOWED_ORIGINS": "" },
+  // Per participant and per address; see Env in src/index.ts.
+  "ratelimits": [
+    { "name": "PER_PARTICIPANT", "namespace_id": "4101", "simple": { "limit": 120, "period": 60 } },
+    { "name": "PER_ADDRESS", "namespace_id": "4102", "simple": { "limit": 600, "period": 60 } },
+  ],
   "observability": { "enabled": true },
   "env": {
     // `wrangler dev --env local`: no stream, rows land in the local CONTROL bucket.

@@ -22,6 +22,11 @@ export interface Bucket {
   put(key: string, value: string): Promise<unknown>;
 }
 
+/** A Workers rate limiting binding: approximate, counted per Cloudflare location. */
+export interface Limiter {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
+
 /** A Pipelines stream binding. */
 export interface Stream {
   send(rows: EventRow[]): Promise<void>;
@@ -34,6 +39,13 @@ export interface Env {
   readonly CONTROL: Bucket;
   /** Origins allowed to call across origins (local development); comma-separated. */
   readonly ALLOWED_ORIGINS?: string;
+  /**
+   * Requests per participant (120 a minute; the uploader sends at most 60 while draining a
+   * backlog), and per address before the body is read (600 a minute, generous because many
+   * people can share one address). Absent in local development.
+   */
+  readonly PER_PARTICIPANT?: Limiter;
+  readonly PER_ADDRESS?: Limiter;
 }
 
 /** The most bytes read from a request body, before and after decompression. */
@@ -56,6 +68,10 @@ export async function handle(request: Request, env: Env): Promise<Response> {
       headers: { ...cors, "content-type": "application/json", "cache-control": "no-store" },
     });
   try {
+    if (request.method === "POST") {
+      const address = request.headers.get("cf-connecting-ip") ?? "unknown";
+      await within(env.PER_ADDRESS, `address:${address}`);
+    }
     if (request.method === "POST" && path === "/ingest/v1/batches")
       return await batches(request, env, reply);
     const deletion = /^\/ingest\/v1\/participants\/([^/]+)\/delete$/.exec(path);
@@ -63,7 +79,16 @@ export async function handle(request: Request, env: Env): Promise<Response> {
       return await erase(request, env, decodeURIComponent(deletion[1]), reply);
     return reply(404, { error: "Not found." });
   } catch (cause) {
-    if (cause instanceof Refusal) return reply(cause.status, { error: cause.message });
+    if (cause instanceof Refusal)
+      return new Response(JSON.stringify({ error: cause.message }), {
+        status: cause.status,
+        headers: {
+          ...cors,
+          "content-type": "application/json",
+          "cache-control": "no-store",
+          ...(cause.status === 429 ? { "retry-after": "60" } : {}),
+        },
+      });
     console.error("ingest failed", cause);
     // The device keeps the records and retries later.
     return reply(503, { error: "Try again later." });
@@ -92,6 +117,7 @@ async function batches(
     throw new Refusal(400, cause instanceof Error ? cause.message : "Malformed batch.");
   }
   const { participantId, proof } = batch;
+  await within(env.PER_PARTICIPANT, `participant:${participantId}`);
   if (await env.CONTROL.get(`deleted/${participantId}`))
     throw new Refusal(410, "This participant's data was deleted.");
   await claim(env, participantId, proof);
@@ -153,6 +179,7 @@ async function erase(
   } catch {
     throw new Refusal(400, "Unknown participant.");
   }
+  await within(env.PER_PARTICIPANT, `participant:${participantId}`);
   let secret: unknown;
   try {
     secret = JSON.parse(await body(request)).secret;
@@ -172,6 +199,12 @@ async function erase(
     );
   proofs.delete(participantId);
   return reply(200, { deleted: true, uploaded: true });
+}
+
+/** Refuses the request (429) when this key is over its limit. */
+async function within(limiter: Limiter | undefined, key: string): Promise<void> {
+  if (limiter && !(await limiter.limit({ key })).success)
+    throw new Refusal(429, "Too many requests. Try again in a minute.");
 }
 
 /** The request body as text, gunzipped when marked, refusing anything too large. */

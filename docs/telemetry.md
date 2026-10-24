@@ -20,6 +20,7 @@ browser (IndexedDB) ──outbox──▶ ingest Worker ──▶ Pipelines stre
 `apps/ingest` serves `musclememory.run/ingest/*`: same origin as the app, behind the same Access gate during the owner preview.
 
 - `POST /ingest/v1/batches`: a batch (`packages/domain/ingest.ts`). The whole batch is refused (400) only if its shape is wrong; single records are checked one by one and refused with a reason in a successful reply (another participant, an unknown capture version, a payload that does not match its envelope). Only the current capture versions are accepted.
+- **Rate limits** (Workers rate limiting bindings, approximate and per Cloudflare location): 600 requests a minute per address, checked before the body is read, and 120 a minute per participant (the uploader sends at most 60 while draining a backlog). Over a limit the reply is 429 with `Retry-After: 60`, and the device keeps its records and backs off.
 - `POST /ingest/v1/participants/<id>/delete` with `{ "secret": … }`: writes a tombstone (`deleted/<id>` in the control bucket), after which uploads for that ID get 410 and the uploader stops.
 - Each accepted record becomes one row (`EventRow`): the envelope as columns (`record_id`, `kind`, `participant_id`, `received_at`, `type`, `capture_version`, `source_id`, `sequence`, `occurred_at`, `elapsed_ms`, `issue`, `issue_revision`, `consent_version`) and `payload`, the record exactly as the device stored it. The table therefore is the raw archive too: anything can be re-derived from `payload`.
 
@@ -75,5 +76,5 @@ Running over every tombstone each day catches rows the pipeline was still holdin
 
 ## Not yet
 
-- Rate limiting and abuse checks beyond validation (Cloudflare rate limiting rules on `/ingest/*`).
+- Abuse checks beyond validation and rate limits, such as spotting impossible timing in a stream.
 - Typed derived tables.
