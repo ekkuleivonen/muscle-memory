@@ -30,6 +30,9 @@ const preview = spawn(
   },
 );
 const results = {};
+// ONLY=session,device,double-open,retry,bootstrap runs a subset.
+const want = (section) =>
+  !process.env.ONLY || process.env.ONLY.split(",").includes(section);
 const check = (name, condition, detail) => {
   results[name] = {
     pass: Boolean(condition),
@@ -188,7 +191,7 @@ try {
   const browser = await chromium.launch();
 
   // Session-only: editing, runs, errors, timeout, cancel, stale results, undo.
-  if (!process.env.ONLY_DEVICE) {
+  if (want("session")) {
     const context = await browser.newContext();
     const page = await context.newPage();
     await page.addInitScript(observeInput);
@@ -302,7 +305,7 @@ try {
   }
 
   // Device-local: persistence, recovery, faults, gaps and clear.
-  {
+  if (want("device")) {
     const context = await browser.newContext();
     const page = await context.newPage();
     await page.addInitScript(injectStorageFaults);
@@ -428,8 +431,115 @@ try {
     await context.close();
   }
 
+  // A double click while catalog responses arrive out of order opens exactly one session.
+  if (want("double-open")) {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    let catalogRequests = 0;
+    await page.route("**/api/catalog", async (route) => {
+      const request = ++catalogRequests;
+      const response = await route.fetch();
+      // Staggered: a second request, if any, would resolve before the first.
+      await new Promise((done) => setTimeout(done, request === 1 ? 1500 : 100));
+      await route.fulfill({ response });
+    });
+    await page.goto(URL);
+    await page.getByLabel(/Save workspace activity/).check();
+    await page.getByLabel(/I understand what is recorded/).check();
+    // Two clicks in the same task, before React can re-render a disabled button.
+    await page.evaluate(() => {
+      const open = [...document.querySelectorAll("button")].find((button) =>
+        button.textContent.includes("Open the workspace"),
+      );
+      open.click();
+      open.click();
+    });
+    const opening = page.locator("button", { hasText: /Opening/ });
+    const label = (await opening.count()) === 1 && (await opening.isDisabled());
+    await page.locator(".cm-content").waitFor();
+    await page.getByText("Python ready.").waitFor({ timeout: 60000 });
+    await page.waitForTimeout(2000);
+    check("Open is disabled while opening", label);
+    check(
+      "double open makes one catalog request",
+      catalogRequests === 1,
+      catalogRequests,
+    );
+    check(
+      "double open shows one editor",
+      (await page.locator(".cm-editor").count()) === 1,
+    );
+    await setCode(page, SOLUTION);
+    const text = await runAndWait(page, /Run result/);
+    check("Run works in the single session", text.includes("4/4"));
+    await page.waitForTimeout(1500);
+    const records = await readWorkspaceRecords(page);
+    const opened = records.filter(
+      (record) => record.type === "observation.workspace.opened",
+    );
+    const sources = new Set(
+      records
+        .filter((record) => record.source)
+        .map((record) => record.source.id),
+    );
+    check(
+      "one opened observation and one source",
+      opened.length === 1 && sources.size === 1,
+      {
+        opened: opened.length,
+        sources: sources.size,
+      },
+    );
+    await page
+      .getByRole("button", { name: /Clear all device-local practice/ })
+      .click();
+    await page
+      .getByText(
+        /Workspace activity, pending captures and local identity cleared/,
+      )
+      .waitFor();
+    await page.waitForTimeout(2000);
+    check(
+      "Clear removes everything and nothing writes afterwards",
+      (await readWorkspaceRecords(page)).length === 0,
+    );
+    await context.close();
+  }
+
+  // Retry loading Python: the open session must run on the reloaded runtime.
+  if (want("retry")) {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    let broken = true;
+    await page.route("**/pyodide.asm.wasm", async (route) => {
+      const response = await route.fetch();
+      const body = Buffer.from(await response.body());
+      if (broken) body[100] ^= 1;
+      await route.fulfill({ response, body });
+    });
+    await page.goto(URL);
+    await page.getByLabel(/I understand what is recorded/).check();
+    await page.getByRole("button", { name: /Open the workspace/ }).click();
+    await page.getByText(/Run is unavailable/).waitFor({ timeout: 60000 });
+    broken = false;
+    await page.getByRole("button", { name: /Retry loading Python/ }).click();
+    await page.getByText("Python ready.").waitFor({ timeout: 60000 });
+    await setCode(page, SOLUTION);
+    const text = await runAndWait(page, /Run result/);
+    check(
+      "after Retry, the open session runs on the reloaded runtime",
+      text.includes("4/4"),
+    );
+    check(
+      "the disposed runtime left no sandbox frames beyond the new spare",
+      (await page.locator("iframe").count()) <= 1,
+      await page.locator("iframe").count(),
+    );
+    await context.close();
+  }
+
   // Bootstrap failure is reported separately from user-code failure, and Run stays off.
-  {
+  if (want("bootstrap")) {
     const context = await browser.newContext();
     const page = await context.newPage();
     await page.route("**/pyodide.asm.wasm", async (route) => {

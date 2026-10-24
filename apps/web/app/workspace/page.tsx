@@ -36,6 +36,7 @@ export default function Workspace() {
   const [saveOnDevice, setSaveOnDevice] = useState(false);
   const [understood, setUnderstood] = useState(false);
   const [open, setOpen] = useState(false);
+  const [opening, setOpening] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [runtime, setRuntime] = useState<Runtime>({ state: "loading" });
@@ -48,6 +49,10 @@ export default function Workspace() {
   const session = useRef<WorkspaceSession | null>(null);
   const store = useRef<PracticeStore | null>(null);
   const memory = useRef(new MemorySink());
+  // Synchronous guard plus generation: only the latest, uncancelled open may install a
+  // session, however its catalog and storage responses interleave.
+  const openInFlight = useRef(false);
+  const generation = useRef(0);
 
   function startRuntime() {
     runner.current?.dispose();
@@ -68,6 +73,7 @@ export default function Workspace() {
   useEffect(() => {
     startRuntime();
     return () => {
+      generation.current++;
       runner.current?.dispose();
       void session.current?.close();
     };
@@ -83,6 +89,11 @@ export default function Workspace() {
   }, [open]);
 
   async function begin() {
+    if (openInFlight.current || session.current) return;
+    openInFlight.current = true;
+    const attempt = ++generation.current;
+    const current = () => attempt === generation.current;
+    setOpening(true);
     setError("");
     try {
       const catalog = await currentCatalog();
@@ -101,11 +112,12 @@ export default function Workspace() {
         if (saved) {
           initialCode = saved.text;
           restoredFrom = saved.revision;
-          setMessage(
-            `Restored your last saved code (revision ${saved.revision}).`,
-          );
         }
       }
+      // A cleared or superseded open must not create a session or record anything.
+      if (!current()) return;
+      if (restoredFrom !== undefined)
+        setMessage(`Restored your last saved code (revision ${restoredFrom}).`);
       session.current = new WorkspaceSession({
         participantId,
         consentVersion: saveOnDevice
@@ -115,7 +127,8 @@ export default function Workspace() {
         sink: saveOnDevice ? store.current! : memory.current,
         initialCode,
         restoredFrom,
-        runner: runner.current!,
+        // Read at use time, so a runtime reloaded with Retry is the one that runs.
+        runner: () => runner.current!,
         onRun: (view) => {
           setRun(view);
           setStale(view.revision !== session.current?.currentRevision);
@@ -124,11 +137,17 @@ export default function Workspace() {
       });
       setOpen(true);
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "The workspace could not open.",
-      );
+      if (current())
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "The workspace could not open.",
+        );
+    } finally {
+      if (current()) {
+        openInFlight.current = false;
+        setOpening(false);
+      }
     }
   }
 
@@ -139,6 +158,10 @@ export default function Workspace() {
 
   async function clearActivity() {
     setError("");
+    // Cancels any open still in flight.
+    generation.current++;
+    openInFlight.current = false;
+    setOpening(false);
     try {
       await session.current?.close();
       session.current = null;
@@ -213,8 +236,8 @@ export default function Workspace() {
               />{" "}
               I understand what is recorded and want to practice locally.
             </label>
-            <button disabled={!understood} onClick={begin}>
-              Open the workspace →
+            <button disabled={!understood || opening} onClick={begin}>
+              {opening ? "Opening…" : "Open the workspace →"}
             </button>
           </div>
         ) : (
@@ -306,6 +329,12 @@ export default function Workspace() {
                                   returned {result?.repr?.text ?? "nothing"}
                                   {result?.unserializable &&
                                     ` (not JSON: ${result.unserializable})`}
+                                  {result?.conversionError && (
+                                    <pre>
+                                      {result.conversionError.traceback.text ||
+                                        `${result.conversionError.type}: ${result.conversionError.message}`}
+                                    </pre>
+                                  )}
                                 </span>
                               )}
                             </li>

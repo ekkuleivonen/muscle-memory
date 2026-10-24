@@ -12,6 +12,7 @@ Submitted code never runs in the app's JavaScript context, in Node or on a serve
 - **Loading inside the sandbox.** The app fetches the files from its own origin with Subresource Integrity, then posts the bytes into the frame. The worker answers Pyodide's file reads from memory. Only the standard library is available: the package lock is empty, so other imports fail without any request.
 - **Timeout and cancel.** A finished, timed-out (5 s) or cancelled run destroys its iframe, which ends the worker and anything it started. A spare sandbox boots in the background, so every run starts with a fresh interpreter.
 - **Results.** The worker returns raw results only: exceptions and tracebacks, `repr` and `json.dumps` of each return value, and stdout/stderr bounded to 64 KiB each with byte counts. Expected outputs never enter the sandbox. The app validates and bounds every message and renders all of it as text.
+- **Conversion failures.** Turning a return value into `repr` and JSON runs user code too. A failing `__repr__`, an unprintable exception, or a value nested more than 500 levels deep or cyclic becomes a per-case `conversionError`, and earlier cases are kept. The depth limit exists because CPython's C-level `repr`, `json.dumps` and deallocation of very deep containers exhaust the wasm stack before Python's own recursion guard fires. For the same reason, returned values stay referenced until the sandbox is destroyed.
 - **Failing closed.** If the runtime cannot load (hash mismatch, missing file, blocked worker, boot timeout), Run stays unavailable and the error is shown as a runtime failure, never as a user error.
 
 `npm run test:browser` checks this in a real Chromium. Run `npm run build:cloudflare` first; the workspace half starts a local `wrangler dev` preview and never deploys.
@@ -31,6 +32,7 @@ Limits:
 - **Memory and CPU.** There is no hard per-run memory quota in browsers; only wasm's own memory ceiling applies, and the timeout or cancel destroys everything. CPU is bounded by the 5 s timeout.
 - **Startup.** The first run downloads about 13 MB; every run boots a fresh interpreter, about 2 s in headless Chromium.
 - **Browsers.** Firefox and Safari/WebKit were not verified here: this host lacks their system libraries.
+- **Engine stack.** If user code itself builds and frees a container nested about 3,000 or more levels deep, the wasm stack is exhausted. The run is then reported as a runner error and its cases are lost. Python-level recursion raises a normal `RecursionError`.
 - **Forged results.** Python can forge result messages to its own frame, because tests run in the same interpreter. Feedback is practice only, not anti-cheat.
 - **Tab focus.** Tab indents inside the editor; Escape then Tab, or Ctrl-M (Shift-Alt-M on macOS), moves focus out.
 

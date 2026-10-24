@@ -39,7 +39,8 @@ export interface SessionOptions {
   readonly sink: CaptureSink;
   readonly initialCode: string;
   readonly restoredFrom?: number;
-  readonly runner: PythonRunner;
+  /** The page's current runner; it changes when the runtime is reloaded. */
+  readonly runner: () => PythonRunner;
   readonly onRun: (run: RunView) => void;
   /** Called on the first edit after a run, so its result can be shown as stale. */
   readonly onEditedAfterRun: () => void;
@@ -86,7 +87,7 @@ export class WorkspaceSession {
 
   mount(parent: HTMLElement): void {
     this.view = createEditor(parent, this.options.initialCode, {
-      onChange: (transaction, view) => this.recordEdit(transaction, view),
+      onChange: (transaction) => this.recordEdit(transaction),
       onRun: () => void this.run(),
     });
     this.view.focus();
@@ -97,11 +98,11 @@ export class WorkspaceSession {
   }
 
   get running(): boolean {
-    return this.options.runner.running;
+    return this.options.runner().running;
   }
 
   async run(): Promise<void> {
-    if (!this.view || this.options.runner.running) return;
+    if (!this.view || this.options.runner().running) return;
     const revision = this.revision;
     const code = this.artifact(this.view.state.doc.toString());
     const runId = crypto.randomUUID();
@@ -133,7 +134,7 @@ export class WorkspaceSession {
       this.options.onRun(this.lastRun);
     };
     update("queued");
-    const outcome = await this.options.runner.run(
+    const outcome = await this.options.runner().run(
       {
         runId,
         code: this.view.state.doc.sliceString(0),
@@ -147,18 +148,19 @@ export class WorkspaceSession {
   }
 
   cancel(): void {
-    this.options.runner.cancel();
+    this.options.runner().cancel();
   }
 
   /** Stops capture after in-flight writes settle; the caller then clears storage. */
   async close(): Promise<void> {
-    this.options.runner.cancel();
+    this.options.runner().cancel();
     this.view?.destroy();
     this.view = undefined;
     await this.recorder.stop();
   }
 
-  private recordEdit(transaction: Transaction, view: EditorView): void {
+  /** Records one applied transaction. Exposed for tests; the editor calls it per change. */
+  recordEdit(transaction: Transaction): void {
     this.revision++;
     const changes = transaction.changes.toJSON() as Json;
     const changesBytes = new TextEncoder().encode(
@@ -177,7 +179,9 @@ export class WorkspaceSession {
     // Recovery snapshots let the document be rebuilt from the stream; an oversize edit
     // has no change set, so it is followed by a snapshot immediately.
     if (oversize || ++this.editsSinceSnapshot >= SNAPSHOT_EVERY_EDITS) {
-      const code = this.artifact(view.state.doc.toString());
+      // This transaction's document, not the view's: one update can hold several
+      // transactions, and the snapshot must match the revision it is labelled with.
+      const code = this.artifact(transaction.newDoc.toString());
       this.recorder.observe(
         "observation.workspace.snapshot",
         {

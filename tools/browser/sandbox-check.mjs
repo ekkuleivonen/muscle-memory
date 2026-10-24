@@ -81,6 +81,38 @@ const outsidePort = await listen(outside);
 const APP = `http://127.0.0.1:${appPort}`;
 const OUT = `http://127.0.0.1:${outsidePort}`;
 
+// Return values whose conversion runs failing user code, and an unprintable exception.
+const CONVERSION = `class BadRepr:
+    def __repr__(self):
+        raise ValueError("repr exploded")
+class BadStr(Exception):
+    def __str__(self):
+        raise RuntimeError("str exploded")
+class WorseRepr:
+    def __repr__(self):
+        raise BadStr()
+def deep():
+    value = []
+    for _ in range(100000):
+        value = [value]
+    return value
+def cyclic():
+    value = []
+    value.append(value)
+    return value
+def frequency_map(items):
+    if items == ["ok"]:
+        return {"ok": 1}
+    if items == ["repr"]:
+        return BadRepr()
+    if items == ["deep"]:
+        return deep()
+    if items == ["worse"]:
+        return WorseRepr()
+    if items == ["cyclic"]:
+        return cyclic()
+    raise BadStr()
+`;
 const SOLUTION = `def frequency_map(items):
     counts = {}
     for item in items:
@@ -156,7 +188,7 @@ async function check(browserType) {
     await tab.waitForFunction(() => window.dbReady);
   }
   const report = await tab.evaluate(
-    async ({ SOLUTION, TESTS, ESCAPES, BAD_ASSETS }) => {
+    async ({ SOLUTION, TESTS, ESCAPES, CONVERSION, BAD_ASSETS }) => {
       const runner = window.makeRunner({ timeoutMs: 4000 });
       const time = async (work) => {
         const started = performance.now();
@@ -199,6 +231,12 @@ async function check(browserType) {
       setTimeout(() => runner.cancel(), 300);
       results.cancel = await time(() => cancelled);
       results.afterCancel = await runner.run(request("r9", SOLUTION));
+      results.conversion = await runner.run({
+        runId: "r11",
+        code: CONVERSION,
+        inputs: [["ok"], ["repr"], ["deep"], ["worse"], ["cyclic"], ["raise"]],
+        functionName: "frequency_map",
+      });
       results.flood = await runner.run(
         request(
           "r10",
@@ -222,6 +260,7 @@ async function check(browserType) {
     },
     {
       SOLUTION,
+      CONVERSION,
       TESTS,
       ESCAPES,
       // The preview cannot serve tampered bytes, so it checks missing files instead.
@@ -316,6 +355,20 @@ function verdicts({ report, frameProbe, hits }) {
     "clean run after timeout": solved(report.afterLoop),
     "cancel stops the run": report.cancel.outcome.status === "cancelled",
     "clean run after cancel": solved(report.afterCancel),
+    "conversion failures stay per case and keep earlier cases": (() => {
+      const outcome = report.conversion;
+      if (outcome.status !== "completed") return false;
+      const [ok, badRepr, deep, worse, cyclic, raised] = outcome.cases;
+      return (
+        ok.output?.text === '{"ok": 1}' &&
+        badRepr.conversionError?.type === "ValueError" &&
+        Boolean(badRepr.unserializable) &&
+        deep.conversionError?.type === "RecursionError" &&
+        worse.conversionError?.message === "<unprintable BadStr>" &&
+        cyclic.conversionError?.type === "RecursionError" &&
+        raised.error?.message === "<unprintable BadStr>"
+      );
+    })(),
     "output flood bounded with byte count":
       report.flood.stdout.truncated && report.flood.stdout.bytes === 1000001,
     "tampered or missing runtime fails closed":
@@ -341,7 +394,12 @@ for (const name of requested.length ? requested : ["chromium"]) {
     timeout: result.report.loop.ms,
     cancel: result.report.cancel.ms,
   });
-  if (process.env.VERBOSE) console.log(result.report.escapes.stdout.text);
+  if (process.env.VERBOSE) {
+    console.log(result.report.escapes.stdout.text);
+    console.log(
+      JSON.stringify(result.report.conversion, null, 1).slice(0, 3000),
+    );
+  }
 }
 if (failures) process.exitCode = 1;
 app.close();

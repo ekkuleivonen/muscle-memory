@@ -55,12 +55,42 @@ def __mm_bounded(text, limit):
         return {"text": text, "bytes": len(data), "truncated": False}
     return {"text": data[:limit].decode("utf-8", "ignore"), "bytes": len(data), "truncated": True}
 
+def __mm_text(error, limit):
+    # A user exception's __str__ is user code and may fail as well.
+    try:
+        return str(error)[:limit]
+    except BaseException:
+        return "<unprintable " + type(error).__name__ + ">"
+
 def __mm_error(error, limit):
-    lines = traceback.format_exception(error)
-    # Drop the harness's own frames so tracebacks point at solution.py.
-    lines = [line for line in lines if '"<exec>"' not in line]
-    return {"type": type(error).__name__, "message": str(error)[:2000],
-            "traceback": __mm_bounded("".join(lines), limit)}
+    try:
+        lines = traceback.format_exception(error)
+        # Drop the harness's own frames so tracebacks point at solution.py.
+        text = "".join(line for line in lines if '"<exec>"' not in line)
+    except BaseException:
+        text = type(error).__name__ + ": " + __mm_text(error, 2000) + "\\n"
+    return {"type": type(error).__name__, "message": __mm_text(error, 2000),
+            "traceback": __mm_bounded(text, limit)}
+
+__mm_keep = []
+
+def __mm_too_deep(value, limit):
+    # Iterative, so measuring depth cannot itself overflow the stack.
+    stack = [(value, 1)]
+    visited = 0
+    while stack:
+        item, depth = stack.pop()
+        if depth > limit:
+            return True
+        visited += 1
+        if visited > 1000000:
+            return False
+        if isinstance(item, dict):
+            stack.extend((child, depth + 1) for child in item.keys())
+            stack.extend((child, depth + 1) for child in item.values())
+        elif isinstance(item, (list, tuple, set, frozenset)):
+            stack.extend((child, depth + 1) for child in item)
+    return False
 
 def __mm_run(code, inputs_json, function_name, limit):
     tests = [json.dumps(value) for value in json.loads(inputs_json)]
@@ -86,12 +116,35 @@ def __mm_run(code, inputs_json, function_name, limit):
         except BaseException as error:
             results.append({"index": index, "error": __mm_error(error, limit)})
             continue
-        result = {"index": index, "repr": __mm_bounded(repr(actual), 2000)}
+        # Converting the return value runs user code too (__repr__, very deep nesting).
+        # Its failures belong to this case, and earlier cases are kept.
+        # Returned values stay referenced until the sandbox is destroyed: freeing a
+        # deeply nested value recurses in C and would exhaust the wasm stack.
+        __mm_keep.append(actual)
+        result = {"index": index}
+        results.append(result)
+        try:
+            # repr/json.dumps recurse in C, which exhausts the wasm stack (a JS
+            # RangeError that ends the whole run) long before Python's guard fires.
+            too_deep = __mm_too_deep(actual, 500)
+        except BaseException as error:
+            result["conversionError"] = __mm_error(error, limit)
+            continue
+        if too_deep:
+            result["conversionError"] = __mm_error(RecursionError(
+                "Return value is nested more than 500 levels deep or is cyclic; "
+                "it was not converted."), limit)
+            continue
+        try:
+            result["repr"] = __mm_bounded(repr(actual), 2000)
+        except BaseException as error:
+            result["conversionError"] = __mm_error(error, limit)
         try:
             result["output"] = __mm_bounded(json.dumps(actual, allow_nan=False), limit)
         except (TypeError, ValueError) as error:
-            result["unserializable"] = str(error)[:500]
-        results.append(result)
+            result["unserializable"] = __mm_text(error, 500)
+        except BaseException as error:
+            result.setdefault("conversionError", __mm_error(error, limit))
     return json.dumps({"phase": "tests", "tests": results})
 `,
 )};

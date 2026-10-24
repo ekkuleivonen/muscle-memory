@@ -30,7 +30,10 @@ export interface CaseResult {
   readonly output?: Bounded;
   readonly repr?: Bounded;
   readonly unserializable?: string;
+  /** The call raised. */
   readonly error?: PythonError;
+  /** The call returned, but converting its value (repr or JSON) raised. */
+  readonly conversionError?: PythonError;
 }
 
 export type RunOutcome =
@@ -266,6 +269,9 @@ function parseResult(data: unknown, runId: string): RunOutcome | undefined {
             ? { unserializable: result.unserializable.slice(0, 500) }
             : {}),
           ...(result.error ? { error: pythonError(result.error) } : {}),
+          ...(result.conversionError
+            ? { conversionError: pythonError(result.conversionError) }
+            : {}),
         };
       })
     : [];
