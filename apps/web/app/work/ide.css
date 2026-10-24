@@ -738,3 +738,30 @@
     animation: none;
   }
 }
+
+/* Type hints: the type under the pointer, like an editor's hover. */
+.cm-tooltip.cm-tooltip-hover {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--ide-side);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.12);
+}
+.cm-type-hint {
+  max-width: 560px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.cm-type-hint code {
+  display: block;
+  white-space: pre-wrap;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.cm-type-hint p {
+  margin: 6px 0 0;
+  color: var(--faint);
+}
+.cm-tooltip-lint {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--ide-side);
+}

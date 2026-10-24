@@ -15,7 +15,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { build } from "esbuild";
+import { build, transform } from "esbuild";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const manifestPath = join(root, "packages/runner/runtime-manifest.json");
@@ -125,6 +125,35 @@ const ENGINES = {
         { level: 9 },
       ),
     }),
+  },
+  // Not a runner: the editor's type checker for TypeScript and JavaScript (squiggles and
+  // hover types; never completion).
+  typescript: {
+    package: "typescript",
+    license: (v) =>
+      `TypeScript ${v} (Apache-2.0), https://github.com/microsoft/TypeScript\n`,
+    files: async () => {
+      const dir = join(packageDir("typescript"), "lib");
+      // The ES2023 library and everything it references; no DOM.
+      const libs = {};
+      const add = async (name) => {
+        const file = `lib.${name}.d.ts`;
+        if (libs[file]) return;
+        libs[file] = await readFile(join(dir, file), "utf8");
+        for (const [, ref] of libs[file].matchAll(/<reference lib="([^"]+)"/g))
+          await add(ref);
+      };
+      await add("es2023");
+      const source = await readFile(join(dir, "typescript.js"), "utf8");
+      const { code } = await transform(source, {
+        minify: true,
+        legalComments: "inline",
+      });
+      return {
+        "typescript.js": Buffer.from(code),
+        "libs.json": Buffer.from(JSON.stringify(libs)),
+      };
+    },
   },
   pglite: {
     package: "@electric-sql/pglite",

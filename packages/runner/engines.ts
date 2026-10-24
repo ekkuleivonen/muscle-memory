@@ -11,7 +11,8 @@ import { PYTHON_WORKER } from "./workers/python";
 import { RUBY_WORKER } from "./workers/ruby";
 import { SQL_WORKER } from "./workers/sql";
 
-export type EngineId = keyof typeof manifest;
+/** Every pinned runtime except the editor's type checker, which runs no code. */
+export type EngineId = Exclude<keyof typeof manifest, "typescript">;
 
 export interface Engine {
   readonly id: EngineId;

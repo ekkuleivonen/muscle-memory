@@ -31,6 +31,7 @@ import {
 } from "../../../../packages/runner/runner";
 import type { FileLanguage } from "../../lib/repo";
 import { createEditor, editorFeatures, type Keymap } from "./editor";
+import type { TypeChecker } from "./type-checker";
 
 export const RUN_TIMEOUT_MS = 5000;
 const SNAPSHOT_EVERY_EDITS = 25;
@@ -72,6 +73,8 @@ export interface SessionOptions {
   readonly filename?: string;
   readonly keymap?: Keymap;
   readonly mediaType?: string;
+  /** Type hints (squiggles, hover types) for languages that have them. */
+  readonly types?: TypeChecker;
   /**
    * What runs the code, recorded with the session; by default the language's engine. Null
    * when this language cannot run yet: edits are still recorded, Run is not.
@@ -141,6 +144,7 @@ export class WorkspaceSession {
           editor: editorFeatures(
             options.language ?? "python",
             options.keymap ?? "standard",
+            Boolean(options.types),
           ),
           runtime: this.runtime,
           captureGaps: WORKSPACE_CAPTURE_GAPS,
@@ -190,6 +194,7 @@ export class WorkspaceSession {
         language: this.options.language ?? "python",
         keymap: this.options.keymap ?? "standard",
         label: "Code editor",
+        types: this.options.types,
       },
     );
     this.view.focus();

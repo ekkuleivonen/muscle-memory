@@ -84,5 +84,17 @@
       "ruby.js": 47932,
       "ruby.wasm.gz": 8918704
     }
+  },
+  "typescript": {
+    "version": "5.9.3",
+    "basePath": "/runtime/typescript-5.9.3/",
+    "files": {
+      "typescript.js": "sha256-hJF1vEbUq/pLSmcTA+VL85FqrmMU+3dxkqQZokcDD0c=",
+      "libs.json": "sha256-KlZZ5vk5VDP+SvhQKKL8u7oyv2NplRK1isGyxTNYM6I="
+    },
+    "sizes": {
+      "typescript.js": 3590382,
+      "libs.json": 530735
+    }
   }
 }

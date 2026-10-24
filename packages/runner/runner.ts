@@ -189,75 +189,12 @@ export class Runner {
     this.spare = undefined;
   }
 
-  private loaded = 0;
-
-  /** Reads a body while counting bytes; integrity is still checked by fetch at the end. */
-  private async read(response: Response): Promise<ArrayBuffer> {
-    const total = Object.values(this.engine.sizes).reduce((a, b) => a + b, 0);
-    const report = () =>
-      this.options.onProgress?.({
-        phase: "download",
-        loaded: Math.min(this.loaded, total),
-        total,
-      });
-    if (!response.body) {
-      const bytes = await response.arrayBuffer();
-      this.loaded += bytes.byteLength;
-      report();
-      return bytes;
-    }
-    const chunks: Uint8Array[] = [];
-    let size = 0;
-    const reader = response.body.getReader();
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-      size += value.byteLength;
-      this.loaded += value.byteLength;
-      report();
-    }
-    const bytes = new Uint8Array(size);
-    let offset = 0;
-    for (const chunk of chunks) {
-      bytes.set(chunk, offset);
-      offset += chunk.byteLength;
-    }
-    return bytes.buffer;
-  }
-
   private loadAssets(): Promise<Record<string, ArrayBuffer>> {
-    // Only this trusted page fetches runtime files, and only from its own origin, so the
-    // site's existing sign-in (such as a Cloudflare Access cookie) applies. The sandbox
-    // receives bytes, never credentials. Each file must match its pinned hash, and any
-    // redirect (for example to a sign-in page) fails instead of being followed.
-    this.assets ??= Promise.all(
-      Object.entries(this.engine.files).map(async ([name, integrity]) => {
-        let response: Response;
-        try {
-          response = await fetch(new URL(name, this.assetBase), {
-            integrity,
-            credentials: "same-origin",
-            mode: "same-origin",
-            redirect: "error",
-          });
-        } catch {
-          throw new Error(
-            `Runtime file ${name} could not be loaded from this site, or did not match its pinned hash. If your sign-in has expired, reload the page.`,
-          );
-        }
-        if (!response.ok)
-          throw new Error(
-            `Runtime file ${name} is unavailable (${response.status}).`,
-          );
-        const bytes = await this.read(response);
-        // Large files ship gzipped (static hosts cap file sizes); the hash covers the
-        // compressed bytes, and the worker gets them unpacked under their plain name.
-        if (name.endsWith(".gz"))
-          return [name.slice(0, -3), await gunzip(bytes)] as const;
-        return [name, bytes] as const;
-      }),
-    ).then(Object.fromEntries);
+    this.assets ??= loadPinned(
+      this.engine,
+      this.assetBase,
+      this.options.onProgress,
+    );
     this.assets.catch(() => (this.assets = undefined));
     return this.assets;
   }
@@ -332,6 +269,86 @@ export class Runner {
     });
     return sandbox;
   }
+}
+
+/**
+ * Fetches pinned runtime files. Only the trusted page fetches them, and only from its own
+ * origin, so the site's existing sign-in (such as a Cloudflare Access cookie) applies; a
+ * sandbox receives bytes, never credentials. Each file must match its pinned hash, and any
+ * redirect (for example to a sign-in page) fails instead of being followed. Download
+ * progress is reported against the pinned sizes.
+ */
+export async function loadPinned(
+  pinned: {
+    readonly files: Readonly<Record<string, string>>;
+    readonly sizes: Readonly<Record<string, number>>;
+  },
+  base: URL,
+  onProgress?: (progress: LoadProgress) => void,
+): Promise<Record<string, ArrayBuffer>> {
+  const total = Object.values(pinned.sizes).reduce((a, b) => a + b, 0);
+  let loaded = 0;
+  const count = (bytes: number) => {
+    loaded += bytes;
+    onProgress?.({ phase: "download", loaded: Math.min(loaded, total), total });
+  };
+  const entries = await Promise.all(
+    Object.entries(pinned.files).map(async ([name, integrity]) => {
+      let response: Response;
+      try {
+        response = await fetch(new URL(name, base), {
+          integrity,
+          credentials: "same-origin",
+          mode: "same-origin",
+          redirect: "error",
+        });
+      } catch {
+        throw new Error(
+          `Runtime file ${name} could not be loaded from this site, or did not match its pinned hash. If your sign-in has expired, reload the page.`,
+        );
+      }
+      if (!response.ok)
+        throw new Error(
+          `Runtime file ${name} is unavailable (${response.status}).`,
+        );
+      const bytes = await read(response, count);
+      // Large files ship gzipped (static hosts cap file sizes); the hash covers the
+      // compressed bytes, and callers get them unpacked under their plain name.
+      if (name.endsWith(".gz"))
+        return [name.slice(0, -3), await gunzip(bytes)] as const;
+      return [name, bytes] as const;
+    }),
+  );
+  return Object.fromEntries(entries);
+}
+
+/** Reads a body while counting bytes; integrity is still checked by fetch at the end. */
+async function read(
+  response: Response,
+  count: (bytes: number) => void,
+): Promise<ArrayBuffer> {
+  if (!response.body) {
+    const bytes = await response.arrayBuffer();
+    count(bytes.byteLength);
+    return bytes;
+  }
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  const reader = response.body.getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    size += value.byteLength;
+    count(value.byteLength);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes.buffer;
 }
 
 function gunzip(bytes: ArrayBuffer): Promise<ArrayBuffer> {

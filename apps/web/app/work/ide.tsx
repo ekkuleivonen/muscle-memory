@@ -53,6 +53,7 @@ import { LanguageDot } from "../(browse)/_components/bits";
 import { StatusMenu, useBoard } from "../(browse)/_components/board";
 import { Markdown } from "../(browse)/_components/markdown";
 import { createViewer, type Keymap } from "../workspace/editor";
+import { checksTypes, TypeChecker } from "../workspace/type-checker";
 import { PANEL, panelMax, SIDE, Splitter, useIdeLayout } from "./splitter";
 import { recoveryMessage, saveBadge, saveState } from "../workspace/save-state";
 import {
@@ -190,6 +191,7 @@ export function Ide({
   const engine = engineFor(issue.language);
   const runner = useRef<Runner | null>(null);
   const session = useRef<WorkspaceSession | null>(null);
+  const types = useRef<TypeChecker | null>(null);
   const store = useRef<PracticeStore | null>(null);
   // Each mount (twice in development) bumps this; a superseded open installs nothing.
   const generation = useRef(0);
@@ -256,6 +258,7 @@ export function Ide({
         restoredFrom: recovered?.revision,
         language: issue.language,
         keymap: keys,
+        types: types.current ?? undefined,
         mediaType: mediaTypeOf(issue.language),
         filename: repo.solution.path,
         runtime: issue.runnable && engine ? engine.runtime : null,
@@ -307,6 +310,8 @@ export function Ide({
   useEffect(() => {
     const attempt = ++generation.current;
     startRuntime();
+    if (checksTypes(issue.language))
+      types.current = new TypeChecker(repo.solution.path);
     void open(() => attempt === generation.current);
     const timer = setInterval(() => {
       // Counts refresh each second; state changes arrive at once through onSaveStatus.
@@ -318,6 +323,8 @@ export function Ide({
       clearInterval(timer);
       runner.current?.dispose();
       runner.current = null;
+      types.current?.dispose();
+      types.current = null;
       // The session flushes its last writes on close; the store stays open for them.
       const closing = session.current;
       session.current = null;
