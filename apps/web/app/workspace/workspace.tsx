@@ -5,18 +5,25 @@ import type { ContentRef } from "../../../../packages/catalog/catalog";
 import { findEntry } from "../../../../packages/catalog/gates";
 import type { Challenge } from "../../../../packages/domain/assessment";
 import { runFeedback } from "../../../../packages/domain/workspace";
-import {
-  MemorySink,
-  type CaptureStatus,
-} from "../../../../packages/capture/recorder";
+import { MemorySink } from "../../../../packages/capture/recorder";
 import {
   openPracticeStore,
   type PracticeStore,
 } from "../../../../packages/browser/practice-store";
 import { PythonRunner, RUNTIME } from "../../../../packages/runner/runner";
 import { currentCatalog } from "../current-catalog";
-import { latestSavedCode } from "../../../../packages/capture/restore";
-import { RUN_TIMEOUT_MS, WorkspaceSession, type RunView } from "./session";
+import {
+  latestSavedCode,
+  type RecoveredCode,
+} from "../../../../packages/capture/restore";
+import { contentArtifactId } from "../../../../packages/domain/evidence";
+import { recoveryMessage, saveState } from "./save-state";
+import {
+  RUN_TIMEOUT_MS,
+  WorkspaceSession,
+  type RunView,
+  type SaveStatus,
+} from "./session";
 
 export type Executable = Challenge & { entrypoint: string; starter: string };
 
@@ -42,7 +49,7 @@ export function Workspace({
   const [runtime, setRuntime] = useState<Runtime>({ state: "loading" });
   const [run, setRun] = useState<RunView | null>(null);
   const [stale, setStale] = useState(false);
-  const [capture, setCapture] = useState<CaptureStatus | null>(null);
+  const [capture, setCapture] = useState<SaveStatus | null>(null);
   const editorHost = useRef<HTMLDivElement>(null);
   const sandboxHost = useRef<HTMLDivElement>(null);
   const runner = useRef<PythonRunner | null>(null);
@@ -82,7 +89,8 @@ export function Workspace({
   useEffect(() => {
     if (!open) return;
     const timer = setInterval(
-      () => setCapture(session.current?.recorder.status() ?? null),
+      // Counts refresh each second; state changes arrive at once through onSaveStatus.
+      () => setCapture(session.current?.saveStatus() ?? null),
       1000,
     );
     return () => clearInterval(timer);
@@ -102,22 +110,23 @@ export function Workspace({
       let participantId = "local-session";
       let initialCode = challenge.starter;
       let restoredFrom: number | undefined;
+      let recovered: RecoveredCode | null = null;
       if (saveOnDevice) {
         store.current ??= await openPracticeStore();
         participantId = await store.current.participantId();
-        const saved = latestSavedCode(
+        recovered = latestSavedCode(
           await store.current.workspaceRecords(),
           participantId,
+          contentArtifactId("challenge", challenge.id, challenge.version),
         );
-        if (saved) {
-          initialCode = saved.text;
-          restoredFrom = saved.revision;
+        if (recovered) {
+          initialCode = recovered.text;
+          restoredFrom = recovered.revision;
         }
       }
       // A cleared or superseded open must not create a session or record anything.
       if (!current()) return;
-      if (restoredFrom !== undefined)
-        setMessage(`Restored your last saved code (revision ${restoredFrom}).`);
+      if (recovered) setMessage(recoveryMessage(recovered));
       session.current = new WorkspaceSession({
         participantId,
         consentVersion: saveOnDevice
@@ -134,6 +143,7 @@ export function Workspace({
           setStale(view.revision !== session.current?.currentRevision);
         },
         onEditedAfterRun: () => setStale(true),
+        onSaveStatus: setCapture,
       });
       setOpen(true);
     } catch (cause) {
@@ -370,14 +380,7 @@ export function Workspace({
                 </section>
               )}
               <p className="note" role="status">
-                {capture &&
-                  `${capture.persisted} records ${saveOnDevice ? "saved on this device" : "kept in this tab"}, ${capture.buffered} waiting` +
-                    (capture.retrying
-                      ? `, retrying (${capture.lastError})`
-                      : "") +
-                    (capture.gaps || capture.undisclosedDrops
-                      ? `, ${capture.gaps + (capture.undisclosedDrops ? 1 : 0)} capture gap(s) recorded`
-                      : "")}
+                {capture && saveState(capture, saveOnDevice)}
               </p>
               <button className="secondary" onClick={clearActivity}>
                 {saveOnDevice
