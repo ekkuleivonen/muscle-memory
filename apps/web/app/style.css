@@ -1156,7 +1156,197 @@ kbd {
   margin-top: 6px;
 }
 
-/* Home dashboard */
+/* Public home page. Text below the headline uses --dim, never --faint, to keep AA contrast. */
+.home-body {
+  padding-top: 72px;
+}
+.home-kicker {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0 0 16px;
+}
+.home-hero h1 {
+  font-size: 44px;
+  text-wrap: balance;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  margin: 0 0 20px;
+}
+.home-punch {
+  color: var(--accent);
+}
+.home-lede {
+  font-size: 19px;
+  line-height: 1.6;
+  color: var(--dim);
+  max-width: 34em;
+  margin: 0;
+}
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin-top: 32px;
+}
+.home-cta {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 12px 22px;
+  border-radius: 8px;
+}
+.home-cta:hover {
+  color: #fff;
+  filter: brightness(1.08);
+}
+/* Dark mode's lighter accent is too pale behind white text; deepen it to keep AA. */
+@media (prefers-color-scheme: dark) {
+  .home-cta {
+    background: color-mix(in srgb, var(--accent), #000 25%);
+  }
+}
+.home-cta:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.home-note {
+  color: var(--dim);
+  font-size: 14px;
+}
+.home-section {
+  margin-top: 80px;
+  font-size: 16px;
+  line-height: 1.65;
+}
+.home-section h2 {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin: 0 0 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.home-section > p {
+  margin: 0 0 24px;
+  max-width: 38em;
+}
+.home-section .home-fine {
+  margin: 20px 0 0;
+  font-size: 14px;
+  color: var(--dim);
+}
+.home-section a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--fg) 30%, transparent);
+  text-underline-offset: 3px;
+}
+.home-section a:hover {
+  text-decoration-color: currentColor;
+}
+.home-section a.home-cta {
+  color: #fff;
+  text-decoration: none;
+}
+/* Each item: a bold title on its own line, the explanation under it. */
+.home-promises {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 20px;
+}
+.home-promises strong {
+  display: block;
+  font-size: 16px;
+  margin-bottom: 2px;
+}
+.home-promises li {
+  color: var(--dim);
+}
+.home-promises li strong {
+  color: var(--fg);
+}
+.home-schedule {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.home-schedule li {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 16px;
+  padding: 12px 0;
+  color: var(--dim);
+}
+.home-schedule li + li {
+  border-top: 1px solid var(--line);
+}
+.home-schedule strong {
+  color: var(--fg);
+}
+.home-schedule time {
+  color: var(--accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.home-invite {
+  text-align: center;
+  background: var(--bg-subtle);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 48px 32px;
+}
+.home-invite h2 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  color: var(--fg);
+  border: 0;
+  padding: 0;
+  margin: 0 0 12px;
+}
+.home-invite > p {
+  color: var(--dim);
+  margin: 0 auto;
+}
+.home-invite .home-actions {
+  justify-content: center;
+  margin-top: 24px;
+}
+@media (max-width: 600px) {
+  .home-body {
+    padding-top: 40px;
+  }
+  .home-hero h1 {
+    font-size: 34px;
+  }
+  .home-lede {
+    font-size: 17px;
+  }
+  .home-section {
+    margin-top: 56px;
+  }
+  .home-schedule li {
+    grid-template-columns: 52px 1fr;
+    gap: 12px;
+  }
+  .home-invite {
+    padding: 36px 20px;
+  }
+}
+
+/* Dashboard */
 .dash-head h1 {
   font-size: 22px;
   letter-spacing: -0.2px;

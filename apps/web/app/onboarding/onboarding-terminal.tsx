@@ -23,7 +23,7 @@ import {
 
 /**
  * New-hire setup, run once: the paperwork (Terms and Privacy Notice), profile questions, a
- * laptop "install" and the handle, then on to the app. Later changes happen in /settings.
+ * stack summary and the handle, then on to the app. Later changes happen in /settings.
  * `next` is where the person was heading, already checked to be same-site.
  */
 export function OnboardingTerminal({ next }: { next: string | null }) {
@@ -31,11 +31,11 @@ export function OnboardingTerminal({ next }: { next: string | null }) {
 }
 
 async function onboard(t: TerminalApi, next: string | null) {
-  const onward = () => t.go(next ?? "/", next ?? "your dashboard");
+  const onward = () => t.go(next ?? "/dashboard", next ?? "your dashboard");
   // Signed-in visits never get here: the server sends them on.
   const stored = readProfile();
   const description =
-    "New hire setup: the paperwork, a few questions, then your laptop.";
+    "New hire setup: the paperwork, a few questions, then your desk.";
   if (!stored) {
     t.print(<Banner description={description} status="○ not signed in" />);
     const accepted = await paperwork(t);
@@ -77,7 +77,7 @@ async function onboard(t: TerminalApi, next: string | null) {
 async function setup(t: TerminalApi, accepted?: Acceptance) {
   t.print(
     "",
-    <span>Welcome aboard. Let&apos;s set up your profile and laptop.</span>,
+    <span>Welcome aboard. Let&apos;s set up your profile.</span>,
     <span className="t-dim">
       Arrow keys or numbers to choose · Esc skips a question · answers stay on
       this device.
@@ -96,7 +96,7 @@ async function setup(t: TerminalApi, accepted?: Acceptance) {
     "",
     ...languages.map((id) => (
       <span>
-        <span className="t-dim">→</span> installing {languageLabel(id)}{" "}
+        <span className="t-dim">→</span> {languageLabel(id)}{" "}
         {RUNNABLE_LANGUAGES.includes(id) ? (
           <span className="t-ok">✔</span>
         ) : (
@@ -113,7 +113,7 @@ async function setup(t: TerminalApi, accepted?: Acceptance) {
           </span>,
         ]
       : []),
-    <span className="t-ok">Laptop ready.</span>,
+    <span className="t-ok">Your desk is ready.</span>,
     <span>
       <span className="t-dim">→</span> your handle is{" "}
       <span className="t-brand">{handle}</span>{" "}
@@ -185,7 +185,7 @@ async function paperwork(t: TerminalApi, updated = false): Promise<Acceptance> {
     if (yes) return acceptance();
     t.print(
       <span className="t-dim">
-        No signature, no laptop: it&apos;s the one rule. Nothing has been saved.
+        No signature, no desk: it&apos;s the one rule. Nothing has been saved.
         Take your time.
       </span>,
     );

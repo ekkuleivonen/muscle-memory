@@ -19,6 +19,6 @@ export default async function OnboardingPage({
 }) {
   const next = returnPath((await searchParams).next);
   const store = await cookies();
-  if (isOnboarded(store.get(ONBOARDING_COOKIE)?.value)) redirect(next ?? "/");
+  if (isOnboarded(store.get(ONBOARDING_COOKIE)?.value)) redirect(next ?? "/dashboard");
   return <OnboardingTerminal next={next} />;
 }
