@@ -91,9 +91,9 @@ class BadStr(Exception):
 class WorseRepr:
     def __repr__(self):
         raise BadStr()
-def deep():
+def deep(levels=100000):
     value = []
-    for _ in range(100000):
+    for _ in range(levels):
         value = [value]
     return value
 def cyclic():
@@ -103,6 +103,9 @@ def cyclic():
 def frequency_map(items):
     if items == ["ok"]:
         return {"ok": 1}
+    if items == ["broad"]:
+        # Breadth that exhausts the inspection budget before the deep branch is seen.
+        return [deep(3000), [0] * 1000000]
     if items == ["repr"]:
         return BadRepr()
     if items == ["deep"]:
@@ -234,7 +237,15 @@ async function check(browserType) {
       results.conversion = await runner.run({
         runId: "r11",
         code: CONVERSION,
-        inputs: [["ok"], ["repr"], ["deep"], ["worse"], ["cyclic"], ["raise"]],
+        inputs: [
+          ["ok"],
+          ["broad"],
+          ["repr"],
+          ["deep"],
+          ["worse"],
+          ["cyclic"],
+          ["raise"],
+        ],
         functionName: "frequency_map",
       });
       results.flood = await runner.run(
@@ -358,9 +369,12 @@ function verdicts({ report, frameProbe, hits }) {
     "conversion failures stay per case and keep earlier cases": (() => {
       const outcome = report.conversion;
       if (outcome.status !== "completed") return false;
-      const [ok, badRepr, deep, worse, cyclic, raised] = outcome.cases;
+      const [ok, broad, badRepr, deep, worse, cyclic, raised] = outcome.cases;
       return (
         ok.output?.text === '{"ok": 1}' &&
+        broad.conversionError?.type === "ConversionLimitError" &&
+        !broad.repr &&
+        !broad.output &&
         badRepr.conversionError?.type === "ValueError" &&
         Boolean(badRepr.unserializable) &&
         deep.conversionError?.type === "RecursionError" &&

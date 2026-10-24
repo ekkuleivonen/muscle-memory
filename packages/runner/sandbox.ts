@@ -74,23 +74,33 @@ def __mm_error(error, limit):
 
 __mm_keep = []
 
-def __mm_too_deep(value, limit):
-    # Iterative, so measuring depth cannot itself overflow the stack.
+class ConversionLimitError(Exception):
+    pass
+
+def __mm_unconvertible(value, depth_limit, item_limit):
+    # Iterative, so inspecting the value cannot itself overflow the stack. A value that
+    # cannot be inspected completely is refused, never assumed to be shallow.
     stack = [(value, 1)]
-    visited = 0
+    items = 1
     while stack:
         item, depth = stack.pop()
-        if depth > limit:
-            return True
-        visited += 1
-        if visited > 1000000:
-            return False
+        if depth > depth_limit:
+            return RecursionError(
+                f"Return value is nested more than {depth_limit} levels deep or is "
+                "cyclic; it was not converted.")
         if isinstance(item, dict):
-            stack.extend((child, depth + 1) for child in item.keys())
-            stack.extend((child, depth + 1) for child in item.values())
+            children = [*item.keys(), *item.values()]
         elif isinstance(item, (list, tuple, set, frozenset)):
-            stack.extend((child, depth + 1) for child in item)
-    return False
+            children = list(item)
+        else:
+            continue
+        items += len(children)
+        if items > item_limit:
+            return ConversionLimitError(
+                f"Return value holds more than {item_limit} nested items, too many to "
+                "inspect safely; it was not converted.")
+        stack.extend((child, depth + 1) for child in children)
+    return None
 
 def __mm_run(code, inputs_json, function_name, limit):
     tests = [json.dumps(value) for value in json.loads(inputs_json)]
@@ -126,14 +136,12 @@ def __mm_run(code, inputs_json, function_name, limit):
         try:
             # repr/json.dumps recurse in C, which exhausts the wasm stack (a JS
             # RangeError that ends the whole run) long before Python's guard fires.
-            too_deep = __mm_too_deep(actual, 500)
+            refusal = __mm_unconvertible(actual, 500, 1000000)
         except BaseException as error:
             result["conversionError"] = __mm_error(error, limit)
             continue
-        if too_deep:
-            result["conversionError"] = __mm_error(RecursionError(
-                "Return value is nested more than 500 levels deep or is cyclic; "
-                "it was not converted."), limit)
+        if refusal is not None:
+            result["conversionError"] = __mm_error(refusal, limit)
             continue
         try:
             result["repr"] = __mm_bounded(repr(actual), 2000)
