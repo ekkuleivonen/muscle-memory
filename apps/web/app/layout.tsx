@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { TrackerActivity } from "./(browse)/_components/tracker-activity";
+import { Uploads } from "./(browse)/_components/uploads";
 import "./style.css";
 export const metadata: Metadata = {
   title: "Muscle Memory — keep your craft",
@@ -20,6 +21,7 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <TrackerActivity />
         </Suspense>
+        <Uploads />
       </body>
     </html>
   );

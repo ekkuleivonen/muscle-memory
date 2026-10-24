@@ -150,7 +150,8 @@ async function paperwork(t: TerminalApi, updated = false): Promise<Acceptance> {
       <span className="t-dim">→</span> We record what you do here, keystroke by
       keystroke: every key you press in the editor and when, your edits and
       pastes, the pages and files you open, test runs and their output, and
-      when you switch away (never to what). That&apos;s the product: it picks
+      when you switch away (never to what), and send it to our servers as you
+      go. That&apos;s the product: it picks
       your next issues and shows how you compare with other people and LLMs.
     </span>,
     <span>

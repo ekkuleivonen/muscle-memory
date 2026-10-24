@@ -3,6 +3,7 @@
  * cookie that stands in for a session. Browser-only; the server sees just the cookie.
  */
 import { openPracticeStore } from "../../../packages/browser/practice-store";
+import { eraseUploaded } from "./ingest";
 import { BOARD_CHANGE, BOARD_KEY } from "./board";
 import { HANDLE_PATTERN, randomHandle } from "./handle";
 import { LEGAL_VERSION, type Acceptance } from "./legal";
@@ -109,21 +110,34 @@ export function logOut() {
   document.cookie = `${ONBOARDING_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
 }
 
-/** Board, saved practice and recorded activity. Profile, handle and settings stay. */
-export async function resetProgress() {
+/**
+ * Board, saved practice and recorded activity on this device. Profile, handle, settings and
+ * the device identity stay, so anything already uploaded can still be deleted later.
+ */
+export async function resetProgress(identity = false) {
   localStorage.removeItem(BOARD_KEY);
   window.dispatchEvent(new Event(BOARD_CHANGE));
   const store = await openPracticeStore();
   try {
-    await store.clear();
+    await store.clear(identity);
   } finally {
     store.close();
   }
 }
 
-/** Everything this browser holds for the account, then the session. */
+/**
+ * Everything: uploaded records first (with the device secret as proof), then everything this
+ * browser holds, then the session. If the server cannot be reached, nothing is deleted, since
+ * forgetting the secret would leave the uploaded records undeletable.
+ */
 export async function deleteAccount() {
-  await resetProgress();
+  const store = await openPracticeStore();
+  try {
+    await eraseUploaded(store);
+  } finally {
+    store.close();
+  }
+  await resetProgress(true);
   localStorage.removeItem(PROFILE_KEY);
   localStorage.removeItem(LEGACY_ACTIVITY_KEY);
   window.dispatchEvent(new Event(ACCOUNT_CHANGE));

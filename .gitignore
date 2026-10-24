@@ -3,6 +3,8 @@ __pycache__/
 .venv/
 .env*
 !.env.example
+# Public build settings only (NEXT_PUBLIC_*, compiled into the page anyway); never secrets.
+!apps/web/.env.production
 *.db
 *.sqlite*
 private/

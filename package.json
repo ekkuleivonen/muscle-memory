@@ -7,8 +7,9 @@
   "scripts": {
     "dev": "npm run dev --workspace apps/web",
     "build": "npm run check:content && npm run build --workspace apps/web",
-    "test": "node --import tsx --test packages/*/*.test.ts apps/web/app/*/*.test.ts apps/web/lib/*.test.ts",
+    "test": "node --import tsx --test packages/*/*.test.ts apps/web/app/*/*.test.ts apps/web/lib/*.test.ts apps/ingest/src/*.test.ts",
     "check:content": "node --import tsx tools/build-content.ts --check",
+    "typecheck": "tsc --noEmit -p apps/web && tsc --noEmit -p apps/ingest",
     "check:publish": "node --import tsx tools/browser/content-check.ts",
     "build:content": "node --import tsx tools/build-content.ts",
     "build:cloudflare": "npm run build:cloudflare --workspace apps/web",

@@ -1,0 +1,29 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  // Receives practice records from browsers; see docs/telemetry.md. It shares the app's
+  // hostname under /ingest/, so uploads are same-origin and behind the same Access gate.
+  "name": "muscle-memory-ingest",
+  "main": "src/index.ts",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "musclememory.run/ingest/*", "zone_name": "musclememory.run" }],
+  "compatibility_date": "2026-10-23",
+  "r2_buckets": [{ "binding": "CONTROL", "bucket_name": "muscle-memory-control" }],
+  // The stream muscle_memory_events (docs/telemetry.md).
+  "pipelines": [{ "binding": "EVENTS", "stream": "4ccd18f15b5845159747f7c4f42a5c5e" }],
+  "vars": { "ALLOWED_ORIGINS": "" },
+  // Per participant and per address; see Env in src/index.ts.
+  "ratelimits": [
+    { "name": "PER_PARTICIPANT", "namespace_id": "4101", "simple": { "limit": 120, "period": 60 } },
+    { "name": "PER_ADDRESS", "namespace_id": "4102", "simple": { "limit": 600, "period": 60 } },
+  ],
+  "observability": { "enabled": true },
+  "env": {
+    // `wrangler dev --env local`: no stream, rows land in the local CONTROL bucket.
+    "local": {
+      "r2_buckets": [{ "binding": "CONTROL", "bucket_name": "muscle-memory-control-local" }],
+      "pipelines": [],
+      "vars": { "ALLOWED_ORIGINS": "http://localhost:3000,http://192.168.40.32:3000" },
+    },
+  },
+}

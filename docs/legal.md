@@ -15,7 +15,7 @@ Under GDPR, consent bundled into sign-up is not valid consent, but consent is on
 
 Selling personal data, sharing it beyond published anonymised datasets, or using it for unrelated purposes such as training models would need opt-in consent and is not covered.
 
-What is recorded is listed in the Privacy Notice in plain words, keystroke timing included, with a line on typing rhythm being able to tell people apart and our commitment not to use it for that. The version moved to 2026-10-25 when keystrokes, page views and visibility were added, so everyone is asked again.
+Records are uploaded to our servers as people play ([telemetry](telemetry.md)); deleting an account erases them there too, with the device secret as proof. What is recorded is listed in the Privacy Notice in plain words, keystroke timing included, with a line on typing rhythm being able to tell people apart and our commitment not to use it for that. The version moved to 2026-10-25 when keystrokes, page views and visibility were added, so everyone is asked again.
 
 The Terms also grant a licence to submitted code (needed to publish solutions), set a minimum age of 16, and forbid AI assistance in human runs and re-identifying people in published datasets.
 
