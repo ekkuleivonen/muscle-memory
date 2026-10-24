@@ -133,12 +133,12 @@ test("qualifiers parse into filters; unknown ones stay as text", () => {
   assert.deepEqual(query.language, ["python"]);
   assert.deepEqual(query.label, ["maps"]);
   assert.deepEqual(query.project, ["edge-proxy"]);
-  assert.equal(query.runnable, true);
   assert.equal(query.sort, "title");
   assert.deepEqual(query.text, ["log parser", "colour:red"]);
   assert.equal(
     formatQuery(query),
-    'is:runnable kind:bug lang:python project:edge-proxy label:maps sort:title "log parser" colour:red',
+    // is:runnable from older links is dropped: every issue runs.
+    'kind:bug lang:python project:edge-proxy label:maps sort:title "log parser" colour:red',
   );
   assert.equal(parseIssueQuery("x".repeat(500)).text[0].length, 200);
   for (const alias of ["project", "proj", "category", "cat"])
@@ -169,28 +169,8 @@ test("filters combine across qualifiers and match any value within one", () => {
     "EDGE-2",
     "EDGE-4",
   ]);
-  assert.deepEqual(keys("is:runnable"), [
-    "API-1",
-    "API-2",
-    "API-3",
-    "API-4",
-    "API-5",
-    "API-6",
-    "DATA-1",
-    "DATA-2",
-    "DATA-3",
-    "DATA-4",
-    "DATA-5",
-    "EDGE-1",
-    "EDGE-2",
-    "EDGE-3",
-    "EDGE-4",
-    "FN-1",
-    "SHOP-1",
-    "SHOP-2",
-    "SHOP-3",
-    "SHOP-4",
-  ]);
+  // Every issue runs, and an old is:runnable link still shows them all.
+  assert.equal(keys("is:runnable").length, merged.issues.length);
   assert.deepEqual(keys("label:strings"), [
     "API-4",
     "API-5",
@@ -331,8 +311,7 @@ test("summaries for client components leave out fixtures and long text", () => {
 test("board statuses parse as is: qualifiers and filter wherever the board is known", () => {
   const query = parseIssueQuery("is:done,todo is:runnable lang:python");
   assert.deepEqual(query.status, ["todo", "done"]);
-  assert.equal(query.runnable, true);
-  assert.equal(formatQuery(query), "is:runnable is:todo,done lang:python");
+  assert.equal(formatQuery(query), "is:todo,done lang:python");
   assert.deepEqual(parseIssueQuery("is:nonsense").status, []);
   const onBoard = new Set(["API-2", "FN-1"]);
   const statusOf = (key: string) =>

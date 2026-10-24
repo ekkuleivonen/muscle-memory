@@ -1,6 +1,6 @@
 /**
  * GitHub-style search for issues and projects: one `q` string with qualifiers such as
- * `kind:bug lang:python,go difficulty:easy project:shop label:maps is:runnable`, plus
+ * `kind:bug lang:python,go difficulty:easy project:shop label:maps is:todo`, plus
  * free text. Commas mean "any of"; different qualifiers must all match. Unknown qualifiers
  * and values are kept as plain text rather than rejected, so hand-typed queries still work.
  */
@@ -48,7 +48,6 @@ export interface IssueQuery {
   label: string[];
   /** Board status lives in the browser, so the server leaves this filter to the client. */
   status: Status[];
-  runnable: boolean;
   sort: Sort;
   text: string[];
 }
@@ -97,7 +96,6 @@ export const emptyIssueQuery = (): IssueQuery => ({
   project: [],
   label: [],
   status: [],
-  runnable: false,
   sort: "key",
   text: [],
 });
@@ -122,11 +120,11 @@ export function parseIssueQuery(q: string): IssueQuery {
     const match = /^([a-z]+):(.+)$/i.exec(token);
     const name = match?.[1].toLowerCase();
     if (name === "is") {
-      // is:runnable, and board statuses as is:todo or is:backlog,done.
+      // Board statuses as is:todo or is:backlog,done. (is:runnable from older links is
+      // ignored: every issue runs now.)
       for (const raw of match![2].toLowerCase().split(",")) {
         const value = raw.trim();
-        if (value === "runnable") query.runnable = true;
-        else if (STATUSES.includes(value as Status))
+        if (STATUSES.includes(value as Status))
           add(query.status, value as Status);
       }
       continue;
@@ -160,7 +158,6 @@ export function parseProjectQuery(q: string): ProjectQuery {
 /** The canonical query string: qualifiers first, in a fixed order, then free text. */
 export function formatQuery(query: IssueQuery | ProjectQuery): string {
   const parts: string[] = [];
-  if ("runnable" in query && query.runnable) parts.push("is:runnable");
   if ("status" in query && query.status.length)
     parts.push(
       `is:${STATUSES.filter((s) => query.status.includes(s)).join(",")}`,
@@ -287,7 +284,6 @@ export function filterIssues(
               query.project.includes(issue.project.slug)))) &&
         (query.label.length === 0 ||
           issue.labels.some((l) => query.label.includes(l))) &&
-        (!query.runnable || issue.runnable) &&
         matchesText(issueText(issue), query.text),
     )
     .sort(SORTERS[query.sort]);
