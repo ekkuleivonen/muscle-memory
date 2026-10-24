@@ -12,9 +12,19 @@ import {
   todoFull,
   type BoardItem,
 } from "../../../lib/board";
+import type { BoardMoveVia } from "../../../../../packages/domain/board";
+import { ACTIVITY_KEY, parseConsent } from "../../../lib/activity-log";
+import { logBoardMove } from "./board-log";
 import { StatusIcon } from "./icons";
 
 const CHANGE = "muscle-memory:board";
+
+/** What a move needs to know about the issue: its key and the exact content shown. */
+export interface IssueRef {
+  key: string;
+  slug: string;
+  version: string;
+}
 
 function subscribe(onChange: () => void) {
   window.addEventListener("storage", onChange);
@@ -37,12 +47,33 @@ export function useBoard() {
     localStorage.setItem(BOARD_KEY, serializeBoard(next));
     window.dispatchEvent(new Event(CHANGE));
   };
-  return {
-    items,
-    toTodo: (key: string) =>
-      save(moveToTodo(items, key, new Date().toISOString())),
-    toBacklog: (key: string) => save(moveToBacklog(items, key)),
+  /** Moves an issue and, if the activity log is on, records how it moved. */
+  const move = (
+    issue: IssueRef,
+    to: "todo" | "backlog",
+    via: BoardMoveVia,
+    nudged = false,
+  ) => {
+    const onBoard = items.some((i) => i.key === issue.key);
+    if (onBoard === (to === "todo")) return;
+    save(
+      to === "todo"
+        ? moveToTodo(items, issue.key, new Date().toISOString())
+        : moveToBacklog(items, issue.key),
+    );
+    void logBoardMove(
+      { id: issue.slug, version: issue.version },
+      {
+        issueKey: issue.key,
+        from: to === "todo" ? "backlog" : "todo",
+        to,
+        via,
+        todoBefore: items.length,
+        nudged,
+      },
+    );
   };
+  return { items, move };
 }
 
 export function IssueStatus({ issueKey }: { issueKey: string }) {
@@ -64,16 +95,16 @@ const typing = (target: EventTarget | null) =>
  * The one status anyone sets by hand: backlog ↔ Todo. `t` toggles it from the keyboard.
  * Over the soft limit it asks once instead of refusing.
  */
-export function TodoButton({ issueKey }: { issueKey: string }) {
-  const { items, toTodo, toBacklog } = useBoard();
-  const [confirming, setConfirming] = useState(false);
-  const onBoard = items.some((i) => i.key === issueKey);
+export function TodoButton({ issue }: { issue: IssueRef }) {
+  const { items, move } = useBoard();
+  const [confirming, setConfirming] = useState<BoardMoveVia | null>(null);
+  const onBoard = items.some((i) => i.key === issue.key);
 
-  function toggle() {
-    if (onBoard) return toBacklog(issueKey);
-    if (todoFull(items) && !confirming) return setConfirming(true);
-    setConfirming(false);
-    toTodo(issueKey);
+  function toggle(via: BoardMoveVia) {
+    if (onBoard) return move(issue, "backlog", via);
+    if (todoFull(items) && !confirming) return setConfirming(via);
+    setConfirming(null);
+    move(issue, "todo", confirming ?? via, !!confirming);
   }
 
   useEffect(() => {
@@ -87,7 +118,7 @@ export function TodoButton({ issueKey }: { issueKey: string }) {
       )
         return;
       event.preventDefault();
-      toggle();
+      toggle("keyboard");
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -99,7 +130,7 @@ export function TodoButton({ issueKey }: { issueKey: string }) {
         type="button"
         className={onBoard ? "btn todo-btn" : "btn todo-btn primary-outline"}
         aria-pressed={onBoard}
-        onClick={toggle}
+        onClick={() => toggle("button")}
         title={`${onBoard ? "Back to backlog" : "Move to Todo"} (t)`}
       >
         <StatusIcon status={onBoard ? "todo" : "backlog"} />
@@ -114,13 +145,17 @@ export function TodoButton({ issueKey }: { issueKey: string }) {
             <Link className="btn" href="/board">
               Open board
             </Link>
-            <button className="btn" type="button" onClick={toggle}>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => toggle("button")}
+            >
               Add anyway
             </button>
             <button
               className="btn"
               type="button"
-              onClick={() => setConfirming(false)}
+              onClick={() => setConfirming(null)}
             >
               Cancel
             </button>
@@ -132,9 +167,9 @@ export function TodoButton({ issueKey }: { issueKey: string }) {
 }
 
 /** Status in the properties panel, with the same backlog ↔ Todo switch. */
-export function StatusField({ issueKey }: { issueKey: string }) {
-  const { items, toTodo, toBacklog } = useBoard();
-  const status = statusOf(items, issueKey);
+export function StatusField({ issue }: { issue: IssueRef }) {
+  const { items, move } = useBoard();
+  const status = statusOf(items, issue.key);
   return (
     <>
       <StatusIcon status={status} /> {STATUS_LABELS[status]}
@@ -142,11 +177,39 @@ export function StatusField({ issueKey }: { issueKey: string }) {
         type="button"
         className="link-btn"
         onClick={() =>
-          status === "backlog" ? toTodo(issueKey) : toBacklog(issueKey)
+          move(issue, status === "backlog" ? "todo" : "backlog", "status-field")
         }
       >
         {status === "backlog" ? "Move to Todo" : "Back to backlog"}
       </button>
     </>
+  );
+}
+
+const noop = () => () => {};
+
+/** Whether board moves are being recorded, always visible where moves happen. */
+export function ActivityLogNote() {
+  const on = useSyncExternalStore(
+    subscribe,
+    () => parseConsent(localStorage.getItem(ACTIVITY_KEY)) !== null,
+    () => null,
+  );
+  useSyncExternalStore(
+    noop,
+    () => true,
+    () => false,
+  );
+  if (on === null) return null;
+  return (
+    <p className="hint">
+      Activity log: <b>{on ? "on" : "off"}</b>.{" "}
+      {on
+        ? "Moves between the backlog and Todo are recorded in this browser only. "
+        : "Moves are not recorded. "}
+      <Link href="/onboarding">
+        {on ? "Turn it off in Setup (log off)" : "Turn it on in Setup (log on)"}
+      </Link>
+    </p>
   );
 }

@@ -2,6 +2,7 @@
  * One open workspace: editor transactions and runs become ordered raw observations, then
  * feedback is derived from the stored run outcome. No React state is touched per keystroke.
  */
+import { randomId } from "../../../../packages/browser/random-id";
 import { Transaction } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { CaptureRecorder } from "../../../../packages/capture/recorder";
@@ -48,7 +49,7 @@ export interface SessionOptions {
 
 export class WorkspaceSession {
   readonly recorder: CaptureRecorder;
-  readonly sourceId = `workspace-${crypto.randomUUID()}`;
+  readonly sourceId = `workspace-${randomId()}`;
   private view?: EditorView;
   private revision = 0;
   private editsSinceSnapshot = 0;
@@ -105,7 +106,7 @@ export class WorkspaceSession {
     if (!this.view || this.options.runner().running) return;
     const revision = this.revision;
     const code = this.artifact(this.view.state.doc.toString());
-    const runId = crypto.randomUUID();
+    const runId = randomId();
     const base = {
       runId,
       revision,

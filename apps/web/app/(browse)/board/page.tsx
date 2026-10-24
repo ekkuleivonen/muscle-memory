@@ -5,6 +5,7 @@ import { summarize } from "../../../lib/library";
 import { getLibrary } from "../../../lib/load";
 import { pathWithQuery } from "../../../lib/onboarding";
 import type { SearchParams } from "../../../lib/queries";
+import { ActivityLogNote } from "../_components/board";
 import { Board } from "../_components/board-view";
 import { Topbar } from "../_components/topbar";
 
@@ -45,6 +46,7 @@ export default async function BoardPage({
           Moving an issue from the backlog to Todo is the only thing you do by
           hand. It moves to In progress and Done on its own as you work.
         </p>
+        <ActivityLogNote />
       </main>
     </>
   );

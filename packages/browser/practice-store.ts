@@ -1,4 +1,5 @@
 /** Optional device-local storage. This module sends no records over the network. */
+import { randomId } from "./random-id";
 import {
   createAttemptEvent,
   encodeEvent,
@@ -18,7 +19,7 @@ export class PracticeStore implements CaptureSink {
       let id: string;
       const request = settings.get("participantId");
       request.onsuccess = () => {
-        id = request.result ?? crypto.randomUUID();
+        id = request.result ?? randomId();
         if (!request.result) settings.put(id, "participantId");
       };
       transaction.oncomplete = () => resolve(id);

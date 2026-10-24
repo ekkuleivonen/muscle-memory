@@ -12,6 +12,13 @@ import {
   openPracticeStore,
 } from "../../../../packages/browser/practice-store";
 import { BOARD_KEY } from "../../lib/board";
+import {
+  ACTIVITY_DISCLOSURE,
+  ACTIVITY_KEY,
+  consentRecord,
+  parseConsent,
+} from "../../lib/activity-log";
+import { boardPayloads } from "../../../../packages/domain/board";
 import { languageLabel } from "../../lib/library";
 import {
   issuesFor,
@@ -72,9 +79,25 @@ function saveProfile(profile: Profile) {
   document.cookie = `${ONBOARDING_COOKIE}=${ONBOARDING_VERSION}; Path=/; Max-Age=${YEAR_SECONDS}; SameSite=Lax`;
 }
 
+function activityLogOn(): boolean {
+  return parseConsent(localStorage.getItem(ACTIVITY_KEY)) !== null;
+}
+
+function download(name: string, text: string) {
+  const url = URL.createObjectURL(
+    new Blob([text], { type: "application/x-ndjson" }),
+  );
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function forgetProfile() {
   localStorage.removeItem(PROFILE_KEY);
   localStorage.removeItem(BOARD_KEY);
+  localStorage.removeItem(ACTIVITY_KEY);
   document.cookie = `${ONBOARDING_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
 }
 
@@ -199,6 +222,9 @@ export function Terminal({ next }: { next: string | null }) {
       </span>,
       "",
     );
+    if (activityLogOn())
+      print(<span className="t-dim">Activity log: on.</span>, "");
+    else await askActivityLog();
     if (
       await ask({
         kind: "confirm",
@@ -214,6 +240,53 @@ export function Terminal({ next }: { next: string | null }) {
       <span className="t-dim">
         Type <Cmd line="help" /> to look around, or <Cmd line="home" /> when
         you&apos;re ready.
+      </span>,
+    );
+  }
+
+  /** Opt-in only: the disclosure, then a question whose default is no. */
+  async function askActivityLog() {
+    print(
+      ...ACTIVITY_DISCLOSURE.map((line) => (
+        <span className="t-dim">{line}</span>
+      )),
+    );
+    const yes = await ask({
+      kind: "confirm",
+      id: "activity-log",
+      message: "Keep the activity log?",
+      initial: false,
+    });
+    if (yes)
+      localStorage.setItem(
+        ACTIVITY_KEY,
+        consentRecord(new Date().toISOString()),
+      );
+    print(
+      <span className="t-dim">
+        {yes
+          ? "Activity log on. log off stops it at any time."
+          : "No activity log. log on turns it on later."}
+      </span>,
+      "",
+    );
+  }
+
+  async function log(sub: string | undefined) {
+    if (sub === "on") {
+      if (activityLogOn()) return print("Activity log is already on.");
+      return askActivityLog();
+    }
+    if (sub === "off") {
+      localStorage.removeItem(ACTIVITY_KEY);
+      return print(
+        "Activity log off. Moves are no longer recorded; data clear deletes what was.",
+      );
+    }
+    print(
+      <span>
+        Activity log: {activityLogOn() ? "on" : "off"}. <Cmd line="log on" /> |{" "}
+        <Cmd line="log off" />
       </span>,
     );
   }
@@ -254,23 +327,21 @@ export function Terminal({ next }: { next: string | null }) {
         return;
       }
       const events = await store.pending();
-      if (!events.length)
+      const moves = boardPayloads(await store.workspaceRecords());
+      if (!events.length && !moves.length)
         return print(
-          <span className="t-dim">No saved practice on this device.</span>,
+          <span className="t-dim">Nothing saved on this device yet.</span>,
         );
-      const url = URL.createObjectURL(
-        new Blob([encodePendingExport(events)], {
-          type: "application/x-ndjson",
-        }),
-      );
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "muscle-memory-local-events.jsonl";
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      // A browser download is no proof of a write, so events stay and export stays repeatable.
+      // A browser download is no proof of a write, so records stay and export stays repeatable.
+      if (events.length)
+        download(
+          "muscle-memory-local-events.jsonl",
+          encodePendingExport(events),
+        );
+      if (moves.length)
+        download("muscle-memory-board-activity.jsonl", moves.join("\n") + "\n");
       print(
-        `Downloaded ${events.length} saved event(s). They stay on this device.`,
+        `Downloaded ${events.length} practice event(s) and ${moves.length} board move(s). They stay on this device.`,
       );
     } finally {
       store.close();
@@ -326,6 +397,9 @@ export function Terminal({ next }: { next: string | null }) {
           return go(issuesFor(profile.current ?? {}));
         case "data":
           await data(command.args[0]);
+          break;
+        case "log":
+          await log(command.args[0]);
           break;
         default:
           print(

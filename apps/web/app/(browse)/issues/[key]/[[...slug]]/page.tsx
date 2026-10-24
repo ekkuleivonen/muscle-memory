@@ -79,7 +79,13 @@ export default async function IssuePage(props: Props) {
       <Topbar
         actions={
           <>
-            <TodoButton issueKey={issue.key} />
+            <TodoButton
+              issue={{
+                key: issue.key,
+                slug: issue.slug,
+                version: issue.version,
+              }}
+            />
             {issue.runnable && (
               <Link className="btn primary" href={workspaceHref(issue)}>
                 <PlayIcon /> Start work
@@ -187,7 +193,9 @@ function Properties({ issue }: { issue: Issue }) {
       <dl>
         <dt>Status</dt>
         <dd>
-          <StatusField issueKey={issue.key} />
+          <StatusField
+            issue={{ key: issue.key, slug: issue.slug, version: issue.version }}
+          />
         </dd>
         <dt>Kind</dt>
         <dd>

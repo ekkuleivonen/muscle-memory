@@ -10,6 +10,11 @@ export const COMMANDS = [
     summary: "export or clear everything saved on this device",
     subcommands: ["export", "clear"],
   },
+  {
+    name: "log",
+    summary: "turn the private board activity log on or off",
+    subcommands: ["on", "off", "status"],
+  },
   { name: "clear", summary: "clear the screen" },
 ] as const;
 

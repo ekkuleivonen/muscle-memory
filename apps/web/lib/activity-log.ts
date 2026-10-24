@@ -1,0 +1,38 @@
+/**
+ * Consent for the board activity log. Opt-in only: without a stored consent for the current
+ * version, nothing is recorded. Changing the disclosure means bumping BOARD_CONSENT_VERSION,
+ * which asks again.
+ */
+import { BOARD_CONSENT_VERSION } from "../../../packages/domain/board";
+
+export const ACTIVITY_KEY = "muscle-memory.activity-log";
+
+export interface ActivityConsent {
+  consentVersion: string;
+  consentedAt: string;
+}
+
+/** The disclosure shown before asking, word for word what the consent version covers. */
+export const ACTIVITY_DISCLOSURE = [
+  "Keep a private activity log? Each time you move an issue between the backlog and Todo, it records which issue, when, how (button, Status field or keyboard), how many were in Todo and whether you were nudged.",
+  "It stays in this browser's storage under a random ID. Nothing is uploaded and research sharing is off. log off stops it; data clear deletes it.",
+] as const;
+
+export function parseConsent(raw: string | null): ActivityConsent | null {
+  try {
+    const value = JSON.parse(raw ?? "null") as Partial<ActivityConsent> | null;
+    return value?.consentVersion === BOARD_CONSENT_VERSION &&
+      typeof value.consentedAt === "string"
+      ? { consentVersion: value.consentVersion, consentedAt: value.consentedAt }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export function consentRecord(at: string): string {
+  return JSON.stringify({
+    consentVersion: BOARD_CONSENT_VERSION,
+    consentedAt: at,
+  });
+}
