@@ -63,7 +63,9 @@ function observations(records: readonly WorkspaceRecord[]): Observation[] {
             sequence: Number(value.source?.sequence ?? 0),
             issue: typeof value.issue === "string" ? value.issue : null,
             issueRevision:
-              typeof value.issueRevision === "string" ? value.issueRevision : null,
+              typeof value.issueRevision === "string"
+                ? value.issueRevision
+                : null,
             data: value.data ?? {},
           },
         ];
@@ -114,7 +116,9 @@ function summary(
   const mergedAt = merged.get(`${o.issue}#${Number(o.data.number)}`);
   const other = [...merged.keys()]
     .map((key) => key.split("#"))
-    .find(([id, n]) => id === o.issue && Number(n) !== Number(o.data.number))?.[1];
+    .find(
+      ([id, n]) => id === o.issue && Number(n) !== Number(o.data.number),
+    )?.[1];
   return {
     issue: o.issue!,
     issueRevision: o.issueRevision!,
@@ -181,7 +185,13 @@ export type TimelineEntry =
   | { kind: "merged"; at: string }
   /** A teammate's review comment on this pull request; its thread is read from feedback. */
   | { kind: "review"; at: string; comment: string; push: number }
-  | { kind: "resolved"; at: string; comment: string; push: number; issueRevision: string }
+  | {
+      kind: "resolved";
+      at: string;
+      comment: string;
+      push: number;
+      issueRevision: string;
+    }
   /** A comment or hint released into the ticket's thread while this work went on. */
   | {
       kind: "note";
@@ -249,7 +259,9 @@ export function pullRequestDetail(
   const window = all.filter(
     (o) =>
       (!before || o.occurredAt > before.at) &&
-      o.occurredAt <= pull.at &&
+      (o.occurredAt <= pull.at ||
+        (o.type === "observation.workspace.run" &&
+          pushOf.has(String(o.data.runId)))) &&
       // Another pull request's own runs and checks are its story, not this one's.
       !(
         (o.type === "observation.workspace.pull-request" &&
@@ -297,7 +309,9 @@ export function pullRequestDetail(
       else timeline.push({ kind: "opened", at: o.occurredAt, times: 1 });
     } else if (o.type === "observation.workspace.run") {
       const status = String(o.data.status);
-      const revision = o.issueRevision ? revisionFor(o.issueRevision) : undefined;
+      const revision = o.issueRevision
+        ? revisionFor(o.issueRevision)
+        : undefined;
       const push = pushOf.get(String(o.data.runId));
       if (push) {
         // The first observation of a push's run is when it was opened or pushed.
@@ -317,7 +331,10 @@ export function pullRequestDetail(
         flush();
         runs++;
         const verdict = revision
-          ? pullRequestResult(casesRun(revision.checks.cases, "local"), o.data.outcome as never)
+          ? pullRequestResult(
+              casesRun(revision.checks.cases, "local"),
+              o.data.outcome as never,
+            )
           : { result: "checks-errored", passed: 0, total: 0 };
         const green = verdict.result === "checks-passed";
         const tested = green || verdict.result === "checks-failed";
@@ -389,7 +406,9 @@ export function pullRequestDetail(
         kind: "note",
         at: o.occurredAt,
         source: o.type === "observation.workspace.hint" ? "hint" : "comment",
-        id: String(o.type === "observation.workspace.hint" ? d.hint : d.comment),
+        id: String(
+          o.type === "observation.workspace.hint" ? d.hint : d.comment,
+        ),
         wording: Number(d.wording ?? 0),
         issueRevision: o.issueRevision ?? "",
       });
@@ -413,7 +432,10 @@ export function pullRequestDetail(
           >,
         ).map(([path, file]) => [
           path,
-          { text: String(file.text ?? ""), truncated: Boolean(file.capture?.truncated) },
+          {
+            text: String(file.text ?? ""),
+            truncated: Boolean(file.capture?.truncated),
+          },
         ]),
       );
     } catch {

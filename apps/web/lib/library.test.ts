@@ -25,6 +25,21 @@ import { catalog } from "./test-fixtures";
 
 const merged = library(catalog);
 
+test("unlisted exercises remain addressable in personal history but not discovery", () => {
+  assert.equal(
+    merged.issues.some((i) => i.key === "QUICK-2"),
+    false,
+  );
+  assert.equal(
+    merged.allIssues.find((i) => i.key === "QUICK-2")?.language,
+    "javascript",
+  );
+  assert.equal(
+    merged.allIssues.find((i) => i.key === "QUICK-2")?.slug,
+    merged.findIssue("QUICK-2")?.slug,
+  );
+});
+
 test("issues are live metadata over their live revisions, grouped into projects", () => {
   const issue = merged.findIssue("FN-1")!;
   const meta = catalog.issues.find((i) => i.id === "frequency-map")!;
@@ -72,7 +87,9 @@ test("retired issues leave lists, but every published revision still resolves", 
   );
   // Recorded work names the revision it ran against; it stays readable.
   assert.equal(retired.revision(meta.revision)?.issue, "lru-cache");
-  assert.deepEqual(Object.keys(retired.revisionsOf("lru-cache")), [meta.revision]);
+  assert.deepEqual(Object.keys(retired.revisionsOf("lru-cache")), [
+    meta.revision,
+  ]);
 });
 
 test("issues run when their language has an engine; project summaries span their issues", () => {

@@ -69,6 +69,27 @@ test("the feed lists moves, opens and finished runs, newest first", () => {
   assert.equal(recentActivity(records, 1).length, 1);
 });
 
+test("queued and running phases do not duplicate a finished run, and pushes keep their identity", () => {
+  const phases = ["queued", "running", "result"].map((status) =>
+    record({
+      type: "observation.workspace.run",
+      occurredAt: "2026-10-25T09:00:00Z",
+      issue: "frequency-map",
+      data: { runId: "run-1", purpose: "local", status },
+    }),
+  );
+  const push = record({
+    type: "observation.workspace.pull-request",
+    occurredAt: "2026-10-25T09:01:00Z",
+    issue: "frequency-map",
+    data: { number: 1, push: 2, result: "checks-passed", passed: 4, total: 4 },
+  });
+  const feed = recentActivity([...phases, push]);
+  assert.equal(feed.length, 2);
+  assert.equal(feed[0].kind, "pull-request");
+  assert.equal(feed[0].kind === "pull-request" && feed[0].push, 2);
+});
+
 test("every observation counts towards its local day", () => {
   const days = actionsPerDay(records);
   const total = [...days.values()].reduce((a, b) => a + b, 0);
@@ -137,7 +158,15 @@ test("pull requests read back per person and Challenge, newest first", () => {
       participantId: "p",
       occurredAt: "2026-10-24T10:05:00.000Z",
       issue: "frequency-map",
-      data: { number: 1, push: 2, runId: "run-1b", revision: 9, result: "checks-passed", passed: 4, total: 4 },
+      data: {
+        number: 1,
+        push: 2,
+        runId: "run-1b",
+        revision: 9,
+        result: "checks-passed",
+        passed: 4,
+        total: 4,
+      },
     }),
     pr("q", "frequency-map", 9, "merged"),
     pr("p", "dedupe", 3, "merged"),
