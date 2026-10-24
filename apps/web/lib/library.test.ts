@@ -85,7 +85,7 @@ test("older and disabled versions stay out of lists but specific versions resolv
 test("only Python with a starter runs; project summaries span their issues", () => {
   assert.deepEqual(
     merged.issues.filter((i) => i.runnable).map((i) => i.slug),
-    ["frequency-map"],
+    ["frequency-map", "csv-quoted-fields", "dedupe-customers"],
   );
   const edge = merged.projects.find((c) => c.slug === "edge-proxy")!;
   assert.equal(difficultyRange(edge.issues), "easy–hard");
@@ -145,7 +145,7 @@ test("filters combine across qualifiers and match any value within one", () => {
     "EDGE-2",
     "EDGE-4",
   ]);
-  assert.deepEqual(keys("is:runnable"), ["FN-1"]);
+  assert.deepEqual(keys("is:runnable"), ["DATA-1", "DATA-2", "FN-1"]);
   assert.deepEqual(keys("label:strings"), [
     "API-4",
     "DATA-1",

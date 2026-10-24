@@ -105,17 +105,22 @@ test("the board keeps the order issues were added and skips ones that no longer 
 });
 
 test("suggestions prefer runnable, then the person's stack, then easier issues", () => {
+  // The three Python issues run in the browser, so they come first, easiest first.
   assert.deepEqual(
     suggestions(issues, [], ["rust"]).map((i) => i.key),
-    ["FN-1", "EDGE-4", "EDGE-2"],
+    ["FN-1", "DATA-1", "DATA-2"],
+  );
+  const runnableOnBoard = ["FN-1", "DATA-1", "DATA-2"].map((key) => ({
+    key,
+    addedAt: "t",
+    status: "todo" as const,
+  }));
+  assert.deepEqual(
+    suggestions(issues, runnableOnBoard, ["rust"]).map((i) => i.key),
+    ["EDGE-4", "EDGE-2", "SHOP-1"],
   );
   assert.deepEqual(
-    suggestions(
-      issues,
-      [{ key: "FN-1", addedAt: "t", status: "todo" }],
-      ["go"],
-      2,
-    ).map((i) => i.key),
+    suggestions(issues, runnableOnBoard, ["go"], 2).map((i) => i.key),
     ["API-1", "API-4"],
   );
 });

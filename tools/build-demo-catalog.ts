@@ -40,7 +40,221 @@ const challenge = (
   assessment_version: "1.0.0",
   hints: [],
   ...fields,
+  ...STARTERS[id],
+  ...(fields.language === "python" ? { runtime: PYODIDE } : {}),
 });
+
+/**
+ * The file each issue opens in the IDE: an entry point and starter code in the issue's own
+ * language, written like the file you would find at work. Python ones also name the runtime,
+ * which makes them runnable in the browser; the rest are editable until a runner exists.
+ */
+const PYODIDE = { id: "pyodide", python: "3.14.2", version: "314.0.7" };
+const STARTERS: Record<string, { entrypoint: string; starter: string }> = {
+  "format-price": {
+    entrypoint: "formatPrice",
+    starter: `/**
+ * Formats an amount in cents for the cart: 123456 → "$1,234.56".
+ * Refunds are negative and keep the minus first: -500 → "-$5.00".
+ */
+export function formatPrice(cents) {
+  return \`\${cents}\`;
+}
+`,
+  },
+  "discount-codes": {
+    entrypoint: "applyDiscount",
+    starter: `/** Percent off per promo code, as configured in the admin: { SAVE10: 10 }. */
+export type Codes = Record<string, number>;
+
+/** The total after the matching code's discount, rounded down to whole cents. */
+export function applyDiscount(totalCents: number, code: string, codes: Codes): number {
+  const percent = codes[code];
+  if (percent === undefined) return totalCents;
+  return Math.floor(totalCents * (100 - percent) / 100);
+}
+`,
+  },
+  "filter-form-labels": {
+    entrypoint: "render",
+    starter: `<!--
+  Product filters on the category page. Render one checkbox per filter name,
+  each with a label tied to it, all inside the form.
+-->
+<form>
+  <input type="checkbox" name="in-stock"> in-stock
+  <input type="checkbox" name="on-sale"> on-sale
+</form>
+`,
+  },
+  "debounce-search": {
+    entrypoint: "debounceTimes",
+    starter: `/**
+ * When the search request fires for the given keystroke times (ms): waitMs after
+ * a keystroke, unless another keystroke comes first.
+ */
+export function debounceTimes(keystrokes: number[], waitMs: number): number[] {
+  return keystrokes.map((time) => time + waitMs);
+}
+`,
+  },
+  "pagination-params": {
+    entrypoint: "ParsePage",
+    starter: `package accounts
+
+// Page is the pagination requested by a list endpoint.
+type Page struct {
+	Page    int \`json:"page"\`
+	PerPage int \`json:"perPage"\`
+}
+
+// ParsePage reads page and per_page from a URL query string, with defaults
+// of page 1 and 20 per page, and per_page capped at 100.
+func ParsePage(query string) Page {
+	return Page{Page: 1, PerPage: 20}
+}
+`,
+  },
+  "reset-link-expiry": {
+    entrypoint: "isExpired",
+    starter: `<?php
+
+declare(strict_types=1);
+
+/**
+ * Whether a password reset link has expired. Timestamps are Unix seconds;
+ * a link stays valid until $issuedAt + $ttlMinutes * 60, inclusive.
+ */
+function isExpired(int $issuedAt, int $now, int $ttlMinutes): bool
+{
+    return $now > $issuedAt + $ttlMinutes;
+}
+`,
+  },
+  "rate-limiter": {
+    entrypoint: "allow",
+    starter: `/**
+ * For each login attempt time, whether it is allowed: at most \`limit\` attempts
+ * may fall inside any window of \`windowMs\` milliseconds.
+ */
+export function allow(times: number[], limit: number, windowMs: number): boolean[] {
+  return times.map(() => true);
+}
+`,
+  },
+  "parse-log-line": {
+    entrypoint: "ParseLine",
+    starter: `package accesslog
+
+// Entry is one line of the access log.
+type Entry struct {
+	Method string \`json:"method"\`
+	Path   string \`json:"path"\`
+	Status int    \`json:"status"\`
+	Ms     int    \`json:"ms"\`
+}
+
+// ParseLine parses lines like "GET /cart 200 12ms".
+func ParseLine(line string) Entry {
+	return Entry{}
+}
+`,
+  },
+  "csv-quoted-fields": {
+    entrypoint: "parse_csv_line",
+    starter: `def parse_csv_line(line):
+    """Split a partner CSV line on commas, except inside double quotes.
+
+    Quotes are removed, and a doubled quote inside a quoted field is a literal quote.
+    """
+    return line.split(",")
+`,
+  },
+  "dedupe-customers": {
+    entrypoint: "dedupe",
+    starter: `def dedupe(records):
+    """Keep the first record for each email before the newsletter sync.
+
+    Emails compare case-insensitively, ignoring surrounding spaces. Order is kept.
+    """
+    return records
+`,
+  },
+  "top-customers": {
+    entrypoint: "query",
+    starter: `-- Monthly report: revenue by customer, biggest first.
+-- orders(id, customer, total)
+SELECT customer, total
+FROM orders;
+`,
+  },
+  "unpaid-orders": {
+    entrypoint: "query",
+    starter: `-- Month-end close: orders that have no matching payment, smallest id first.
+-- orders(id, customer), payments(order_id, amount)
+SELECT id
+FROM orders;
+`,
+  },
+  "ring-buffer": {
+    entrypoint: "ring_buffer",
+    starter: `#include <stddef.h>
+
+/*
+ * Keeps the last \`capacity\` request latencies. Push each value in order, then
+ * write the contents oldest first into \`out\` and return how many there are.
+ */
+size_t ring_buffer(size_t capacity, const int *values, size_t count, int *out)
+{
+    (void)capacity;
+    (void)values;
+    (void)count;
+    (void)out;
+    return 0;
+}
+`,
+  },
+  "p99-latency": {
+    entrypoint: "percentile",
+    starter: `/// Nearest-rank percentile of the samples: sort them and take the value at
+/// rank ceil(p / 100 × n), counting from 1. None when there are no samples.
+pub fn percentile(samples: &[u32], p: f64) -> Option<u32> {
+    let _ = (samples, p);
+    None
+}
+`,
+  },
+  "lru-cache": {
+    entrypoint: "simulate",
+    starter: `#include <string>
+#include <vector>
+
+// One cache operation: {"put", key, value} or {"get", key}.
+struct Op {
+    std::string name;
+    int key;
+    int value;
+};
+
+// Runs the operations against an LRU cache of the given capacity and returns
+// the result of each get, -1 for a miss. A get counts as a use.
+std::vector<int> simulate(int capacity, const std::vector<Op>& ops) {
+    std::vector<int> results;
+    return results;
+}
+`,
+  },
+  "parse-duration": {
+    entrypoint: "parse_duration",
+    starter: `/// Parses durations like "1h30m", "45s" or "2h" into seconds. Units are h, m
+/// and s, each at most once and in that order; anything else is None.
+pub fn parse_duration(text: &str) -> Option<u64> {
+    let _ = text;
+    None
+}
+`,
+  },
+};
 
 // Recurring teammates, so threads read like one team.
 const ada = (body: string): Comment => ({
