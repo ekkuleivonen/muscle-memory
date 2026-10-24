@@ -1,5 +1,5 @@
 /**
- * Raw observations from the Python Challenge workspace: editor transactions, recovery
+ * Raw observations from the Challenge workspace (the IDE): editor transactions, recovery
  * snapshots and run lifecycle. Disclosed, local-only and scoped to the editor; nothing here
  * listens to the keyboard, clipboard or anything outside the workspace.
  */
@@ -12,7 +12,13 @@ import {
 import { boundText, CAPTURE_LIMIT_BYTES } from "./evidence";
 import { safeIdentifier } from "./events";
 
-export const WORKSPACE_CAPTURE_VERSION = "workspace-capture-1.0.0";
+/**
+ * 1.1.0: code revisions in any language (the media type follows the file), the editor's
+ * keymap among its features, and a null runtime for languages that cannot run yet.
+ * 1.0.0 was Python only. Stored records keep theirs.
+ */
+export const WORKSPACE_CAPTURE_VERSION = "workspace-capture-1.1.0";
+export const PYTHON_MEDIA_TYPE = "text/x-python; charset=utf-8";
 /** An edit whose change set is larger than this is recorded without it, plus a snapshot. */
 export const EDIT_CHANGES_LIMIT_BYTES = 16384;
 /** What this capture version does not record. Absence is a gap, not evidence of no activity. */
@@ -110,7 +116,8 @@ export interface CodeRevisionArtifact {
   readonly owner: "participant";
   readonly participantId: string;
   readonly revision: number;
-  readonly mediaType: "text/x-python; charset=utf-8";
+  /** text/x-python, text/x-go, text/html, ...; always UTF-8. */
+  readonly mediaType: string;
   readonly text: string;
   readonly capture: {
     readonly captureVersion: string;
@@ -135,6 +142,7 @@ export function codeRevision(
   sourceId: string,
   revision: number,
   code: string,
+  mediaType: string = PYTHON_MEDIA_TYPE,
 ): CodeRevisionArtifact {
   const bounded = boundText(code);
   const artifactId = `${sourceId}.code.${revision}`;
@@ -146,7 +154,7 @@ export function codeRevision(
     owner: "participant",
     participantId,
     revision,
-    mediaType: "text/x-python; charset=utf-8",
+    mediaType,
     text: bounded.text,
     capture: {
       captureVersion: WORKSPACE_CAPTURE_VERSION,

@@ -25,7 +25,8 @@ import {
   RUNTIME,
   type RunOutcome,
 } from "../../../../packages/runner/runner";
-import { createEditor, EDITOR } from "./editor";
+import type { FileLanguage } from "../../lib/repo";
+import { createEditor, editorFeatures, type Keymap } from "./editor";
 
 export const RUN_TIMEOUT_MS = 5000;
 const SNAPSHOT_EVERY_EDITS = 25;
@@ -44,6 +45,13 @@ export interface SessionOptions {
   readonly sink: CaptureSink;
   readonly initialCode: string;
   readonly restoredFrom?: number;
+  /** The solution file's language, keymap and media type; Python unless told otherwise. */
+  readonly language?: FileLanguage;
+  readonly keymap?: Keymap;
+  readonly mediaType?: string;
+  /** Null when this language cannot run yet: edits are still recorded, Run is not. */
+  readonly runtime?: typeof RUNTIME | null;
+  readonly onVimMode?: (mode: string) => void;
   /** The page's current runner; it changes when the runtime is reloaded. */
   readonly runner: () => PythonRunner;
   readonly onRun: (run: RunView) => void;
@@ -94,8 +102,11 @@ export class WorkspaceSession {
         {
           revision: 0,
           codeArtifactId: code.artifactId,
-          editor: EDITOR,
-          runtime: RUNTIME,
+          editor: editorFeatures(
+            options.language ?? "python",
+            options.keymap ?? "standard",
+          ),
+          runtime: options.runtime === undefined ? RUNTIME : options.runtime,
           captureGaps: WORKSPACE_CAPTURE_GAPS,
         },
         [code],
@@ -130,10 +141,20 @@ export class WorkspaceSession {
   }
 
   mount(parent: HTMLElement): void {
-    this.view = createEditor(parent, this.options.initialCode, {
-      onChange: (transaction) => this.recordEdit(transaction),
-      onRun: () => void this.run(),
-    });
+    this.view = createEditor(
+      parent,
+      this.options.initialCode,
+      {
+        onChange: (transaction) => this.recordEdit(transaction),
+        onRun: () => void this.run(),
+        onVimMode: this.options.onVimMode,
+      },
+      {
+        language: this.options.language ?? "python",
+        keymap: this.options.keymap ?? "standard",
+        label: "Code editor",
+      },
+    );
     this.view.focus();
   }
 
@@ -145,8 +166,13 @@ export class WorkspaceSession {
     return this.options.runner().running;
   }
 
+  /** Whether this language can run in the browser. */
+  get runnable(): boolean {
+    return this.options.runtime !== null;
+  }
+
   async run(): Promise<void> {
-    if (!this.view || this.options.runner().running) return;
+    if (!this.view || !this.runnable || this.options.runner().running) return;
     const revision = this.revision;
     const code = this.artifact(this.view.state.doc.toString());
     const runId = randomId();
@@ -309,6 +335,7 @@ export class WorkspaceSession {
       this.sourceId,
       this.revision,
       code,
+      this.options.mediaType,
     );
   }
 }
