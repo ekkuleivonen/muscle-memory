@@ -256,6 +256,7 @@ const challenges = [
 const adventures = [
   {
     id: "night-shift",
+    key: "NS",
     title: "Night shift",
     summary: "Keep a small web shop running through a long night.",
     story:
@@ -264,6 +265,7 @@ const adventures = [
   },
   {
     id: "lighthouse",
+    key: "LH",
     title: "The lighthouse",
     summary: "Signals, logs and a keeper who writes everything down.",
     story:
@@ -272,6 +274,7 @@ const adventures = [
   },
   {
     id: "rooftop-garden",
+    key: "RG",
     title: "Rooftop garden",
     summary: "Plan, water and harvest a garden above the city.",
     story:

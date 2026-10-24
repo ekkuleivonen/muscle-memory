@@ -32,6 +32,9 @@ test('accepts optional display metadata and rejects malformed values', () => {
   const catalog = new Map([['tally@1.0.0', challenge]]);
   assert.ok(validateAdventure({ ...adventure, title: 'Notebook' }, catalog));
   assert.throws(() => validateAdventure({ ...adventure, difficulty: 'easy' }, catalog), /comes from its Challenges/);
+  assert.ok(validateAdventure({ ...adventure, key: 'NB2' }, catalog));
+  for (const key of ['nb', 'N', '2NB', 'NOTEBK'])
+    assert.throws(() => validateAdventure({ ...adventure, key }, catalog), /key/);
 });
 
 test('rejects duplicate content identities across files', async () => {

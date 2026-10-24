@@ -887,16 +887,17 @@
           ]
         ],
         "id": "night-shift",
+        "key": "NS",
         "presentation": "demo-text-v1",
         "story": "The on-call phone buzzes at 02:14. Traffic is spiking, logs are scrolling and the shop must stay up until morning.",
         "summary": "Keep a small web shop running through a long night.",
         "title": "Night shift",
         "version": "1.0.0"
       },
-      "digest": "b3615afc1d648cbc6ba9e6dc727e7ba001756b6cf43182c98129b17fe3015428",
+      "digest": "39818fd2692ad067f695feeced76dcea87bd9195ab34879857efa8dfe12241f0",
       "state": "published",
       "testResult": {
-        "digest": "b3615afc1d648cbc6ba9e6dc727e7ba001756b6cf43182c98129b17fe3015428",
+        "digest": "39818fd2692ad067f695feeced76dcea87bd9195ab34879857efa8dfe12241f0",
         "fixtures": 6,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -905,28 +906,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "b3615afc1d648cbc6ba9e6dc727e7ba001756b6cf43182c98129b17fe3015428",
+          "digest": "39818fd2692ad067f695feeced76dcea87bd9195ab34879857efa8dfe12241f0",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "b3615afc1d648cbc6ba9e6dc727e7ba001756b6cf43182c98129b17fe3015428",
+          "digest": "39818fd2692ad067f695feeced76dcea87bd9195ab34879857efa8dfe12241f0",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "b3615afc1d648cbc6ba9e6dc727e7ba001756b6cf43182c98129b17fe3015428",
+          "digest": "39818fd2692ad067f695feeced76dcea87bd9195ab34879857efa8dfe12241f0",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "b3615afc1d648cbc6ba9e6dc727e7ba001756b6cf43182c98129b17fe3015428",
+          "digest": "39818fd2692ad067f695feeced76dcea87bd9195ab34879857efa8dfe12241f0",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -951,16 +952,17 @@
           ]
         ],
         "id": "lighthouse",
+        "key": "LH",
         "presentation": "demo-text-v1",
         "story": "The keeper has left, but the lamp still blinks and the logbook is full. Piece together the last week on the rock.",
         "summary": "Signals, logs and a keeper who writes everything down.",
         "title": "The lighthouse",
         "version": "1.0.0"
       },
-      "digest": "88b12b1797053a3b37c10203c9424f49fad53672f8fdde1e3b65400c6fc0c62f",
+      "digest": "a798e0ac18bf22d6c2f2c3d18c6c6363ad3b06e9ec64a0d6e752b8372d6d084f",
       "state": "published",
       "testResult": {
-        "digest": "88b12b1797053a3b37c10203c9424f49fad53672f8fdde1e3b65400c6fc0c62f",
+        "digest": "a798e0ac18bf22d6c2f2c3d18c6c6363ad3b06e9ec64a0d6e752b8372d6d084f",
         "fixtures": 6,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -969,28 +971,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "88b12b1797053a3b37c10203c9424f49fad53672f8fdde1e3b65400c6fc0c62f",
+          "digest": "a798e0ac18bf22d6c2f2c3d18c6c6363ad3b06e9ec64a0d6e752b8372d6d084f",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "88b12b1797053a3b37c10203c9424f49fad53672f8fdde1e3b65400c6fc0c62f",
+          "digest": "a798e0ac18bf22d6c2f2c3d18c6c6363ad3b06e9ec64a0d6e752b8372d6d084f",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "88b12b1797053a3b37c10203c9424f49fad53672f8fdde1e3b65400c6fc0c62f",
+          "digest": "a798e0ac18bf22d6c2f2c3d18c6c6363ad3b06e9ec64a0d6e752b8372d6d084f",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "88b12b1797053a3b37c10203c9424f49fad53672f8fdde1e3b65400c6fc0c62f",
+          "digest": "a798e0ac18bf22d6c2f2c3d18c6c6363ad3b06e9ec64a0d6e752b8372d6d084f",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -1019,16 +1021,17 @@
           ]
         ],
         "id": "rooftop-garden",
+        "key": "RG",
         "presentation": "demo-text-v1",
         "story": "A co-op is turning an empty roof into a garden. They have seeds, a sketch of the beds and a lot of enthusiasm.",
         "summary": "Plan, water and harvest a garden above the city.",
         "title": "Rooftop garden",
         "version": "1.0.0"
       },
-      "digest": "8773962da3023cc0fdddbc63f3144d1aa4077d9c851846cfbe4b468246e7c1c4",
+      "digest": "ea926db7e7dd06cd4ab0953f5b9e5b79d556b5ebdeb3b5a4c33ecfba8798ea17",
       "state": "published",
       "testResult": {
-        "digest": "8773962da3023cc0fdddbc63f3144d1aa4077d9c851846cfbe4b468246e7c1c4",
+        "digest": "ea926db7e7dd06cd4ab0953f5b9e5b79d556b5ebdeb3b5a4c33ecfba8798ea17",
         "fixtures": 6,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1037,28 +1040,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "8773962da3023cc0fdddbc63f3144d1aa4077d9c851846cfbe4b468246e7c1c4",
+          "digest": "ea926db7e7dd06cd4ab0953f5b9e5b79d556b5ebdeb3b5a4c33ecfba8798ea17",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "8773962da3023cc0fdddbc63f3144d1aa4077d9c851846cfbe4b468246e7c1c4",
+          "digest": "ea926db7e7dd06cd4ab0953f5b9e5b79d556b5ebdeb3b5a4c33ecfba8798ea17",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "8773962da3023cc0fdddbc63f3144d1aa4077d9c851846cfbe4b468246e7c1c4",
+          "digest": "ea926db7e7dd06cd4ab0953f5b9e5b79d556b5ebdeb3b5a4c33ecfba8798ea17",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "8773962da3023cc0fdddbc63f3144d1aa4077d9c851846cfbe4b468246e7c1c4",
+          "digest": "ea926db7e7dd06cd4ab0953f5b9e5b79d556b5ebdeb3b5a4c33ecfba8798ea17",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]

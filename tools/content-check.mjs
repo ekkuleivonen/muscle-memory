@@ -73,6 +73,9 @@ export function validateAdventure(adventure, challenges) {
     requireValue(challenges.has(`${ref[0]}@${ref[1]}`), `Missing Challenge ${ref[0]}@${ref[1]}`);
   }
   requireValue(adventure.difficulty === undefined, 'Adventure difficulty comes from its Challenges');
+  // Prefix for issue keys such as NS-2.
+  if (adventure.key !== undefined)
+    requireValue(typeof adventure.key === 'string' && /^[A-Z][A-Z0-9]{1,4}$/.test(adventure.key), 'Adventure key must be 2-5 uppercase letters or digits, starting with a letter');
   validateDisplay(adventure, 'Adventure');
   return adventure;
 }

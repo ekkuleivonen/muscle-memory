@@ -37,6 +37,8 @@ export interface Adventure {
   readonly story: string;
   readonly presentation: string;
   readonly challenges: readonly Reference[];
+  /** Prefix for issue keys, e.g. "NS" for NS-1, NS-2. */
+  readonly key?: string;
   readonly title?: string;
   readonly summary?: string;
 }
