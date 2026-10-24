@@ -1,20 +1,20 @@
 /**
  * Raw observations of personal-board moves: an issue's status set by hand (Backlog, Todo,
  * In progress) from its Status menu.
- * Recorded only after explicit, device-local consent; nothing here reads anything beyond the
- * move itself and the board at that moment.
+ * Recorded for every account under the Terms and Privacy Notice it accepted, whose version
+ * each move carries; nothing here reads anything beyond the move itself and the board at
+ * that moment.
  */
 import { canonical, type Json } from "./assessment";
 import { safeIdentifier } from "./events";
 import type { WorkspaceRecord } from "./workspace";
 
 /**
- * 1.1.0 adds In progress and records the Status menu input (pointer or keyboard); 1.0.0
- * covered backlog <-> Todo via button, Status field or shortcut. Stored records keep theirs.
+ * 1.2.0 records every account's moves, with the accepted Terms version as `consentVersion`
+ * instead of a separate opt-in; 1.1.0 added In progress and the Status menu input; 1.0.0
+ * covered backlog <-> Todo. Stored records keep theirs.
  */
-export const BOARD_CAPTURE_VERSION = "board-capture-1.1.0";
-/** v2 disclosed In progress moves; v3 points to Settings instead of terminal commands. Consent to earlier versions does not carry over. */
-export const BOARD_CONSENT_VERSION = "board-activity-device-v3";
+export const BOARD_CAPTURE_VERSION = "board-capture-1.2.0";
 /** What this capture does not record. Absence is a gap, not evidence of no activity. */
 export const BOARD_CAPTURE_GAPS = [
   "issue-views",
@@ -51,6 +51,7 @@ export interface BoardObservation {
   };
   readonly captureVersion: string;
   readonly captureGaps: readonly string[];
+  /** The Terms and Privacy Notice version the account accepted, e.g. terms-2026-10-24. */
   readonly consentVersion: string;
   readonly researchConsent: false;
   /** Exact content shown, as in workspace observations: challenge.<id>.<version>. */
@@ -68,11 +69,20 @@ export function boardMove(input: {
   sourceId: string;
   sequence: number;
   occurredAt: string;
+  /** The accepted Terms and Privacy Notice version. */
+  termsVersion: string;
   challenge: { id: string; version: string };
   data: BoardMoveData;
 }): BoardObservation {
-  const { participantId, sourceId, sequence, occurredAt, challenge, data } =
-    input;
+  const {
+    participantId,
+    sourceId,
+    sequence,
+    occurredAt,
+    termsVersion,
+    challenge,
+    data,
+  } = input;
   safeIdentifier(participantId);
   safeIdentifier(sourceId);
   safeIdentifier(challenge.id);
@@ -82,6 +92,8 @@ export function boardMove(input: {
     throw new Error("Board moves name an exact Challenge version.");
   if (Number.isNaN(Date.parse(occurredAt)))
     throw new Error("Board moves need a time.");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(termsVersion))
+    throw new Error("Board moves name the accepted Terms version.");
   if (!ISSUE_KEY.test(data.issueKey)) throw new Error("Unknown issue key.");
   if (
     !COLUMNS.includes(data.from) ||
@@ -107,7 +119,7 @@ export function boardMove(input: {
     serverReceipt: { status: "absent", reason: "local-only" },
     captureVersion: BOARD_CAPTURE_VERSION,
     captureGaps: [...BOARD_CAPTURE_GAPS],
-    consentVersion: BOARD_CONSENT_VERSION,
+    consentVersion: `terms-${termsVersion}`,
     researchConsent: false,
     challengeArtifactId: `challenge.${challenge.id}.${challenge.version}`,
     data: {

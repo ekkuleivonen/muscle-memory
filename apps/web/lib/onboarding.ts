@@ -3,10 +3,16 @@
  * the cookie carries only the setup version, so the server can redirect without seeing them.
  */
 import type { LanguageId } from "./languages";
+import { LEGAL_VERSION, type Acceptance } from "./legal";
 
 export const ONBOARDING_COOKIE = "mm_setup";
 /** Bump when the questions change enough that everyone should answer again. */
 export const ONBOARDING_VERSION = "1";
+/**
+ * The cookie value for a signed-in browser: setup done and the current Terms accepted. A new
+ * setup or legal version changes it, so the server sends everyone back to onboarding once.
+ */
+export const SESSION_VALUE = `${ONBOARDING_VERSION}.${LEGAL_VERSION}`;
 export const PROFILE_KEY = "muscle-memory.profile";
 
 export interface Profile {
@@ -21,11 +27,15 @@ export interface StoredProfile {
   completedAt: string;
   /** Anonymous, handed out rather than chosen: Quiet-Compiler-4821. */
   handle?: string;
+  /** The Terms and Privacy Notice version accepted, and when. */
+  accepted?: Acceptance;
+  /** Settings opt-out: leave this account out of published datasets. */
+  excludeFromPublishedData?: boolean;
   profile: Profile;
 }
 
 export function isOnboarded(cookieValue: string | undefined): boolean {
-  return cookieValue === ONBOARDING_VERSION;
+  return cookieValue === SESSION_VALUE;
 }
 
 /**

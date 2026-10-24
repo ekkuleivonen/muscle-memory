@@ -8,17 +8,14 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import {
+  acceptance,
+  acceptTerms,
   ensureHandle,
   readProfile,
   saveProfile,
   startSession,
 } from "../../lib/account";
-import {
-  ACTIVITY_DISCLOSURE,
-  ACTIVITY_KEY,
-  consentRecord,
-  parseConsent,
-} from "../../lib/activity-log";
+import { acceptsCurrent, type Acceptance } from "../../lib/legal";
 import { languageLabel } from "../../lib/library";
 import type { Profile } from "../../lib/onboarding";
 import {
@@ -46,13 +43,9 @@ type Active =
       resolve: (answer: Answer | null) => void;
     };
 
-function activityLogOn(): boolean {
-  return parseConsent(localStorage.getItem(ACTIVITY_KEY)) !== null;
-}
-
 /**
- * New-hire setup as a terminal, run once: profile questions, a laptop "install", the handle
- * and the activity-log question, then on to the app. Everything after lives in the UI
+ * New-hire setup as a terminal, run once: the paperwork (Terms and Privacy Notice), profile
+ * questions, a laptop "install" and the handle, then on to the app. Everything after lives in the UI
  * (Settings). `next` is where the person was heading, already checked to be same-site;
  * `again` re-asks the questions from Settings and returns there.
  */
@@ -136,6 +129,8 @@ export function Terminal({
   }
 
   async function setup() {
+    // Settings only links here for signed-in accounts, which already accepted the current Terms.
+    const accepted = again ? undefined : await paperwork();
     print(
       "",
       again ? (
@@ -155,7 +150,7 @@ export function Terminal({
       if (answer !== null) answers[question.id] = answer;
     }
     const profile: Profile = toProfile(answers);
-    const { handle } = saveProfile(profile);
+    const { handle } = saveProfile(profile, accepted);
     const { languages = [], editor } = profile;
     print(
       "",
@@ -188,29 +183,71 @@ export function Terminal({
       </span>,
       "",
     );
-    if (!again && !activityLogOn()) await askActivityLog();
     if (again) finish("/settings", "Settings");
     else finish(next ?? "/", next ? next : "your dashboard");
   }
 
-  /** Opt-in only: the disclosure, then a question whose default is no. */
-  async function askActivityLog() {
-    print(
-      ...ACTIVITY_DISCLOSURE.map((line) => (
-        <span className="t-dim">{line}</span>
-      )),
+  /**
+   * New-hire paperwork: what the Terms and Privacy Notice say, in four lines, then a signature.
+   * There is no way in without it, so declining just asks again.
+   */
+  async function paperwork(updated = false): Promise<Acceptance> {
+    const link = (href: string, label: string) => (
+      <a className="t-cmd" href={href} target="_blank" rel="noreferrer">
+        {label}
+      </a>
     );
-    const yes = await ask({
-      kind: "confirm",
-      id: "activity-log",
-      message: "Keep the activity log?",
-      initial: false,
-    });
-    if (yes)
-      localStorage.setItem(
-        ACTIVITY_KEY,
-        consentRecord(new Date().toISOString()),
+    print(
+      "",
+      updated ? (
+        <span>
+          The paperwork changed since you last signed. Same deal, mostly:
+        </span>
+      ) : (
+        <span>
+          First, the paperwork. Every new job has some; ours fits on one screen.
+        </span>
+      ),
+      <span>
+        <span className="t-dim">→</span> We record what you do here: status
+        changes, attempts, test runs, timings. That&apos;s the product: it picks
+        your next issues and shows how you compare with other people and LLMs.
+      </span>,
+      <span>
+        <span className="t-dim">→</span> We use it to make better issues, and
+        may publish anonymised stats and datasets. Opt out of publishing any
+        time in Settings.
+      </span>,
+      <span>
+        <span className="t-dim">→</span> Others never see your results next to
+        your handle, and we don&apos;t sell your personal data.
+      </span>,
+      <span>
+        <span className="t-dim">→</span> Code you write stays yours; you give us
+        a licence to use and publish it.
+      </span>,
+      <span className="t-dim">
+        The full {link("/terms", "Terms")} and{" "}
+        {link("/privacy", "Privacy Notice")} are short and written for humans.
+      </span>,
+      "",
+    );
+    for (;;) {
+      const yes = await ask({
+        kind: "confirm",
+        id: "terms",
+        message:
+          "I'm 16 or older and accept the Terms and Privacy Notice. Sign here?",
+        initial: true,
+      });
+      if (yes) return acceptance();
+      print(
+        <span className="t-dim">
+          No signature, no laptop: it&apos;s the one rule. Nothing has been
+          saved. Take your time.
+        </span>,
       );
+    }
   }
 
   /** Back after logging out: sign in again, or answer the questions afresh. */
@@ -230,6 +267,20 @@ export function Terminal({
     await setup();
   }
 
+  /** An account from before the current Terms: sign the new ones, then carry on. */
+  async function resign() {
+    print(
+      "",
+      <span>
+        Welcome back, <span className="t-brand">{ensureHandle()}</span>.
+      </span>,
+    );
+    await paperwork(true);
+    acceptTerms();
+    startSession();
+    finish(next ?? "/", next ? next : "your dashboard");
+  }
+
   useEffect(() => {
     // Strict Mode mounts twice in development; boot once.
     if (booted.current) return;
@@ -239,7 +290,10 @@ export function Terminal({
       <span className="t-dim">new hire setup</span>,
     );
     // Signed-in visits are redirected by the server unless re-answering from Settings.
-    void (readProfile() && !again ? welcomeBack() : setup());
+    const stored = readProfile();
+    if (!stored || again) void setup();
+    else if (!acceptsCurrent(stored.accepted)) void resign();
+    else void welcomeBack();
   }, []);
 
   useEffect(() => {

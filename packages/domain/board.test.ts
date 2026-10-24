@@ -2,7 +2,6 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   BOARD_CAPTURE_VERSION,
-  BOARD_CONSENT_VERSION,
   boardMove,
   boardPayloads,
   boardRecord,
@@ -13,6 +12,7 @@ const base = {
   sourceId: "board-4f1c",
   sequence: 1,
   occurredAt: "2026-10-24T10:00:00.000Z",
+  termsVersion: "2026-10-24",
   challenge: { id: "reset-link-expiry", version: "1.0.0" },
   data: {
     issueKey: "API-2",
@@ -29,7 +29,7 @@ test("a board move is a versioned, local-only observation of exactly what moved"
   assert.equal(move.observationId, "board-4f1c.1");
   assert.equal(move.type, "observation.board.moved");
   assert.equal(move.captureVersion, BOARD_CAPTURE_VERSION);
-  assert.equal(move.consentVersion, BOARD_CONSENT_VERSION);
+  assert.equal(move.consentVersion, "terms-2026-10-24");
   assert.equal(move.researchConsent, false);
   assert.deepEqual(move.serverReceipt, {
     status: "absent",
@@ -46,6 +46,7 @@ test("malformed moves are refused rather than stored", () => {
   assert.throws(bad({ participantId: "ann@example.com" }), /opaque/);
   assert.throws(bad({ challenge: { id: "x", version: "latest" } }), /exact/);
   assert.throws(bad({ occurredAt: "yesterday" }), /time/);
+  assert.throws(bad({ termsVersion: "" }), /Terms/);
   assert.throws(
     bad({ data: { ...base.data, issueKey: "api-2" } }),
     /issue key/,

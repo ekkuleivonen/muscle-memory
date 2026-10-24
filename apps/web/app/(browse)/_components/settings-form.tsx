@@ -1,33 +1,18 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import {
-  ACCOUNT_CHANGE,
   deleteAccount,
-  exportData,
   resetProgress,
   saveProfile,
+  setExcludeFromPublishedData,
 } from "../../../lib/account";
-import {
-  ACTIVITY_DISCLOSURE,
-  ACTIVITY_KEY,
-  consentRecord,
-  parseConsent,
-} from "../../../lib/activity-log";
+import { LEGAL_UPDATED } from "../../../lib/legal";
 import type { Profile } from "../../../lib/onboarding";
 import { QUESTIONS } from "../../onboarding/questions";
 import { useAccount } from "./profile-menu";
 import { TerminalIcon } from "./icons";
-
-function subscribe(onChange: () => void) {
-  window.addEventListener("storage", onChange);
-  window.addEventListener(ACCOUNT_CHANGE, onChange);
-  return () => {
-    window.removeEventListener("storage", onChange);
-    window.removeEventListener(ACCOUNT_CHANGE, onChange);
-  };
-}
 
 /** Profile answers, privacy, the terminal and the danger zone, all for this browser. */
 export function SettingsForm() {
@@ -38,10 +23,27 @@ export function SettingsForm() {
         No profile on this device. <Link href="/onboarding">Run setup</Link>.
       </p>
     );
-  return <Settings handle={account.handle ?? "…"} initial={account.profile} />;
+  return (
+    <Settings
+      handle={account.handle ?? "…"}
+      initial={account.profile}
+      excluded={account.excludeFromPublishedData === true}
+      acceptedAt={account.accepted?.at}
+    />
+  );
 }
 
-function Settings({ handle, initial }: { handle: string; initial: Profile }) {
+function Settings({
+  handle,
+  initial,
+  excluded,
+  acceptedAt,
+}: {
+  handle: string;
+  initial: Profile;
+  excluded: boolean;
+  acceptedAt?: string;
+}) {
   const [profile, setProfile] = useState<Profile>(initial);
   const [saved, setSaved] = useState(false);
   const languages = profile.languages ?? [];
@@ -132,9 +134,7 @@ function Settings({ handle, initial }: { handle: string; initial: Profile }) {
         </div>
       </form>
 
-      <ActivityLog />
-
-      <ExportData />
+      <Privacy excluded={excluded} acceptedAt={acceptedAt} />
 
       <section className="settings-section">
         <h2>Terminal setup</h2>
@@ -151,71 +151,44 @@ function Settings({ handle, initial }: { handle: string; initial: Profile }) {
   );
 }
 
-function ActivityLog() {
-  const on = useSyncExternalStore(
-    subscribe,
-    () => parseConsent(localStorage.getItem(ACTIVITY_KEY)) !== null,
-    () => false,
-  );
+function Privacy({
+  excluded,
+  acceptedAt,
+}: {
+  excluded: boolean;
+  acceptedAt?: string;
+}) {
   return (
     <section className="settings-section" id="privacy">
       <h2>Privacy</h2>
+      <p className="dim">
+        What you do here is recorded to run the product: picking your next
+        issues, comparing you with other people and LLMs, and making better
+        issues. The <Link href="/privacy">Privacy Notice</Link> has the details
+        {acceptedAt && (
+          <>
+            ; you accepted the version of {LEGAL_UPDATED} on{" "}
+            {new Date(acceptedAt).toLocaleDateString()}
+          </>
+        )}
+        .
+      </p>
       <label className="choice toggle">
         <input
           type="checkbox"
-          checked={on}
-          onChange={(event) => {
-            if (event.target.checked)
-              localStorage.setItem(
-                ACTIVITY_KEY,
-                consentRecord(new Date().toISOString()),
-              );
-            else localStorage.removeItem(ACTIVITY_KEY);
-            window.dispatchEvent(new Event(ACCOUNT_CHANGE));
-          }}
+          checked={excluded}
+          onChange={(event) =>
+            setExcludeFromPublishedData(event.target.checked)
+          }
         />
-        Keep a private activity log
+        Exclude my data from published datasets
       </label>
-      {ACTIVITY_DISCLOSURE.map((line) => (
-        <p className="hint" key={line}>
-          {line}
-        </p>
-      ))}
-    </section>
-  );
-}
-
-function ExportData() {
-  const [result, setResult] = useState<string | null>(null);
-  return (
-    <section className="settings-section">
-      <h2>Your data</h2>
-      <p className="dim">
-        Download what this browser has saved: practice events and, if the
-        activity log is on, your board moves, as JSON Lines. Nothing is
-        uploaded.
+      <p className="hint">
+        We may publish anonymised stats and records so anyone can see how people
+        (and LLMs) solve issues. Ticking this leaves you out of those, including
+        anything we publish later from what you&apos;ve already done. Your own
+        stats and comparisons keep working.
       </p>
-      <div className="form-actions">
-        <button
-          className="btn"
-          type="button"
-          onClick={async () => {
-            const { events, moves } = await exportData();
-            setResult(
-              events || moves
-                ? `Downloaded ${events} practice event(s) and ${moves} board move(s).`
-                : "Nothing saved in this browser yet.",
-            );
-          }}
-        >
-          Export data
-        </button>
-        {result && (
-          <span className="hint" role="status">
-            {result}
-          </span>
-        )}
-      </div>
     </section>
   );
 }

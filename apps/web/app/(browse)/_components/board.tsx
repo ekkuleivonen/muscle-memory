@@ -8,7 +8,6 @@ import {
   useSyncExternalStore,
 } from "react";
 import type { BoardMoveVia } from "../../../../../packages/domain/board";
-import { ACTIVITY_KEY, parseConsent } from "../../../lib/activity-log";
 import {
   BOARD_CHANGE as CHANGE,
   BOARD_KEY,
@@ -251,33 +250,5 @@ export function StatusMenu({ issue }: { issue: IssueRef }) {
         </div>
       )}
     </div>
-  );
-}
-
-const noop = () => () => {};
-
-/** Whether status changes are being recorded, always visible where they happen. */
-export function ActivityLogNote() {
-  const on = useSyncExternalStore(
-    subscribe,
-    () => parseConsent(localStorage.getItem(ACTIVITY_KEY)) !== null,
-    () => null,
-  );
-  useSyncExternalStore(
-    noop,
-    () => true,
-    () => false,
-  );
-  if (on === null) return null;
-  return (
-    <p className="hint">
-      Activity log: <b>{on ? "on" : "off"}</b>.{" "}
-      {on
-        ? "Status changes are recorded in this browser only. "
-        : "Status changes are not recorded. "}
-      <Link href="/settings#privacy">
-        {on ? "Turn it off in Settings" : "Turn it on in Settings"}
-      </Link>
-    </p>
   );
 }

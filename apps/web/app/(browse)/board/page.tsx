@@ -5,7 +5,6 @@ import { summarize } from "../../../lib/library";
 import { getLibrary } from "../../../lib/load";
 import { pathWithQuery } from "../../../lib/onboarding";
 import type { SearchParams } from "../../../lib/queries";
-import { ActivityLogNote } from "../_components/board";
 import { Board } from "../_components/board-view";
 import { Topbar } from "../_components/topbar";
 
@@ -46,7 +45,6 @@ export default async function BoardPage({
           Set Backlog, Todo or In progress from an issue's Status menu (s). Done
           is set for you when every acceptance check passes.
         </p>
-        <ActivityLogNote />
       </main>
     </>
   );

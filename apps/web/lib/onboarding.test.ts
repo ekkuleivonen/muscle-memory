@@ -6,11 +6,14 @@ import {
   issuesFor,
   ONBOARDING_VERSION,
   pathWithQuery,
+  SESSION_VALUE,
   safeNext,
 } from "./onboarding";
 
-test("only the current setup version counts as onboarded", () => {
-  assert.equal(isOnboarded(ONBOARDING_VERSION), true);
+test("only the current setup and Terms versions count as onboarded", () => {
+  assert.equal(isOnboarded(SESSION_VALUE), true);
+  // Setup done under older Terms: back to onboarding to accept the new ones.
+  assert.equal(isOnboarded(ONBOARDING_VERSION), false);
   assert.equal(isOnboarded(undefined), false);
   assert.equal(isOnboarded("0"), false);
 });
