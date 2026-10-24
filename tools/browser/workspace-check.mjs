@@ -366,12 +366,12 @@ try {
     const failing = await typingProfile(page, 300);
     await page.waitForTimeout(1500);
     const retrying = await page
-      .locator("p[role=status]", { hasText: /records saved/ })
+      .locator("p[role=status]", { hasText: /records stored/ })
       .innerText();
     check("typing stays responsive while storage fails", true, failing);
     check(
       "failed storage is reported and retried",
-      /retrying/.test(retrying),
+      /failing and will retry/.test(retrying) && /not saved yet/.test(retrying),
       retrying,
     );
     // Overflow the 1000-record buffer while storage is down.
@@ -383,7 +383,7 @@ try {
       (record) => record.type === "observation.workspace.capture-gap",
     );
     const status = await page
-      .locator("p[role=status]", { hasText: /records saved/ })
+      .locator("p[role=status]", { hasText: /records stored/ })
       .innerText();
     check(
       "buffer overflow is disclosed as a stored gap",
@@ -404,12 +404,13 @@ try {
     // Recovery after reload.
     await page.reload();
     await openWorkspace(page, { device: true });
-    const restored = await page
-      .getByText(/Restored your last saved code/)
-      .innerText();
+    // The capture gap above means only code up to the gap is exact; that must be disclosed.
+    const restored = await page.getByText(/^Restored /).innerText();
     check(
-      "latest complete snapshot is restored after reload",
-      /revision \d+/.test(restored),
+      "after a capture gap, recovery stops at the gap and says so",
+      /Restored revision \d+, the latest code that could be recovered exactly/.test(
+        restored,
+      ) && /not recovered/.test(restored),
       restored,
     );
 
@@ -427,6 +428,106 @@ try {
       "clear removes every workspace record",
       records.length === 0,
       records.length,
+    );
+    await context.close();
+  }
+
+  // Refresh keeps the latest saved code exactly, not only the last snapshot.
+  if (want("recovery")) {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const savedConfirmed = async () => {
+      await page.waitForTimeout(500);
+      return page
+        .getByText(/All edits so far are saved on this device/)
+        .waitFor({ timeout: 5000 })
+        .then(
+          () => true,
+          () => false,
+        );
+    };
+    const reopen = async () => {
+      await page.reload();
+      await openWorkspace(page, { device: true });
+      return page
+        .getByText(/^Restored /)
+        .innerText({ timeout: 5000 })
+        .catch(() => "");
+    };
+    await openWorkspace(page, { device: true });
+    await page.locator(".cm-content").click();
+    await page.keyboard.press("Control+End");
+    await page.keyboard.type("x = 1");
+    const before = await docText(page);
+    check("a short edit is confirmed saved", await savedConfirmed());
+    let message = await reopen();
+    let after = await docText(page);
+    check("refresh restores the exact text of a short edit", after === before, {
+      before: before.slice(-40),
+      after: after.slice(-40),
+      message,
+    });
+    check(
+      "recovery is reported as complete",
+      /Restored your latest saved code/.test(message),
+      message,
+    );
+
+    // The saved label must disappear at once when an edit makes the code dirty.
+    const status = page.locator("p[role=status]", {
+      hasText: /records stored/,
+    });
+    await page.locator(".cm-content").click();
+    await page.keyboard.press("Control+End");
+    await page.keyboard.type("#");
+    const immediately = await status.innerText();
+    check(
+      "an edit removes the saved label immediately",
+      !/All edits so far are saved/.test(immediately),
+      immediately,
+    );
+    check("saved returns after the edit is stored", await savedConfirmed());
+
+    // A paste too large to save completely is never reported as saved.
+    await page.locator(".cm-content").click();
+    await page.keyboard.press("Control+End");
+    await page.keyboard.insertText("x".repeat(70000));
+    await page.waitForTimeout(2500);
+    const large = await status.innerText();
+    check(
+      "a truncated large paste is reported as not fully restorable",
+      /cannot be fully restored after a refresh/.test(large) &&
+        !/All edits so far are saved/.test(large),
+      large.slice(0, 160),
+    );
+    await setCode(page, SOLUTION);
+    await page.waitForTimeout(1500);
+    check(
+      "still not saved after removing the paste, until a complete copy",
+      /cannot be fully restored/.test(await status.innerText()),
+    );
+    await runAndWait(page, /Run result/);
+    check(
+      "Run stores a complete copy and saved returns",
+      await savedConfirmed(),
+    );
+    await page.locator(".cm-content").click();
+    await page.keyboard.press("Control+End");
+    await page.keyboard.type("# after run");
+    await page.keyboard.press("Control+Z");
+    await page.keyboard.type("# edited");
+    const afterRun = await docText(page);
+    check("edits after a run are confirmed saved", await savedConfirmed());
+    message = await reopen();
+    after = await docText(page);
+    check(
+      "refresh restores the exact text after a run, undo and more edits",
+      after === afterRun,
+      {
+        expected: afterRun.slice(-40),
+        after: after.slice(-40),
+        message,
+      },
     );
     await context.close();
   }
