@@ -37,7 +37,7 @@ const challenge = (
     parameters?: string[];
     /** SQL: the tables each case's rows go into. */
     schema?: string;
-    /** C and C++: turns a case's JSON arguments into the function's types. */
+    /** C, C++ and Java: turns a case's JSON arguments into the function's types. */
     adapter?: string;
   },
 ) => ({
@@ -55,6 +55,29 @@ const challenge = (
  * up to the app's runners, not the content.
  */
 const STARTERS: Record<string, { entrypoint: string; starter: string }> = {
+  "password-policy": {
+    entrypoint: "violations",
+    starter: `package com.acme.accounts;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/** The password rules sign-up and password reset enforce. */
+public final class PasswordPolicy {
+    private PasswordPolicy() {}
+
+    /**
+     * The rules a password breaks, in this order: too-short, no-digit, no-letter,
+     * has-whitespace. Empty when it passes.
+     */
+    public static List<String> violations(String password) {
+        List<String> broken = new ArrayList<>();
+        if (password.length() < 8) broken.add("too-short");
+        return broken;
+    }
+}
+`,
+  },
   "late-fee-rounding": {
     entrypoint: "LateFee",
     starter: `namespace Billing;
@@ -510,6 +533,43 @@ const challenges = [
       ),
     ],
   }),
+  challenge("password-policy", {
+    adapter: `import com.acme.accounts.PasswordPolicy;
+
+/** [password] → the rules it breaks. */
+final class Adapter {
+    static Object call(Json args) {
+        return PasswordPolicy.violations(args.at(0).asString());
+    }
+}
+`,
+    title: "Password policy still allows 8-character passwords",
+    summary: "Enforce the new password rules and report every one that is broken.",
+    kind: "bug",
+    difficulty: "easy",
+    language: "java",
+    skills: ["validation", "strings", "security"],
+    task: '`PasswordPolicy.violations(password)` lists the rules a password breaks, in this order: `"too-short"` (fewer than 12 characters), `"no-digit"`, `"no-letter"` and `"has-whitespace"`. A password that breaks none gets an empty list.',
+    inputs: [
+      "correct horse battery",
+      "Tr0ub4dor&3",
+      "hunter2hunter2",
+      "123456789012",
+      "",
+    ],
+    expected: [
+      ["no-digit", "has-whitespace"],
+      ["too-short"],
+      [],
+      ["no-letter"],
+      ["too-short", "no-digit", "no-letter"],
+    ],
+    comments: [
+      mateo(
+        "Security moved the minimum to 12 last quarter. The form says 12, the API still checks 8, and nothing reports the other rules.",
+      ),
+    ],
+  }),
   challenge("parse-log-line", {
     title: "Access log parser drops fields on 5xx lines",
     summary: "Turn an access log line into a structured record.",
@@ -843,7 +903,7 @@ Stack: TypeScript, JavaScript, HTML.`,
     key: "API",
     title: "Accounts API",
     summary: "Backend: sign-up, login and account endpoints behind every app.",
-    story: `The service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, the admin back office is a small Ruby app, and the login gateway in front is TypeScript.
+    story: `The service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, the admin back office is a small Ruby app, the password service is Java, and the login gateway in front is TypeScript.
 
 It mostly works, and the on-call channel has opinions about the rest: list endpoints that accept any page size, reset links that expire too soon, and logs that are hard to search during an incident.
 
@@ -857,15 +917,16 @@ It mostly works, and the on-call channel has opinions about the rest: list endpo
 
 - Write backend services, or want practice with the bugs they actually get
 - Like **input validation**, edge cases and reading a stack trace at 2am
-- Know **Go**, **PHP**, **Ruby** or **TypeScript**, or want to try one of them on familiar problems
+- Know **Go**, **PHP**, **Ruby**, **Java** or **TypeScript**, or want to try one of them on familiar problems
 
-Stack: Go, PHP, Ruby, TypeScript.`,
+Stack: Go, PHP, Ruby, Java, TypeScript.`,
     challenges: [
       "pagination-params",
       "reset-link-expiry",
       "rate-limiter",
       "parse-log-line",
       "workspace-slugs",
+      "password-policy",
     ],
   },
   {

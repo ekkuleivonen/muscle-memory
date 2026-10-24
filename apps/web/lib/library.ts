@@ -167,8 +167,8 @@ function toIssue(
       !!engineFor(language) &&
       workable &&
       (language !== "sql" || typeof content.schema === "string") &&
-      // C and C++ need the issue's adapter to call the function.
-      ((language !== "c" && language !== "cpp") ||
+      // C, C++ and Java need the issue's adapter to call the function.
+      ((language !== "c" && language !== "cpp" && language !== "java") ||
         typeof content.adapter === "string"),
     workable,
     project,

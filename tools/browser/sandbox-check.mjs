@@ -1101,6 +1101,104 @@ async function csharpCheck(browserType) {
   };
 }
 
+/** Java in a page of its own, like the other compilers. */
+async function javaCheck(browserType) {
+  resetHits();
+  const browser = await browserType.launch();
+  const context = await signedInContext(browser, AUTH_VALUE);
+  const tab = await context.newPage();
+  await tab.goto(APP + "/");
+  const report = await tab.evaluate(async (OUT) => {
+    const catalog = await (await fetch("/demo-catalog.json")).json();
+    const issue = Object.values(catalog.entries).find(
+      (e) => e.content.id === "password-policy",
+    ).content;
+    const host = document.getElementById("host");
+    const run = async (code, extra = {}) => {
+      const runner = new MMRunner.Runner(MMRunner.ENGINES.java, host, {
+        timeoutMs: 4000,
+      });
+      try {
+        return await runner.run({
+          runId: "java",
+          code,
+          inputs: issue.inputs,
+          filename: "src/main/java/com/acme/accounts/PasswordPolicy.java",
+          language: "java",
+          entrypoint: issue.entrypoint,
+          adapter: issue.adapter,
+          ...extra,
+        });
+      } finally {
+        runner.dispose();
+      }
+    };
+    const results = { expected: issue.expected };
+    results.starter = await run(issue.starter);
+    results.fixed = await run(
+      issue.starter.replace(
+        'if (password.length() < 8) broken.add("too-short");',
+        'System.out.println("checking " + password.length());\n        if (password.length() < 12) broken.add("too-short");\n        if (!password.matches(".*\\\\d.*")) broken.add("no-digit");\n        if (!password.matches(".*[A-Za-z].*")) broken.add("no-letter");\n        if (password.matches(".*\\\\s.*")) broken.add("has-whitespace");',
+      ),
+    );
+    results.syntax = await run(
+      issue.starter.replace("return broken;", "return broken"),
+    );
+    results.thrown = await run(
+      issue.starter.replace(
+        "return broken;",
+        'throw new IllegalStateException("nope");',
+      ),
+    );
+    // TeaVM's inline JavaScript (@JSBody) is not Java; solutions that use it are refused.
+    results.jsbody = await run(
+      issue.starter.replace(
+        "return broken;",
+        `broken.add("net-" + probe());
+        return broken;
+    }
+
+    @org.teavm.jso.JSBody(script = "var r = new XMLHttpRequest(); r.open('GET', '${OUT}/java-xhr', false); try { r.send(); return 1; } catch (e) { return 2; }")
+    static native int probe();
+
+    static void unused() {`,
+      ),
+      { inputs: ["x"] },
+    );
+    results.frames = document.querySelectorAll("iframe").length;
+    return results;
+  }, OUT);
+  await new Promise((done) => setTimeout(done, 500));
+  await browser.close();
+  if (process.env.VERBOSE)
+    for (const [name, value] of Object.entries(report))
+      console.log(name, JSON.stringify(value).slice(0, 700));
+  const outputs = (outcome) => outcome.cases?.map((c) => c.output?.text);
+  const expected = report.expected.map((e) => JSON.stringify(e));
+  return {
+    "java: the starter's 8-character rule fails the cases it should":
+      report.starter.status === "completed" &&
+      outputs(report.starter)[2] === expected[2] &&
+      outputs(report.starter)[0] !== expected[0],
+    "java: the fix passes every case, System.out captured":
+      outputs(report.fixed).every((o, i) => o === expected[i]) &&
+      /checking 21\n/.test(report.fixed.stdout.text),
+    "java: a compile error shows javac's message for the solution file":
+      report.syntax.phase === "compile" &&
+      /PasswordPolicy\.java:\d+: error: ';' expected/.test(
+        report.syntax.error.traceback.text,
+      ),
+    "java: an exception stays with its case":
+      report.thrown.cases[0]?.error?.type === "IllegalStateException",
+    "java: TeaVM's JavaScript interop is refused as a compile error":
+      report.jsbody.phase === "compile" &&
+      /TeaVM's JavaScript interop/.test(report.jsbody.error.traceback.text),
+    "no request from Java reached either server":
+      hits.app.length === 0 && hits.outside.length === 0,
+    "no sandbox frames left behind": report.frames === 0,
+  };
+}
+
 const requested = process.argv.slice(2);
 const engines = { chromium, firefox, webkit };
 let failures = 0;
@@ -1131,6 +1229,13 @@ for (const name of process.env.ONLY_AUTH
 }
 if (!process.env.PREVIEW_URL && !process.env.ONLY_AUTH)
   for (const name of requested.length ? requested : ["chromium"]) {
+    console.log(`\n=== ${name}: Java ===`);
+    for (const [label, pass] of Object.entries(
+      await javaCheck(engines[name]),
+    )) {
+      if (!pass) failures++;
+      console.log(`${pass ? "ok  " : "FAIL"} ${label}`);
+    }
     console.log(`\n=== ${name}: C# ===`);
     for (const [label, pass] of Object.entries(
       await csharpCheck(engines[name]),

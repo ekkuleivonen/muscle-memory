@@ -808,6 +808,101 @@
         }
       ]
     },
+    "challenge:password-policy@1.0.0": {
+      "kind": "challenge",
+      "id": "password-policy",
+      "version": "1.0.0",
+      "content": {
+        "adapter": "import com.acme.accounts.PasswordPolicy;\n\n/** [password] → the rules it breaks. */\nfinal class Adapter {\n    static Object call(Json args) {\n        return PasswordPolicy.violations(args.at(0).asString());\n    }\n}\n",
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Mateo O",
+            "body": "Security moved the minimum to 12 last quarter. The form says 12, the API still checks 8, and nothing reports the other rules.",
+            "role": "Backend"
+          }
+        ],
+        "difficulty": "easy",
+        "entrypoint": "violations",
+        "expected": [
+          [
+            "no-digit",
+            "has-whitespace"
+          ],
+          [
+            "too-short"
+          ],
+          [],
+          [
+            "no-letter"
+          ],
+          [
+            "too-short",
+            "no-digit",
+            "no-letter"
+          ]
+        ],
+        "hints": [],
+        "id": "password-policy",
+        "inputs": [
+          "correct horse battery",
+          "Tr0ub4dor&3",
+          "hunter2hunter2",
+          "123456789012",
+          ""
+        ],
+        "kind": "bug",
+        "language": "java",
+        "number": 6,
+        "skills": [
+          "validation",
+          "strings",
+          "security"
+        ],
+        "starter": "package com.acme.accounts;\n\nimport java.util.ArrayList;\nimport java.util.List;\n\n/** The password rules sign-up and password reset enforce. */\npublic final class PasswordPolicy {\n    private PasswordPolicy() {}\n\n    /**\n     * The rules a password breaks, in this order: too-short, no-digit, no-letter,\n     * has-whitespace. Empty when it passes.\n     */\n    public static List<String> violations(String password) {\n        List<String> broken = new ArrayList<>();\n        if (password.length() < 8) broken.add(\"too-short\");\n        return broken;\n    }\n}\n",
+        "summary": "Enforce the new password rules and report every one that is broken.",
+        "task": "`PasswordPolicy.violations(password)` lists the rules a password breaks, in this order: `\"too-short\"` (fewer than 12 characters), `\"no-digit\"`, `\"no-letter\"` and `\"has-whitespace\"`. A password that breaks none gets an empty list.",
+        "title": "Password policy still allows 8-character passwords",
+        "version": "1.0.0"
+      },
+      "digest": "b14800982c4fd928adade93ef0be1fec0d3a2cc5e465dc470e40755f08a885af",
+      "state": "published",
+      "testResult": {
+        "digest": "b14800982c4fd928adade93ef0be1fec0d3a2cc5e465dc470e40755f08a885af",
+        "fixtures": 5,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "b14800982c4fd928adade93ef0be1fec0d3a2cc5e465dc470e40755f08a885af",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "b14800982c4fd928adade93ef0be1fec0d3a2cc5e465dc470e40755f08a885af",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "b14800982c4fd928adade93ef0be1fec0d3a2cc5e465dc470e40755f08a885af",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "b14800982c4fd928adade93ef0be1fec0d3a2cc5e465dc470e40755f08a885af",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
     "challenge:parse-log-line@1.0.0": {
       "kind": "challenge",
       "id": "parse-log-line",
@@ -1931,21 +2026,25 @@
           [
             "workspace-slugs",
             "1.0.0"
+          ],
+          [
+            "password-policy",
+            "1.0.0"
           ]
         ],
         "id": "accounts-api",
         "key": "API",
         "presentation": "demo-text-v1",
-        "story": "The service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, the admin back office is a small Ruby app, and the login gateway in front is TypeScript.\n\nIt mostly works, and the on-call channel has opinions about the rest: list endpoints that accept any page size, reset links that expire too soon, and logs that are hard to search during an incident.\n\n## What you'll work on\n\n- Parsing and validating request parameters with sensible defaults\n- Time and expiry logic, where off-by-one and unit mix-ups hide\n- Rate limiting and log handling for the people on call\n\n## Good fit if you\n\n- Write backend services, or want practice with the bugs they actually get\n- Like **input validation**, edge cases and reading a stack trace at 2am\n- Know **Go**, **PHP**, **Ruby** or **TypeScript**, or want to try one of them on familiar problems\n\nStack: Go, PHP, Ruby, TypeScript.",
+        "story": "The service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, the admin back office is a small Ruby app, the password service is Java, and the login gateway in front is TypeScript.\n\nIt mostly works, and the on-call channel has opinions about the rest: list endpoints that accept any page size, reset links that expire too soon, and logs that are hard to search during an incident.\n\n## What you'll work on\n\n- Parsing and validating request parameters with sensible defaults\n- Time and expiry logic, where off-by-one and unit mix-ups hide\n- Rate limiting and log handling for the people on call\n\n## Good fit if you\n\n- Write backend services, or want practice with the bugs they actually get\n- Like **input validation**, edge cases and reading a stack trace at 2am\n- Know **Go**, **PHP**, **Ruby**, **Java** or **TypeScript**, or want to try one of them on familiar problems\n\nStack: Go, PHP, Ruby, Java, TypeScript.",
         "summary": "Backend: sign-up, login and account endpoints behind every app.",
         "title": "Accounts API",
         "version": "1.0.0"
       },
-      "digest": "4a7916348619a07a86912e6ace22ef48f0493d940e7e0092225e323fd86e3e4d",
+      "digest": "84a36a7f745a624152ece21090164a0d833ba25115e4a38eac8080f626f456cd",
       "state": "published",
       "testResult": {
-        "digest": "4a7916348619a07a86912e6ace22ef48f0493d940e7e0092225e323fd86e3e4d",
-        "fixtures": 18,
+        "digest": "84a36a7f745a624152ece21090164a0d833ba25115e4a38eac8080f626f456cd",
+        "fixtures": 23,
         "at": "2026-10-24T00:00:00.000Z"
       },
       "history": [
@@ -1953,28 +2052,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "4a7916348619a07a86912e6ace22ef48f0493d940e7e0092225e323fd86e3e4d",
+          "digest": "84a36a7f745a624152ece21090164a0d833ba25115e4a38eac8080f626f456cd",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "4a7916348619a07a86912e6ace22ef48f0493d940e7e0092225e323fd86e3e4d",
+          "digest": "84a36a7f745a624152ece21090164a0d833ba25115e4a38eac8080f626f456cd",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "4a7916348619a07a86912e6ace22ef48f0493d940e7e0092225e323fd86e3e4d",
+          "digest": "84a36a7f745a624152ece21090164a0d833ba25115e4a38eac8080f626f456cd",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "4a7916348619a07a86912e6ace22ef48f0493d940e7e0092225e323fd86e3e4d",
+          "digest": "84a36a7f745a624152ece21090164a0d833ba25115e4a38eac8080f626f456cd",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
