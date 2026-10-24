@@ -16,6 +16,17 @@ export const QUESTIONS = [
     ],
   },
   {
+    kind: "select",
+    id: "aiUse",
+    message: "How often do you code with AI help?",
+    choices: [
+      { value: "daily", label: "Every day" },
+      { value: "weekly", label: "Most weeks" },
+      { value: "rarely", label: "Now and then" },
+      { value: "never", label: "Never" },
+    ],
+  },
+  {
     kind: "multiselect",
     id: "languages",
     message: "Which languages will you be working with?",

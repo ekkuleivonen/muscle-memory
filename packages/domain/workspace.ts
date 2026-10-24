@@ -9,6 +9,9 @@ import { boundText, CAPTURE_LIMIT_BYTES, safeIdentifier } from "./capture";
 import { canonical, type Json } from "./json";
 
 /**
+ * 6.0.0: `opened` carries the person's profile as it stood when the IDE opened (experience,
+ * how often they code with AI, languages, goal, editor; whatever they answered, null before
+ * any answers), so every attempt says who made it without a join.
  * 5.0.0: everything that happens in the IDE, as finely as it happens. Every observation has
  * `elapsedMs`, a monotonic clock from the start of its source stream, for exact intervals.
  * New: `keys` (every key down and up and IME composition in an editor, batched about once a
@@ -34,7 +37,7 @@ import { canonical, type Json } from "./json";
  * `number` with `push` 2, 3, …, and `result` reports only that run's checks. Earlier versions
  * were never released.
  */
-export const WORKSPACE_CAPTURE_VERSION = "workspace-capture-5.0.0";
+export const WORKSPACE_CAPTURE_VERSION = "workspace-capture-6.0.0";
 /** An edit whose change set is larger than this is recorded without it, plus a snapshot. */
 export const EDIT_CHANGES_LIMIT_BYTES = 16384;
 /** What this capture version does not record. Absence is a gap, not evidence of no activity. */
@@ -70,6 +73,8 @@ export interface ObservationData {
     readonly codeArtifactId: string;
     /** The app page the IDE was opened from (same-origin path), or null. */
     readonly entry: string | null;
+    /** The self-reported profile at this moment (onboarding or settings answers), or null. */
+    readonly profile: Json | null;
     readonly viewport: { readonly width: number; readonly height: number } | null;
     readonly editor: {
       readonly name: string;

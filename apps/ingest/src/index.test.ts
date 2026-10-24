@@ -38,7 +38,7 @@ function observation(participantId: string, sequence: number, extra: Record<stri
     source: { id: "workspace-a", sequence },
     occurredAt: "2026-10-25T10:00:00.000Z",
     elapsedMs: 12.5 * sequence,
-    captureVersion: "workspace-capture-5.0.0",
+    captureVersion: "workspace-capture-6.0.0",
     consentVersion: "terms-2026-10-25",
     issue: "frequency-map",
     issueRevision: "sha256:" + "a".repeat(64),

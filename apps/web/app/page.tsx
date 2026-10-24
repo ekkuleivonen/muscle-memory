@@ -14,7 +14,7 @@ const SCHEDULE = [
   [
     "9:05",
     "Setup",
-    "Four questions: experience, the languages you work with, why you're here, Vim or not.",
+    "Five questions: experience, how much you code with AI, the languages you work with, why you're here, Vim or not.",
   ],
   [
     "9:10",

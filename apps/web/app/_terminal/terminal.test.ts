@@ -96,6 +96,7 @@ test("confirm takes y/n and falls back to its default on Enter", () => {
 test("answers become a profile; skipped questions are left out", () => {
   const answers = {
     experience: "professional",
+    aiUse: "daily",
     languages: ["typescript", "cpp"],
     goal: "sharp",
     editor: "vim",
@@ -106,13 +107,14 @@ test("answers become a profile; skipped questions are left out", () => {
   );
   assert.deepEqual(toProfile(answers), answers);
   assert.equal(
-    formatAnswer(QUESTIONS[1], answers.languages),
+    formatAnswer(QUESTIONS[2], answers.languages),
     "TypeScript, C++",
   );
   const partial = toProfile({ languages: ["go"] });
   assert.deepEqual(partial, { languages: ["go"] });
   assert.deepEqual(describeProfile(partial), [
     ["experience", "skipped"],
+    ["aiUse", "skipped"],
     ["languages", "Go"],
     ["goal", "skipped"],
     ["editor", "skipped"],

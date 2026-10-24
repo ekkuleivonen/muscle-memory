@@ -17,6 +17,8 @@ export const PROFILE_KEY = "muscle-memory.profile";
 
 export interface Profile {
   experience?: "new" | "some" | "professional" | "veteran";
+  /** How often they code with AI help, in their own words: the context for everything else. */
+  aiUse?: "daily" | "weekly" | "rarely" | "never";
   languages?: LanguageId[];
   goal?: "sharp" | "learn" | "interview" | "fun";
   editor?: "standard" | "vim";
