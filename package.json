@@ -15,6 +15,7 @@
     "delete:participant": "node --experimental-sqlite --import tsx tools/delete-participant.ts",
     "demo:authoring": "node --import tsx tools/authoring/cli.ts demo",
     "build:reference-catalog": "node --import tsx tools/build-reference-catalog.ts",
+    "build:logo": "node tools/build-logo.mjs",
     "build:demo-catalog": "node --import tsx tools/build-demo-catalog.ts",
     "test:browser": "node tools/browser/sandbox-check.mjs && node tools/browser/workspace-check.mjs"
   },

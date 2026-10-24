@@ -22,7 +22,13 @@ export function Sidebar({
   return (
     <aside className="sidebar" aria-label="Workspace">
       <Link href="/" className="workspace-name">
-        <span className="logo-mark">M</span>
+        <img
+          className="logo-mark"
+          src="/logo.svg"
+          alt=""
+          width={22}
+          height={22}
+        />
         muscle memory
       </Link>
       <Link

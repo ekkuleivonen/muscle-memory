@@ -10,7 +10,13 @@ export default function LegalLayout({
     <div className="legal">
       <header className="legal-head">
         <Link href="/" className="workspace-name">
-          <span className="logo-mark">M</span>
+          <img
+            className="logo-mark"
+            src="/logo.svg"
+            alt=""
+            width={22}
+            height={22}
+          />
           muscle memory
         </Link>
         <nav>
