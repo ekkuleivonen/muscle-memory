@@ -1091,6 +1091,115 @@
         }
       ]
     },
+    "challenge:late-fee-rounding@1.0.0": {
+      "kind": "challenge",
+      "id": "late-fee-rounding",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Rui F",
+            "body": "Customers keep emailing about a one-cent difference between the invoice and the reminder. Finance's spreadsheet rounds 0.505 up.",
+            "role": "Finance"
+          }
+        ],
+        "difficulty": "easy",
+        "entrypoint": "LateFee",
+        "expected": [
+          0.5,
+          0.51,
+          0.01,
+          25,
+          1.5,
+          0
+        ],
+        "hints": [
+          "Math.Round on a decimal rounds halves to the nearest even digit unless told otherwise."
+        ],
+        "id": "late-fee-rounding",
+        "inputs": [
+          [
+            100,
+            1
+          ],
+          [
+            101,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            250,
+            30
+          ],
+          [
+            99.9,
+            3
+          ],
+          [
+            80,
+            0
+          ]
+        ],
+        "kind": "bug",
+        "language": "csharp",
+        "number": 5,
+        "parameters": [
+          "balance",
+          "daysLate"
+        ],
+        "skills": [
+          "rounding",
+          "decimals",
+          "finance"
+        ],
+        "starter": "namespace Billing;\n\npublic static class LateFees\n{\n    /// <summary>\n    /// The late fee on an overdue invoice: 0.5% of the balance per day late, at most 10% of\n    /// the balance, in cents. Finance rounds halves away from zero.\n    /// </summary>\n    public static decimal LateFee(decimal balance, int daysLate)\n    {\n        if (daysLate <= 0) return 0;\n        var fee = balance * 0.005m * daysLate;\n        return Math.Round(Math.Min(fee, balance * 0.10m), 2);\n    }\n}\n",
+        "summary": "Round late fees the way finance does: halves away from zero.",
+        "task": "`LateFee(balance, daysLate)` is the fee on an overdue invoice: 0.5% of the balance per day late, capped at 10% of the balance, rounded to cents with halves rounded away from zero. Nothing is charged when the invoice is not late.",
+        "title": "Late fees are a cent off on some invoices",
+        "version": "1.0.0"
+      },
+      "digest": "388719a36af36b0a8d8ea05caf905a7b28aa5fc0687f1bd17bc51fde6d5d2762",
+      "state": "published",
+      "testResult": {
+        "digest": "388719a36af36b0a8d8ea05caf905a7b28aa5fc0687f1bd17bc51fde6d5d2762",
+        "fixtures": 6,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "388719a36af36b0a8d8ea05caf905a7b28aa5fc0687f1bd17bc51fde6d5d2762",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "388719a36af36b0a8d8ea05caf905a7b28aa5fc0687f1bd17bc51fde6d5d2762",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "388719a36af36b0a8d8ea05caf905a7b28aa5fc0687f1bd17bc51fde6d5d2762",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "388719a36af36b0a8d8ea05caf905a7b28aa5fc0687f1bd17bc51fde6d5d2762",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
     "challenge:top-customers@1.0.0": {
       "kind": "challenge",
       "id": "top-customers",
@@ -1891,21 +2000,25 @@
           [
             "unpaid-orders",
             "1.0.0"
+          ],
+          [
+            "late-fee-rounding",
+            "1.0.0"
           ]
         ],
         "id": "data-platform",
         "key": "DATA",
         "presentation": "demo-text-v1",
-        "story": "Partners drop CSV exports in a bucket every night. A pipeline cleans them, loads the warehouse and feeds the reports finance reads on Monday morning.\n\nThe exports are messier than anyone admits: quoted commas in company names, duplicate customers with slightly different emails, and orders that never got paid. When the numbers look wrong, this is where people come asking.\n\n## What you'll work on\n\n- Parsing awkward input files without losing data\n- Cleaning and deduplicating records before they reach the warehouse\n- SQL for the reports and reconciliations people rely on\n\n## Good fit if you\n\n- Work with data, or are the person on your team who ends up writing the SQL\n- Enjoy turning messy input into something you can trust\n- Know **Python** and **SQL**, or want more practice with both\n\nStack: Python, SQL.",
+        "story": "Partners drop CSV exports in a bucket every night. A pipeline cleans them, loads the warehouse and feeds the reports finance reads on Monday morning.\n\nThe exports are messier than anyone admits: quoted commas in company names, duplicate customers with slightly different emails, and orders that never got paid. When the numbers look wrong, this is where people come asking.\n\n## What you'll work on\n\n- Parsing awkward input files without losing data\n- Cleaning and deduplicating records before they reach the warehouse\n- SQL for the reports and reconciliations people rely on\n\n## Good fit if you\n\n- Work with data, or are the person on your team who ends up writing the SQL\n- Enjoy turning messy input into something you can trust\n- Know **Python**, **SQL** or **C#**, or want more practice with them\n\nStack: Python, SQL, and C# for the billing jobs.",
         "summary": "Data: nightly partner imports, cleaning and the reports finance relies on.",
         "title": "Data platform",
         "version": "1.0.0"
       },
-      "digest": "1b47b124c04c2bedcd61f072327dec6ffb94027db553fababf304a3b4dd2455d",
+      "digest": "80c7e8adb2235584cf9b3c34467d5ef3219e7dcea1b4b17e91e0efd8b7b4a342",
       "state": "published",
       "testResult": {
-        "digest": "1b47b124c04c2bedcd61f072327dec6ffb94027db553fababf304a3b4dd2455d",
-        "fixtures": 8,
+        "digest": "80c7e8adb2235584cf9b3c34467d5ef3219e7dcea1b4b17e91e0efd8b7b4a342",
+        "fixtures": 14,
         "at": "2026-10-24T00:00:00.000Z"
       },
       "history": [
@@ -1913,28 +2026,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "1b47b124c04c2bedcd61f072327dec6ffb94027db553fababf304a3b4dd2455d",
+          "digest": "80c7e8adb2235584cf9b3c34467d5ef3219e7dcea1b4b17e91e0efd8b7b4a342",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "1b47b124c04c2bedcd61f072327dec6ffb94027db553fababf304a3b4dd2455d",
+          "digest": "80c7e8adb2235584cf9b3c34467d5ef3219e7dcea1b4b17e91e0efd8b7b4a342",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "1b47b124c04c2bedcd61f072327dec6ffb94027db553fababf304a3b4dd2455d",
+          "digest": "80c7e8adb2235584cf9b3c34467d5ef3219e7dcea1b4b17e91e0efd8b7b4a342",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "1b47b124c04c2bedcd61f072327dec6ffb94027db553fababf304a3b4dd2455d",
+          "digest": "80c7e8adb2235584cf9b3c34467d5ef3219e7dcea1b4b17e91e0efd8b7b4a342",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]

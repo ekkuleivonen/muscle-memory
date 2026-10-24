@@ -1008,6 +1008,98 @@ std::vector<int> simulate(int capacity, const std::vector<Op>& ops) {
   };
 }
 
+/** C# in a page of its own: the .NET runtime and Roslyn are 22 MB of WebAssembly. */
+async function csharpCheck(browserType) {
+  resetHits();
+  const browser = await browserType.launch();
+  const context = await signedInContext(browser, AUTH_VALUE);
+  const tab = await context.newPage();
+  await tab.goto(APP + "/");
+  const report = await tab.evaluate(async (OUT) => {
+    const catalog = await (await fetch("/demo-catalog.json")).json();
+    const fee = Object.values(catalog.entries).find(
+      (e) => e.content.id === "late-fee-rounding",
+    ).content;
+    const host = document.getElementById("host");
+    const run = async (code, extra = {}) => {
+      const runner = new MMRunner.Runner(MMRunner.ENGINES.csharp, host, {
+        timeoutMs: 4000,
+      });
+      try {
+        return await runner.run({
+          runId: "cs",
+          code,
+          inputs: fee.inputs,
+          filename: "src/LateFees.cs",
+          language: "csharp",
+          entrypoint: fee.entrypoint,
+          parameters: fee.parameters,
+          ...extra,
+        });
+      } finally {
+        runner.dispose();
+      }
+    };
+    const results = { expected: fee.expected };
+    results.starter = await run(fee.starter);
+    results.fixed = await run(
+      fee.starter
+        .replace(
+          "Math.Round(Math.Min(fee, balance * 0.10m), 2)",
+          "Math.Round(Math.Min(fee, balance * 0.10m), 2, MidpointRounding.AwayFromZero)",
+        )
+        .replace(
+          "if (daysLate <= 0) return 0;",
+          'if (daysLate <= 0) return 0;\n        Console.WriteLine($"{balance} for {daysLate} days");',
+        ),
+    );
+    results.syntax = await run(
+      "public static class LateFees { public static decimal LateFee(decimal b, int d) { return b }",
+    );
+    results.thrown = await run(
+      'public static class LateFees { public static decimal LateFee(decimal b, int d) => throw new InvalidOperationException("nope"); }',
+    );
+    results.escape = await run(
+      `public static class LateFees { public static decimal LateFee(decimal b, int d) { try { new System.Net.Http.HttpClient().GetStringAsync("${OUT}/cs-fetch").Wait(); return 1; } catch { return 2; } } }`,
+      { inputs: [[1, 1]] },
+    );
+    results.frames = document.querySelectorAll("iframe").length;
+    return results;
+  }, OUT);
+  await new Promise((done) => setTimeout(done, 500));
+  await browser.close();
+  if (process.env.VERBOSE)
+    for (const [name, value] of Object.entries(report))
+      console.log(name, JSON.stringify(value).slice(0, 700));
+  const outputs = (outcome) => outcome.cases?.map((c) => c.output?.text);
+  const expected = report.expected.map((e) => JSON.stringify(e));
+  return {
+    "csharp: the starter's banker's rounding fails just the midpoint cases":
+      report.starter.status === "completed" &&
+      outputs(report.starter).filter(
+        (o, i) => Number(o) !== JSON.parse(expected[i]),
+      ).length === 2,
+    "csharp: the fix passes every case, Console output captured":
+      outputs(report.fixed).every(
+        (o, i) => Number(o) === JSON.parse(expected[i]),
+      ) && /100 for 1 days\n/.test(report.fixed.stdout.text),
+    "csharp: a compile error shows Roslyn's message for the solution file":
+      report.syntax.phase === "compile" &&
+      /src\/LateFees\.cs\(1,\d+\): error CS1002/.test(
+        report.syntax.error.traceback.text,
+      ),
+    "csharp: an exception stays with its case":
+      report.thrown.cases[0]?.error?.type === "InvalidOperationException",
+    // Networking assemblies are not among the references, so it does not even compile.
+    "csharp: HttpClient is not available to solutions":
+      report.escape.phase === "compile" &&
+      /HttpClient/.test(report.escape.error.traceback.text),
+    "no request from C# reached either server":
+      hits.app.length === 0 && hits.outside.length === 0,
+    "no sandbox frames left behind": report.frames === 0,
+  };
+}
+
 const requested = process.argv.slice(2);
 const engines = { chromium, firefox, webkit };
 let failures = 0;
@@ -1038,6 +1130,13 @@ for (const name of process.env.ONLY_AUTH
 }
 if (!process.env.PREVIEW_URL && !process.env.ONLY_AUTH)
   for (const name of requested.length ? requested : ["chromium"]) {
+    console.log(`\n=== ${name}: C# ===`);
+    for (const [label, pass] of Object.entries(
+      await csharpCheck(engines[name]),
+    )) {
+      if (!pass) failures++;
+      console.log(`${pass ? "ok  " : "FAIL"} ${label}`);
+    }
     console.log(`\n=== ${name}: C and C++ ===`);
     for (const [label, pass] of Object.entries(
       await clangCheck(engines[name]),

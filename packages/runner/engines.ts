@@ -5,6 +5,7 @@
  */
 import manifest from "./runtime-manifest.json";
 import { CLANG_WORKER } from "./workers/clang";
+import { CSHARP_WORKER } from "./workers/csharp";
 import { GO_WORKER } from "./workers/go";
 import { HTML_WORKER } from "./workers/html";
 import { JAVASCRIPT_WORKER } from "./workers/javascript";
@@ -42,7 +43,8 @@ export interface Engine {
   readonly reusable?: boolean;
 }
 
-const { pyodide, javascript, pglite, html, php, ruby, go, clang } = manifest;
+const { pyodide, javascript, pglite, html, php, ruby, go, clang, csharp } =
+  manifest;
 
 export const ENGINES: Record<EngineId, Engine> = {
   pyodide: {
@@ -139,6 +141,22 @@ export const ENGINES: Record<EngineId, Engine> = {
     timeoutMs: 30_000,
     reusable: true,
   },
+  csharp: {
+    id: "csharp",
+    label: `C# ${csharp.csharp} (.NET ${csharp.dotnet})`,
+    runtime: {
+      id: "dotnet-roslyn",
+      version: csharp.version,
+      dotnet: csharp.dotnet,
+    },
+    basePath: csharp.basePath,
+    files: csharp.files,
+    sizes: csharp.sizes,
+    config: {},
+    worker: CSHARP_WORKER,
+    // Roslyn compiles first; its first compile in a fresh sandbox takes a second or two.
+    timeoutMs: 15_000,
+  },
 };
 
 const BY_LANGUAGE: Record<string, EngineId> = {
@@ -152,6 +170,7 @@ const BY_LANGUAGE: Record<string, EngineId> = {
   go: "go",
   c: "clang",
   cpp: "clang",
+  csharp: "csharp",
 };
 
 /** The engine that runs a language, if any does yet. */

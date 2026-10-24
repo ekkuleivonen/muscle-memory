@@ -308,6 +308,11 @@ ${cases}
 `;
 }
 
+/** The class a C# or Java starter declares, e.g. "LateFees"; else one named after the method. */
+function className(src: RepoSource): string {
+  return /\bclass\s+(\w+)/.exec(src.starter)?.[1] ?? pascal(src.entrypoint);
+}
+
 function csharpTests(src: RepoSource, name: string): string {
   const cases = src.criteria
     .map(
@@ -323,9 +328,9 @@ public class ${name}Tests
     // Input and expected output as JSON.
     [Theory]
 ${cases}
-    public void ${pascal(src.entrypoint)}(string input, string expected)
+    public void ${src.entrypoint}(string input, string expected)
     {
-        Assert.Equal(Json.Parse(expected), Json.Call(${name}.${pascal(src.entrypoint)}, input));
+        Assert.Equal(Json.Parse(expected), Json.Call(${className(src)}.${src.entrypoint}, input));
     }
 }
 `;
@@ -515,9 +520,9 @@ function layout(src: RepoSource): {
       };
     case "csharp":
       return {
-        solution: `src/${pascal(e)}.cs`,
-        tests: `tests/${pascal(e)}Tests.cs`,
-        text: csharpTests(src, pascal(e)),
+        solution: `src/${className(src)}.cs`,
+        tests: `tests/${className(src)}Tests.cs`,
+        text: csharpTests(src, className(src)),
       };
     case "html":
       return {

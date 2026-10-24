@@ -12,7 +12,7 @@ import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -203,6 +203,19 @@ const ENGINES = {
       };
     },
   },
+  csharp: {
+    // Not an npm package: Roslyn's version is pinned in tools/runtimes/csharp/Runner.csproj.
+    version: async () =>
+      /Microsoft\.CodeAnalysis\.CSharp" Version="([\d.]+)"/.exec(
+        await readFile(
+          join(root, "tools/runtimes/csharp/Runner.csproj"),
+          "utf8",
+        ),
+      )[1],
+    license: (v) =>
+      `Roslyn ${v} (MIT), https://github.com/dotnet/roslyn\n.NET runtime (MIT), https://github.com/dotnet/runtime\n`,
+    files: csharpRunner,
+  },
   pglite: {
     package: "@electric-sql/pglite",
     license: (v) =>
@@ -284,6 +297,64 @@ async function goRunner() {
     "go.wasm": await readFile(join(cache, "go.wasm")),
     "wasm_exec.js": await readFile(join(cache, "wasm_exec.js")),
   };
+}
+
+/**
+ * The C# runner is a .NET WebAssembly app built from tools/runtimes/csharp in a pinned .NET SDK
+ * image, cached by its inputs like the Go runner. Its files are the published _framework.
+ */
+const DOTNET_IMAGE =
+  "mcr.microsoft.com/dotnet/sdk:9.0@sha256:d9ad72f6b3eb5d61adb158db510ae1c3098c12c92d23ab8da833418275f1c652";
+async function csharpRunner() {
+  const src = join(root, "tools/runtimes/csharp");
+  const inputs = await Promise.all(
+    ["Program.cs", "Runner.csproj"].map((name) => readFile(join(src, name))),
+  );
+  const key = createHash("sha256")
+    .update(DOTNET_IMAGE)
+    .update(Buffer.concat(inputs))
+    .digest("hex")
+    .slice(0, 16);
+  const cache = join(
+    root,
+    "node_modules/.cache/muscle-memory-runtimes",
+    `csharp-${key}`,
+  );
+  if (!existsSync(join(cache, "_framework", "blazor.boot.json"))) {
+    await mkdir(cache, { recursive: true });
+    console.log("building the C# runner (once per change, in Docker)…");
+    execFileSync(
+      "docker",
+      [
+        "run",
+        "--rm",
+        "-u",
+        `${process.getuid()}:${process.getgid()}`,
+        "-e",
+        "HOME=/tmp",
+        "-e",
+        "DOTNET_CLI_TELEMETRY_OPTOUT=1",
+        "-e",
+        "DOTNET_NOLOGO=1",
+        "-v",
+        `${src}:/src:ro`,
+        "-v",
+        `${cache}:/out`,
+        DOTNET_IMAGE,
+        "sh",
+        "-c",
+        "cp -r /src /tmp/build && cd /tmp/build && dotnet publish -c Release -o /tmp/pub >/tmp/log 2>&1 || { cat /tmp/log; exit 1; }; cp -r /tmp/pub/wwwroot/_framework /out/",
+      ],
+      { stdio: ["ignore", "inherit", "inherit"] },
+    );
+  }
+  const dir = join(cache, "_framework");
+  const names = (await readdir(dir)).sort();
+  return Object.fromEntries(
+    await Promise.all(
+      names.map(async (name) => [name, await readFile(join(dir, name))]),
+    ),
+  );
 }
 
 const integrity = (bytes) =>

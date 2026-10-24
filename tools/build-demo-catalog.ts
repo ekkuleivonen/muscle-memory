@@ -55,6 +55,25 @@ const challenge = (
  * up to the app's runners, not the content.
  */
 const STARTERS: Record<string, { entrypoint: string; starter: string }> = {
+  "late-fee-rounding": {
+    entrypoint: "LateFee",
+    starter: `namespace Billing;
+
+public static class LateFees
+{
+    /// <summary>
+    /// The late fee on an overdue invoice: 0.5% of the balance per day late, at most 10% of
+    /// the balance, in cents. Finance rounds halves away from zero.
+    /// </summary>
+    public static decimal LateFee(decimal balance, int daysLate)
+    {
+        if (daysLate <= 0) return 0;
+        var fee = balance * 0.005m * daysLate;
+        return Math.Round(Math.Min(fee, balance * 0.10m), 2);
+    }
+}
+`,
+  },
   "workspace-slugs": {
     entrypoint: "slugify",
     starter: `# Workspace URLs are /w/<slug>. Turn a workspace name into its slug:
@@ -563,6 +582,33 @@ const challenges = [
       ),
     ],
   }),
+  challenge("late-fee-rounding", {
+    parameters: ["balance", "daysLate"],
+    title: "Late fees are a cent off on some invoices",
+    summary: "Round late fees the way finance does: halves away from zero.",
+    kind: "bug",
+    difficulty: "easy",
+    language: "csharp",
+    skills: ["rounding", "decimals", "finance"],
+    task: "`LateFee(balance, daysLate)` is the fee on an overdue invoice: 0.5% of the balance per day late, capped at 10% of the balance, rounded to cents with halves rounded away from zero. Nothing is charged when the invoice is not late.",
+    inputs: [
+      [100.0, 1],
+      [101.0, 1],
+      [1.0, 1],
+      [250.0, 30],
+      [99.9, 3],
+      [80.0, 0],
+    ],
+    expected: [0.5, 0.51, 0.01, 25, 1.5, 0],
+    hints: [
+      "Math.Round on a decimal rounds halves to the nearest even digit unless told otherwise.",
+    ],
+    comments: [
+      rui(
+        "Customers keep emailing about a one-cent difference between the invoice and the reminder. Finance's spreadsheet rounds 0.505 up.",
+      ),
+    ],
+  }),
   challenge("top-customers", {
     schema: "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  customer text NOT NULL,\n  total integer NOT NULL\n);",
     title: "Revenue by customer for the monthly report",
@@ -842,14 +888,15 @@ The exports are messier than anyone admits: quoted commas in company names, dupl
 
 - Work with data, or are the person on your team who ends up writing the SQL
 - Enjoy turning messy input into something you can trust
-- Know **Python** and **SQL**, or want more practice with both
+- Know **Python**, **SQL** or **C#**, or want more practice with them
 
-Stack: Python, SQL.`,
+Stack: Python, SQL, and C# for the billing jobs.`,
     challenges: [
       "csv-quoted-fields",
       "dedupe-customers",
       "top-customers",
       "unpaid-orders",
+      "late-fee-rounding",
     ],
   },
   {
