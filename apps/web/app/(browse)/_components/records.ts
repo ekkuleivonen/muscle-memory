@@ -3,8 +3,11 @@ import { useEffect, useState } from "react";
 import { openPracticeStore } from "../../../../../packages/browser/practice-store";
 import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
 
-/** Everything recorded in this browser, read once per visit; null while loading. */
-export function useRecords(): WorkspaceRecord[] | null {
+/**
+ * Everything recorded in this browser, read once per visit, and again whenever `version`
+ * changes (after this page records something); null while first loading.
+ */
+export function useRecords(version = 0): WorkspaceRecord[] | null {
   const [records, setRecords] = useState<WorkspaceRecord[] | null>(null);
   useEffect(() => {
     let live = true;
@@ -21,7 +24,7 @@ export function useRecords(): WorkspaceRecord[] | null {
     return () => {
       live = false;
     };
-  }, []);
+  }, [version]);
   return records;
 }
 

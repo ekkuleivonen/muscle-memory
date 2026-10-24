@@ -1,7 +1,5 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import type { Challenge } from "../../../packages/domain/assessment";
 import type { WorkspaceRecord } from "../../../packages/domain/workspace";
 import { diffLines, diffStats, hunks } from "./diff";
 import {
@@ -11,13 +9,10 @@ import {
   pullRequestDetail,
 } from "./pulls";
 
-const challenge = JSON.parse(
-  readFileSync(
-    new URL("../../../content/challenges/frequency-map.v2.json", import.meta.url),
-    "utf8",
-  ),
-) as Challenge;
-const ARTIFACT = `challenge.frequency-map.${challenge.version}`;
+import { live } from "./test-fixtures";
+
+const fixture = live("frequency-map");
+const cases = fixture.revision.checks.cases;
 
 let sequence = 0;
 function observation(
@@ -34,7 +29,8 @@ function observation(
       type,
       occurredAt: new Date(Date.UTC(2026, 9, 24, 9, minute)).toISOString(),
       source: { id: "s", sequence },
-      challengeArtifactId: ARTIFACT,
+      issue: "frequency-map",
+      issueRevision: fixture.id,
       data,
     }),
   };
@@ -45,7 +41,7 @@ function outcome(passing: number) {
   return {
     status: "completed",
     phase: "tests",
-    cases: challenge.expected.map((expected, index) => ({
+    cases: cases.map(({ expected }, index) => ({
       index,
       output: {
         text: JSON.stringify(index < passing ? expected : "wrong"),
@@ -61,11 +57,13 @@ function code(revision: number, text: string): WorkspaceRecord {
     recordId: `s.code.${revision}`,
     kind: "artifact",
     participantId: "p",
-    payload: JSON.stringify({ text, capture: { truncated: false } }),
+    payload: JSON.stringify({
+      files: { [fixture.path]: { text, capture: { truncated: false } } },
+    }),
   };
 }
 
-const total = challenge.expected.length;
+const total = cases.length;
 const records: WorkspaceRecord[] = [
   observation("observation.workspace.opened", 0, {}),
   observation("observation.workspace.edit", 1, {}),
@@ -86,10 +84,10 @@ const records: WorkspaceRecord[] = [
 test("pull requests are listed newest first, open until the person merges one", () => {
   const pulls = allPullRequests(records);
   assert.deepEqual(
-    pulls.map((p) => [p.challengeId, p.version, p.number, p.result, p.state]),
+    pulls.map((p) => [p.issue, p.issueRevision, p.number, p.result, p.state]),
     [
-      ["frequency-map", challenge.version, 2, "checks-passed", "merged"],
-      ["frequency-map", challenge.version, 1, "checks-failed", "open"],
+      ["frequency-map", fixture.id, 2, "checks-passed", "merged"],
+      ["frequency-map", fixture.id, 1, "checks-failed", "open"],
     ],
   );
   // #1 stays open (failing checks never close it), but its issue is Done through #2.
@@ -100,17 +98,8 @@ test("pull requests are listed newest first, open until the person merges one", 
   assert.equal(allPullRequests(unmerged)[0].state, "open");
 });
 
-test("before capture 1.4.0 a pull request with passing checks merged itself", () => {
-  const legacy = [
-    observation("observation.workspace.pull-request", 30, { number: 1, runId: "l1", revision: 1, codeArtifactId: "l.code.1", result: "merged", passed: total, total }),
-  ];
-  const [pull] = allPullRequests(legacy);
-  assert.equal(pull.state, "merged");
-  assert.equal(pull.mergedAt, pull.at);
-});
-
 test("a pull request's timeline starts after the previous one and folds edits together", () => {
-  const detail = pullRequestDetail(records, "frequency-map", 2, () => challenge)!;
+  const detail = pullRequestDetail(records, "frequency-map", 2, (id) => (id === fixture.id ? fixture.revision : undefined))!;
   assert.equal(detail.previous?.number, 1);
   assert.deepEqual(
     detail.timeline.map((e) => e.kind),
@@ -121,12 +110,14 @@ test("a pull request's timeline starts after the previous one and folds edits to
   assert.equal(detail.stats.edits, 1);
   assert.equal(detail.stats.runs, 1);
   assert.equal(detail.stats.firstGreenAt, detail.timeline[1].at);
-  assert.equal(detail.code?.text, "def frequency_map(words):\n    return {}\n");
+  assert.deepEqual(detail.code, {
+    [fixture.path]: { text: "def frequency_map(words):\n    return {}\n", truncated: false },
+  });
   assert.equal((detail.outcome as { status: string }).status, "completed");
 });
 
 test("the first pull request includes opening the IDE, and missing code is null", () => {
-  const detail = pullRequestDetail(records, "frequency-map", 1, () => challenge)!;
+  const detail = pullRequestDetail(records, "frequency-map", 1, (id) => (id === fixture.id ? fixture.revision : undefined))!;
   assert.deepEqual(
     detail.timeline.map((e) => e.kind),
     ["opened", "edits", "run", "pull-request", "checks"],
@@ -134,7 +125,7 @@ test("the first pull request includes opening the IDE, and missing code is null"
   assert.equal(detail.stats.edits, 2);
   assert.equal(detail.stats.firstGreenAt, undefined);
   assert.equal(detail.code, null);
-  assert.equal(pullRequestDetail(records, "frequency-map", 9, () => challenge), null);
+  assert.equal(pullRequestDetail(records, "frequency-map", 9, (id) => (id === fixture.id ? fixture.revision : undefined)), null);
 });
 
 test("line diffs keep unchanged lines and number both sides", () => {
@@ -179,7 +170,7 @@ test("work continues on an open pull request: each push is checked under the sam
     [1, 2, "checks-passed", "a2", "open"],
   );
   assert.ok(pull.openedAt < pull.at);
-  const detail = pullRequestDetail(pushes, "frequency-map", 1, () => challenge)!;
+  const detail = pullRequestDetail(pushes, "frequency-map", 1, (id) => (id === fixture.id ? fixture.revision : undefined))!;
   assert.deepEqual(
     detail.timeline.map((e) => e.kind),
     ["pull-request", "checks", "edits", "push", "checks"],

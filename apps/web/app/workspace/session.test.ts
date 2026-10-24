@@ -1,30 +1,29 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { EditorState, type Transaction } from "@codemirror/state";
 import { MemorySink } from "../../../../packages/capture/recorder";
-import type { Challenge } from "../../../../packages/domain/assessment";
 import type { Runner } from "../../../../packages/runner/runner";
+import { live } from "../../lib/test-fixtures";
 import { WorkspaceSession } from "./session";
 
-const challenge = JSON.parse(
-  readFileSync(
-    new URL(
-      "../../../../content/challenges/frequency-map.v2.json",
-      import.meta.url,
-    ),
-    "utf8",
-  ),
-) as Challenge & { entrypoint: string; starter: string };
+const fixture = live("frequency-map");
 
 function session(sink: MemorySink) {
   return new WorkspaceSession({
     participantId: "synthetic-participant",
     consentVersion: "workspace-session-v1",
-    challenge,
+    issue: "frequency-map",
+    issueRevision: fixture.id,
+    executable: fixture.executable,
     sink,
-    initialCode: "",
-    runner: () => ({ running: false }) as unknown as Runner,
+    files: {
+      [fixture.path]: {
+        text: "",
+        language: "python",
+        mediaType: "text/x-python; charset=utf-8",
+      },
+    },
+    runner: () => ({ running: false, cancel: () => undefined }) as unknown as Runner,
     onRun: () => undefined,
     onEditedAfterRun: () => undefined,
   });
@@ -68,28 +67,28 @@ test("snapshots hold the exact text of the revision that triggered them, within 
     Array.from({ length: 30 }, (_, index) => `${index + 1};`),
   );
   // All 30 transactions belong to one editor update: the view already shows revision 30.
-  for (const transaction of batch) workspace.recordEdit(transaction);
+  for (const transaction of batch) workspace.recordEdit(fixture.path, transaction);
   await workspace.recorder.flush();
   const [periodic] = snapshots(sink).filter(
     (snapshot) => snapshot.reason === "periodic",
   );
   assert.equal(periodic.revision, 25);
   assert.equal(periodic.artifact.revision, 25);
-  assert.equal(periodic.artifact.text, batch[24].newDoc.toString());
-  assert.notEqual(periodic.artifact.text, batch[29].newDoc.toString());
+  assert.equal(periodic.artifact.files[fixture.path].text, batch[24].newDoc.toString());
+  assert.notEqual(periodic.artifact.files[fixture.path].text, batch[29].newDoc.toString());
 });
 
 test("an oversize edit inside a batch is snapshotted at its own revision", async () => {
   const sink = new MemorySink();
   const workspace = session(sink);
   const batch = transactions(["a", "x".repeat(20000), "b", "c"]);
-  for (const transaction of batch) workspace.recordEdit(transaction);
+  for (const transaction of batch) workspace.recordEdit(fixture.path, transaction);
   await workspace.recorder.flush();
   const [oversize] = snapshots(sink).filter(
     (snapshot) => snapshot.reason === "oversize-edit",
   );
   assert.equal(oversize.revision, 2);
-  assert.equal(oversize.artifact.text, batch[1].newDoc.toString());
+  assert.equal(oversize.artifact.files[fixture.path].text, batch[1].newDoc.toString());
   const edit = [...sink.records.values()]
     .map((record) => JSON.parse(record.payload))
     .find(
@@ -99,4 +98,80 @@ test("an oversize edit inside a batch is snapshotted at its own revision", async
     );
   assert.equal(edit.data.changes, null);
   assert.equal(edit.data.changesTruncated, true);
+});
+
+const observations = (sink: MemorySink) =>
+  [...sink.records.values()]
+    .map((record) => JSON.parse(record.payload))
+    .filter((record) => record.observationId)
+    .sort((a, b) => a.source.sequence - b.source.sequence);
+
+test("keys are batched with their own times; cursor bursts merge and are written before what follows", async () => {
+  const sink = new MemorySink();
+  const workspace = session(sink);
+  const hooks = workspace.activity(fixture.path);
+  hooks.onFocus(true);
+  hooks.onKey("down", "a", "", false);
+  hooks.onKey("up", "a", "", false);
+  hooks.onKey("down", "Escape", "", false);
+  // A burst of cursor moves, then an edit: the moves are written first, as one observation.
+  hooks.onSelection({ ranges: [{ anchor: 1, head: 1 }], main: 0 }, "select.pointer");
+  hooks.onSelection({ ranges: [{ anchor: 2, head: 2 }], main: 0 }, "select.pointer");
+  hooks.onSelection({ ranges: [{ anchor: 3, head: 3 }], main: 0 }, "select.pointer");
+  workspace.recordEdit(fixture.path, transactions(["x"])[0]);
+  hooks.onScroll(1, 20);
+  hooks.onScroll(5, 24);
+  hooks.onClipboard("copy", [{ from: 0, to: 1 }], false);
+  workspace.navigated("panel", "show", "output", "pointer");
+  workspace.page({ visible: false, focused: false, width: 800, height: 600 });
+  await workspace.close();
+  const all = observations(sink);
+  const types = all.map((o) => o.type.replace("observation.workspace.", ""));
+  assert.deepEqual(types, [
+    "opened",
+    "focus",
+    "selection",
+    "edit",
+    "scroll",
+    "clipboard",
+    "navigated",
+    "page",
+    "keys",
+    "closed",
+  ]);
+  const selection = all.find((o) => o.type === "observation.workspace.selection");
+  assert.equal(selection.data.moves, 3);
+  assert.deepEqual(selection.data.selection.ranges, [{ anchor: 3, head: 3 }]);
+  assert.deepEqual(
+    all.find((o) => o.type === "observation.workspace.scroll").data,
+    { file: fixture.path, fromLine: 5, toLine: 24 },
+  );
+  const keys = all.find((o) => o.type === "observation.workspace.keys").data.keys;
+  assert.deepEqual(
+    keys.map((k: unknown[]) => k.slice(1)),
+    [
+      ["down", "a", "", false],
+      ["up", "a", "", false],
+      ["down", "Escape", "", false],
+    ],
+  );
+  // Every observation has a monotonic time, and they never go backwards.
+  const times = all.map((o) => o.elapsedMs);
+  assert.ok(times.every((t, i) => typeof t === "number" && (i === 0 || t >= times[i - 1])));
+  assert.ok(keys.every((k: number[]) => k[0] <= all.at(-1).elapsedMs));
+});
+
+test("closing writes what is still buffered; discarding does not", async () => {
+  const kept = new MemorySink();
+  const one = session(kept);
+  one.activity(fixture.path).onKey("down", "b", "", false);
+  await one.close();
+  assert.ok(observations(kept).some((o) => o.type === "observation.workspace.keys"));
+  assert.equal(observations(kept).at(-1).data.reason, "left");
+
+  const dropped = new MemorySink();
+  const two = session(dropped);
+  two.activity(fixture.path).onKey("down", "b", "", false);
+  await two.close(true);
+  assert.ok(!observations(dropped).some((o) => o.type === "observation.workspace.keys"));
 });

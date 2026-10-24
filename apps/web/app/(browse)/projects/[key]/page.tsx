@@ -22,11 +22,8 @@ type Props = { params: Promise<{ key: string }> };
 /** `key` is a project key such as FN (any case) or, for older links, its slug. */
 async function find({ params }: Props) {
   const { key } = await params;
-  const { findProject, issues } = await getLibrary();
-  return {
-    project: findProject(decodeURIComponent(key)),
-    latest: new Map(issues.map((i) => [i.slug, i.version])),
-  };
+  const { findProject } = await getLibrary();
+  return { project: findProject(decodeURIComponent(key)) };
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
@@ -42,7 +39,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 export default async function ProjectPage(props: Props) {
   const { key } = await props.params;
   await requireOnboarding(`/projects/${key}`);
-  const { project, latest } = await find(props);
+  const { project } = await find(props);
   if (!project) notFound();
   // One canonical URL per project: /projects/FN.
   if (key !== project.key) permanentRedirect(projectHref(project));
@@ -103,7 +100,7 @@ export default async function ProjectPage(props: Props) {
           <h2>
             Issues <span className="count">{project.issues.length}</span>
           </h2>
-          <IssueRows issues={project.issues} latest={latest} standalone />
+          <IssueRows issues={project.issues} standalone />
         </section>
       </main>
     </>

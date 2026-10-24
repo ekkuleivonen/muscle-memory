@@ -1,11 +1,15 @@
 # Contributing
 
-Start with README setup and the Foundation reference. Keep changes small and run the focused contract tests. New Challenges need a pinned version, a clear task, fixtures including edge cases, hints, skill tags and an explicit assessment version. Adventures reference those versions and own their story and sequence separately.
+Start with the README setup. Keep changes small, with a commit message that says why, and keep docs in step with behaviour in the same change.
 
-Do not edit published versions in place. Add a new version, retain old content, and include a focused test proving the changed behavior. Do not put real participant records, credentials, private organization notes or generated exports in this repository.
+## Content
 
-Open a focused PR describing the behavior, a runnable check and any limitation. Foundation work precedes player progression, launch features and observatory research. Keep issue status, meaningful progress, blockers and PR links current. Avoid speculative infrastructure and repeated checks without a concrete reason.
+Issues are seed data in `content/seed.ts` until the admin system exists. A new issue needs a clear ticket, an entry point and starter in its language, cases including edge cases, skill tags, and teammate comments and hints where they help. Give it a `private` part where you can: a reference solution, and for every blocking review comment code that fires it and code that does not. The build refuses an issue whose private part fails the publish checks, and `npm run check:publish` runs the reference and the starter in the browser sandbox. The private part is never written to the catalog. After changing the seed, run `npm run build:content` and commit `content/catalog.json` with it; `npm run check:content` fails when the two disagree.
 
-Before proposing content, use Node.js 22+ to run `node tools/content-check.mjs` and `node --test tools/tests/content-check.test.mjs`. These dependency-free authoring checks reject missing references, unpinned versions, duplicate identities and mismatched fixtures. They validate source manifests; they do not publish content or implement the runtime lifecycle.
+Never edit `content/catalog.json` by hand. A revision is immutable and stored under the hash of its content: editing a seed issue adds a new revision and moves the issue's live pointer to it, and earlier revisions stay because recorded work names them. Change live metadata (title, difficulty, labels) freely; change revision content (ticket, files, cases, comments, hints) only by adding a revision. See the [issue model](docs/issue-model.md).
 
-Use the [authoring CLI](docs/authoring.md) to exercise lifecycle transitions. After changing reference source manifests, regenerate the release fixture with `npm run build:reference-catalog` and run `npm run check:content`. Published versions still require new version identifiers; regeneration is not permission to overwrite them. `npm test` covers the catalog, application gates and storage adapters together.
+## Checks
+
+`npm test` and `npx tsc --noEmit -p apps/web` before a PR; `node tools/browser/sandbox-check.mjs chromium` after touching the runner or a worker. Do not put real participant records, credentials, private notes or generated exports in this repository.
+
+Open a focused PR describing the behaviour, a runnable check and any limitation.

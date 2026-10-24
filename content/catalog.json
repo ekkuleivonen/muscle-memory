@@ -1,0 +1,2887 @@
+{
+  "schemaVersion": "2.0.0",
+  "projects": [
+    {
+      "id": "field-notes",
+      "key": "FN",
+      "title": "Field notes",
+      "summary": "Warm-up: help a field researcher make sense of a messy notebook.",
+      "story": "A field researcher keeps specimen labels in a notebook and needs exact tallies. A good first ticket: small, in Python, with one surprise in the data.",
+      "issues": [
+        "frequency-map"
+      ]
+    },
+    {
+      "id": "storefront",
+      "key": "SHOP",
+      "title": "Shop",
+      "summary": "Frontend: the customer-facing shop, cart and checkout.",
+      "story": "The online shop customers actually see: product listings, filters, the cart and a three-step checkout. Pages are server-rendered, with a thin layer of TypeScript for the interactive parts.\n\nConversion dipped after the last redesign. Support is fielding tickets about prices, promo codes and a search box that feels sluggish, and an accessibility audit came back with a long list.\n\n## What you'll work on\n\n- Formatting money and other values the way customers expect to read them\n- Form behaviour, validation and accessible markup\n- Small performance fixes in the browser, like debouncing input\n\n## Good fit if you\n\n- Build user interfaces, or want to get sharper at the details that make one feel solid\n- Are comfortable with **JavaScript**, **TypeScript** or plain **HTML**\n- Care what a bug looks like from the customer's side of the screen\n\nStack: TypeScript, JavaScript, HTML.",
+      "issues": [
+        "format-price",
+        "discount-codes",
+        "filter-form-labels",
+        "debounce-search",
+        "refund-totals"
+      ]
+    },
+    {
+      "id": "accounts-api",
+      "key": "API",
+      "title": "Accounts API",
+      "summary": "Backend: sign-up, login and account endpoints behind every app.",
+      "story": "The service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, the admin back office is a small Ruby app, the password service is Java, and the login gateway in front is TypeScript.\n\nIt mostly works, and the on-call channel has opinions about the rest: list endpoints that accept any page size, reset links that expire too soon, and logs that are hard to search during an incident.\n\n## What you'll work on\n\n- Parsing and validating request parameters with sensible defaults\n- Time and expiry logic, where off-by-one and unit mix-ups hide\n- Rate limiting and log handling for the people on call\n\n## Good fit if you\n\n- Write backend services, or want practice with the bugs they actually get\n- Like **input validation**, edge cases and reading a stack trace at 2am\n- Know **Go**, **PHP**, **Ruby**, **Java** or **TypeScript**, or want to try one of them on familiar problems\n\nStack: Go, PHP, Ruby, Java, TypeScript.",
+      "issues": [
+        "pagination-params",
+        "reset-link-expiry",
+        "rate-limiter",
+        "parse-log-line",
+        "workspace-slugs",
+        "password-policy"
+      ]
+    },
+    {
+      "id": "data-platform",
+      "key": "DATA",
+      "title": "Data platform",
+      "summary": "Data: nightly partner imports, cleaning and the reports finance relies on.",
+      "story": "Partners drop CSV exports in a bucket every night. A pipeline cleans them, loads the warehouse and feeds the reports finance reads on Monday morning.\n\nThe exports are messier than anyone admits: quoted commas in company names, duplicate customers with slightly different emails, and orders that never got paid. When the numbers look wrong, this is where people come asking.\n\n## What you'll work on\n\n- Parsing awkward input files without losing data\n- Cleaning and deduplicating records before they reach the warehouse\n- SQL for the reports and reconciliations people rely on\n\n## Good fit if you\n\n- Work with data, or are the person on your team who ends up writing the SQL\n- Enjoy turning messy input into something you can trust\n- Know **Python**, **SQL** or **C#**, or want more practice with them\n\nStack: Python, SQL, and C# for the billing jobs.",
+      "issues": [
+        "csv-quoted-fields",
+        "dedupe-customers",
+        "top-customers",
+        "unpaid-orders",
+        "late-fee-rounding"
+      ]
+    },
+    {
+      "id": "edge-proxy",
+      "key": "EDGE",
+      "title": "Edge proxy",
+      "summary": "Systems: the low-latency proxy in front of everything.",
+      "story": "A small proxy in front of everything: it terminates connections, caches hot responses and exports latency metrics. The hot path is C and C++; the control plane and metrics are Go.\n\nEvery allocation shows up on a flame graph here. The backlog is about doing more with fixed memory, measuring the right thing, and keeping configuration readable for whoever is paged.\n\n## What you'll work on\n\n- Fixed-size data structures such as ring buffers and LRU caches\n- Latency percentiles and the metrics behind dashboards\n- Small, strict configuration formats\n\n## Good fit if you\n\n- Do systems or performance work, or want to get closer to the metal\n- Think about memory, ordering and what happens under load\n- Know **C**, **C++** or **Go**, or are learning one of them\n\nStack: C, C++, Go.",
+      "issues": [
+        "ring-buffer",
+        "p99-latency",
+        "lru-cache",
+        "parse-duration"
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "id": "frequency-map",
+      "project": "field-notes",
+      "number": 1,
+      "title": "Frequency map",
+      "summary": "Count every exact, case-sensitive label in a list.",
+      "difficulty": "warm-up",
+      "estimate": 1,
+      "labels": [
+        "iteration",
+        "maps",
+        "edge-cases"
+      ],
+      "state": "live",
+      "revision": "sha256:14153171b5fc3f1532f08ee702213efeaa16f190aded75eadd6e4b2ca385e8d7"
+    },
+    {
+      "id": "format-price",
+      "project": "storefront",
+      "number": 1,
+      "title": "Cart shows prices as raw cents",
+      "summary": "Format amounts as dollars with separators, including refunds.",
+      "difficulty": "warm-up",
+      "estimate": 1,
+      "labels": [
+        "formatting",
+        "strings",
+        "numbers"
+      ],
+      "state": "live",
+      "revision": "sha256:63c63d5bbd4fec87fe0988b24f11a1320a8b12de9a5fef79be61b6e5db8d2d83"
+    },
+    {
+      "id": "discount-codes",
+      "project": "storefront",
+      "number": 2,
+      "title": "Discount codes fail when typed in lowercase",
+      "summary": "Match promo codes case-insensitively and ignore stray spaces.",
+      "difficulty": "easy",
+      "estimate": 2,
+      "labels": [
+        "strings",
+        "validation"
+      ],
+      "state": "live",
+      "revision": "sha256:9ba507e3a8a0cbe12d22fe18c98aa82553c7bf0d255158c7889bdba2d631dbe9"
+    },
+    {
+      "id": "filter-form-labels",
+      "project": "storefront",
+      "number": 3,
+      "title": "Product filter checkboxes have no labels",
+      "summary": "Tie every filter checkbox to a label so it is accessible.",
+      "difficulty": "warm-up",
+      "estimate": 1,
+      "labels": [
+        "accessibility",
+        "forms",
+        "semantics"
+      ],
+      "state": "live",
+      "revision": "sha256:c22f8677aa640cf2047b53f1d864caabc1e8c6e42261e0c1e30b1f4e91ff7204"
+    },
+    {
+      "id": "debounce-search",
+      "project": "storefront",
+      "number": 4,
+      "title": "Search box sends a request on every keystroke",
+      "summary": "Debounce search-as-you-type so the API sees one request per pause.",
+      "difficulty": "medium",
+      "estimate": 3,
+      "labels": [
+        "timing",
+        "events"
+      ],
+      "state": "live",
+      "revision": "sha256:1b74e849d13310d6f07db3d56bd8a8beb378ae24917b472439292a763a3f9534"
+    },
+    {
+      "id": "refund-totals",
+      "project": "storefront",
+      "number": 5,
+      "title": "Refund totals double-count discounts",
+      "summary": "Refunds on orders with a promo code give back less than the customer paid.",
+      "difficulty": "medium",
+      "estimate": 3,
+      "labels": [
+        "debugging",
+        "money",
+        "reading-code"
+      ],
+      "state": "live",
+      "revision": "sha256:23a88d059b91840de8e983f72236c86a234b29b87bc77a7d9debde9f6781513b"
+    },
+    {
+      "id": "pagination-params",
+      "project": "accounts-api",
+      "number": 1,
+      "title": "List endpoints accept any page size",
+      "summary": "Parse page and per_page with defaults and a hard cap.",
+      "difficulty": "easy",
+      "estimate": 2,
+      "labels": [
+        "parsing",
+        "validation",
+        "http"
+      ],
+      "state": "live",
+      "revision": "sha256:dce849a205d06e1a4764c66140bd06b80bb2d4a5bbbddb84bb876245f90686d3"
+    },
+    {
+      "id": "reset-link-expiry",
+      "project": "accounts-api",
+      "number": 2,
+      "title": "Password reset links expire after a minute",
+      "summary": "The TTL is in minutes but the check compares seconds.",
+      "difficulty": "easy",
+      "estimate": 2,
+      "labels": [
+        "time",
+        "units"
+      ],
+      "state": "live",
+      "revision": "sha256:05eb487fc5c41e9caf6d8a6861b578ed3029d4ccdab4195681e22d199844cccc"
+    },
+    {
+      "id": "rate-limiter",
+      "project": "accounts-api",
+      "number": 3,
+      "title": "Rate-limit login attempts",
+      "summary": "Allow at most n attempts in any sliding window.",
+      "difficulty": "medium",
+      "estimate": 3,
+      "labels": [
+        "sliding-window",
+        "queues"
+      ],
+      "state": "live",
+      "revision": "sha256:a75cd9214c584f122830c480249f4236613d97cf9542c512857edb586bb07abf"
+    },
+    {
+      "id": "parse-log-line",
+      "project": "accounts-api",
+      "number": 4,
+      "title": "Access log parser drops fields on 5xx lines",
+      "summary": "Turn an access log line into a structured record.",
+      "difficulty": "easy",
+      "estimate": 2,
+      "labels": [
+        "parsing",
+        "strings"
+      ],
+      "state": "live",
+      "revision": "sha256:8e9793f61cadcf5651f5031f1f75b7f3fa8bc961de05cef3dbc06e14eed1a53d"
+    },
+    {
+      "id": "workspace-slugs",
+      "project": "accounts-api",
+      "number": 5,
+      "title": "Workspace URLs break on names with accents",
+      "summary": "Make URL slugs from workspace names, accents and all.",
+      "difficulty": "easy",
+      "estimate": 2,
+      "labels": [
+        "strings",
+        "unicode",
+        "urls"
+      ],
+      "state": "live",
+      "revision": "sha256:43c9f82af02d2540c0391d7937fbd6f2c38188625363dc764fa9089ead0527af"
+    },
+    {
+      "id": "password-policy",
+      "project": "accounts-api",
+      "number": 6,
+      "title": "Password policy still allows 8-character passwords",
+      "summary": "Enforce the new password rules and report every one that is broken.",
+      "difficulty": "easy",
+      "estimate": 2,
+      "labels": [
+        "validation",
+        "strings",
+        "security"
+      ],
+      "state": "live",
+      "revision": "sha256:4d1d200e2d005623bdf1fc9c350bbd210a82ceed6cb9a8163f56bb87174766a2"
+    },
+    {
+      "id": "csv-quoted-fields",
+      "project": "data-platform",
+      "number": 1,
+      "title": "CSV import splits company names on commas",
+      "summary": "Respect quoted fields when parsing partner exports.",
+      "difficulty": "easy",
+      "estimate": 2,
+      "labels": [
+        "parsing",
+        "strings",
+        "csv"
+      ],
+      "state": "live",
+      "revision": "sha256:607cf6cd406b5498bb724b734e48661fcd3b2f01c05d9950e9726b95f28a57a0"
+    },
+    {
+      "id": "dedupe-customers",
+      "project": "data-platform",
+      "number": 2,
+      "title": "Deduplicate customer records by email",
+      "summary": "Keep the first record per email before the newsletter sync.",
+      "difficulty": "medium",
+      "estimate": 3,
+      "labels": [
+        "maps",
+        "data-cleaning"
+      ],
+      "state": "live",
+      "revision": "sha256:0dd2c091a29d5715b7bcd3ccb93979bde094e5cd33aa035059daa962b234b5f2"
+    },
+    {
+      "id": "top-customers",
+      "project": "data-platform",
+      "number": 3,
+      "title": "Revenue by customer for the monthly report",
+      "summary": "Total each customer's orders, biggest first.",
+      "difficulty": "easy",
+      "estimate": 2,
+      "labels": [
+        "aggregation",
+        "sorting"
+      ],
+      "state": "live",
+      "revision": "sha256:191804cd8231846ec0a058e8ffc22dc2d1afb91c88461c98c469ce2c7a1ff0a6"
+    },
+    {
+      "id": "unpaid-orders",
+      "project": "data-platform",
+      "number": 4,
+      "title": "Find orders with no matching payment",
+      "summary": "Reconcile orders against payments before month-end close.",
+      "difficulty": "medium",
+      "estimate": 3,
+      "labels": [
+        "joins",
+        "reconciliation"
+      ],
+      "state": "live",
+      "revision": "sha256:e29497404701da3bc698b3b6f4e4e556508857f48c4cf5db62a42b8ffbe46986"
+    },
+    {
+      "id": "late-fee-rounding",
+      "project": "data-platform",
+      "number": 5,
+      "title": "Late fees are a cent off on some invoices",
+      "summary": "Round late fees the way finance does: halves away from zero.",
+      "difficulty": "easy",
+      "estimate": 2,
+      "labels": [
+        "rounding",
+        "decimals",
+        "finance"
+      ],
+      "state": "live",
+      "revision": "sha256:a9b0528abd385b6cfb20f69aed3ee8003a8878b736cb526ce9350dc2460ecc5d"
+    },
+    {
+      "id": "ring-buffer",
+      "project": "edge-proxy",
+      "number": 1,
+      "title": "Keep the last N request latencies in memory",
+      "summary": "A fixed-size buffer that overwrites its oldest entry.",
+      "difficulty": "medium",
+      "estimate": 3,
+      "labels": [
+        "arrays",
+        "modular-arithmetic"
+      ],
+      "state": "live",
+      "revision": "sha256:4a88309413d9ceecb5a832f62f0544efcfe80f6a9dae219376d79308fcba79e2"
+    },
+    {
+      "id": "p99-latency",
+      "project": "edge-proxy",
+      "number": 2,
+      "title": "p99 latency panel times out in busy hours",
+      "summary": "Compute nearest-rank percentiles for the metrics endpoint.",
+      "difficulty": "medium",
+      "estimate": 3,
+      "labels": [
+        "sorting",
+        "statistics"
+      ],
+      "state": "live",
+      "revision": "sha256:e359a096b7c0455ff5dd4e21cf035bd1d6483c251ecacdd15540b8af0c436dc4"
+    },
+    {
+      "id": "lru-cache",
+      "project": "edge-proxy",
+      "number": 3,
+      "title": "Cache evicts entries that were just used",
+      "summary": "Reads must refresh recency in the LRU cache.",
+      "difficulty": "hard",
+      "estimate": 5,
+      "labels": [
+        "caching",
+        "linked-lists",
+        "maps"
+      ],
+      "state": "live",
+      "revision": "sha256:ddd685e7390e621bf103680a2dffee5f5cffed1dd597d5ec5a4c7b5f72acd2ac"
+    },
+    {
+      "id": "parse-duration",
+      "project": "edge-proxy",
+      "number": 4,
+      "title": "Timeouts in config must be written in seconds",
+      "summary": "Accept durations like 1h30m in config files.",
+      "difficulty": "easy",
+      "estimate": 2,
+      "labels": [
+        "parsing",
+        "config"
+      ],
+      "state": "live",
+      "revision": "sha256:70c73fef246df0693a991a10539f3a29b6b73a7231772e8d973c0d7b2cdd1841"
+    }
+  ],
+  "revisions": {
+    "sha256:05eb487fc5c41e9caf6d8a6861b578ed3029d4ccdab4195681e22d199844cccc": {
+      "issue": "reset-link-expiry",
+      "kind": "bug",
+      "body": "`isExpired(issuedAt, now, ttlMinutes)` with Unix timestamps in seconds. A link issued at t stays valid until `t + ttlMinutes × 60`, inclusive.",
+      "skills": [
+        "time",
+        "units"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "php",
+        "files": {
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Accounts API\n\nThe service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, the admin back office is a small Ruby app, the password service is Java, and the login gateway in front is TypeScript.\n\nIt mostly works, and the on-call channel has opinions about the rest: list endpoints that accept any page size, reset links that expire too soon, and logs that are hard to search during an incident.\n\n## What you'll work on\n\n- Parsing and validating request parameters with sensible defaults\n- Time and expiry logic, where off-by-one and unit mix-ups hide\n- Rate limiting and log handling for the people on call\n\n## Good fit if you\n\n- Write backend services, or want practice with the bugs they actually get\n- Like **input validation**, edge cases and reading a stack trace at 2am\n- Know **Go**, **PHP**, **Ruby**, **Java** or **TypeScript**, or want to try one of them on familiar problems\n\nStack: Go, PHP, Ruby, Java, TypeScript.\n"
+          },
+          "src/isExpired.php": {
+            "role": "edit",
+            "language": "php",
+            "text": "<?php\n\ndeclare(strict_types=1);\n\n/**\n * Whether a password reset link has expired. Timestamps are Unix seconds;\n * a link stays valid until $issuedAt + $ttlMinutes * 60, inclusive.\n */\nfunction isExpired(int $issuedAt, int $now, int $ttlMinutes): bool\n{\n    return $now > $issuedAt + $ttlMinutes;\n}\n"
+          },
+          "tests/IsExpiredTest.php": {
+            "role": "tests",
+            "language": "php",
+            "text": "<?php\n\ndeclare(strict_types=1);\n\nuse PHPUnit\\Framework\\Attributes\\DataProvider;\nuse PHPUnit\\Framework\\TestCase;\n\n// Acceptance criteria for API-2. The checks run against these cases.\nfinal class IsExpiredTest extends TestCase\n{\n    /** [arguments, expected] as JSON. */\n    public static function cases(): array\n    {\n        return [\n            'case 1' => ['[1000,1059,60]', 'false'],\n            'case 2' => ['[1000,4600,60]', 'false'],\n            'case 3' => ['[1000,4601,60]', 'true'],\n            'case 4' => ['[1000,1000,0]', 'false'],\n        ];\n    }\n\n    #[DataProvider('cases')]\n    public function testIsExpired(string $input, string $expected): void\n    {\n        $args = json_decode($input, true);\n        $actual = isExpired(...$args);\n        $this->assertSame(json_decode($expected, true), $actual);\n    }\n}\n"
+          }
+        },
+        "entry": "src/isExpired.php",
+        "entrypoint": "isExpired",
+        "parameters": [
+          "issuedAt",
+          "now",
+          "ttlMinutes"
+        ]
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": [
+              1000,
+              1059,
+              60
+            ],
+            "expected": false,
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": [
+              1000,
+              4600,
+              60
+            ],
+            "expected": false,
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": [
+              1000,
+              4601,
+              60
+            ],
+            "expected": true,
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": [
+              1000,
+              1000,
+              0
+            ],
+            "expected": false,
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "jo-1",
+          "author": {
+            "name": "Jo T",
+            "role": "Support"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Customers say reset emails 'never work'. They do, if you click within a minute."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        }
+      ],
+      "hints": [],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:0dd2c091a29d5715b7bcd3ccb93979bde094e5cd33aa035059daa962b234b5f2": {
+      "issue": "dedupe-customers",
+      "kind": "feature",
+      "body": "`dedupe(records)` keeps the first record for each email, comparing emails case-insensitively and ignoring surrounding spaces. Keep the original order.",
+      "skills": [
+        "maps",
+        "data-cleaning"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "python",
+        "files": {
+          "dedupe.py": {
+            "role": "edit",
+            "language": "python",
+            "text": "def dedupe(records):\n    \"\"\"Keep the first record for each email before the newsletter sync.\n\n    Emails compare case-insensitively, ignoring surrounding spaces. Order is kept.\n    \"\"\"\n    return records\n"
+          },
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Data platform\n\nPartners drop CSV exports in a bucket every night. A pipeline cleans them, loads the warehouse and feeds the reports finance reads on Monday morning.\n\nThe exports are messier than anyone admits: quoted commas in company names, duplicate customers with slightly different emails, and orders that never got paid. When the numbers look wrong, this is where people come asking.\n\n## What you'll work on\n\n- Parsing awkward input files without losing data\n- Cleaning and deduplicating records before they reach the warehouse\n- SQL for the reports and reconciliations people rely on\n\n## Good fit if you\n\n- Work with data, or are the person on your team who ends up writing the SQL\n- Enjoy turning messy input into something you can trust\n- Know **Python**, **SQL** or **C#**, or want more practice with them\n\nStack: Python, SQL, and C# for the billing jobs.\n"
+          },
+          "tests/test_dedupe.py": {
+            "role": "tests",
+            "language": "python",
+            "text": "# Acceptance criteria for DATA-2. The checks run against these cases.\nimport pytest\n\nfrom dedupe import dedupe\n\nCASES = [\n    ([{\"id\": 1, \"email\": \"Ann@x.io\"}, {\"id\": 2, \"email\": \" ann@x.io\"}, {\"id\": 3, \"email\": \"bo@x.io\"}], [{\"id\": 1, \"email\": \"Ann@x.io\"}, {\"id\": 3, \"email\": \"bo@x.io\"}]),\n    ([], []),\n]\n\n\n@pytest.mark.parametrize(\"given, expected\", CASES)\ndef test_dedupe(given, expected):\n    assert dedupe(given) == expected\n"
+          }
+        },
+        "entry": "dedupe.py",
+        "entrypoint": "dedupe"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": [
+              {
+                "id": 1,
+                "email": "Ann@x.io"
+              },
+              {
+                "id": 2,
+                "email": " ann@x.io"
+              },
+              {
+                "id": 3,
+                "email": "bo@x.io"
+              }
+            ],
+            "expected": [
+              {
+                "id": 1,
+                "email": "Ann@x.io"
+              },
+              {
+                "id": 3,
+                "email": "bo@x.io"
+              }
+            ],
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": [],
+            "expected": [],
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "lena-1",
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Marketing sent last week's newsletter three times to some people. They were not thrilled."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        }
+      ],
+      "hints": [],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:14153171b5fc3f1532f08ee702213efeaa16f190aded75eadd6e4b2ca385e8d7": {
+      "issue": "frequency-map",
+      "kind": "feature",
+      "body": "Write `frequency_map(items)`: count each exact, case-sensitive string and return a dict of string to integer count. Empty input returns `{}`.",
+      "skills": [
+        "iteration",
+        "maps",
+        "edge-cases"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "python",
+        "files": {
+          "frequency_map.py": {
+            "role": "edit",
+            "language": "python",
+            "text": "def frequency_map(items):\n    counts = {}\n    # Count each item.\n    return counts\n"
+          },
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Field notes\n\nA field researcher keeps specimen labels in a notebook and needs exact tallies. A good first ticket: small, in Python, with one surprise in the data.\n"
+          },
+          "tests/test_frequency_map.py": {
+            "role": "tests",
+            "language": "python",
+            "text": "# Acceptance criteria for FN-1. The checks run against these cases.\nimport pytest\n\nfrom frequency_map import frequency_map\n\nCASES = [\n    ([\"a\", \"b\", \"a\"], {\"a\": 2, \"b\": 1}),\n    ([], {}),\n    ([\"A\", \"a\", \"A\"], {\"A\": 2, \"a\": 1}),\n    ([\"__proto__\", \"__proto__\", \"x\"], {\"__proto__\": 2, \"x\": 1}),\n]\n\n\n@pytest.mark.parametrize(\"given, expected\", CASES)\ndef test_frequency_map(given, expected):\n    assert frequency_map(given) == expected\n"
+          }
+        },
+        "entry": "frequency_map.py",
+        "entrypoint": "frequency_map"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": [
+              "a",
+              "b",
+              "a"
+            ],
+            "expected": {
+              "a": 2,
+              "b": 1
+            },
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": [],
+            "expected": {},
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": [
+              "A",
+              "a",
+              "A"
+            ],
+            "expected": {
+              "A": 2,
+              "a": 1
+            },
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": [
+              "__proto__",
+              "__proto__",
+              "x"
+            ],
+            "expected": {
+              "__proto__": 2,
+              "x": 1
+            },
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "priya-1",
+          "author": {
+            "name": "Priya K",
+            "role": "Data"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Heads up: the scanner sometimes emits odd labels like __proto__. Please don't special-case anything; every label is just a string."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        },
+        {
+          "id": "priya-debug-print",
+          "where": "review",
+          "severity": "blocking",
+          "text": [
+            "Could you take the `print` out before this goes in? The scanner job ships everything on stdout to the warehouse logs.",
+            "There's a `print` left in here. Anything on stdout ends up in the warehouse logs, so it needs to go before we merge."
+          ],
+          "when": {
+            "pattern": "^\\s*print\\(",
+            "present": true
+          },
+          "repeat": "while-true",
+          "author": {
+            "name": "Priya K",
+            "role": "Data"
+          }
+        },
+        {
+          "id": "priya-long-function",
+          "where": "review",
+          "severity": "nit",
+          "text": [
+            "Nit: `frequency_map` has grown quite long for what it does. Could the dict itself do more of the work?"
+          ],
+          "when": {
+            "metric": "function-lines",
+            "above": 12
+          },
+          "author": {
+            "name": "Priya K",
+            "role": "Data"
+          }
+        },
+        {
+          "id": "priya-proto-passes",
+          "where": "review",
+          "severity": "info",
+          "text": [
+            "Nice, `__proto__` comes through as a plain label now. That was the one breaking the nightly run."
+          ],
+          "when": {
+            "check": "case-4",
+            "is": "passing"
+          },
+          "author": {
+            "name": "Priya K",
+            "role": "Data"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "id": "hint-1",
+          "level": 1,
+          "author": {
+            "name": "Priya K",
+            "role": "Data"
+          },
+          "text": "A dict can hold one counter for each distinct string.",
+          "when": {
+            "behaviour": "active-minutes-without-progress",
+            "atLeast": 10
+          }
+        },
+        {
+          "id": "hint-2",
+          "level": 2,
+          "author": {
+            "name": "Priya K",
+            "role": "Data"
+          },
+          "text": "Try the `__proto__` case by hand: what does your dict hold after the first label, and after the second?",
+          "when": {
+            "behaviour": "failing-pushes",
+            "atLeast": 2
+          }
+        }
+      ],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:191804cd8231846ec0a058e8ffc22dc2d1afb91c88461c98c469ce2c7a1ff0a6": {
+      "issue": "top-customers",
+      "kind": "feature",
+      "body": "Given `orders(id, customer, total)`, select each customer and the sum of their totals, highest first.",
+      "skills": [
+        "aggregation",
+        "sorting"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "sql",
+        "files": {
+          "db/schema.sql": {
+            "role": "docs",
+            "language": "sql",
+            "text": "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  customer text NOT NULL,\n  total integer NOT NULL\n);\n"
+          },
+          "queries/top-customers.sql": {
+            "role": "edit",
+            "language": "sql",
+            "text": "-- Monthly report: revenue by customer, biggest first.\n-- orders(id, customer, total)\nSELECT customer, total\nFROM orders;\n"
+          },
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Data platform\n\nPartners drop CSV exports in a bucket every night. A pipeline cleans them, loads the warehouse and feeds the reports finance reads on Monday morning.\n\nThe exports are messier than anyone admits: quoted commas in company names, duplicate customers with slightly different emails, and orders that never got paid. When the numbers look wrong, this is where people come asking.\n\n## What you'll work on\n\n- Parsing awkward input files without losing data\n- Cleaning and deduplicating records before they reach the warehouse\n- SQL for the reports and reconciliations people rely on\n\n## Good fit if you\n\n- Work with data, or are the person on your team who ends up writing the SQL\n- Enjoy turning messy input into something you can trust\n- Know **Python**, **SQL** or **C#**, or want more practice with them\n\nStack: Python, SQL, and C# for the billing jobs.\n"
+          },
+          "tests/top-customers.sql": {
+            "role": "tests",
+            "language": "sql",
+            "text": "-- Acceptance criteria for DATA-3. The checks run against these cases.\n\n-- Case 1\nBEGIN;\nINSERT INTO orders (id, customer, total) VALUES\n  (1, 'ana', 30),\n  (2, 'bo', 10),\n  (3, 'ana', 5);\n-- Expected rows, in order:\n--   ('ana', 35)\n--   ('bo', 10)\nROLLBACK;\n"
+          }
+        },
+        "entry": "queries/top-customers.sql",
+        "entrypoint": "query",
+        "schema": "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  customer text NOT NULL,\n  total integer NOT NULL\n);"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": {
+              "orders": [
+                [
+                  1,
+                  "ana",
+                  30
+                ],
+                [
+                  2,
+                  "bo",
+                  10
+                ],
+                [
+                  3,
+                  "ana",
+                  5
+                ]
+              ]
+            },
+            "expected": [
+              [
+                "ana",
+                35
+              ],
+              [
+                "bo",
+                10
+              ]
+            ],
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "rui-1",
+          "author": {
+            "name": "Rui F",
+            "role": "Finance"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Just the totals per customer, biggest first. The chart is my job."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        }
+      ],
+      "hints": [],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:1b74e849d13310d6f07db3d56bd8a8beb378ae24917b472439292a763a3f9534": {
+      "issue": "debounce-search",
+      "kind": "performance",
+      "body": "`debounceTimes(keystrokes, waitMs)`: given keystroke times in milliseconds, return the times at which the debounced search fires. It fires `waitMs` after a keystroke unless another keystroke comes first.",
+      "skills": [
+        "timing",
+        "events"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "typescript",
+        "files": {
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Shop\n\nThe online shop customers actually see: product listings, filters, the cart and a three-step checkout. Pages are server-rendered, with a thin layer of TypeScript for the interactive parts.\n\nConversion dipped after the last redesign. Support is fielding tickets about prices, promo codes and a search box that feels sluggish, and an accessibility audit came back with a long list.\n\n## What you'll work on\n\n- Formatting money and other values the way customers expect to read them\n- Form behaviour, validation and accessible markup\n- Small performance fixes in the browser, like debouncing input\n\n## Good fit if you\n\n- Build user interfaces, or want to get sharper at the details that make one feel solid\n- Are comfortable with **JavaScript**, **TypeScript** or plain **HTML**\n- Care what a bug looks like from the customer's side of the screen\n\nStack: TypeScript, JavaScript, HTML.\n"
+          },
+          "src/debounce-times.test.ts": {
+            "role": "tests",
+            "language": "typescript",
+            "text": "// Acceptance criteria for SHOP-4. The checks run against these cases.\nimport { describe, expect, it } from \"vitest\";\nimport { debounceTimes } from \"./debounce-times\";\n\nconst cases: [unknown, unknown][] = [\n  [[[0,100,200,1000],300], [500,1300]],\n  [[[],300], []],\n  [[[0,500],300], [300,800]],\n];\n\ndescribe(\"debounceTimes\", () => {\n  it.each(cases)(\"case %#\", (input, expected) => {\n    expect(debounceTimes(...(input as Parameters<typeof debounceTimes>))).toEqual(expected);\n  });\n});\n"
+          },
+          "src/debounce-times.ts": {
+            "role": "edit",
+            "language": "typescript",
+            "text": "/**\n * When the search request fires for the given keystroke times (ms): waitMs after\n * a keystroke, unless another keystroke comes first.\n */\nexport function debounceTimes(keystrokes: number[], waitMs: number): number[] {\n  return keystrokes.map((time) => time + waitMs);\n}\n"
+          }
+        },
+        "entry": "src/debounce-times.ts",
+        "entrypoint": "debounceTimes",
+        "parameters": [
+          "keystrokes",
+          "waitMs"
+        ]
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": [
+              [
+                0,
+                100,
+                200,
+                1000
+              ],
+              300
+            ],
+            "expected": [
+              500,
+              1300
+            ],
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": [
+              [],
+              300
+            ],
+            "expected": [],
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": [
+              [
+                0,
+                500
+              ],
+              300
+            ],
+            "expected": [
+              300,
+              800
+            ],
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "sam-1",
+          "author": {
+            "name": "Sam R",
+            "role": "SRE"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Search API gets about eight requests per query. 300 ms after the last keystroke is plenty."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "id": "hint-1",
+          "level": 1,
+          "author": {
+            "name": "Sam R",
+            "role": "SRE"
+          },
+          "text": "Each keystroke cancels the pending request if it arrives before the timer fires.",
+          "when": {
+            "behaviour": "active-minutes-without-progress",
+            "atLeast": 10
+          }
+        }
+      ],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:23a88d059b91840de8e983f72236c86a234b29b87bc77a7d9debde9f6781513b": {
+      "issue": "refund-totals",
+      "kind": "bug",
+      "body": "Support escalated this from the help desk:\n\n> A customer returned one of two jackets from an order that used **SPRING10** (10% off). The receipt says they paid **$45.00** for that jacket, but the refund came through as **$40.50**.\n\n```text\nOrder #10482    SPRING10 (10% off)\n  Rain jacket    1 × $50.00    −$5.00    $45.00\nRefund #R-2291\n  Rain jacket    1 × $50.00              −$40.50\n```\n\n`refundTotal(refund)` in `src/cart/totals.js` works out what a refund gives back, in cents, as a negative amount. A refund gives back exactly what the customer paid for the lines returned. Checkout totals are not part of this ticket.",
+      "skills": [
+        "debugging",
+        "money",
+        "reading-code"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "javascript",
+        "files": {
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Shop\n\nThe online shop customers actually see: product listings, filters, the cart and a three-step checkout. Pages are server-rendered, with a thin layer of TypeScript for the interactive parts.\n\nConversion dipped after the last redesign. Support is fielding tickets about prices, promo codes and a search box that feels sluggish, and an accessibility audit came back with a long list.\n\n## What you'll work on\n\n- Formatting money and other values the way customers expect to read them\n- Form behaviour, validation and accessible markup\n- Small performance fixes in the browser, like debouncing input\n\n## Good fit if you\n\n- Build user interfaces, or want to get sharper at the details that make one feel solid\n- Are comfortable with **JavaScript**, **TypeScript** or plain **HTML**\n- Care what a bug looks like from the customer's side of the screen\n\nStack: TypeScript, JavaScript, HTML.\n"
+          },
+          "src/cart/discounts.js": {
+            "role": "read",
+            "language": "javascript",
+            "text": "import { sum } from \"./money.js\";\n\n/**\n * A promo code's discount on a subtotal, in cents: a percentage ({ percent: 10 }) or a fixed\n * amount ({ amount: 500 }), never more than the subtotal.\n */\nexport function discountFor(code, subtotal) {\n  if (!code) return 0;\n  const off =\n    \"percent\" in code ? Math.round((subtotal * code.percent) / 100) : code.amount;\n  return Math.min(off, subtotal);\n}\n\n/**\n * At checkout the order's discount is spread over its lines in proportion to their value and\n * stored on each line as `discount`, so a partial refund can give back exactly what was paid\n * for the lines returned.\n */\nexport function allocate(code, lines) {\n  const gross = lines.map((line) => line.price * line.quantity);\n  const subtotal = sum(gross);\n  const total = discountFor(code, subtotal);\n  let left = total;\n  return lines.map((line, index) => {\n    const share =\n      index === lines.length - 1 || subtotal === 0\n        ? left\n        : Math.floor((total * gross[index]) / subtotal);\n    left -= share;\n    return { ...line, discount: share };\n  });\n}\n"
+          },
+          "src/cart/money.js": {
+            "role": "read",
+            "language": "javascript",
+            "text": "/** Money is whole cents everywhere: never floats. */\n\n/**\n * What a line charges: its price times quantity, less the share of the order's discount that\n * checkout allocated to it (see allocate in discounts.js).\n */\nexport function lineTotal(line) {\n  return line.price * line.quantity - (line.discount ?? 0);\n}\n\nexport function sum(amounts) {\n  return amounts.reduce((total, amount) => total + amount, 0);\n}\n"
+          },
+          "src/cart/totals.js": {
+            "role": "edit",
+            "language": "javascript",
+            "text": "import { discountFor } from \"./discounts.js\";\nimport { lineTotal, sum } from \"./money.js\";\n\n/** What an order charges at checkout, in cents: its lines less the promo code's discount. */\nexport function orderTotal(order) {\n  const subtotal = sum(order.lines.map((line) => line.price * line.quantity));\n  return subtotal - discountFor(order.code, subtotal);\n}\n\n/**\n * What a refund gives back for the returned lines, in cents, as a negative amount: refunds\n * stay negative all the way to the ledger.\n */\nexport function refundTotal(refund) {\n  const returned = sum(refund.lines.map(lineTotal));\n  return -(returned - discountFor(refund.code, returned));\n}\n"
+          },
+          "src/cart/totals.test.js": {
+            "role": "tests",
+            "language": "javascript",
+            "text": "// Acceptance criteria for SHOP-5. CI runs these cases and 3 more it does not show.\nimport { describe, expect, it } from \"vitest\";\nimport { refundTotal } from \"./totals\";\n\nconst cases = [\n  [{\"code\":null,\"lines\":[{\"sku\":\"tee\",\"price\":2500,\"quantity\":2,\"discount\":0}]}, -5000],\n  [{\"code\":{\"percent\":10},\"lines\":[{\"sku\":\"rain-jacket\",\"price\":5000,\"quantity\":1,\"discount\":500}]}, -4500],\n  [{\"code\":{\"amount\":1000},\"lines\":[{\"sku\":\"boots\",\"price\":3000,\"quantity\":1,\"discount\":600},{\"sku\":\"socks\",\"price\":2000,\"quantity\":1,\"discount\":400}]}, -4000],\n];\n\ndescribe(\"refundTotal\", () => {\n  it.each(cases)(\"case %#\", (input, expected) => {\n    expect(refundTotal(input)).toEqual(expected);\n  });\n});\n"
+          }
+        },
+        "entry": "src/cart/totals.js",
+        "entrypoint": "refundTotal"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": {
+              "code": null,
+              "lines": [
+                {
+                  "sku": "tee",
+                  "price": 2500,
+                  "quantity": 2,
+                  "discount": 0
+                }
+              ]
+            },
+            "expected": -5000,
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": {
+              "code": {
+                "percent": 10
+              },
+              "lines": [
+                {
+                  "sku": "rain-jacket",
+                  "price": 5000,
+                  "quantity": 1,
+                  "discount": 500
+                }
+              ]
+            },
+            "expected": -4500,
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": {
+              "code": {
+                "amount": 1000
+              },
+              "lines": [
+                {
+                  "sku": "boots",
+                  "price": 3000,
+                  "quantity": 1,
+                  "discount": 600
+                },
+                {
+                  "sku": "socks",
+                  "price": 2000,
+                  "quantity": 1,
+                  "discount": 400
+                }
+              ]
+            },
+            "expected": -4000,
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": {
+              "code": {
+                "percent": 20
+              },
+              "lines": [
+                {
+                  "sku": "mug",
+                  "price": 1000,
+                  "quantity": 3,
+                  "discount": 600
+                }
+              ]
+            },
+            "expected": -2400,
+            "visible": false
+          },
+          {
+            "id": "case-5",
+            "input": {
+              "code": {
+                "percent": 10
+              },
+              "lines": []
+            },
+            "expected": 0,
+            "visible": false
+          },
+          {
+            "id": "case-6",
+            "input": {
+              "code": {
+                "amount": 500
+              },
+              "lines": [
+                {
+                  "sku": "gift-wrap",
+                  "price": 0,
+                  "quantity": 1,
+                  "discount": 0
+                }
+              ]
+            },
+            "expected": 0,
+            "visible": false
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "jo-1",
+          "author": {
+            "name": "Jo T",
+            "role": "Support"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "40 tickets about this since Monday. Every one of them used a promo code."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        },
+        {
+          "id": "ada-abs",
+          "where": "review",
+          "severity": "blocking",
+          "text": [
+            "Taking the absolute value hides the sign we need for refunds. Can we keep refunds negative all the way through?",
+            "`Math.abs` here would turn a refund into a charge if the sign is ever wrong upstream. Can we keep refunds negative all the way through instead?"
+          ],
+          "when": {
+            "pattern": "Math\\.abs\\(",
+            "present": true,
+            "file": "src/cart/totals.js"
+          },
+          "repeat": "while-true",
+          "author": {
+            "name": "Ada N",
+            "role": "Frontend"
+          }
+        },
+        {
+          "id": "ada-order-total",
+          "where": "review",
+          "severity": "blocking",
+          "text": [
+            "This changes `orderTotal` too, and checkout uses that. Can we keep this pull request to refunds?"
+          ],
+          "when": {
+            "pattern": "return subtotal - discountFor\\(order\\.code, subtotal\\);",
+            "present": false,
+            "file": "src/cart/totals.js"
+          },
+          "repeat": "while-true",
+          "author": {
+            "name": "Ada N",
+            "role": "Frontend"
+          }
+        },
+        {
+          "id": "ada-long-refund",
+          "where": "review",
+          "severity": "nit",
+          "text": [
+            "Nit: `refundTotal` is getting long. Would a helper for one line's amount read better?"
+          ],
+          "when": {
+            "metric": "function-lines",
+            "above": 12,
+            "file": "src/cart/totals.js"
+          },
+          "author": {
+            "name": "Ada N",
+            "role": "Frontend"
+          }
+        },
+        {
+          "id": "sam-incident",
+          "where": "review",
+          "severity": "info",
+          "text": [
+            "Nice, that's the jacket from the incident. I'll let support know once it's out."
+          ],
+          "when": {
+            "check": "case-2",
+            "is": "passing"
+          },
+          "author": {
+            "name": "Sam R",
+            "role": "SRE"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "id": "hint-1",
+          "level": 1,
+          "author": {
+            "name": "Jo T",
+            "role": "Support"
+          },
+          "text": "Where does a returned line's discount come from? Have a look at what `lineTotal` already does with it.",
+          "when": {
+            "behaviour": "active-minutes-without-progress",
+            "atLeast": 12
+          }
+        },
+        {
+          "id": "hint-2",
+          "level": 2,
+          "author": {
+            "name": "Jo T",
+            "role": "Support"
+          },
+          "text": "Try the jacket from the ticket on paper: $50.00, $5.00 off at checkout. How many times does the refund take a discount off?",
+          "when": {
+            "behaviour": "failing-pushes",
+            "atLeast": 3
+          }
+        }
+      ],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:43c9f82af02d2540c0391d7937fbd6f2c38188625363dc764fa9089ead0527af": {
+      "issue": "workspace-slugs",
+      "kind": "bug",
+      "body": "`slugify(name)` turns a workspace name into its URL slug: lowercase ASCII letters and digits, with every run of anything else between words becoming a single hyphen, and no hyphen at either end. Accented Latin letters lose their accents first, so `\"Café Ünïcorn\"` becomes `\"cafe-unicorn\"`.",
+      "skills": [
+        "strings",
+        "unicode",
+        "urls"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "ruby",
+        "files": {
+          "lib/slugify.rb": {
+            "role": "edit",
+            "language": "ruby",
+            "text": "# Workspace URLs are /w/<slug>. Turn a workspace name into its slug:\n# lowercase ASCII letters and digits, words joined by single hyphens.\ndef slugify(name)\n  name.downcase.tr(\" \", \"-\")\nend\n"
+          },
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Accounts API\n\nThe service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, the admin back office is a small Ruby app, the password service is Java, and the login gateway in front is TypeScript.\n\nIt mostly works, and the on-call channel has opinions about the rest: list endpoints that accept any page size, reset links that expire too soon, and logs that are hard to search during an incident.\n\n## What you'll work on\n\n- Parsing and validating request parameters with sensible defaults\n- Time and expiry logic, where off-by-one and unit mix-ups hide\n- Rate limiting and log handling for the people on call\n\n## Good fit if you\n\n- Write backend services, or want practice with the bugs they actually get\n- Like **input validation**, edge cases and reading a stack trace at 2am\n- Know **Go**, **PHP**, **Ruby**, **Java** or **TypeScript**, or want to try one of them on familiar problems\n\nStack: Go, PHP, Ruby, Java, TypeScript.\n"
+          },
+          "spec/slugify_spec.rb": {
+            "role": "tests",
+            "language": "ruby",
+            "text": "# Acceptance criteria for API-5. The checks run against these cases.\nrequire \"json\"\nrequire_relative \"../lib/slugify\"\n\nRSpec.describe \"slugify\" do\n  # Input and expected output as JSON.\n  [\n    [\"\\\"Acme Inc\\\"\", \"\\\"acme-inc\\\"\"],\n    [\"\\\"  Café   Ünïcorn  \\\"\", \"\\\"cafe-unicorn\\\"\"],\n    [\"\\\"R&D / Ops\\\"\", \"\\\"r-d-ops\\\"\"],\n    [\"\\\"2024 Planning!!\\\"\", \"\\\"2024-planning\\\"\"],\n    [\"\\\"---\\\"\", \"\\\"\\\"\"],\n  ].each_with_index do |(input, expected), i|\n    it \"passes case #{i + 1}\" do\n      expect(slugify(JSON.parse(input))).to eq(JSON.parse(expected))\n    end\n  end\nend\n"
+          }
+        },
+        "entry": "lib/slugify.rb",
+        "entrypoint": "slugify"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": "Acme Inc",
+            "expected": "acme-inc",
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": "  Café   Ünïcorn  ",
+            "expected": "cafe-unicorn",
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": "R&D / Ops",
+            "expected": "r-d-ops",
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": "2024 Planning!!",
+            "expected": "2024-planning",
+            "visible": true
+          },
+          {
+            "id": "case-5",
+            "input": "---",
+            "expected": "",
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "mateo-1",
+          "author": {
+            "name": "Mateo O",
+            "role": "Backend"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Support has a customer whose workspace is \"Équipe Été\". The link we email them is /w/%C3%A9quipe-%C3%A9t%C3%A9 and it 404s."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "id": "hint-1",
+          "level": 1,
+          "author": {
+            "name": "Mateo O",
+            "role": "Backend"
+          },
+          "text": "Unicode normalization (NFD) splits a letter from its accent, so the accent can be dropped.",
+          "when": {
+            "behaviour": "active-minutes-without-progress",
+            "atLeast": 10
+          }
+        }
+      ],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:4a88309413d9ceecb5a832f62f0544efcfe80f6a9dae219376d79308fcba79e2": {
+      "issue": "ring-buffer",
+      "kind": "feature",
+      "body": "Implement a ring buffer of capacity `n`. Given a sequence of pushes, return the contents oldest first.",
+      "skills": [
+        "arrays",
+        "modular-arithmetic"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "c",
+        "files": {
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Edge proxy\n\nA small proxy in front of everything: it terminates connections, caches hot responses and exports latency metrics. The hot path is C and C++; the control plane and metrics are Go.\n\nEvery allocation shows up on a flame graph here. The backlog is about doing more with fixed memory, measuring the right thing, and keeping configuration readable for whoever is paged.\n\n## What you'll work on\n\n- Fixed-size data structures such as ring buffers and LRU caches\n- Latency percentiles and the metrics behind dashboards\n- Small, strict configuration formats\n\n## Good fit if you\n\n- Do systems or performance work, or want to get closer to the metal\n- Think about memory, ordering and what happens under load\n- Know **C**, **C++** or **Go**, or are learning one of them\n\nStack: C, C++, Go.\n"
+          },
+          "src/ring_buffer.c": {
+            "role": "edit",
+            "language": "c",
+            "text": "#include <stddef.h>\n\n/*\n * Keeps the last `capacity` request latencies. Push each value in order, then\n * write the contents oldest first into `out` and return how many there are.\n */\nsize_t ring_buffer(size_t capacity, const int *values, size_t count, int *out)\n{\n    (void)capacity;\n    (void)values;\n    (void)count;\n    (void)out;\n    return 0;\n}\n"
+          },
+          "tests/test_ring_buffer.c": {
+            "role": "tests",
+            "language": "c",
+            "text": "// Acceptance criteria for EDGE-1. The checks run against these cases.\n// Each case runs the program once: the arguments go to mm_call as JSON, and what it\n// returns is compared with the expected JSON.\n\n#include <stdlib.h>\n#include \"mm_json.h\"\n\nsize_t ring_buffer(size_t capacity, const int *values, size_t count, int *out);\n\n/* [capacity, values] → the buffer's contents, oldest first. */\nmm_value *mm_call(const mm_value *args) {\n    size_t capacity = (size_t)mm_integer(mm_at(args, 0));\n    const mm_value *list = mm_at(args, 1);\n    size_t count = mm_length(list);\n    int *values = calloc(count + 1, sizeof(int));\n    int *out = calloc(count + 1, sizeof(int));\n    for (size_t i = 0; i < count; i++)\n        values[i] = (int)mm_integer(mm_at(list, i));\n    size_t kept = ring_buffer(capacity, values, count, out);\n    mm_value *result = mm_new_array();\n    for (size_t i = 0; i < kept && i <= count; i++)\n        mm_push(result, mm_new_integer(out[i]));\n    return result;\n}\n\n/* Arguments and expected result, as JSON. */\nstatic const struct { const char *args; const char *expected; } cases[] = {\n    {\"[3,[1,2,3,4]]\", \"[2,3,4]\"},\n    {\"[2,[]]\", \"[]\"},\n};\n"
+          }
+        },
+        "entry": "src/ring_buffer.c",
+        "entrypoint": "ring_buffer",
+        "parameters": [
+          "capacity",
+          "values"
+        ],
+        "adapter": "#include <stdlib.h>\n#include \"mm_json.h\"\n\nsize_t ring_buffer(size_t capacity, const int *values, size_t count, int *out);\n\n/* [capacity, values] → the buffer's contents, oldest first. */\nmm_value *mm_call(const mm_value *args) {\n    size_t capacity = (size_t)mm_integer(mm_at(args, 0));\n    const mm_value *list = mm_at(args, 1);\n    size_t count = mm_length(list);\n    int *values = calloc(count + 1, sizeof(int));\n    int *out = calloc(count + 1, sizeof(int));\n    for (size_t i = 0; i < count; i++)\n        values[i] = (int)mm_integer(mm_at(list, i));\n    size_t kept = ring_buffer(capacity, values, count, out);\n    mm_value *result = mm_new_array();\n    for (size_t i = 0; i < kept && i <= count; i++)\n        mm_push(result, mm_new_integer(out[i]));\n    return result;\n}\n"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": [
+              3,
+              [
+                1,
+                2,
+                3,
+                4
+              ]
+            ],
+            "expected": [
+              2,
+              3,
+              4
+            ],
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": [
+              2,
+              []
+            ],
+            "expected": [],
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "sam-1",
+          "author": {
+            "name": "Sam R",
+            "role": "SRE"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "No malloc on the hot path. Fixed-size array, overwrite the oldest."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        }
+      ],
+      "hints": [],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:4d1d200e2d005623bdf1fc9c350bbd210a82ceed6cb9a8163f56bb87174766a2": {
+      "issue": "password-policy",
+      "kind": "bug",
+      "body": "`PasswordPolicy.violations(password)` lists the rules a password breaks, in this order: `\"too-short\"` (fewer than 12 characters), `\"no-digit\"`, `\"no-letter\"` and `\"has-whitespace\"`. A password that breaks none gets an empty list.",
+      "skills": [
+        "validation",
+        "strings",
+        "security"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "java",
+        "files": {
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Accounts API\n\nThe service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, the admin back office is a small Ruby app, the password service is Java, and the login gateway in front is TypeScript.\n\nIt mostly works, and the on-call channel has opinions about the rest: list endpoints that accept any page size, reset links that expire too soon, and logs that are hard to search during an incident.\n\n## What you'll work on\n\n- Parsing and validating request parameters with sensible defaults\n- Time and expiry logic, where off-by-one and unit mix-ups hide\n- Rate limiting and log handling for the people on call\n\n## Good fit if you\n\n- Write backend services, or want practice with the bugs they actually get\n- Like **input validation**, edge cases and reading a stack trace at 2am\n- Know **Go**, **PHP**, **Ruby**, **Java** or **TypeScript**, or want to try one of them on familiar problems\n\nStack: Go, PHP, Ruby, Java, TypeScript.\n"
+          },
+          "src/main/java/com/acme/accounts/PasswordPolicy.java": {
+            "role": "edit",
+            "language": "java",
+            "text": "package com.acme.accounts;\n\nimport java.util.ArrayList;\nimport java.util.List;\n\n/** The password rules sign-up and password reset enforce. */\npublic final class PasswordPolicy {\n    private PasswordPolicy() {}\n\n    /**\n     * The rules a password breaks, in this order: too-short, no-digit, no-letter,\n     * has-whitespace. Empty when it passes.\n     */\n    public static List<String> violations(String password) {\n        List<String> broken = new ArrayList<>();\n        if (password.length() < 8) broken.add(\"too-short\");\n        return broken;\n    }\n}\n"
+          },
+          "src/test/java/com/acme/accounts/PasswordPolicyTest.java": {
+            "role": "tests",
+            "language": "java",
+            "text": "// Acceptance criteria for API-6. The checks run against these cases.\n// Each case runs the program once: the arguments go to Adapter.call as JSON, and what it\n// returns is compared with the expected JSON.\n\nimport com.acme.accounts.PasswordPolicy;\n\n/** [password] → the rules it breaks. */\nfinal class Adapter {\n    static Object call(Json args) {\n        return PasswordPolicy.violations(args.at(0).asString());\n    }\n}\n\nfinal class PasswordPolicyCases {\n    /** Arguments and expected result, as JSON. */\n    static final String[][] CASES = {\n        {\"\\\"correct horse battery\\\"\", \"[\\\"no-digit\\\",\\\"has-whitespace\\\"]\"},\n        {\"\\\"Tr0ub4dor&3\\\"\", \"[\\\"too-short\\\"]\"},\n        {\"\\\"hunter2hunter2\\\"\", \"[]\"},\n        {\"\\\"123456789012\\\"\", \"[\\\"no-letter\\\"]\"},\n        {\"\\\"\\\"\", \"[\\\"too-short\\\",\\\"no-digit\\\",\\\"no-letter\\\"]\"},\n    };\n}\n"
+          }
+        },
+        "entry": "src/main/java/com/acme/accounts/PasswordPolicy.java",
+        "entrypoint": "violations",
+        "adapter": "import com.acme.accounts.PasswordPolicy;\n\n/** [password] → the rules it breaks. */\nfinal class Adapter {\n    static Object call(Json args) {\n        return PasswordPolicy.violations(args.at(0).asString());\n    }\n}\n"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": "correct horse battery",
+            "expected": [
+              "no-digit",
+              "has-whitespace"
+            ],
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": "Tr0ub4dor&3",
+            "expected": [
+              "too-short"
+            ],
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": "hunter2hunter2",
+            "expected": [],
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": "123456789012",
+            "expected": [
+              "no-letter"
+            ],
+            "visible": true
+          },
+          {
+            "id": "case-5",
+            "input": "",
+            "expected": [
+              "too-short",
+              "no-digit",
+              "no-letter"
+            ],
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "mateo-1",
+          "author": {
+            "name": "Mateo O",
+            "role": "Backend"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Security moved the minimum to 12 last quarter. The form says 12, the API still checks 8, and nothing reports the other rules."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        }
+      ],
+      "hints": [],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:607cf6cd406b5498bb724b734e48661fcd3b2f01c05d9950e9726b95f28a57a0": {
+      "issue": "csv-quoted-fields",
+      "kind": "bug",
+      "body": "`parse_csv_line(line)` splits a CSV line on commas, except inside double quotes. Quotes are removed, and a doubled quote inside a quoted field is a literal quote: `\"say \"\"hi\"\"\"` → `say \"hi\"`.",
+      "skills": [
+        "parsing",
+        "strings",
+        "csv"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "python",
+        "files": {
+          "parse_csv_line.py": {
+            "role": "edit",
+            "language": "python",
+            "text": "def parse_csv_line(line):\n    \"\"\"Split a partner CSV line on commas, except inside double quotes.\n\n    Quotes are removed, and a doubled quote inside a quoted field is a literal quote.\n    \"\"\"\n    return line.split(\",\")\n"
+          },
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Data platform\n\nPartners drop CSV exports in a bucket every night. A pipeline cleans them, loads the warehouse and feeds the reports finance reads on Monday morning.\n\nThe exports are messier than anyone admits: quoted commas in company names, duplicate customers with slightly different emails, and orders that never got paid. When the numbers look wrong, this is where people come asking.\n\n## What you'll work on\n\n- Parsing awkward input files without losing data\n- Cleaning and deduplicating records before they reach the warehouse\n- SQL for the reports and reconciliations people rely on\n\n## Good fit if you\n\n- Work with data, or are the person on your team who ends up writing the SQL\n- Enjoy turning messy input into something you can trust\n- Know **Python**, **SQL** or **C#**, or want more practice with them\n\nStack: Python, SQL, and C# for the billing jobs.\n"
+          },
+          "tests/test_parse_csv_line.py": {
+            "role": "tests",
+            "language": "python",
+            "text": "# Acceptance criteria for DATA-1. The checks run against these cases.\nimport pytest\n\nfrom parse_csv_line import parse_csv_line\n\nCASES = [\n    (\"a,b,c\", [\"a\", \"b\", \"c\"]),\n    (\"\\\"Acme, Inc.\\\",42,\\\"NY\\\"\", [\"Acme, Inc.\", \"42\", \"NY\"]),\n    (\"\\\"say \\\"\\\"hi\\\"\\\"\\\",x\", [\"say \\\"hi\\\"\", \"x\"]),\n    (\"\", [\"\"]),\n]\n\n\n@pytest.mark.parametrize(\"given, expected\", CASES)\ndef test_parse_csv_line(given, expected):\n    assert parse_csv_line(given) == expected\n"
+          }
+        },
+        "entry": "parse_csv_line.py",
+        "entrypoint": "parse_csv_line"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": "a,b,c",
+            "expected": [
+              "a",
+              "b",
+              "c"
+            ],
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": "\"Acme, Inc.\",42,\"NY\"",
+            "expected": [
+              "Acme, Inc.",
+              "42",
+              "NY"
+            ],
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": "\"say \"\"hi\"\"\",x",
+            "expected": [
+              "say \"hi\"",
+              "x"
+            ],
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": "",
+            "expected": [
+              ""
+            ],
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "priya-1",
+          "author": {
+            "name": "Priya K",
+            "role": "Data"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Every customer with a comma in their company name lands in the wrong column. 'Acme, Inc.' is our biggest account."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        }
+      ],
+      "hints": [],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:63c63d5bbd4fec87fe0988b24f11a1320a8b12de9a5fef79be61b6e5db8d2d83": {
+      "issue": "format-price",
+      "kind": "bug",
+      "body": "Write `formatPrice(cents)`: return the amount in dollars with two decimals and comma thousands separators, e.g. `123456` → `\"$1,234.56\"`. Negative amounts are refunds and get a leading minus: `-500` → `\"-$5.00\"`.",
+      "skills": [
+        "formatting",
+        "strings",
+        "numbers"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "javascript",
+        "files": {
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Shop\n\nThe online shop customers actually see: product listings, filters, the cart and a three-step checkout. Pages are server-rendered, with a thin layer of TypeScript for the interactive parts.\n\nConversion dipped after the last redesign. Support is fielding tickets about prices, promo codes and a search box that feels sluggish, and an accessibility audit came back with a long list.\n\n## What you'll work on\n\n- Formatting money and other values the way customers expect to read them\n- Form behaviour, validation and accessible markup\n- Small performance fixes in the browser, like debouncing input\n\n## Good fit if you\n\n- Build user interfaces, or want to get sharper at the details that make one feel solid\n- Are comfortable with **JavaScript**, **TypeScript** or plain **HTML**\n- Care what a bug looks like from the customer's side of the screen\n\nStack: TypeScript, JavaScript, HTML.\n"
+          },
+          "src/format-price.js": {
+            "role": "edit",
+            "language": "javascript",
+            "text": "/**\n * Formats an amount in cents for the cart: 123456 → \"$1,234.56\".\n * Refunds are negative and keep the minus first: -500 → \"-$5.00\".\n */\nexport function formatPrice(cents) {\n  return `${cents}`;\n}\n"
+          },
+          "src/format-price.test.js": {
+            "role": "tests",
+            "language": "javascript",
+            "text": "// Acceptance criteria for SHOP-1. The checks run against these cases.\nimport { describe, expect, it } from \"vitest\";\nimport { formatPrice } from \"./format-price\";\n\nconst cases = [\n  [123456, \"$1,234.56\"],\n  [5, \"$0.05\"],\n  [0, \"$0.00\"],\n  [-500, \"-$5.00\"],\n  [100000000, \"$1,000,000.00\"],\n];\n\ndescribe(\"formatPrice\", () => {\n  it.each(cases)(\"case %#\", (input, expected) => {\n    expect(formatPrice(input)).toEqual(expected);\n  });\n});\n"
+          }
+        },
+        "entry": "src/format-price.js",
+        "entrypoint": "formatPrice"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": 123456,
+            "expected": "$1,234.56",
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": 5,
+            "expected": "$0.05",
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": 0,
+            "expected": "$0.00",
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": -500,
+            "expected": "-$5.00",
+            "visible": true
+          },
+          {
+            "id": "case-5",
+            "input": 100000000,
+            "expected": "$1,000,000.00",
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "ada-1",
+          "author": {
+            "name": "Ada N",
+            "role": "Frontend"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Design wants the minus before the dollar sign for refunds, same as on the receipts."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        }
+      ],
+      "hints": [],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:70c73fef246df0693a991a10539f3a29b6b73a7231772e8d973c0d7b2cdd1841": {
+      "issue": "parse-duration",
+      "kind": "feature",
+      "body": "`ParseDuration(text)` turns strings like `\"1h30m\"`, `\"45s\"` or `\"2h\"` into seconds. Units are `h`, `m` and `s`, each at most once and in that order; anything else returns an error (shown as `null` in the checks).",
+      "skills": [
+        "parsing",
+        "config"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "go",
+        "files": {
+          "parse_duration_test.go": {
+            "role": "tests",
+            "language": "go",
+            "text": "package config\n\nimport \"testing\"\n\n// Acceptance criteria for EDGE-4. The checks run against these cases.\n// Input and expected output are JSON.\nvar parseDurationCases = []struct {\n\tinput string\n\twant  string\n}{\n\t{`\"1h30m\"`, `5400`},\n\t{`\"45s\"`, `45`},\n\t{`\"2h\"`, `7200`},\n\t{`\"1h1h\"`, `null`},\n\t{`\"90\"`, `null`},\n\t{`\"\"`, `null`},\n}\n\nfunc TestParseDuration(t *testing.T) {\n\tfor _, c := range parseDurationCases {\n\t\tt.Run(c.input, func(t *testing.T) {\n\t\t\tassertJSON(t, ParseDuration, c.input, c.want)\n\t\t})\n\t}\n}\n"
+          },
+          "parse_duration.go": {
+            "role": "edit",
+            "language": "go",
+            "text": "package config\n\nimport \"errors\"\n\n// ParseDuration turns durations like \"1h30m\", \"45s\" or \"2h\" into seconds.\n// Units are h, m and s, each at most once and in that order; anything else\n// is an error.\nfunc ParseDuration(text string) (int, error) {\n\treturn 0, errors.New(\"not implemented\")\n}\n"
+          },
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Edge proxy\n\nA small proxy in front of everything: it terminates connections, caches hot responses and exports latency metrics. The hot path is C and C++; the control plane and metrics are Go.\n\nEvery allocation shows up on a flame graph here. The backlog is about doing more with fixed memory, measuring the right thing, and keeping configuration readable for whoever is paged.\n\n## What you'll work on\n\n- Fixed-size data structures such as ring buffers and LRU caches\n- Latency percentiles and the metrics behind dashboards\n- Small, strict configuration formats\n\n## Good fit if you\n\n- Do systems or performance work, or want to get closer to the metal\n- Think about memory, ordering and what happens under load\n- Know **C**, **C++** or **Go**, or are learning one of them\n\nStack: C, C++, Go.\n"
+          }
+        },
+        "entry": "parse_duration.go",
+        "entrypoint": "ParseDuration"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": "1h30m",
+            "expected": 5400,
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": "45s",
+            "expected": 45,
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": "2h",
+            "expected": 7200,
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": "1h1h",
+            "expected": null,
+            "visible": true
+          },
+          {
+            "id": "case-5",
+            "input": "90",
+            "expected": null,
+            "visible": true
+          },
+          {
+            "id": "case-6",
+            "input": "",
+            "expected": null,
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "sam-1",
+          "author": {
+            "name": "Sam R",
+            "role": "SRE"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Somebody set idle_timeout = 3600 meaning minutes. Let people write 1h."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        }
+      ],
+      "hints": [],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:8e9793f61cadcf5651f5031f1f75b7f3fa8bc961de05cef3dbc06e14eed1a53d": {
+      "issue": "parse-log-line",
+      "kind": "bug",
+      "body": "Write `ParseLine(line)` for lines like `GET /cart 200 12ms`, returning method, path, status and duration in milliseconds.",
+      "skills": [
+        "parsing",
+        "strings"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "go",
+        "files": {
+          "parse_line_test.go": {
+            "role": "tests",
+            "language": "go",
+            "text": "package accesslog\n\nimport \"testing\"\n\n// Acceptance criteria for API-4. The checks run against these cases.\n// Input and expected output are JSON.\nvar parseLineCases = []struct {\n\tinput string\n\twant  string\n}{\n\t{`\"GET /cart 200 12ms\"`, `{\"method\":\"GET\",\"path\":\"/cart\",\"status\":200,\"ms\":12}`},\n\t{`\"POST /pay 502 1300ms\"`, `{\"method\":\"POST\",\"path\":\"/pay\",\"status\":502,\"ms\":1300}`},\n}\n\nfunc TestParseLine(t *testing.T) {\n\tfor _, c := range parseLineCases {\n\t\tt.Run(c.input, func(t *testing.T) {\n\t\t\tassertJSON(t, ParseLine, c.input, c.want)\n\t\t})\n\t}\n}\n"
+          },
+          "parse_line.go": {
+            "role": "edit",
+            "language": "go",
+            "text": "package accesslog\n\n// Entry is one line of the access log.\ntype Entry struct {\n\tMethod string `json:\"method\"`\n\tPath   string `json:\"path\"`\n\tStatus int    `json:\"status\"`\n\tMs     int    `json:\"ms\"`\n}\n\n// ParseLine parses lines like \"GET /cart 200 12ms\".\nfunc ParseLine(line string) Entry {\n\treturn Entry{}\n}\n"
+          },
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Accounts API\n\nThe service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, the admin back office is a small Ruby app, the password service is Java, and the login gateway in front is TypeScript.\n\nIt mostly works, and the on-call channel has opinions about the rest: list endpoints that accept any page size, reset links that expire too soon, and logs that are hard to search during an incident.\n\n## What you'll work on\n\n- Parsing and validating request parameters with sensible defaults\n- Time and expiry logic, where off-by-one and unit mix-ups hide\n- Rate limiting and log handling for the people on call\n\n## Good fit if you\n\n- Write backend services, or want practice with the bugs they actually get\n- Like **input validation**, edge cases and reading a stack trace at 2am\n- Know **Go**, **PHP**, **Ruby**, **Java** or **TypeScript**, or want to try one of them on familiar problems\n\nStack: Go, PHP, Ruby, Java, TypeScript.\n"
+          }
+        },
+        "entry": "parse_line.go",
+        "entrypoint": "ParseLine"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": "GET /cart 200 12ms",
+            "expected": {
+              "method": "GET",
+              "path": "/cart",
+              "status": 200,
+              "ms": 12
+            },
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": "POST /pay 502 1300ms",
+            "expected": {
+              "method": "POST",
+              "path": "/pay",
+              "status": 502,
+              "ms": 1300
+            },
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "sam-1",
+          "author": {
+            "name": "Sam R",
+            "role": "SRE"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Alerting is blind to the 502s because duration and status come back empty."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        },
+        {
+          "id": "priya-2",
+          "author": {
+            "name": "Priya K",
+            "role": "Data"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Durations are always whole milliseconds, suffixed with ms."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        }
+      ],
+      "hints": [],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:9ba507e3a8a0cbe12d22fe18c98aa82553c7bf0d255158c7889bdba2d631dbe9": {
+      "issue": "discount-codes",
+      "kind": "bug",
+      "body": "`applyDiscount(totalCents, code, codes)` returns the total after the matching code's percentage off, rounded down to whole cents. Codes match case-insensitively and ignoring surrounding spaces; an unknown code leaves the total unchanged.",
+      "skills": [
+        "strings",
+        "validation"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "typescript",
+        "files": {
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Shop\n\nThe online shop customers actually see: product listings, filters, the cart and a three-step checkout. Pages are server-rendered, with a thin layer of TypeScript for the interactive parts.\n\nConversion dipped after the last redesign. Support is fielding tickets about prices, promo codes and a search box that feels sluggish, and an accessibility audit came back with a long list.\n\n## What you'll work on\n\n- Formatting money and other values the way customers expect to read them\n- Form behaviour, validation and accessible markup\n- Small performance fixes in the browser, like debouncing input\n\n## Good fit if you\n\n- Build user interfaces, or want to get sharper at the details that make one feel solid\n- Are comfortable with **JavaScript**, **TypeScript** or plain **HTML**\n- Care what a bug looks like from the customer's side of the screen\n\nStack: TypeScript, JavaScript, HTML.\n"
+          },
+          "src/apply-discount.test.ts": {
+            "role": "tests",
+            "language": "typescript",
+            "text": "// Acceptance criteria for SHOP-2. The checks run against these cases.\nimport { describe, expect, it } from \"vitest\";\nimport { applyDiscount } from \"./apply-discount\";\n\nconst cases: [unknown, unknown][] = [\n  [[10000,\"save10\",{\"SAVE10\":10}], 9000],\n  [[10000,\" SAVE10 \",{\"SAVE10\":10}], 9000],\n  [[999,\"HALF\",{\"HALF\":50}], 499],\n  [[5000,\"NOPE\",{\"SAVE10\":10}], 5000],\n];\n\ndescribe(\"applyDiscount\", () => {\n  it.each(cases)(\"case %#\", (input, expected) => {\n    expect(applyDiscount(...(input as Parameters<typeof applyDiscount>))).toEqual(expected);\n  });\n});\n"
+          },
+          "src/apply-discount.ts": {
+            "role": "edit",
+            "language": "typescript",
+            "text": "/** Percent off per promo code, as configured in the admin: { SAVE10: 10 }. */\nexport type Codes = Record<string, number>;\n\n/** The total after the matching code's discount, rounded down to whole cents. */\nexport function applyDiscount(totalCents: number, code: string, codes: Codes): number {\n  const percent = codes[code];\n  if (percent === undefined) return totalCents;\n  return Math.floor(totalCents * (100 - percent) / 100);\n}\n"
+          }
+        },
+        "entry": "src/apply-discount.ts",
+        "entrypoint": "applyDiscount",
+        "parameters": [
+          "totalCents",
+          "code",
+          "codes"
+        ]
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": [
+              10000,
+              "save10",
+              {
+                "SAVE10": 10
+              }
+            ],
+            "expected": 9000,
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": [
+              10000,
+              " SAVE10 ",
+              {
+                "SAVE10": 10
+              }
+            ],
+            "expected": 9000,
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": [
+              999,
+              "HALF",
+              {
+                "HALF": 50
+              }
+            ],
+            "expected": 499,
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": [
+              5000,
+              "NOPE",
+              {
+                "SAVE10": 10
+              }
+            ],
+            "expected": 5000,
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "jo-1",
+          "author": {
+            "name": "Jo T",
+            "role": "Support"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "40 tickets this morning. People type codes the way they read them in the email."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        },
+        {
+          "id": "lena-2",
+          "author": {
+            "name": "Lena M",
+            "role": "Product"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Black Friday is in two weeks, so this one jumps the queue."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        }
+      ],
+      "hints": [],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:a75cd9214c584f122830c480249f4236613d97cf9542c512857edb586bb07abf": {
+      "issue": "rate-limiter",
+      "kind": "feature",
+      "body": "Write `allow(times, limit, windowMs)`: for each login attempt time, return whether it is allowed when at most `limit` attempts may fall inside any window of `windowMs` milliseconds.",
+      "skills": [
+        "sliding-window",
+        "queues"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "typescript",
+        "files": {
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Accounts API\n\nThe service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, the admin back office is a small Ruby app, the password service is Java, and the login gateway in front is TypeScript.\n\nIt mostly works, and the on-call channel has opinions about the rest: list endpoints that accept any page size, reset links that expire too soon, and logs that are hard to search during an incident.\n\n## What you'll work on\n\n- Parsing and validating request parameters with sensible defaults\n- Time and expiry logic, where off-by-one and unit mix-ups hide\n- Rate limiting and log handling for the people on call\n\n## Good fit if you\n\n- Write backend services, or want practice with the bugs they actually get\n- Like **input validation**, edge cases and reading a stack trace at 2am\n- Know **Go**, **PHP**, **Ruby**, **Java** or **TypeScript**, or want to try one of them on familiar problems\n\nStack: Go, PHP, Ruby, Java, TypeScript.\n"
+          },
+          "src/allow.test.ts": {
+            "role": "tests",
+            "language": "typescript",
+            "text": "// Acceptance criteria for API-3. The checks run against these cases.\nimport { describe, expect, it } from \"vitest\";\nimport { allow } from \"./allow\";\n\nconst cases: [unknown, unknown][] = [\n  [[[0,1,2,3],3,10], [true,true,true,false]],\n  [[[],1,10], []],\n  [[[0,10,20],1,10], [true,true,true]],\n];\n\ndescribe(\"allow\", () => {\n  it.each(cases)(\"case %#\", (input, expected) => {\n    expect(allow(...(input as Parameters<typeof allow>))).toEqual(expected);\n  });\n});\n"
+          },
+          "src/allow.ts": {
+            "role": "edit",
+            "language": "typescript",
+            "text": "/**\n * For each login attempt time, whether it is allowed: at most `limit` attempts\n * may fall inside any window of `windowMs` milliseconds.\n */\nexport function allow(times: number[], limit: number, windowMs: number): boolean[] {\n  return times.map(() => true);\n}\n"
+          }
+        },
+        "entry": "src/allow.ts",
+        "entrypoint": "allow",
+        "parameters": [
+          "times",
+          "limit",
+          "windowMs"
+        ]
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": [
+              [
+                0,
+                1,
+                2,
+                3
+              ],
+              3,
+              10
+            ],
+            "expected": [
+              true,
+              true,
+              true,
+              false
+            ],
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": [
+              [],
+              1,
+              10
+            ],
+            "expected": [],
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": [
+              [
+                0,
+                10,
+                20
+              ],
+              1,
+              10
+            ],
+            "expected": [
+              true,
+              true,
+              true
+            ],
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "sam-1",
+          "author": {
+            "name": "Sam R",
+            "role": "SRE"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Credential-stuffing bot again last night. A sliding window per IP, nothing fancy."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "id": "hint-1",
+          "level": 1,
+          "author": {
+            "name": "Sam R",
+            "role": "SRE"
+          },
+          "text": "Keep only the timestamps still inside the window.",
+          "when": {
+            "behaviour": "active-minutes-without-progress",
+            "atLeast": 10
+          }
+        }
+      ],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:a9b0528abd385b6cfb20f69aed3ee8003a8878b736cb526ce9350dc2460ecc5d": {
+      "issue": "late-fee-rounding",
+      "kind": "bug",
+      "body": "`LateFee(balance, daysLate)` is the fee on an overdue invoice: 0.5% of the balance per day late, capped at 10% of the balance, rounded to cents with halves rounded away from zero. Nothing is charged when the invoice is not late.",
+      "skills": [
+        "rounding",
+        "decimals",
+        "finance"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "csharp",
+        "files": {
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Data platform\n\nPartners drop CSV exports in a bucket every night. A pipeline cleans them, loads the warehouse and feeds the reports finance reads on Monday morning.\n\nThe exports are messier than anyone admits: quoted commas in company names, duplicate customers with slightly different emails, and orders that never got paid. When the numbers look wrong, this is where people come asking.\n\n## What you'll work on\n\n- Parsing awkward input files without losing data\n- Cleaning and deduplicating records before they reach the warehouse\n- SQL for the reports and reconciliations people rely on\n\n## Good fit if you\n\n- Work with data, or are the person on your team who ends up writing the SQL\n- Enjoy turning messy input into something you can trust\n- Know **Python**, **SQL** or **C#**, or want more practice with them\n\nStack: Python, SQL, and C# for the billing jobs.\n"
+          },
+          "src/LateFees.cs": {
+            "role": "edit",
+            "language": "csharp",
+            "text": "namespace Billing;\n\npublic static class LateFees\n{\n    /// <summary>\n    /// The late fee on an overdue invoice: 0.5% of the balance per day late, at most 10% of\n    /// the balance, in cents. Finance rounds halves away from zero.\n    /// </summary>\n    public static decimal LateFee(decimal balance, int daysLate)\n    {\n        if (daysLate <= 0) return 0;\n        var fee = balance * 0.005m * daysLate;\n        return Math.Round(Math.Min(fee, balance * 0.10m), 2);\n    }\n}\n"
+          },
+          "tests/LateFeesTests.cs": {
+            "role": "tests",
+            "language": "csharp",
+            "text": "// Acceptance criteria for DATA-5. The checks run against these cases.\nusing Xunit;\n\npublic class LateFeesTests\n{\n    // Input and expected output as JSON.\n    [Theory]\n    [InlineData(\"[100,1]\", \"0.5\")]\n    [InlineData(\"[101,1]\", \"0.51\")]\n    [InlineData(\"[1,1]\", \"0.01\")]\n    [InlineData(\"[250,30]\", \"25\")]\n    [InlineData(\"[99.9,3]\", \"1.5\")]\n    [InlineData(\"[80,0]\", \"0\")]\n    public void LateFee(string input, string expected)\n    {\n        Assert.Equal(Json.Parse(expected), Json.Call(LateFees.LateFee, input));\n    }\n}\n"
+          }
+        },
+        "entry": "src/LateFees.cs",
+        "entrypoint": "LateFee",
+        "parameters": [
+          "balance",
+          "daysLate"
+        ]
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": [
+              100,
+              1
+            ],
+            "expected": 0.5,
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": [
+              101,
+              1
+            ],
+            "expected": 0.51,
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": [
+              1,
+              1
+            ],
+            "expected": 0.01,
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": [
+              250,
+              30
+            ],
+            "expected": 25,
+            "visible": true
+          },
+          {
+            "id": "case-5",
+            "input": [
+              99.9,
+              3
+            ],
+            "expected": 1.5,
+            "visible": true
+          },
+          {
+            "id": "case-6",
+            "input": [
+              80,
+              0
+            ],
+            "expected": 0,
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "rui-1",
+          "author": {
+            "name": "Rui F",
+            "role": "Finance"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Customers keep emailing about a one-cent difference between the invoice and the reminder. Finance's spreadsheet rounds 0.505 up."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "id": "hint-1",
+          "level": 1,
+          "author": {
+            "name": "Rui F",
+            "role": "Finance"
+          },
+          "text": "Math.Round on a decimal rounds halves to the nearest even digit unless told otherwise.",
+          "when": {
+            "behaviour": "active-minutes-without-progress",
+            "atLeast": 10
+          }
+        }
+      ],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:c22f8677aa640cf2047b53f1d864caabc1e8c6e42261e0c1e30b1f4e91ff7204": {
+      "issue": "filter-form-labels",
+      "kind": "refactor",
+      "body": "The category page's filter form has two checkboxes, `in-stock` and `on-sale`, with bare text next to them, so screen readers announce \"checkbox\" and nothing else. Give each checkbox the id `filter-NAME` and a `<label for=\"filter-NAME\">` with its name as the text. Keep the `name` attributes, and keep everything inside the `<form>`. The checks query the page like the frontend tests do: each one is a CSS selector and what to read from the matches (their count, text, accessible label or an attribute).",
+      "skills": [
+        "accessibility",
+        "forms",
+        "semantics"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "html",
+        "files": {
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Shop\n\nThe online shop customers actually see: product listings, filters, the cart and a three-step checkout. Pages are server-rendered, with a thin layer of TypeScript for the interactive parts.\n\nConversion dipped after the last redesign. Support is fielding tickets about prices, promo codes and a search box that feels sluggish, and an accessibility audit came back with a long list.\n\n## What you'll work on\n\n- Formatting money and other values the way customers expect to read them\n- Form behaviour, validation and accessible markup\n- Small performance fixes in the browser, like debouncing input\n\n## Good fit if you\n\n- Build user interfaces, or want to get sharper at the details that make one feel solid\n- Are comfortable with **JavaScript**, **TypeScript** or plain **HTML**\n- Care what a bug looks like from the customer's side of the screen\n\nStack: TypeScript, JavaScript, HTML.\n"
+          },
+          "templates/filter-form-labels.html": {
+            "role": "edit",
+            "language": "html",
+            "text": "<!--\n  Product filters on the category page. The accessibility audit flagged these\n  checkboxes: each needs a label tied to it.\n-->\n<form>\n  <input type=\"checkbox\" name=\"in-stock\"> in-stock\n  <input type=\"checkbox\" name=\"on-sale\"> on-sale\n</form>\n"
+          },
+          "tests/filter-form-labels.test.js": {
+            "role": "tests",
+            "language": "javascript",
+            "text": "// Acceptance criteria for SHOP-3. The checks run against these cases.\nimport { readFileSync } from \"node:fs\";\nimport { describe, expect, it } from \"vitest\";\nimport { JSDOM } from \"jsdom\";\n\nconst { document } = new JSDOM(readFileSync(\"templates/filter-form-labels.html\", \"utf8\")).window;\nconst squash = (text) => (text ?? \"\").replace(/\\s+/g, \" \").trim();\n\n/** The name a screen reader announces: aria-labelledby, aria-label, then the label. */\nfunction label(element) {\n  const ids = element.getAttribute(\"aria-labelledby\");\n  if (ids) return squash(ids.split(/\\s+/).map((id) => document.getElementById(id)?.textContent).join(\" \"));\n  if (element.hasAttribute(\"aria-label\")) return squash(element.getAttribute(\"aria-label\"));\n  const tied = element.id && document.querySelector(`label[for=\"${element.id}\"]`);\n  const owner = tied || element.closest(\"label\");\n  return owner ? squash(owner.textContent) : null;\n}\n\nfunction read(selector, how) {\n  const matches = [...document.querySelectorAll(selector)];\n  if (how === \"count\") return matches.length;\n  if (how === \"text\") return matches.map((element) => squash(element.textContent));\n  if (how === \"label\") return matches.map(label);\n  return matches.map((element) => element.getAttribute(how));\n}\n\n// [selector, what to read, expected]: \"count\", \"text\", \"label\" (the accessible\n// name a screen reader announces) or an attribute name.\nconst cases = [\n  [\"form input[type=checkbox]\", \"name\", [\"in-stock\",\"on-sale\"]],\n  [\"form input[type=checkbox]\", \"id\", [\"filter-in-stock\",\"filter-on-sale\"]],\n  [\"form input[type=checkbox]\", \"label\", [\"in-stock\",\"on-sale\"]],\n  [\"form label\", \"text\", [\"in-stock\",\"on-sale\"]],\n];\n\ndescribe(\"templates/filter-form-labels.html\", () => {\n  it.each(cases)(\"%s → %s\", (selector, how, expected) => {\n    expect(read(selector, how)).toEqual(expected);\n  });\n});\n"
+          }
+        },
+        "entry": "templates/filter-form-labels.html",
+        "entrypoint": "page",
+        "parameters": [
+          "selector",
+          "read"
+        ]
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": [
+              "form input[type=checkbox]",
+              "name"
+            ],
+            "expected": [
+              "in-stock",
+              "on-sale"
+            ],
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": [
+              "form input[type=checkbox]",
+              "id"
+            ],
+            "expected": [
+              "filter-in-stock",
+              "filter-on-sale"
+            ],
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": [
+              "form input[type=checkbox]",
+              "label"
+            ],
+            "expected": [
+              "in-stock",
+              "on-sale"
+            ],
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": [
+              "form label",
+              "text"
+            ],
+            "expected": [
+              "in-stock",
+              "on-sale"
+            ],
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "ada-1",
+          "author": {
+            "name": "Ada N",
+            "role": "Frontend"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "The accessibility audit flagged every checkbox here. Clicking the text should toggle the box."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        }
+      ],
+      "hints": [],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:dce849a205d06e1a4764c66140bd06b80bb2d4a5bbbddb84bb876245f90686d3": {
+      "issue": "pagination-params",
+      "kind": "bug",
+      "body": "`ParsePage(query)` reads `page` and `per_page` from a URL query string. Defaults are page 1 and 20 per page, `per_page` is capped at 100, and missing, zero, negative or non-numeric values fall back to the default.",
+      "skills": [
+        "parsing",
+        "validation",
+        "http"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "go",
+        "files": {
+          "parse_page_test.go": {
+            "role": "tests",
+            "language": "go",
+            "text": "package accounts\n\nimport \"testing\"\n\n// Acceptance criteria for API-1. The checks run against these cases.\n// Input and expected output are JSON.\nvar parsePageCases = []struct {\n\tinput string\n\twant  string\n}{\n\t{`\"page=2&per_page=50\"`, `{\"page\":2,\"perPage\":50}`},\n\t{`\"\"`, `{\"page\":1,\"perPage\":20}`},\n\t{`\"per_page=500\"`, `{\"page\":1,\"perPage\":100}`},\n\t{`\"page=-1&per_page=abc\"`, `{\"page\":1,\"perPage\":20}`},\n}\n\nfunc TestParsePage(t *testing.T) {\n\tfor _, c := range parsePageCases {\n\t\tt.Run(c.input, func(t *testing.T) {\n\t\t\tassertJSON(t, ParsePage, c.input, c.want)\n\t\t})\n\t}\n}\n"
+          },
+          "parse_page.go": {
+            "role": "edit",
+            "language": "go",
+            "text": "package accounts\n\n// Page is the pagination requested by a list endpoint.\ntype Page struct {\n\tPage    int `json:\"page\"`\n\tPerPage int `json:\"perPage\"`\n}\n\n// ParsePage reads page and per_page from a URL query string, with defaults\n// of page 1 and 20 per page, and per_page capped at 100.\nfunc ParsePage(query string) Page {\n\treturn Page{Page: 1, PerPage: 20}\n}\n"
+          },
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Accounts API\n\nThe service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, the admin back office is a small Ruby app, the password service is Java, and the login gateway in front is TypeScript.\n\nIt mostly works, and the on-call channel has opinions about the rest: list endpoints that accept any page size, reset links that expire too soon, and logs that are hard to search during an incident.\n\n## What you'll work on\n\n- Parsing and validating request parameters with sensible defaults\n- Time and expiry logic, where off-by-one and unit mix-ups hide\n- Rate limiting and log handling for the people on call\n\n## Good fit if you\n\n- Write backend services, or want practice with the bugs they actually get\n- Like **input validation**, edge cases and reading a stack trace at 2am\n- Know **Go**, **PHP**, **Ruby**, **Java** or **TypeScript**, or want to try one of them on familiar problems\n\nStack: Go, PHP, Ruby, Java, TypeScript.\n"
+          }
+        },
+        "entry": "parse_page.go",
+        "entrypoint": "ParsePage"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": "page=2&per_page=50",
+            "expected": {
+              "page": 2,
+              "perPage": 50
+            },
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": "",
+            "expected": {
+              "page": 1,
+              "perPage": 20
+            },
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": "per_page=500",
+            "expected": {
+              "page": 1,
+              "perPage": 100
+            },
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": "page=-1&per_page=abc",
+            "expected": {
+              "page": 1,
+              "perPage": 20
+            },
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "mateo-1",
+          "author": {
+            "name": "Mateo O",
+            "role": "Backend"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "The mobile app sends per_page=500 to fetch everything in one go. Cap it, don't error."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        }
+      ],
+      "hints": [],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:ddd685e7390e621bf103680a2dffee5f5cffed1dd597d5ec5a4c7b5f72acd2ac": {
+      "issue": "lru-cache",
+      "kind": "bug",
+      "body": "Simulate an LRU cache with the given capacity over operations `[\"put\", key, value]` and `[\"get\", key]`. Return the results of the gets in order, `-1` for a miss. A get counts as a use.",
+      "skills": [
+        "caching",
+        "linked-lists",
+        "maps"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "cpp",
+        "files": {
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Edge proxy\n\nA small proxy in front of everything: it terminates connections, caches hot responses and exports latency metrics. The hot path is C and C++; the control plane and metrics are Go.\n\nEvery allocation shows up on a flame graph here. The backlog is about doing more with fixed memory, measuring the right thing, and keeping configuration readable for whoever is paged.\n\n## What you'll work on\n\n- Fixed-size data structures such as ring buffers and LRU caches\n- Latency percentiles and the metrics behind dashboards\n- Small, strict configuration formats\n\n## Good fit if you\n\n- Do systems or performance work, or want to get closer to the metal\n- Think about memory, ordering and what happens under load\n- Know **C**, **C++** or **Go**, or are learning one of them\n\nStack: C, C++, Go.\n"
+          },
+          "src/simulate.cpp": {
+            "role": "edit",
+            "language": "cpp",
+            "text": "#include <string>\n#include <vector>\n\n// One cache operation: {\"put\", key, value} or {\"get\", key}.\nstruct Op {\n    std::string name;\n    int key;\n    int value;\n};\n\n// Runs the operations against an LRU cache of the given capacity and returns\n// the result of each get, -1 for a miss. A get counts as a use.\nstd::vector<int> simulate(int capacity, const std::vector<Op>& ops) {\n    std::vector<int> results;\n    return results;\n}\n"
+          },
+          "tests/simulate_test.cpp": {
+            "role": "tests",
+            "language": "cpp",
+            "text": "// Acceptance criteria for EDGE-3. The checks run against these cases.\n// Each case runs the program once: the arguments go to mm_call as JSON, and what it\n// returns is compared with the expected JSON.\n\n#include <string>\n#include <vector>\n#include \"mm_json.h\"\n\nstruct Op {\n    std::string name;\n    int key;\n    int value;\n};\nstd::vector<int> simulate(int capacity, const std::vector<Op>& ops);\n\n// [capacity, [[name, key, value?], ...]] → the result of each get.\nmm_value *mm_call(const mm_value *args) {\n    std::vector<Op> ops;\n    const mm_value *list = mm_at(args, 1);\n    for (size_t i = 0; i < mm_length(list); i++) {\n        const mm_value *op = mm_at(list, i);\n        ops.push_back({mm_string(mm_at(op, 0)), (int)mm_integer(mm_at(op, 1)),\n                       (int)mm_integer(mm_at(op, 2))});\n    }\n    mm_value *result = mm_new_array();\n    for (int got : simulate((int)mm_integer(mm_at(args, 0)), ops))\n        mm_push(result, mm_new_integer(got));\n    return result;\n}\n\n/* Arguments and expected result, as JSON. */\nstatic const struct { const char *args; const char *expected; } cases[] = {\n    {\"[2,[[\\\"put\\\",1,1],[\\\"put\\\",2,2],[\\\"get\\\",1],[\\\"put\\\",3,3],[\\\"get\\\",2],[\\\"get\\\",1]]]\", \"[1,-1,1]\"},\n    {\"[1,[[\\\"put\\\",1,1],[\\\"put\\\",2,2],[\\\"get\\\",1]]]\", \"[-1]\"},\n};\n"
+          }
+        },
+        "entry": "src/simulate.cpp",
+        "entrypoint": "simulate",
+        "parameters": [
+          "capacity",
+          "ops"
+        ],
+        "adapter": "#include <string>\n#include <vector>\n#include \"mm_json.h\"\n\nstruct Op {\n    std::string name;\n    int key;\n    int value;\n};\nstd::vector<int> simulate(int capacity, const std::vector<Op>& ops);\n\n// [capacity, [[name, key, value?], ...]] → the result of each get.\nmm_value *mm_call(const mm_value *args) {\n    std::vector<Op> ops;\n    const mm_value *list = mm_at(args, 1);\n    for (size_t i = 0; i < mm_length(list); i++) {\n        const mm_value *op = mm_at(list, i);\n        ops.push_back({mm_string(mm_at(op, 0)), (int)mm_integer(mm_at(op, 1)),\n                       (int)mm_integer(mm_at(op, 2))});\n    }\n    mm_value *result = mm_new_array();\n    for (int got : simulate((int)mm_integer(mm_at(args, 0)), ops))\n        mm_push(result, mm_new_integer(got));\n    return result;\n}\n"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": [
+              2,
+              [
+                [
+                  "put",
+                  1,
+                  1
+                ],
+                [
+                  "put",
+                  2,
+                  2
+                ],
+                [
+                  "get",
+                  1
+                ],
+                [
+                  "put",
+                  3,
+                  3
+                ],
+                [
+                  "get",
+                  2
+                ],
+                [
+                  "get",
+                  1
+                ]
+              ]
+            ],
+            "expected": [
+              1,
+              -1,
+              1
+            ],
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": [
+              1,
+              [
+                [
+                  "put",
+                  1,
+                  1
+                ],
+                [
+                  "put",
+                  2,
+                  2
+                ],
+                [
+                  "get",
+                  1
+                ]
+              ]
+            ],
+            "expected": [
+              -1
+            ],
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "mateo-1",
+          "author": {
+            "name": "Mateo O",
+            "role": "Backend"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Hit rate dropped to 12% after the last deploy. I think get() stopped refreshing recency."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "id": "hint-1",
+          "level": 1,
+          "author": {
+            "name": "Mateo O",
+            "role": "Backend"
+          },
+          "text": "Pair a hash map with a doubly linked list ordered by last use.",
+          "when": {
+            "behaviour": "active-minutes-without-progress",
+            "atLeast": 10
+          }
+        }
+      ],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:e29497404701da3bc698b3b6f4e4e556508857f48c4cf5db62a42b8ffbe46986": {
+      "issue": "unpaid-orders",
+      "kind": "feature",
+      "body": "Given `orders(id, customer)` and `payments(order_id, amount)`, select the ids of orders that have no payment, smallest first.",
+      "skills": [
+        "joins",
+        "reconciliation"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "sql",
+        "files": {
+          "db/schema.sql": {
+            "role": "docs",
+            "language": "sql",
+            "text": "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  customer text NOT NULL\n);\n\nCREATE TABLE payments (\n  order_id integer NOT NULL REFERENCES orders (id),\n  amount integer NOT NULL\n);\n"
+          },
+          "queries/unpaid-orders.sql": {
+            "role": "edit",
+            "language": "sql",
+            "text": "-- Month-end close: orders that have no matching payment, smallest id first.\n-- orders(id, customer), payments(order_id, amount)\nSELECT id\nFROM orders;\n"
+          },
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Data platform\n\nPartners drop CSV exports in a bucket every night. A pipeline cleans them, loads the warehouse and feeds the reports finance reads on Monday morning.\n\nThe exports are messier than anyone admits: quoted commas in company names, duplicate customers with slightly different emails, and orders that never got paid. When the numbers look wrong, this is where people come asking.\n\n## What you'll work on\n\n- Parsing awkward input files without losing data\n- Cleaning and deduplicating records before they reach the warehouse\n- SQL for the reports and reconciliations people rely on\n\n## Good fit if you\n\n- Work with data, or are the person on your team who ends up writing the SQL\n- Enjoy turning messy input into something you can trust\n- Know **Python**, **SQL** or **C#**, or want more practice with them\n\nStack: Python, SQL, and C# for the billing jobs.\n"
+          },
+          "tests/unpaid-orders.sql": {
+            "role": "tests",
+            "language": "sql",
+            "text": "-- Acceptance criteria for DATA-4. The checks run against these cases.\n\n-- Case 1\nBEGIN;\nINSERT INTO orders (id, customer) VALUES\n  (1, 'ana'),\n  (2, 'bo'),\n  (3, 'cy');\nINSERT INTO payments (order_id, amount) VALUES\n  (1, 30),\n  (3, 12);\n-- Expected rows, in order:\n--   (2)\nROLLBACK;\n"
+          }
+        },
+        "entry": "queries/unpaid-orders.sql",
+        "entrypoint": "query",
+        "schema": "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  customer text NOT NULL\n);\n\nCREATE TABLE payments (\n  order_id integer NOT NULL REFERENCES orders (id),\n  amount integer NOT NULL\n);"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": {
+              "orders": [
+                [
+                  1,
+                  "ana"
+                ],
+                [
+                  2,
+                  "bo"
+                ],
+                [
+                  3,
+                  "cy"
+                ]
+              ],
+              "payments": [
+                [
+                  1,
+                  30
+                ],
+                [
+                  3,
+                  12
+                ]
+              ]
+            },
+            "expected": [
+              [
+                2
+              ]
+            ],
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "rui-1",
+          "author": {
+            "name": "Rui F",
+            "role": "Finance"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Month-end close is Friday. I need this list before then."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "id": "hint-1",
+          "level": 1,
+          "author": {
+            "name": "Rui F",
+            "role": "Finance"
+          },
+          "text": "A LEFT JOIN keeps orders even when no payment matches.",
+          "when": {
+            "behaviour": "active-minutes-without-progress",
+            "atLeast": 10
+          }
+        }
+      ],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:e359a096b7c0455ff5dd4e21cf035bd1d6483c251ecacdd15540b8af0c436dc4": {
+      "issue": "p99-latency",
+      "kind": "performance",
+      "body": "`Percentile(samples, p)` returns the nearest-rank percentile: sort the samples and take the value at rank `ceil(p / 100 × n)`, counting from 1. With no samples, `ok` is false (shown as `null` in the checks).",
+      "skills": [
+        "sorting",
+        "statistics"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "go",
+        "files": {
+          "percentile_test.go": {
+            "role": "tests",
+            "language": "go",
+            "text": "package metrics\n\nimport \"testing\"\n\n// Acceptance criteria for EDGE-2. The checks run against these cases.\n// Input and expected output are JSON.\nvar percentileCases = []struct {\n\tinput string\n\twant  string\n}{\n\t{`[[15,20,35,40,50],30]`, `20`},\n\t{`[[15,20,35,40,50],100]`, `50`},\n\t{`[[],99]`, `null`},\n\t{`[[5],99]`, `5`},\n}\n\nfunc TestPercentile(t *testing.T) {\n\tfor _, c := range percentileCases {\n\t\tt.Run(c.input, func(t *testing.T) {\n\t\t\tassertJSON(t, Percentile, c.input, c.want)\n\t\t})\n\t}\n}\n"
+          },
+          "percentile.go": {
+            "role": "edit",
+            "language": "go",
+            "text": "package metrics\n\nimport \"sort\"\n\n// Percentile returns the nearest-rank percentile of the samples: sort them and\n// take the value at rank ceil(p / 100 × n), counting from 1. ok is false when\n// there are no samples.\nfunc Percentile(samples []int, p float64) (value int, ok bool) {\n\tsorted := append([]int(nil), samples...)\n\tsort.Ints(sorted)\n\treturn 0, false\n}\n"
+          },
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Edge proxy\n\nA small proxy in front of everything: it terminates connections, caches hot responses and exports latency metrics. The hot path is C and C++; the control plane and metrics are Go.\n\nEvery allocation shows up on a flame graph here. The backlog is about doing more with fixed memory, measuring the right thing, and keeping configuration readable for whoever is paged.\n\n## What you'll work on\n\n- Fixed-size data structures such as ring buffers and LRU caches\n- Latency percentiles and the metrics behind dashboards\n- Small, strict configuration formats\n\n## Good fit if you\n\n- Do systems or performance work, or want to get closer to the metal\n- Think about memory, ordering and what happens under load\n- Know **C**, **C++** or **Go**, or are learning one of them\n\nStack: C, C++, Go.\n"
+          }
+        },
+        "entry": "percentile.go",
+        "entrypoint": "Percentile",
+        "parameters": [
+          "samples",
+          "p"
+        ]
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": [
+              [
+                15,
+                20,
+                35,
+                40,
+                50
+              ],
+              30
+            ],
+            "expected": 20,
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": [
+              [
+                15,
+                20,
+                35,
+                40,
+                50
+              ],
+              100
+            ],
+            "expected": 50,
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": [
+              [],
+              99
+            ],
+            "expected": null,
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": [
+              [
+                5
+              ],
+              99
+            ],
+            "expected": 5,
+            "visible": true
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "sam-1",
+          "author": {
+            "name": "Sam R",
+            "role": "SRE"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "The current version re-sorts every sample for every percentile. Busy hours have two million samples."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        }
+      ],
+      "hints": [],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    }
+  }
+}

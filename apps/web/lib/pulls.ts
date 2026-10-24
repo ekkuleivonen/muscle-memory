@@ -5,22 +5,24 @@
  *
  * A pull request stays open, whatever its checks say, until the person merges it (recorded as
  * the board move to Done). Work continues on an open one: each push is recorded under the same
- * number, and the pull request shows its latest push. Before workspace capture 1.4.0, passing
- * checks merged by themselves and the pull request's own result said `merged`.
+ * number, and the pull request shows its latest push.
  */
-import type { Challenge, Json } from "../../../packages/domain/assessment";
+import { casesRun, type Revision } from "../../../packages/content/model";
+import type { Json } from "../../../packages/domain/json";
 import {
   pullRequestResult,
   type WorkspaceRecord,
 } from "../../../packages/domain/workspace";
 
 export interface PullSummary {
-  challengeId: string;
-  /** The published Challenge version the pull request was opened against. */
-  version: string;
+  /** The issue's permanent id. */
+  issue: string;
+  /** The issue revision its latest push ran against. */
+  issueRevision: string;
   number: number;
   runId: string;
-  revision: number;
+  /** The editor's document revision that was pushed. */
+  codeRevision: number;
   codeArtifactId: string;
   result: string;
   passed: number;
@@ -32,7 +34,7 @@ export interface PullSummary {
   /** Opened, then each push: how many times CI checked it. */
   pushes: number;
   state: "open" | "merged";
-  /** When the person merged it (or, before capture 1.4.0, when its checks merged it). */
+  /** When the person merged it. */
   mergedAt?: string;
   /** Another of this issue's pull requests that was merged, which put the issue in Done. */
   otherMerged?: number;
@@ -42,17 +44,9 @@ interface Observation {
   type: string;
   occurredAt: string;
   sequence: number;
-  challengeId: string | null;
-  version: string | null;
+  issue: string | null;
+  issueRevision: string | null;
   data: Record<string, unknown>;
-}
-
-/** "challenge.frequency-map.2.1.0" → frequency-map, 2.1.0. */
-export function challengeRef(
-  artifactId: string | undefined,
-): { id: string; version: string } | null {
-  const match = /^challenge\.([^.]+)\.(\d+\.\d+\.\d+)$/.exec(artifactId ?? "");
-  return match ? { id: match[1], version: match[2] } : null;
 }
 
 function observations(records: readonly WorkspaceRecord[]): Observation[] {
@@ -62,14 +56,14 @@ function observations(records: readonly WorkspaceRecord[]): Observation[] {
       try {
         const value = JSON.parse(record.payload);
         if (typeof value?.occurredAt !== "string") return [];
-        const ref = challengeRef(value.challengeArtifactId);
         return [
           {
             type: String(value.type),
             occurredAt: value.occurredAt,
             sequence: Number(value.source?.sequence ?? 0),
-            challengeId: ref?.id ?? null,
-            version: ref?.version ?? null,
+            issue: typeof value.issue === "string" ? value.issue : null,
+            issueRevision:
+              typeof value.issueRevision === "string" ? value.issueRevision : null,
             data: value.data ?? {},
           },
         ];
@@ -83,33 +77,30 @@ function observations(records: readonly WorkspaceRecord[]): Observation[] {
     );
 }
 
-/** Merge times by Challenge and pull request number: "frequency-map#2" → time. */
+/** Merge times by issue and pull request number: "frequency-map#2" → time. */
 function merges(all: readonly Observation[]): Map<string, string> {
   const merged = new Map<string, string>();
-  for (const o of all) {
-    const legacy =
-      o.type === "observation.workspace.pull-request" &&
-      o.data.result === "merged";
-    const byHand =
+  for (const o of all)
+    if (
       o.type === "observation.board.moved" &&
-      o.data.trigger === "pull-request-merged";
-    if ((legacy || byHand) && o.challengeId) {
-      const key = `${o.challengeId}#${Number(legacy ? o.data.number : o.data.pullRequest)}`;
+      o.data.trigger === "pull-request-merged" &&
+      o.issue
+    ) {
+      const key = `${o.issue}#${Number(o.data.pullRequest)}`;
       if (!merged.has(key)) merged.set(key, o.occurredAt);
     }
-  }
   return merged;
 }
 
-/** Numbers of this Challenge's merged pull requests. */
+/** Numbers of this issue's merged pull requests. */
 export function mergedPullRequests(
   records: readonly WorkspaceRecord[],
-  challengeId: string,
+  issue: string,
 ): Set<number> {
   const numbers = new Set<number>();
   for (const key of merges(observations(records)).keys()) {
     const [id, number] = key.split("#");
-    if (id === challengeId) numbers.add(Number(number));
+    if (id === issue) numbers.add(Number(number));
   }
   return numbers;
 }
@@ -120,16 +111,16 @@ function summary(
   merged: Map<string, string>,
 ): PullSummary {
   const o = pushes[pushes.length - 1];
-  const mergedAt = merged.get(`${o.challengeId}#${Number(o.data.number)}`);
+  const mergedAt = merged.get(`${o.issue}#${Number(o.data.number)}`);
   const other = [...merged.keys()]
     .map((key) => key.split("#"))
-    .find(([id, n]) => id === o.challengeId && Number(n) !== Number(o.data.number))?.[1];
+    .find(([id, n]) => id === o.issue && Number(n) !== Number(o.data.number))?.[1];
   return {
-    challengeId: o.challengeId!,
-    version: o.version!,
+    issue: o.issue!,
+    issueRevision: o.issueRevision!,
     number: Number(o.data.number),
     runId: String(o.data.runId),
-    revision: Number(o.data.revision),
+    codeRevision: Number(o.data.revision),
     codeArtifactId: String(o.data.codeArtifactId),
     result: String(o.data.result),
     passed: Number(o.data.passed),
@@ -143,12 +134,12 @@ function summary(
   };
 }
 
-/** Pull request observations grouped by Challenge and number, each group oldest first. */
+/** Pull request observations grouped by issue and number, each group oldest first. */
 function grouped(all: readonly Observation[]): Observation[][] {
   const groups = new Map<string, Observation[]>();
   for (const o of all)
-    if (o.type === "observation.workspace.pull-request" && o.challengeId) {
-      const key = `${o.challengeId}#${Number(o.data.number)}`;
+    if (o.type === "observation.workspace.pull-request" && o.issue) {
+      const key = `${o.issue}#${Number(o.data.number)}`;
       groups.set(key, [...(groups.get(key) ?? []), o]);
     }
   return [...groups.values()];
@@ -166,7 +157,8 @@ export function allPullRequests(
 }
 
 export type TimelineEntry =
-  | { kind: "opened"; at: string }
+  /** Opened in the IDE; `times` when it was opened again with nothing done in between. */
+  | { kind: "opened"; at: string; times: number }
   | { kind: "edits"; at: string; from: string; count: number }
   | {
       kind: "run";
@@ -186,13 +178,26 @@ export type TimelineEntry =
       passed: number;
       total: number;
     }
-  | { kind: "merged"; at: string };
+  | { kind: "merged"; at: string }
+  /** A teammate's review comment on this pull request; its thread is read from feedback. */
+  | { kind: "review"; at: string; comment: string; push: number }
+  | { kind: "resolved"; at: string; comment: string; push: number; issueRevision: string }
+  /** A comment or hint released into the ticket's thread while this work went on. */
+  | {
+      kind: "note";
+      at: string;
+      source: "comment" | "hint";
+      id: string;
+      wording: number;
+      issueRevision: string;
+    };
 
 export interface PullDetail {
   pull: PullSummary;
-  /** The pull request before this one for the same Challenge, if any. */
+  /** The pull request before this one for the same issue, if any. */
   previous?: PullSummary;
-  code: { text: string; truncated: boolean } | null;
+  /** Every editable file as pushed, by path; null when the code was not saved. */
+  code: Record<string, { text: string; truncated: boolean }> | null;
   /** The checks run's raw outcome, as recorded. */
   outcome: Json | null;
   openedAt: string;
@@ -216,17 +221,17 @@ const TERMINAL = new Set([
 ]);
 
 /**
- * One pull request with the work that led to it: everything recorded for its Challenge after
+ * One pull request with the work that led to it: everything recorded for its issue after
  * the previous pull request, up to and including its latest push's checks. Edits are counted,
  * not listed.
  */
 export function pullRequestDetail(
   records: readonly WorkspaceRecord[],
-  challengeId: string,
+  issue: string,
   number: number,
-  challengeFor: (version: string) => Challenge | undefined,
+  revisionFor: (id: string) => Revision | undefined,
 ): PullDetail | null {
-  const all = observations(records).filter((o) => o.challengeId === challengeId);
+  const all = observations(records).filter((o) => o.issue === issue);
   const merged = merges(all);
   const groups = grouped(all);
   const own = groups.find((g) => Number(g[0].data.number) === number);
@@ -287,10 +292,12 @@ export function pullRequestDetail(
     }
     if (o.type === "observation.workspace.opened") {
       flush();
-      timeline.push({ kind: "opened", at: o.occurredAt });
+      const last = timeline.at(-1);
+      if (last?.kind === "opened") last.times++;
+      else timeline.push({ kind: "opened", at: o.occurredAt, times: 1 });
     } else if (o.type === "observation.workspace.run") {
       const status = String(o.data.status);
-      const challenge = o.version ? challengeFor(o.version) : undefined;
+      const revision = o.issueRevision ? revisionFor(o.issueRevision) : undefined;
       const push = pushOf.get(String(o.data.runId));
       if (push) {
         // The first observation of a push's run is when it was opened or pushed.
@@ -309,8 +316,8 @@ export function pullRequestDetail(
       } else if (o.data.purpose !== "pull-request" && TERMINAL.has(status)) {
         flush();
         runs++;
-        const verdict = challenge
-          ? pullRequestResult(challenge, o.data.outcome as never)
+        const verdict = revision
+          ? pullRequestResult(casesRun(revision.checks.cases, "local"), o.data.outcome as never)
           : { result: "checks-errored", passed: 0, total: 0 };
         const green = verdict.result === "checks-passed";
         const tested = green || verdict.result === "checks-failed";
@@ -347,7 +354,49 @@ export function pullRequestDetail(
     }
   }
   flush();
+  // Teammate feedback: this pull request's review, whenever it came (it follows the checks),
+  // and the ticket's comments and hints released during the work above.
+  for (const o of all) {
+    const d = o.data;
+    if (
+      o.type === "observation.workspace.comment" &&
+      d.where === "review" &&
+      Number(d.pullRequest) === number
+    )
+      timeline.push({
+        kind: "review",
+        at: o.occurredAt,
+        comment: String(d.comment),
+        push: Number(d.push),
+      });
+    else if (
+      o.type === "observation.workspace.thread-resolved" &&
+      Number(d.pullRequest) === number
+    )
+      timeline.push({
+        kind: "resolved",
+        at: o.occurredAt,
+        comment: String(d.comment),
+        push: Number(d.push),
+        issueRevision: o.issueRevision ?? "",
+      });
+    else if (
+      (o.type === "observation.workspace.hint" ||
+        (o.type === "observation.workspace.comment" && d.where === "issue")) &&
+      window.includes(o)
+    )
+      timeline.push({
+        kind: "note",
+        at: o.occurredAt,
+        source: o.type === "observation.workspace.hint" ? "hint" : "comment",
+        id: String(o.type === "observation.workspace.hint" ? d.hint : d.comment),
+        wording: Number(d.wording ?? 0),
+        issueRevision: o.issueRevision ?? "",
+      });
+  }
   if (pull.mergedAt) timeline.push({ kind: "merged", at: pull.mergedAt });
+  // In time order; entries at the same moment keep the order they were added in.
+  timeline.sort((a, b) => a.at.localeCompare(b.at));
 
   const artifact = records.find(
     (r) => r.kind === "artifact" && r.recordId === pull.codeArtifactId,
@@ -356,10 +405,17 @@ export function pullRequestDetail(
   if (artifact)
     try {
       const value = JSON.parse(artifact.payload);
-      code = {
-        text: String(value.text ?? ""),
-        truncated: Boolean(value.capture?.truncated),
-      };
+      code = Object.fromEntries(
+        Object.entries(
+          (value.files ?? {}) as Record<
+            string,
+            { text?: string; capture?: { truncated?: boolean } }
+          >,
+        ).map(([path, file]) => [
+          path,
+          { text: String(file.text ?? ""), truncated: Boolean(file.capture?.truncated) },
+        ]),
+      );
     } catch {
       code = null;
     }

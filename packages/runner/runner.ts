@@ -63,8 +63,14 @@ export type LoadProgress =
 
 export interface RunRequest {
   readonly runId: string;
+  /** The entry file's source: CI loads it and calls the entry point. */
   readonly code: string;
-  /** The solution's file name, used in error locations. */
+  /**
+   * The program's other source files by path, relative to the repo root, for engines that load
+   * more than one file (see `multiFile` in engines.ts). The entry file can import them.
+   */
+  readonly files?: Readonly<Record<string, string>>;
+  /** The entry file's path, used in error locations and to resolve relative imports. */
   readonly filename: string;
   readonly language: string;
   readonly entrypoint: string;

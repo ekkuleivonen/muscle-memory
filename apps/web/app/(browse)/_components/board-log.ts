@@ -1,5 +1,6 @@
 /**
- * Records board moves on this device for accounts that accepted the current Terms, stamped
+ * Records tracker activity (page views, the page's visibility, board moves, replies to review
+ * comments, profile answers) on this device for accounts that accepted the current Terms, stamped
  * with that version. Nothing is uploaded yet. One source
  * stream per page load; positions are assigned in call order and writes retry with the same
  * IDs, so retried records deduplicate.
@@ -11,8 +12,17 @@ import {
 import { randomId } from "../../../../../packages/browser/random-id";
 import {
   boardMove,
+  boardPage,
+  boardProfile,
   boardRecord,
+  boardReply,
+  boardView,
+  type BoardBase,
   type BoardMoveData,
+  type BoardObservation,
+  type BoardPageData,
+  type BoardProfileData,
+  type BoardViewData,
 } from "../../../../../packages/domain/board";
 import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
 import { readProfile } from "../../../lib/account";
@@ -23,9 +33,61 @@ let sequence = 0;
 let store: Promise<PracticeStore> | null = null;
 const pending: WorkspaceRecord[] = [];
 
-export async function logBoardMove(
-  challenge: { id: string; version: string },
+/** The app page before the current one in this tab, for the IDE's `entry` (client navigation leaves document.referrer stale). */
+export const PREVIOUS_PATH_KEY = "muscle-memory.previous-path";
+
+export function logBoardMove(
+  issue: { id: string; revision: string },
   data: BoardMoveData,
+): Promise<void> {
+  return log((base) => boardMove({ ...base, issue, data }), "Board move");
+}
+
+/** A reply to a review comment; resolves the thread if it was blocking. */
+export function logReply(
+  issue: { id: string; revision: string },
+  data: { issueKey: string; pullRequest: number; comment: string; text: string },
+): Promise<void> {
+  return log((base) => boardReply({ ...base, issue, data }), "Reply");
+}
+
+export function logView(
+  issue: { id: string; revision: string } | null,
+  data: BoardViewData,
+): Promise<void> {
+  return log((base) => boardView({ ...base, issue, data }), "Page view");
+}
+
+export function logPage(data: BoardPageData): Promise<void> {
+  return log((base) => boardPage({ ...base, data }), "Page state");
+}
+
+export function logProfile(data: BoardProfileData): Promise<void> {
+  return log((base) => boardProfile({ ...base, data }), "Profile answers");
+}
+
+/**
+ * The issue the page on screen is about, set by that page so its view names the issue and the
+ * revision live at the time. Children's effects run before the layout's, so it is set by the
+ * time the view is recorded.
+ */
+let context: { path: string; issue: { id: string; revision: string } } | null = null;
+
+export function setIssueContext(issue: { id: string; revision: string } | null): () => void {
+  const path = location.pathname;
+  context = issue ? { path, issue } : null;
+  return () => {
+    if (context?.path === path) context = null;
+  };
+}
+
+export function issueContext(path: string): { id: string; revision: string } | null {
+  return context?.path === path ? context.issue : null;
+}
+
+async function log(
+  build: (base: BoardBase) => BoardObservation,
+  what: string,
 ): Promise<void> {
   const accepted = readProfile()?.accepted;
   // The gate keeps people without current acceptance out; this is the belt to its braces.
@@ -33,19 +95,20 @@ export async function logBoardMove(
   // Claim the position and time now, so order matches what the person did.
   const position = ++sequence;
   const occurredAt = new Date().toISOString();
+  // performance.now() counts from this page load, which is this source stream.
+  const elapsedMs = Math.round(performance.now() * 10) / 10;
   try {
     store ??= openPracticeStore();
     const opened = await store;
     pending.push(
       boardRecord(
-        boardMove({
+        build({
           participantId: await opened.participantId(),
           sourceId,
           sequence: position,
           occurredAt,
+          elapsedMs,
           termsVersion: accepted.version,
-          challenge,
-          data,
         }),
       ),
     );
@@ -59,6 +122,6 @@ export async function logBoardMove(
   } catch (cause) {
     store = null;
     // A missed position stays visible as a gap in the source stream.
-    console.warn("Board move was not recorded.", cause);
+    console.warn(`${what} was not recorded.`, cause);
   }
 }

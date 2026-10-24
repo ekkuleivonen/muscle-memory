@@ -7,17 +7,13 @@
   "scripts": {
     "dev": "npm run dev --workspace apps/web",
     "build": "npm run check:content && npm run build --workspace apps/web",
-    "test": "node --test tools/tests/*.test.mjs && node --experimental-sqlite --import tsx --test packages/*/*.test.ts apps/web/app/*/*.test.ts apps/web/lib/*.test.ts",
-    "check:content": "node tools/content-check.mjs && node --import tsx tools/build-reference-catalog.ts --check && node --import tsx tools/build-demo-catalog.ts --check",
+    "test": "node --import tsx --test packages/*/*.test.ts apps/web/app/*/*.test.ts apps/web/lib/*.test.ts",
+    "check:content": "node --import tsx tools/build-content.ts --check",
+    "check:publish": "node --import tsx tools/browser/content-check.ts",
+    "build:content": "node --import tsx tools/build-content.ts",
     "build:cloudflare": "npm run build:cloudflare --workspace apps/web",
-    "demo:events": "node --experimental-sqlite --import tsx tools/reference-events.ts",
-    "demo:evidence": "node --experimental-sqlite --import tsx tools/reference-evidence.ts",
-    "delete:participant": "node --experimental-sqlite --import tsx tools/delete-participant.ts",
-    "demo:authoring": "node --import tsx tools/authoring/cli.ts demo",
-    "build:reference-catalog": "node --import tsx tools/build-reference-catalog.ts",
     "build:logo": "node tools/build-logo.mjs",
-    "build:demo-catalog": "node --import tsx tools/build-demo-catalog.ts",
-    "test:browser": "node tools/browser/sandbox-check.mjs && node tools/browser/workspace-check.mjs"
+    "test:browser": "node tools/browser/sandbox-check.mjs && node --import tsx tools/browser/content-check.ts"
   },
   "devDependencies": {
     "@types/node": "22.19.0",

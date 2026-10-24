@@ -1,8 +1,10 @@
 /**
  * The small repo an issue opens as in the IDE: the file you work in, a read-only test file
- * holding the acceptance criteria in that language's usual test style, and the project's
- * README. Generated from the Challenge, so content needs nothing more than a starter.
+ * holding the visible cases in that language's usual test style, and the project's README.
+ * `repoFor` generates it at authoring time into each revision's workspace (tools/build-content);
+ * `repoOf` turns a revision's workspace back into the IDE's view.
  */
+import type { FileRole, Workspace } from "../../../packages/content/model";
 import type { LanguageId } from "./languages";
 
 export type FileLanguage = LanguageId | "markdown";
@@ -11,8 +13,8 @@ export interface RepoFile {
   path: string;
   language: FileLanguage;
   text: string;
-  /** Only the solution is editable (and recorded). A schema is read-only, like the tests. */
-  role: "solution" | "tests" | "schema" | "readme";
+  /** Only the edit file is editable (and recorded). A schema is read-only, like the tests. */
+  role: FileRole;
 }
 
 export interface Repo {
@@ -39,6 +41,12 @@ export interface RepoSource {
   adapter?: string;
   criteria: readonly { input: unknown; expected: unknown }[];
   project?: { slug: string; title: string; story?: string };
+  /** JavaScript and TypeScript: where the entry file lives, when not src/<entry point>. */
+  entry?: string;
+  /** Cases CI runs that the test file leaves out. */
+  hidden?: number;
+  /** More of the repo: source the code uses (read) and documents (docs). */
+  files?: readonly RepoFile[];
 }
 
 /** frequency_map → frequency-map; parsePage → parse-page. */
@@ -93,8 +101,11 @@ const sqlString = (value: unknown) =>
       ? "NULL"
       : String(value);
 
-function header(comment: string, key: string): string {
-  return `${comment} Acceptance criteria for ${key}. The checks run against these cases.`;
+function header(comment: string, src: RepoSource): string {
+  const hidden = src.hidden ?? 0;
+  return hidden
+    ? `${comment} Acceptance criteria for ${src.key}. CI runs these cases and ${hidden} more it does not show.`
+    : `${comment} Acceptance criteria for ${src.key}. The checks run against these cases.`;
 }
 
 function pythonTests(src: RepoSource, module: string): string {
@@ -103,7 +114,7 @@ function pythonTests(src: RepoSource, module: string): string {
       (c) => `    (${pythonLiteral(c.input)}, ${pythonLiteral(c.expected)}),`,
     )
     .join("\n");
-  return `${header("#", src.key)}
+  return `${header("#", src)}
 import pytest
 
 from ${module} import ${src.entrypoint}
@@ -124,7 +135,7 @@ function jsTests(src: RepoSource, module: string, typed: boolean): string {
     .map((c) => `  [${json(c.input)}, ${json(c.expected)}],`)
     .join("\n");
   const fn = src.entrypoint;
-  return `${header("//", src.key)}
+  return `${header("//", src)}
 import { describe, expect, it } from "vitest";
 import { ${fn} } from "./${module}";
 
@@ -153,7 +164,7 @@ function goTests(src: RepoSource): string {
 
 import "testing"
 
-${header("//", src.key)}
+${header("//", src)}
 // Input and expected output are JSON.
 var ${src.entrypoint.charAt(0).toLowerCase() + src.entrypoint.slice(1)}Cases = []struct {
 	input string
@@ -190,7 +201,7 @@ declare(strict_types=1);
 use PHPUnit\\Framework\\Attributes\\DataProvider;
 use PHPUnit\\Framework\\TestCase;
 
-${header("//", src.key)}
+${header("//", src)}
 final class ${name}Test extends TestCase
 {
     /** [arguments, expected] as JSON. */
@@ -216,7 +227,7 @@ function rustTests(src: RepoSource, crate: string): string {
   const cases = src.criteria
     .map((c) => `    (${rustString(c.input)}, ${rustString(c.expected)}),`)
     .join("\n");
-  return `${header("//", src.key)}
+  return `${header("//", src)}
 use ${crate}::${src.entrypoint};
 
 /// Input and expected output as JSON.
@@ -242,7 +253,7 @@ function cTests(src: RepoSource): string {
   const cases = src.criteria
     .map((c) => `    {${cString(c.input)}, ${cString(c.expected)}},`)
     .join("\n");
-  return `${header("//", src.key)}
+  return `${header("//", src)}
 // Each case runs the program once: the arguments go to mm_call as JSON, and what it
 // returns is compared with the expected JSON.
 
@@ -260,7 +271,7 @@ function rubyTests(src: RepoSource, file: string): string {
     .map((c) => `    [${json(json(c.input))}, ${json(json(c.expected))}],`)
     .join("\n");
   const call = src.parameters ? "*JSON.parse(input)" : "JSON.parse(input)";
-  return `${header("#", src.key)}
+  return `${header("#", src)}
 require "json"
 require_relative "../lib/${file}"
 
@@ -285,7 +296,7 @@ function javaTests(src: RepoSource, name: string): string {
   const cases = src.criteria
     .map((c) => `        {${json(json(c.input))}, ${json(json(c.expected))}},`)
     .join("\n");
-  return `${header("//", src.key)}
+  return `${header("//", src)}
 // Each case runs the program once: the arguments go to Adapter.call as JSON, and what it
 // returns is compared with the expected JSON.
 
@@ -312,7 +323,7 @@ function csharpTests(src: RepoSource, name: string): string {
         `    [InlineData(${json(json(c.input))}, ${json(json(c.expected))})]`,
     )
     .join("\n");
-  return `${header("//", src.key)}
+  return `${header("//", src)}
 using Xunit;
 
 public class ${name}Tests
@@ -375,7 +386,7 @@ function sqlTests(src: RepoSource): string {
       .join("\n");
     return `-- Case ${i + 1}\nBEGIN;\n${inserts.join("\n")}\n-- Expected rows, in order:\n${expected || "--   (none)"}\nROLLBACK;`;
   });
-  return `${header("--", src.key)}\n\n${blocks.join("\n\n")}\n`;
+  return `${header("--", src)}\n\n${blocks.join("\n\n")}\n`;
 }
 
 /** HTML is checked by querying the page, so its tests are a DOM test in JavaScript. */
@@ -386,7 +397,7 @@ function htmlTests(src: RepoSource, page: string): string {
       return `  [${json(selector)}, ${json(how)}, ${json(c.expected)}],`;
     })
     .join("\n");
-  return `${header("//", src.key)}
+  return `${header("//", src)}
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { JSDOM } from "jsdom";
@@ -431,7 +442,7 @@ function readme(src: RepoSource): RepoFile {
   const text = project
     ? `# ${project.title}\n\n${project.story ?? ""}\n`
     : `# ${src.slug}\n`;
-  return { path: "README.md", language: "markdown", text, role: "readme" };
+  return { path: "README.md", language: "markdown", text, role: "docs" };
 }
 
 /** Where each language keeps the code and its tests. */
@@ -451,17 +462,17 @@ function layout(src: RepoSource): {
         text: pythonTests(src, snake(e)),
       };
     case "javascript":
+    case "typescript": {
+      const ext = src.language === "typescript" ? "ts" : "js";
+      // The tests sit next to the entry file and import it by its name.
+      const solution = src.entry ?? `src/${kebab(e)}.${ext}`;
+      const module = solution.replace(/^.*\//, "").replace(/\.[jt]s$/, "");
       return {
-        solution: `src/${kebab(e)}.js`,
-        tests: `src/${kebab(e)}.test.js`,
-        text: jsTests(src, kebab(e), false),
+        solution,
+        tests: solution.replace(/\.([jt]s)$/, ".test.$1"),
+        text: jsTests(src, module, ext === "ts"),
       };
-    case "typescript":
-      return {
-        solution: `src/${kebab(e)}.ts`,
-        tests: `src/${kebab(e)}.test.ts`,
-        text: jsTests(src, kebab(e), true),
-      };
+    }
     case "go":
       return {
         solution: `${snake(e)}.go`,
@@ -536,7 +547,7 @@ export function repoFor(src: RepoSource): Repo {
     path: solutionPath,
     language: src.language,
     text: src.starter,
-    role: "solution",
+    role: "edit",
   };
   const files: RepoFile[] = [
     readme(src),
@@ -548,12 +559,13 @@ export function repoFor(src: RepoSource): Repo {
       role: "tests",
     },
   ];
+  files.push(...(src.files ?? []));
   if (src.schema)
     files.push({
       path: "db/schema.sql",
       language: "sql",
       text: src.schema.endsWith("\n") ? src.schema : `${src.schema}\n`,
-      role: "schema",
+      role: "docs",
     });
   files.sort((a, b) => a.path.localeCompare(b.path));
   return {
@@ -561,6 +573,28 @@ export function repoFor(src: RepoSource): Repo {
     branch: `${src.key.toLowerCase()}-${src.slug}`,
     files,
     solution,
+  };
+}
+
+/** The IDE's view of a revision's workspace: its files by path, the repo's folder and branch. */
+export function repoOf(
+  workspace: Workspace,
+  issue: { key: string; slug: string },
+  root: string,
+): Repo {
+  const files: RepoFile[] = Object.entries(workspace.files)
+    .map(([path, file]) => ({
+      path,
+      role: file.role,
+      language: file.language as FileLanguage,
+      text: file.text,
+    }))
+    .sort((a, b) => a.path.localeCompare(b.path));
+  return {
+    root,
+    branch: `${issue.key.toLowerCase()}-${issue.slug}`,
+    files,
+    solution: files.find((f) => f.role === "edit")!,
   };
 }
 

@@ -3,28 +3,17 @@
  * printed, every error with its trace, each case's result and the summary. Pure, so the
  * wording is testable without a browser.
  */
-import type { Challenge } from "../../../../packages/domain/assessment";
+import { casesRun, type Case, type Executable } from "../../../../packages/content/model";
 import { runFeedback } from "../../../../packages/domain/workspace";
 import type { CaseResult, CodeError } from "../../../../packages/runner/runner";
 import type { RunView } from "../workspace/session";
 
+export type { Executable };
 export type Tone = "out" | "err" | "pass" | "fail" | "dim";
 export interface Line {
   text: string;
   tone: Tone;
 }
-
-export type Executable = Challenge & {
-  entrypoint: string;
-  starter: string;
-  /** Named when each case lists several arguments. */
-  parameters?: string[];
-  /** SQL: the tables each case's rows go into. */
-  schema?: string;
-  /** C, C++ and Java: turns a case's JSON arguments into the function's types. */
-  adapter?: string;
-  language?: string;
-};
 
 /** How a case reads: the call, or for SQL the rows it starts with. */
 export function caseLabel(challenge: Executable, input: unknown): string {
@@ -54,18 +43,25 @@ function errorLines(error: CodeError, indent = ""): Line[] {
 
 function caseLines(
   challenge: Executable,
-  index: number,
+  check: Case,
   passed: boolean,
   result?: CaseResult,
 ): Line[] {
-  const label = caseLabel(challenge, challenge.inputs[index]);
+  // CI runs hidden cases on a pull request; their input and output stay hidden.
+  if (!check.visible)
+    return [
+      passed
+        ? { text: `✔ hidden case ${check.id}`, tone: "pass" }
+        : { text: `✘ hidden case ${check.id}`, tone: "fail" },
+    ];
+  const label = caseLabel(challenge, check.input);
   if (passed) return [{ text: `✔ ${label}`, tone: "pass" }];
   const out: Line[] = [{ text: `✘ ${label}`, tone: "fail" }];
   if (result?.error) return [...out, ...errorLines(result.error, "    ")];
   if (result?.conversionError)
     return [...out, ...errorLines(result.conversionError, "    ")];
   out.push({
-    text: `    expected ${JSON.stringify(challenge.expected[index])}`,
+    text: `    expected ${JSON.stringify(check.expected)}`,
     tone: "dim",
   });
   out.push({
@@ -124,10 +120,11 @@ export function transcript(
     });
     return out;
   }
-  const feedback = runFeedback(challenge, o.cases);
-  challenge.inputs.forEach((_, index) =>
+  const cases = casesRun(challenge.cases, run.purpose);
+  const feedback = runFeedback(cases, o.cases);
+  cases.forEach((check, index) =>
     out.push(
-      ...caseLines(challenge, index, feedback.passed[index], o.cases[index]),
+      ...caseLines(challenge, check, feedback.passed[index], o.cases[index]),
     ),
   );
   const failed = feedback.total - feedback.correct;

@@ -1,21 +1,13 @@
-import { verifyCatalog, type Catalog } from "../../../packages/catalog/catalog";
-import reference from "../../../content/catalog/reference.v1.json";
+import { verifyCatalog } from "../../../packages/content/revision";
+import type { Catalog } from "../../../packages/content/model";
+import catalog from "../../../content/catalog.json";
 
-/** True in builds made with DEMO_CATALOG=1 (inlined by next.config `env`). */
-export const DEMO = process.env.DEMO_CATALOG === "1";
-
-/** Published content, plus the synthetic demo catalog in demo builds. */
+/**
+ * The catalog the app serves: live issue metadata plus every published revision. Built from
+ * the seed by tools/build-content.ts; it moves to object storage once the admin system exists.
+ */
 export async function publishedCatalog(): Promise<Catalog> {
-  // Re-checking every digest catches content altered on its way in. Turbopack, for one,
+  // Re-checking every content hash catches content altered on its way in. Turbopack, for one,
   // turns imported JSON into object literals, where a "__proto__" key silently vanishes.
-  const catalog = verifyCatalog(reference);
-  // The import must sit inside this inline comparison so builds without the flag drop it
-  // and the demo content with it.
-  if (process.env.DEMO_CATALOG === "1") {
-    const demo = verifyCatalog(
-      (await import("../../../content/demo/catalog.json")).default,
-    );
-    return { ...catalog, entries: { ...catalog.entries, ...demo.entries } };
-  }
-  return catalog;
+  return verifyCatalog(catalog);
 }

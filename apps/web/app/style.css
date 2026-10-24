@@ -1560,6 +1560,110 @@ kbd {
 .pull-timeline a {
   color: var(--accent);
 }
+/* A comment or hint posted on the ticket, quoted under its row. */
+.pull-note {
+  display: block;
+  margin-top: 4px;
+  padding-left: 10px;
+  border-left: 2px solid var(--line-strong);
+  color: var(--fg);
+}
+.pull-note .markdown p {
+  margin: 0;
+}
+/* A review comment: a card hanging on the timeline, with its replies. */
+.pull-timeline li.review-thread {
+  grid-template-columns: 11px 1fr;
+  align-items: start;
+}
+.pull-timeline .review-thread .dot {
+  margin-top: 12px;
+}
+.pull-timeline .review-thread.open .dot {
+  background: var(--red);
+  border-color: var(--red);
+}
+.review-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  background: var(--bg);
+}
+.review-thread.open .review-card {
+  border-color: color-mix(in srgb, var(--red) 45%, var(--line));
+}
+.review-card header {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.review-card header time {
+  margin-left: auto;
+}
+.review-card .markdown p {
+  margin: 6px 0;
+}
+.review-on {
+  margin: 0;
+  font-size: 12px;
+}
+.review-badge {
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--dim);
+}
+.review-badge.blocking {
+  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 50%, transparent);
+}
+.review-badge.resolved {
+  color: var(--green);
+  border-color: color-mix(in srgb, var(--green) 50%, transparent);
+}
+.review-reply {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.review-reply p {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+}
+.review-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-top: 10px;
+  align-items: end;
+}
+.review-form textarea {
+  font: inherit;
+  font-size: 13.5px;
+  padding: 6px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  resize: vertical;
+}
+.review-form button {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+.review-form button:disabled {
+  color: var(--faint);
+  cursor: default;
+}
 .pull-checks ol {
   list-style: none;
   margin: 0;
@@ -1670,6 +1774,10 @@ kbd {
   color: var(--dim);
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   padding: 4px 12px;
+}
+.pull-files {
+  display: grid;
+  gap: 14px;
 }
 .diff-empty {
   padding: 16px 12px;

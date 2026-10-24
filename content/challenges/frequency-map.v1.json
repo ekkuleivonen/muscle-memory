@@ -1,8 +1,0 @@
-{
-  "id": "frequency-map", "version": "1.0.0", "assessment_version": "1.0.0",
-  "task": "Implement frequency_map(items): count each exact, case-sensitive string. Return an object of string to integer count. Empty input returns {}. Write your function locally, then submit one JSON output per fixture in fixture order. This prototype does not execute submitted code.",
-  "skills": ["iteration", "maps", "edge-cases"],
-  "hints": ["A map can hold one counter for each distinct string."],
-  "inputs": [["a", "b", "a"], [], ["A", "a", "A"], ["__proto__", "__proto__", "x"]],
-  "expected": [{"a": 2, "b": 1}, {}, {"A": 2, "a": 1}, {"__proto__": 2, "x": 1}]
-}

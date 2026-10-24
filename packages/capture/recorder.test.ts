@@ -20,7 +20,8 @@ function recorder(sink: CaptureSink, options: Partial<RecorderOptions> = {}) {
     participantId: P,
     sourceId: S,
     consentVersion: "workspace-local-v1",
-    challengeArtifactId: "challenge.frequency-map.2.0.0",
+    issue: "frequency-map",
+    issueRevision: "sha256:" + "0".repeat(64),
     sink,
     flushDelayMs: 0,
     retryBaseMs: 1,
@@ -131,7 +132,11 @@ test("a full buffer drops observations and discloses the exact gap; artifacts dr
   const kept: (number | null)[] = [];
   for (let revision = 1; revision <= 10; revision++) {
     const artifacts =
-      revision === 8 ? [codeRevision(P, S, 8, "def f(): pass")] : [];
+      revision === 8 ? [
+            codeRevision(P, S, 8, {
+              "solution.py": { text: "def f(): pass", mediaType: "text/x-python" },
+            }),
+          ] : [];
     kept.push(
       capture.observe("observation.workspace.edit", edit(revision), artifacts)
         ?.source.sequence ?? null,
@@ -266,16 +271,18 @@ test("IndexedDB batches commit atomically, deduplicate, reject conflicts and cle
   }
 });
 
-test("upgrading the version 1 database keeps saved attempts", async () => {
+test("upgrading an earlier database drops its old records but keeps the identity", async () => {
   const factory = new IDBFactory();
   await new Promise<void>((resolve) => {
-    const request = factory.open("muscle-memory-local-practice", 1);
+    const request = factory.open("muscle-memory-local-practice", 2);
     request.onupgradeneeded = () => {
       request.result.createObjectStore("events", { keyPath: "eventId" });
       request.result.createObjectStore("settings");
+      request.result.createObjectStore("workspace", { keyPath: "recordId" });
+      request.transaction!.objectStore("settings").put("old-id", "participantId");
       request
-        .transaction!.objectStore("events")
-        .add({ eventId: "legacy-1", payload: "{}" });
+        .transaction!.objectStore("workspace")
+        .add({ recordId: "legacy-1", payload: "{}" });
     };
     request.onsuccess = () => {
       request.result.close();
@@ -284,7 +291,7 @@ test("upgrading the version 1 database keeps saved attempts", async () => {
   });
   const store = await openPracticeStore(factory);
   try {
-    assert.equal((await store.pending()).length, 1);
+    assert.equal(await store.participantId(), "old-id");
     assert.deepEqual(await store.workspaceRecords(), []);
   } finally {
     store.close();

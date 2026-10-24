@@ -47,10 +47,10 @@ const app = createServer(async (request, response) => {
   const path = new URL(request.url, "http://x").pathname;
   if (path === "/")
     return response.writeHead(200, { "content-type": "text/html" }).end(page);
-  if (path === "/demo-catalog.json")
+  if (path === "/catalog.json")
     return response
       .writeHead(200, { "content-type": "application/json" })
-      .end(await readFile(join(root, "content/demo/catalog.json")));
+      .end(await readFile(join(root, "content/catalog.json")));
   if (path === "/runner.js")
     return response
       .writeHead(200, { "content-type": "text/javascript" })
@@ -559,6 +559,48 @@ export function applyDiscount(total: number, code: string, codes: Codes): number
       language: "javascript",
       entrypoint: "formatPrice",
     });
+    // Several source files: the entry imports siblings, TypeScript and JavaScript alike.
+    const totals = (code, files) =>
+      run("javascript", {
+        code,
+        files,
+        inputs: [[10000, 10], [5000, 0]],
+        filename: "src/cart/totals.ts",
+        language: "typescript",
+        entrypoint: "cartTotal",
+        parameters: ["subtotal", "percent"],
+      });
+    results.multi = await totals(
+      `import { discount } from "./discounts";
+import { round } from "../lib/money.js";
+export function cartTotal(subtotal: number, percent: number): number {
+  return round(subtotal - discount(subtotal, percent));
+}`,
+      {
+        "src/cart/discounts.ts":
+          "export const discount = (total: number, percent: number) => total * percent / 100;",
+        "src/lib/money.js": "export const round = (n) => Math.floor(n);",
+      },
+    );
+    results.multiThrown = await totals(
+      `import { discount } from "./discounts";
+export const cartTotal = (s: number, p: number) => discount(s, p);`,
+      {
+        "src/cart/discounts.ts":
+          "export function discount(total: number, percent: number): number {\n  throw new Error('rates unavailable');\n}",
+      },
+    );
+    results.missingModule = await totals(
+      `import { gone } from "./nowhere";
+export const cartTotal = () => gone;`,
+      {},
+    );
+    results.circular = await totals(
+      `import { b } from "./b";
+export const cartTotal = () => b;`,
+      { "src/cart/b.ts": `import { cartTotal } from "./totals";
+export const b = () => cartTotal;` },
+    );
     results.syntax = await ts("export function applyDiscount( {", [
       [1, "a", {}],
     ]);
@@ -746,6 +788,23 @@ export function applyDiscount() { return 0; }`,
       out(report.ts) === "9000" && out(report.ts, 1) === "5000",
     "javascript: an array input is one argument without parameters":
       out(report.single) === '"1.23"' && out(report.single, 1) === '"NaN"',
+    "multi-file: the entry imports sibling TypeScript and JavaScript files":
+      out(report.multi) === "9000" && out(report.multi, 1) === "5000",
+    "multi-file: an error in an imported file points at that file":
+      report.multiThrown.cases[0]?.error?.message === "rates unavailable" &&
+      /src\/cart\/discounts\.ts:2:/.test(
+        report.multiThrown.cases[0].error.traceback.text,
+      ),
+    "multi-file: a missing module is a compile error that names it":
+      report.missingModule.phase === "compile" &&
+      /Cannot find module '\.\/nowhere' imported from src\/cart\/totals\.ts/.test(
+        report.missingModule.error.message,
+      ),
+    "multi-file: a circular import is refused with its path":
+      report.circular.phase === "compile" &&
+      /Circular import: src\/cart\/totals\.ts → src\/cart\/b\.ts → src\/cart\/totals\.ts/.test(
+        report.circular.error.message,
+      ),
     "typescript: syntax error is a compile error":
       report.syntax.status === "user-error" &&
       report.syntax.phase === "compile" &&
@@ -882,9 +941,18 @@ async function clangCheck(browserType) {
   const report = await tab.evaluate(async (traps) => {
     const host = document.getElementById("host");
     const results = {};
-    const catalog = await (await fetch("/demo-catalog.json")).json();
-    const issue = (id) =>
-      Object.values(catalog.entries).find((e) => e.content.id === id).content;
+    const catalog = await (await fetch("/catalog.json")).json();
+    // An issue's live revision, flattened to what the engines take.
+    const issue = (id) => {
+      const meta = catalog.issues.find((i) => i.id === id);
+      const { workspace, checks } = catalog.revisions[meta.revision];
+      return {
+        ...workspace,
+        inputs: checks.cases.map((c) => c.input),
+        expected: checks.cases.map((c) => c.expected),
+        starter: Object.values(workspace.files).find((f) => f.role === "edit").text,
+      };
+    };
     const ring = issue("ring-buffer");
     const lru = issue("lru-cache");
     // One runner for C, kept between runs like the IDE does.
@@ -1017,10 +1085,19 @@ async function csharpCheck(browserType) {
   const tab = await context.newPage();
   await tab.goto(APP + "/");
   const report = await tab.evaluate(async (OUT) => {
-    const catalog = await (await fetch("/demo-catalog.json")).json();
-    const fee = Object.values(catalog.entries).find(
-      (e) => e.content.id === "late-fee-rounding",
-    ).content;
+    const catalog = await (await fetch("/catalog.json")).json();
+    // An issue's live revision, flattened to what the engines take.
+    const issue = (id) => {
+      const meta = catalog.issues.find((i) => i.id === id);
+      const { workspace, checks } = catalog.revisions[meta.revision];
+      return {
+        ...workspace,
+        inputs: checks.cases.map((c) => c.input),
+        expected: checks.cases.map((c) => c.expected),
+        starter: Object.values(workspace.files).find((f) => f.role === "edit").text,
+      };
+    };
+    const fee = issue("late-fee-rounding");
     const host = document.getElementById("host");
     const run = async (code, extra = {}) => {
       const runner = new MMRunner.Runner(MMRunner.ENGINES.csharp, host, {
@@ -1109,10 +1186,19 @@ async function javaCheck(browserType) {
   const tab = await context.newPage();
   await tab.goto(APP + "/");
   const report = await tab.evaluate(async (OUT) => {
-    const catalog = await (await fetch("/demo-catalog.json")).json();
-    const issue = Object.values(catalog.entries).find(
-      (e) => e.content.id === "password-policy",
-    ).content;
+    const catalog = await (await fetch("/catalog.json")).json();
+    // An issue's live revision, flattened to what the engines take.
+    const find = (id) => {
+      const meta = catalog.issues.find((i) => i.id === id);
+      const { workspace, checks } = catalog.revisions[meta.revision];
+      return {
+        ...workspace,
+        inputs: checks.cases.map((c) => c.input),
+        expected: checks.cases.map((c) => c.expected),
+        starter: Object.values(workspace.files).find((f) => f.role === "edit").text,
+      };
+    };
+    const issue = find("password-policy");
     const host = document.getElementById("host");
     const run = async (code, extra = {}) => {
       const runner = new MMRunner.Runner(MMRunner.ENGINES.java, host, {

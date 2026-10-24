@@ -14,7 +14,7 @@ import {
   type WorkspaceObservation,
   type WorkspaceRecord,
 } from "../domain/workspace";
-import { safeIdentifier } from "../domain/events";
+import { safeIdentifier } from "../domain/capture";
 
 export type WriteOutcome = "written" | "duplicate" | "conflict";
 
@@ -27,7 +27,9 @@ export interface RecorderOptions {
   readonly participantId: string;
   readonly sourceId: string;
   readonly consentVersion: string;
-  readonly challengeArtifactId: string;
+  /** The issue and the revision this session works against. */
+  readonly issue: string;
+  readonly issueRevision: string;
   readonly sink: CaptureSink;
   readonly maxRecords?: number;
   readonly maxBytes?: number;
@@ -41,6 +43,8 @@ export interface RecorderOptions {
    */
   readonly onTransition?: () => void;
   readonly now?: () => Date;
+  /** A monotonic clock in milliseconds; performance.now() by default. */
+  readonly monotonic?: () => number;
 }
 
 export interface CaptureStatus {
@@ -88,7 +92,10 @@ export class CaptureRecorder {
   private readonly maxRecords: number;
   private readonly maxBytes: number;
 
+  private readonly origin: number;
+
   constructor(private readonly options: RecorderOptions) {
+    this.origin = this.clock();
     safeIdentifier(options.participantId);
     safeIdentifier(options.sourceId);
     this.maxRecords = options.maxRecords ?? 1000;
@@ -113,11 +120,13 @@ export class CaptureRecorder {
       participantId: this.options.participantId,
       source: { id: this.options.sourceId, sequence },
       occurredAt: (this.options.now?.() ?? new Date()).toISOString(),
+      elapsedMs: this.elapsed(),
       serverReceipt: { status: "absent", reason: "local-only" },
       captureVersion: WORKSPACE_CAPTURE_VERSION,
       consentVersion: this.options.consentVersion,
       researchConsent: false,
-      challengeArtifactId: this.options.challengeArtifactId,
+      issue: this.options.issue,
+      issueRevision: this.options.issueRevision,
       data,
     };
     // An artifact (one code revision) is stored once, however many observations cite it.
@@ -139,6 +148,15 @@ export class CaptureRecorder {
     this.schedule(this.options.flushDelayMs ?? 250);
     this.transition();
     return observation;
+  }
+
+  /** Milliseconds since this source stream started, on the monotonic clock. */
+  elapsed(): number {
+    return Math.round((this.clock() - this.origin) * 10) / 10;
+  }
+
+  private clock(): number {
+    return this.options.monotonic?.() ?? performance.now();
   }
 
   /** Stores a record that is not participant activity, such as shared content. */
@@ -268,11 +286,13 @@ export class CaptureRecorder {
         participantId: this.options.participantId,
         source: { id: this.options.sourceId, sequence },
         occurredAt: (this.options.now?.() ?? new Date()).toISOString(),
+        elapsedMs: this.elapsed(),
         serverReceipt: { status: "absent", reason: "local-only" },
         captureVersion: WORKSPACE_CAPTURE_VERSION,
         consentVersion: this.options.consentVersion,
         researchConsent: false,
-        challengeArtifactId: this.options.challengeArtifactId,
+        issue: this.options.issue,
+      issueRevision: this.options.issueRevision,
         data: {
           fromSequence: range.from,
           toSequence: range.to,

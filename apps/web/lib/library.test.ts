@@ -1,18 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import type { Catalog } from "../../../packages/catalog/catalog";
-import type { Adventure } from "../../../packages/domain/assessment";
 import {
   difficultyRange,
   issueHref,
   languagesOf,
-  keyFromSlug,
   library,
   projectHref,
   summarize,
 } from "./library";
-import { keyFromId } from "../../../tools/content-check.mjs";
 import {
   filterByStatus,
   filterPulls,
@@ -26,96 +21,70 @@ import {
   parsePullQuery,
   toggle,
 } from "./queries";
+import { catalog } from "./test-fixtures";
 
-const read = (path: string) =>
-  JSON.parse(
-    readFileSync(new URL(`../../../content/${path}`, import.meta.url), "utf8"),
-  ) as Catalog;
-const reference = read("catalog/reference.v1.json");
-const demo = read("demo/catalog.json");
-const merged = library({
-  ...reference,
-  entries: { ...reference.entries, ...demo.entries },
-});
+const merged = library(catalog);
 
-test("issues are the latest published Challenge versions with their projects", () => {
-  const { issues, projects } = library(reference);
+test("issues are live metadata over their live revisions, grouped into projects", () => {
+  const issue = merged.findIssue("FN-1")!;
+  const meta = catalog.issues.find((i) => i.id === "frequency-map")!;
   assert.deepEqual(
-    issues.map((i) => [
-      i.key,
-      i.slug,
-      i.version,
-      i.runnable,
-      i.kind,
-      i.estimate,
-    ]),
-    [["FN-1", "frequency-map", "2.1.0", true, "feature", 1]],
+    [issue.slug, issue.revision, issue.runnable, issue.kind, issue.estimate],
+    ["frequency-map", meta.revision, true, "feature", 1],
   );
-  const [issue] = issues;
   assert.equal(issue.title, "Frequency map");
   assert.deepEqual(issue.project, {
     slug: "field-notes",
     title: "Field notes",
     key: "FN",
-    hue: issue.project?.hue,
+    hue: issue.project.hue,
   });
   assert.deepEqual(issue.criteria[1], { input: [], expected: {} });
-  assert.equal(issue.comments[0].author, "Priya K");
+  assert.deepEqual(issue.comments[0], {
+    author: "Priya K",
+    role: "Data",
+    body: catalog.revisions[meta.revision].team[0].text[0],
+  });
   assert.deepEqual(
-    projects.map((c) => [c.slug, c.version, c.issues.map((i) => i.version)]),
-    [["field-notes", "2.0.0", ["2.1.0"]]],
+    merged.projects.map((p) => [p.slug, p.issues.length]),
+    [
+      ["field-notes", 1],
+      ["storefront", 5],
+      ["accounts-api", 6],
+      ["data-platform", 5],
+      ["edge-proxy", 4],
+    ],
   );
 });
 
-test("older and disabled versions stay out of lists but specific versions resolve", () => {
-  const { issueVersion } = library(reference);
-  assert.equal(issueVersion("frequency-map", "1.0.0")?.runnable, false);
-  assert.equal(issueVersion("frequency-map", "9.9.9"), undefined);
-  const key = "challenge:frequency-map@2.1.0";
-  const disabled = library({
-    ...reference,
-    entries: {
-      ...reference.entries,
-      [key]: { ...reference.entries[key], state: "disabled" as const },
-    },
+test("retired issues leave lists, but every published revision still resolves", () => {
+  const meta = catalog.issues.find((i) => i.id === "lru-cache")!;
+  const retired = library({
+    ...catalog,
+    issues: catalog.issues.map((i) =>
+      i.id === "lru-cache" ? { ...i, state: "retired" as const } : i,
+    ),
   });
-  assert.deepEqual(disabled.projects[0].issues, []);
-  // 2.0.0 is still published, so the issue itself remains listed at that version.
-  assert.equal(disabled.issues[0].version, "2.0.0");
+  assert.equal(retired.findIssue("EDGE-3"), undefined);
+  assert.deepEqual(
+    retired.findProject("EDGE")!.issues.map((i) => i.key),
+    ["EDGE-1", "EDGE-2", "EDGE-4"],
+  );
+  // Recorded work names the revision it ran against; it stays readable.
+  assert.equal(retired.revision(meta.revision)?.issue, "lru-cache");
+  assert.deepEqual(Object.keys(retired.revisionsOf("lru-cache")), [meta.revision]);
 });
 
 test("issues run when their language has an engine; project summaries span their issues", () => {
-  assert.deepEqual(
-    merged.issues.filter((i) => i.runnable).map((i) => i.slug),
-    [
-      "frequency-map",
-      "format-price",
-      "discount-codes",
-      "filter-form-labels",
-      "debounce-search",
-      "pagination-params",
-      "reset-link-expiry",
-      "rate-limiter",
-      "workspace-slugs",
-      "password-policy",
-      "parse-log-line",
-      "csv-quoted-fields",
-      "dedupe-customers",
-      "late-fee-rounding",
-      "top-customers",
-      "unpaid-orders",
-      "ring-buffer",
-      "p99-latency",
-      "lru-cache",
-      "parse-duration",
-    ],
-  );
+  // Every seed issue's language has an engine, with what that engine needs.
+  assert.equal(merged.issues.length, 21);
+  assert.ok(merged.issues.every((i) => i.runnable));
   const edge = merged.projects.find((c) => c.slug === "edge-proxy")!;
   assert.equal(difficultyRange(edge.issues), "easy–hard");
   assert.deepEqual(languagesOf(edge.issues), ["go", "c", "cpp"]);
 });
 
-test("issue keys come from the project key, or one derived from its id", () => {
+test("issue keys come from the project key and the issue's number", () => {
   const keys = Object.fromEntries(merged.issues.map((i) => [i.slug, i.key]));
   assert.equal(keys["frequency-map"], "FN-1");
   assert.equal(keys["parse-log-line"], "API-4");
@@ -163,6 +132,7 @@ test("filters combine across qualifiers and match any value within one", () => {
     "EDGE-3",
     "SHOP-1",
     "SHOP-2",
+    "SHOP-5",
   ]);
   assert.deepEqual(keys("kind:bug lang:go"), ["API-1", "API-4"]);
   assert.deepEqual(keys("lang:rust,go"), [
@@ -188,6 +158,7 @@ test("filters combine across qualifiers and match any value within one", () => {
     "SHOP-2",
     "SHOP-3",
     "SHOP-4",
+    "SHOP-5",
   ]);
   assert.deepEqual(
     keys("project:SHOP,fn"),
@@ -218,7 +189,7 @@ test("groups keep their declared order and drop empty ones", () => {
       g.issues.length,
     ]),
     [
-      ["bug", 10],
+      ["bug", 11],
       ["performance", 2],
     ],
   );
@@ -228,7 +199,7 @@ test("groups keep their declared order and drop empty ones", () => {
   );
   assert.equal(
     groupIssues(issues, "none", merged.projects)[0].issues.length,
-    12,
+    13,
   );
 });
 
@@ -253,20 +224,16 @@ test("links toggle one value and round-trip through the URL", () => {
   assert.deepEqual(parseIssueQuery(back), on);
 });
 
-test("issues are found by permanent key, in any case, or by an older slug link", () => {
+test("issues are found by permanent key, in any case, or by their id", () => {
   const lru = merged.findIssue("EDGE-3")!;
   assert.equal(lru.slug, "lru-cache");
   assert.equal(merged.findIssue("edge-3"), lru);
   assert.equal(merged.findIssue("lru-cache"), lru);
   assert.equal(merged.findIssue("EDGE-99"), undefined);
   assert.equal(issueHref(lru), "/issues/EDGE-3");
-  assert.equal(
-    issueHref({ ...lru, version: "0.9.0" }, lru.version),
-    "/issues/EDGE-3?version=0.9.0",
-  );
 });
 
-test("projects are found by unique key, in any case, or by an older slug link", () => {
+test("projects are found by unique key, in any case, or by their id", () => {
   const edge = merged.findProject("EDGE")!;
   assert.equal(edge.slug, "edge-proxy");
   assert.equal(merged.findProject("edge"), edge);
@@ -277,28 +244,17 @@ test("projects are found by unique key, in any case, or by an older slug link", 
   assert.equal(new Set(keys).size, keys.length);
 });
 
-test("derived keys match the content check's derivation", () => {
-  for (const id of ["night-shift", "field-notes", "edge", "a-b-c-d", "x"])
-    assert.equal(keyFromSlug(id), keyFromId(id), id);
-});
-
-test("keys come from authored numbers, not from list position", () => {
-  const key = "adventure:accounts-api@1.0.0";
-  const entry = demo.entries[key];
-  const content = entry.content as Adventure;
+test("keys come from issue numbers, not from list position", () => {
   // Reordering a project must not renumber its issues.
   const reordered = library({
-    ...demo,
-    entries: {
-      ...demo.entries,
-      [key]: {
-        ...entry,
-        content: { ...content, challenges: [...content.challenges].reverse() },
-      },
-    },
+    ...catalog,
+    projects: catalog.projects.map((p) =>
+      p.id === "accounts-api" ? { ...p, issues: [...p.issues].reverse() } : p,
+    ),
   });
   assert.equal(reordered.findIssue("API-1")?.slug, "pagination-params");
   assert.equal(reordered.findIssue("API-4")?.slug, "parse-log-line");
+  assert.equal(reordered.findProject("API")!.issues[0].key, "API-6");
 });
 
 test("summaries for client components leave out fixtures and long text", () => {
@@ -369,6 +325,8 @@ test("pull requests search like issues, plus their own state and checks", () => 
     issue: {
       key: `SHOP-${number}`,
       title: `Issue ${number}`,
+      kind: "bug" as const,
+      difficulty: "easy" as const,
       language,
       labels: ["money"],
       project: shop,

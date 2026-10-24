@@ -1,53 +1,48 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { IDBFactory } from "fake-indexeddb";
-import { openPracticeStore, encodePendingExport } from "./practice-store";
-import { referenceEvent } from "../storage/reference-fixture";
-import { createAttemptEvent } from "../domain/events";
+import { openPracticeStore } from "./practice-store";
+import type { WorkspaceRecord } from "../domain/workspace";
 
-test("committed events and pseudonymous identity survive reopen; retries deduplicate", async () => {
+const record = (recordId: string, payload: string): WorkspaceRecord => ({
+  recordId,
+  kind: "observation",
+  participantId: "p",
+  payload,
+});
+
+test("records and the pseudonymous identity survive reopen; retries deduplicate", async () => {
   const factory = new IDBFactory();
   let store = await openPracticeStore(factory);
   const id = await store.participantId();
-  const fixture = referenceEvent();
-  const event = createAttemptEvent(
-    fixture.adventureSnapshot,
-    fixture.challengeSnapshot,
-    { ...fixture.attempt, participantId: id },
-  );
-  assert.equal((await store.append(event)).duplicate, false);
+  assert.deepEqual(await store.write([record("s.1", "{}")]), ["written"]);
   store.close();
   store = await openPracticeStore(factory);
   try {
     assert.equal(await store.participantId(), id);
-    assert.equal((await store.append(event)).duplicate, true);
-    assert.deepEqual(await store.pending(), [event]);
-    const changed = createAttemptEvent(
-      fixture.adventureSnapshot,
-      fixture.challengeSnapshot,
-      { ...event.attempt, assistance: "assisted" },
+    assert.deepEqual(
+      await store.write([record("s.1", "{}"), record("s.1", '{"x":1}')]),
+      ["duplicate", "conflict"],
     );
-    await assert.rejects(store.append(changed), /different content/);
-    assert.deepEqual(await store.pending(), [event]);
+    assert.deepEqual(
+      (await store.workspaceRecords()).map((r) => r.payload),
+      ["{}"],
+    );
   } finally {
     store.close();
   }
 });
 
-test("download remains retryable; clear removes records, pending export and identity", async () => {
+test("clear removes records and the identity together", async () => {
   const factory = new IDBFactory();
   let store = await openPracticeStore(factory);
   const oldId = await store.participantId();
-  await store.append(referenceEvent());
-  const first = encodePendingExport(await store.pending());
-  assert.equal(JSON.parse(first.trim()).schemaVersion, "1.0.0");
-  assert.equal(encodePendingExport(await store.pending()), first);
+  await store.write([record("s.1", "{}")]);
   await store.clear();
   store.close();
   store = await openPracticeStore(factory);
   try {
-    assert.deepEqual(await store.pending(), []);
-    assert.equal(encodePendingExport(await store.pending()), "");
+    assert.deepEqual(await store.workspaceRecords(), []);
     assert.notEqual(await store.participantId(), oldId);
   } finally {
     store.close();

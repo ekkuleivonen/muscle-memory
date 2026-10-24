@@ -1,7 +1,12 @@
 "use client";
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import type { Challenge, Json } from "../../../../../packages/domain/assessment";
+import { useEffect, useMemo, useState } from "react";
+import {
+  editableFiles,
+  type Case,
+  type Revision,
+} from "../../../../../packages/content/model";
+import type { Json } from "../../../../../packages/domain/json";
 import { runFeedback } from "../../../../../packages/domain/workspace";
 import { timeAgo } from "../../../lib/activity";
 import type { IssueSummary } from "../../../lib/library";
@@ -15,36 +20,26 @@ import {
   type PullSummary,
   type TimelineEntry,
 } from "../../../lib/pulls";
-import type { LanguageId } from "../../../lib/languages";
 import type { BoardMoveVia } from "../../../../../packages/domain/board";
 import { LanguageTag } from "./bits";
 import { useBoard } from "./board";
+import { logReply, setIssueContext } from "./board-log";
+import { Markdown } from "./markdown";
 import { useNow, useRecords } from "./records";
+import { feedbackOf, openBlocking, type Thread } from "../../../lib/feedback";
 
 export interface PullIssue {
   key: string;
   slug: string;
   title: string;
-  /** The latest published version; the list does not need it. */
-  version?: string;
+  /** The live revision; the list does not need it. */
+  revision?: string;
 }
 
-/** The IDE on the version the pull request was opened against, to keep working on it. */
-function workHref(issue: PullIssue, version: string) {
-  return !issue.version || issue.version === version
-    ? `/work/${issue.key}`
-    : `/work/${issue.key}?version=${version}`;
-}
+/** The IDE on the issue's live revision; pushes still go to the open pull request. */
+const workHref = (issue: PullIssue) => `/work/${issue.key}`;
 
-/** One published version of the issue, as the pull request saw it. */
-export interface PullVersion {
-  version: string;
-  /** A JSON string: React's serializer would drop a "__proto__" fixture key from an object. */
-  challengeJson: string;
-  starter: string;
-  path: string;
-  language?: LanguageId;
-}
+const shortRevision = (id: string) => id.replace(/^sha256:/, "").slice(0, 8);
 
 type State = PullSummary["state"];
 const STATE_LABELS: Record<State, string> = {
@@ -114,10 +109,9 @@ export function PullList({
   const bySlug = useMemo(() => new Map(issues.map((i) => [i.slug, i])), [issues]);
   const pulls = useMemo(
     () =>
-      (records ? allPullRequests(records) : []).map((pull) => ({
-        ...pull,
-        issue: bySlug.get(pull.challengeId),
-      })),
+      (records ? allPullRequests(records) : []).map(
+        ({ issue: id, ...pull }) => ({ ...pull, id, issue: bySlug.get(id) }),
+      ),
     [records, bySlug],
   );
   if (!records || !now) return null;
@@ -162,13 +156,13 @@ export function PullList({
       ) : (
         <ul className="rows">
           {shown.map((pull) => {
-            const key = pull.issue?.key ?? pull.challengeId;
+            const key = pull.issue?.key ?? pull.id;
             return (
-              <li key={`${pull.challengeId}#${pull.number}`}>
+              <li key={`${pull.id}#${pull.number}`}>
                 <Link className="row pull-row" href={pullHref(key, pull.number)} data-row>
                   <PullIcon state={pull.state} />
                   <span className="title">
-                    {pull.issue?.title ?? pull.challengeId}{" "}
+                    {pull.issue?.title ?? pull.id}{" "}
                     <span className="faint">#{pull.number}</span>
                   </span>
                   <span className="meta dim">
@@ -205,29 +199,38 @@ function dateTime(at: string) {
 export function PullView({
   issue,
   number,
-  versions,
+  revisionsJson,
 }: {
   issue: PullIssue;
   number: number;
-  versions: PullVersion[];
+  /** Every published revision of the issue by id, as JSON: fixtures may hold a "__proto__" key. */
+  revisionsJson: string;
 }) {
-  const records = useRecords();
+  useEffect(
+    () =>
+      issue.revision ? setIssueContext({ id: issue.slug, revision: issue.revision }) : undefined,
+    [issue.slug, issue.revision],
+  );
+  /** Bumped after a reply is recorded, so the records are read again. */
+  const [version, setVersion] = useState(0);
+  const records = useRecords(version);
   const board = useBoard();
   const [tab, setTab] = useState<"timeline" | "checks" | "files">("timeline");
   /** Set when merged on this page, before the stored records are read again. */
   const [mergedNow, setMergedNow] = useState<string | null>(null);
-  const challenges = useMemo(
-    () =>
-      new Map(
-        versions.map((v) => [v.version, JSON.parse(v.challengeJson) as Challenge]),
-      ),
-    [versions],
+  const revisions = useMemo(
+    () => JSON.parse(revisionsJson) as Record<string, Revision>,
+    [revisionsJson],
   );
   const detail = useMemo(
     () =>
       records &&
-      pullRequestDetail(records, issue.slug, number, (v) => challenges.get(v)),
-    [records, issue.slug, number, challenges],
+      pullRequestDetail(records, issue.slug, number, (id) => revisions[id]),
+    [records, issue.slug, number, revisions],
+  );
+  const feedback = useMemo(
+    () => (records ? feedbackOf(records, issue.slug) : { released: [], threads: [] }),
+    [records, issue.slug],
   );
   if (!records) return null;
   if (!detail)
@@ -240,15 +243,36 @@ export function PullView({
   const pull: PullSummary = mergedNow
     ? { ...detail.pull, state: "merged", mergedAt: mergedNow }
     : detail.pull;
-  const version = versions.find((v) => v.version === pull.version);
-  const challenge = challenges.get(pull.version);
-  const diff =
-    version && detail.code ? diffLines(version.starter, detail.code.text) : [];
-  const stats = diffStats(diff);
+  const revision = revisions[pull.issueRevision];
+  // Each editable file against the revision's starting version of it.
+  const changes: FileChange[] =
+    revision && detail.code
+      ? Object.entries(editableFiles(revision.workspace)).map(([path, start]) => {
+          const pushed = detail.code![path];
+          const diff = diffLines(start.text, pushed?.text ?? "");
+          return { path, diff, stats: diffStats(diff), truncated: !!pushed?.truncated };
+        })
+      : [];
+  const stats = changes.reduce(
+    (sum, c) => ({
+      added: sum.added + c.stats.added,
+      removed: sum.removed + c.stats.removed,
+    }),
+    { added: 0, removed: 0 },
+  );
   const label = STATE_LABELS[pull.state];
+  const threads = feedback.threads.filter((t) => t.number === number);
+  const blocking = openBlocking(feedback, number);
+  const reply = async (thread: Thread, text: string) => {
+    await logReply(
+      { id: issue.slug, revision: thread.issueRevision },
+      { issueKey: issue.key, pullRequest: number, comment: thread.comment, text },
+    );
+    setVersion((v) => v + 1);
+  };
   const merge = (via: BoardMoveVia) => {
     board.complete(
-      { key: issue.key, slug: issue.slug, version: pull.version },
+      { key: issue.key, slug: issue.slug, revision: issue.revision ?? pull.issueRevision },
       { number: pull.number, runId: pull.runId },
       via,
     );
@@ -307,15 +331,23 @@ export function PullView({
                 : detail
             }
             issue={issue}
+            threads={threads}
+            revisions={revisions}
+            onReply={pull.state === "merged" ? undefined : reply}
           />
         )}
         {tab === "checks" && (
-          <Checks outcome={detail.outcome} challenge={challenge} />
+          <Checks outcome={detail.outcome} cases={revision?.checks.cases} />
         )}
         {tab === "files" && (
-          <Files detail={detail} version={version} diff={diff} stats={stats} />
+          <Files saved={!!detail.code} changes={changes} />
         )}
-        <MergeBox pull={pull} issue={issue} onMerge={merge} />
+        <MergeBox
+          pull={pull}
+          issue={issue}
+          blocking={blocking.length}
+          onMerge={merge}
+        />
       </article>
       <aside className="props" aria-label="Details">
         <dl>
@@ -327,7 +359,7 @@ export function PullView({
           </dd>
           <dt>Language</dt>
           <dd>
-            <LanguageTag language={version?.language} />
+            <LanguageTag language={revision?.workspace.language} />
           </dd>
           <dt>Checks</dt>
           <dd>{checksText(pull)}</dd>
@@ -339,13 +371,20 @@ export function PullView({
           <dd>{detail.stats.runs}</dd>
           <dt>Edits</dt>
           <dd>{detail.stats.edits}</dd>
-          <dt>Version</dt>
-          <dd className="mono">{pull.version}</dd>
+          <dt>Revision</dt>
+          <dd>
+            <span className="mono" title={pull.issueRevision}>
+              {shortRevision(pull.issueRevision)}
+            </span>
+            {issue.revision && issue.revision !== pull.issueRevision && (
+              <span className="dim">(issue updated since)</span>
+            )}
+          </dd>
         </dl>
         {pull.state !== "merged" && !pull.otherMerged && (
           <Link
             className="pull-continue"
-            href={workHref(issue, pull.version)}
+            href={workHref(issue)}
             title={`Back to the IDE to keep working; push to #${number} from there (⌘⇧⏎)`}
           >
             Continue in the IDE →
@@ -378,7 +417,18 @@ function Tab<T extends string>({
   );
 }
 
-function Timeline({ detail, issue }: { detail: PullDetail; issue: PullIssue }) {
+interface Review {
+  threads: Thread[];
+  revisions: Record<string, Revision>;
+  /** Absent once merged: the conversation is closed. */
+  onReply?: (thread: Thread, text: string) => Promise<void>;
+}
+
+function Timeline({
+  detail,
+  issue,
+  ...review
+}: { detail: PullDetail; issue: PullIssue } & Review) {
   const { stats, previous } = detail;
   return (
     <div className="pull-timeline">
@@ -406,7 +456,7 @@ function Timeline({ detail, issue }: { detail: PullDetail; issue: PullIssue }) {
           </TimelineRow>
         )}
         {detail.timeline.map((entry, index) => (
-          <Entry key={index} entry={entry} issue={issue} />
+          <Entry key={index} entry={entry} issue={issue} {...review} />
         ))}
       </ol>
     </div>
@@ -431,12 +481,60 @@ function TimelineRow({
   );
 }
 
-function Entry({ entry, issue }: { entry: TimelineEntry; issue: PullIssue }) {
+function Entry({
+  entry,
+  issue,
+  threads,
+  revisions,
+  onReply,
+}: { entry: TimelineEntry; issue: PullIssue } & Review) {
   switch (entry.kind) {
+    case "review": {
+      const thread = threads.find(
+        (t) => t.comment === entry.comment && t.at === entry.at,
+      );
+      return thread ? (
+        <ReviewThread
+          thread={thread}
+          revision={revisions[thread.issueRevision]}
+          onReply={onReply}
+        />
+      ) : null;
+    }
+    case "resolved": {
+      const author = revisions[entry.issueRevision]?.team.find(
+        (c) => c.id === entry.comment,
+      )?.author.name;
+      return (
+        <TimelineRow at={entry.at} tone="pass">
+          {author ? `${author}'s review comment` : "A review comment"} was
+          resolved by push {entry.push}.
+        </TimelineRow>
+      );
+    }
+    case "note": {
+      const from = revisions[entry.issueRevision];
+      const note =
+        entry.source === "hint"
+          ? from?.hints.find((h) => h.id === entry.id)
+          : from?.team.find((c) => c.id === entry.id);
+      if (!note) return null;
+      const text =
+        "level" in note ? note.text : (note.text[entry.wording] ?? note.text[0]);
+      return (
+        <TimelineRow at={entry.at} tone="dim">
+          {note.author.name} commented on {issue.key}:
+          <span className="pull-note">
+            <Markdown source={text} />
+          </span>
+        </TimelineRow>
+      );
+    }
     case "opened":
       return (
         <TimelineRow at={entry.at} tone="dim">
           Opened {issue.key} in the IDE
+          {entry.times > 1 && ` (${entry.times} times)`}
         </TimelineRow>
       );
     case "edits":
@@ -518,13 +616,13 @@ const show = (value: unknown) => JSON.stringify(value);
 
 function Checks({
   outcome: raw,
-  challenge,
+  cases,
 }: {
   outcome: Json | null;
-  challenge?: Challenge;
+  cases?: readonly Case[];
 }) {
   const outcome = raw as unknown as Outcome | null;
-  if (!outcome || !challenge)
+  if (!outcome || !cases)
     return <p className="dim">This pull request&apos;s check run wasn&apos;t recorded.</p>;
   if (outcome.status === "timeout")
     return (
@@ -539,7 +637,7 @@ function Checks({
     return <p className="dim">The checks were cancelled.</p>;
   const verdicts =
     outcome.phase === "tests" && outcome.cases
-      ? runFeedback(challenge, outcome.cases).passed
+      ? runFeedback(cases, outcome.cases).passed
       : null;
   return (
     <div className="pull-checks">
@@ -555,7 +653,7 @@ function Checks({
       )}
       {verdicts && (
         <ol>
-          {challenge.inputs.map((input, index) => {
+          {cases.map(({ input, expected, visible, id }, index) => {
             const got = outcome.cases?.[index];
             const ok = verdicts[index];
             return (
@@ -564,9 +662,16 @@ function Checks({
                   {ok ? "✔" : "✘"}
                 </span>
                 <div>
-                  <code>{show(input)}</code> <span className="dim">→</span>{" "}
-                  <code>{show(challenge.expected[index])}</code>
-                  {!ok && (
+                  {visible ? (
+                    <>
+                      <code>{show(input)}</code> <span className="dim">→</span>{" "}
+                      <code>{show(expected)}</code>
+                    </>
+                  ) : (
+                    // CI's hidden cases keep their input and output to themselves.
+                    <span className="dim">Hidden case {id}</span>
+                  )}
+                  {!ok && visible && (
                     <div className="got">
                       {got?.error ? (
                         <>
@@ -603,47 +708,56 @@ function Checks({
   );
 }
 
-function Files({
-  detail,
-  version,
-  diff,
-  stats,
-}: {
-  detail: PullDetail;
-  version?: PullVersion;
+interface FileChange {
+  path: string;
   diff: ReturnType<typeof diffLines>;
   stats: { added: number; removed: number };
-}) {
-  if (!detail.code || !version)
+  truncated: boolean;
+}
+
+/** Every editable file's diff from the starting code; unchanged files fold to one line. */
+function Files({ saved, changes }: { saved: boolean; changes: FileChange[] }) {
+  if (!saved || !changes.length)
     return (
       <p className="dim">The submitted code wasn&apos;t saved in this browser.</p>
     );
-  const parts = hunks(diff);
+  const changed = changes.filter((c) => c.stats.added || c.stats.removed);
+  const same = changes.filter((c) => !c.stats.added && !c.stats.removed);
   return (
     <div className="pull-files">
-      <div className="diff">
-        <div className="diff-head">
-          <span className="mono">{version.path}</span>
-          <span>
-            <span className="add">+{stats.added}</span>{" "}
-            <span className="del">−{stats.removed}</span>
-          </span>
-        </div>
-        {parts.length === 0 ? (
-          <p className="dim diff-empty">No changes from the starter code.</p>
-        ) : (
+      {changed.map(({ path, diff, stats, truncated }) => (
+        <div className="diff" key={path}>
+          <div className="diff-head">
+            <span className="mono">{path}</span>
+            <span>
+              <span className="add">+{stats.added}</span>{" "}
+              <span className="del">−{stats.removed}</span>
+            </span>
+          </div>
           <table>
             <tbody>
-              {parts.map((hunk, h) => (
+              {hunks(diff).map((hunk, h) => (
                 <HunkRows key={h} hunk={hunk} />
               ))}
             </tbody>
           </table>
-        )}
-      </div>
-      {detail.code.truncated && (
+          {truncated && (
+            <p className="dim diff-empty">
+              This file was longer than the capture limit; only its start was saved.
+            </p>
+          )}
+        </div>
+      ))}
+      {same.length > 0 && (
         <p className="dim">
-          The code was longer than the capture limit; only its start was saved.
+          {changed.length ? "Unchanged: " : "No changes from the starter code in "}
+          {same.map((c, i) => (
+            <span key={c.path}>
+              {i > 0 && ", "}
+              <span className="mono">{c.path}</span>
+            </span>
+          ))}
+          .
         </p>
       )}
     </div>
@@ -674,17 +788,106 @@ function HunkRows({ hunk }: { hunk: ReturnType<typeof hunks>[number] }) {
   );
 }
 
+/** A teammate's review comment, its replies and whether it is resolved. */
+function ReviewThread({
+  thread,
+  revision,
+  onReply,
+}: {
+  thread: Thread;
+  revision: Revision | undefined;
+  onReply?: (thread: Thread, text: string) => Promise<void>;
+}) {
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const comment = revision?.team.find((c) => c.id === thread.comment);
+  if (!comment) return null;
+  const blocking = thread.severity === "blocking";
+  const send = async () => {
+    if (!text.trim() || !onReply) return;
+    setSending(true);
+    try {
+      await onReply(thread, text);
+      setText("");
+    } finally {
+      setSending(false);
+    }
+  };
+  return (
+    <li className={`review-thread ${blocking && !thread.resolved ? "open" : ""}`}>
+      <span className="dot" aria-hidden />
+      <div className="review-card">
+        <header>
+          <b>{comment.author.name}</b>{" "}
+          <span className="faint">· {comment.author.role}</span>{" "}
+          {blocking ? (
+            <span className={`review-badge ${thread.resolved ? "resolved" : "blocking"}`}>
+              {thread.resolved ? "Resolved" : "Requested changes"}
+            </span>
+          ) : thread.severity === "nit" ? (
+            <span className="review-badge">Nit</span>
+          ) : null}
+          <time dateTime={thread.at}>{clock(thread.at)}</time>
+        </header>
+        <Markdown source={comment.text[thread.wording] ?? comment.text[0]} />
+        <p className="faint review-on">On push {thread.push}</p>
+        {thread.replies.map((r, i) => (
+          <div className="review-reply" key={i}>
+            <b>You</b> <time dateTime={r.at}>{clock(r.at)}</time>
+            <p>{r.text}</p>
+          </div>
+        ))}
+        {thread.resolved && (
+          <p className="faint">
+            {thread.resolved.by === "code"
+              ? `Resolved by push ${thread.resolved.push}: it no longer applies.`
+              : "Resolved by your reply."}
+          </p>
+        )}
+        {onReply && (
+          <form
+            className="review-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void send();
+            }}
+          >
+            <textarea
+              value={text}
+              rows={2}
+              placeholder={
+                blocking && !thread.resolved
+                  ? "Reply, if the code should stay as it is…"
+                  : "Reply…"
+              }
+              aria-label={`Reply to ${comment.author.name}`}
+              onChange={(event) => setText(event.target.value)}
+            />
+            <button type="submit" disabled={!text.trim() || sending}>
+              Reply
+            </button>
+          </form>
+        )}
+      </div>
+    </li>
+  );
+}
+
 /**
- * Review, then merge: only a pull request whose checks all passed can be merged, as with
- * branch protection. Merging moves the issue to Done.
+ * Review, then merge: only a pull request whose checks all passed and whose blocking review
+ * comments are resolved can be merged, as with branch protection. Merging moves the issue to
+ * Done.
  */
 function MergeBox({
   pull,
   issue,
+  blocking,
   onMerge,
 }: {
   pull: PullSummary;
   issue: PullIssue;
+  /** Open blocking review threads. */
+  blocking: number;
   onMerge: (via: BoardMoveVia) => void;
 }) {
   if (pull.state === "merged")
@@ -711,14 +914,25 @@ function MergeBox({
         </div>
       </div>
     );
-  const green = passed(pull.result);
+  const checks = passed(pull.result);
+  const green = checks && blocking === 0;
   return (
     <div className={green ? "merge-box ready" : "merge-box blocked"}>
       <span className="merge-mark" aria-hidden>
         {green ? "✔" : "✘"}
       </span>
       <div className="merge-text">
-        {green ? (
+        {checks && !green ? (
+          <>
+            <b>
+              All {pull.total} checks passed, but {blocking} blocking review
+              comment{blocking === 1 ? " is" : "s are"} open.
+            </b>{" "}
+            Change the code in the <Link href={workHref(issue)}>IDE</Link> and push
+            to it (<kbd>⌘⇧⏎</kbd>), or reply to explain why it should stay as it
+            is.
+          </>
+        ) : green ? (
           <>
             <b>All {pull.total} checks passed.</b> Read through your changes,
             then merge when you&apos;re happy with them. Merging moves{" "}
@@ -728,7 +942,7 @@ function MergeBox({
           <>
             <b>Merging is blocked: {checksText(pull)}.</b> Every check has to
             pass. The pull request stays open: keep working in the{" "}
-            <Link href={workHref(issue, pull.version)}>IDE</Link> and push to it (
+            <Link href={workHref(issue)}>IDE</Link> and push to it (
             <kbd>⌘⇧⏎</kbd>), and CI runs again.
           </>
         )}

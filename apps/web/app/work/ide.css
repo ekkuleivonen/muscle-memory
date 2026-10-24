@@ -136,6 +136,18 @@
   color: var(--faint);
   cursor: pointer;
 }
+.ide-activity-button {
+  position: relative;
+}
+.ide-activity-dot {
+  position: absolute;
+  top: 10px;
+  right: 11px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
 .ide-activity-button:hover {
   color: var(--fg);
 }
@@ -219,6 +231,12 @@
 }
 .ide-ticket .markdown {
   font-size: 13px;
+  min-width: 0;
+}
+/* A log or receipt in a ticket scrolls inside the narrow side bar instead of being cut off. */
+.ide-ticket .markdown pre {
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .ide-ticket-tests {
   margin: 12px 0;
@@ -789,4 +807,8 @@
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--ide-side);
+}
+.ide-pr-blocking {
+  color: var(--red);
+  font-size: 12px;
 }

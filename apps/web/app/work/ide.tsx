@@ -13,18 +13,17 @@ import {
   openPracticeStore,
   type PracticeStore,
 } from "../../../../packages/browser/practice-store";
-import { findEntry } from "../../../../packages/catalog/gates";
 import {
   latestSavedCode,
   type RecoveredCode,
 } from "../../../../packages/capture/restore";
-import type {
-  Challenge,
-  Difficulty,
-  IssueComment,
-  IssueKind,
-} from "../../../../packages/domain/assessment";
-import { contentArtifactId } from "../../../../packages/domain/evidence";
+import {
+  casesRun,
+  executableOf,
+  type Difficulty,
+  type IssueKind,
+  type Revision,
+} from "../../../../packages/content/model";
 import { runFeedback } from "../../../../packages/domain/workspace";
 import {
   engineFor,
@@ -40,21 +39,27 @@ import {
 } from "../../lib/activity";
 import { statusOf } from "../../lib/board";
 import { mergedPullRequests } from "../../lib/pulls";
-import { languageLabel } from "../../lib/library";
+import {
+  due,
+  feedbackOf,
+  type Feedback,
+  type Release,
+} from "../../lib/feedback";
+import { languageLabel, type IssueComment } from "../../lib/library";
 import type { LanguageId } from "../../lib/languages";
 import {
   mediaTypeOf,
-  repoFor,
+  repoOf,
   tree,
   type RepoFile,
   type TreeNode,
 } from "../../lib/repo";
-import { currentCatalog } from "../current-catalog";
 import { LanguageDot } from "../(browse)/_components/bits";
 import { StatusMenu, useBoard } from "../(browse)/_components/board";
+import { PREVIOUS_PATH_KEY, setIssueContext } from "../(browse)/_components/board-log";
 import { Markdown } from "../(browse)/_components/markdown";
 import { pullHref } from "../(browse)/_components/pulls";
-import { createViewer, type Keymap } from "../workspace/editor";
+import { createViewer, type ActivityHooks, type Keymap } from "../workspace/editor";
 import { checksTypes, TypeChecker } from "../workspace/type-checker";
 import { PANEL, panelMax, SIDE, Splitter, useIdeLayout } from "./splitter";
 import { caseLabel, transcript, type Executable } from "./transcript";
@@ -69,7 +74,8 @@ import {
 export interface IdeIssue {
   key: string;
   slug: string;
-  version: string;
+  /** The live revision the IDE opens: sha256:… of its content. */
+  revision: string;
   title: string;
   task: string;
   kind?: IssueKind;
@@ -93,52 +99,51 @@ type Opening =
   | { state: "failed"; message: string };
 
 /**
- * One issue as a small repo in a VS Code-like IDE. The solution file is the only editable
- * one; its edits and runs are recorded on this device under the accepted Terms, exactly as
- * the workspace always has.
+ * One issue as a small repo in a VS Code-like IDE. The issue decides which files are editable;
+ * their edits and runs are recorded on this device under the accepted Terms. Everything else
+ * opens read-only.
  */
 export function Ide({
-  challengeJson,
+  revisionsJson,
   issue,
-  project,
+  root,
 }: {
-  challengeJson: string;
+  /**
+   * Every published revision of the issue by id, as a JSON string: React's serializer would
+   * drop a "__proto__" fixture key. The IDE opens the live one; feedback recorded against
+   * earlier ones is read from theirs.
+   */
+  revisionsJson: string;
   issue: IdeIssue;
-  project?: { slug: string; title: string; story: string };
+  /** The repo's folder: the project's key, as in project:shop. */
+  root: string;
 }) {
-  // JSON.parse keeps a "__proto__" fixture key as ordinary data.
-  const challenge = useMemo(
-    () => JSON.parse(challengeJson) as Executable,
-    [challengeJson],
+  const revisions = useMemo(
+    () => JSON.parse(revisionsJson) as Record<string, Revision>,
+    [revisionsJson],
   );
+  const revision = revisions[issue.revision];
+  const challenge = useMemo(() => executableOf(revision), [revision]);
   const repo = useMemo(
-    () =>
-      repoFor({
-        key: issue.key,
-        slug: issue.slug,
-        language: issue.language,
-        entrypoint: challenge.entrypoint,
-        starter: challenge.starter,
-        task: challenge.task,
-        parameters: challenge.parameters,
-        schema: challenge.schema,
-        adapter: challenge.adapter,
-        criteria: challenge.inputs.map((input, i) => ({
-          input,
-          expected: challenge.expected[i],
-        })),
-        project,
-      }),
-    [challenge, issue, project],
+    () => repoOf(revision.workspace, issue, root),
+    [revision, issue, root],
   );
   const testsFile = repo.files.find((f) => f.role === "tests")!;
+  const editable = useMemo(
+    () => repo.files.filter((f) => f.role === "edit"),
+    [repo],
+  );
+  /** Where the IDE opens: the entry file when it is editable, else the first editable one. */
+  const home =
+    editable.find((f) => f.path === challenge.entry)?.path ?? editable[0].path;
 
   const [view, setView] = useState<"explorer" | "ticket">("ticket");
   const [tabs, setTabs] = useState<string[]>([
-    repo.solution.path,
+    home,
+    ...editable.map((f) => f.path).filter((path) => path !== home),
     testsFile.path,
   ]);
-  const [active, setActive] = useState(repo.solution.path);
+  const [active, setActive] = useState(home);
   const [panel, setPanel] = useState<"tests" | "output" | "pulls">("tests");
   /** This person's pull requests for the issue, newest first, across sessions. */
   const [pulls, setPulls] = useState<PullRequestRecord[]>([]);
@@ -154,9 +159,14 @@ export function Ide({
   const [capture, setCapture] = useState<SaveStatus | null>(null);
   const [keymap, setKeymap] = useState<Keymap>("standard");
   const [vimMode, setVimMode] = useState("normal");
-  const [edited, setEdited] = useState(false);
+  /** Editable files changed in this session. */
+  const [edited, setEdited] = useState<ReadonlySet<string>>(new Set());
   /** The boot screen can be dismissed while only the runtime is still loading. */
   const [booted, setBooted] = useState(false);
+  /** Teammate comments, hints and review threads released so far. */
+  const [feedback, setFeedback] = useState<Feedback>({ released: [], threads: [] });
+  /** Something new arrived in the ticket's thread while another view was showing. */
+  const [unread, setUnread] = useState(false);
 
   const layout = useIdeLayout();
   const mainRef = useRef<HTMLElement>(null);
@@ -173,6 +183,41 @@ export function Ide({
       : null;
   const openPullRef = useRef(openPull);
   openPullRef.current = openPull;
+  /** The ticket's thread: its own comments, then released comments and hints. */
+  const thread = useMemo(
+    () => [
+      ...issue.comments.map((c) => ({ ...c, at: undefined as string | undefined })),
+      ...feedback.released.flatMap((r) => {
+        const from = revisions[r.issueRevision];
+        if (r.kind === "hint") {
+          const hint = from?.hints.find((h) => h.id === r.hint);
+          return hint
+            ? [{ author: hint.author.name, role: hint.author.role, body: hint.text, at: r.at }]
+            : [];
+        }
+        const comment = from?.team.find((c) => c.id === r.comment);
+        return comment
+          ? [
+              {
+                author: comment.author.name,
+                role: comment.author.role,
+                body: comment.text[r.wording] ?? comment.text[0],
+                at: r.at,
+              },
+            ]
+          : [];
+      }),
+    ],
+    [issue.comments, feedback, revisions],
+  );
+  /** Open blocking review threads by pull request number. */
+  const blocking = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const t of feedback.threads)
+      if (t.severity === "blocking" && !t.resolved)
+        counts.set(t.number, (counts.get(t.number) ?? 0) + 1);
+    return counts;
+  }, [feedback]);
 
   const hosts = useRef(new Map<string, HTMLDivElement>());
   const viewers = useRef(new Map<string, EditorView>());
@@ -184,6 +229,51 @@ export function Ide({
   const store = useRef<PracticeStore | null>(null);
   // Each mount (twice in development) bumps this; a superseded open installs nothing.
   const generation = useRef(0);
+  const participant = useRef("");
+  /** Feedback checks run one at a time, in the order asked for. */
+  const reviewing = useRef<Promise<void>>(Promise.resolve());
+  const viewRef = useRef(view);
+  viewRef.current = view;
+
+  /**
+   * Releases whatever teammate feedback the revision's triggers say is due, from what is
+   * stored (so pending writes are flushed first), and shows it. `push` names a push whose
+   * checks just finished: only then are review comments checked.
+   */
+  function review(push?: { number: number; push: number }) {
+    reviewing.current = reviewing.current.then(async () => {
+      const current = session.current;
+      const opened = store.current;
+      if (!current || !opened) return;
+      try {
+        await current.recorder.flush();
+        let records = await opened.workspaceRecords();
+        const releases = due({
+          revision,
+          records,
+          issue: issue.slug,
+          participantId: participant.current,
+          revisionFor: (id) => revisions[id],
+          files: current.code(),
+          push,
+        });
+        if (releases.length) {
+          current.release(releases);
+          await current.recorder.flush();
+          records = await opened.workspaceRecords();
+          setMessage(announcement(releases));
+          if (
+            releases.some((r) => r.kind !== "resolved" && !("pullRequest" in r && r.pullRequest)) &&
+            viewRef.current !== "ticket"
+          )
+            setUnread(true);
+        }
+        if (session.current === current) setFeedback(feedbackOf(records, issue.slug));
+      } catch (cause) {
+        console.warn("Teammate feedback could not be checked.", cause);
+      }
+    });
+  }
 
   function startRuntime() {
     if (!issue.runnable || !engine) return;
@@ -209,49 +299,55 @@ export function Ide({
     );
   }
 
-  /** Opens the session on the solution file, restoring the latest saved code. */
+  /** Opens the session on the editable files, restoring the latest saved code. */
   async function open(current: () => boolean) {
     try {
-      const catalog = await currentCatalog();
-      const ref = {
-        kind: "challenge",
-        id: challenge.id,
-        version: challenge.version,
-      } as const;
-      if (findEntry(catalog, ref)?.state !== "published")
-        throw new Error("This issue is not available right now.");
       const account = readProfile();
       const keys: Keymap =
         account?.profile.editor === "vim" ? "vim" : "standard";
       setKeymap(keys);
       store.current ??= await openPracticeStore();
       const participantId = await store.current.participantId();
+      participant.current = participantId;
       const records = await store.current.workspaceRecords();
       const recovered: RecoveredCode | null = latestSavedCode(
         records,
         participantId,
-        contentArtifactId("challenge", challenge.id, challenge.version),
+        issue.slug,
       );
-      const history = pullRequestHistory(records, participantId, challenge.id);
-      const mergedNumbers = mergedPullRequests(records, challenge.id);
-      const host = hosts.current.get(repo.solution.path);
+      const history = pullRequestHistory(records, participantId, issue.slug);
+      const mergedNumbers = mergedPullRequests(records, issue.slug);
+      const homeHost = hosts.current.get(home);
       // A superseded open must not create a session or record anything.
-      if (!host || !current()) return;
+      if (!homeHost || !current()) return;
       if (recovered) setMessage(recoveryMessage(recovered));
       setPulls(history);
       setMerged(mergedNumbers);
+      setFeedback(feedbackOf(records, issue.slug));
       session.current = new WorkspaceSession({
         participantId,
         consentVersion: `terms-${account?.accepted?.version ?? "unknown"}`,
-        challenge,
+        issue: issue.slug,
+        issueRevision: issue.revision,
+        executable: challenge,
         sink: store.current,
-        initialCode: recovered?.text ?? challenge.starter,
+        files: Object.fromEntries(
+          editable.map((f) => [
+            f.path,
+            {
+              text: recovered?.files[f.path] ?? f.text,
+              language: f.language,
+              mediaType: mediaTypeOf(f.language as LanguageId),
+            },
+          ]),
+        ),
+        sources: Object.fromEntries(
+          repo.files.filter((f) => f.role === "read").map((f) => [f.path, f.text]),
+        ),
         restoredFrom: recovered?.revision,
         language: issue.language,
         keymap: keys,
         types: types.current ?? undefined,
-        mediaType: mediaTypeOf(issue.language),
-        filename: repo.solution.path,
         runtime: issue.runnable && engine ? engine.runtime : null,
         pullRequestsBefore: history[0]?.number ?? 0,
         openPullRequest: () => {
@@ -264,6 +360,9 @@ export function Ide({
           setRun(next);
           setStale(next.revision !== session.current?.currentRevision);
           const pr = next.pullRequest;
+          // Once a run or a push's checks finish, teammates may have something to say.
+          if (next.status !== "queued" && next.status !== "running")
+            review(pr ? { number: pr.number, push: pr.push } : undefined);
           if (!pr) return;
           // Opening shows the pull request at once; its checks fill in when they finish.
           setPulls((current) => [
@@ -274,7 +373,7 @@ export function Ide({
               revision: pr.revision,
               result: pr.result ?? "running",
               passed: pr.passed ?? 0,
-              total: pr.total ?? challenge.inputs.length,
+              total: pr.total ?? challenge.cases.length,
               at: pr.at,
             },
             ...current.filter((p) => p.number !== pr.number),
@@ -285,9 +384,22 @@ export function Ide({
         onEditedAfterRun: () => setStale(true),
         onSaveStatus: setCapture,
         onVimMode: setVimMode,
+        entry: entryPath(),
+        viewport: { width: window.innerWidth, height: window.innerHeight },
       });
-      session.current.mount(host);
+      // The home file mounts last, so it has the focus.
+      for (const file of editable)
+        if (file.path !== home)
+          session.current.mount(file.path, hosts.current.get(file.path)!);
+      session.current.mount(home, homeHost);
+      session.current.page({
+        visible: document.visibilityState === "visible",
+        focused: document.hasFocus(),
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
       setOpening({ state: "open" });
+      review();
     } catch (cause) {
       if (current())
         setOpening({
@@ -302,16 +414,24 @@ export function Ide({
     const attempt = ++generation.current;
     startRuntime();
     if (checksTypes(issue.language))
-      types.current = new TypeChecker(repo.solution.path);
+      types.current = new TypeChecker(challenge.entry);
     void open(() => attempt === generation.current);
     const timer = setInterval(() => {
       // Counts refresh each second; state changes arrive at once through onSaveStatus.
       setCapture(session.current?.saveStatus() ?? null);
-      setEdited((session.current?.currentRevision ?? 0) > 0);
+      const changed = session.current?.editedFiles() ?? [];
+      setEdited((before) =>
+        before.size === changed.length && changed.every((p) => before.has(p))
+          ? before
+          : new Set(changed),
+      );
     }, 1000);
+    // Hints wait for active minutes, which pass without any other event.
+    const feedbackTimer = setInterval(() => review(), 30_000);
     return () => {
       generation.current++;
       clearInterval(timer);
+      clearInterval(feedbackTimer);
       runner.current?.dispose();
       runner.current = null;
       types.current?.dispose();
@@ -325,10 +445,99 @@ export function Ide({
     };
   }, []);
 
+  /** The last input, so a navigation can say whether a person or the app made it. */
+  const input = useRef<{ kind: "pointer" | "keyboard"; at: number } | null>(null);
+  const via = (): "pointer" | "keyboard" | "app" =>
+    input.current && performance.now() - input.current.at < 1000 ? input.current.kind : "app";
+  /** Activity hooks that reach whichever session is open when the event happens. */
+  function forward(path: string): ActivityHooks {
+    const to = () => session.current?.activity(path);
+    return {
+      onKey: (...a) => to()?.onKey(...a),
+      onSelection: (...a) => to()?.onSelection(...a),
+      onScroll: (...a) => to()?.onScroll(...a),
+      onFocus: (...a) => to()?.onFocus(...a),
+      onClipboard: (...a) => to()?.onClipboard(...a),
+    };
+  }
+
+  useEffect(
+    () => setIssueContext({ id: issue.slug, revision: issue.revision }),
+    [issue.slug, issue.revision],
+  );
+
+  // The page: visible or hidden, focused or not, its size, and its last moments.
+  useEffect(() => {
+    const noteInput = (kind: "pointer" | "keyboard") => () =>
+      (input.current = { kind, at: performance.now() });
+    const pointer = noteInput("pointer");
+    const keyboard = noteInput("keyboard");
+    let resize: ReturnType<typeof setTimeout> | undefined;
+    const page = () =>
+      session.current?.page({
+        visible: document.visibilityState === "visible",
+        focused: document.hasFocus(),
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    const resized = () => {
+      clearTimeout(resize);
+      resize = setTimeout(page, 250);
+    };
+    const hidden = () => session.current?.pageHidden();
+    window.addEventListener("pointerdown", pointer, true);
+    window.addEventListener("keydown", keyboard, true);
+    document.addEventListener("visibilitychange", page);
+    window.addEventListener("focus", page);
+    window.addEventListener("blur", page);
+    window.addEventListener("resize", resized);
+    window.addEventListener("pagehide", hidden);
+    return () => {
+      clearTimeout(resize);
+      window.removeEventListener("pointerdown", pointer, true);
+      window.removeEventListener("keydown", keyboard, true);
+      document.removeEventListener("visibilitychange", page);
+      window.removeEventListener("focus", page);
+      window.removeEventListener("blur", page);
+      window.removeEventListener("resize", resized);
+      window.removeEventListener("pagehide", hidden);
+    };
+  }, []);
+
+  // What was open: tabs opened and closed, the file shown, the side bar and the panel.
+  const shownTabs = useRef<string[]>([]);
+  const isOpen = opening.state === "open";
+  useEffect(() => {
+    const current = session.current;
+    if (!isOpen || !current) return;
+    const before = shownTabs.current;
+    for (const path of tabs)
+      if (!before.includes(path)) current.navigated("file", "open", path, via());
+    for (const path of before)
+      if (!tabs.includes(path)) current.navigated("file", "close", path, via());
+    shownTabs.current = tabs;
+  }, [tabs, isOpen]);
+  useEffect(() => {
+    if (isOpen) session.current?.navigated("file", "show", active, via());
+  }, [active, isOpen]);
+  useEffect(() => {
+    if (isOpen) session.current?.navigated("side", "show", view, via());
+  }, [view, isOpen]);
+  useEffect(() => {
+    if (isOpen) session.current?.navigated("panel", "show", panel, via());
+  }, [panel, isOpen]);
+  useEffect(() => {
+    if (!isOpen || runtime.state === "none") return;
+    session.current?.runtimeState(
+      runtime.state,
+      runtime.state === "unavailable" ? runtime.message : undefined,
+    );
+  }, [runtime.state, isOpen]);
+
   // Read-only files get a viewer the first time they are shown.
   useEffect(() => {
     const file = repo.files.find((f) => f.path === active);
-    if (!file || file.role === "solution" || viewers.current.has(file.path))
+    if (!file || file.role === "edit" || viewers.current.has(file.path))
       return;
     const host = hosts.current.get(file.path);
     if (host)
@@ -337,6 +546,7 @@ export function Ide({
         createViewer(host, file.text, {
           language: file.language,
           label: `${file.path} (read-only)`,
+          activity: forward(file.path),
         }),
       );
   }, [active, tabs, repo]);
@@ -349,11 +559,10 @@ export function Ide({
   }
 
   function closeTab(path: string) {
-    if (path === repo.solution.path) return;
+    if (editable.some((f) => f.path === path)) return;
     setTabs((current) => {
       const next = current.filter((p) => p !== path);
-      if (active === path)
-        setActive(next[next.length - 1] ?? repo.solution.path);
+      if (active === path) setActive(next[next.length - 1] ?? home);
       return next;
     });
   }
@@ -389,7 +598,7 @@ export function Ide({
         </span>
         <span className="ide-actions">
           <StatusMenu
-            issue={{ key: issue.key, slug: issue.slug, version: issue.version }}
+            issue={{ key: issue.key, slug: issue.slug, revision: issue.revision }}
           />
           {issue.runnable ? (
             running ? (
@@ -406,7 +615,9 @@ export function Ide({
                   type="button"
                   className="ide-run secondary"
                   disabled={!ready}
-                  onClick={() => void session.current?.run()}
+                  onClick={(event) =>
+                    void session.current?.run("local", event.detail === 0 ? "keyboard" : "pointer")
+                  }
                   title="Run the tests on your code (Ctrl/⌘-Enter). Nothing else happens."
                 >
                   ▶ Run tests <kbd>⌘⏎</kbd>
@@ -415,7 +626,9 @@ export function Ide({
                   type="button"
                   className="ide-run"
                   disabled={!ready}
-                  onClick={() => void session.current?.pullRequest()}
+                  onClick={(event) =>
+                    void session.current?.pullRequest(event.detail === 0 ? "keyboard" : "pointer")
+                  }
                   title={
                     openPull
                       ? `Push this code to pull request #${openPull.number}: CI checks it again (Ctrl/⌘-Shift-Enter)`
@@ -445,9 +658,13 @@ export function Ide({
 
       <nav className="ide-activity" aria-label="Views">
         <ActivityButton
-          label="Ticket"
+          label={unread ? "Ticket (new comments)" : "Ticket"}
           active={view === "ticket"}
-          onClick={() => setView("ticket")}
+          dot={unread}
+          onClick={() => {
+            setView("ticket");
+            setUnread(false);
+          }}
         >
           <TicketIcon />
         </ActivityButton>
@@ -472,8 +689,9 @@ export function Ide({
         ) : (
           <Ticket
             issue={issue}
-            cases={challenge.inputs.length}
+            cases={casesRun(challenge.cases, "local").length}
             testsPath={testsFile.path}
+            thread={thread}
             onOpenTests={() => openFile(testsFile.path)}
           />
         )}
@@ -512,8 +730,8 @@ export function Ide({
               >
                 <LanguageDot language={file.language} />
                 {path.split("/").pop()}
-                {file.role === "solution" ? (
-                  edited && <span className="ide-dot" title="Modified" />
+                {file.role === "edit" ? (
+                  edited.has(path) && <span className="ide-dot" title="Modified" />
                 ) : (
                   <button
                     type="button"
@@ -533,7 +751,7 @@ export function Ide({
         </div>
         <div className="ide-crumbs faint">
           {repo.root} › {active.split("/").join(" › ")}
-          {active !== repo.solution.path && (
+          {!editable.some((f) => f.path === active) && (
             <span className="ide-ro">read-only</span>
           )}
         </div>
@@ -601,6 +819,7 @@ export function Ide({
               <PullRequests
                 pulls={pulls}
                 merged={merged}
+                blocking={blocking}
                 issue={issue}
                 done={done}
                 runnable={issue.runnable}
@@ -692,11 +911,14 @@ function runtimeLabel(runtime: Runtime): string {
 function ActivityButton({
   label,
   active,
+  dot,
   onClick,
   children,
 }: {
   label: string;
   active: boolean;
+  /** Something new to look at. */
+  dot?: boolean;
   onClick(): void;
   children: ReactNode;
 }) {
@@ -710,6 +932,7 @@ function ActivityButton({
       onClick={onClick}
     >
       {children}
+      {dot && <span className="ide-activity-dot" aria-hidden />}
     </button>
   );
 }
@@ -724,7 +947,7 @@ function Explorer({
   root: string;
   files: RepoFile[];
   active: string;
-  edited: boolean;
+  edited: ReadonlySet<string>;
   onOpen(path: string): void;
 }) {
   const byPath = new Map(files.map((f) => [f.path, f]));
@@ -748,7 +971,7 @@ function Explorer({
           >
             <LanguageDot language={byPath.get(node.path)!.language} />
             {node.name}
-            {byPath.get(node.path)!.role === "solution" && edited && (
+            {edited.has(node.path) && (
               <span className="ide-git" title="Modified">
                 M
               </span>
@@ -770,13 +993,17 @@ function Ticket({
   issue,
   cases,
   testsPath,
+  thread,
   onOpenTests,
 }: {
   issue: IdeIssue;
   cases: number;
   testsPath: string;
+  /** The ticket's comments, then teammates' later ones, with when they were posted. */
+  thread: (IssueComment & { at?: string })[];
   onOpenTests(): void;
 }) {
+  const now = new Date();
   return (
     <div className="ide-ticket">
       <h2>Ticket</h2>
@@ -789,12 +1016,18 @@ function Ticket({
           {testsPath}
         </button>
       </p>
-      {issue.comments.length > 0 && (
+      {thread.length > 0 && (
         <div className="ide-comments">
-          {issue.comments.map((comment, i) => (
+          {thread.map((comment, i) => (
             <div className="ide-comment" key={i}>
               <b>{comment.author}</b>
               {comment.role && <span className="faint"> · {comment.role}</span>}
+              {comment.at && (
+                <time className="faint" dateTime={comment.at}>
+                  {" "}
+                  · {timeAgo(comment.at, now)}
+                </time>
+              )}
               <Markdown source={comment.body} />
             </div>
           ))}
@@ -821,12 +1054,14 @@ function Tests({
   runtime: Runtime;
   onRetry(): void;
 }) {
+  /** The cases in the repo's test file, which Run tests runs. */
+  const visible = casesRun(challenge.cases, "local").length;
   if (!issue.runnable)
     return (
       <p className="faint">
         Running {languageLabel(issue.language)} in the browser isn&apos;t
         available yet. Your edits are saved as you go; the{" "}
-        {challenge.inputs.length} cases are in {testsPath}.
+        {visible} cases are in {testsPath}.
       </p>
     );
   if (runtime.state === "unavailable")
@@ -841,8 +1076,10 @@ function Tests({
   if (!run)
     return (
       <p className="faint">
-        Run the tests (<kbd>⌘⏎</kbd>) to check your code against{" "}
-        {challenge.inputs.length} cases.
+        Run the tests (<kbd>⌘⏎</kbd>) to check your code against the {visible}{" "}
+        cases in {testsPath}.
+        {visible < challenge.cases.length &&
+          " CI runs more on a pull request."}
       </p>
     );
   const o = run.outcome;
@@ -867,7 +1104,8 @@ function Tests({
         {o.error.traceback.text || `${o.error.type}: ${o.error.message}`}
       </pre>
     );
-  const feedback = runFeedback(challenge, o.cases);
+  const cases = casesRun(challenge.cases, run.purpose);
+  const feedback = runFeedback(cases, o.cases);
   const failed = feedback.total - feedback.correct;
   return (
     <div>
@@ -888,12 +1126,14 @@ function Tests({
         )}
       </p>
       <ol className="ide-cases">
-        {challenge.inputs.map((input, index) => (
+        {cases.map((check, index) => (
           <Case
             key={index}
             index={index}
-            label={caseLabel(challenge, input)}
-            expected={challenge.expected[index]}
+            // CI's hidden cases keep their input and output to themselves.
+            label={check.visible ? caseLabel(challenge, check.input) : `hidden case ${check.id}`}
+            expected={check.expected}
+            hidden={!check.visible}
             passed={feedback.passed[index]}
             result={o.cases[index]}
           />
@@ -907,12 +1147,14 @@ function Case({
   index,
   label,
   expected,
+  hidden,
   passed,
   result,
 }: {
   index: number;
   label: string;
   expected: unknown;
+  hidden?: boolean;
   passed: boolean;
   result?: CaseResult;
 }) {
@@ -921,7 +1163,7 @@ function Case({
       <span className="ide-case-mark">{passed ? "✔" : "✘"}</span>
       <span className="ide-case-body">
         <code>{label}</code>
-        {!passed && (
+        {!passed && !hidden && (
           <span className="ide-case-detail">
             <span>
               expected <code>{JSON.stringify(expected)}</code>
@@ -964,12 +1206,15 @@ const MERGED = { mark: "⇢", label: "Merged", tone: "merged" };
 function PullRequests({
   pulls,
   merged,
+  blocking,
   issue,
   done,
   runnable,
 }: {
   pulls: PullRequestRecord[];
   merged: ReadonlySet<number>;
+  /** Open blocking review threads by pull request number. */
+  blocking: ReadonlyMap<number, number>;
   issue: IdeIssue;
   done: boolean;
   runnable: boolean;
@@ -985,7 +1230,15 @@ function PullRequests({
         !done &&
         !isMerged(latest) &&
         latest.result !== "running" &&
-        (latest.result === "checks-passed" ? (
+        (latest.result === "checks-passed" && blocking.get(latest.number) ? (
+          <p className="ide-review">
+            Pull request #{latest.number}&apos;s checks pass, but{" "}
+            {comments(blocking.get(latest.number)!)} in its review{" "}
+            {blocking.get(latest.number) === 1 ? "blocks" : "block"} merging.
+            Change the code and push (<kbd>⌘⇧⏎</kbd>), or{" "}
+            <Link href={pullHref(issue.key, latest.number)}>reply on #{latest.number}</Link>.
+          </p>
+        ) : latest.result === "checks-passed" ? (
           <p className="ide-review">
             Pull request #{latest.number} is open and its checks pass.{" "}
             <Link href={pullHref(issue.key, latest.number)}>
@@ -1046,6 +1299,12 @@ function PullRequests({
                     ? `${pr.total} checks`
                     : `${pr.passed}/${pr.total} checks`}
                   {pr.pushes > 1 && ` · ${pr.pushes} pushes`}
+                  {!isMerged(pr) && blocking.get(pr.number) && (
+                    <span className="ide-pr-blocking">
+                      {" · "}
+                      {comments(blocking.get(pr.number)!)}
+                    </span>
+                  )}
                 </span>
                 <time className="faint" dateTime={pr.at}>
                   {timeAgo(pr.at, now)}
@@ -1057,6 +1316,43 @@ function PullRequests({
       )}
     </div>
   );
+}
+
+/** The app page the IDE was opened from, if it was one of ours. */
+function entryPath(): string | null {
+  // Client navigation leaves document.referrer at the first page loaded; the tracker notes
+  // the page before this one.
+  try {
+    const previous = sessionStorage.getItem(PREVIOUS_PATH_KEY);
+    if (previous && !previous.startsWith("/work/")) return previous;
+  } catch {
+    // Fall back to the referrer.
+  }
+  try {
+    const from = new URL(document.referrer);
+    return from.origin === location.origin ? from.pathname + from.search : null;
+  } catch {
+    return null;
+  }
+}
+
+function comments(count: number): string {
+  return `${count} blocking comment${count === 1 ? "" : "s"}`;
+}
+
+/** One line in the panel saying what teammates just did. */
+function announcement(releases: readonly Release[]): string {
+  return releases
+    .map((r) => {
+      if (r.kind === "hint") return `${r.hint.author.name} commented on the ticket.`;
+      if (r.kind === "resolved") return `Review comment on #${r.pullRequest} resolved by your push.`;
+      const who = r.comment.author.name;
+      if (!r.pullRequest) return `${who} commented on the ticket.`;
+      return r.comment.severity === "blocking"
+        ? `${who} requested changes on #${r.pullRequest}.`
+        : `${who} commented on #${r.pullRequest}.`;
+    })
+    .join(" ");
 }
 
 /** The run as a terminal shows it: printed output, errors with traces, cases, summary. */

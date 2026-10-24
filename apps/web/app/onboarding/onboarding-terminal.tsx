@@ -10,6 +10,8 @@ import {
 import { acceptsCurrent, type Acceptance } from "../../lib/legal";
 import { languageLabel } from "../../lib/library";
 import type { Profile } from "../../lib/onboarding";
+import type { Json } from "../../../../packages/domain/json";
+import { logProfile } from "../(browse)/_components/board-log";
 import type { Answer } from "../_terminal/prompts";
 import { RUNNABLE_LANGUAGES } from "../../../../packages/runner/engines";
 import { QUESTIONS, toProfile } from "../_terminal/questions";
@@ -91,6 +93,7 @@ async function setup(t: TerminalApi, accepted?: Acceptance) {
   }
   const profile: Profile = toProfile(answers);
   const { handle } = saveProfile(profile, accepted);
+  void logProfile({ from: "onboarding", answers: { ...profile } as Json });
   const { languages = [], editor } = profile;
   t.print(
     "",
@@ -144,8 +147,10 @@ async function paperwork(t: TerminalApi, updated = false): Promise<Acceptance> {
       </span>
     ),
     <span>
-      <span className="t-dim">→</span> We record what you do here: status
-      changes, attempts, test runs, timings. That&apos;s the product: it picks
+      <span className="t-dim">→</span> We record what you do here, keystroke by
+      keystroke: every key you press in the editor and when, your edits and
+      pastes, the pages and files you open, test runs and their output, and
+      when you switch away (never to what). That&apos;s the product: it picks
       your next issues and shows how you compare with other people and LLMs.
     </span>,
     <span>

@@ -1,5 +1,5 @@
 /** Small inline icons in the style of developer trackers. 16px, currentColor unless noted. */
-import type { IssueKind } from "../../../../../packages/domain/assessment";
+import type { IssueKind } from "../../../../../packages/content/model";
 import { STATUS_LABELS, type Status } from "../../../lib/board";
 
 type Props = { size?: number; className?: string };

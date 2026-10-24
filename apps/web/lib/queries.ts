@@ -7,7 +7,7 @@
 import type {
   Difficulty,
   IssueKind,
-} from "../../../packages/domain/assessment";
+} from "../../../packages/content/model";
 import { STATUS_LABELS, type Status } from "./board";
 import { LANGUAGES, type LanguageId } from "./languages";
 import {
