@@ -1,0 +1,1067 @@
+{
+  "schemaVersion": "1.0.0",
+  "entries": {
+    "challenge:rate-limiter@1.0.0": {
+      "kind": "challenge",
+      "id": "rate-limiter",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Sam R",
+            "body": "We got hammered by a retry storm last night. Keep it simple, a sliding window is fine.",
+            "role": "SRE"
+          }
+        ],
+        "difficulty": "medium",
+        "expected": [
+          [
+            true,
+            true,
+            true,
+            false
+          ],
+          [],
+          [
+            true,
+            true,
+            true
+          ]
+        ],
+        "hints": [
+          "Keep only the timestamps still inside the window."
+        ],
+        "id": "rate-limiter",
+        "inputs": [
+          [
+            [
+              0,
+              1,
+              2,
+              3
+            ],
+            3,
+            10
+          ],
+          [
+            [],
+            1,
+            10
+          ],
+          [
+            [
+              0,
+              10,
+              20
+            ],
+            1,
+            10
+          ]
+        ],
+        "kind": "feature",
+        "language": "typescript",
+        "skills": [
+          "sliding-window",
+          "queues"
+        ],
+        "summary": "Allow at most n requests in any sliding window.",
+        "task": "Write allow(times, limit, windowMs): for each request time, return whether it is allowed when at most `limit` requests may fall inside any window of `windowMs`.",
+        "title": "Rate-limit the checkout endpoint",
+        "version": "1.0.0"
+      },
+      "digest": "8e765c0c7d4dc74bef9bbde1783786b2aa152c6631373d0d0fff498cb29c6967",
+      "state": "published",
+      "testResult": {
+        "digest": "8e765c0c7d4dc74bef9bbde1783786b2aa152c6631373d0d0fff498cb29c6967",
+        "fixtures": 3,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "8e765c0c7d4dc74bef9bbde1783786b2aa152c6631373d0d0fff498cb29c6967",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "8e765c0c7d4dc74bef9bbde1783786b2aa152c6631373d0d0fff498cb29c6967",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "8e765c0c7d4dc74bef9bbde1783786b2aa152c6631373d0d0fff498cb29c6967",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "8e765c0c7d4dc74bef9bbde1783786b2aa152c6631373d0d0fff498cb29c6967",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:parse-log-line@1.0.0": {
+      "kind": "challenge",
+      "id": "parse-log-line",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Sam R",
+            "body": "Alerting is blind to the 502s because duration and status come back empty.",
+            "role": "SRE"
+          },
+          {
+            "author": "Priya K",
+            "body": "Durations are always whole milliseconds, suffixed with ms.",
+            "role": "Data"
+          }
+        ],
+        "difficulty": "easy",
+        "expected": [
+          {
+            "method": "GET",
+            "ms": 12,
+            "path": "/cart",
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "ms": 1300,
+            "path": "/pay",
+            "status": 502
+          }
+        ],
+        "hints": [],
+        "id": "parse-log-line",
+        "inputs": [
+          "GET /cart 200 12ms",
+          "POST /pay 502 1300ms"
+        ],
+        "kind": "bug",
+        "language": "go",
+        "skills": [
+          "parsing",
+          "strings"
+        ],
+        "summary": "Turn an access log line into a structured record.",
+        "task": "Write ParseLine(line) for lines like \"GET /cart 200 12ms\", returning method, path, status and duration in milliseconds.",
+        "title": "Log parser drops fields on 5xx lines",
+        "version": "1.0.0"
+      },
+      "digest": "394668c0b9b675b8bcea4c16dd35a59c002fdeae1790b081d1d44cc40d7e60d2",
+      "state": "published",
+      "testResult": {
+        "digest": "394668c0b9b675b8bcea4c16dd35a59c002fdeae1790b081d1d44cc40d7e60d2",
+        "fixtures": 2,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "394668c0b9b675b8bcea4c16dd35a59c002fdeae1790b081d1d44cc40d7e60d2",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "394668c0b9b675b8bcea4c16dd35a59c002fdeae1790b081d1d44cc40d7e60d2",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "394668c0b9b675b8bcea4c16dd35a59c002fdeae1790b081d1d44cc40d7e60d2",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "394668c0b9b675b8bcea4c16dd35a59c002fdeae1790b081d1d44cc40d7e60d2",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:top-customers@1.0.0": {
+      "kind": "challenge",
+      "id": "top-customers",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Lena M",
+            "body": "Just the totals per customer, biggest first. No need for a chart.",
+            "role": "Product"
+          }
+        ],
+        "difficulty": "easy",
+        "expected": [
+          [
+            [
+              "ana",
+              35
+            ],
+            [
+              "bo",
+              10
+            ]
+          ]
+        ],
+        "hints": [],
+        "id": "top-customers",
+        "inputs": [
+          {
+            "orders": [
+              [
+                1,
+                "ana",
+                30
+              ],
+              [
+                2,
+                "bo",
+                10
+              ],
+              [
+                3,
+                "ana",
+                5
+              ]
+            ]
+          }
+        ],
+        "kind": "feature",
+        "language": "sql",
+        "skills": [
+          "aggregation",
+          "sorting"
+        ],
+        "summary": "Rank customers by what they spent tonight.",
+        "task": "Given orders(id, customer, total), select each customer and the sum of their totals, highest first.",
+        "title": "Top customers report for stand-up",
+        "version": "1.0.0"
+      },
+      "digest": "003ab41db68924766d57b035d28219e33b69629e64faa870c04f3216b1c2ee62",
+      "state": "published",
+      "testResult": {
+        "digest": "003ab41db68924766d57b035d28219e33b69629e64faa870c04f3216b1c2ee62",
+        "fixtures": 1,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "003ab41db68924766d57b035d28219e33b69629e64faa870c04f3216b1c2ee62",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "003ab41db68924766d57b035d28219e33b69629e64faa870c04f3216b1c2ee62",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "003ab41db68924766d57b035d28219e33b69629e64faa870c04f3216b1c2ee62",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "003ab41db68924766d57b035d28219e33b69629e64faa870c04f3216b1c2ee62",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:ring-buffer@1.0.0": {
+      "kind": "challenge",
+      "id": "ring-buffer",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "difficulty": "medium",
+        "expected": [
+          [
+            2,
+            3,
+            4
+          ],
+          []
+        ],
+        "hints": [],
+        "id": "ring-buffer",
+        "inputs": [
+          [
+            3,
+            [
+              1,
+              2,
+              3,
+              4
+            ]
+          ],
+          [
+            2,
+            []
+          ]
+        ],
+        "kind": "feature",
+        "language": "c",
+        "skills": [
+          "arrays",
+          "modular-arithmetic"
+        ],
+        "summary": "A fixed-size log that overwrites its oldest entry.",
+        "task": "Implement a ring buffer of capacity n. Given a sequence of pushes, return the contents oldest first.",
+        "title": "Keep only the latest lamp readings",
+        "version": "1.0.0"
+      },
+      "digest": "ad2275dade967e75728b68abf843b152f5e7a35519a55950329282f4fc0697ee",
+      "state": "published",
+      "testResult": {
+        "digest": "ad2275dade967e75728b68abf843b152f5e7a35519a55950329282f4fc0697ee",
+        "fixtures": 2,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "ad2275dade967e75728b68abf843b152f5e7a35519a55950329282f4fc0697ee",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "ad2275dade967e75728b68abf843b152f5e7a35519a55950329282f4fc0697ee",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "ad2275dade967e75728b68abf843b152f5e7a35519a55950329282f4fc0697ee",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "ad2275dade967e75728b68abf843b152f5e7a35519a55950329282f4fc0697ee",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:morse-decoder@1.0.0": {
+      "kind": "challenge",
+      "id": "morse-decoder",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Mateo O",
+            "body": "Three spaces between words, one between letters. The old code treated both the same.",
+            "role": "Backend"
+          }
+        ],
+        "difficulty": "easy",
+        "expected": [
+          "SOS",
+          "HI THERE"
+        ],
+        "hints": [],
+        "id": "morse-decoder",
+        "inputs": [
+          "... --- ...",
+          ".... ..   - .... . .-. ."
+        ],
+        "kind": "bug",
+        "language": "rust",
+        "skills": [
+          "maps",
+          "strings"
+        ],
+        "summary": "Read the keeper's signal lamp.",
+        "task": "Write decode(signal): letters are separated by one space and words by three. Return the uppercase text.",
+        "title": "Morse decoder merges separate words",
+        "version": "1.0.0"
+      },
+      "digest": "8acd5d62bb084ee31361ce48f765759e878751db1658624bf3069f04fb3df328",
+      "state": "published",
+      "testResult": {
+        "digest": "8acd5d62bb084ee31361ce48f765759e878751db1658624bf3069f04fb3df328",
+        "fixtures": 2,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "8acd5d62bb084ee31361ce48f765759e878751db1658624bf3069f04fb3df328",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "8acd5d62bb084ee31361ce48f765759e878751db1658624bf3069f04fb3df328",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "8acd5d62bb084ee31361ce48f765759e878751db1658624bf3069f04fb3df328",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "8acd5d62bb084ee31361ce48f765759e878751db1658624bf3069f04fb3df328",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:word-wrap@1.0.0": {
+      "kind": "challenge",
+      "id": "word-wrap",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "difficulty": "easy",
+        "expected": [
+          [
+            "the",
+            "light",
+            "is on"
+          ],
+          []
+        ],
+        "hints": [],
+        "id": "word-wrap",
+        "inputs": [
+          [
+            "the light is on",
+            7
+          ],
+          [
+            "",
+            5
+          ]
+        ],
+        "kind": "bug",
+        "language": "python",
+        "skills": [
+          "strings",
+          "greedy"
+        ],
+        "summary": "Fit the logbook onto a narrow page.",
+        "task": "Write wrap(text, width): break text into lines of at most width characters without splitting words.",
+        "title": "Logbook lines overflow the printer",
+        "version": "1.0.0"
+      },
+      "digest": "cb4c026c97233a3c45180899da9adfdc74bec32b54b182c5cbd49c4b4421b2c5",
+      "state": "published",
+      "testResult": {
+        "digest": "cb4c026c97233a3c45180899da9adfdc74bec32b54b182c5cbd49c4b4421b2c5",
+        "fixtures": 2,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "cb4c026c97233a3c45180899da9adfdc74bec32b54b182c5cbd49c4b4421b2c5",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "cb4c026c97233a3c45180899da9adfdc74bec32b54b182c5cbd49c4b4421b2c5",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "cb4c026c97233a3c45180899da9adfdc74bec32b54b182c5cbd49c4b4421b2c5",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "cb4c026c97233a3c45180899da9adfdc74bec32b54b182c5cbd49c4b4421b2c5",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:plant-schedule@1.0.0": {
+      "kind": "challenge",
+      "id": "plant-schedule",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Lena M",
+            "body": "Day 0 counts. Basil on a 2-day cycle gets watered on day 0, 2 and 4.",
+            "role": "Product"
+          }
+        ],
+        "difficulty": "warm-up",
+        "expected": [
+          {
+            "basil": [
+              0,
+              2,
+              4
+            ]
+          }
+        ],
+        "hints": [],
+        "id": "plant-schedule",
+        "inputs": [
+          [
+            [
+              {
+                "every": 2,
+                "name": "basil"
+              }
+            ],
+            5
+          ]
+        ],
+        "kind": "feature",
+        "language": "php",
+        "skills": [
+          "iteration",
+          "dates"
+        ],
+        "summary": "List the days each plant needs water.",
+        "task": "Write schedule(plants, days): each plant waters every `every` days starting on day 0. Return the watering days per plant within `days`.",
+        "title": "Watering schedule for the co-op",
+        "version": "1.0.0"
+      },
+      "digest": "de52b6374178f44c9f06fc8604a706898a4e599f101aab444e0744c7fb9745d5",
+      "state": "published",
+      "testResult": {
+        "digest": "de52b6374178f44c9f06fc8604a706898a4e599f101aab444e0744c7fb9745d5",
+        "fixtures": 1,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "de52b6374178f44c9f06fc8604a706898a4e599f101aab444e0744c7fb9745d5",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "de52b6374178f44c9f06fc8604a706898a4e599f101aab444e0744c7fb9745d5",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "de52b6374178f44c9f06fc8604a706898a4e599f101aab444e0744c7fb9745d5",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "de52b6374178f44c9f06fc8604a706898a4e599f101aab444e0744c7fb9745d5",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:garden-grid@1.0.0": {
+      "kind": "challenge",
+      "id": "garden-grid",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Sam R",
+            "body": "The current version tries every route. A breadth-first search should be plenty.",
+            "role": "SRE"
+          }
+        ],
+        "difficulty": "medium",
+        "expected": [
+          4,
+          -1
+        ],
+        "hints": [],
+        "id": "garden-grid",
+        "inputs": [
+          [
+            [
+              "..#",
+              "...",
+              "#.."
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              2,
+              2
+            ]
+          ],
+          [
+            [
+              ".#",
+              "#."
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "kind": "performance",
+        "language": "javascript",
+        "skills": [
+          "grids",
+          "breadth-first-search"
+        ],
+        "summary": "Find the shortest path between two beds.",
+        "task": "Write shortestPath(grid, from, to) over a grid of '.' paths and '#' beds. Return the number of steps, or -1.",
+        "title": "Path finder times out on big gardens",
+        "version": "1.0.0"
+      },
+      "digest": "7e119acd9cfaac2b6556555773ed30e82b8462aee8c86985e66f77e4181b43de",
+      "state": "published",
+      "testResult": {
+        "digest": "7e119acd9cfaac2b6556555773ed30e82b8462aee8c86985e66f77e4181b43de",
+        "fixtures": 2,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "7e119acd9cfaac2b6556555773ed30e82b8462aee8c86985e66f77e4181b43de",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "7e119acd9cfaac2b6556555773ed30e82b8462aee8c86985e66f77e4181b43de",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "7e119acd9cfaac2b6556555773ed30e82b8462aee8c86985e66f77e4181b43de",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "7e119acd9cfaac2b6556555773ed30e82b8462aee8c86985e66f77e4181b43de",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:harvest-totals@1.0.0": {
+      "kind": "challenge",
+      "id": "harvest-totals",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "difficulty": "hard",
+        "expected": [
+          7,
+          0
+        ],
+        "hints": [],
+        "id": "harvest-totals",
+        "inputs": [
+          [
+            [
+              [
+                2,
+                3
+              ],
+              [
+                3,
+                4
+              ],
+              [
+                4,
+                5
+              ]
+            ],
+            5
+          ],
+          [
+            [],
+            3
+          ]
+        ],
+        "kind": "feature",
+        "language": "cpp",
+        "skills": [
+          "dynamic-programming"
+        ],
+        "summary": "Choose crops to fill the rooftop for the biggest yield.",
+        "task": "Write bestYield(crops, area): each crop has an area and a yield and can be planted once. Return the largest total yield within the area.",
+        "title": "Pick crops for the biggest harvest",
+        "version": "1.0.0"
+      },
+      "digest": "477eb75c1c03086d8d8fc876b07c5e7f55fc6d71ee3aa6d85e9c14d57ca22c28",
+      "state": "published",
+      "testResult": {
+        "digest": "477eb75c1c03086d8d8fc876b07c5e7f55fc6d71ee3aa6d85e9c14d57ca22c28",
+        "fixtures": 2,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "477eb75c1c03086d8d8fc876b07c5e7f55fc6d71ee3aa6d85e9c14d57ca22c28",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "477eb75c1c03086d8d8fc876b07c5e7f55fc6d71ee3aa6d85e9c14d57ca22c28",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "477eb75c1c03086d8d8fc876b07c5e7f55fc6d71ee3aa6d85e9c14d57ca22c28",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "477eb75c1c03086d8d8fc876b07c5e7f55fc6d71ee3aa6d85e9c14d57ca22c28",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "challenge:seed-labels@1.0.0": {
+      "kind": "challenge",
+      "id": "seed-labels",
+      "version": "1.0.0",
+      "content": {
+        "assessment_version": "1.0.0",
+        "comments": [
+          {
+            "author": "Ada N",
+            "body": "Screen readers announce it as one long string right now. A plain list is all we need.",
+            "role": "Frontend"
+          }
+        ],
+        "difficulty": "warm-up",
+        "expected": [
+          "<ul><li>basil</li><li>mint</li></ul>"
+        ],
+        "hints": [],
+        "id": "seed-labels",
+        "inputs": [
+          [
+            "basil",
+            "mint"
+          ]
+        ],
+        "kind": "refactor",
+        "language": "html",
+        "skills": [
+          "semantics",
+          "accessibility"
+        ],
+        "summary": "Mark up the seed list so every reader can use it.",
+        "task": "Render the seed names as an unordered list with one item per seed.",
+        "title": "Clean up the seed list markup",
+        "version": "1.0.0"
+      },
+      "digest": "fdf71bb55d1770717dbab9c43d908e87489b4cb30a5e5dbd41902b52931adce0",
+      "state": "published",
+      "testResult": {
+        "digest": "fdf71bb55d1770717dbab9c43d908e87489b4cb30a5e5dbd41902b52931adce0",
+        "fixtures": 1,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "fdf71bb55d1770717dbab9c43d908e87489b4cb30a5e5dbd41902b52931adce0",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "fdf71bb55d1770717dbab9c43d908e87489b4cb30a5e5dbd41902b52931adce0",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "fdf71bb55d1770717dbab9c43d908e87489b4cb30a5e5dbd41902b52931adce0",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "fdf71bb55d1770717dbab9c43d908e87489b4cb30a5e5dbd41902b52931adce0",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "adventure:night-shift@1.0.0": {
+      "kind": "adventure",
+      "id": "night-shift",
+      "version": "1.0.0",
+      "content": {
+        "challenges": [
+          [
+            "rate-limiter",
+            "1.0.0"
+          ],
+          [
+            "parse-log-line",
+            "1.0.0"
+          ],
+          [
+            "top-customers",
+            "1.0.0"
+          ]
+        ],
+        "id": "night-shift",
+        "presentation": "demo-text-v1",
+        "story": "The on-call phone buzzes at 02:14. Traffic is spiking, logs are scrolling and the shop must stay up until morning.",
+        "summary": "Keep a small web shop running through a long night.",
+        "title": "Night shift",
+        "version": "1.0.0"
+      },
+      "digest": "b3615afc1d648cbc6ba9e6dc727e7ba001756b6cf43182c98129b17fe3015428",
+      "state": "published",
+      "testResult": {
+        "digest": "b3615afc1d648cbc6ba9e6dc727e7ba001756b6cf43182c98129b17fe3015428",
+        "fixtures": 6,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "b3615afc1d648cbc6ba9e6dc727e7ba001756b6cf43182c98129b17fe3015428",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "b3615afc1d648cbc6ba9e6dc727e7ba001756b6cf43182c98129b17fe3015428",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "b3615afc1d648cbc6ba9e6dc727e7ba001756b6cf43182c98129b17fe3015428",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "b3615afc1d648cbc6ba9e6dc727e7ba001756b6cf43182c98129b17fe3015428",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "adventure:lighthouse@1.0.0": {
+      "kind": "adventure",
+      "id": "lighthouse",
+      "version": "1.0.0",
+      "content": {
+        "challenges": [
+          [
+            "morse-decoder",
+            "1.0.0"
+          ],
+          [
+            "ring-buffer",
+            "1.0.0"
+          ],
+          [
+            "word-wrap",
+            "1.0.0"
+          ]
+        ],
+        "id": "lighthouse",
+        "presentation": "demo-text-v1",
+        "story": "The keeper has left, but the lamp still blinks and the logbook is full. Piece together the last week on the rock.",
+        "summary": "Signals, logs and a keeper who writes everything down.",
+        "title": "The lighthouse",
+        "version": "1.0.0"
+      },
+      "digest": "88b12b1797053a3b37c10203c9424f49fad53672f8fdde1e3b65400c6fc0c62f",
+      "state": "published",
+      "testResult": {
+        "digest": "88b12b1797053a3b37c10203c9424f49fad53672f8fdde1e3b65400c6fc0c62f",
+        "fixtures": 6,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "88b12b1797053a3b37c10203c9424f49fad53672f8fdde1e3b65400c6fc0c62f",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "88b12b1797053a3b37c10203c9424f49fad53672f8fdde1e3b65400c6fc0c62f",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "88b12b1797053a3b37c10203c9424f49fad53672f8fdde1e3b65400c6fc0c62f",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "88b12b1797053a3b37c10203c9424f49fad53672f8fdde1e3b65400c6fc0c62f",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    },
+    "adventure:rooftop-garden@1.0.0": {
+      "kind": "adventure",
+      "id": "rooftop-garden",
+      "version": "1.0.0",
+      "content": {
+        "challenges": [
+          [
+            "seed-labels",
+            "1.0.0"
+          ],
+          [
+            "plant-schedule",
+            "1.0.0"
+          ],
+          [
+            "garden-grid",
+            "1.0.0"
+          ],
+          [
+            "harvest-totals",
+            "1.0.0"
+          ]
+        ],
+        "id": "rooftop-garden",
+        "presentation": "demo-text-v1",
+        "story": "A co-op is turning an empty roof into a garden. They have seeds, a sketch of the beds and a lot of enthusiasm.",
+        "summary": "Plan, water and harvest a garden above the city.",
+        "title": "Rooftop garden",
+        "version": "1.0.0"
+      },
+      "digest": "8773962da3023cc0fdddbc63f3144d1aa4077d9c851846cfbe4b468246e7c1c4",
+      "state": "published",
+      "testResult": {
+        "digest": "8773962da3023cc0fdddbc63f3144d1aa4077d9c851846cfbe4b468246e7c1c4",
+        "fixtures": 6,
+        "at": "2026-10-24T00:00:00.000Z"
+      },
+      "history": [
+        {
+          "action": "drafted",
+          "from": null,
+          "to": "draft",
+          "digest": "8773962da3023cc0fdddbc63f3144d1aa4077d9c851846cfbe4b468246e7c1c4",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "previewed",
+          "from": "draft",
+          "to": "preview",
+          "digest": "8773962da3023cc0fdddbc63f3144d1aa4077d9c851846cfbe4b468246e7c1c4",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "tested",
+          "from": "preview",
+          "to": "tested",
+          "digest": "8773962da3023cc0fdddbc63f3144d1aa4077d9c851846cfbe4b468246e7c1c4",
+          "at": "2026-10-24T00:00:00.000Z"
+        },
+        {
+          "action": "published",
+          "from": "tested",
+          "to": "published",
+          "digest": "8773962da3023cc0fdddbc63f3144d1aa4077d9c851846cfbe4b468246e7c1c4",
+          "at": "2026-10-24T00:00:00.000Z"
+        }
+      ]
+    }
+  }
+}
