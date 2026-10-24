@@ -88,9 +88,9 @@ Feedback is derived from the stored run outcome when shown. It is not stored, an
 - **Buffer.** It holds up to 1,000 records or 4 MiB. Failed writes keep the records and retry with backoff under the same IDs, so partial writes deduplicate. A changed payload under an existing ID is a conflict and is never overwritten.
 - **Overflow.** When the buffer is full, the observation and the artifact it would add are dropped, but their position stays used. Once there is room, a `capture-gap` observation discloses the exact range. Typing stays responsive through all of this.
 - **Storage.** Records go to the device-local IndexedDB database (version 4: a `workspace` store, the local identity and device secret, and the upload outbox), and from there to our servers ([telemetry](telemetry.md)).
-- **Restore.** On reopening with device storage, `packages/capture/restore.ts` rebuilds the latest saved code exactly, using only this participant's records for this issue, whichever revision they were written against.
+- **Restore.** On reopening with device storage, `packages/capture/restore.ts` rebuilds the latest saved code exactly, using only this participant's workspace records for this issue, whichever revision they were written against. Board events with an issue context are not editor sessions.
   - Each source stream (page load) is replayed on its own and streams are never combined. Replay starts from a complete code artifact (the opening document or a snapshot) and applies saved CodeMirror change sets in strict source order, checking each revision and document length.
-  - Replay stops at a missing position, a disclosed capture gap, a duplicate position, or a truncated, missing or invalid change or snapshot. The last exact document is restored, and the page says which revision was recovered and that later saved changes were not. A later complete snapshot is a new safe starting point.
+  - Replay stops at a missing position, a disclosed capture gap, a duplicate position, or a truncated, missing or invalid change or snapshot. The last exact document is restored, and the page says which revision was recovered and whether a newer saved code revision exists; missing activity alone does not claim that a newer edit was lost. A later complete snapshot is a new safe starting point.
   - The stream with the most recent saved activity is used. If it has nothing recoverable, an earlier session's code is used and labelled as such.
 - **Save state.** The page shows whether code is kept in this tab only, still being saved, failing and retrying, or not fully restorable.
   - "All edits so far are saved on this device" needs two things: nothing is waiting to be written, and the current code can be rebuilt exactly. That means a complete copy (opening document or snapshot) is stored, and nothing at or after it is lost, conflicting or without a change set.
@@ -100,3 +100,7 @@ Feedback is derived from the stored run outcome when shown. It is not stored, an
 - **Clear.** Clearing first stops capture and waits for any write in flight, then clears the tab's memory or the device database. On the device this removes attempts, workspace records and the local identity together.
 
 Not included: editor timelines beyond transactions, keystroke timing, participant uploads, exports of workspace records, server receipt, research collection or analytics. Copies made outside the browser need separate deletion, and browser storage can be evicted.
+
+## Small screens and keyboard access
+
+Below 860px, Ticket and Files open native modal drawers; Escape closes them and restores focus. Run and pull-request controls wrap, while the editor and result panel retain their own scrolling. File, result and pull-request tabs support arrows, Home and End with roving focus and labelled panels. The `?` button explains run shortcuts and Escape then Tab to leave the editor; shortcut labels use Ctrl on Windows/Linux and Command on macOS.
