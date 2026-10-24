@@ -134,6 +134,14 @@ test("pull requests read back per person and Challenge, newest first", () => {
   const prs = [
     pr("p", "frequency-map", 1, "checks-failed"),
     pr("p", "frequency-map", 2, "merged"),
+    // A later push to #1: the same number, its latest checks win.
+    record({
+      type: "observation.workspace.pull-request",
+      participantId: "p",
+      occurredAt: "2026-10-24T10:05:00.000Z",
+      challengeArtifactId: "challenge.frequency-map.2.1.0",
+      data: { number: 1, push: 2, runId: "run-1b", revision: 9, result: "checks-passed", passed: 4, total: 4 },
+    }),
     pr("q", "frequency-map", 9, "merged"),
     pr("p", "dedupe", 3, "merged"),
   ];
@@ -141,10 +149,11 @@ test("pull requests read back per person and Challenge, newest first", () => {
     pullRequestHistory(prs, "p", "frequency-map").map((p) => [
       p.number,
       p.result,
+      p.pushes,
     ]),
     [
-      [2, "merged"],
-      [1, "checks-failed"],
+      [2, "merged", 1],
+      [1, "checks-passed", 2],
     ],
   );
   // The feed shows pull requests, and their checks are not repeated as runs.

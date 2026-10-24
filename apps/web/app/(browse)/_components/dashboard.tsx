@@ -1,8 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { openPracticeStore } from "../../../../../packages/browser/practice-store";
-import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
+import { useMemo } from "react";
 import {
   actionsPerDay,
   activeDays,
@@ -26,35 +24,8 @@ import { Suggestions } from "./board-view";
 import { StatusIcon } from "./icons";
 import { IssueRows } from "./issue-list";
 import { useAccount } from "./profile-menu";
-
-/** Everything recorded in this browser, read once per visit; null while loading. */
-function useRecords(): WorkspaceRecord[] | null {
-  const [records, setRecords] = useState<WorkspaceRecord[] | null>(null);
-  useEffect(() => {
-    let live = true;
-    openPracticeStore()
-      .then(async (store) => {
-        try {
-          const all = await store.workspaceRecords();
-          if (live) setRecords(all);
-        } finally {
-          store.close();
-        }
-      })
-      .catch(() => live && setRecords([]));
-    return () => {
-      live = false;
-    };
-  }, []);
-  return records;
-}
-
-/** Client-only "now", so server and first client render agree. */
-function useNow(): Date | null {
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => setNow(new Date()), []);
-  return now;
-}
+import { pullHref } from "./pulls";
+import { useNow, useRecords } from "./records";
 
 /**
  * Home: a greeting, where you stand, what to pick up next, and what you have been doing.
@@ -119,7 +90,7 @@ export function Dashboard({ issues }: { issues: Issue[] }) {
           value={doneCount}
           status="done"
           hint={
-            doneCount ? "every check passed" : "lands when every check passes"
+            doneCount ? "merged by you" : "lands when you merge a pull request"
           }
         />
         <Stat label="Points on your board" value={points} />
@@ -325,28 +296,37 @@ function Feed({
             <span className="feed-text">
               {entry.kind === "moved" &&
                 (entry.to === "done" ? (
-                  <>Finished {ref}: every check passed</>
+                  entry.pullRequest ? (
+                    <>
+                      Merged{" "}
+                      <PullLink
+                        entry={{ number: entry.pullRequest }}
+                        issue={issue}
+                      />{" "}
+                      for {ref}
+                    </>
+                  ) : (
+                    <>Finished {ref}</>
+                  )
                 ) : (
                   <>
                     Moved {ref} {MOVED_TO[entry.to] ?? `to ${entry.to}`}
                   </>
                 ))}
               {entry.kind === "opened" && <>Opened {ref} in the IDE</>}
-              {entry.kind === "pull-request" &&
-                (entry.result === "merged" ? (
-                  <>
-                    Merged pull request #{entry.number} for {ref}
-                  </>
-                ) : (
-                  <>
-                    Pull request #{entry.number} for {ref}:{" "}
-                    {entry.result === "checks-failed"
+              {entry.kind === "pull-request" && (
+                <>
+                  Opened <PullLink entry={entry} issue={issue} /> for {ref}:{" "}
+                  {entry.result === "checks-passed" ||
+                  entry.result === "merged"
+                    ? `checks passed (${entry.passed}/${entry.total})`
+                    : entry.result === "checks-failed"
                       ? `checks failed (${entry.passed}/${entry.total})`
                       : entry.result === "cancelled"
-                        ? "closed"
+                        ? "checks cancelled"
                         : "checks errored"}
-                  </>
-                ))}
+                </>
+              )}
               {entry.kind === "ran" && (
                 <>
                   Ran {ref}
@@ -398,4 +378,16 @@ function Stack({
       })}
     </ul>
   );
+}
+
+/** "pull request #2", linked to its page when the issue is known. */
+function PullLink({
+  entry,
+  issue,
+}: {
+  entry: { number: number };
+  issue?: Issue;
+}) {
+  const text = `pull request #${entry.number}`;
+  return issue ? <Link href={pullHref(issue.key, entry.number)}>{text}</Link> : <>{text}</>;
 }

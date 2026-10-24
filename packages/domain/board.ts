@@ -10,6 +10,9 @@ import { safeIdentifier } from "./events";
 import type { WorkspaceRecord } from "./workspace";
 
 /**
+ * 1.5.0: pull requests no longer merge themselves; the person merges one from its page, so the
+ * move to Done comes `via` pointer or keyboard, never automatic. Only a pull request whose
+ * checks all passed can be merged, as with branch protection.
  * 1.4.0 adds the automatic move to Done when a pull request merges (`via: "automatic"`,
  * `trigger: "pull-request-merged"`, with the pull request's number and the run that checked
  * it); 1.3.0 adds `trigger`: the Status menu, or Start work (which moves an issue to In progress);
@@ -17,7 +20,7 @@ import type { WorkspaceRecord } from "./workspace";
  * instead of a separate opt-in; 1.1.0 added In progress and the Status menu input; 1.0.0
  * covered backlog <-> Todo. Stored records keep theirs.
  */
-export const BOARD_CAPTURE_VERSION = "board-capture-1.4.0";
+export const BOARD_CAPTURE_VERSION = "board-capture-1.5.0";
 /** What this capture does not record. Absence is a gap, not evidence of no activity. */
 export const BOARD_CAPTURE_GAPS = [
   "issue-views",
@@ -28,8 +31,8 @@ export const BOARD_CAPTURE_GAPS = [
 
 export type BoardColumn = "backlog" | "todo" | "in-progress" | "done";
 /**
- * How the move was made: pointer, or keyboard (`s`, arrows, Enter; Enter on a link), or
- * automatic when a merged pull request moved the issue to Done.
+ * How the move was made: pointer, or keyboard (`s`, arrows, Enter; Enter on a link). Automatic
+ * appears only before 1.5.0, when a pull request merged itself.
  */
 export type BoardMoveVia = "pointer" | "keyboard" | "automatic";
 /** What made the move: choosing a status, starting work, or a pull request merging. */
@@ -82,7 +85,7 @@ const COLUMNS: readonly BoardColumn[] = [
   "in-progress",
   "done",
 ];
-const VIAS: readonly BoardMoveVia[] = ["pointer", "keyboard", "automatic"];
+const VIAS: readonly BoardMoveVia[] = ["pointer", "keyboard"];
 const TRIGGERS: readonly BoardMoveTrigger[] = [
   "status-menu",
   "start-work",
@@ -133,11 +136,10 @@ export function boardMove(input: {
     throw new Error("Unknown way of moving an issue.");
   if (!TRIGGERS.includes(data.trigger))
     throw new Error("Unknown trigger for a move.");
-  // Done comes only from a merged pull request, and nothing else is automatic.
+  // Done comes only from merging a pull request, which the person does by hand.
   const merged = data.trigger === "pull-request-merged";
   if (
     (data.to === "done") !== merged ||
-    (data.via === "automatic") !== merged ||
     (merged &&
       (typeof data.runId !== "string" ||
         !Number.isSafeInteger(data.pullRequest) ||

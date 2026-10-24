@@ -19,7 +19,7 @@ const EMPTY: Record<Status, string> = {
   backlog: "",
   todo: "Set an issue's status to Todo and it appears here.",
   "in-progress": "Set an issue to In progress when you start on it.",
-  done: "Issues land here on their own when every acceptance check passes.",
+  done: "Issues land here when you merge one of their pull requests.",
 };
 
 export function Board({

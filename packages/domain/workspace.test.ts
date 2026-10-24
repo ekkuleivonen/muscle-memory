@@ -28,7 +28,7 @@ test("feedback scores raw outputs as canonical JSON, never Python equality", () 
   assert.deepEqual(runFeedback(challenge, []).unscorable, [0, 1, 2, 3]);
 });
 
-test("a pull request merges only when every case passes", () => {
+test("a pull request's checks pass only when every case passes", () => {
   const out = (text: string) => ({ output: { text, truncated: false } });
   const all = challenge.expected.map((value) => out(JSON.stringify(value)));
   assert.deepEqual(
@@ -37,7 +37,7 @@ test("a pull request merges only when every case passes", () => {
       phase: "tests",
       cases: all,
     }),
-    { result: "merged", passed: all.length, total: all.length },
+    { result: "checks-passed", passed: all.length, total: all.length },
   );
   const oneWrong = [out("{}"), ...all.slice(1)];
   assert.deepEqual(

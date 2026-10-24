@@ -117,6 +117,34 @@ export function IssuesIcon({ size = 16 }: Props) {
   );
 }
 
+export function DashboardIcon({ size = 16 }: Props) {
+  return (
+    <svg {...svg(size)} stroke="currentColor" strokeWidth="1.4">
+      <rect x="2" y="2" width="5" height="6" rx="1" />
+      <rect x="9" y="2" width="5" height="3.5" rx="1" />
+      <rect x="9" y="7.5" width="5" height="6.5" rx="1" />
+      <rect x="2" y="10" width="5" height="4" rx="1" />
+    </svg>
+  );
+}
+
+export function PullsIcon({ size = 16 }: Props) {
+  return (
+    <svg
+      {...svg(size)}
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+    >
+      <circle cx="4.5" cy="3.5" r="1.7" />
+      <circle cx="4.5" cy="12.5" r="1.7" />
+      <circle cx="11.5" cy="12.5" r="1.7" />
+      <path d="M4.5 5.2v5.6M11.5 10.8V6.5a2 2 0 0 0-2-2H7.5" />
+      <path d="M9 3l-1.5 1.5L9 6" />
+    </svg>
+  );
+}
+
 export function BoardIcon({ size = 16 }: Props) {
   return (
     <svg {...svg(size)}>

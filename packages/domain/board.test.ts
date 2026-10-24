@@ -83,12 +83,12 @@ test("records are canonical, stable and found again for export", () => {
   assert.deepEqual(JSON.parse(record.payload).data, base.data);
 });
 
-test("only a merged pull request moves an issue to Done", () => {
+test("only merging a pull request moves an issue to Done", () => {
   const done = {
     ...base.data,
     from: "in-progress" as const,
     to: "done" as const,
-    via: "automatic" as const,
+    via: "pointer" as const,
     trigger: "pull-request-merged" as const,
     pullRequest: 3,
     runId: "7f3c9a2e-41b8-4d0e-9a51-2c6f0e8b1d44",
@@ -97,23 +97,17 @@ test("only a merged pull request moves an issue to Done", () => {
   assert.equal(move.data.to, "done");
   assert.equal(move.data.runId, done.runId);
   assert.equal(move.data.pullRequest, 3);
+  // The person merges it, by pointer or keyboard.
+  assert.equal(boardMove({ ...base, data: { ...done, via: "keyboard" } }).data.via, "keyboard");
   // Manual moves never carry a pull request or run.
   assert.equal("runId" in boardMove(base).data, false);
   assert.equal("pullRequest" in boardMove(base).data, false);
   const bad = (change: object) => () =>
     boardMove({ ...base, data: { ...done, ...change } });
   assert.throws(bad({ trigger: "status-menu" }), /Done/);
-  assert.throws(bad({ via: "pointer" }), /Done/);
   assert.throws(bad({ runId: undefined }), /Done/);
   assert.throws(bad({ pullRequest: 0 }), /Done/);
   assert.throws(bad({ from: "done", to: "todo" }), /on to Done/);
-  // Nothing but Done is automatic.
-  assert.throws(
-    () =>
-      boardMove({
-        ...base,
-        data: { ...base.data, via: "automatic" as const },
-      }),
-    /Done/,
-  );
+  // Since 1.5.0 nothing is automatic, Done included.
+  assert.throws(bad({ via: "automatic" }), /Unknown way/);
 });

@@ -39,6 +39,7 @@ import {
   type PullRequestRecord,
 } from "../../lib/activity";
 import { statusOf } from "../../lib/board";
+import { mergedPullRequests } from "../../lib/pulls";
 import { languageLabel } from "../../lib/library";
 import type { LanguageId } from "../../lib/languages";
 import {
@@ -52,6 +53,7 @@ import { currentCatalog } from "../current-catalog";
 import { LanguageDot } from "../(browse)/_components/bits";
 import { StatusMenu, useBoard } from "../(browse)/_components/board";
 import { Markdown } from "../(browse)/_components/markdown";
+import { pullHref } from "../(browse)/_components/pulls";
 import { createViewer, type Keymap } from "../workspace/editor";
 import { checksTypes, TypeChecker } from "../workspace/type-checker";
 import { PANEL, panelMax, SIDE, Splitter, useIdeLayout } from "./splitter";
@@ -140,6 +142,8 @@ export function Ide({
   const [panel, setPanel] = useState<"tests" | "output" | "pulls">("tests");
   /** This person's pull requests for the issue, newest first, across sessions. */
   const [pulls, setPulls] = useState<PullRequestRecord[]>([]);
+  /** Which of them the person has merged (on the pull request's page). */
+  const [merged, setMerged] = useState<ReadonlySet<number>>(new Set());
   const [opening, setOpening] = useState<Opening>({ state: "opening" });
   const [message, setMessage] = useState("");
   const [runtime, setRuntime] = useState<Runtime>(
@@ -158,9 +162,17 @@ export function Ide({
   const mainRef = useRef<HTMLElement>(null);
   const board = useBoard();
   // The session's callbacks outlive renders; they read the latest board through this.
-  const boardRef = useRef(board);
-  boardRef.current = board;
   const done = statusOf(board.items, issue.key) === "done";
+  /** The pull request new work is pushed to: the latest one, unless it was merged. */
+  const openPull =
+    pulls[0] &&
+    !done &&
+    pulls[0].result !== "merged" &&
+    !merged.has(pulls[0].number)
+      ? pulls[0]
+      : null;
+  const openPullRef = useRef(openPull);
+  openPullRef.current = openPull;
 
   const hosts = useRef(new Map<string, HTMLDivElement>());
   const viewers = useRef(new Map<string, EditorView>());
@@ -221,11 +233,13 @@ export function Ide({
         contentArtifactId("challenge", challenge.id, challenge.version),
       );
       const history = pullRequestHistory(records, participantId, challenge.id);
+      const mergedNumbers = mergedPullRequests(records, challenge.id);
       const host = hosts.current.get(repo.solution.path);
       // A superseded open must not create a session or record anything.
       if (!host || !current()) return;
       if (recovered) setMessage(recoveryMessage(recovered));
       setPulls(history);
+      setMerged(mergedNumbers);
       session.current = new WorkspaceSession({
         participantId,
         consentVersion: `terms-${account?.accepted?.version ?? "unknown"}`,
@@ -240,6 +254,10 @@ export function Ide({
         filename: repo.solution.path,
         runtime: issue.runnable && engine ? engine.runtime : null,
         pullRequestsBefore: history[0]?.number ?? 0,
+        openPullRequest: () => {
+          const open = openPullRef.current;
+          return open ? { number: open.number, pushes: open.pushes } : null;
+        },
         // Read at use time, so a runtime reloaded with Retry is the one that runs.
         runner: () => runner.current!,
         onRun: (next) => {
@@ -251,6 +269,7 @@ export function Ide({
           setPulls((current) => [
             {
               number: pr.number,
+              pushes: pr.push,
               runId: pr.runId,
               revision: pr.revision,
               result: pr.result ?? "running",
@@ -260,13 +279,8 @@ export function Ide({
             },
             ...current.filter((p) => p.number !== pr.number),
           ]);
+          // It stays open: the person reviews and merges it on its page.
           if (next.status === "queued") setPanel("pulls");
-          // A merged pull request is what moves the issue to Done.
-          if (pr.result === "merged")
-            boardRef.current.complete(
-              { key: issue.key, slug: issue.slug, version: issue.version },
-              { number: pr.number, runId: pr.runId },
-            );
         },
         onEditedAfterRun: () => setStale(true),
         onSaveStatus: setCapture,
@@ -402,9 +416,18 @@ export function Ide({
                   className="ide-run"
                   disabled={!ready}
                   onClick={() => void session.current?.pullRequest()}
-                  title="Open a pull request: CI checks this exact code, and merges it when every check passes (Ctrl/⌘-Shift-Enter)"
+                  title={
+                    openPull
+                      ? `Push this code to pull request #${openPull.number}: CI checks it again (Ctrl/⌘-Shift-Enter)`
+                      : "Open a pull request: CI checks this exact code; then you review it and merge it (Ctrl/⌘-Shift-Enter)"
+                  }
                 >
-                  ⇡ {done ? "Open another PR" : "Open pull request"}{" "}
+                  ⇡{" "}
+                  {openPull
+                    ? `Push to #${openPull.number}`
+                    : done
+                      ? "Open another PR"
+                      : "Open pull request"}{" "}
                   <kbd>⌘⇧⏎</kbd>
                 </button>
               </>
@@ -577,6 +600,7 @@ export function Ide({
             {panel === "pulls" ? (
               <PullRequests
                 pulls={pulls}
+                merged={merged}
                 issue={issue}
                 done={done}
                 runnable={issue.runnable}
@@ -924,36 +948,63 @@ function Case({
   );
 }
 
+/** An open pull request by what its checks said; merged ones are labelled Merged. */
 const PR_RESULTS: Record<
   string,
   { mark: string; label: string; tone: string }
 > = {
   running: { mark: "●", label: "Checks running…", tone: "busy" },
-  merged: { mark: "✔", label: "Merged", tone: "pass" },
-  "checks-failed": { mark: "✘", label: "Checks failed", tone: "fail" },
-  "checks-errored": { mark: "!", label: "Checks errored", tone: "fail" },
-  cancelled: { mark: "–", label: "Closed", tone: "faint" },
+  "checks-passed": { mark: "✔", label: "Open · checks passed", tone: "pass" },
+  "checks-failed": { mark: "✘", label: "Open · checks failed", tone: "fail" },
+  "checks-errored": { mark: "!", label: "Open · checks errored", tone: "fail" },
+  cancelled: { mark: "–", label: "Open · checks cancelled", tone: "faint" },
 };
+const MERGED = { mark: "⇢", label: "Merged", tone: "merged" };
 
 function PullRequests({
   pulls,
+  merged,
   issue,
   done,
   runnable,
 }: {
   pulls: PullRequestRecord[];
+  merged: ReadonlySet<number>;
   issue: IdeIssue;
   done: boolean;
   runnable: boolean;
 }) {
   const now = new Date();
-  const merged = pulls.find((p) => p.result === "merged");
+  const isMerged = (pr: PullRequestRecord) =>
+    pr.result === "merged" || merged.has(pr.number);
+  const mergedPull = pulls.find(isMerged);
+  const latest = pulls[0];
   return (
     <div>
-      {done && merged && (
+      {latest &&
+        !done &&
+        !isMerged(latest) &&
+        latest.result !== "running" &&
+        (latest.result === "checks-passed" ? (
+          <p className="ide-review">
+            Pull request #{latest.number} is open and its checks pass.{" "}
+            <Link href={pullHref(issue.key, latest.number)}>
+              Review it and merge it
+            </Link>{" "}
+            when you&apos;re happy with it; merging moves {issue.key} to Done.
+          </p>
+        ) : (
+          <p className="ide-review">
+            Pull request #{latest.number} is open, but its checks don&apos;t
+            pass yet, so it can&apos;t be merged. Keep working and push to it (
+            <kbd>⌘⇧⏎</kbd>); CI runs again on the new code.{" "}
+            <Link href={pullHref(issue.key, latest.number)}>View #{latest.number}</Link>
+          </p>
+        ))}
+      {done && mergedPull && (
         <p className="ide-done">
-          Pull request #{merged.number} merged. {issue.key} is <b>Done</b>.{" "}
-          <Link href="/">Back to your dashboard</Link> or{" "}
+          Pull request #{mergedPull.number} merged. {issue.key} is <b>Done</b>.{" "}
+          <Link href="/dashboard">Back to your dashboard</Link> or{" "}
           <Link href="/issues">pick the next one</Link>.
         </p>
       )}
@@ -962,9 +1013,9 @@ function PullRequests({
           {runnable ? (
             <>
               When your code is ready, open a pull request (<kbd>⌘⇧⏎</kbd>). CI
-              runs every check on that exact code and merges it when they all
-              pass, which moves {issue.key} to Done. Run the tests (
-              <kbd>⌘⏎</kbd>) as often as you like before that.
+              runs every check on that exact code; then you review it and merge
+              it, which moves {issue.key} to Done. Run the tests (<kbd>⌘⏎</kbd>)
+              as often as you like before that.
             </>
           ) : (
             <>
@@ -976,17 +1027,25 @@ function PullRequests({
       ) : (
         <ol className="ide-pulls">
           {pulls.map((pr) => {
-            const shown = PR_RESULTS[pr.result] ?? PR_RESULTS["checks-errored"];
+            const shown = isMerged(pr)
+              ? MERGED
+              : (PR_RESULTS[pr.result] ?? PR_RESULTS["checks-errored"]);
             return (
               <li key={pr.number} className={shown.tone}>
                 <span className="ide-pr-mark">{shown.mark}</span>
-                <span className="mono">#{pr.number}</span>
+                {pr.result === "running" ? (
+                  <span className="mono">#{pr.number}</span>
+                ) : (
+                  <Link className="mono" href={pullHref(issue.key, pr.number)}>
+                    #{pr.number}
+                  </Link>
+                )}
                 <span className="ide-pr-label">{shown.label}</span>
                 <span className="faint">
                   {pr.result === "running"
                     ? `${pr.total} checks`
-                    : `${pr.passed}/${pr.total} checks`}{" "}
-                  · revision {pr.revision}
+                    : `${pr.passed}/${pr.total} checks`}
+                  {pr.pushes > 1 && ` · ${pr.pushes} pushes`}
                 </span>
                 <time className="faint" dateTime={pr.at}>
                   {timeAgo(pr.at, now)}
@@ -1065,7 +1124,7 @@ function FilesIcon() {
 
 /**
  * What the IDE is doing while it opens: checking out the issue's repo, restoring saved work and
- * installing the language's runtime, with download progress. Editing can start before the
+ * loading the language's runtime into the tab, with download progress. Editing can start before the
  * runtime is ready; only Run waits for it.
  */
 function Boot({
@@ -1107,7 +1166,7 @@ function Boot({
           {engine ? (
             <BootStep state={runtime.state === "loading" ? "busy" : "done"}>
               {downloading
-                ? `Installing ${engine.label}`
+                ? `Loading ${engine.label} in this tab`
                 : runtime.state === "loading"
                   ? `Starting ${engine.label}…`
                   : `${engine.label} ready`}

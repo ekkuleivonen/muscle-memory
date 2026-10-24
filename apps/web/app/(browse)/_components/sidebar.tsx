@@ -4,7 +4,13 @@ import { usePathname } from "next/navigation";
 import { projectHref, type ProjectRef } from "../../../lib/library";
 import { ProjectSquare } from "./bits";
 import { BoardCount } from "./board";
-import { BoardIcon, ProjectsIcon, IssuesIcon } from "./icons";
+import {
+  BoardIcon,
+  DashboardIcon,
+  IssuesIcon,
+  ProjectsIcon,
+  PullsIcon,
+} from "./icons";
 import { ProfileMenu } from "./profile-menu";
 
 export function Sidebar({
@@ -21,7 +27,7 @@ export function Sidebar({
       : undefined;
   return (
     <aside className="sidebar" aria-label="Workspace">
-      <Link href="/" className="workspace-name">
+      <Link href="/dashboard" className="workspace-name">
         <img
           className="logo-mark"
           src="/logo.svg"
@@ -30,6 +36,13 @@ export function Sidebar({
           height={22}
         />
         <span className="company-name">Muscle Memory Inc.</span>
+      </Link>
+      <Link
+        className="side-link"
+        href="/dashboard"
+        aria-current={current("/dashboard")}
+      >
+        <DashboardIcon /> Dashboard
       </Link>
       <Link
         className="side-link"
@@ -44,6 +57,13 @@ export function Sidebar({
         aria-current={current("/issues")}
       >
         <IssuesIcon /> Issues <span className="count">{issueCount}</span>
+      </Link>
+      <Link
+        className="side-link"
+        href="/pulls"
+        aria-current={current("/pulls")}
+      >
+        <PullsIcon /> Pull requests
       </Link>
       <Link
         className="side-link"

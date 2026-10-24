@@ -15,6 +15,7 @@ import {
 import { keyFromId } from "../../../tools/content-check.mjs";
 import {
   filterByStatus,
+  filterPulls,
   filterProjects,
   filterIssues,
   formatQuery,
@@ -22,6 +23,7 @@ import {
   href,
   parseProjectQuery,
   parseIssueQuery,
+  parsePullQuery,
   toggle,
 } from "./queries";
 
@@ -334,4 +336,56 @@ test("board statuses parse as is: qualifiers and filter wherever the board is kn
       ["todo", 2],
     ],
   );
+});
+
+test("pull requests search like issues, plus their own state and checks", () => {
+  const query = parsePullQuery(
+    'is:merged,open checks:FAILED,bogus lang:go project:shop "price list" sort:oldest is:todo',
+  );
+  assert.deepEqual(query.state, ["open", "merged"]);
+  assert.deepEqual(query.checks, ["failed"]);
+  assert.deepEqual(query.language, ["go"]);
+  assert.deepEqual(query.project, ["shop"]);
+  assert.equal(query.sort, "oldest");
+  // is:todo is an issue status, not a pull request state: dropped, not searched as text.
+  assert.deepEqual(query.text, ["price list"]);
+  assert.equal(
+    formatQuery(query),
+    'is:open,merged checks:failed lang:go project:shop sort:oldest "price list"',
+  );
+
+  const shop = { slug: "storefront", title: "Shop", key: "SHOP", hue: 0 };
+  const pull = (
+    number: number,
+    state: "open" | "merged",
+    result: string,
+    language: "go" | "python",
+    at: string,
+  ) => ({
+    number,
+    state,
+    result,
+    at,
+    issue: {
+      key: `SHOP-${number}`,
+      title: `Issue ${number}`,
+      language,
+      labels: ["money"],
+      project: shop,
+    },
+  });
+  const pulls = [
+    pull(1, "open", "checks-failed", "go", "2026-10-24T10:00:00Z"),
+    pull(2, "merged", "checks-passed", "go", "2026-10-24T11:00:00Z"),
+    pull(3, "merged", "merged", "python", "2026-10-24T12:00:00Z"),
+  ];
+  const numbers = (q: string) =>
+    filterPulls(pulls, parsePullQuery(q)).map((p) => p.number);
+  assert.deepEqual(numbers(""), [3, 2, 1]);
+  assert.deepEqual(numbers("is:open"), [1]);
+  // Before capture 1.4.0 a pull request's result said merged: its checks passed.
+  assert.deepEqual(numbers("checks:passed"), [3, 2]);
+  assert.deepEqual(numbers("lang:go sort:oldest"), [1, 2]);
+  assert.deepEqual(numbers("project:shop label:money #2"), [2]);
+  assert.deepEqual(numbers("project:api"), []);
 });

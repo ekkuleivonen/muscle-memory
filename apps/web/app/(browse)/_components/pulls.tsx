@@ -1,0 +1,747 @@
+"use client";
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import type { Challenge, Json } from "../../../../../packages/domain/assessment";
+import { runFeedback } from "../../../../../packages/domain/workspace";
+import { timeAgo } from "../../../lib/activity";
+import type { IssueSummary } from "../../../lib/library";
+import { filterPulls, href, type PullQuery } from "../../../lib/queries";
+import { diffLines, diffStats, hunks } from "../../../lib/diff";
+import {
+  allPullRequests,
+  duration,
+  pullRequestDetail,
+  type PullDetail,
+  type PullSummary,
+  type TimelineEntry,
+} from "../../../lib/pulls";
+import type { LanguageId } from "../../../lib/languages";
+import type { BoardMoveVia } from "../../../../../packages/domain/board";
+import { LanguageTag } from "./bits";
+import { useBoard } from "./board";
+import { useNow, useRecords } from "./records";
+
+export interface PullIssue {
+  key: string;
+  slug: string;
+  title: string;
+  /** The latest published version; the list does not need it. */
+  version?: string;
+}
+
+/** The IDE on the version the pull request was opened against, to keep working on it. */
+function workHref(issue: PullIssue, version: string) {
+  return !issue.version || issue.version === version
+    ? `/work/${issue.key}`
+    : `/work/${issue.key}?version=${version}`;
+}
+
+/** One published version of the issue, as the pull request saw it. */
+export interface PullVersion {
+  version: string;
+  /** A JSON string: React's serializer would drop a "__proto__" fixture key from an object. */
+  challengeJson: string;
+  starter: string;
+  path: string;
+  language?: LanguageId;
+}
+
+type State = PullSummary["state"];
+const STATE_LABELS: Record<State, string> = {
+  open: "Open",
+  merged: "Merged",
+};
+/** Passing checks; before capture 1.4.0 they were recorded as `merged`. */
+const passed = (result: string) =>
+  result === "checks-passed" || result === "merged";
+
+export function pullHref(key: string, number: number) {
+  return `/pulls/${key}/${number}`;
+}
+
+/** Open: a branch heading back. Merged: two branches joined. */
+export function PullIcon({ state, size = 16 }: { state: State; size?: number }) {
+  return (
+    <svg
+      className={`pull-icon ${state}`}
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      aria-hidden
+    >
+      <circle cx="4.5" cy="3.5" r="1.7" />
+      <circle cx="4.5" cy="12.5" r="1.7" />
+      {state === "merged" ? (
+        <>
+          <circle cx="11.5" cy="8" r="1.7" />
+          <path d="M4.5 5.2v5.6M4.5 5.5c0 2.5 2.5 2.5 5.3 2.5" />
+        </>
+      ) : (
+        <>
+          <circle cx="11.5" cy="12.5" r="1.7" />
+          <path d="M4.5 5.2v5.6M11.5 10.8V6.5a2 2 0 0 0-2-2H7.5" />
+          <path d="M9 3l-1.5 1.5L9 6" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function checksText(pull: Pick<PullSummary, "result" | "passed" | "total">) {
+  if (pull.result === "checks-errored") return "checks errored";
+  if (pull.result === "cancelled") return "checks cancelled";
+  return `${pull.passed}/${pull.total} checks`;
+}
+
+/**
+ * Every pull request in this browser, filtered by the same kind of query as issues
+ * (is:open checks:failed lang:go …). The query comes from the URL; the pull requests from
+ * this browser, so the filtering happens here.
+ */
+export function PullList({
+  issues,
+  query,
+}: {
+  issues: IssueSummary[];
+  query: PullQuery;
+}) {
+  const records = useRecords();
+  const now = useNow();
+  const bySlug = useMemo(() => new Map(issues.map((i) => [i.slug, i])), [issues]);
+  const pulls = useMemo(
+    () =>
+      (records ? allPullRequests(records) : []).map((pull) => ({
+        ...pull,
+        issue: bySlug.get(pull.challengeId),
+      })),
+    [records, bySlug],
+  );
+  if (!records || !now) return null;
+  if (!pulls.length)
+    return (
+      <p className="empty">
+        No pull requests yet. When your code is ready in the IDE, open one: CI
+        runs every check, then you review it here and merge it.
+      </p>
+    );
+  // The state tabs count within the other filters, as GitHub's Open and Closed do.
+  const others = filterPulls(pulls, { ...query, state: [] });
+  const shown = filterPulls(pulls, query);
+  const tab = (state: State | null, label: string) => {
+    const selected =
+      state === null ? query.state.length === 0 : query.state.length === 1 && query.state[0] === state;
+    const n = state === null ? others.length : others.filter((p) => p.state === state).length;
+    return (
+      <Link
+        key={label}
+        role="tab"
+        aria-selected={selected}
+        href={href("/pulls", { ...query, state: state ? [state] : [] })}
+        scroll={false}
+      >
+        {state && <PullIcon state={state} size={14} />} {label}{" "}
+        <span className="count">{n}</span>
+      </Link>
+    );
+  };
+  return (
+    <>
+      <div className="pull-filter" role="tablist" aria-label="State">
+        {tab(null, "All")}
+        {tab("open", "Open")}
+        {tab("merged", "Merged")}
+      </div>
+      {shown.length === 0 ? (
+        <p className="empty pull-empty">
+          No pull requests match this search. Remove a filter or try fewer words.
+        </p>
+      ) : (
+        <ul className="rows">
+          {shown.map((pull) => {
+            const key = pull.issue?.key ?? pull.challengeId;
+            return (
+              <li key={`${pull.challengeId}#${pull.number}`}>
+                <Link className="row pull-row" href={pullHref(key, pull.number)} data-row>
+                  <PullIcon state={pull.state} />
+                  <span className="title">
+                    {pull.issue?.title ?? pull.challengeId}{" "}
+                    <span className="faint">#{pull.number}</span>
+                  </span>
+                  <span className="meta dim">
+                    {pull.issue && <LanguageTag language={pull.issue.language} />}
+                    <span className="mono">{key}</span> · {checksText(pull)} ·{" "}
+                    <time dateTime={pull.at}>{timeAgo(pull.at, now)}</time>
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </>
+  );
+}
+
+const clock = (at: string) =>
+  new Date(at).toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+function dateTime(at: string) {
+  return new Date(at).toLocaleString(undefined, {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** One pull request: what led to it, what its checks said, and the code it changed. */
+export function PullView({
+  issue,
+  number,
+  versions,
+}: {
+  issue: PullIssue;
+  number: number;
+  versions: PullVersion[];
+}) {
+  const records = useRecords();
+  const board = useBoard();
+  const [tab, setTab] = useState<"timeline" | "checks" | "files">("timeline");
+  /** Set when merged on this page, before the stored records are read again. */
+  const [mergedNow, setMergedNow] = useState<string | null>(null);
+  const challenges = useMemo(
+    () =>
+      new Map(
+        versions.map((v) => [v.version, JSON.parse(v.challengeJson) as Challenge]),
+      ),
+    [versions],
+  );
+  const detail = useMemo(
+    () =>
+      records &&
+      pullRequestDetail(records, issue.slug, number, (v) => challenges.get(v)),
+    [records, issue.slug, number, challenges],
+  );
+  if (!records) return null;
+  if (!detail)
+    return (
+      <p className="empty">
+        Pull request #{number} for {issue.key} isn&apos;t recorded in this
+        browser. Pull requests stay on the device they were opened on.
+      </p>
+    );
+  const pull: PullSummary = mergedNow
+    ? { ...detail.pull, state: "merged", mergedAt: mergedNow }
+    : detail.pull;
+  const version = versions.find((v) => v.version === pull.version);
+  const challenge = challenges.get(pull.version);
+  const diff =
+    version && detail.code ? diffLines(version.starter, detail.code.text) : [];
+  const stats = diffStats(diff);
+  const label = STATE_LABELS[pull.state];
+  const merge = (via: BoardMoveVia) => {
+    board.complete(
+      { key: issue.key, slug: issue.slug, version: pull.version },
+      { number: pull.number, runId: pull.runId },
+      via,
+    );
+    setMergedNow(new Date().toISOString());
+  };
+  return (
+    <div className="pull">
+      <article>
+        <h1>
+          {issue.title} <span className="faint">#{number}</span>
+        </h1>
+        <p className="pull-state">
+          <span className={`pull-badge ${pull.state}`}>
+            <PullIcon state={pull.state} size={14} /> {label}
+          </span>
+          <span className="dim">
+            {pull.state === "merged"
+              ? `Merged on ${dateTime(pull.mergedAt!)}`
+              : `Opened on ${dateTime(detail.openedAt)}`}
+            {pull.pushes > 1 &&
+              ` · ${pull.pushes - 1} ${pull.pushes === 2 ? "push" : "pushes"} after opening`}{" "}
+            ·{" "}
+            <Link href={`/issues/${issue.key}`} className="mono">
+              {issue.key}
+            </Link>
+          </span>
+        </p>
+        <div className="pull-tabs" role="tablist">
+          <Tab id="timeline" tab={tab} setTab={setTab}>
+            Timeline
+          </Tab>
+          <Tab id="checks" tab={tab} setTab={setTab}>
+            Checks <span className="count">{checksText(pull)}</span>
+          </Tab>
+          <Tab id="files" tab={tab} setTab={setTab}>
+            Files changed{" "}
+            {detail.code && (
+              <span className="count">
+                <span className="add">+{stats.added}</span>{" "}
+                <span className="del">−{stats.removed}</span>
+              </span>
+            )}
+          </Tab>
+        </div>
+        {tab === "timeline" && (
+          <Timeline
+            detail={
+              mergedNow
+                ? {
+                    ...detail,
+                    timeline: [
+                      ...detail.timeline,
+                      { kind: "merged", at: mergedNow },
+                    ],
+                  }
+                : detail
+            }
+            issue={issue}
+          />
+        )}
+        {tab === "checks" && (
+          <Checks outcome={detail.outcome} challenge={challenge} />
+        )}
+        {tab === "files" && (
+          <Files detail={detail} version={version} diff={diff} stats={stats} />
+        )}
+        <MergeBox pull={pull} issue={issue} onMerge={merge} />
+      </article>
+      <aside className="props" aria-label="Details">
+        <dl>
+          <dt>Status</dt>
+          <dd>{label}</dd>
+          <dt>Issue</dt>
+          <dd>
+            <Link href={`/issues/${issue.key}`}>{issue.key}</Link>
+          </dd>
+          <dt>Language</dt>
+          <dd>
+            <LanguageTag language={version?.language} />
+          </dd>
+          <dt>Checks</dt>
+          <dd>{checksText(pull)}</dd>
+          <dt>Elapsed</dt>
+          <dd title="Wall-clock time from the first recorded activity to the pull request; breaks included.">
+            {duration(detail.stats.startedAt, detail.openedAt)}
+          </dd>
+          <dt>Test runs</dt>
+          <dd>{detail.stats.runs}</dd>
+          <dt>Edits</dt>
+          <dd>{detail.stats.edits}</dd>
+          <dt>Version</dt>
+          <dd className="mono">{pull.version}</dd>
+        </dl>
+        {pull.state !== "merged" && !pull.otherMerged && (
+          <Link
+            className="pull-continue"
+            href={workHref(issue, pull.version)}
+            title={`Back to the IDE to keep working; push to #${number} from there (⌘⇧⏎)`}
+          >
+            Continue in the IDE →
+          </Link>
+        )}
+        <p className="note">
+          Recorded in this browser as you worked. These are raw facts; nothing
+          here is a grade.
+        </p>
+      </aside>
+    </div>
+  );
+}
+
+function Tab<T extends string>({
+  id,
+  tab,
+  setTab,
+  children,
+}: {
+  id: T;
+  tab: T;
+  setTab: (tab: T) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>
+      {children}
+    </button>
+  );
+}
+
+function Timeline({ detail, issue }: { detail: PullDetail; issue: PullIssue }) {
+  const { stats, previous } = detail;
+  return (
+    <div className="pull-timeline">
+      <p className="pull-summary dim">
+        {duration(stats.startedAt, detail.openedAt)} (wall clock) from{" "}
+        {previous ? `pull request #${previous.number}` : "first opening the issue"}{" "}
+        to this pull request
+        {stats.firstGreenAt && (
+          <>
+            {" "}
+            · tests first passed after{" "}
+            {duration(stats.startedAt, stats.firstGreenAt)}
+          </>
+        )}
+        .
+      </p>
+      <ol>
+        {previous && (
+          <TimelineRow at={previous.at} tone="dim">
+            Follows{" "}
+            <Link href={pullHref(issue.key, previous.number)}>
+              #{previous.number}
+            </Link>{" "}
+            ({checksText(previous)})
+          </TimelineRow>
+        )}
+        {detail.timeline.map((entry, index) => (
+          <Entry key={index} entry={entry} issue={issue} />
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function TimelineRow({
+  at,
+  tone,
+  children,
+}: {
+  at: string;
+  tone: "dim" | "pass" | "fail" | "accent" | "merged";
+  children: React.ReactNode;
+}) {
+  return (
+    <li className={tone}>
+      <span className="dot" aria-hidden />
+      <span className="text">{children}</span>
+      <time dateTime={at}>{clock(at)}</time>
+    </li>
+  );
+}
+
+function Entry({ entry, issue }: { entry: TimelineEntry; issue: PullIssue }) {
+  switch (entry.kind) {
+    case "opened":
+      return (
+        <TimelineRow at={entry.at} tone="dim">
+          Opened {issue.key} in the IDE
+        </TimelineRow>
+      );
+    case "edits":
+      return (
+        <TimelineRow at={entry.at} tone="dim">
+          Edited the code: {entry.count}{" "}
+          {entry.count === 1 ? "change" : "changes"}
+          {entry.from !== entry.at && <> over {duration(entry.from, entry.at)}</>}
+        </TimelineRow>
+      );
+    case "run":
+      return (
+        <TimelineRow
+          at={entry.at}
+          tone={entry.tested && entry.passed === entry.total ? "pass" : "fail"}
+        >
+          Ran the tests:{" "}
+          {entry.tested
+            ? `${entry.passed}/${entry.total} passing`
+            : RUN_STATUS[entry.status] ?? "didn't reach the tests"}
+        </TimelineRow>
+      );
+    case "pull-request":
+      return (
+        <TimelineRow at={entry.at} tone="accent">
+          Opened pull request #{entry.number}
+        </TimelineRow>
+      );
+    case "push":
+      return (
+        <TimelineRow at={entry.at} tone="accent">
+          Pushed new code to #{entry.number}
+        </TimelineRow>
+      );
+    case "checks":
+      return (
+        <TimelineRow at={entry.at} tone={passed(entry.result) ? "pass" : "fail"}>
+          {passed(entry.result)
+            ? `CI: all ${entry.total} checks passed.`
+            : entry.result === "checks-failed"
+              ? `CI: ${entry.passed}/${entry.total} checks passed.`
+              : entry.result === "checks-errored"
+                ? "CI: the checks errored before reaching the tests."
+                : "CI: the checks were cancelled."}
+        </TimelineRow>
+      );
+    case "merged":
+      return (
+        <TimelineRow at={entry.at} tone="merged">
+          Merged. {issue.key} moved to Done.
+        </TimelineRow>
+      );
+  }
+}
+
+const RUN_STATUS: Record<string, string> = {
+  "user-error": "the code raised an error",
+  timeout: "timed out",
+  "runner-error": "the runner failed",
+  cancelled: "cancelled",
+};
+
+interface Outcome {
+  status: string;
+  phase?: string;
+  error?: { type: string; message: string; traceback?: { text: string } };
+  cases?: {
+    output?: { text: string; truncated: boolean };
+    error?: { type: string; message: string };
+    unserializable?: string;
+  }[];
+  stdout?: { text: string };
+  durationMs?: number;
+  timeoutMs?: number;
+  message?: string;
+}
+
+const show = (value: unknown) => JSON.stringify(value);
+
+function Checks({
+  outcome: raw,
+  challenge,
+}: {
+  outcome: Json | null;
+  challenge?: Challenge;
+}) {
+  const outcome = raw as unknown as Outcome | null;
+  if (!outcome || !challenge)
+    return <p className="dim">This pull request&apos;s check run wasn&apos;t recorded.</p>;
+  if (outcome.status === "timeout")
+    return (
+      <p className="pull-error">
+        The checks timed out after {Math.round((outcome.timeoutMs ?? 0) / 1000)}{" "}
+        s, before every case finished.
+      </p>
+    );
+  if (outcome.status === "runner-error")
+    return <p className="pull-error">The runner failed: {outcome.message}</p>;
+  if (outcome.status === "cancelled")
+    return <p className="dim">The checks were cancelled.</p>;
+  const verdicts =
+    outcome.phase === "tests" && outcome.cases
+      ? runFeedback(challenge, outcome.cases).passed
+      : null;
+  return (
+    <div className="pull-checks">
+      {outcome.error && (
+        <div className="pull-error">
+          <b>
+            {outcome.error.type}: {outcome.error.message}
+          </b>
+          {outcome.error.traceback?.text && (
+            <pre>{outcome.error.traceback.text}</pre>
+          )}
+        </div>
+      )}
+      {verdicts && (
+        <ol>
+          {challenge.inputs.map((input, index) => {
+            const got = outcome.cases?.[index];
+            const ok = verdicts[index];
+            return (
+              <li key={index} className={ok ? "pass" : "fail"}>
+                <span className="mark" aria-label={ok ? "Passed" : "Failed"}>
+                  {ok ? "✔" : "✘"}
+                </span>
+                <div>
+                  <code>{show(input)}</code> <span className="dim">→</span>{" "}
+                  <code>{show(challenge.expected[index])}</code>
+                  {!ok && (
+                    <div className="got">
+                      {got?.error ? (
+                        <>
+                          raised <code>{got.error.type}: {got.error.message}</code>
+                        </>
+                      ) : got?.output ? (
+                        <>
+                          returned <code>{got.output.text}</code>
+                          {got.output.truncated && " (truncated)"}
+                        </>
+                      ) : (
+                        <>returned a value that isn&apos;t JSON</>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+      {outcome.stdout?.text && (
+        <details className="pull-output">
+          <summary>Printed output</summary>
+          <pre>{outcome.stdout.text}</pre>
+        </details>
+      )}
+      {typeof outcome.durationMs === "number" && (
+        <p className="dim pull-duration">
+          Ran in {Math.round(outcome.durationMs)} ms.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Files({
+  detail,
+  version,
+  diff,
+  stats,
+}: {
+  detail: PullDetail;
+  version?: PullVersion;
+  diff: ReturnType<typeof diffLines>;
+  stats: { added: number; removed: number };
+}) {
+  if (!detail.code || !version)
+    return (
+      <p className="dim">The submitted code wasn&apos;t saved in this browser.</p>
+    );
+  const parts = hunks(diff);
+  return (
+    <div className="pull-files">
+      <div className="diff">
+        <div className="diff-head">
+          <span className="mono">{version.path}</span>
+          <span>
+            <span className="add">+{stats.added}</span>{" "}
+            <span className="del">−{stats.removed}</span>
+          </span>
+        </div>
+        {parts.length === 0 ? (
+          <p className="dim diff-empty">No changes from the starter code.</p>
+        ) : (
+          <table>
+            <tbody>
+              {parts.map((hunk, h) => (
+                <HunkRows key={h} hunk={hunk} />
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+      {detail.code.truncated && (
+        <p className="dim">
+          The code was longer than the capture limit; only its start was saved.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function HunkRows({ hunk }: { hunk: ReturnType<typeof hunks>[number] }) {
+  return (
+    <>
+      <tr className="hunk">
+        <td colSpan={3}>
+          @@ −{hunk.oldStart},{hunk.oldLines} +{hunk.newStart},{hunk.newLines} @@
+        </td>
+      </tr>
+      {hunk.lines.map((line, i) => (
+        <tr key={i} className={line.kind}>
+          <td className="ln">{line.oldLine ?? ""}</td>
+          <td className="ln">{line.newLine ?? ""}</td>
+          <td className="code">
+            <span className="sign" aria-hidden>
+              {line.kind === "add" ? "+" : line.kind === "del" ? "−" : " "}
+            </span>
+            {line.text}
+          </td>
+        </tr>
+      ))}
+    </>
+  );
+}
+
+/**
+ * Review, then merge: only a pull request whose checks all passed can be merged, as with
+ * branch protection. Merging moves the issue to Done.
+ */
+function MergeBox({
+  pull,
+  issue,
+  onMerge,
+}: {
+  pull: PullSummary;
+  issue: PullIssue;
+  onMerge: (via: BoardMoveVia) => void;
+}) {
+  if (pull.state === "merged")
+    return (
+      <div className="merge-box merged">
+        <PullIcon state="merged" size={18} />
+        <div>
+          <b>Merged.</b> {issue.key} is Done.
+        </div>
+      </div>
+    );
+  if (pull.otherMerged)
+    return (
+      <div className="merge-box blocked">
+        <span className="merge-mark" aria-hidden>
+          –
+        </span>
+        <div className="merge-text">
+          <b>{issue.key} is already Done.</b> Pull request{" "}
+          <Link href={pullHref(issue.key, pull.otherMerged)}>
+            #{pull.otherMerged}
+          </Link>{" "}
+          was merged, so there is nothing left to merge this into.
+        </div>
+      </div>
+    );
+  const green = passed(pull.result);
+  return (
+    <div className={green ? "merge-box ready" : "merge-box blocked"}>
+      <span className="merge-mark" aria-hidden>
+        {green ? "✔" : "✘"}
+      </span>
+      <div className="merge-text">
+        {green ? (
+          <>
+            <b>All {pull.total} checks passed.</b> Read through your changes,
+            then merge when you&apos;re happy with them. Merging moves{" "}
+            {issue.key} to Done.
+          </>
+        ) : (
+          <>
+            <b>Merging is blocked: {checksText(pull)}.</b> Every check has to
+            pass. The pull request stays open: keep working in the{" "}
+            <Link href={workHref(issue, pull.version)}>IDE</Link> and push to it (
+            <kbd>⌘⇧⏎</kbd>), and CI runs again.
+          </>
+        )}
+      </div>
+      <button
+        type="button"
+        className="merge-button"
+        disabled={!green}
+        // A click from the keyboard (Enter or Space) has no pointer position.
+        onClick={(event) => onMerge(event.detail === 0 ? "keyboard" : "pointer")}
+      >
+        Merge pull request
+      </button>
+    </div>
+  );
+}
