@@ -21,7 +21,8 @@
         "format-price",
         "discount-codes",
         "filter-form-labels",
-        "debounce-search"
+        "debounce-search",
+        "refund-totals"
       ]
     },
     {
@@ -145,6 +146,22 @@
       ],
       "state": "live",
       "revision": "sha256:1b74e849d13310d6f07db3d56bd8a8beb378ae24917b472439292a763a3f9534"
+    },
+    {
+      "id": "refund-totals",
+      "project": "storefront",
+      "number": 5,
+      "title": "Refund totals double-count discounts",
+      "summary": "Refunds on orders with a promo code give back less than the customer paid.",
+      "difficulty": "medium",
+      "estimate": 3,
+      "labels": [
+        "debugging",
+        "money",
+        "reading-code"
+      ],
+      "state": "live",
+      "revision": "sha256:23a88d059b91840de8e983f72236c86a234b29b87bc77a7d9debde9f6781513b"
     },
     {
       "id": "pagination-params",
@@ -961,6 +978,277 @@
           "when": {
             "behaviour": "active-minutes-without-progress",
             "atLeast": 10
+          }
+        }
+      ],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:23a88d059b91840de8e983f72236c86a234b29b87bc77a7d9debde9f6781513b": {
+      "issue": "refund-totals",
+      "kind": "bug",
+      "body": "Support escalated this from the help desk:\n\n> A customer returned one of two jackets from an order that used **SPRING10** (10% off). The receipt says they paid **$45.00** for that jacket, but the refund came through as **$40.50**.\n\n```text\nOrder #10482    SPRING10 (10% off)\n  Rain jacket    1 × $50.00    −$5.00    $45.00\nRefund #R-2291\n  Rain jacket    1 × $50.00              −$40.50\n```\n\n`refundTotal(refund)` in `src/cart/totals.js` works out what a refund gives back, in cents, as a negative amount. A refund gives back exactly what the customer paid for the lines returned. Checkout totals are not part of this ticket.",
+      "skills": [
+        "debugging",
+        "money",
+        "reading-code"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "javascript",
+        "files": {
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Shop\n\nThe online shop customers actually see: product listings, filters, the cart and a three-step checkout. Pages are server-rendered, with a thin layer of TypeScript for the interactive parts.\n\nConversion dipped after the last redesign. Support is fielding tickets about prices, promo codes and a search box that feels sluggish, and an accessibility audit came back with a long list.\n\n## What you'll work on\n\n- Formatting money and other values the way customers expect to read them\n- Form behaviour, validation and accessible markup\n- Small performance fixes in the browser, like debouncing input\n\n## Good fit if you\n\n- Build user interfaces, or want to get sharper at the details that make one feel solid\n- Are comfortable with **JavaScript**, **TypeScript** or plain **HTML**\n- Care what a bug looks like from the customer's side of the screen\n\nStack: TypeScript, JavaScript, HTML.\n"
+          },
+          "src/cart/discounts.js": {
+            "role": "read",
+            "language": "javascript",
+            "text": "import { sum } from \"./money.js\";\n\n/**\n * A promo code's discount on a subtotal, in cents: a percentage ({ percent: 10 }) or a fixed\n * amount ({ amount: 500 }), never more than the subtotal.\n */\nexport function discountFor(code, subtotal) {\n  if (!code) return 0;\n  const off =\n    \"percent\" in code ? Math.round((subtotal * code.percent) / 100) : code.amount;\n  return Math.min(off, subtotal);\n}\n\n/**\n * At checkout the order's discount is spread over its lines in proportion to their value and\n * stored on each line as `discount`, so a partial refund can give back exactly what was paid\n * for the lines returned.\n */\nexport function allocate(code, lines) {\n  const gross = lines.map((line) => line.price * line.quantity);\n  const subtotal = sum(gross);\n  const total = discountFor(code, subtotal);\n  let left = total;\n  return lines.map((line, index) => {\n    const share =\n      index === lines.length - 1 || subtotal === 0\n        ? left\n        : Math.floor((total * gross[index]) / subtotal);\n    left -= share;\n    return { ...line, discount: share };\n  });\n}\n"
+          },
+          "src/cart/money.js": {
+            "role": "read",
+            "language": "javascript",
+            "text": "/** Money is whole cents everywhere: never floats. */\n\n/**\n * What a line charges: its price times quantity, less the share of the order's discount that\n * checkout allocated to it (see allocate in discounts.js).\n */\nexport function lineTotal(line) {\n  return line.price * line.quantity - (line.discount ?? 0);\n}\n\nexport function sum(amounts) {\n  return amounts.reduce((total, amount) => total + amount, 0);\n}\n"
+          },
+          "src/cart/totals.js": {
+            "role": "edit",
+            "language": "javascript",
+            "text": "import { discountFor } from \"./discounts.js\";\nimport { lineTotal, sum } from \"./money.js\";\n\n/** What an order charges at checkout, in cents: its lines less the promo code's discount. */\nexport function orderTotal(order) {\n  const subtotal = sum(order.lines.map((line) => line.price * line.quantity));\n  return subtotal - discountFor(order.code, subtotal);\n}\n\n/**\n * What a refund gives back for the returned lines, in cents, as a negative amount: refunds\n * stay negative all the way to the ledger.\n */\nexport function refundTotal(refund) {\n  const returned = sum(refund.lines.map(lineTotal));\n  return -(returned - discountFor(refund.code, returned));\n}\n"
+          },
+          "src/cart/totals.test.js": {
+            "role": "tests",
+            "language": "javascript",
+            "text": "// Acceptance criteria for SHOP-5. CI runs these cases and 3 more it does not show.\nimport { describe, expect, it } from \"vitest\";\nimport { refundTotal } from \"./totals\";\n\nconst cases = [\n  [{\"code\":null,\"lines\":[{\"sku\":\"tee\",\"price\":2500,\"quantity\":2,\"discount\":0}]}, -5000],\n  [{\"code\":{\"percent\":10},\"lines\":[{\"sku\":\"rain-jacket\",\"price\":5000,\"quantity\":1,\"discount\":500}]}, -4500],\n  [{\"code\":{\"amount\":1000},\"lines\":[{\"sku\":\"boots\",\"price\":3000,\"quantity\":1,\"discount\":600},{\"sku\":\"socks\",\"price\":2000,\"quantity\":1,\"discount\":400}]}, -4000],\n];\n\ndescribe(\"refundTotal\", () => {\n  it.each(cases)(\"case %#\", (input, expected) => {\n    expect(refundTotal(input)).toEqual(expected);\n  });\n});\n"
+          }
+        },
+        "entry": "src/cart/totals.js",
+        "entrypoint": "refundTotal"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": {
+              "code": null,
+              "lines": [
+                {
+                  "sku": "tee",
+                  "price": 2500,
+                  "quantity": 2,
+                  "discount": 0
+                }
+              ]
+            },
+            "expected": -5000,
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": {
+              "code": {
+                "percent": 10
+              },
+              "lines": [
+                {
+                  "sku": "rain-jacket",
+                  "price": 5000,
+                  "quantity": 1,
+                  "discount": 500
+                }
+              ]
+            },
+            "expected": -4500,
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": {
+              "code": {
+                "amount": 1000
+              },
+              "lines": [
+                {
+                  "sku": "boots",
+                  "price": 3000,
+                  "quantity": 1,
+                  "discount": 600
+                },
+                {
+                  "sku": "socks",
+                  "price": 2000,
+                  "quantity": 1,
+                  "discount": 400
+                }
+              ]
+            },
+            "expected": -4000,
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": {
+              "code": {
+                "percent": 20
+              },
+              "lines": [
+                {
+                  "sku": "mug",
+                  "price": 1000,
+                  "quantity": 3,
+                  "discount": 600
+                }
+              ]
+            },
+            "expected": -2400,
+            "visible": false
+          },
+          {
+            "id": "case-5",
+            "input": {
+              "code": {
+                "percent": 10
+              },
+              "lines": []
+            },
+            "expected": 0,
+            "visible": false
+          },
+          {
+            "id": "case-6",
+            "input": {
+              "code": {
+                "amount": 500
+              },
+              "lines": [
+                {
+                  "sku": "gift-wrap",
+                  "price": 0,
+                  "quantity": 1,
+                  "discount": 0
+                }
+              ]
+            },
+            "expected": 0,
+            "visible": false
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "jo-1",
+          "author": {
+            "name": "Jo T",
+            "role": "Support"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "40 tickets about this since Monday. Every one of them used a promo code."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        },
+        {
+          "id": "ada-abs",
+          "where": "review",
+          "severity": "blocking",
+          "text": [
+            "Taking the absolute value hides the sign we need for refunds. Can we keep refunds negative all the way through?",
+            "`Math.abs` here would turn a refund into a charge if the sign is ever wrong upstream. Can we keep refunds negative all the way through instead?"
+          ],
+          "when": {
+            "pattern": "Math\\.abs\\(",
+            "present": true,
+            "file": "src/cart/totals.js"
+          },
+          "repeat": "while-true",
+          "author": {
+            "name": "Ada N",
+            "role": "Frontend"
+          }
+        },
+        {
+          "id": "ada-order-total",
+          "where": "review",
+          "severity": "blocking",
+          "text": [
+            "This changes `orderTotal` too, and checkout uses that. Can we keep this pull request to refunds?"
+          ],
+          "when": {
+            "pattern": "return subtotal - discountFor\\(order\\.code, subtotal\\);",
+            "present": false,
+            "file": "src/cart/totals.js"
+          },
+          "repeat": "while-true",
+          "author": {
+            "name": "Ada N",
+            "role": "Frontend"
+          }
+        },
+        {
+          "id": "ada-long-refund",
+          "where": "review",
+          "severity": "nit",
+          "text": [
+            "Nit: `refundTotal` is getting long. Would a helper for one line's amount read better?"
+          ],
+          "when": {
+            "metric": "function-lines",
+            "above": 12,
+            "file": "src/cart/totals.js"
+          },
+          "author": {
+            "name": "Ada N",
+            "role": "Frontend"
+          }
+        },
+        {
+          "id": "sam-incident",
+          "where": "review",
+          "severity": "info",
+          "text": [
+            "Nice, that's the jacket from the incident. I'll let support know once it's out."
+          ],
+          "when": {
+            "check": "case-2",
+            "is": "passing"
+          },
+          "author": {
+            "name": "Sam R",
+            "role": "SRE"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "id": "hint-1",
+          "level": 1,
+          "author": {
+            "name": "Jo T",
+            "role": "Support"
+          },
+          "text": "Where does a returned line's discount come from? Have a look at what `lineTotal` already does with it.",
+          "when": {
+            "behaviour": "active-minutes-without-progress",
+            "atLeast": 12
+          }
+        },
+        {
+          "id": "hint-2",
+          "level": 2,
+          "author": {
+            "name": "Jo T",
+            "role": "Support"
+          },
+          "text": "Try the jacket from the ticket on paper: $50.00, $5.00 off at checkout. How many times does the refund take a discount off?",
+          "when": {
+            "behaviour": "failing-pushes",
+            "atLeast": 3
           }
         }
       ],

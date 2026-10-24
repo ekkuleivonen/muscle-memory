@@ -3,7 +3,7 @@
  * printed, every error with its trace, each case's result and the summary. Pure, so the
  * wording is testable without a browser.
  */
-import type { Executable } from "../../../../packages/content/model";
+import { casesRun, type Case, type Executable } from "../../../../packages/content/model";
 import { runFeedback } from "../../../../packages/domain/workspace";
 import type { CaseResult, CodeError } from "../../../../packages/runner/runner";
 import type { RunView } from "../workspace/session";
@@ -43,18 +43,25 @@ function errorLines(error: CodeError, indent = ""): Line[] {
 
 function caseLines(
   challenge: Executable,
-  index: number,
+  check: Case,
   passed: boolean,
   result?: CaseResult,
 ): Line[] {
-  const label = caseLabel(challenge, challenge.cases[index].input);
+  // CI runs hidden cases on a pull request; their input and output stay hidden.
+  if (!check.visible)
+    return [
+      passed
+        ? { text: `✔ hidden case ${check.id}`, tone: "pass" }
+        : { text: `✘ hidden case ${check.id}`, tone: "fail" },
+    ];
+  const label = caseLabel(challenge, check.input);
   if (passed) return [{ text: `✔ ${label}`, tone: "pass" }];
   const out: Line[] = [{ text: `✘ ${label}`, tone: "fail" }];
   if (result?.error) return [...out, ...errorLines(result.error, "    ")];
   if (result?.conversionError)
     return [...out, ...errorLines(result.conversionError, "    ")];
   out.push({
-    text: `    expected ${JSON.stringify(challenge.cases[index].expected)}`,
+    text: `    expected ${JSON.stringify(check.expected)}`,
     tone: "dim",
   });
   out.push({
@@ -113,10 +120,11 @@ export function transcript(
     });
     return out;
   }
-  const feedback = runFeedback(challenge.cases, o.cases);
-  challenge.cases.forEach((_, index) =>
+  const cases = casesRun(challenge.cases, run.purpose);
+  const feedback = runFeedback(cases, o.cases);
+  cases.forEach((check, index) =>
     out.push(
-      ...caseLines(challenge, index, feedback.passed[index], o.cases[index]),
+      ...caseLines(challenge, check, feedback.passed[index], o.cases[index]),
     ),
   );
   const failed = feedback.total - feedback.correct;

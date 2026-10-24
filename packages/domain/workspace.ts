@@ -10,7 +10,8 @@ import { canonical, type Json } from "./json";
  * 4.0.0: teammate feedback. `comment` records a teammate comment released by its trigger,
  * `hint` a hint, and `thread-resolved` a blocking review thread that a later push no longer
  * triggers. The ticket's own thread (comments on the `opened` event) is part of the ticket and
- * is not recorded. A reply is recorded on the board (board capture 3.0.0).
+ * is not recorded. A reply is recorded on the board (board capture 3.0.0). A local run (Run
+ * tests) runs only the revision's visible cases, in order; a pull request's run runs every case.
  * 3.0.0: a workspace can have several editable files. Every edit names its `file`, and a code
  * revision artifact holds every editable file (`files`, each bounded on its own) instead of one
  * `text`; `revision` counts edits across all files.
@@ -84,7 +85,10 @@ export interface ObservationData {
     readonly status: RunStatus;
     readonly runtime: Json;
     readonly timeoutMs: number;
-    /** Raw, bounded runner outcome for terminal statuses. */
+    /**
+     * Raw, bounded runner outcome for terminal statuses. Its cases follow the revision's
+     * visible cases for a local run, and all of them for a pull request.
+     */
     readonly outcome?: Json;
   };
   /**

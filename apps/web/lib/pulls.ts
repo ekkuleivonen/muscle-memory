@@ -7,7 +7,7 @@
  * the board move to Done). Work continues on an open one: each push is recorded under the same
  * number, and the pull request shows its latest push.
  */
-import type { Revision } from "../../../packages/content/model";
+import { casesRun, type Revision } from "../../../packages/content/model";
 import type { Json } from "../../../packages/domain/json";
 import {
   pullRequestResult,
@@ -317,7 +317,7 @@ export function pullRequestDetail(
         flush();
         runs++;
         const verdict = revision
-          ? pullRequestResult(revision.checks.cases, o.data.outcome as never)
+          ? pullRequestResult(casesRun(revision.checks.cases, "local"), o.data.outcome as never)
           : { result: "checks-errored", passed: 0, total: 0 };
         const green = verdict.result === "checks-passed";
         const tested = green || verdict.result === "checks-failed";

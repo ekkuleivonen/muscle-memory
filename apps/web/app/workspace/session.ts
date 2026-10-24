@@ -10,7 +10,7 @@ import type {
   CaptureSink,
   CaptureStatus,
 } from "../../../../packages/capture/recorder";
-import type { Executable } from "../../../../packages/content/model";
+import { casesRun, type Executable } from "../../../../packages/content/model";
 import type { Json } from "../../../../packages/domain/json";
 import {
   codeRevision,
@@ -318,7 +318,7 @@ export class WorkspaceSession {
         ...(this.options.executable.adapter
           ? { adapter: this.options.executable.adapter }
           : {}),
-        inputs: this.options.executable.cases.map((c) => c.input),
+        inputs: casesRun(this.options.executable.cases, purpose).map((c) => c.input),
       },
       () => update("running"),
     );

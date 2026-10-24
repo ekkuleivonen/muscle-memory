@@ -231,6 +231,12 @@
 }
 .ide-ticket .markdown {
   font-size: 13px;
+  min-width: 0;
+}
+/* A log or receipt in a ticket scrolls inside the narrow side bar instead of being cut off. */
+.ide-ticket .markdown pre {
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .ide-ticket-tests {
   margin: 12px 0;

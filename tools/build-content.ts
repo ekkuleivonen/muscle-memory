@@ -2,7 +2,9 @@
  * Builds content/catalog.json from content/seed.ts: each issue's repo is generated here, at
  * authoring time, and each revision is stored under the SHA-256 of its content. Revisions
  * already in the catalog are kept (they are immutable and recorded work may name them), so
- * editing a seed issue adds a revision and moves the issue's live pointer to it.
+ * editing a seed issue adds a revision and moves the issue's live pointer to it. An issue with a
+ * private part must pass the publish checks that need no code to run (packages/content/publish);
+ * the private part itself is never written out.
  *
  *   node --import tsx tools/build-content.ts           write the catalog
  *   node --import tsx tools/build-content.ts --check   fail if it is out of date
@@ -21,6 +23,7 @@ import {
   type Revision,
   type TeamComment,
 } from "../packages/content/model";
+import { publishProblems } from "../packages/content/publish";
 import { revisionId, verifyCatalog } from "../packages/content/revision";
 import { SEED_ISSUES, SEED_PROJECTS, type SeedIssue } from "../content/seed";
 
@@ -36,8 +39,11 @@ function revisionOf(seed: SeedIssue, key: string, project: (typeof SEED_PROJECTS
     id: `case-${index + 1}`,
     input: input as Json,
     expected: seed.expected[index] as Json,
-    visible: true,
+    // Hidden cases only run in CI; the repo's test file shows the rest.
+    visible: !seed.hidden?.includes(index),
   }));
+  if (seed.entry && !["javascript", "typescript"].includes(seed.language))
+    throw new Error(`${seed.id}: only JavaScript and TypeScript issues can place their entry file.`);
   const repo = repoFor({
     key,
     slug: seed.id,
@@ -50,6 +56,9 @@ function revisionOf(seed: SeedIssue, key: string, project: (typeof SEED_PROJECTS
     adapter: seed.adapter,
     criteria: cases.filter((c) => c.visible),
     project: { slug: project.key.toLowerCase(), title: project.title, story: project.story },
+    hidden: cases.filter((c) => !c.visible).length,
+    entry: seed.entry,
+    files: seed.files?.map((f) => ({ ...f, language: f.language as LanguageId })),
   });
   const persona = (c: { author: string; role: string }): Persona => ({
     name: c.author,
@@ -127,6 +136,11 @@ for (const project of SEED_PROJECTS)
     if (!seed) throw new Error(`${project.id} lists unknown issue ${id}.`);
     const number = index + 1;
     const revision = revisionOf(seed, `${project.key}-${number}`, project);
+    if (seed.private) {
+      const problems = publishProblems(revision, seed.private);
+      if (problems.length)
+        throw new Error(`${seed.id} cannot be published:\n  ${problems.join("\n  ")}`);
+    }
     const rid = revisionId(revision);
     revisions[rid] = revision;
     issues.push({

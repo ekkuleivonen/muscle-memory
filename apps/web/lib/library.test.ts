@@ -49,7 +49,7 @@ test("issues are live metadata over their live revisions, grouped into projects"
     merged.projects.map((p) => [p.slug, p.issues.length]),
     [
       ["field-notes", 1],
-      ["storefront", 4],
+      ["storefront", 5],
       ["accounts-api", 6],
       ["data-platform", 5],
       ["edge-proxy", 4],
@@ -77,7 +77,7 @@ test("retired issues leave lists, but every published revision still resolves", 
 
 test("issues run when their language has an engine; project summaries span their issues", () => {
   // Every seed issue's language has an engine, with what that engine needs.
-  assert.equal(merged.issues.length, 20);
+  assert.equal(merged.issues.length, 21);
   assert.ok(merged.issues.every((i) => i.runnable));
   const edge = merged.projects.find((c) => c.slug === "edge-proxy")!;
   assert.equal(difficultyRange(edge.issues), "easy–hard");
@@ -132,6 +132,7 @@ test("filters combine across qualifiers and match any value within one", () => {
     "EDGE-3",
     "SHOP-1",
     "SHOP-2",
+    "SHOP-5",
   ]);
   assert.deepEqual(keys("kind:bug lang:go"), ["API-1", "API-4"]);
   assert.deepEqual(keys("lang:rust,go"), [
@@ -157,6 +158,7 @@ test("filters combine across qualifiers and match any value within one", () => {
     "SHOP-2",
     "SHOP-3",
     "SHOP-4",
+    "SHOP-5",
   ]);
   assert.deepEqual(
     keys("project:SHOP,fn"),
@@ -187,7 +189,7 @@ test("groups keep their declared order and drop empty ones", () => {
       g.issues.length,
     ]),
     [
-      ["bug", 10],
+      ["bug", 11],
       ["performance", 2],
     ],
   );
@@ -197,7 +199,7 @@ test("groups keep their declared order and drop empty ones", () => {
   );
   assert.equal(
     groupIssues(issues, "none", merged.projects)[0].issues.length,
-    12,
+    13,
   );
 });
 

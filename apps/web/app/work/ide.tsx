@@ -18,6 +18,7 @@ import {
   type RecoveredCode,
 } from "../../../../packages/capture/restore";
 import {
+  casesRun,
   executableOf,
   type Difficulty,
   type IssueKind,
@@ -585,7 +586,7 @@ export function Ide({
         ) : (
           <Ticket
             issue={issue}
-            cases={challenge.cases.length}
+            cases={casesRun(challenge.cases, "local").length}
             testsPath={testsFile.path}
             thread={thread}
             onOpenTests={() => openFile(testsFile.path)}
@@ -950,12 +951,14 @@ function Tests({
   runtime: Runtime;
   onRetry(): void;
 }) {
+  /** The cases in the repo's test file, which Run tests runs. */
+  const visible = casesRun(challenge.cases, "local").length;
   if (!issue.runnable)
     return (
       <p className="faint">
         Running {languageLabel(issue.language)} in the browser isn&apos;t
         available yet. Your edits are saved as you go; the{" "}
-        {challenge.cases.length} cases are in {testsPath}.
+        {visible} cases are in {testsPath}.
       </p>
     );
   if (runtime.state === "unavailable")
@@ -970,8 +973,10 @@ function Tests({
   if (!run)
     return (
       <p className="faint">
-        Run the tests (<kbd>⌘⏎</kbd>) to check your code against{" "}
-        {challenge.cases.length} cases.
+        Run the tests (<kbd>⌘⏎</kbd>) to check your code against the {visible}{" "}
+        cases in {testsPath}.
+        {visible < challenge.cases.length &&
+          " CI runs more on a pull request."}
       </p>
     );
   const o = run.outcome;
@@ -996,7 +1001,8 @@ function Tests({
         {o.error.traceback.text || `${o.error.type}: ${o.error.message}`}
       </pre>
     );
-  const feedback = runFeedback(challenge.cases, o.cases);
+  const cases = casesRun(challenge.cases, run.purpose);
+  const feedback = runFeedback(cases, o.cases);
   const failed = feedback.total - feedback.correct;
   return (
     <div>
@@ -1017,12 +1023,14 @@ function Tests({
         )}
       </p>
       <ol className="ide-cases">
-        {challenge.cases.map(({ input, expected }, index) => (
+        {cases.map((check, index) => (
           <Case
             key={index}
             index={index}
-            label={caseLabel(challenge, input)}
-            expected={expected}
+            // CI's hidden cases keep their input and output to themselves.
+            label={check.visible ? caseLabel(challenge, check.input) : `hidden case ${check.id}`}
+            expected={check.expected}
+            hidden={!check.visible}
             passed={feedback.passed[index]}
             result={o.cases[index]}
           />
@@ -1036,12 +1044,14 @@ function Case({
   index,
   label,
   expected,
+  hidden,
   passed,
   result,
 }: {
   index: number;
   label: string;
   expected: unknown;
+  hidden?: boolean;
   passed: boolean;
   result?: CaseResult;
 }) {
@@ -1050,7 +1060,7 @@ function Case({
       <span className="ide-case-mark">{passed ? "✔" : "✘"}</span>
       <span className="ide-case-body">
         <code>{label}</code>
-        {!passed && (
+        {!passed && !hidden && (
           <span className="ide-case-detail">
             <span>
               expected <code>{JSON.stringify(expected)}</code>

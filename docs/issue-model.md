@@ -2,7 +2,7 @@
 
 What an issue is, how it is managed and where it is stored.
 
-**Built so far:** the model itself. Issue metadata, revisions and the catalog are in `packages/content` (types, validation, revision hashing). The seed (`content/seed.ts`) is built into `content/catalog.json` by `tools/build-content.ts`, and the app reads every page and the IDE from it. Recorded data names the issue and revision. The IDE takes several editable and read-only files, recorded per file (JavaScript and TypeScript run them; other runners still load one source file). Teammate comments, review threads and hints are released by their triggers (`packages/content/triggers.ts`, read from records by `apps/web/lib/feedback.ts`), recorded, and blocking threads hold the merge. **Not built yet:** hidden cases, static rules and scaling checks in CI, the private part (reference solution, trigger examples) and the checks that use it, the database, R2 and the admin UI. Until then, the seed and its build stand in for authoring.
+**Built so far:** the model itself. Issue metadata, revisions and the catalog are in `packages/content` (types, validation, revision hashing). The seed (`content/seed.ts`) is built into `content/catalog.json` by `tools/build-content.ts`, and the app reads every page and the IDE from it. Recorded data names the issue and revision. The IDE takes several editable and read-only files, recorded per file (JavaScript and TypeScript run them; other runners still load one source file). Teammate comments, review threads and hints are released by their triggers (`packages/content/triggers.ts`, read from records by `apps/web/lib/feedback.ts`), recorded, and blocking threads hold the merge. Cases can be hidden: Run tests runs the repo's test file, CI on a pull request runs every case. A seed issue's private part (reference solution, trigger examples) feeds the publish checks: the content build checks the examples, the reference against blocking comments and the hints (`packages/content/publish.ts`), and `npm run check:publish` runs the reference and the starter in the browser sandbox (`tools/browser/content-check.ts`). SHOP-5 is the first multi-file issue with all of it. **Not built yet:** static rules and scaling checks in CI, author notes, the database, R2 and the admin UI. Until then, the seed and its build stand in for authoring.
 
 ## Principles
 
@@ -50,7 +50,7 @@ Two parts: **metadata** (live) and **revision content** (immutable). Published r
 ```ts
 interface IssueMetadata {
   id: string;                 // "refund-totals": permanent
-  number: number;             // SHOP-7: project key + number, permanent
+  number: number;             // SHOP-5: project key + number, permanent
   project: string;            // the project that lists it
   title: string;
   summary: string;
@@ -168,26 +168,27 @@ From these, every attempt can say when it stopped being unaided, which feedback 
 
 ## A worked example
 
-**SHOP-7 · Refund totals double-count discounts** (bug, medium, JavaScript)
+**SHOP-5 · Refund totals double-count discounts** (bug, medium, JavaScript), in `content/seed.ts`:
 
-- **Ticket:** Support says a refunded order with a promo code shows a negative total. A screenshot of the receipt is in the body; no failing test is given.
+- **Ticket:** support escalated a refund on an order with a promo code that gave back less than the customer paid, with the receipt in the body. No failing test is given.
 - **Workspace:**
-  - `src/cart/totals.js` (edit);
-  - `src/cart/discounts.js` (read);
+  - `src/cart/totals.js` (edit, the entry file);
+  - `src/cart/money.js` and `src/cart/discounts.js` (read): `lineTotal` already takes off each line's share of the discount, which checkout allocates;
   - `src/cart/totals.test.js` (tests, visible cases only);
   - `README.md`.
-- **Checks:** eight cases, three of them hidden, covering a refund with a discount, a full refund and a zero-value order.
+- **Checks:** six cases, three of them hidden: a refund without a code, with a percentage and with a fixed amount, a larger percentage, an empty refund and a free item.
 - **Team:**
-  - *Jo T (Support), issue, info, on opened:* "40 tickets about this since Monday. It's only orders with a code."
-  - *Ada N (Frontend), review, blocking, pattern* `Math.abs\(` *in* `totals.js`: "Taking the absolute value hides the sign we need for refunds. Can we keep refunds negative all the way through?"
-  - *Ada N, review, nit, metric* `function-lines > 30`: "`cartTotal` is getting long; would a helper for the discount step read better?"
-  - *Sam R (SRE), review, info, check `refund-with-code` passes:* "Nice, that's the one from the incident."
+  - *Jo T (Support), the ticket's thread:* "40 tickets about this since Monday. Every one of them used a promo code."
+  - *Ada N (Frontend), review, blocking, pattern* `Math\.abs\(` *in* `totals.js`: "Taking the absolute value hides the sign we need for refunds. Can we keep refunds negative all the way through?"
+  - *Ada N, review, blocking, `orderTotal`'s return line missing:* "This changes `orderTotal` too, and checkout uses that. Can we keep this pull request to refunds?"
+  - *Ada N, review, nit, metric* `function-lines > 12`: "`refundTotal` is getting long. Would a helper for one line's amount read better?"
+  - *Sam R (SRE), review, info, check `case-2` passes:* "Nice, that's the jacket from the incident."
 - **Hints:**
-  - level 1, after 12 active minutes without progress: "Where is the discount applied: before or after the refund sign?"
-  - level 2, after 3 failing pushes: "Try the refund case on paper: the discount ends up subtracted twice."
+  - level 1, after 12 active minutes without progress: "Where does a returned line's discount come from? Have a look at what `lineTotal` already does with it."
+  - level 2, after 3 failing pushes: "Try the jacket from the ticket on paper: $50.00, $5.00 off at checkout. How many times does the refund take a discount off?"
 - **Private:**
   - the reference fix;
-  - for the `Math.abs` comment, one example that must fire it and one that must not.
+  - for each review comment that reads code, an example that must fire it and one that must not.
 
 ## Managing issues
 
@@ -205,7 +206,10 @@ AI draft ─▶ human edit ─▶ checks ─▶ approved ─▶ published (live)
   - running twice gives the same result (no flaky checks);
   - every **trigger example** fires or stays quiet as declared;
   - the **reference solution** triggers no blocking comment;
-  - **comments and hints** contain no long passage of the reference solution.
+  - **hints** contain no line the reference solution adds;
+  - every **blocking** comment has examples both ways.
+
+  Today the content build runs the checks that read code as text, and `npm run check:publish` runs the reference (twice) and the starter in the browser sandbox; issues without a reference yet are listed as unchecked.
 - **Approved** by a person who did not draft it.
 - **Published.** The revision is frozen, written as a bundle, and becomes the issue's live revision. Players starting the issue get this revision; work in progress on an older one keeps its own.
 - **Retired.** Out of lists and no new starts; recorded work stays valid. This is how issues rotate to keep the board fresh.

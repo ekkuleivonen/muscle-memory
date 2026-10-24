@@ -3,6 +3,9 @@
  * will store them later. Five projects, one per engineering area plus a warm-up, with the kind
  * of issues people meet in a normal job. tools/build-content.ts turns this into the catalog
  * (content/catalog.json): it generates each issue's repo and hashes each revision.
+ *
+ * An issue's `private` part (reference solution, trigger examples) is for publish checks only:
+ * it is never written to the catalog, and nothing the app ships imports this file.
  */
 import type { Trigger } from "../packages/content/model";
 
@@ -49,6 +52,31 @@ export interface SeedIssue {
   schema?: string;
   /** C, C++ and Java: turns a case's JSON arguments into the function's types. */
   adapter?: string;
+  /** JavaScript and TypeScript: where the entry file lives, when not src/<entry point>. */
+  entry?: string;
+  /** More of the repo: source the code uses but may not change (read), and documents (docs). */
+  files?: SeedFile[];
+  /** Cases left out of the repo's test file, by index: only CI runs them. */
+  hidden?: number[];
+  private?: SeedPrivate;
+}
+
+export interface SeedFile {
+  path: string;
+  role: "read" | "docs";
+  language: string;
+  text: string;
+}
+
+/** Never published. Publish checks use it (tools/build-content.ts, tools/browser/content-check.ts). */
+export interface SeedPrivate {
+  /** The editable files after a correct fix, by path: it must pass every case. */
+  reference: Record<string, string>;
+  /**
+   * Per teammate comment: changes to the editable files that must fire it, and changes that
+   * must not. Every blocking review comment needs both.
+   */
+  examples?: Record<string, { fires: Record<string, string>[]; quiet: Record<string, string>[] }>;
 }
 
 export interface SeedProject {
@@ -174,6 +202,27 @@ export function applyDiscount(totalCents: number, code: string, codes: Codes): n
   <input type="checkbox" name="in-stock"> in-stock
   <input type="checkbox" name="on-sale"> on-sale
 </form>
+`,
+  },
+  "refund-totals": {
+    entrypoint: "refundTotal",
+    starter: `import { discountFor } from "./discounts.js";
+import { lineTotal, sum } from "./money.js";
+
+/** What an order charges at checkout, in cents: its lines less the promo code's discount. */
+export function orderTotal(order) {
+  const subtotal = sum(order.lines.map((line) => line.price * line.quantity));
+  return subtotal - discountFor(order.code, subtotal);
+}
+
+/**
+ * What a refund gives back for the returned lines, in cents, as a negative amount: refunds
+ * stay negative all the way to the ledger.
+ */
+export function refundTotal(refund) {
+  const returned = sum(refund.lines.map(lineTotal));
+  return -(returned - discountFor(refund.code, returned));
+}
 `,
   },
   "debounce-search": {
@@ -447,6 +496,31 @@ export const SEED_ISSUES: SeedIssue[] = [
         when: { check: "case-4", is: "passing" },
       },
     ],
+    private: {
+      reference: { "frequency_map.py": `def frequency_map(items):
+    counts = {}
+    for item in items:
+        counts[item] = counts.get(item, 0) + 1
+    return counts
+` },
+      examples: {
+        "priya-debug-print": {
+          fires: [{ "frequency_map.py": `def frequency_map(items):
+    counts = {}
+    for item in items:
+        counts[item] = counts.get(item, 0) + 1
+    print(counts)
+    return counts
+` }],
+          quiet: [{ "frequency_map.py": `def frequency_map(items):
+    counts = {}
+    for item in items:
+        counts[item] = counts.get(item, 0) + 1
+    return counts
+` }],
+        },
+      },
+    },
   }),
   // Storefront: frontend
   challenge("format-price", {
@@ -541,6 +615,302 @@ export const SEED_ISSUES: SeedIssue[] = [
     ],
   }),
 
+  challenge("refund-totals", {
+    title: "Refund totals double-count discounts",
+    summary: "Refunds on orders with a promo code give back less than the customer paid.",
+    kind: "bug",
+    difficulty: "medium",
+    language: "javascript",
+    skills: ["debugging", "money", "reading-code"],
+    task: `Support escalated this from the help desk:
+
+> A customer returned one of two jackets from an order that used **SPRING10** (10% off). The receipt says they paid **$45.00** for that jacket, but the refund came through as **$40.50**.
+
+\`\`\`text
+Order #10482    SPRING10 (10% off)
+  Rain jacket    1 × $50.00    −$5.00    $45.00
+Refund #R-2291
+  Rain jacket    1 × $50.00              −$40.50
+\`\`\`
+
+\`refundTotal(refund)\` in \`src/cart/totals.js\` works out what a refund gives back, in cents, as a negative amount. A refund gives back exactly what the customer paid for the lines returned. Checkout totals are not part of this ticket.`,
+    entry: "src/cart/totals.js",
+    files: [
+      { path: "src/cart/money.js", role: "read", language: "javascript", text: `/** Money is whole cents everywhere: never floats. */
+
+/**
+ * What a line charges: its price times quantity, less the share of the order's discount that
+ * checkout allocated to it (see allocate in discounts.js).
+ */
+export function lineTotal(line) {
+  return line.price * line.quantity - (line.discount ?? 0);
+}
+
+export function sum(amounts) {
+  return amounts.reduce((total, amount) => total + amount, 0);
+}
+` },
+      { path: "src/cart/discounts.js", role: "read", language: "javascript", text: `import { sum } from "./money.js";
+
+/**
+ * A promo code's discount on a subtotal, in cents: a percentage ({ percent: 10 }) or a fixed
+ * amount ({ amount: 500 }), never more than the subtotal.
+ */
+export function discountFor(code, subtotal) {
+  if (!code) return 0;
+  const off =
+    "percent" in code ? Math.round((subtotal * code.percent) / 100) : code.amount;
+  return Math.min(off, subtotal);
+}
+
+/**
+ * At checkout the order's discount is spread over its lines in proportion to their value and
+ * stored on each line as \`discount\`, so a partial refund can give back exactly what was paid
+ * for the lines returned.
+ */
+export function allocate(code, lines) {
+  const gross = lines.map((line) => line.price * line.quantity);
+  const subtotal = sum(gross);
+  const total = discountFor(code, subtotal);
+  let left = total;
+  return lines.map((line, index) => {
+    const share =
+      index === lines.length - 1 || subtotal === 0
+        ? left
+        : Math.floor((total * gross[index]) / subtotal);
+    left -= share;
+    return { ...line, discount: share };
+  });
+}
+` },
+    ],
+    inputs: [
+      { code: null, lines: [{ sku: "tee", price: 2500, quantity: 2, discount: 0 }] },
+      { code: { percent: 10 }, lines: [{ sku: "rain-jacket", price: 5000, quantity: 1, discount: 500 }] },
+      {
+        code: { amount: 1000 },
+        lines: [
+          { sku: "boots", price: 3000, quantity: 1, discount: 600 },
+          { sku: "socks", price: 2000, quantity: 1, discount: 400 },
+        ],
+      },
+      { code: { percent: 20 }, lines: [{ sku: "mug", price: 1000, quantity: 3, discount: 600 }] },
+      { code: { percent: 10 }, lines: [] },
+      { code: { amount: 500 }, lines: [{ sku: "gift-wrap", price: 0, quantity: 1, discount: 0 }] },
+    ],
+    expected: [-5000, -4500, -4000, -2400, 0, 0],
+    hidden: [3, 4, 5],
+    comments: [
+      jo("40 tickets about this since Monday. Every one of them used a promo code."),
+    ],
+    hints: [
+      {
+        text: "Where does a returned line's discount come from? Have a look at what `lineTotal` already does with it.",
+        when: { behaviour: "active-minutes-without-progress", atLeast: 12 },
+      },
+      {
+        text: "Try the jacket from the ticket on paper: $50.00, $5.00 off at checkout. How many times does the refund take a discount off?",
+        when: { behaviour: "failing-pushes", atLeast: 3 },
+      },
+    ],
+    team: [
+      {
+        id: "ada-abs",
+        author: "Ada N",
+        role: "Frontend",
+        where: "review",
+        severity: "blocking",
+        text: [
+          "Taking the absolute value hides the sign we need for refunds. Can we keep refunds negative all the way through?",
+          "`Math.abs` here would turn a refund into a charge if the sign is ever wrong upstream. Can we keep refunds negative all the way through instead?",
+        ],
+        when: { pattern: "Math\\.abs\\(", present: true, file: "src/cart/totals.js" },
+        repeat: "while-true",
+      },
+      {
+        id: "ada-order-total",
+        author: "Ada N",
+        role: "Frontend",
+        where: "review",
+        severity: "blocking",
+        text: [
+          "This changes `orderTotal` too, and checkout uses that. Can we keep this pull request to refunds?",
+        ],
+        when: {
+          pattern: "return subtotal - discountFor\\(order\\.code, subtotal\\);",
+          present: false,
+          file: "src/cart/totals.js",
+        },
+        repeat: "while-true",
+      },
+      {
+        id: "ada-long-refund",
+        author: "Ada N",
+        role: "Frontend",
+        where: "review",
+        severity: "nit",
+        text: ["Nit: `refundTotal` is getting long. Would a helper for one line's amount read better?"],
+        when: { metric: "function-lines", above: 12, file: "src/cart/totals.js" },
+      },
+      {
+        id: "sam-incident",
+        author: "Sam R",
+        role: "SRE",
+        where: "review",
+        severity: "info",
+        text: ["Nice, that's the jacket from the incident. I'll let support know once it's out."],
+        when: { check: "case-2", is: "passing" },
+      },
+    ],
+    private: {
+      reference: { "src/cart/totals.js": `import { discountFor } from "./discounts.js";
+import { lineTotal, sum } from "./money.js";
+
+/** What an order charges at checkout, in cents: its lines less the promo code's discount. */
+export function orderTotal(order) {
+  const subtotal = sum(order.lines.map((line) => line.price * line.quantity));
+  return subtotal - discountFor(order.code, subtotal);
+}
+
+/**
+ * What a refund gives back for the returned lines, in cents, as a negative amount: refunds
+ * stay negative all the way to the ledger.
+ */
+export function refundTotal(refund) {
+  // Each returned line already carries its share of the discount from checkout.
+  return -sum(refund.lines.map(lineTotal));
+}
+` },
+      examples: {
+        "ada-abs": {
+          fires: [{ "src/cart/totals.js": `import { discountFor } from "./discounts.js";
+import { lineTotal, sum } from "./money.js";
+
+/** What an order charges at checkout, in cents: its lines less the promo code's discount. */
+export function orderTotal(order) {
+  const subtotal = sum(order.lines.map((line) => line.price * line.quantity));
+  return subtotal - discountFor(order.code, subtotal);
+}
+
+/**
+ * What a refund gives back for the returned lines, in cents, as a negative amount: refunds
+ * stay negative all the way to the ledger.
+ */
+export function refundTotal(refund) {
+  // Each returned line already carries its share of the discount from checkout.
+  return -Math.abs(sum(refund.lines.map(lineTotal)));
+}
+` }],
+          quiet: [{ "src/cart/totals.js": `import { discountFor } from "./discounts.js";
+import { lineTotal, sum } from "./money.js";
+
+/** What an order charges at checkout, in cents: its lines less the promo code's discount. */
+export function orderTotal(order) {
+  const subtotal = sum(order.lines.map((line) => line.price * line.quantity));
+  return subtotal - discountFor(order.code, subtotal);
+}
+
+/**
+ * What a refund gives back for the returned lines, in cents, as a negative amount: refunds
+ * stay negative all the way to the ledger.
+ */
+export function refundTotal(refund) {
+  // Each returned line already carries its share of the discount from checkout.
+  return -sum(refund.lines.map(lineTotal));
+}
+` }],
+        },
+        "ada-order-total": {
+          fires: [{ "src/cart/totals.js": `import { discountFor } from "./discounts.js";
+import { lineTotal, sum } from "./money.js";
+
+/** What an order charges at checkout, in cents: its lines less the promo code's discount. */
+export function orderTotal(order) {
+  const subtotal = sum(order.lines.map((line) => line.price * line.quantity));
+  return subtotal;
+}
+
+/**
+ * What a refund gives back for the returned lines, in cents, as a negative amount: refunds
+ * stay negative all the way to the ledger.
+ */
+export function refundTotal(refund) {
+  // Each returned line already carries its share of the discount from checkout.
+  return -sum(refund.lines.map(lineTotal));
+}
+` }],
+          quiet: [{ "src/cart/totals.js": `import { discountFor } from "./discounts.js";
+import { lineTotal, sum } from "./money.js";
+
+/** What an order charges at checkout, in cents: its lines less the promo code's discount. */
+export function orderTotal(order) {
+  const subtotal = sum(order.lines.map((line) => line.price * line.quantity));
+  return subtotal - discountFor(order.code, subtotal);
+}
+
+/**
+ * What a refund gives back for the returned lines, in cents, as a negative amount: refunds
+ * stay negative all the way to the ledger.
+ */
+export function refundTotal(refund) {
+  // Each returned line already carries its share of the discount from checkout.
+  return -sum(refund.lines.map(lineTotal));
+}
+` }],
+        },
+        "ada-long-refund": {
+          fires: [{ "src/cart/totals.js": `import { discountFor } from "./discounts.js";
+import { lineTotal, sum } from "./money.js";
+
+/** What an order charges at checkout, in cents: its lines less the promo code's discount. */
+export function orderTotal(order) {
+  const subtotal = sum(order.lines.map((line) => line.price * line.quantity));
+  return subtotal - discountFor(order.code, subtotal);
+}
+
+/**
+ * What a refund gives back for the returned lines, in cents, as a negative amount: refunds
+ * stay negative all the way to the ledger.
+ */
+export function refundTotal(refund) {
+  let total = 0;
+  for (const line of refund.lines) {
+    const gross = line.price * line.quantity;
+    const share = line.discount ?? 0;
+    const paid = gross - share;
+    if (paid === 0) {
+      continue;
+    }
+    total += paid;
+  }
+  if (total === 0) {
+    return 0;
+  }
+  return -total;
+}
+` }],
+          quiet: [{ "src/cart/totals.js": `import { discountFor } from "./discounts.js";
+import { lineTotal, sum } from "./money.js";
+
+/** What an order charges at checkout, in cents: its lines less the promo code's discount. */
+export function orderTotal(order) {
+  const subtotal = sum(order.lines.map((line) => line.price * line.quantity));
+  return subtotal - discountFor(order.code, subtotal);
+}
+
+/**
+ * What a refund gives back for the returned lines, in cents, as a negative amount: refunds
+ * stay negative all the way to the ledger.
+ */
+export function refundTotal(refund) {
+  // Each returned line already carries its share of the discount from checkout.
+  return -sum(refund.lines.map(lineTotal));
+}
+` }],
+        },
+      },
+    },
+  }),
   // Accounts API: backend
   challenge("pagination-params", {
     title: "List endpoints accept any page size",
@@ -997,6 +1367,7 @@ Stack: TypeScript, JavaScript, HTML.`,
       "discount-codes",
       "filter-form-labels",
       "debounce-search",
+      "refund-totals",
     ],
   },
   {

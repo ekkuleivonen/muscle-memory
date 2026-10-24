@@ -203,6 +203,17 @@ export function sourceFiles(workspace: Workspace): Record<string, WorkspaceFile>
   );
 }
 
+/**
+ * The cases a run checks: Run tests runs the repo's own tests (the visible cases); CI on a pull
+ * request runs every case, hidden ones included.
+ */
+export function casesRun<C extends { readonly visible: boolean }>(
+  cases: readonly C[],
+  purpose: "local" | "pull-request",
+): C[] {
+  return purpose === "pull-request" ? [...cases] : cases.filter((c) => c.visible);
+}
+
 /** What CI needs to run a revision's code: the engine's inputs, without the repo. */
 export interface Executable {
   readonly language: string;

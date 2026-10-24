@@ -5,7 +5,12 @@
  * and the revision's triggers (packages/content/triggers.ts), so everyone gets the same
  * feedback for the same work.
  */
-import type { Hint, Revision, TeamComment } from "../../../packages/content/model";
+import {
+  casesRun,
+  type Hint,
+  type Revision,
+  type TeamComment,
+} from "../../../packages/content/model";
 import {
   evaluate,
   wordingFor,
@@ -59,8 +64,11 @@ function casesOf(
     | { phase?: string; cases?: { output?: { text: string; truncated: boolean } }[] }
     | undefined;
   if (!revision || outcome?.phase !== "tests" || !outcome.cases) return null;
-  const { passed } = runFeedback(revision.checks.cases, outcome.cases);
-  return Object.fromEntries(revision.checks.cases.map((c, i) => [c.id, passed[i]]));
+  // A local run checks the visible cases; a pull request's run checks them all.
+  const purpose = run.data.purpose === "pull-request" ? "pull-request" : "local";
+  const cases = casesRun(revision.checks.cases, purpose);
+  const { passed } = runFeedback(cases, outcome.cases);
+  return Object.fromEntries(cases.map((c, i) => [c.id, passed[i]]));
 }
 
 export interface Push {
@@ -104,8 +112,9 @@ export function pushesOf(
 }
 
 /**
- * Behaviour since the last progress: a run or push that passed more cases than any before.
- * Active minutes are distinct minutes with an edit or a run, so a break never counts.
+ * Behaviour since the last progress: a run or push that passed a larger share of the cases it
+ * ran than any before (a local run runs fewer cases than CI). Active minutes are distinct
+ * minutes with an edit or a run, so a break never counts.
  */
 export function behaviourOf(
   records: readonly WorkspaceRecord[],
@@ -122,7 +131,8 @@ export function behaviourOf(
     if (o.type !== "observation.workspace.run" || !TERMINAL.has(String(o.data.status)))
       continue;
     const cases = casesOf(o, revisionFor);
-    const passed = cases ? Object.values(cases).filter(Boolean).length : 0;
+    const results = cases ? Object.values(cases) : [];
+    const passed = results.length ? results.filter(Boolean).length / results.length : 0;
     if (passed > best) {
       best = passed;
       since = o.occurredAt;

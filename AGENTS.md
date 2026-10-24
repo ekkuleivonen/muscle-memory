@@ -16,6 +16,7 @@ Muscle Memory is practice that feels like a developer job before AI, and it reco
 - Every runtime file is pinned by hash and size in `runtime-manifest.json`. `tools/build-runtimes.mjs` builds and verifies them; after changing a runtime, run it with `--update` and commit the manifest. Builds must be reproducible: the Go and C# runners are built from `tools/runtimes/`, and Java from a pinned teavm-javac commit, in digest-pinned Docker images, and files over 25 MiB are gzipped with fflate (not `node:zlib`, whose output differs between Node versions).
 - Cases are JSON. Without `parameters`, a case is the function's only argument; with them, it is the argument list. SQL issues carry a `schema`; C, C++ and Java issues carry an `adapter` from JSON arguments to the function's types.
 - `node tools/browser/sandbox-check.mjs chromium` checks every engine's results, errors and isolation in a real browser. Run it after touching the runner or a worker.
+- `npm run check:publish` runs each seed issue's private reference solution and its starter in the same sandbox. Run it after changing an issue's code or cases.
 
 ## Working here
 
