@@ -35,8 +35,13 @@ export default async function Image({ params }: { params: Promise<{ card: string
           MUSCLE MEMORY · SHIPPED WITHOUT AI
         </div>
         <div style={{ fontSize: 52, lineHeight: 1.2 }}>
-          {result ? sentence(result, label) : "One bug. No AI. Can you still fix it?"}
+          {result ? sentence({ ...result, fp: undefined }, label) : "One bug. No AI. Can you still fix it?"}
         </div>
+        {result?.fp !== undefined && (
+          <div style={{ fontSize: 38, color: "#4ade80" }}>
+            {`Faster than ${result.fp}% of people who fixed it in ${label}.`}
+          </div>
+        )}
         {result && (
           <div style={{ display: "flex" }}>
             {stat(String(result.ks), "keystrokes")}

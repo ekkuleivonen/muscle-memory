@@ -32,6 +32,12 @@ The fix itself is never shown, so a friend still gets a fair go. The same number
 
 Sharing (copy link, X, LinkedIn, or the system share sheet) makes a link `/r/<card>`: the numbers, base64url-encoded in the path, plus this device's **referral code**, a random code separate from the participant ID. The link is a brag, not a record: anyone could edit it, so nothing trusts it.
 
+## Comparing with everyone else
+
+A player against anonymous aggregates, never a list of people. `tools/aggregates/aggregate.py` runs daily after the erasure job (`.github/workflows/erasure.yml`): it reads every `result` event, keeps each participant's first finish of each issue, leaves out stealth players and anyone who asked for deletion, and writes the 0th–100th percentiles of active time (and peak speed) per issue to `aggregates/v1.json` in the control bucket. The ingest Worker serves it at `GET /ingest/v1/aggregates`, cached for an hour.
+
+The card compares in the browser: "Faster than 72% of people who fixed it in Python", once at least 50 people have finished that issue (`COMPARE_FROM`); before that, "One of the first 50 people to fix it in Python". The shared link carries the comparison, so the shared page and preview show it. Stealth players see no comparison, as the Privacy Notice says. "People who fixed it", not "developers": the players chose to be here.
+
 ## The shared page (`/r/<card>`)
 
 Public. It shows the receipt, a preview image (the headline sentence and keystrokes, typos, speed and pastes) for posts and chats (`opengraph-image.tsx`, 1200×630), and "Your turn", which leads to `/play?ref=<code>&lang=<language>`. A link that does not decode to a card we would have made goes to `/play`.

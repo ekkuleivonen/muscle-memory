@@ -2124,6 +2124,13 @@ kbd {
   color: #9aa0b1;
   margin: 0 0 18px;
 }
+.receipt-compare {
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 600;
+  color: #4ade80;
+  margin: -8px 0 16px;
+}
 .receipt-rows {
   margin: 0;
   border-top: 1px dashed #2c3140;

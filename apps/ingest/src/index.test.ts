@@ -180,3 +180,13 @@ test("too many requests from one participant or one address get 429, and the dev
   assert.equal(fifth.status, 429);
   assert.equal(fifth.headers.get("retry-after"), "60");
 });
+
+test("aggregates are served from the control bucket, or empty before the first run", async () => {
+  const { env, objects } = fakes();
+  const get = () => handle(new Request("https://musclememory.run/ingest/v1/aggregates"), env);
+  assert.deepEqual(await (await get()).json(), { version: 1, issues: {} });
+  objects.set("aggregates/v1.json", JSON.stringify({ version: 1, issues: { "QUICK-1": { n: 3 } } }));
+  const response = await get();
+  assert.equal(response.headers.get("cache-control"), "public, max-age=3600");
+  assert.equal((await response.json()).issues["QUICK-1"].n, 3);
+});

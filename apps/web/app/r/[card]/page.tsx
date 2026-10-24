@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LANGUAGES } from "../../../lib/languages";
 import { getLibrary } from "../../../lib/load";
-import { decodeResult, sentence } from "../../../lib/result";
+import { comparisonLine, decodeResult, sentence } from "../../../lib/result";
 import { Arrived } from "./arrived";
 import { Receipt } from "../../(browse)/_components/result-card";
 
@@ -57,6 +57,7 @@ export default async function SharedResult(props: Props) {
             headline="Someone fixed a real bug without AI."
             detail={`“${issue.title}”, in ${label}, from memory, with no autocomplete.`}
             metrics={result}
+            comparison={comparisonLine(result, label)}
           />
         </section>
         <section className="home-hero">

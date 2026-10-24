@@ -8,11 +8,15 @@ import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
 import { answerQuestions, readProfile } from "../../../lib/account";
 import { LANGUAGES } from "../../../lib/languages";
 import type { Profile } from "../../../lib/onboarding";
+import { INGEST_URL } from "../../../lib/ingest";
 import {
+  compare,
+  comparisonLine,
   duration,
   encodeResult,
   metricsOf,
   sentence,
+  type Aggregate,
   type Metrics,
   type Result,
 } from "../../../lib/result";
@@ -44,12 +48,15 @@ export function Receipt({
   detail,
   metrics,
   top,
+  comparison,
   children,
 }: {
   headline: string;
   detail: string;
   metrics: Metrics;
   top: string;
+  /** "Faster than 72% of people who fixed it in Python." */
+  comparison?: string | null;
   children?: React.ReactNode;
 }) {
   return (
@@ -60,6 +67,7 @@ export function Receipt({
       </div>
       <p className="receipt-head">{headline}</p>
       <p className="receipt-sub">{detail}</p>
+      {comparison && <p className="receipt-compare">{comparison}</p>}
       <dl className="receipt-rows">
         {receiptLines(metrics).map(([label, value, good]) => (
           <div key={label} className="receipt-row">
@@ -95,6 +103,19 @@ export function ResultCard({
 }) {
   const [code, setCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [aggregate, setAggregate] = useState<Aggregate | undefined>();
+  useEffect(() => {
+    // Stealth players are left out of the aggregates and see no comparisons.
+    if (!INGEST_URL || readProfile()?.stealth) return;
+    let live = true;
+    fetch(`${INGEST_URL}/v1/aggregates`, { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => live && setAggregate(body?.issues?.[issue.key]))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [issue.key]);
   useEffect(() => {
     let live = true;
     openPracticeStore()
@@ -117,7 +138,15 @@ export function ResultCard({
   );
   if (!code) return null;
   const label = LANGUAGES.find((l) => l.id === language)?.label ?? language;
-  const result: Result = { v: 2, k: issue.key, l: language, c: code, ...metrics };
+  const { fasterThan, people } = compare(aggregate, metrics.t);
+  const result: Result = {
+    v: 2,
+    k: issue.key,
+    l: language,
+    c: code,
+    ...metrics,
+    ...(aggregate ? { fn: people, ...(fasterThan !== undefined ? { fp: fasterThan } : {}) } : {}),
+  };
   const url = `${location.origin}/r/${encodeResult(result)}`;
   const text = `${sentence(result, label)} Can you still code without it?`;
   const share = async (channel: Channel) => {
@@ -145,6 +174,7 @@ export function ResultCard({
         headline="I fixed a real bug without AI."
         detail={`“${issue.title}”, in ${label}, from memory, with no autocomplete.`}
         metrics={metrics}
+        comparison={comparisonLine(result, label)}
       >
         <div className="receipt-foot">
           <span className="receipt-ask">Can your friends still do it?</span>

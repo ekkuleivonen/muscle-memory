@@ -38,6 +38,10 @@ export interface Metrics {
 
 export interface Result extends Metrics {
   readonly v: 2;
+  /** Faster than this percent of the people who fixed the same issue, when there are enough. */
+  readonly fp?: number;
+  /** How many people the comparison is with, or that this is one of the first of. */
+  readonly fn?: number;
   /** Issue key, e.g. QUICK-4. */
   readonly k: string;
   /** Language id. */
@@ -242,10 +246,45 @@ export function decodeResult(segment: string): Result | null {
     const metrics = Object.fromEntries(
       (Object.keys(LIMITS) as (keyof Metrics)[]).map((k) => [k, value[k]]),
     ) as unknown as Metrics;
-    return { v: 2, k: value.k, l: value.l, c: value.c, ...metrics };
+    const comparison =
+      count(value.fp, 100) && count(value.fn, 10_000_000) ? { fp: value.fp, fn: value.fn } : {};
+    return { v: 2, k: value.k, l: value.l, c: value.c, ...metrics, ...comparison };
   } catch {
     return null;
   }
+}
+
+/** Everyone needs this many finishes of an issue before anyone is compared with them. */
+export const COMPARE_FROM = 50;
+
+/** One issue's percentiles, as tools/aggregates writes them. */
+export interface Aggregate {
+  readonly n: number;
+  readonly language?: string;
+  /** Active time in seconds at the 0th to 100th percentile. */
+  readonly t?: readonly number[];
+}
+
+/**
+ * How someone's active time compares with everyone who fixed the same issue: faster than
+ * what percent, once there are enough people; otherwise just how few there are so far.
+ */
+export function compare(
+  aggregate: Aggregate | undefined,
+  seconds: number,
+): { fasterThan?: number; people: number } {
+  const people = aggregate?.n ?? 0;
+  if (!aggregate?.t?.length || people < COMPARE_FROM) return { people };
+  const slower = aggregate.t.filter((q) => q > seconds).length;
+  return { fasterThan: Math.round((100 * slower) / aggregate.t.length), people };
+}
+
+/** The comparison line, or null when there is nothing to compare with. */
+export function comparisonLine(result: Pick<Result, "fp" | "fn">, language: string): string | null {
+  if (result.fp !== undefined) return `Faster than ${result.fp}% of people who fixed it in ${language}.`;
+  if (result.fn !== undefined)
+    return `One of the first ${COMPARE_FROM} people to fix it in ${language}.`;
+  return null;
 }
 
 /** "4 min 12 s", "48 s". */
@@ -261,5 +300,6 @@ export function sentence(result: Result, language: string): string {
   const time = result.t < 60 ? "under a minute" : `${Math.round(result.t / 60)} minutes`;
   const green =
     result.g === 1 ? " Green on the first run." : result.g ? ` Green on run ${result.g}.` : "";
-  return `Fixed a real bug in ${language} without AI in ${time}.${green}`;
+  const comparison = result.fp !== undefined ? ` Faster than ${result.fp}% of people who fixed it.` : "";
+  return `Fixed a real bug in ${language} without AI in ${time}.${green}${comparison}`;
 }
