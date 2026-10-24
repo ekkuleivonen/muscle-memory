@@ -12,7 +12,7 @@ import {
 } from "../../../../lib/queries";
 import {
   Avatar,
-  CategorySquare,
+  ProjectSquare,
   Estimate,
   LabelPill,
   LanguageTag,
@@ -64,7 +64,7 @@ export default async function IssuePage(props: Props) {
   await requireOnboarding(pathWithQuery(`/issues/${slug}`, params));
   const { issue, latest } = await find(props);
   if (!issue) notFound();
-  const category = issue.categories[0];
+  const { project } = issue;
   return (
     <>
       <Topbar
@@ -76,9 +76,9 @@ export default async function IssuePage(props: Props) {
           )
         }
       >
-        {category ? (
-          <Link href={`/categories/${category.slug}`}>
-            <CategorySquare category={category} /> {category.title}
+        {project ? (
+          <Link href={`/projects/${project.slug}`}>
+            <ProjectSquare project={project} /> {project.title}
           </Link>
         ) : (
           <Link href="/issues">Issues</Link>
@@ -198,19 +198,15 @@ function Properties({ issue }: { issue: Issue }) {
             </Link>
           ))}
         </dd>
-        <dt>Category</dt>
+        <dt>Project</dt>
         <dd>
-          {issue.categories.length
-            ? issue.categories.map((c) => (
-                <Link
-                  key={c.slug}
-                  href={`/categories/${c.slug}`}
-                  className="tag"
-                >
-                  <CategorySquare category={c} /> {c.title}
-                </Link>
-              ))
-            : "—"}
+          {issue.project ? (
+            <Link href={`/projects/${issue.project.slug}`} className="tag">
+              <ProjectSquare project={issue.project} /> {issue.project.title}
+            </Link>
+          ) : (
+            "—"
+          )}
         </dd>
         <dt>Version</dt>
         <dd className="mono faint">{issue.version}</dd>

@@ -6,7 +6,7 @@ import {
   href,
   SORTS,
   toggle,
-  type CategoryQuery,
+  type ProjectQuery,
   type Group,
   type IssueQuery,
   type ListKey,
@@ -32,7 +32,7 @@ function Check({ on }: { on: boolean }) {
  * Search box that understands qualifiers, plus filter and display menus that rewrite the
  * same query. Every state is a plain link, so it works without JavaScript and can be shared.
  */
-export function Toolbar<Q extends IssueQuery | CategoryQuery>({
+export function Toolbar<Q extends IssueQuery | ProjectQuery>({
   path,
   query,
   group,
@@ -63,7 +63,7 @@ export function Toolbar<Q extends IssueQuery | CategoryQuery>({
             spellCheck={false}
             autoComplete="off"
           />
-          {group && group !== "category" && (
+          {group && group !== "project" && (
             <input type="hidden" name="group" value={group} />
           )}
           <kbd>/</kbd>
@@ -163,7 +163,7 @@ export function Toolbar<Q extends IssueQuery | CategoryQuery>({
   );
 }
 
-function ActiveFilters<Q extends IssueQuery | CategoryQuery>({
+function ActiveFilters<Q extends IssueQuery | ProjectQuery>({
   path,
   query,
   group,
@@ -221,8 +221,8 @@ function ActiveFilters<Q extends IssueQuery | CategoryQuery>({
   );
 }
 
-function clearFilters(query: IssueQuery | CategoryQuery) {
+function clearFilters(query: IssueQuery | ProjectQuery) {
   return "kind" in query
-    ? { language: [], kind: [], difficulty: [], category: [], label: [] }
+    ? { language: [], kind: [], difficulty: [], project: [], label: [] }
     : { language: [] };
 }

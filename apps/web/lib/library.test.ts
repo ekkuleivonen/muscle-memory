@@ -4,12 +4,12 @@ import { readFileSync } from "node:fs";
 import type { Catalog } from "../../../packages/catalog/catalog";
 import { difficultyRange, languagesOf, library } from "./library";
 import {
-  filterCategories,
+  filterProjects,
   filterIssues,
   formatQuery,
   groupIssues,
   href,
-  parseCategoryQuery,
+  parseProjectQuery,
   parseIssueQuery,
   toggle,
 } from "./queries";
@@ -25,8 +25,8 @@ const merged = library({
   entries: { ...reference.entries, ...demo.entries },
 });
 
-test("issues are the latest published Challenge versions with their categories", () => {
-  const { issues, categories } = library(reference);
+test("issues are the latest published Challenge versions with their projects", () => {
+  const { issues, projects } = library(reference);
   assert.deepEqual(
     issues.map((i) => [
       i.key,
@@ -40,18 +40,16 @@ test("issues are the latest published Challenge versions with their categories",
   );
   const [issue] = issues;
   assert.equal(issue.title, "Frequency map");
-  assert.deepEqual(issue.categories, [
-    {
-      slug: "field-notes",
-      title: "Field notes",
-      key: "FN",
-      hue: issue.categories[0].hue,
-    },
-  ]);
+  assert.deepEqual(issue.project, {
+    slug: "field-notes",
+    title: "Field notes",
+    key: "FN",
+    hue: issue.project?.hue,
+  });
   assert.deepEqual(issue.criteria[1], { input: [], expected: {} });
   assert.equal(issue.comments[0].author, "Priya K");
   assert.deepEqual(
-    categories.map((c) => [c.slug, c.version, c.issues.map((i) => i.version)]),
+    projects.map((c) => [c.slug, c.version, c.issues.map((i) => i.version)]),
     [["field-notes", "2.0.0", ["2.1.0"]]],
   );
 });
@@ -68,31 +66,31 @@ test("older and disabled versions stay out of lists but specific versions resolv
       [key]: { ...reference.entries[key], state: "disabled" as const },
     },
   });
-  assert.deepEqual(disabled.categories[0].issues, []);
+  assert.deepEqual(disabled.projects[0].issues, []);
   // 2.0.0 is still published, so the issue itself remains listed at that version.
   assert.equal(disabled.issues[0].version, "2.0.0");
 });
 
-test("only Python with a starter runs; category summaries span their issues", () => {
+test("only Python with a starter runs; project summaries span their issues", () => {
   assert.deepEqual(
     merged.issues.filter((i) => i.runnable).map((i) => i.slug),
     ["frequency-map"],
   );
-  const lighthouse = merged.categories.find((c) => c.slug === "lighthouse")!;
+  const lighthouse = merged.projects.find((c) => c.slug === "lighthouse")!;
   assert.equal(difficultyRange(lighthouse.issues), "easy–medium");
   assert.deepEqual(languagesOf(lighthouse.issues), ["python", "rust", "c"]);
 });
 
-test("issue keys come from the category key, or one derived from its id", () => {
+test("issue keys come from the project key, or one derived from its id", () => {
   const keys = Object.fromEntries(merged.issues.map((i) => [i.slug, i.key]));
   assert.equal(keys["frequency-map"], "FN-1");
   assert.equal(keys["parse-log-line"], "NS-2");
   assert.equal(keys["harvest-totals"], "RG-4");
   assert.deepEqual(
-    merged.categories.map((c) => c.key),
+    merged.projects.map((c) => c.key),
     ["FN", "NS", "LH", "RG"],
   );
-  assert.ok(merged.categories.every((c) => c.hue >= 0 && c.hue < 8));
+  assert.ok(merged.projects.every((c) => c.hue >= 0 && c.hue < 8));
 });
 
 test("qualifiers parse into filters; unknown ones stay as text", () => {
@@ -102,15 +100,19 @@ test("qualifiers parse into filters; unknown ones stay as text", () => {
   assert.deepEqual(query.kind, ["bug"]);
   assert.deepEqual(query.language, ["python"]);
   assert.deepEqual(query.label, ["maps"]);
-  assert.deepEqual(query.category, ["night-shift"]);
+  assert.deepEqual(query.project, ["night-shift"]);
   assert.equal(query.runnable, true);
   assert.equal(query.sort, "title");
   assert.deepEqual(query.text, ["log parser", "colour:red"]);
   assert.equal(
     formatQuery(query),
-    'is:runnable kind:bug lang:python category:night-shift label:maps sort:title "log parser" colour:red',
+    'is:runnable kind:bug lang:python project:night-shift label:maps sort:title "log parser" colour:red',
   );
   assert.equal(parseIssueQuery("x".repeat(500)).text[0].length, 200);
+  for (const alias of ["project", "proj", "category", "cat"])
+    assert.deepEqual(parseIssueQuery(`${alias}:lighthouse`).project, [
+      "lighthouse",
+    ]);
 });
 
 test("filters combine across qualifiers and match any value within one", () => {
@@ -121,12 +123,12 @@ test("filters combine across qualifiers and match any value within one", () => {
   assert.deepEqual(keys("lang:rust,go"), ["LH-1", "NS-2"]);
   assert.deepEqual(keys("is:runnable"), ["FN-1"]);
   assert.deepEqual(keys("label:strings"), ["LH-1", "LH-3", "NS-2"]);
-  assert.deepEqual(keys("category:field-notes"), ["FN-1"]);
+  assert.deepEqual(keys("project:field-notes"), ["FN-1"]);
   assert.deepEqual(keys("NS-2"), ["NS-2"]);
   assert.equal(keys("garden").length, 4);
   assert.deepEqual(keys("rust hard"), []);
   // Natural key order by default; difficulty and title on request.
-  assert.deepEqual(keys("category:rooftop-garden"), [
+  assert.deepEqual(keys("project:rooftop-garden"), [
     "RG-1",
     "RG-2",
     "RG-3",
@@ -142,7 +144,7 @@ test("groups keep their declared order and drop empty ones", () => {
     parseIssueQuery("kind:bug,performance"),
   );
   assert.deepEqual(
-    groupIssues(issues, "kind", merged.categories).map((g) => [
+    groupIssues(issues, "kind", merged.projects).map((g) => [
       g.id,
       g.issues.length,
     ]),
@@ -152,20 +154,18 @@ test("groups keep their declared order and drop empty ones", () => {
     ],
   );
   assert.deepEqual(
-    groupIssues(issues, "category", merged.categories).map((g) => g.id),
+    groupIssues(issues, "project", merged.projects).map((g) => g.id),
     ["night-shift", "lighthouse", "rooftop-garden"],
   );
   assert.equal(
-    groupIssues(issues, "none", merged.categories)[0].issues.length,
+    groupIssues(issues, "none", merged.projects)[0].issues.length,
     4,
   );
 });
 
-test("category queries search their issues too", () => {
+test("project queries search their issues too", () => {
   const slugs = (q: string) =>
-    filterCategories(merged.categories, parseCategoryQuery(q)).map(
-      (c) => c.slug,
-    );
+    filterProjects(merged.projects, parseProjectQuery(q)).map((c) => c.slug);
   assert.deepEqual(slugs("lang:cpp"), ["rooftop-garden"]);
   assert.deepEqual(slugs("morse"), ["lighthouse"]);
   assert.equal(slugs("").length, 4);

@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { LANGUAGES } from "../../../lib/languages";
-import { languageLabel, type CategoryRef } from "../../../lib/library";
+import { languageLabel, type ProjectRef } from "../../../lib/library";
 
 type HueStyle = CSSProperties & { "--h": number };
 
@@ -46,14 +46,14 @@ export function Estimate({ points }: { points?: number }) {
   ) : null;
 }
 
-/** Category colours spread evenly around the wheel. */
-export function CategorySquare({
-  category,
+/** Project colours spread evenly around the wheel. */
+export function ProjectSquare({
+  project,
 }: {
-  category: Pick<CategoryRef, "hue">;
+  project: Pick<ProjectRef, "hue">;
 }) {
   return (
-    <span className="square" style={{ "--h": category.hue * 45 } as HueStyle} />
+    <span className="square" style={{ "--h": project.hue * 45 } as HueStyle} />
   );
 }
 

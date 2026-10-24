@@ -1,15 +1,15 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { CategoryRef } from "../../../lib/library";
-import { CategorySquare } from "./bits";
-import { CategoriesIcon, IssuesIcon, TerminalIcon } from "./icons";
+import type { ProjectRef } from "../../../lib/library";
+import { ProjectSquare } from "./bits";
+import { ProjectsIcon, IssuesIcon, TerminalIcon } from "./icons";
 
 export function Sidebar({
-  categories,
+  projects,
   issueCount,
 }: {
-  categories: (CategoryRef & { count: number })[];
+  projects: (ProjectRef & { count: number })[];
   issueCount: number;
 }) {
   const pathname = usePathname();
@@ -32,21 +32,21 @@ export function Sidebar({
       </Link>
       <Link
         className="side-link"
-        href="/categories"
-        aria-current={current("/categories", true)}
+        href="/projects"
+        aria-current={current("/projects", true)}
       >
-        <CategoriesIcon /> Categories
+        <ProjectsIcon /> Projects
       </Link>
-      <div className="side-heading">Categories</div>
-      {categories.map((category) => (
+      <div className="side-heading">Projects</div>
+      {projects.map((project) => (
         <Link
-          key={category.slug}
-          className="side-link category-link"
-          href={`/categories/${category.slug}`}
-          aria-current={current(`/categories/${category.slug}`)}
+          key={project.slug}
+          className="side-link project-link"
+          href={`/projects/${project.slug}`}
+          aria-current={current(`/projects/${project.slug}`)}
         >
-          <CategorySquare category={category} /> {category.title}
-          <span className="key">{category.key}</span>
+          <ProjectSquare project={project} /> {project.title}
+          <span className="key">{project.key}</span>
         </Link>
       ))}
       <div className="spacer" />

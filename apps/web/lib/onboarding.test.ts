@@ -21,7 +21,7 @@ test("next only ever leads to a path on this site, never back to onboarding", ()
     safeNext("/issues/frequency-map?version=2.1.0", fallback),
     "/issues/frequency-map?version=2.1.0",
   );
-  assert.equal(safeNext("/categories#top", fallback), "/categories#top");
+  assert.equal(safeNext("/projects#top", fallback), "/projects#top");
   for (const bad of [
     "https://evil.example/",
     "//evil.example/path",
@@ -39,8 +39,8 @@ test("next only ever leads to a path on this site, never back to onboarding", ()
 test("onboarding returns to the page someone was heading for, otherwise home", () => {
   assert.equal(returnPath("/issues/frequency-map"), "/issues/frequency-map");
   assert.equal(
-    returnPath("/categories?q=lang%3Arust"),
-    "/categories?q=lang%3Arust",
+    returnPath("/projects?q=lang%3Arust"),
+    "/projects?q=lang%3Arust",
   );
   for (const home of [
     "/",
@@ -68,5 +68,5 @@ test("a page's own path and query survive the round trip through onboarding", ()
   });
   assert.equal(path, "/issues?language=go&language=rust&q=log+parser");
   assert.equal(safeNext(path, "/"), path);
-  assert.equal(pathWithQuery("/categories", {}), "/categories");
+  assert.equal(pathWithQuery("/projects", {}), "/projects");
 });

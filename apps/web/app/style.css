@@ -1,6 +1,6 @@
 /*
  * Neutral, developer-tool palette (in the spirit of GitHub and Linear): greys plus one
- * indigo accent, light and dark following the OS. Category colours are hues 0-7 (--hue-n).
+ * indigo accent, light and dark following the OS. Project colours are hues 0-7 (--hue-n).
  */
 :root {
   color-scheme: light dark;
@@ -668,7 +668,7 @@ kbd {
   color: var(--accent);
 }
 
-/* Categories table, like Linear projects */
+/* Projects table, like Linear projects */
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -722,18 +722,18 @@ kbd {
   align-items: center;
   gap: 5px;
 }
-.category-head {
+.project-head {
   display: flex;
   gap: 12px;
   align-items: center;
   margin: 8px 0 4px;
 }
-.category-head h1 {
+.project-head h1 {
   font-size: 24px;
   margin: 0;
   letter-spacing: -0.2px;
 }
-.category-head .square {
+.project-head .square {
   width: 22px;
   height: 22px;
   border-radius: 6px;
@@ -771,7 +771,7 @@ kbd {
     border-bottom: 1px solid var(--line);
   }
   .sidebar .side-heading,
-  .sidebar .category-link,
+  .sidebar .project-link,
   .sidebar .spacer {
     display: none;
   }

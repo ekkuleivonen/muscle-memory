@@ -12,7 +12,7 @@ import {
   queryParam,
   type SearchParams,
 } from "../../../lib/queries";
-import { CategorySquare, LanguageDot } from "../_components/bits";
+import { ProjectSquare, LanguageDot } from "../_components/bits";
 import { KIND_LABELS, KindIcon } from "../_components/icons";
 import { IssueGroups } from "../_components/issue-list";
 import { Toolbar } from "../_components/toolbar";
@@ -29,7 +29,7 @@ export default async function IssuesPage({
   await requireOnboarding(pathWithQuery("/issues", params));
   const query = parseIssueQuery(queryParam(params));
   const group = parseGroup(params);
-  const { issues, categories } = await getLibrary();
+  const { issues, projects } = await getLibrary();
   const results = filterIssues(issues, query);
   return (
     <>
@@ -72,17 +72,17 @@ export default async function IssuesPage({
               options: DIFFICULTIES.map((d) => ({ value: d, label: d })),
             },
             {
-              key: "category",
-              label: "Category",
-              options: categories.map((c) => ({
+              key: "project",
+              label: "Project",
+              options: projects.map((c) => ({
                 value: c.slug,
                 label: c.title,
-                icon: <CategorySquare category={c} />,
+                icon: <ProjectSquare project={c} />,
               })),
             },
           ]}
         />
-        <IssueGroups groups={groupIssues(results, group, categories)} />
+        <IssueGroups groups={groupIssues(results, group, projects)} />
         <p className="hint">
           <kbd>/</kbd> search · <kbd>j</kbd> <kbd>k</kbd> move · <kbd>↵</kbd>{" "}
           open

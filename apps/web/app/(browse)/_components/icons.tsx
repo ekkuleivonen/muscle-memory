@@ -86,7 +86,7 @@ export function IssuesIcon({ size = 16 }: Props) {
   );
 }
 
-export function CategoriesIcon({ size = 16 }: Props) {
+export function ProjectsIcon({ size = 16 }: Props) {
   return (
     <svg {...svg(size)}>
       <rect

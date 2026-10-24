@@ -11,7 +11,7 @@ export default async function Home() {
         <h1>Hello, world.</h1>
         <p className="dim">
           Pick up an <Link href="/issues">issue</Link> or browse the{" "}
-          <Link href="/categories">categories</Link>.
+          <Link href="/projects">projects</Link>.
         </p>
       </main>
     </>

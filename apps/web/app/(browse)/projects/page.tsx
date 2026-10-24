@@ -10,36 +10,36 @@ import {
 import { getLibrary } from "../../../lib/load";
 import { pathWithQuery } from "../../../lib/onboarding";
 import {
-  filterCategories,
-  parseCategoryQuery,
+  filterProjects,
+  parseProjectQuery,
   queryParam,
   type SearchParams,
 } from "../../../lib/queries";
-import { CategorySquare, LanguageDot } from "../_components/bits";
+import { ProjectSquare, LanguageDot } from "../_components/bits";
 import { Toolbar } from "../_components/toolbar";
 import { Topbar } from "../_components/topbar";
 
-export const metadata: Metadata = { title: "Categories · Muscle Memory" };
+export const metadata: Metadata = { title: "Projects · Muscle Memory" };
 
-export default async function CategoriesPage({
+export default async function ProjectsPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  await requireOnboarding(pathWithQuery("/categories", params));
-  const query = parseCategoryQuery(queryParam(params));
-  const { categories, issues } = await getLibrary();
-  const results = filterCategories(categories, query);
+  await requireOnboarding(pathWithQuery("/projects", params));
+  const query = parseProjectQuery(queryParam(params));
+  const { projects, issues } = await getLibrary();
+  const results = filterProjects(projects, query);
   return (
     <>
       <Topbar>
-        <span>Categories</span>
+        <span>Projects</span>
         <span className="faint">{results.length}</span>
       </Topbar>
       <main className="content">
         <Toolbar
-          path="/categories"
+          path="/projects"
           query={query}
           placeholder="lang:rust lighthouse …"
           filters={[
@@ -66,27 +66,27 @@ export default async function CategoriesPage({
               </tr>
             </thead>
             <tbody>
-              {results.map((category) => (
-                <tr key={category.slug}>
+              {results.map((project) => (
+                <tr key={project.slug}>
                   <td>
                     <div className="name">
-                      <CategorySquare category={category} />
+                      <ProjectSquare project={project} />
                       <div>
-                        <Link href={`/categories/${category.slug}`}>
-                          <b>{category.title}</b>
+                        <Link href={`/projects/${project.slug}`}>
+                          <b>{project.title}</b>
                         </Link>
-                        <div className="dim">{category.summary}</div>
+                        <div className="dim">{project.summary}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="mono faint">{category.key}</td>
-                  <td>{category.issues.length}</td>
+                  <td className="mono faint">{project.key}</td>
+                  <td>{project.issues.length}</td>
                   <td className="dim">
-                    {difficultyRange(category.issues) || "—"}
+                    {difficultyRange(project.issues) || "—"}
                   </td>
                   <td>
                     <div className="langs">
-                      {languagesOf(category.issues).map((id) => (
+                      {languagesOf(project.issues).map((id) => (
                         <span key={id}>
                           <LanguageDot language={id} /> {languageLabel(id)}
                         </span>
@@ -98,7 +98,7 @@ export default async function CategoriesPage({
             </tbody>
           </table>
         ) : (
-          <p className="empty">No categories match this search.</p>
+          <p className="empty">No projects match this search.</p>
         )}
       </main>
     </>

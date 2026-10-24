@@ -19,7 +19,7 @@ npm run dev
 
 `npm run dev` uses webpack, like production builds: Turbopack turns imported JSON into object literals, where the reference fixture key `__proto__` is silently dropped. The server also re-checks every catalog digest on load, so altered content fails loudly.
 
-Open http://localhost:3000. First visits go to `/onboarding`, a short terminal-style setup whose answers stay in the browser; a cookie holding only the setup version lets pages skip it afterwards. Setup ends on the home dashboard, or on the page that redirected there. Browse `/issues` and `/categories` (Challenges and Adventures, presented as issues and categories) with search and filters in the URL. The onboarding terminal's `data export` and `data clear` manage [device-local history](docs/device-local-practice.md). No practice records are uploaded. The [Python workspace preview](docs/workspace.md) at `/workspace` runs submitted Python only inside a network-denied browser sandbox, never on a server.
+Open http://localhost:3000. First visits go to `/onboarding`, a short terminal-style setup whose answers stay in the browser; a cookie holding only the setup version lets pages skip it afterwards. Setup ends on the home dashboard, or on the page that redirected there. Browse `/issues` and `/projects` (Challenges and Adventures, presented as issues and projects) with search and filters in the URL. The onboarding terminal's `data export` and `data clear` manage [device-local history](docs/device-local-practice.md). No practice records are uploaded. The [Python workspace preview](docs/workspace.md) at `/workspace` runs submitted Python only inside a network-denied browser sandbox, never on a server.
 
 ```sh
 npm test
@@ -63,4 +63,4 @@ The [durable reference demo](docs/local-events.md) uses synthetic data to prove 
 
 See the [authoring lifecycle](docs/authoring.md) for draft, preview, test, publish, retire and disable commands. The reference app reads a generated published catalog and refreshes its eligibility before starts and assessments.
 
-To design against more than the reference content, build or run the app with `DEMO_CATALOG=1`. Issue and category pages then include a synthetic demo catalog (`content/demo/catalog.json`, built by `npm run build:demo-catalog`) of three categories across all highlighted languages. Builds without the flag leave it out entirely. To open the dev server from another device, add `ALLOWED_DEV_ORIGINS=<lan-ip>` and pass `-- -H 0.0.0.0`.
+To design against more than the reference content, build or run the app with `DEMO_CATALOG=1`. Issue and project pages then include a synthetic demo catalog (`content/demo/catalog.json`, built by `npm run build:demo-catalog`) of three projects across all highlighted languages. Builds without the flag leave it out entirely. To open the dev server from another device, add `ALLOWED_DEV_ORIGINS=<lan-ip>` and pass `-- -H 0.0.0.0`.

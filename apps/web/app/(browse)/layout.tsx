@@ -7,12 +7,12 @@ export default async function BrowseLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { categories, issues } = await getLibrary();
+  const { projects, issues } = await getLibrary();
   return (
     <div className="app">
       <Sidebar
         issueCount={issues.length}
-        categories={categories.map(({ slug, title, key, hue, issues }) => ({
+        projects={projects.map(({ slug, title, key, hue, issues }) => ({
           slug,
           title,
           key,

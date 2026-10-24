@@ -1,6 +1,6 @@
 /**
- * GitHub-style search for issues and categories: one `q` string with qualifiers such as
- * `kind:bug lang:python,go difficulty:easy category:night-shift label:maps is:runnable`, plus
+ * GitHub-style search for issues and projects: one `q` string with qualifiers such as
+ * `kind:bug lang:python,go difficulty:easy project:night-shift label:maps is:runnable`, plus
  * free text. Commas mean "any of"; different qualifiers must all match. Unknown qualifiers
  * and values are kept as plain text rather than rejected, so hand-typed queries still work.
  */
@@ -13,7 +13,7 @@ import {
   DIFFICULTIES,
   KINDS,
   languageLabel,
-  type Category,
+  type Project,
   type Issue,
 } from "./library";
 
@@ -22,7 +22,7 @@ export type SearchParams = Record<string, string | string[] | undefined>;
 export const SORTS = ["key", "difficulty", "title"] as const;
 export type Sort = (typeof SORTS)[number];
 export const GROUPS = [
-  "category",
+  "project",
   "kind",
   "difficulty",
   "language",
@@ -34,19 +34,19 @@ export interface IssueQuery {
   language: LanguageId[];
   kind: IssueKind[];
   difficulty: Difficulty[];
-  category: string[];
+  project: string[];
   label: string[];
   runnable: boolean;
   sort: Sort;
   text: string[];
 }
 
-export interface CategoryQuery {
+export interface ProjectQuery {
   language: LanguageId[];
   text: string[];
 }
 
-export type ListKey = "language" | "kind" | "difficulty" | "category" | "label";
+export type ListKey = "language" | "kind" | "difficulty" | "project" | "label";
 
 const LANGUAGE_IDS = LANGUAGES.map((l) => l.id);
 /** Qualifier names people type, mapped to the filter they set. */
@@ -57,8 +57,11 @@ const QUALIFIERS: Record<string, ListKey> = {
   type: "kind",
   difficulty: "difficulty",
   diff: "difficulty",
-  category: "category",
-  cat: "category",
+  project: "project",
+  proj: "project",
+  // Earlier name for projects, still understood.
+  category: "project",
+  cat: "project",
   label: "label",
 };
 const ALLOWED: Partial<Record<ListKey, readonly string[]>> = {
@@ -73,7 +76,7 @@ export const emptyIssueQuery = (): IssueQuery => ({
   language: [],
   kind: [],
   difficulty: [],
-  category: [],
+  project: [],
   label: [],
   runnable: false,
   sort: "key",
@@ -123,13 +126,13 @@ export function parseIssueQuery(q: string): IssueQuery {
   return query;
 }
 
-export function parseCategoryQuery(q: string): CategoryQuery {
+export function parseProjectQuery(q: string): ProjectQuery {
   const { language, text } = parseIssueQuery(q);
   return { language, text };
 }
 
 /** The canonical query string: qualifiers first, in a fixed order, then free text. */
-export function formatQuery(query: IssueQuery | CategoryQuery): string {
+export function formatQuery(query: IssueQuery | ProjectQuery): string {
   const parts: string[] = [];
   if ("runnable" in query && query.runnable) parts.push("is:runnable");
   const lists: [string, readonly string[]][] =
@@ -138,7 +141,7 @@ export function formatQuery(query: IssueQuery | CategoryQuery): string {
           ["kind", query.kind],
           ["lang", query.language],
           ["difficulty", query.difficulty],
-          ["category", query.category],
+          ["project", query.project],
           ["label", query.label],
         ]
       : [["lang", query.language]];
@@ -150,7 +153,7 @@ export function formatQuery(query: IssueQuery | CategoryQuery): string {
 }
 
 /** The same query with one filter value switched on or off. */
-export function toggle<Q extends IssueQuery | CategoryQuery>(
+export function toggle<Q extends IssueQuery | ProjectQuery>(
   query: Q,
   key: ListKey,
   value: string,
@@ -168,19 +171,19 @@ export function parseGroup(params: SearchParams): Group {
   const group = first(params, "group");
   return (GROUPS as readonly string[]).includes(group)
     ? (group as Group)
-    : "category";
+    : "project";
 }
 
 /** A list URL; the default grouping is left out to keep links short. */
 export function href(
   path: string,
-  query: IssueQuery | CategoryQuery,
-  group: Group = "category",
+  query: IssueQuery | ProjectQuery,
+  group: Group = "project",
 ): string {
   const params = new URLSearchParams();
   const q = formatQuery(query);
   if (q) params.set("q", q);
-  if (group !== "category") params.set("group", group);
+  if (group !== "project") params.set("group", group);
   const search = params.toString();
   return search ? `${path}?${search}` : path;
 }
@@ -206,7 +209,7 @@ function issueText(issue: Issue): string[] {
     issue.language ?? "",
     languageLabel(issue.language),
     ...issue.labels,
-    ...issue.categories.map((c) => c.title),
+    issue.project?.title ?? "",
   ];
 }
 
@@ -236,8 +239,8 @@ export function filterIssues(
         within(query.language, issue.language) &&
         within(query.kind, issue.kind) &&
         within(query.difficulty, issue.difficulty) &&
-        (query.category.length === 0 ||
-          issue.categories.some((c) => query.category.includes(c.slug))) &&
+        (query.project.length === 0 ||
+          (!!issue.project && query.project.includes(issue.project.slug))) &&
         (query.label.length === 0 ||
           issue.labels.some((l) => query.label.includes(l))) &&
         (!query.runnable || issue.runnable) &&
@@ -246,24 +249,24 @@ export function filterIssues(
     .sort(SORTERS[query.sort]);
 }
 
-export function filterCategories(
-  categories: readonly Category[],
-  query: CategoryQuery,
-): Category[] {
-  return categories.filter(
-    (category) =>
+export function filterProjects(
+  projects: readonly Project[],
+  query: ProjectQuery,
+): Project[] {
+  return projects.filter(
+    (project) =>
       (query.language.length === 0 ||
-        category.issues.some(
+        project.issues.some(
           (i) => i.language && query.language.includes(i.language),
         )) &&
       matchesText(
         [
-          category.key,
-          category.slug,
-          category.title,
-          category.summary ?? "",
-          category.story,
-          ...category.issues.flatMap(issueText),
+          project.key,
+          project.slug,
+          project.title,
+          project.summary ?? "",
+          project.story,
+          ...project.issues.flatMap(issueText),
         ],
         query.text,
       ),
@@ -280,21 +283,21 @@ export interface IssueGroup {
 export function groupIssues(
   issues: readonly Issue[],
   group: Group,
-  categories: readonly Category[],
+  projects: readonly Project[],
 ): IssueGroup[] {
   if (group === "none")
     return [{ id: "all", label: "All issues", issues: [...issues] }];
   const order: { id: string; label: string }[] =
-    group === "category"
-      ? categories.map((c) => ({ id: c.slug, label: c.title }))
+    group === "project"
+      ? projects.map((c) => ({ id: c.slug, label: c.title }))
       : group === "kind"
         ? KINDS.map((k) => ({ id: k, label: k }))
         : group === "difficulty"
           ? DIFFICULTIES.map((d) => ({ id: d, label: d }))
           : LANGUAGES.map((l) => ({ id: l.id, label: l.label }));
   const valueOf = (issue: Issue): string | undefined =>
-    group === "category"
-      ? issue.categories[0]?.slug
+    group === "project"
+      ? issue.project?.slug
       : group === "kind"
         ? issue.kind
         : group === "difficulty"

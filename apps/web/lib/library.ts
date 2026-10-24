@@ -1,6 +1,6 @@
 /**
  * Read model for browsing published content as an issue tracker: Challenges are issues,
- * Adventures are categories. Pure, so pages, search and filters are testable without a server.
+ * Adventures are projects. Pure, so pages, search and filters are testable without a server.
  */
 import type { Catalog } from "../../../packages/catalog/catalog";
 import type {
@@ -35,20 +35,20 @@ export const ESTIMATES: Record<Difficulty, number> = {
   medium: 3,
   hard: 5,
 };
-/** Number of distinct category colours the theme defines (--hue-0 …). */
+/** Number of distinct project colours the theme defines (--hue-0 …). */
 export const HUES = 8;
 
-export interface CategoryRef {
+export interface ProjectRef {
   slug: string;
   title: string;
   key: string;
-  /** Index into the theme's category colours; stable for a slug. */
+  /** Index into the theme's project colours; stable for a slug. */
   hue: number;
 }
 
 export interface Issue {
   slug: string;
-  /** Display identifier such as NS-2: its first category's key and position there. */
+  /** Display identifier such as NS-2: its first project's key and position there. */
   key: string;
   version: string;
   title: string;
@@ -63,15 +63,15 @@ export interface Issue {
   hints: number;
   comments: readonly IssueComment[];
   runnable: boolean;
-  /** Categories whose latest version includes this issue, in catalog order. */
-  categories: CategoryRef[];
+  /** The project whose latest version includes this issue; content allows only one. */
+  project?: ProjectRef;
 }
 
-export interface Category extends CategoryRef {
+export interface Project extends ProjectRef {
   version: string;
   summary?: string;
   story: string;
-  /** Exactly the issue versions this category pins, in its order. */
+  /** Exactly the issue versions this project pins, in its order. */
   issues: Issue[];
 }
 
@@ -118,7 +118,7 @@ export function hueFor(slug: string): number {
 
 function toIssue(
   content: Executable,
-  categories: CategoryRef[],
+  project: ProjectRef | undefined,
   key: string,
 ): Issue {
   const language = LANGUAGES.find((l) => l.id === content.language)?.id;
@@ -145,7 +145,7 @@ function toIssue(
       RUNNABLE.includes(language) &&
       typeof content.entrypoint === "string" &&
       typeof content.starter === "string",
-    categories,
+    project,
   };
 }
 
@@ -164,9 +164,9 @@ function latestBy<T extends { id: string; version: string }>(
 export interface Library {
   /** The latest published version of every issue. */
   issues: Issue[];
-  /** The latest published version of every category. */
-  categories: Category[];
-  /** A specific published version, e.g. one a category pins. */
+  /** The latest published version of every project. */
+  projects: Project[];
+  /** A specific published version, e.g. one a project pins. */
   issueVersion(slug: string, version: string): Issue | undefined;
 }
 
@@ -185,19 +185,19 @@ export function library(catalog: Catalog): Library {
     ).values(),
   ];
   const refs = adventures.map(
-    (a): CategoryRef => ({
+    (a): ProjectRef => ({
       slug: a.id,
       title: a.title ?? titleFromSlug(a.id),
       key: a.key ?? keyFromSlug(a.id),
       hue: hueFor(a.id),
     }),
   );
-  const categoriesOf = (slug: string): CategoryRef[] =>
-    refs.filter((_, i) => adventures[i].challenges.some(([id]) => id === slug));
+  const ownerOf = (slug: string) =>
+    adventures.findIndex((a) => a.challenges.some(([id]) => id === slug));
+  const projectOf = (slug: string): ProjectRef | undefined =>
+    refs[ownerOf(slug)];
   const keyOf = (slug: string): string => {
-    const i = adventures.findIndex((a) =>
-      a.challenges.some(([id]) => id === slug),
-    );
+    const i = ownerOf(slug);
     if (i < 0) return keyFromSlug(slug);
     const position = adventures[i].challenges.findIndex(([id]) => id === slug);
     return `${refs[i].key}-${position + 1}`;
@@ -206,13 +206,13 @@ export function library(catalog: Catalog): Library {
     const content = challenges.find(
       (c) => c.id === slug && c.version === version,
     );
-    return content && toIssue(content, categoriesOf(slug), keyOf(slug));
+    return content && toIssue(content, projectOf(slug), keyOf(slug));
   };
   return {
     issues: [...latestBy(challenges).values()].map((c) =>
-      toIssue(c, categoriesOf(c.id), keyOf(c.id)),
+      toIssue(c, projectOf(c.id), keyOf(c.id)),
     ),
-    categories: adventures.map((adventure, i) => ({
+    projects: adventures.map((adventure, i) => ({
       ...refs[i],
       version: adventure.version,
       summary: adventure.summary,

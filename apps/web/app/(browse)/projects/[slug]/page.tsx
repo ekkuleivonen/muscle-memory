@@ -9,7 +9,7 @@ import {
 } from "../../../../lib/library";
 import { getLibrary } from "../../../../lib/load";
 import { emptyIssueQuery, href } from "../../../../lib/queries";
-import { CategorySquare, LanguageDot } from "../../_components/bits";
+import { ProjectSquare, LanguageDot } from "../../_components/bits";
 import { FilterIcon } from "../../_components/icons";
 import { IssueRows } from "../../_components/issue-list";
 import { Sep, Topbar } from "../../_components/topbar";
@@ -18,27 +18,27 @@ type Props = { params: Promise<{ slug: string }> };
 
 async function find({ params }: Props) {
   const { slug } = await params;
-  const { categories, issues } = await getLibrary();
+  const { projects, issues } = await getLibrary();
   return {
-    category: categories.find((c) => c.slug === slug),
+    project: projects.find((c) => c.slug === slug),
     latest: new Map(issues.map((i) => [i.slug, i.version])),
   };
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
-  const { category } = await find(props);
-  return category
+  const { project } = await find(props);
+  return project
     ? {
-        title: `${category.title} · Muscle Memory`,
-        description: category.summary,
+        title: `${project.title} · Muscle Memory`,
+        description: project.summary,
       }
-    : { title: "Category not found · Muscle Memory" };
+    : { title: "Project not found · Muscle Memory" };
 }
 
-export default async function CategoryPage(props: Props) {
-  await requireOnboarding(`/categories/${(await props.params).slug}`);
-  const { category, latest } = await find(props);
-  if (!category) notFound();
+export default async function ProjectPage(props: Props) {
+  await requireOnboarding(`/projects/${(await props.params).slug}`);
+  const { project, latest } = await find(props);
+  if (!project) notFound();
   return (
     <>
       <Topbar
@@ -47,40 +47,40 @@ export default async function CategoryPage(props: Props) {
             className="btn"
             href={href("/issues", {
               ...emptyIssueQuery(),
-              category: [category.slug],
+              project: [project.slug],
             })}
           >
             <FilterIcon /> View in issues
           </Link>
         }
       >
-        <Link href="/categories">Categories</Link>
+        <Link href="/projects">Projects</Link>
         <Sep />
-        <span>{category.title}</span>
+        <span>{project.title}</span>
       </Topbar>
       <main className="content">
-        <div className="category-head">
-          <CategorySquare category={category} />
-          <h1>{category.title}</h1>
+        <div className="project-head">
+          <ProjectSquare project={project} />
+          <h1>{project.title}</h1>
         </div>
-        {category.summary && <p className="dim">{category.summary}</p>}
+        {project.summary && <p className="dim">{project.summary}</p>}
         <dl className="facts">
           <div>
             <dt>Key</dt>
-            <dd className="mono">{category.key}</dd>
+            <dd className="mono">{project.key}</dd>
           </div>
           <div>
             <dt>Issues</dt>
-            <dd>{category.issues.length}</dd>
+            <dd>{project.issues.length}</dd>
           </div>
           <div>
             <dt>Difficulty</dt>
-            <dd>{difficultyRange(category.issues) || "—"}</dd>
+            <dd>{difficultyRange(project.issues) || "—"}</dd>
           </div>
           <div>
             <dt>Languages</dt>
             <dd className="langs">
-              {languagesOf(category.issues).map((id) => (
+              {languagesOf(project.issues).map((id) => (
                 <span key={id}>
                   <LanguageDot language={id} /> {languageLabel(id)}
                 </span>
@@ -90,13 +90,13 @@ export default async function CategoryPage(props: Props) {
         </dl>
         <section className="section">
           <h2>About</h2>
-          <p>{category.story}</p>
+          <p>{project.story}</p>
         </section>
         <section className="section">
           <h2>
-            Issues <span className="count">{category.issues.length}</span>
+            Issues <span className="count">{project.issues.length}</span>
           </h2>
-          <IssueRows issues={category.issues} latest={latest} standalone />
+          <IssueRows issues={project.issues} latest={latest} standalone />
         </section>
       </main>
     </>
