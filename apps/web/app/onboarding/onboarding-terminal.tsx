@@ -94,8 +94,8 @@ async function setup(t: TerminalApi, accepted?: Acceptance) {
     "",
     <span>Welcome aboard. Let&apos;s set up your profile.</span>,
     <span className="t-dim">
-      Arrow keys or numbers to choose · Esc skips a question · answers stay on
-      this device.
+      Arrow keys or numbers to choose · Esc skips a question · answers are recorded
+      with your practice, without your name.
     </span>,
     "",
   );
@@ -137,7 +137,7 @@ async function setup(t: TerminalApi, accepted?: Acceptance) {
     </span>,
     ...profileLines(profile),
     <span className="t-dim">
-      Saved in this browser only. Change any of it later in{" "}
+      Recorded with your practice, without your name. Change any of it later in{" "}
       <TermLink href="/settings">settings</TermLink>.
     </span>,
   );
