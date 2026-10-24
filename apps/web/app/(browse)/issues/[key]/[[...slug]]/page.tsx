@@ -25,6 +25,7 @@ import {
 } from "../../../_components/icons";
 import { Sep, Topbar } from "../../../_components/topbar";
 import { StatusMenu } from "../../../_components/board";
+import { Markdown } from "../../../_components/markdown";
 
 type Props = {
   params: Promise<{ key: string; slug?: string[] }>;
@@ -101,7 +102,7 @@ export default async function IssuePage(props: Props) {
           {issue.summary && <p className="lede">{issue.summary}</p>}
           <section className="section">
             <h2>Description</h2>
-            <p>{issue.task}</p>
+            <Markdown source={issue.task} />
           </section>
           <section className="section">
             <h2>
@@ -133,7 +134,7 @@ export default async function IssuePage(props: Props) {
                         <span className="role">{comment.role}</span>
                       )}
                     </div>
-                    <div className="comment-body">{comment.body}</div>
+                    <Markdown className="comment-body" source={comment.body} />
                   </div>
                 </div>
               ))}

@@ -40,14 +40,14 @@
           "numbers"
         ],
         "summary": "Format amounts as dollars with separators, including refunds.",
-        "task": "Write formatPrice(cents): return the amount in dollars with two decimals and comma thousands separators, e.g. 123456 → \"$1,234.56\". Negative amounts are refunds and get a leading minus: -500 → \"-$5.00\".",
+        "task": "Write `formatPrice(cents)`: return the amount in dollars with two decimals and comma thousands separators, e.g. `123456` → `\"$1,234.56\"`. Negative amounts are refunds and get a leading minus: `-500` → `\"-$5.00\"`.",
         "title": "Cart shows prices as raw cents",
         "version": "1.0.0"
       },
-      "digest": "b7b60d6e02fecd3afa85090ad5f7428d2587dae28dfbd475f6a1b203670aa103",
+      "digest": "bf272a8cc4eb8a073f26b7f1a43541c4d3e1f48a803aba7f43d082d54f9499aa",
       "state": "published",
       "testResult": {
-        "digest": "b7b60d6e02fecd3afa85090ad5f7428d2587dae28dfbd475f6a1b203670aa103",
+        "digest": "bf272a8cc4eb8a073f26b7f1a43541c4d3e1f48a803aba7f43d082d54f9499aa",
         "fixtures": 5,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -56,28 +56,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "b7b60d6e02fecd3afa85090ad5f7428d2587dae28dfbd475f6a1b203670aa103",
+          "digest": "bf272a8cc4eb8a073f26b7f1a43541c4d3e1f48a803aba7f43d082d54f9499aa",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "b7b60d6e02fecd3afa85090ad5f7428d2587dae28dfbd475f6a1b203670aa103",
+          "digest": "bf272a8cc4eb8a073f26b7f1a43541c4d3e1f48a803aba7f43d082d54f9499aa",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "b7b60d6e02fecd3afa85090ad5f7428d2587dae28dfbd475f6a1b203670aa103",
+          "digest": "bf272a8cc4eb8a073f26b7f1a43541c4d3e1f48a803aba7f43d082d54f9499aa",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "b7b60d6e02fecd3afa85090ad5f7428d2587dae28dfbd475f6a1b203670aa103",
+          "digest": "bf272a8cc4eb8a073f26b7f1a43541c4d3e1f48a803aba7f43d082d54f9499aa",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -147,14 +147,14 @@
           "validation"
         ],
         "summary": "Match promo codes case-insensitively and ignore stray spaces.",
-        "task": "applyDiscount(totalCents, code, codes) returns the total after the matching code's percentage off, rounded down to whole cents. Codes match case-insensitively and ignoring surrounding spaces; an unknown code leaves the total unchanged.",
+        "task": "`applyDiscount(totalCents, code, codes)` returns the total after the matching code's percentage off, rounded down to whole cents. Codes match case-insensitively and ignoring surrounding spaces; an unknown code leaves the total unchanged.",
         "title": "Discount codes fail when typed in lowercase",
         "version": "1.0.0"
       },
-      "digest": "5b00bacb5e0ac2affd0f16003bd34cfe996188613086cba84e243acb56ad524d",
+      "digest": "4cddde99cdcf76135c9dfd545ec02232f380d12a5050111d22dda8099077deb0",
       "state": "published",
       "testResult": {
-        "digest": "5b00bacb5e0ac2affd0f16003bd34cfe996188613086cba84e243acb56ad524d",
+        "digest": "4cddde99cdcf76135c9dfd545ec02232f380d12a5050111d22dda8099077deb0",
         "fixtures": 4,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -163,28 +163,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "5b00bacb5e0ac2affd0f16003bd34cfe996188613086cba84e243acb56ad524d",
+          "digest": "4cddde99cdcf76135c9dfd545ec02232f380d12a5050111d22dda8099077deb0",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "5b00bacb5e0ac2affd0f16003bd34cfe996188613086cba84e243acb56ad524d",
+          "digest": "4cddde99cdcf76135c9dfd545ec02232f380d12a5050111d22dda8099077deb0",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "5b00bacb5e0ac2affd0f16003bd34cfe996188613086cba84e243acb56ad524d",
+          "digest": "4cddde99cdcf76135c9dfd545ec02232f380d12a5050111d22dda8099077deb0",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "5b00bacb5e0ac2affd0f16003bd34cfe996188613086cba84e243acb56ad524d",
+          "digest": "4cddde99cdcf76135c9dfd545ec02232f380d12a5050111d22dda8099077deb0",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -225,14 +225,14 @@
           "semantics"
         ],
         "summary": "Tie every filter checkbox to a label so it is accessible.",
-        "task": "Render the product filter form: for each filter name, a <label for=\"filter-NAME\"> with the name as text, followed by <input type=\"checkbox\" id=\"filter-NAME\" name=\"NAME\">, all inside a <form>.",
+        "task": "Render the product filter form: for each filter name, a `<label for=\"filter-NAME\">` with the name as text, followed by `<input type=\"checkbox\" id=\"filter-NAME\" name=\"NAME\">`, all inside a `<form>`.",
         "title": "Product filter checkboxes have no labels",
         "version": "1.0.0"
       },
-      "digest": "23918de7db9a91e25c48fd969bc7ac00c9889c3715539e525a89e41dd0b016dd",
+      "digest": "5875e3ee0b86549c40fc23c273585d70733fdfca46659699e7a48eacc56db2c9",
       "state": "published",
       "testResult": {
-        "digest": "23918de7db9a91e25c48fd969bc7ac00c9889c3715539e525a89e41dd0b016dd",
+        "digest": "5875e3ee0b86549c40fc23c273585d70733fdfca46659699e7a48eacc56db2c9",
         "fixtures": 2,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -241,28 +241,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "23918de7db9a91e25c48fd969bc7ac00c9889c3715539e525a89e41dd0b016dd",
+          "digest": "5875e3ee0b86549c40fc23c273585d70733fdfca46659699e7a48eacc56db2c9",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "23918de7db9a91e25c48fd969bc7ac00c9889c3715539e525a89e41dd0b016dd",
+          "digest": "5875e3ee0b86549c40fc23c273585d70733fdfca46659699e7a48eacc56db2c9",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "23918de7db9a91e25c48fd969bc7ac00c9889c3715539e525a89e41dd0b016dd",
+          "digest": "5875e3ee0b86549c40fc23c273585d70733fdfca46659699e7a48eacc56db2c9",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "23918de7db9a91e25c48fd969bc7ac00c9889c3715539e525a89e41dd0b016dd",
+          "digest": "5875e3ee0b86549c40fc23c273585d70733fdfca46659699e7a48eacc56db2c9",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -326,14 +326,14 @@
           "events"
         ],
         "summary": "Debounce search-as-you-type so the API sees one request per pause.",
-        "task": "debounceTimes(keystrokes, waitMs): given keystroke times in milliseconds, return the times at which the debounced search fires. It fires waitMs after a keystroke unless another keystroke comes first.",
+        "task": "`debounceTimes(keystrokes, waitMs)`: given keystroke times in milliseconds, return the times at which the debounced search fires. It fires `waitMs` after a keystroke unless another keystroke comes first.",
         "title": "Search box sends a request on every keystroke",
         "version": "1.0.0"
       },
-      "digest": "d258e914aa52d0f7692715491b491324f642d65d321abba37d92da3122ecfcd2",
+      "digest": "3b7ea2e4c7bf151d846b5aa4aa208c3bc84ba76fd101ff26f92e697ab84f3a9c",
       "state": "published",
       "testResult": {
-        "digest": "d258e914aa52d0f7692715491b491324f642d65d321abba37d92da3122ecfcd2",
+        "digest": "3b7ea2e4c7bf151d846b5aa4aa208c3bc84ba76fd101ff26f92e697ab84f3a9c",
         "fixtures": 3,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -342,28 +342,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "d258e914aa52d0f7692715491b491324f642d65d321abba37d92da3122ecfcd2",
+          "digest": "3b7ea2e4c7bf151d846b5aa4aa208c3bc84ba76fd101ff26f92e697ab84f3a9c",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "d258e914aa52d0f7692715491b491324f642d65d321abba37d92da3122ecfcd2",
+          "digest": "3b7ea2e4c7bf151d846b5aa4aa208c3bc84ba76fd101ff26f92e697ab84f3a9c",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "d258e914aa52d0f7692715491b491324f642d65d321abba37d92da3122ecfcd2",
+          "digest": "3b7ea2e4c7bf151d846b5aa4aa208c3bc84ba76fd101ff26f92e697ab84f3a9c",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "d258e914aa52d0f7692715491b491324f642d65d321abba37d92da3122ecfcd2",
+          "digest": "3b7ea2e4c7bf151d846b5aa4aa208c3bc84ba76fd101ff26f92e697ab84f3a9c",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -417,14 +417,14 @@
           "http"
         ],
         "summary": "Parse page and per_page with defaults and a hard cap.",
-        "task": "ParsePage(query) reads page and per_page from a URL query string. Defaults are page 1 and 20 per page, per_page is capped at 100, and missing, zero, negative or non-numeric values fall back to the default.",
+        "task": "`ParsePage(query)` reads `page` and `per_page` from a URL query string. Defaults are page 1 and 20 per page, `per_page` is capped at 100, and missing, zero, negative or non-numeric values fall back to the default.",
         "title": "List endpoints accept any page size",
         "version": "1.0.0"
       },
-      "digest": "484675dc548a1d8c1eec311fc35448ab32abce039a8c7ed777434829d6f27622",
+      "digest": "f0e3acb30e381c80c4dc16775f57f9d12d2f8d2148e004ecb47c580ca7840954",
       "state": "published",
       "testResult": {
-        "digest": "484675dc548a1d8c1eec311fc35448ab32abce039a8c7ed777434829d6f27622",
+        "digest": "f0e3acb30e381c80c4dc16775f57f9d12d2f8d2148e004ecb47c580ca7840954",
         "fixtures": 4,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -433,28 +433,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "484675dc548a1d8c1eec311fc35448ab32abce039a8c7ed777434829d6f27622",
+          "digest": "f0e3acb30e381c80c4dc16775f57f9d12d2f8d2148e004ecb47c580ca7840954",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "484675dc548a1d8c1eec311fc35448ab32abce039a8c7ed777434829d6f27622",
+          "digest": "f0e3acb30e381c80c4dc16775f57f9d12d2f8d2148e004ecb47c580ca7840954",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "484675dc548a1d8c1eec311fc35448ab32abce039a8c7ed777434829d6f27622",
+          "digest": "f0e3acb30e381c80c4dc16775f57f9d12d2f8d2148e004ecb47c580ca7840954",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "484675dc548a1d8c1eec311fc35448ab32abce039a8c7ed777434829d6f27622",
+          "digest": "f0e3acb30e381c80c4dc16775f57f9d12d2f8d2148e004ecb47c580ca7840954",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -511,14 +511,14 @@
           "units"
         ],
         "summary": "The TTL is in minutes but the check compares seconds.",
-        "task": "isExpired(issuedAt, now, ttlMinutes) with Unix timestamps in seconds. A link issued at t stays valid until t + ttlMinutes × 60, inclusive.",
+        "task": "`isExpired(issuedAt, now, ttlMinutes)` with Unix timestamps in seconds. A link issued at t stays valid until `t + ttlMinutes × 60`, inclusive.",
         "title": "Password reset links expire after a minute",
         "version": "1.0.0"
       },
-      "digest": "1e0eb2ba48c2c977e69e0376aa211784e66c191e7b11eb759686586867d9181f",
+      "digest": "0f116a5ab92cd0985c693849a700520a595e914cefb9d090455ad38e0f7e8a17",
       "state": "published",
       "testResult": {
-        "digest": "1e0eb2ba48c2c977e69e0376aa211784e66c191e7b11eb759686586867d9181f",
+        "digest": "0f116a5ab92cd0985c693849a700520a595e914cefb9d090455ad38e0f7e8a17",
         "fixtures": 4,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -527,28 +527,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "1e0eb2ba48c2c977e69e0376aa211784e66c191e7b11eb759686586867d9181f",
+          "digest": "0f116a5ab92cd0985c693849a700520a595e914cefb9d090455ad38e0f7e8a17",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "1e0eb2ba48c2c977e69e0376aa211784e66c191e7b11eb759686586867d9181f",
+          "digest": "0f116a5ab92cd0985c693849a700520a595e914cefb9d090455ad38e0f7e8a17",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "1e0eb2ba48c2c977e69e0376aa211784e66c191e7b11eb759686586867d9181f",
+          "digest": "0f116a5ab92cd0985c693849a700520a595e914cefb9d090455ad38e0f7e8a17",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "1e0eb2ba48c2c977e69e0376aa211784e66c191e7b11eb759686586867d9181f",
+          "digest": "0f116a5ab92cd0985c693849a700520a595e914cefb9d090455ad38e0f7e8a17",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -619,14 +619,14 @@
           "queues"
         ],
         "summary": "Allow at most n attempts in any sliding window.",
-        "task": "Write allow(times, limit, windowMs): for each login attempt time, return whether it is allowed when at most `limit` attempts may fall inside any window of `windowMs`.",
+        "task": "Write `allow(times, limit, windowMs)`: for each login attempt time, return whether it is allowed when at most `limit` attempts may fall inside any window of `windowMs` milliseconds.",
         "title": "Rate-limit login attempts",
         "version": "1.0.0"
       },
-      "digest": "66a322d02a8ca9405108b1512daa92d4da605980247a0e3467b6879735f0d262",
+      "digest": "e79cfdbe811020b08a1fe8decf20c8347688ace2e29122ed969f73f4206623e3",
       "state": "published",
       "testResult": {
-        "digest": "66a322d02a8ca9405108b1512daa92d4da605980247a0e3467b6879735f0d262",
+        "digest": "e79cfdbe811020b08a1fe8decf20c8347688ace2e29122ed969f73f4206623e3",
         "fixtures": 3,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -635,28 +635,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "66a322d02a8ca9405108b1512daa92d4da605980247a0e3467b6879735f0d262",
+          "digest": "e79cfdbe811020b08a1fe8decf20c8347688ace2e29122ed969f73f4206623e3",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "66a322d02a8ca9405108b1512daa92d4da605980247a0e3467b6879735f0d262",
+          "digest": "e79cfdbe811020b08a1fe8decf20c8347688ace2e29122ed969f73f4206623e3",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "66a322d02a8ca9405108b1512daa92d4da605980247a0e3467b6879735f0d262",
+          "digest": "e79cfdbe811020b08a1fe8decf20c8347688ace2e29122ed969f73f4206623e3",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "66a322d02a8ca9405108b1512daa92d4da605980247a0e3467b6879735f0d262",
+          "digest": "e79cfdbe811020b08a1fe8decf20c8347688ace2e29122ed969f73f4206623e3",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -708,14 +708,14 @@
           "strings"
         ],
         "summary": "Turn an access log line into a structured record.",
-        "task": "Write ParseLine(line) for lines like \"GET /cart 200 12ms\", returning method, path, status and duration in milliseconds.",
+        "task": "Write `ParseLine(line)` for lines like `GET /cart 200 12ms`, returning method, path, status and duration in milliseconds.",
         "title": "Access log parser drops fields on 5xx lines",
         "version": "1.0.0"
       },
-      "digest": "b9a7c87e0695e977fc8f50896718d4d500591117c25317efe798623d35318134",
+      "digest": "f93f2aece38341855fe56209429cc8e4180a3e4639e095e0bc1dbd12642b4a71",
       "state": "published",
       "testResult": {
-        "digest": "b9a7c87e0695e977fc8f50896718d4d500591117c25317efe798623d35318134",
+        "digest": "f93f2aece38341855fe56209429cc8e4180a3e4639e095e0bc1dbd12642b4a71",
         "fixtures": 2,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -724,28 +724,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "b9a7c87e0695e977fc8f50896718d4d500591117c25317efe798623d35318134",
+          "digest": "f93f2aece38341855fe56209429cc8e4180a3e4639e095e0bc1dbd12642b4a71",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "b9a7c87e0695e977fc8f50896718d4d500591117c25317efe798623d35318134",
+          "digest": "f93f2aece38341855fe56209429cc8e4180a3e4639e095e0bc1dbd12642b4a71",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "b9a7c87e0695e977fc8f50896718d4d500591117c25317efe798623d35318134",
+          "digest": "f93f2aece38341855fe56209429cc8e4180a3e4639e095e0bc1dbd12642b4a71",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "b9a7c87e0695e977fc8f50896718d4d500591117c25317efe798623d35318134",
+          "digest": "f93f2aece38341855fe56209429cc8e4180a3e4639e095e0bc1dbd12642b4a71",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -800,14 +800,14 @@
           "csv"
         ],
         "summary": "Respect quoted fields when parsing partner exports.",
-        "task": "parse_csv_line(line) splits a CSV line on commas, except inside double quotes. Quotes are removed, and a doubled quote inside a quoted field is a literal quote: \"say \"\"hi\"\"\" → say \"hi\".",
+        "task": "`parse_csv_line(line)` splits a CSV line on commas, except inside double quotes. Quotes are removed, and a doubled quote inside a quoted field is a literal quote: `\"say \"\"hi\"\"\"` → `say \"hi\"`.",
         "title": "CSV import splits company names on commas",
         "version": "1.0.0"
       },
-      "digest": "cc8cb9265cc024e2b4abd9c366e7a338b116dab7d560cda5a69ba2907dc73cd4",
+      "digest": "b2b30a11c556900a04b07d13ad2134c8bc0cbb8a0f7272ce681f7a2b7f5f6582",
       "state": "published",
       "testResult": {
-        "digest": "cc8cb9265cc024e2b4abd9c366e7a338b116dab7d560cda5a69ba2907dc73cd4",
+        "digest": "b2b30a11c556900a04b07d13ad2134c8bc0cbb8a0f7272ce681f7a2b7f5f6582",
         "fixtures": 4,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -816,28 +816,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "cc8cb9265cc024e2b4abd9c366e7a338b116dab7d560cda5a69ba2907dc73cd4",
+          "digest": "b2b30a11c556900a04b07d13ad2134c8bc0cbb8a0f7272ce681f7a2b7f5f6582",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "cc8cb9265cc024e2b4abd9c366e7a338b116dab7d560cda5a69ba2907dc73cd4",
+          "digest": "b2b30a11c556900a04b07d13ad2134c8bc0cbb8a0f7272ce681f7a2b7f5f6582",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "cc8cb9265cc024e2b4abd9c366e7a338b116dab7d560cda5a69ba2907dc73cd4",
+          "digest": "b2b30a11c556900a04b07d13ad2134c8bc0cbb8a0f7272ce681f7a2b7f5f6582",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "cc8cb9265cc024e2b4abd9c366e7a338b116dab7d560cda5a69ba2907dc73cd4",
+          "digest": "b2b30a11c556900a04b07d13ad2134c8bc0cbb8a0f7272ce681f7a2b7f5f6582",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -896,14 +896,14 @@
           "data-cleaning"
         ],
         "summary": "Keep the first record per email before the newsletter sync.",
-        "task": "dedupe(records) keeps the first record for each email, comparing emails case-insensitively and ignoring surrounding spaces. Keep the original order.",
+        "task": "`dedupe(records)` keeps the first record for each email, comparing emails case-insensitively and ignoring surrounding spaces. Keep the original order.",
         "title": "Deduplicate customer records by email",
         "version": "1.0.0"
       },
-      "digest": "f7f2241812b17c4ac61730eff0c0480925bba0b7bb66509226c90ea4d90b231a",
+      "digest": "c593efc2737f33c2524e91a77e8eddc0e260eb6d05baccfbc08cda5ecf266d73",
       "state": "published",
       "testResult": {
-        "digest": "f7f2241812b17c4ac61730eff0c0480925bba0b7bb66509226c90ea4d90b231a",
+        "digest": "c593efc2737f33c2524e91a77e8eddc0e260eb6d05baccfbc08cda5ecf266d73",
         "fixtures": 2,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -912,28 +912,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "f7f2241812b17c4ac61730eff0c0480925bba0b7bb66509226c90ea4d90b231a",
+          "digest": "c593efc2737f33c2524e91a77e8eddc0e260eb6d05baccfbc08cda5ecf266d73",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "f7f2241812b17c4ac61730eff0c0480925bba0b7bb66509226c90ea4d90b231a",
+          "digest": "c593efc2737f33c2524e91a77e8eddc0e260eb6d05baccfbc08cda5ecf266d73",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "f7f2241812b17c4ac61730eff0c0480925bba0b7bb66509226c90ea4d90b231a",
+          "digest": "c593efc2737f33c2524e91a77e8eddc0e260eb6d05baccfbc08cda5ecf266d73",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "f7f2241812b17c4ac61730eff0c0480925bba0b7bb66509226c90ea4d90b231a",
+          "digest": "c593efc2737f33c2524e91a77e8eddc0e260eb6d05baccfbc08cda5ecf266d73",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -995,14 +995,14 @@
           "sorting"
         ],
         "summary": "Total each customer's orders, biggest first.",
-        "task": "Given orders(id, customer, total), select each customer and the sum of their totals, highest first.",
+        "task": "Given `orders(id, customer, total)`, select each customer and the sum of their totals, highest first.",
         "title": "Revenue by customer for the monthly report",
         "version": "1.0.0"
       },
-      "digest": "9083afac1b4e5a959bf516134a1a11645752af374fe2ba38c8e8712e5ccc1878",
+      "digest": "a1c0b2316864458ba6d8784a4ec29a2b86953f9cc8df5bff8017de7348b00338",
       "state": "published",
       "testResult": {
-        "digest": "9083afac1b4e5a959bf516134a1a11645752af374fe2ba38c8e8712e5ccc1878",
+        "digest": "a1c0b2316864458ba6d8784a4ec29a2b86953f9cc8df5bff8017de7348b00338",
         "fixtures": 1,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1011,28 +1011,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "9083afac1b4e5a959bf516134a1a11645752af374fe2ba38c8e8712e5ccc1878",
+          "digest": "a1c0b2316864458ba6d8784a4ec29a2b86953f9cc8df5bff8017de7348b00338",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "9083afac1b4e5a959bf516134a1a11645752af374fe2ba38c8e8712e5ccc1878",
+          "digest": "a1c0b2316864458ba6d8784a4ec29a2b86953f9cc8df5bff8017de7348b00338",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "9083afac1b4e5a959bf516134a1a11645752af374fe2ba38c8e8712e5ccc1878",
+          "digest": "a1c0b2316864458ba6d8784a4ec29a2b86953f9cc8df5bff8017de7348b00338",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "9083afac1b4e5a959bf516134a1a11645752af374fe2ba38c8e8712e5ccc1878",
+          "digest": "a1c0b2316864458ba6d8784a4ec29a2b86953f9cc8df5bff8017de7348b00338",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -1098,14 +1098,14 @@
           "reconciliation"
         ],
         "summary": "Reconcile orders against payments before month-end close.",
-        "task": "Given orders(id, customer) and payments(order_id, amount), select the ids of orders that have no payment, smallest first.",
+        "task": "Given `orders(id, customer)` and `payments(order_id, amount)`, select the ids of orders that have no payment, smallest first.",
         "title": "Find orders with no matching payment",
         "version": "1.0.0"
       },
-      "digest": "96086be7f5d32965210ef7b044d8aa0ad1e8d6c22de08926c3a79119b1307ebe",
+      "digest": "d21fd6747aabbf9eefa6f7f24841c628f073d846aa9bd8d74693969cb7b4c5c1",
       "state": "published",
       "testResult": {
-        "digest": "96086be7f5d32965210ef7b044d8aa0ad1e8d6c22de08926c3a79119b1307ebe",
+        "digest": "d21fd6747aabbf9eefa6f7f24841c628f073d846aa9bd8d74693969cb7b4c5c1",
         "fixtures": 1,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1114,28 +1114,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "96086be7f5d32965210ef7b044d8aa0ad1e8d6c22de08926c3a79119b1307ebe",
+          "digest": "d21fd6747aabbf9eefa6f7f24841c628f073d846aa9bd8d74693969cb7b4c5c1",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "96086be7f5d32965210ef7b044d8aa0ad1e8d6c22de08926c3a79119b1307ebe",
+          "digest": "d21fd6747aabbf9eefa6f7f24841c628f073d846aa9bd8d74693969cb7b4c5c1",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "96086be7f5d32965210ef7b044d8aa0ad1e8d6c22de08926c3a79119b1307ebe",
+          "digest": "d21fd6747aabbf9eefa6f7f24841c628f073d846aa9bd8d74693969cb7b4c5c1",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "96086be7f5d32965210ef7b044d8aa0ad1e8d6c22de08926c3a79119b1307ebe",
+          "digest": "d21fd6747aabbf9eefa6f7f24841c628f073d846aa9bd8d74693969cb7b4c5c1",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -1187,14 +1187,14 @@
           "modular-arithmetic"
         ],
         "summary": "A fixed-size buffer that overwrites its oldest entry.",
-        "task": "Implement a ring buffer of capacity n. Given a sequence of pushes, return the contents oldest first.",
+        "task": "Implement a ring buffer of capacity `n`. Given a sequence of pushes, return the contents oldest first.",
         "title": "Keep the last N request latencies in memory",
         "version": "1.0.0"
       },
-      "digest": "724626a0200f14f35b9914c34e114d4d10dabdd473482f9a8376eada28573963",
+      "digest": "dec94b07f090261be6add1289e3468ef0e90b35a9af6a5dcfeb85d40dd1ebe8a",
       "state": "published",
       "testResult": {
-        "digest": "724626a0200f14f35b9914c34e114d4d10dabdd473482f9a8376eada28573963",
+        "digest": "dec94b07f090261be6add1289e3468ef0e90b35a9af6a5dcfeb85d40dd1ebe8a",
         "fixtures": 2,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1203,28 +1203,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "724626a0200f14f35b9914c34e114d4d10dabdd473482f9a8376eada28573963",
+          "digest": "dec94b07f090261be6add1289e3468ef0e90b35a9af6a5dcfeb85d40dd1ebe8a",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "724626a0200f14f35b9914c34e114d4d10dabdd473482f9a8376eada28573963",
+          "digest": "dec94b07f090261be6add1289e3468ef0e90b35a9af6a5dcfeb85d40dd1ebe8a",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "724626a0200f14f35b9914c34e114d4d10dabdd473482f9a8376eada28573963",
+          "digest": "dec94b07f090261be6add1289e3468ef0e90b35a9af6a5dcfeb85d40dd1ebe8a",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "724626a0200f14f35b9914c34e114d4d10dabdd473482f9a8376eada28573963",
+          "digest": "dec94b07f090261be6add1289e3468ef0e90b35a9af6a5dcfeb85d40dd1ebe8a",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -1291,14 +1291,14 @@
           "statistics"
         ],
         "summary": "Compute nearest-rank percentiles for the metrics endpoint.",
-        "task": "percentile(samples, p) returns the nearest-rank percentile: sort the samples and take the value at rank ceil(p / 100 × n), counting from 1. Return null when there are no samples.",
+        "task": "`percentile(samples, p)` returns the nearest-rank percentile: sort the samples and take the value at rank `ceil(p / 100 × n)`, counting from 1. Return `null` when there are no samples.",
         "title": "p99 latency panel times out in busy hours",
         "version": "1.0.0"
       },
-      "digest": "27071dfd5eed018b4d516e6b06039c876fbc7288c6c3af13d93c4ff084c4dbc2",
+      "digest": "98233316f4cbcd5c8f8ff2c1444777d2fbadf78b6dd8cd9287678227b18774f2",
       "state": "published",
       "testResult": {
-        "digest": "27071dfd5eed018b4d516e6b06039c876fbc7288c6c3af13d93c4ff084c4dbc2",
+        "digest": "98233316f4cbcd5c8f8ff2c1444777d2fbadf78b6dd8cd9287678227b18774f2",
         "fixtures": 4,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1307,28 +1307,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "27071dfd5eed018b4d516e6b06039c876fbc7288c6c3af13d93c4ff084c4dbc2",
+          "digest": "98233316f4cbcd5c8f8ff2c1444777d2fbadf78b6dd8cd9287678227b18774f2",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "27071dfd5eed018b4d516e6b06039c876fbc7288c6c3af13d93c4ff084c4dbc2",
+          "digest": "98233316f4cbcd5c8f8ff2c1444777d2fbadf78b6dd8cd9287678227b18774f2",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "27071dfd5eed018b4d516e6b06039c876fbc7288c6c3af13d93c4ff084c4dbc2",
+          "digest": "98233316f4cbcd5c8f8ff2c1444777d2fbadf78b6dd8cd9287678227b18774f2",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "27071dfd5eed018b4d516e6b06039c876fbc7288c6c3af13d93c4ff084c4dbc2",
+          "digest": "98233316f4cbcd5c8f8ff2c1444777d2fbadf78b6dd8cd9287678227b18774f2",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -1423,14 +1423,14 @@
           "maps"
         ],
         "summary": "Reads must refresh recency in the LRU cache.",
-        "task": "Simulate an LRU cache with the given capacity over operations [\"put\", key, value] and [\"get\", key]. Return the results of the gets in order, -1 for a miss. A get counts as a use.",
+        "task": "Simulate an LRU cache with the given capacity over operations `[\"put\", key, value]` and `[\"get\", key]`. Return the results of the gets in order, `-1` for a miss. A get counts as a use.",
         "title": "Cache evicts entries that were just used",
         "version": "1.0.0"
       },
-      "digest": "c84d2b060e5135ae83f8aed7db9332f77996ea1e21a4306f3724c6b893a30882",
+      "digest": "500a8dda29a677406faff72fac1001bece93cad05a59045c91dcb64cd37742f3",
       "state": "published",
       "testResult": {
-        "digest": "c84d2b060e5135ae83f8aed7db9332f77996ea1e21a4306f3724c6b893a30882",
+        "digest": "500a8dda29a677406faff72fac1001bece93cad05a59045c91dcb64cd37742f3",
         "fixtures": 2,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1439,28 +1439,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "c84d2b060e5135ae83f8aed7db9332f77996ea1e21a4306f3724c6b893a30882",
+          "digest": "500a8dda29a677406faff72fac1001bece93cad05a59045c91dcb64cd37742f3",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "c84d2b060e5135ae83f8aed7db9332f77996ea1e21a4306f3724c6b893a30882",
+          "digest": "500a8dda29a677406faff72fac1001bece93cad05a59045c91dcb64cd37742f3",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "c84d2b060e5135ae83f8aed7db9332f77996ea1e21a4306f3724c6b893a30882",
+          "digest": "500a8dda29a677406faff72fac1001bece93cad05a59045c91dcb64cd37742f3",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "c84d2b060e5135ae83f8aed7db9332f77996ea1e21a4306f3724c6b893a30882",
+          "digest": "500a8dda29a677406faff72fac1001bece93cad05a59045c91dcb64cd37742f3",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -1505,14 +1505,14 @@
           "config"
         ],
         "summary": "Accept durations like 1h30m in config files.",
-        "task": "parse_duration(text) turns strings like \"1h30m\", \"45s\" or \"2h\" into seconds. Units are h, m and s, each at most once and in that order; return null for anything else.",
+        "task": "`parse_duration(text)` turns strings like `\"1h30m\"`, `\"45s\"` or `\"2h\"` into seconds. Units are `h`, `m` and `s`, each at most once and in that order; return `null` for anything else.",
         "title": "Timeouts in config must be written in seconds",
         "version": "1.0.0"
       },
-      "digest": "4a0bd14992b070c484bdff6b0f7c88ee2c18a84a4cd8ac48110dd00a64154dcc",
+      "digest": "0071701a80fd5f8e4bd9d8291deeebd56e77273499706cb1c2ba7c00543b9c83",
       "state": "published",
       "testResult": {
-        "digest": "4a0bd14992b070c484bdff6b0f7c88ee2c18a84a4cd8ac48110dd00a64154dcc",
+        "digest": "0071701a80fd5f8e4bd9d8291deeebd56e77273499706cb1c2ba7c00543b9c83",
         "fixtures": 6,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1521,28 +1521,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "4a0bd14992b070c484bdff6b0f7c88ee2c18a84a4cd8ac48110dd00a64154dcc",
+          "digest": "0071701a80fd5f8e4bd9d8291deeebd56e77273499706cb1c2ba7c00543b9c83",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "4a0bd14992b070c484bdff6b0f7c88ee2c18a84a4cd8ac48110dd00a64154dcc",
+          "digest": "0071701a80fd5f8e4bd9d8291deeebd56e77273499706cb1c2ba7c00543b9c83",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "4a0bd14992b070c484bdff6b0f7c88ee2c18a84a4cd8ac48110dd00a64154dcc",
+          "digest": "0071701a80fd5f8e4bd9d8291deeebd56e77273499706cb1c2ba7c00543b9c83",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "4a0bd14992b070c484bdff6b0f7c88ee2c18a84a4cd8ac48110dd00a64154dcc",
+          "digest": "0071701a80fd5f8e4bd9d8291deeebd56e77273499706cb1c2ba7c00543b9c83",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -1573,15 +1573,15 @@
         "id": "storefront",
         "key": "SHOP",
         "presentation": "demo-text-v1",
-        "story": "The online shop: product pages, a cart and checkout, server-rendered with a layer of TypeScript. Conversion dipped after the last redesign, and the backlog is a mix of polish, accessibility and checkout bugs.",
+        "story": "The online shop customers actually see: product listings, filters, the cart and a three-step checkout. Pages are server-rendered, with a thin layer of TypeScript for the interactive parts.\n\nConversion dipped after the last redesign. Support is fielding tickets about prices, promo codes and a search box that feels sluggish, and an accessibility audit came back with a long list.\n\n## What you'll work on\n\n- Formatting money and other values the way customers expect to read them\n- Form behaviour, validation and accessible markup\n- Small performance fixes in the browser, like debouncing input\n\n## Good fit if you\n\n- Build user interfaces, or want to get sharper at the details that make one feel solid\n- Are comfortable with **JavaScript**, **TypeScript** or plain **HTML**\n- Care what a bug looks like from the customer's side of the screen\n\nStack: TypeScript, JavaScript, HTML.",
         "summary": "Frontend: the customer-facing shop, cart and checkout.",
         "title": "Storefront",
         "version": "1.0.0"
       },
-      "digest": "dd79368478f82a1ef3c2cc3ea85a1d0df3d675b0ac8bf6a201995167297e93a7",
+      "digest": "977b70bedc1686d9a3c476a469c6bf34327d3bd2bfc7a4bfb6e87dc17cedd6ea",
       "state": "published",
       "testResult": {
-        "digest": "dd79368478f82a1ef3c2cc3ea85a1d0df3d675b0ac8bf6a201995167297e93a7",
+        "digest": "977b70bedc1686d9a3c476a469c6bf34327d3bd2bfc7a4bfb6e87dc17cedd6ea",
         "fixtures": 14,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1590,28 +1590,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "dd79368478f82a1ef3c2cc3ea85a1d0df3d675b0ac8bf6a201995167297e93a7",
+          "digest": "977b70bedc1686d9a3c476a469c6bf34327d3bd2bfc7a4bfb6e87dc17cedd6ea",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "dd79368478f82a1ef3c2cc3ea85a1d0df3d675b0ac8bf6a201995167297e93a7",
+          "digest": "977b70bedc1686d9a3c476a469c6bf34327d3bd2bfc7a4bfb6e87dc17cedd6ea",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "dd79368478f82a1ef3c2cc3ea85a1d0df3d675b0ac8bf6a201995167297e93a7",
+          "digest": "977b70bedc1686d9a3c476a469c6bf34327d3bd2bfc7a4bfb6e87dc17cedd6ea",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "dd79368478f82a1ef3c2cc3ea85a1d0df3d675b0ac8bf6a201995167297e93a7",
+          "digest": "977b70bedc1686d9a3c476a469c6bf34327d3bd2bfc7a4bfb6e87dc17cedd6ea",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -1642,15 +1642,15 @@
         "id": "accounts-api",
         "key": "API",
         "presentation": "demo-text-v1",
-        "story": "The Go and PHP service every client talks to for accounts, sessions and password resets. It mostly works; the on-call channel has opinions.",
+        "story": "The service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, and the login gateway in front is TypeScript.\n\nIt mostly works, and the on-call channel has opinions about the rest: list endpoints that accept any page size, reset links that expire too soon, and logs that are hard to search during an incident.\n\n## What you'll work on\n\n- Parsing and validating request parameters with sensible defaults\n- Time and expiry logic, where off-by-one and unit mix-ups hide\n- Rate limiting and log handling for the people on call\n\n## Good fit if you\n\n- Write backend services, or want practice with the bugs they actually get\n- Like **input validation**, edge cases and reading a stack trace at 2am\n- Know **Go**, **PHP** or **TypeScript**, or want to try one of them on familiar problems\n\nStack: Go, PHP, TypeScript.",
         "summary": "Backend: sign-up, login and account endpoints behind every app.",
         "title": "Accounts API",
         "version": "1.0.0"
       },
-      "digest": "3df24dce937feb2173ff3444779a627b20d8699c3d11b699a52c6c945761be81",
+      "digest": "1b7351fc7f1fd85ef7b619f993ce7b7ee90a39d557a96c6f240dc4110d605ee3",
       "state": "published",
       "testResult": {
-        "digest": "3df24dce937feb2173ff3444779a627b20d8699c3d11b699a52c6c945761be81",
+        "digest": "1b7351fc7f1fd85ef7b619f993ce7b7ee90a39d557a96c6f240dc4110d605ee3",
         "fixtures": 13,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1659,28 +1659,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "3df24dce937feb2173ff3444779a627b20d8699c3d11b699a52c6c945761be81",
+          "digest": "1b7351fc7f1fd85ef7b619f993ce7b7ee90a39d557a96c6f240dc4110d605ee3",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "3df24dce937feb2173ff3444779a627b20d8699c3d11b699a52c6c945761be81",
+          "digest": "1b7351fc7f1fd85ef7b619f993ce7b7ee90a39d557a96c6f240dc4110d605ee3",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "3df24dce937feb2173ff3444779a627b20d8699c3d11b699a52c6c945761be81",
+          "digest": "1b7351fc7f1fd85ef7b619f993ce7b7ee90a39d557a96c6f240dc4110d605ee3",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "3df24dce937feb2173ff3444779a627b20d8699c3d11b699a52c6c945761be81",
+          "digest": "1b7351fc7f1fd85ef7b619f993ce7b7ee90a39d557a96c6f240dc4110d605ee3",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -1711,15 +1711,15 @@
         "id": "data-platform",
         "key": "DATA",
         "presentation": "demo-text-v1",
-        "story": "Partners drop CSV exports in a bucket every night. A pipeline cleans them, loads the warehouse and feeds the reports people actually read on Monday morning.",
+        "story": "Partners drop CSV exports in a bucket every night. A pipeline cleans them, loads the warehouse and feeds the reports finance reads on Monday morning.\n\nThe exports are messier than anyone admits: quoted commas in company names, duplicate customers with slightly different emails, and orders that never got paid. When the numbers look wrong, this is where people come asking.\n\n## What you'll work on\n\n- Parsing awkward input files without losing data\n- Cleaning and deduplicating records before they reach the warehouse\n- SQL for the reports and reconciliations people rely on\n\n## Good fit if you\n\n- Work with data, or are the person on your team who ends up writing the SQL\n- Enjoy turning messy input into something you can trust\n- Know **Python** and **SQL**, or want more practice with both\n\nStack: Python, SQL.",
         "summary": "Data: nightly partner imports, cleaning and the reports finance relies on.",
         "title": "Data platform",
         "version": "1.0.0"
       },
-      "digest": "ea2f0f4fb279a979fc5cf8c6dfb0575619094722ad7af86e60a3abc1381243f6",
+      "digest": "1b47b124c04c2bedcd61f072327dec6ffb94027db553fababf304a3b4dd2455d",
       "state": "published",
       "testResult": {
-        "digest": "ea2f0f4fb279a979fc5cf8c6dfb0575619094722ad7af86e60a3abc1381243f6",
+        "digest": "1b47b124c04c2bedcd61f072327dec6ffb94027db553fababf304a3b4dd2455d",
         "fixtures": 8,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1728,28 +1728,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "ea2f0f4fb279a979fc5cf8c6dfb0575619094722ad7af86e60a3abc1381243f6",
+          "digest": "1b47b124c04c2bedcd61f072327dec6ffb94027db553fababf304a3b4dd2455d",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "ea2f0f4fb279a979fc5cf8c6dfb0575619094722ad7af86e60a3abc1381243f6",
+          "digest": "1b47b124c04c2bedcd61f072327dec6ffb94027db553fababf304a3b4dd2455d",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "ea2f0f4fb279a979fc5cf8c6dfb0575619094722ad7af86e60a3abc1381243f6",
+          "digest": "1b47b124c04c2bedcd61f072327dec6ffb94027db553fababf304a3b4dd2455d",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "ea2f0f4fb279a979fc5cf8c6dfb0575619094722ad7af86e60a3abc1381243f6",
+          "digest": "1b47b124c04c2bedcd61f072327dec6ffb94027db553fababf304a3b4dd2455d",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]
@@ -1780,15 +1780,15 @@
         "id": "edge-proxy",
         "key": "EDGE",
         "presentation": "demo-text-v1",
-        "story": "A small proxy in C, C++ and Rust that terminates connections, caches hot responses and exports metrics. Every allocation shows up on a flame graph.",
+        "story": "A small proxy in front of everything: it terminates connections, caches hot responses and exports latency metrics. It's written in C, C++ and Rust, depending on who wrote which part and when.\n\nEvery allocation shows up on a flame graph here. The backlog is about doing more with fixed memory, measuring the right thing, and keeping configuration readable for whoever is paged.\n\n## What you'll work on\n\n- Fixed-size data structures such as ring buffers and LRU caches\n- Latency percentiles and the metrics behind dashboards\n- Small, strict configuration formats\n\n## Good fit if you\n\n- Do systems or performance work, or want to get closer to the metal\n- Think about memory, ordering and what happens under load\n- Know **C**, **C++** or **Rust**, or are learning one of them\n\nStack: C, C++, Rust.",
         "summary": "Systems: the low-latency proxy in front of everything.",
         "title": "Edge proxy",
         "version": "1.0.0"
       },
-      "digest": "35b3b80c35507c04b0e58746b20fef6ab7a37c3a32a3c514c67cea89694421df",
+      "digest": "e8d1f6b0f81f3ab224872ca1501c36aade282ccfaaecbd6994fe2d86dc34f754",
       "state": "published",
       "testResult": {
-        "digest": "35b3b80c35507c04b0e58746b20fef6ab7a37c3a32a3c514c67cea89694421df",
+        "digest": "e8d1f6b0f81f3ab224872ca1501c36aade282ccfaaecbd6994fe2d86dc34f754",
         "fixtures": 14,
         "at": "2026-10-24T00:00:00.000Z"
       },
@@ -1797,28 +1797,28 @@
           "action": "drafted",
           "from": null,
           "to": "draft",
-          "digest": "35b3b80c35507c04b0e58746b20fef6ab7a37c3a32a3c514c67cea89694421df",
+          "digest": "e8d1f6b0f81f3ab224872ca1501c36aade282ccfaaecbd6994fe2d86dc34f754",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "previewed",
           "from": "draft",
           "to": "preview",
-          "digest": "35b3b80c35507c04b0e58746b20fef6ab7a37c3a32a3c514c67cea89694421df",
+          "digest": "e8d1f6b0f81f3ab224872ca1501c36aade282ccfaaecbd6994fe2d86dc34f754",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "tested",
           "from": "preview",
           "to": "tested",
-          "digest": "35b3b80c35507c04b0e58746b20fef6ab7a37c3a32a3c514c67cea89694421df",
+          "digest": "e8d1f6b0f81f3ab224872ca1501c36aade282ccfaaecbd6994fe2d86dc34f754",
           "at": "2026-10-24T00:00:00.000Z"
         },
         {
           "action": "published",
           "from": "tested",
           "to": "published",
-          "digest": "35b3b80c35507c04b0e58746b20fef6ab7a37c3a32a3c514c67cea89694421df",
+          "digest": "e8d1f6b0f81f3ab224872ca1501c36aade282ccfaaecbd6994fe2d86dc34f754",
           "at": "2026-10-24T00:00:00.000Z"
         }
       ]

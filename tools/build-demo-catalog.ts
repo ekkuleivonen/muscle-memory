@@ -84,7 +84,7 @@ const challenges = [
     difficulty: "warm-up",
     language: "javascript",
     skills: ["formatting", "strings", "numbers"],
-    task: 'Write formatPrice(cents): return the amount in dollars with two decimals and comma thousands separators, e.g. 123456 → "$1,234.56". Negative amounts are refunds and get a leading minus: -500 → "-$5.00".',
+    task: 'Write `formatPrice(cents)`: return the amount in dollars with two decimals and comma thousands separators, e.g. `123456` → `"$1,234.56"`. Negative amounts are refunds and get a leading minus: `-500` → `"-$5.00"`.',
     inputs: [123456, 5, 0, -500, 100000000],
     expected: ["$1,234.56", "$0.05", "$0.00", "-$5.00", "$1,000,000.00"],
     comments: [
@@ -100,7 +100,7 @@ const challenges = [
     difficulty: "easy",
     language: "typescript",
     skills: ["strings", "validation"],
-    task: "applyDiscount(totalCents, code, codes) returns the total after the matching code's percentage off, rounded down to whole cents. Codes match case-insensitively and ignoring surrounding spaces; an unknown code leaves the total unchanged.",
+    task: "`applyDiscount(totalCents, code, codes)` returns the total after the matching code's percentage off, rounded down to whole cents. Codes match case-insensitively and ignoring surrounding spaces; an unknown code leaves the total unchanged.",
     inputs: [
       [10000, "save10", { SAVE10: 10 }],
       [10000, " SAVE10 ", { SAVE10: 10 }],
@@ -122,7 +122,7 @@ const challenges = [
     difficulty: "warm-up",
     language: "html",
     skills: ["accessibility", "forms", "semantics"],
-    task: 'Render the product filter form: for each filter name, a <label for="filter-NAME"> with the name as text, followed by <input type="checkbox" id="filter-NAME" name="NAME">, all inside a <form>.',
+    task: 'Render the product filter form: for each filter name, a `<label for="filter-NAME">` with the name as text, followed by `<input type="checkbox" id="filter-NAME" name="NAME">`, all inside a `<form>`.',
     inputs: [["in-stock", "on-sale"], []],
     expected: [
       '<form><label for="filter-in-stock">in-stock</label><input type="checkbox" id="filter-in-stock" name="in-stock"><label for="filter-on-sale">on-sale</label><input type="checkbox" id="filter-on-sale" name="on-sale"></form>',
@@ -142,7 +142,7 @@ const challenges = [
     difficulty: "medium",
     language: "typescript",
     skills: ["timing", "events"],
-    task: "debounceTimes(keystrokes, waitMs): given keystroke times in milliseconds, return the times at which the debounced search fires. It fires waitMs after a keystroke unless another keystroke comes first.",
+    task: "`debounceTimes(keystrokes, waitMs)`: given keystroke times in milliseconds, return the times at which the debounced search fires. It fires `waitMs` after a keystroke unless another keystroke comes first.",
     inputs: [
       [[0, 100, 200, 1000], 300],
       [[], 300],
@@ -167,7 +167,7 @@ const challenges = [
     difficulty: "easy",
     language: "go",
     skills: ["parsing", "validation", "http"],
-    task: "ParsePage(query) reads page and per_page from a URL query string. Defaults are page 1 and 20 per page, per_page is capped at 100, and missing, zero, negative or non-numeric values fall back to the default.",
+    task: "`ParsePage(query)` reads `page` and `per_page` from a URL query string. Defaults are page 1 and 20 per page, `per_page` is capped at 100, and missing, zero, negative or non-numeric values fall back to the default.",
     inputs: ["page=2&per_page=50", "", "per_page=500", "page=-1&per_page=abc"],
     expected: [
       { page: 2, perPage: 50 },
@@ -188,7 +188,7 @@ const challenges = [
     difficulty: "easy",
     language: "php",
     skills: ["time", "units"],
-    task: "isExpired(issuedAt, now, ttlMinutes) with Unix timestamps in seconds. A link issued at t stays valid until t + ttlMinutes × 60, inclusive.",
+    task: "`isExpired(issuedAt, now, ttlMinutes)` with Unix timestamps in seconds. A link issued at t stays valid until `t + ttlMinutes × 60`, inclusive.",
     inputs: [
       [1000, 1059, 60],
       [1000, 4600, 60],
@@ -209,7 +209,7 @@ const challenges = [
     difficulty: "medium",
     language: "typescript",
     skills: ["sliding-window", "queues"],
-    task: "Write allow(times, limit, windowMs): for each login attempt time, return whether it is allowed when at most `limit` attempts may fall inside any window of `windowMs`.",
+    task: "Write `allow(times, limit, windowMs)`: for each login attempt time, return whether it is allowed when at most `limit` attempts may fall inside any window of `windowMs` milliseconds.",
     inputs: [
       [[0, 1, 2, 3], 3, 10],
       [[], 1, 10],
@@ -230,7 +230,7 @@ const challenges = [
     difficulty: "easy",
     language: "go",
     skills: ["parsing", "strings"],
-    task: 'Write ParseLine(line) for lines like "GET /cart 200 12ms", returning method, path, status and duration in milliseconds.',
+    task: 'Write `ParseLine(line)` for lines like `GET /cart 200 12ms`, returning method, path, status and duration in milliseconds.',
     inputs: ["GET /cart 200 12ms", "POST /pay 502 1300ms"],
     expected: [
       { method: "GET", path: "/cart", status: 200, ms: 12 },
@@ -252,7 +252,7 @@ const challenges = [
     difficulty: "easy",
     language: "python",
     skills: ["parsing", "strings", "csv"],
-    task: 'parse_csv_line(line) splits a CSV line on commas, except inside double quotes. Quotes are removed, and a doubled quote inside a quoted field is a literal quote: "say ""hi""" → say "hi".',
+    task: '`parse_csv_line(line)` splits a CSV line on commas, except inside double quotes. Quotes are removed, and a doubled quote inside a quoted field is a literal quote: `"say ""hi"""` → `say "hi"`.',
     inputs: ["a,b,c", '"Acme, Inc.",42,"NY"', '"say ""hi""",x', ""],
     expected: [
       ["a", "b", "c"],
@@ -273,7 +273,7 @@ const challenges = [
     difficulty: "medium",
     language: "python",
     skills: ["maps", "data-cleaning"],
-    task: "dedupe(records) keeps the first record for each email, comparing emails case-insensitively and ignoring surrounding spaces. Keep the original order.",
+    task: "`dedupe(records)` keeps the first record for each email, comparing emails case-insensitively and ignoring surrounding spaces. Keep the original order.",
     inputs: [
       [
         { id: 1, email: "Ann@x.io" },
@@ -302,7 +302,7 @@ const challenges = [
     difficulty: "easy",
     language: "sql",
     skills: ["aggregation", "sorting"],
-    task: "Given orders(id, customer, total), select each customer and the sum of their totals, highest first.",
+    task: "Given `orders(id, customer, total)`, select each customer and the sum of their totals, highest first.",
     inputs: [
       {
         orders: [
@@ -329,7 +329,7 @@ const challenges = [
     difficulty: "medium",
     language: "sql",
     skills: ["joins", "reconciliation"],
-    task: "Given orders(id, customer) and payments(order_id, amount), select the ids of orders that have no payment, smallest first.",
+    task: "Given `orders(id, customer)` and `payments(order_id, amount)`, select the ids of orders that have no payment, smallest first.",
     inputs: [
       {
         orders: [
@@ -356,7 +356,7 @@ const challenges = [
     difficulty: "medium",
     language: "c",
     skills: ["arrays", "modular-arithmetic"],
-    task: "Implement a ring buffer of capacity n. Given a sequence of pushes, return the contents oldest first.",
+    task: "Implement a ring buffer of capacity `n`. Given a sequence of pushes, return the contents oldest first.",
     inputs: [
       [3, [1, 2, 3, 4]],
       [2, []],
@@ -373,7 +373,7 @@ const challenges = [
     difficulty: "medium",
     language: "rust",
     skills: ["sorting", "statistics"],
-    task: "percentile(samples, p) returns the nearest-rank percentile: sort the samples and take the value at rank ceil(p / 100 × n), counting from 1. Return null when there are no samples.",
+    task: "`percentile(samples, p)` returns the nearest-rank percentile: sort the samples and take the value at rank `ceil(p / 100 × n)`, counting from 1. Return `null` when there are no samples.",
     inputs: [
       [[15, 20, 35, 40, 50], 30],
       [[15, 20, 35, 40, 50], 100],
@@ -394,7 +394,7 @@ const challenges = [
     difficulty: "hard",
     language: "cpp",
     skills: ["caching", "linked-lists", "maps"],
-    task: 'Simulate an LRU cache with the given capacity over operations ["put", key, value] and ["get", key]. Return the results of the gets in order, -1 for a miss. A get counts as a use.',
+    task: 'Simulate an LRU cache with the given capacity over operations `["put", key, value]` and `["get", key]`. Return the results of the gets in order, `-1` for a miss. A get counts as a use.',
     inputs: [
       [
         2,
@@ -431,7 +431,7 @@ const challenges = [
     difficulty: "easy",
     language: "rust",
     skills: ["parsing", "config"],
-    task: 'parse_duration(text) turns strings like "1h30m", "45s" or "2h" into seconds. Units are h, m and s, each at most once and in that order; return null for anything else.',
+    task: '`parse_duration(text)` turns strings like `"1h30m"`, `"45s"` or `"2h"` into seconds. Units are `h`, `m` and `s`, each at most once and in that order; return `null` for anything else.',
     inputs: ["1h30m", "45s", "2h", "1h1h", "90", ""],
     expected: [5400, 45, 7200, null, null, null],
     comments: [
@@ -448,8 +448,23 @@ const adventures = [
     key: "SHOP",
     title: "Storefront",
     summary: "Frontend: the customer-facing shop, cart and checkout.",
-    story:
-      "The online shop: product pages, a cart and checkout, server-rendered with a layer of TypeScript. Conversion dipped after the last redesign, and the backlog is a mix of polish, accessibility and checkout bugs.",
+    story: `The online shop customers actually see: product listings, filters, the cart and a three-step checkout. Pages are server-rendered, with a thin layer of TypeScript for the interactive parts.
+
+Conversion dipped after the last redesign. Support is fielding tickets about prices, promo codes and a search box that feels sluggish, and an accessibility audit came back with a long list.
+
+## What you'll work on
+
+- Formatting money and other values the way customers expect to read them
+- Form behaviour, validation and accessible markup
+- Small performance fixes in the browser, like debouncing input
+
+## Good fit if you
+
+- Build user interfaces, or want to get sharper at the details that make one feel solid
+- Are comfortable with **JavaScript**, **TypeScript** or plain **HTML**
+- Care what a bug looks like from the customer's side of the screen
+
+Stack: TypeScript, JavaScript, HTML.`,
     challenges: [
       "format-price",
       "discount-codes",
@@ -462,8 +477,23 @@ const adventures = [
     key: "API",
     title: "Accounts API",
     summary: "Backend: sign-up, login and account endpoints behind every app.",
-    story:
-      "The Go and PHP service every client talks to for accounts, sessions and password resets. It mostly works; the on-call channel has opinions.",
+    story: `The service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, and the login gateway in front is TypeScript.
+
+It mostly works, and the on-call channel has opinions about the rest: list endpoints that accept any page size, reset links that expire too soon, and logs that are hard to search during an incident.
+
+## What you'll work on
+
+- Parsing and validating request parameters with sensible defaults
+- Time and expiry logic, where off-by-one and unit mix-ups hide
+- Rate limiting and log handling for the people on call
+
+## Good fit if you
+
+- Write backend services, or want practice with the bugs they actually get
+- Like **input validation**, edge cases and reading a stack trace at 2am
+- Know **Go**, **PHP** or **TypeScript**, or want to try one of them on familiar problems
+
+Stack: Go, PHP, TypeScript.`,
     challenges: [
       "pagination-params",
       "reset-link-expiry",
@@ -477,8 +507,23 @@ const adventures = [
     title: "Data platform",
     summary:
       "Data: nightly partner imports, cleaning and the reports finance relies on.",
-    story:
-      "Partners drop CSV exports in a bucket every night. A pipeline cleans them, loads the warehouse and feeds the reports people actually read on Monday morning.",
+    story: `Partners drop CSV exports in a bucket every night. A pipeline cleans them, loads the warehouse and feeds the reports finance reads on Monday morning.
+
+The exports are messier than anyone admits: quoted commas in company names, duplicate customers with slightly different emails, and orders that never got paid. When the numbers look wrong, this is where people come asking.
+
+## What you'll work on
+
+- Parsing awkward input files without losing data
+- Cleaning and deduplicating records before they reach the warehouse
+- SQL for the reports and reconciliations people rely on
+
+## Good fit if you
+
+- Work with data, or are the person on your team who ends up writing the SQL
+- Enjoy turning messy input into something you can trust
+- Know **Python** and **SQL**, or want more practice with both
+
+Stack: Python, SQL.`,
     challenges: [
       "csv-quoted-fields",
       "dedupe-customers",
@@ -491,8 +536,23 @@ const adventures = [
     key: "EDGE",
     title: "Edge proxy",
     summary: "Systems: the low-latency proxy in front of everything.",
-    story:
-      "A small proxy in C, C++ and Rust that terminates connections, caches hot responses and exports metrics. Every allocation shows up on a flame graph.",
+    story: `A small proxy in front of everything: it terminates connections, caches hot responses and exports latency metrics. It's written in C, C++ and Rust, depending on who wrote which part and when.
+
+Every allocation shows up on a flame graph here. The backlog is about doing more with fixed memory, measuring the right thing, and keeping configuration readable for whoever is paged.
+
+## What you'll work on
+
+- Fixed-size data structures such as ring buffers and LRU caches
+- Latency percentiles and the metrics behind dashboards
+- Small, strict configuration formats
+
+## Good fit if you
+
+- Do systems or performance work, or want to get closer to the metal
+- Think about memory, ordering and what happens under load
+- Know **C**, **C++** or **Rust**, or are learning one of them
+
+Stack: C, C++, Rust.`,
     challenges: ["ring-buffer", "p99-latency", "lru-cache", "parse-duration"],
   },
 ].map(({ challenges: ids, ...adventure }) => ({

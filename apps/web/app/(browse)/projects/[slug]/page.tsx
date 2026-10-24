@@ -12,6 +12,7 @@ import { emptyIssueQuery, href } from "../../../../lib/queries";
 import { ProjectSquare, LanguageDot } from "../../_components/bits";
 import { FilterIcon } from "../../_components/icons";
 import { IssueRows } from "../../_components/issue-list";
+import { Markdown } from "../../_components/markdown";
 import { Sep, Topbar } from "../../_components/topbar";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -90,7 +91,7 @@ export default async function ProjectPage(props: Props) {
         </dl>
         <section className="section">
           <h2>About</h2>
-          <p>{project.story}</p>
+          <Markdown source={project.story} />
         </section>
         <section className="section">
           <h2>
