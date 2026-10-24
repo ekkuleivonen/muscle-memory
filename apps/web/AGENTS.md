@@ -17,7 +17,7 @@ The product is a 9-to-5 job before AI: issues on a board, a VS Code-style IDE, t
 - `app/page.tsx`: the public home page. `app/(browse)`: dashboard, issues, projects, board and pull requests. Pages read the catalog (`content/catalog.json`) through `lib/library.ts` and `lib/queries.ts` (pure, tested).
 - `app/work/[key]`: the IDE (`ide.tsx`) on the issue's live revision. Its repo is the revision's files (`lib/repo.ts` generates them at authoring time and maps them back with `repoOf`): the file to edit, a read-only test file in the language's usual style, a schema or README.
 - `app/workspace`: the editor (`editor.ts`, CodeMirror 6), the session that records edits and runs (`session.ts`), save state, and the TypeScript type checker (`type-checker.ts`, its own worker).
-- `app/_terminal`, `app/settings`: settings as a terminal. Profile questions are asked in place by `app/(browse)/_components/ask.tsx` ([docs/profile.md](../../docs/profile.md)).
+- `app/_terminal`, `app/settings`: direct settings controls and an optional terminal. Profile questions are asked in place by `app/(browse)/_components/ask.tsx` ([docs/profile.md](../../docs/profile.md)).
 - Runners live outside the app, in `packages/runner` (see the root `AGENTS.md`).
 
 ## Conventions

@@ -32,7 +32,11 @@ export function receiptLines(m: Metrics): [string, string, boolean?][] {
     ["peak speed", m.w ? `${m.w} wpm` : "–"],
     [
       "test runs",
-      m.g === 1 ? `${m.r} · green first try` : m.g ? `${m.r} · green on run ${m.g}` : String(m.r),
+      m.g === 1
+        ? `${m.r} · green first try`
+        : m.g
+          ? `${m.r} · green on run ${m.g}`
+          : String(m.r),
       m.g === 1,
     ],
     ["hints", m.h ? String(m.h) : "none"],
@@ -136,7 +140,12 @@ export function useResult(input: ResultInput | null): ResultState | null {
   const metrics = useMemo(
     () =>
       input &&
-      metricsOf(input.records, input.issue.slug, input.mergedAt, (id) => input.revisions[id]),
+      metricsOf(
+        input.records,
+        input.issue.slug,
+        input.mergedAt,
+        (id) => input.revisions[id],
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the inputs, not their wrapper
     [input?.records, input?.issue.slug, input?.mergedAt, input?.revisions],
   );
@@ -150,7 +159,12 @@ export function useResult(input: ResultInput | null): ResultState | null {
   const result: Result | null = code
     ? { v: 2, k: issue.key, l: language, c: code, ...metrics, ...comparison }
     : null;
-  return { metrics, result, comparison: comparisonLine(comparison, label), label };
+  return {
+    metrics,
+    result,
+    comparison: comparisonLine(comparison, label),
+    label,
+  };
 }
 
 /** The result as rows for the pull request's Details: the same numbers a shared card shows. */
@@ -220,15 +234,24 @@ export function ShareResult({
   if (!result) return null;
   const segment = encodeResult(result);
   const url = `${location.origin}/r/${segment}`;
-  const text = `${sentence(result, state.label)} Can you still code without it?`;
+  const text = `${sentence(result, state.label)} Keep your coding skills in practice.`;
   const share = async (channel: Channel) => {
     void logShare(
       { id: issue.slug, revision: issue.revision },
-      { issueKey: issue.key, channel, ref: result.c, card: result as unknown as Json },
+      {
+        issueKey: issue.key,
+        channel,
+        ref: result.c,
+        card: result as unknown as Json,
+      },
     );
     if (channel === "copy") setCopied(await copyText(`${text} ${url}`));
     else if (channel === "x")
-      window.open(`https://x.com/intent/post?${new URLSearchParams({ text, url })}`, "_blank", "noopener");
+      window.open(
+        `https://x.com/intent/post?${new URLSearchParams({ text, url })}`,
+        "_blank",
+        "noopener",
+      );
     else if (channel === "linkedin")
       window.open(
         `https://www.linkedin.com/sharing/share-offsite/?${new URLSearchParams({ url })}`,
@@ -239,20 +262,31 @@ export function ShareResult({
   };
   return (
     <>
-      <button type="button" className="share-open" onClick={() => dialog.current?.showModal()}>
+      <button
+        type="button"
+        className="share-open"
+        onClick={() => dialog.current?.showModal()}
+      >
         Share result
       </button>
       <dialog
         ref={dialog}
         className="share-dialog"
         aria-label="Share your result"
-        onClick={(event) => event.target === dialog.current && dialog.current?.close()}
+        onClick={(event) =>
+          event.target === dialog.current && dialog.current?.close()
+        }
         onClose={() => setCopied(false)}
       >
         <div className="share-body">
           <div className="share-head">
             <b>Share your result</b>
-            <button type="button" className="share-close" aria-label="Close" onClick={() => dialog.current?.close()}>
+            <button
+              type="button"
+              className="share-close"
+              aria-label="Close"
+              onClick={() => dialog.current?.close()}
+            >
               ×
             </button>
           </div>
@@ -269,7 +303,11 @@ export function ShareResult({
             Your numbers and a link to try the same bug. Never your code.
           </p>
           <div className="share-actions">
-            <button type="button" className="primary" onClick={() => void share("copy")}>
+            <button
+              type="button"
+              className="primary"
+              onClick={() => void share("copy")}
+            >
               {copied ? "Copied" : "Copy link"}
             </button>
             <button type="button" onClick={() => void share("x")}>
