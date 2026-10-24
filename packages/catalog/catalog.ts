@@ -20,6 +20,7 @@ import {
   type Json,
 } from "../domain/assessment";
 import {
+  requireSingleOwner,
   validateAdventure,
   validateChallenge,
 } from "../../tools/content-check.mjs";
@@ -111,7 +112,21 @@ function validateSource(
         entry.content as Challenge,
       );
   }
-  return validateAdventure(content, challenges) as Adventure;
+  const adventure = validateAdventure(content, challenges) as Adventure;
+  // Retired and disabled Adventures no longer own their Challenges.
+  requireSingleOwner([
+    ...Object.values(catalog.entries)
+      .filter(
+        (e) =>
+          e.kind === "adventure" &&
+          e.id !== adventure.id &&
+          e.state !== "retired" &&
+          e.state !== "disabled",
+      )
+      .map((e) => e.content as Adventure),
+    adventure,
+  ]);
+  return adventure;
 }
 
 function withEntry(catalog: Catalog, entry: CatalogEntry): Catalog {

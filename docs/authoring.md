@@ -87,3 +87,7 @@ The endpoint reads the deployed release artifact. Changing a private CLI catalog
 ## Display metadata
 
 Challenges may set `title` (up to 60 characters), `summary` (up to 160), `difficulty` (`warm-up`, `easy`, `medium` or `hard`), `kind` (`feature`, `bug`, `performance` or `refactor`) and `comments`: authored remarks from the fictional team, each with an `author`, optional `role` and `body`. Comments are content, not participant posts; hints stay in `hints` because Attempts record which ones were shown. Adventures may set `title`, `summary` and `key`, a 2–5 character uppercase prefix for issue keys such as `NS-2` (derived from the id when absent); their difficulty comes from their Challenges. The fields are optional because earlier published versions predate them, and adding them to published content means publishing a new version, as with `frequency-map` 2.1.0 and `field-notes` 2.0.0.
+
+## One project per issue
+
+The app presents Adventures as projects and Challenges as issues, and an issue belongs to exactly one project: its key (`NS-2`) is the project key and its position there. So each Challenge id may be pinned by only one Adventure id, once. New versions of that Adventure may keep pinning it, and retiring or disabling the Adventure releases it. `check:content` and the authoring lifecycle both enforce this; reusing a Challenge elsewhere means authoring it under a new id.

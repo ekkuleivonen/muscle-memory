@@ -61,6 +61,20 @@ export function validateChallenge(challenge) {
   return challenge;
 }
 
+/**
+ * An issue belongs to one project: across Adventure ids, each Challenge id is pinned by at
+ * most one. Versions of the same Adventure may keep pinning it.
+ */
+export function requireSingleOwner(adventures) {
+  const owners = new Map();
+  for (const adventure of adventures)
+    for (const [id] of adventure.challenges ?? []) {
+      const owner = owners.get(id);
+      requireValue(!owner || owner === adventure.id, `Challenge ${id} is pinned by both ${owner} and ${adventure.id}; an issue belongs to one project`);
+      owners.set(id, adventure.id);
+    }
+}
+
 export function validateAdventure(adventure, challenges) {
   requireValue(adventure && safeId(adventure.id), 'Adventure needs a safe id');
   requireValue(pinnedVersion(adventure.version), 'Adventure needs an explicit version');
@@ -72,6 +86,8 @@ export function validateAdventure(adventure, challenges) {
     requireValue(Array.isArray(ref) && ref.length === 2 && safeId(ref[0]) && pinnedVersion(ref[1]), 'Adventure references must pin [id, version]');
     requireValue(challenges.has(`${ref[0]}@${ref[1]}`), `Missing Challenge ${ref[0]}@${ref[1]}`);
   }
+  const ids = adventure.challenges.map(([id]) => id);
+  requireValue(new Set(ids).size === ids.length, 'An Adventure pins each Challenge once');
   requireValue(adventure.difficulty === undefined, 'Adventure difficulty comes from its Challenges');
   // Prefix for issue keys such as NS-2.
   if (adventure.key !== undefined)
@@ -101,6 +117,7 @@ export async function checkContent(root) {
     adventures.set(key, value);
   }
   requireValue(challenges.size > 0 && adventures.size > 0, 'Content needs at least one Adventure and Challenge');
+  requireSingleOwner(adventures.values());
   return { challenges: challenges.size, adventures: adventures.size };
 }
 

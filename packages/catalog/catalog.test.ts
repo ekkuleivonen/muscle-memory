@@ -366,3 +366,18 @@ test("catalog reload preserves state, history and frozen content", async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("an issue belongs to one project unless its owner was retired", () => {
+  const catalog = publishedReference();
+  const ledger: Adventure = { ...adventure, id: "ledger" };
+  assert.throws(
+    () => saveDraft(catalog, "adventure", ledger, at),
+    /pinned by both notebook and ledger/,
+  );
+  // A new version of the same Adventure keeps it.
+  assert.ok(
+    saveDraft(catalog, "adventure", { ...adventure, version: "1.1.0" }, at),
+  );
+  const retired = retire(catalog, adventureRef, at);
+  assert.ok(saveDraft(retired, "adventure", ledger, at));
+});

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { checkContent, validateChallenge, validateAdventure } from '../content-check.mjs';
+import { checkContent, requireSingleOwner, validateChallenge, validateAdventure } from '../content-check.mjs';
 
 const challenge = { id: 'tally', version: '1.0.0', assessment_version: '1.0.0', task: 'Count labels', skills: ['maps'], hints: [], inputs: [[]], expected: [{}] };
 const adventure = { id: 'notebook', version: '1.0.0', story: 'Read the notebook', presentation: 'text-v1', challenges: [['tally', '1.0.0']] };
@@ -35,6 +35,13 @@ test('accepts optional display metadata and rejects malformed values', () => {
   assert.ok(validateAdventure({ ...adventure, key: 'NB2' }, catalog));
   for (const key of ['nb', 'N', '2NB', 'NOTEBK'])
     assert.throws(() => validateAdventure({ ...adventure, key }, catalog), /key/);
+});
+
+test('an issue belongs to one project, once', () => {
+  const catalog = new Map([['tally@1.0.0', challenge]]);
+  assert.throws(() => validateAdventure({ ...adventure, challenges: [['tally', '1.0.0'], ['tally', '1.0.0']] }, catalog), /once/);
+  requireSingleOwner([adventure, { ...adventure, version: '2.0.0' }]);
+  assert.throws(() => requireSingleOwner([adventure, { ...adventure, id: 'ledger' }]), /pinned by both notebook and ledger/);
 });
 
 test('rejects duplicate content identities across files', async () => {
