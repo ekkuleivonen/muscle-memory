@@ -55,6 +55,9 @@ async function main() {
       });
     }
     const projectionExports = await exportPending(store, archive);
+    // Order and missing positions come from the source stream, not from arrival.
+    const { observations, highestSequence, missing, conflicts } =
+      store.sourceStream("synthetic-participant-1", "synthetic-cli");
     console.log(
       JSON.stringify(
         {
@@ -62,6 +65,7 @@ async function main() {
           capturedExports,
           projections,
           projectionExports,
+          sourceStream: { observations, highestSequence, missing, conflicts },
           dataDirectory: root,
           synthetic: true,
         },

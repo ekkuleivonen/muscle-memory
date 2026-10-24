@@ -319,13 +319,13 @@ test("participant deletion removes owned evidence and projections, keeps shared 
     const database = join(root, "evidence.sqlite");
     const archive = join(root, "exports");
     let store = new SqliteEvidenceStore(database);
-    for (const [participant, id, text] of [
-      [A, "a-malformed", MALFORMED],
-      [A, "a-valid", VALID],
-      [B, "b-valid", VALID],
-    ]) {
+    for (const [participant, id, text, sequence] of [
+      [A, "a-malformed", MALFORMED, 1],
+      [A, "a-valid", VALID, 2],
+      [B, "b-valid", VALID, 1],
+    ] as const) {
       store.capture(
-        captureSubmission(referenceSubmission(text, participant, id)),
+        captureSubmission(referenceSubmission(text, participant, id, sequence)),
       );
       store.appendProjection(await projectAssessment(store.evidence(id)));
     }
@@ -355,7 +355,7 @@ test("participant deletion removes owned evidence and projections, keeps shared 
     assert.throws(
       () =>
         store.capture(
-          captureSubmission(referenceSubmission(VALID, B, "a-valid")),
+          captureSubmission(referenceSubmission(VALID, B, "a-valid", 2)),
         ),
       /awaiting archive deletion/,
     );

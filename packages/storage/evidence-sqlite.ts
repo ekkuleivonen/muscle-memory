@@ -15,6 +15,12 @@ import {
   type SubmissionObservation,
 } from "../domain/evidence";
 import type { AssessmentProjection, Evidence } from "../domain/projection";
+import {
+  isPosition,
+  orderSource,
+  type SourcePosition,
+  type SourceStream,
+} from "../domain/source-order";
 import type {
   EventOutbox,
   ParticipantDeletionStore,
@@ -55,6 +61,12 @@ export class SqliteEvidenceStore
         payload TEXT NOT NULL,
         export_state TEXT NOT NULL DEFAULT 'pending' CHECK(export_state IN ('pending','exported'))
       );
+      -- Finds one source stream's observations. Sequences are read from the parsed payload, not
+      -- by SQLite, so legacy values keep their JSON type (true, 1e300, unsafe integers).
+      CREATE INDEX IF NOT EXISTS observation_source_stream ON evidence_records(
+        participant_id,
+        json_extract(payload, '$.source.id')
+      ) WHERE kind = 'observation.submission';
       CREATE TABLE IF NOT EXISTS deleted_participants (
         participant_id TEXT PRIMARY KEY
       );
@@ -77,6 +89,7 @@ export class SqliteEvidenceStore
     const { observation, submission } = captured;
     return this.transaction(() => {
       this.assertWritable(observation.participantId);
+      this.assertPositionFree(observation);
       for (const artifact of captured.artifacts)
         this.put(artifact.artifactId, artifact.type, null, artifact);
       this.put(
@@ -153,6 +166,22 @@ export class SqliteEvidenceStore
         )
         .all(observationId) as { payload: string }[]
     ).map((row) => JSON.parse(row.payload));
+  }
+
+  /** One participant's one source, in sequence order, with missing-range diagnostics. */
+  sourceStream(
+    participantId: string,
+    sourceId: string,
+    maxRanges?: number,
+  ): SourceStream {
+    safeIdentifier(participantId);
+    safeIdentifier(sourceId);
+    return orderSource(
+      participantId,
+      sourceId,
+      this.positions(participantId, sourceId),
+      maxRanges,
+    );
   }
 
   get(recordId: string): StoredEvent | undefined {
@@ -242,6 +271,46 @@ export class SqliteEvidenceStore
       )
       .run(recordId, kind, participantId, payload);
     return false;
+  }
+
+  /** A different observation may not claim a position already taken in the same stream. */
+  /**
+   * A new observation may not claim a position already taken in the same stream. An
+   * already-stored observation is a retry, not a claim: `put` deduplicates it or rejects
+   * changed content, even where legacy records share its position.
+   */
+  private assertPositionFree(observation: SubmissionObservation): void {
+    if (this.row(observation.observationId)) return;
+    // Only valid positions occupy one: a legacy `true` or unsafe integer never blocks `1`.
+    const claimed = this.positions(
+      observation.participantId,
+      observation.source.id,
+    ).find(
+      (entry) =>
+        isPosition(entry.sequence) &&
+        entry.sequence === observation.source.sequence,
+    );
+    if (claimed)
+      throw new Error(
+        `Source position ${observation.source.id}#${observation.source.sequence} is already claimed by ${claimed.observationId}.`,
+      );
+  }
+
+  /** Sequences exactly as stored in each observation's JSON, including invalid legacy values. */
+  private positions(participantId: string, sourceId: string): SourcePosition[] {
+    return (
+      this.db
+        .prepare(
+          "SELECT record_id, payload FROM evidence_records WHERE kind = 'observation.submission' AND participant_id = ? AND json_extract(payload, '$.source.id') = ?",
+        )
+        .all(participantId, sourceId) as {
+        record_id: string;
+        payload: string;
+      }[]
+    ).map((row) => ({
+      observationId: row.record_id,
+      sequence: JSON.parse(row.payload).source?.sequence,
+    }));
   }
 
   private assertWritable(participantId: string): void {
