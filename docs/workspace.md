@@ -103,6 +103,10 @@ Feedback is derived from the stored run outcome when shown. It is not stored, an
 
 Not included: editor timelines beyond transactions, keystroke timing, participant uploads, exports of workspace records, server receipt, research collection or analytics. Copies made outside the browser need separate deletion, and browser storage can be evicted.
 
+## Practice layout
+
+`/work/<KEY>` fills the window as terminal panes: the challenge on the left, code over feedback on the right. Each pane is bordered, titled in its top border, and scrolls on its own; the pane holding focus is outlined in the accent colour. Run and submit sit along the code pane's bottom edge. Under the panes are a status line (shortcuts, editor keys) and the site's status bar. Below 760px the panes stack and the page scrolls.
+
 ## Small screens and keyboard access
 
 Below 860px, Ticket and Files open native modal drawers; Escape closes them and restores focus. Run and pull-request controls wrap, while the editor and result panel retain their own scrolling. File, result and pull-request tabs support arrows, Home and End with roving focus and labelled panels. The `?` button explains run shortcuts and Escape then Tab to leave the editor; shortcut labels use Ctrl on Windows/Linux and Command on macOS.

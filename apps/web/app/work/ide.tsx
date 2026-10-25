@@ -61,6 +61,7 @@ import {
 } from "../workspace/continuity";
 
 import { ChallengeExamples } from "../(browse)/_components/challenge-examples";
+import { TermFooter } from "../_terminal/footer";
 import { privateCheckFailure } from "./check-feedback";
 import {
   completionEligibility,
@@ -648,36 +649,34 @@ export function Ide({
     verification?.blocker === null &&
     verification.completedInAttempt;
   return (
-    <div className="practice" onClickCapture={persistView}>
-      <header className="practice-header">
-        <Link href="/issues">← Explore</Link>
-        <span>
-          Practice <span className="faint">· {issue.key}</span>
-        </span>
-        <Link href="/profile">Profile</Link>
-      </header>
-      <main className="practice-layout" ref={mainRef}>
-        <section className="practice-challenge" aria-label="Challenge">
-          <p className="eyebrow">Challenge · {languageLabel(issue.language)}</p>
-          <h1>{issue.title}</h1>
-          <h2>Goal and requirements</h2>
-          <Markdown source={issue.task} />
-          {challenge.schema && (
-            <details open>
-              <summary>Data schema</summary>
-              <pre>{challenge.schema}</pre>
-            </details>
-          )}
-          <ChallengeExamples examples={publishedExamples} />
-          <CopyIssueLink issueKey={issue.key} />
-        </section>
-        <section className="practice-work" aria-label="Your code">
-          <div className="practice-code-head">
-            <h2>Your code</h2>
-            <span className="faint">
-              {keymap === "vim" ? `Vim · ${vimMode}` : "Standard keys"}
-            </span>
+    <div className="practice tui" onClickCapture={persistView}>
+      <main className="tui-panes" ref={mainRef}>
+        <section className="pane practice-challenge" aria-label="Challenge">
+          <h2 className="pane-title">
+            challenge <span className="faint">· {issue.key}</span>
+          </h2>
+          <div className="pane-body">
+            <h1>{issue.title}</h1>
+            <h2>Goal and requirements</h2>
+            <Markdown source={issue.task} />
+            {challenge.schema && (
+              <details open>
+                <summary>Data schema</summary>
+                <pre>{challenge.schema}</pre>
+              </details>
+            )}
+            <ChallengeExamples examples={publishedExamples} />
+            <CopyIssueLink issueKey={issue.key} />
           </div>
+        </section>
+        <section className="pane practice-work" aria-label="Your code">
+          <h2 className="pane-title">
+            code{" "}
+            <span className="faint">
+              · {languageLabel(issue.language)} ·{" "}
+              {keymap === "vim" ? `vim ${vimMode}` : "standard keys"}
+            </span>
+          </h2>
           <div className="practice-editors">
             <div
               className="practice-editor"
@@ -788,92 +787,103 @@ export function Ide({
               )}
             </div>
           )}
-          {message && (
-            <p className="practice-notice" role="status">
-              {message}
-            </p>
-          )}
-          {opening.state === "open" && (
-            <div className="practice-feedback">
-              {run?.purpose === "local" ? (
-                <>
-                  <h2>Example feedback</h2>
-                  <Tests
-                    challenge={challenge}
-                    run={run}
-                    stale={stale}
-                    issue={issue}
-                    testsPath="the public examples"
-                    runtime={runtime}
-                    onRetry={startRuntime}
-                  />
-                </>
-              ) : (
-                <CheckFeedbackView feedback={check} />
-              )}
-              {verified && (
-                <section className="practice-next" aria-label="Next challenge">
-                  <h2>
-                    {verification.completedAt
-                      ? "Next challenge"
-                      : "Current code verified"}
-                  </h2>
-                  {next ? (
-                    <>
-                      <p>Next: {next.title}</p>
-                      <StartWork
-                        issue={next}
-                        href={`/work/${next.key}`}
-                        label="Next challenge"
-                      />
-                      <p className="faint">
-                        Suggested by language, project and difficulty.
-                      </p>
-                    </>
-                  ) : (
-                    <Link className="btn primary" href="/issues">
-                      Explore challenges
-                    </Link>
-                  )}
-                  <Link href="/profile">View your evidence</Link>
-                  {shareSnapshot &&
-                    shareSnapshot.proof.completion.runId ===
-                      verification.latest?.runId &&
-                    shareSnapshot.proof.completion.at ===
-                      verification.completedAt && (
-                      <ShareOutcome
-                        challenge={issue}
-                        completion={shareSnapshot.proof.completion}
-                        required={shareSnapshot.proof.required}
-                        records={shareSnapshot.records}
-                        revisions={revisions}
-                      />
+        </section>
+        <section className="pane practice-results" aria-label="Feedback">
+          <h2 className="pane-title">feedback</h2>
+          <div className="pane-body">
+            {message && (
+              <p className="practice-notice" role="status">
+                {message}
+              </p>
+            )}
+            {opening.state === "open" && (
+              <div className="practice-feedback">
+                {run?.purpose === "local" ? (
+                  <>
+                    <h2>Example feedback</h2>
+                    <Tests
+                      challenge={challenge}
+                      run={run}
+                      stale={stale}
+                      issue={issue}
+                      testsPath="the public examples"
+                      runtime={runtime}
+                      onRetry={startRuntime}
+                    />
+                  </>
+                ) : (
+                  <CheckFeedbackView feedback={check} />
+                )}
+                {verified && (
+                  <section
+                    className="practice-next"
+                    aria-label="Next challenge"
+                  >
+                    <h2>
+                      {verification.completedAt
+                        ? "Next challenge"
+                        : "Current code verified"}
+                    </h2>
+                    {next ? (
+                      <>
+                        <p>Next: {next.title}</p>
+                        <StartWork
+                          issue={next}
+                          href={`/work/${next.key}`}
+                          label="Next challenge"
+                        />
+                        <p className="faint">
+                          Suggested by language, project and difficulty.
+                        </p>
+                      </>
+                    ) : (
+                      <Link className="btn primary" href="/issues">
+                        Explore challenges
+                      </Link>
                     )}
-                </section>
-              )}
-              {run && (
-                <details
-                  open={panel === "output"}
-                  onToggle={(event) =>
-                    setPanel(event.currentTarget.open ? "output" : "tests")
-                  }
-                >
-                  <summary>Output</summary>
-                  <Output
-                    run={run}
-                    challenge={challenge}
-                    runtime={engine?.label ?? issue.language}
-                  />
-                </details>
-              )}
-            </div>
-          )}
-          <p className="practice-keys faint">
-            <Shortcut /> submits · Escape, then Tab leaves the editor.{" "}
-            <Link href="/settings?run=editor">Editor keys</Link>
-          </p>
+                    <Link href="/profile">View your evidence</Link>
+                    {shareSnapshot &&
+                      shareSnapshot.proof.completion.runId ===
+                        verification.latest?.runId &&
+                      shareSnapshot.proof.completion.at ===
+                        verification.completedAt && (
+                        <ShareOutcome
+                          challenge={issue}
+                          completion={shareSnapshot.proof.completion}
+                          required={shareSnapshot.proof.required}
+                          records={shareSnapshot.records}
+                          revisions={revisions}
+                        />
+                      )}
+                  </section>
+                )}
+                {run && (
+                  <details
+                    open={panel === "output"}
+                    onToggle={(event) =>
+                      setPanel(event.currentTarget.open ? "output" : "tests")
+                    }
+                  >
+                    <summary>Output</summary>
+                    <Output
+                      run={run}
+                      challenge={challenge}
+                      runtime={engine?.label ?? issue.language}
+                    />
+                  </details>
+                )}
+              </div>
+            )}
+          </div>
         </section>
       </main>
+      <p className="tui-status">
+        <span>
+          <Shortcut /> submits · Esc, then Tab leaves the editor ·{" "}
+          <Link href="/settings?run=editor">editor keys</Link>
+        </span>
+      </p>
+      <TermFooter current={`/work/${issue.key}`} signedIn />
       <div ref={sandboxHost} hidden />
     </div>
   );

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supportsOneFilePractice } from "../../../lib/practice-contract";
 import { summarize } from "../../../lib/library";
 import { getLibrary } from "../../../lib/load";
+import "../../_terminal/terminal.css";
 import "../ide.css";
 import { Ide } from "../ide";
 
