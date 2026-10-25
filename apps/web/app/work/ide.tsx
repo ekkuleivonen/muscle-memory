@@ -1268,14 +1268,8 @@ function Tests({
           <Case
             key={index}
             index={index}
-            // CI's hidden cases keep their input and output to themselves.
-            label={
-              check.visible
-                ? caseLabel(challenge, check.input)
-                : `hidden case ${check.id}`
-            }
+            label={caseLabel(challenge, check.input)}
             expected={check.expected}
-            hidden={!check.visible}
             passed={feedback.passed[index]}
             result={o.cases[index]}
           />
@@ -1289,14 +1283,12 @@ function Case({
   index,
   label,
   expected,
-  hidden,
   passed,
   result,
 }: {
   index: number;
   label: string;
   expected: unknown;
-  hidden?: boolean;
   passed: boolean;
   result?: CaseResult;
 }) {
@@ -1305,7 +1297,7 @@ function Case({
       <span className="ide-case-mark">{passed ? "✔" : "✘"}</span>
       <span className="ide-case-body">
         <code>{label}</code>
-        {!passed && !hidden && (
+        {!passed && (
           <span className="ide-case-detail">
             <span>
               expected <code>{JSON.stringify(expected)}</code>

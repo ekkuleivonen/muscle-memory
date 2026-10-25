@@ -820,7 +820,7 @@ function Checks({
       )}
       {verdicts && (
         <ol>
-          {cases.map(({ input, expected, visible, id }, index) => {
+          {cases.map(({ input, expected }, index) => {
             const got = outcome.cases?.[index];
             const ok = verdicts[index];
             return (
@@ -829,16 +829,9 @@ function Checks({
                   {ok ? "✔" : "✘"}
                 </span>
                 <div>
-                  {visible ? (
-                    <>
-                      <code>{show(input)}</code> <span className="dim">→</span>{" "}
-                      <code>{show(expected)}</code>
-                    </>
-                  ) : (
-                    // CI's hidden cases keep their input and output to themselves.
-                    <span className="dim">Hidden case {id}</span>
-                  )}
-                  {!ok && visible && (
+                  <code>{show(input)}</code> <span className="dim">→</span>{" "}
+                  <code>{show(expected)}</code>
+                  {!ok && (
                     <div className="got">
                       {got?.error ? (
                         <>

@@ -113,7 +113,7 @@ export interface Case {
   readonly id: string;
   readonly input: Json;
   readonly expected: Json;
-  /** Shown in the repo's test file; hidden cases only run in CI. */
+  /** In the repo's test file. The others only run in CI, whose results show them like any other case. */
   readonly visible: boolean;
 }
 
@@ -210,7 +210,7 @@ export function sourceFiles(workspace: Workspace): Record<string, WorkspaceFile>
 
 /**
  * The cases a run checks: Run tests runs the repo's own tests (the visible cases); CI on a pull
- * request runs every case, hidden ones included.
+ * request runs every case, CI-only ones included.
  */
 export function casesRun<C extends { readonly visible: boolean }>(
   cases: readonly C[],
