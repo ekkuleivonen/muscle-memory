@@ -46,6 +46,7 @@ import {
   feedbackOf,
   type Feedback,
   type Release,
+  type Thread,
 } from "../../lib/feedback";
 import { languageLabel, type IssueComment } from "../../lib/library";
 import type { LanguageId } from "../../lib/languages";
@@ -241,6 +242,12 @@ export function Ide({
         counts.set(t.number, (counts.get(t.number) ?? 0) + 1);
     return counts;
   }, [feedback]);
+
+  /** The open pull request once its checks pass and nothing blocks it: the next step is merging. */
+  const reviewable =
+    openPull?.result === "checks-passed" && !blocking.get(openPull.number)
+      ? openPull
+      : null;
 
   const hosts = useRef(new Map<string, HTMLDivElement>());
   const viewers = useRef(new Map<string, EditorView>());
@@ -709,7 +716,7 @@ export function Ide({
                 </button>
                 <button
                   type="button"
-                  className="ide-run"
+                  className={`ide-run${reviewable ? " secondary" : ""}`}
                   disabled={!ready}
                   onClick={(event) =>
                     void session.current?.pullRequest(
@@ -730,6 +737,15 @@ export function Ide({
                       : "Open pull request"}{" "}
                   <Shortcut shift />
                 </button>
+                {reviewable && (
+                  <Link
+                    className="ide-run"
+                    href={pullHref(issue.key, reviewable.number)}
+                    title="Read your changes and the review, then merge: merging moves the issue to Done"
+                  >
+                    Review and merge #{reviewable.number} →
+                  </Link>
+                )}
               </>
             )
           ) : (
@@ -941,6 +957,8 @@ export function Ide({
                 pulls={pulls}
                 merged={merged}
                 blocking={blocking}
+                threads={feedback.threads}
+                revisions={revisions}
                 issue={issue}
                 done={done}
                 runnable={issue.runnable}
@@ -1331,6 +1349,8 @@ function PullRequests({
   pulls,
   merged,
   blocking,
+  threads,
+  revisions,
   issue,
   done,
   runnable,
@@ -1339,6 +1359,9 @@ function PullRequests({
   merged: ReadonlySet<number>;
   /** Open blocking review threads by pull request number. */
   blocking: ReadonlyMap<number, number>;
+  /** Every review thread on this issue's pull requests. */
+  threads: readonly Thread[];
+  revisions: Readonly<Record<string, Revision>>;
   issue: IdeIssue;
   done: boolean;
   runnable: boolean;
@@ -1355,25 +1378,43 @@ function PullRequests({
         !isMerged(latest) &&
         latest.result !== "running" &&
         (latest.result === "checks-passed" && blocking.get(latest.number) ? (
-          <p className="ide-review">
-            Pull request #{latest.number}&apos;s checks pass, but{" "}
-            {comments(blocking.get(latest.number)!)} in its review{" "}
-            {blocking.get(latest.number) === 1 ? "blocks" : "block"} merging.
-            Change the code and push (<Shortcut shift />
-            ), or{" "}
-            <Link href={pullHref(issue.key, latest.number)}>
-              reply on #{latest.number}
+          <div className="ide-review">
+            <p>
+              <b>Next: answer the review on #{latest.number}.</b> Its checks
+              pass, but {comments(blocking.get(latest.number)!)}{" "}
+              {blocking.get(latest.number) === 1 ? "blocks" : "block"} merging.
+              Change the code and push (<Shortcut shift />
+              ), or reply on #{latest.number} if it should stay as it is.
+            </p>
+            <ReviewComments
+              threads={threads.filter((t) => t.number === latest.number)}
+              revisions={revisions}
+            />
+            <Link
+              className="ide-run secondary"
+              href={pullHref(issue.key, latest.number)}
+            >
+              Reply on #{latest.number} →
             </Link>
-            .
-          </p>
+          </div>
         ) : latest.result === "checks-passed" ? (
-          <p className="ide-review">
-            Pull request #{latest.number} is open and its checks pass.{" "}
-            <Link href={pullHref(issue.key, latest.number)}>
-              Review it and merge it
-            </Link>{" "}
-            when you&apos;re happy with it; merging moves {issue.key} to Done.
-          </p>
+          <div className="ide-review">
+            <p>
+              <b>Next: review and merge #{latest.number}.</b> All its checks
+              pass. Read through your changes on the pull request, then merge
+              it; merging moves {issue.key} to Done.
+            </p>
+            <ReviewComments
+              threads={threads.filter((t) => t.number === latest.number)}
+              revisions={revisions}
+            />
+            <Link
+              className="ide-run"
+              href={pullHref(issue.key, latest.number)}
+            >
+              Review and merge #{latest.number} →
+            </Link>
+          </div>
         ) : (
           <p className="ide-review">
             Pull request #{latest.number} is open, but its checks don&apos;t
@@ -1445,6 +1486,40 @@ function PullRequests({
           })}
         </ol>
       )}
+    </div>
+  );
+}
+
+/** Teammates' review comments on a pull request, as they read on the pull request's page. */
+function ReviewComments({
+  threads,
+  revisions,
+}: {
+  threads: readonly Thread[];
+  revisions: Readonly<Record<string, Revision>>;
+}) {
+  const shown = threads.flatMap((t) => {
+    const comment = revisions[t.issueRevision]?.team.find(
+      (c) => c.id === t.comment,
+    );
+    return comment ? [{ thread: t, comment }] : [];
+  });
+  if (!shown.length) return null;
+  return (
+    <div className="ide-comments">
+      {shown.map(({ thread, comment }) => (
+        <div className="ide-comment" key={`${thread.comment}-${thread.push}`}>
+          <b>{comment.author.name}</b>
+          <span className="faint"> · {comment.author.role}</span>
+          {thread.severity === "blocking" && (
+            <span className="faint">
+              {" "}
+              · {thread.resolved ? "resolved" : "requested changes"}
+            </span>
+          )}
+          <Markdown source={comment.text[thread.wording] ?? comment.text[0]} />
+        </div>
+      ))}
     </div>
   );
 }

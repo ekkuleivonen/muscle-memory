@@ -296,7 +296,8 @@ function envelope<T extends keyof BoardData>(
     throw new Error("Board observations name the issue's exact revision.");
   if (Number.isNaN(Date.parse(occurredAt)))
     throw new Error("Board observations need a time.");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(termsVersion))
+  // A date, with a counter when the Terms change more than once a day (2026-10-25.1).
+  if (!/^\d{4}-\d{2}-\d{2}(\.\d+)?$/.test(termsVersion))
     throw new Error("Board observations name the accepted Terms version.");
   const observationId = `${sourceId}.${sequence}`;
   safeIdentifier(observationId);

@@ -59,6 +59,7 @@ test("malformed moves are refused rather than stored", () => {
   assert.throws(bad({ issue: { id: "x", revision: "latest" } }), /exact/);
   assert.throws(bad({ occurredAt: "yesterday" }), /time/);
   assert.throws(bad({ termsVersion: "" }), /Terms/);
+  assert.throws(bad({ termsVersion: "2026-10-24.x" }), /Terms/);
   assert.throws(
     bad({ data: { ...base.data, issueKey: "api-2" } }),
     /issue key/,
