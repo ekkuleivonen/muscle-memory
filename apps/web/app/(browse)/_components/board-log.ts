@@ -12,22 +12,15 @@ import {
 import { randomId } from "../../../../../packages/browser/random-id";
 import {
   boardArrival,
-  boardClose,
-  boardResolve,
   boardMove,
-  boardResult,
   boardShare,
   boardPage,
   boardProfile,
   boardRecord,
-  boardReply,
   boardView,
   type BoardBase,
   type BoardArrivalData,
-  type BoardCloseData,
-  type BoardResolveData,
   type BoardMoveData,
-  type BoardResultData,
   type BoardShareData,
   type BoardObservation,
   type BoardPageData,
@@ -52,22 +45,6 @@ export function logBoardMove(
   data: BoardMoveData,
 ): Promise<boolean> {
   return log((base) => boardMove({ ...base, issue, data }), "Board move");
-}
-
-/** A reply to a review comment; resolves the thread if it was blocking. */
-export function logReply(
-  issue: { id: string; revision: string },
-  data: { issueKey: string; pullRequest: number; comment: string; text: string },
-): Promise<boolean> {
-  return log((base) => boardReply({ ...base, issue, data }), "Reply");
-}
-
-/** Closing one of the person's open pull requests without merging it. */
-export function logClose(
-  issue: { id: string; revision: string },
-  data: BoardCloseData,
-): Promise<boolean> {
-  return log((base) => boardClose({ ...base, issue, data }), "Close");
 }
 
 /** Where an arrival is remembered until the Terms are accepted and it can be recorded. */
@@ -107,21 +84,6 @@ export async function logArrival(): Promise<void> {
   const { ref, landing, landedAt } = arrival;
   localStorage.setItem(ARRIVAL_KEY, JSON.stringify({ ...arrival, recorded: true }));
   await log((base) => boardArrival({ ...base, data: { ref, landing, landedAt } }), "Arrival");
-}
-
-export function logResult(
-  issue: { id: string; revision: string },
-  data: BoardResultData,
-): Promise<boolean> {
-  return log((base) => boardResult({ ...base, issue, data }), "Result");
-}
-
-/** The person resolved one of a pull request's review findings themselves. */
-export function logResolve(
-  issue: { id: string; revision: string },
-  data: BoardResolveData,
-): Promise<boolean> {
-  return log((base) => boardResolve({ ...base, issue, data }), "Resolve");
 }
 
 export function logShare(

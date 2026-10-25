@@ -420,25 +420,3 @@ function typeHints(types: TypeChecker, activity?: ActivityHooks): Extension {
     }),
   ];
 }
-
-/** Tests, README and read-only source: highlighted and selectable, never editable. */
-export function createViewer(
-  parent: HTMLElement,
-  doc: string,
-  options: { language: FileLanguage; label: string; activity?: ActivityHooks },
-): EditorView {
-  const view = new EditorView({
-    parent,
-    state: EditorState.create({
-      doc,
-      extensions: [
-        ...shared(options.language),
-        EditorState.readOnly.of(true),
-        EditorView.contentAttributes.of({ "aria-label": options.label }),
-        options.activity ? selections(options.activity) : [],
-      ],
-    }),
-  });
-  if (options.activity) watch(view, options.activity);
-  return view;
-}

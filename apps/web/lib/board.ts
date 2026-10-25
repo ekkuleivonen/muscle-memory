@@ -4,13 +4,10 @@
  * acceptance check puts the issue there, for good. Stored on this device only.
  */
 import { ISSUE_KEY } from "../../../packages/domain/board";
-import type { IssueSummary as Issue } from "./library";
 
 export const BOARD_KEY = "muscle-memory.board";
 /** Same-tab change notice; other tabs hear the storage event. */
 export const BOARD_CHANGE = "muscle-memory:board";
-/** More than this many in Todo gets a gentle nudge, not a block. */
-export const TODO_LIMIT = 3;
 
 export type Status = "backlog" | "todo" | "in-progress" | "done";
 /** Statuses people can choose; Done comes only from passing every check. */
@@ -32,12 +29,6 @@ export interface BoardItem {
 }
 /** Board columns, left to right. The backlog is the issue list itself. */
 export const COLUMNS: readonly Status[] = ["todo", "in-progress", "done"];
-export const STATUS_LABELS: Record<Status, string> = {
-  backlog: "Backlog",
-  todo: "Todo",
-  "in-progress": "In progress",
-  done: "Done",
-};
 
 /** Reads the stored board, dropping anything malformed rather than failing. */
 export function parseBoard(raw: string | null): BoardItem[] {
@@ -129,22 +120,6 @@ export function activeCount(items: readonly BoardItem[]): number {
   return items.filter((i) => i.status !== "done").length;
 }
 
-/** Whether taking one more off the backlog would go over the soft limit. */
-export function boardFull(items: readonly BoardItem[]): boolean {
-  return activeCount(items) >= TODO_LIMIT;
-}
-
 export function statusOf(items: readonly BoardItem[], key: string): Status {
   return items.find((i) => i.key === key)?.status ?? "backlog";
-}
-
-/** Issues on the board that still exist, in the order they were added. */
-export function boardIssues(
-  items: readonly BoardItem[],
-  issues: readonly Issue[],
-): { issue: Issue; status: Status }[] {
-  return items.flatMap((item) => {
-    const issue = issues.find((i) => i.key === item.key);
-    return issue ? [{ issue, status: statusOf(items, issue.key) }] : [];
-  });
 }

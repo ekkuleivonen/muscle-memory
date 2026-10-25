@@ -91,21 +91,6 @@ test("the numbers come from keystrokes, edits, runs and the page, up to the merg
   });
 });
 
-test("comparisons need enough people, and say so plainly", async () => {
-  const { compare, comparisonLine } = await import("./result");
-  const t = Array.from({ length: 101 }, (_, i) => 60 + i * 6); // 60 s to 660 s
-  assert.deepEqual(compare({ n: 49, t }, 120), { people: 49 });
-  // 90 of the 101 percentile points are slower than 120 s.
-  assert.deepEqual(compare({ n: 200, t }, 120), { fasterThan: 89, people: 200 });
-  assert.deepEqual(compare(undefined, 120), { people: 0 });
-  assert.equal(comparisonLine({ fp: 90, fn: 200 }, "Go"), "Faster than 90% of people who completed it in Go.");
-  assert.equal(comparisonLine({ fn: 12 }, "Go"), "One of the first 50 people to complete it in Go.");
-  assert.equal(comparisonLine({}, "Go"), null);
-  const shared = decodeResult(encodeResult({ ...card, fp: 90, fn: 200 }));
-  assert.equal(shared?.fp, 90);
-  assert.equal(decodeResult(encodeResult({ ...card, fp: 120, fn: 200 }))?.fp, undefined);
-});
-
 test("the share sentence names the challenge and claims only what the card's checks say", () => {
   const ev = {
     v: 1 as const,

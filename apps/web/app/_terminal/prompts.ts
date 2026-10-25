@@ -44,17 +44,6 @@ export interface ListState {
 
 export const initialList: ListState = { cursor: 0, picked: [], error: "" };
 
-/** Where a list prompt starts: the highlighted and ticked answers it was given. */
-export function startState(prompt: Prompt): ListState {
-  if (prompt.kind === "select")
-    return { ...initialList, cursor: prompt.initial ?? 0 };
-  if (prompt.kind === "multiselect") {
-    const picked = [...(prompt.initialPicked ?? [])].sort((a, b) => a - b);
-    return { ...initialList, cursor: picked[0] ?? 0, picked };
-  }
-  return initialList;
-}
-
 export type ListResult =
   | { type: "state"; state: ListState }
   | { type: "submit"; value: string | string[] }
@@ -146,25 +135,4 @@ export function listKey(
   const index = Number(key) - 1;
   if (/^[1-9]$/.test(key) && index < size) return choose(prompt, state, index);
   return { type: "ignore" };
-}
-
-export function confirmKey(
-  prompt: Extract<Prompt, { kind: "confirm" }>,
-  key: string,
-): boolean | null {
-  if (key === "y" || key === "Y") return true;
-  if (key === "n" || key === "N") return false;
-  if (key === "Enter") return prompt.initial;
-  return null;
-}
-
-/** How an answer reads once the prompt is done. */
-export function formatAnswer(prompt: Prompt, answer: Answer): string {
-  if (prompt.kind === "confirm") return answer ? "yes" : "no";
-  if (prompt.kind === "text") return String(answer);
-  const label = (value: string) =>
-    prompt.choices.find((choice) => choice.value === value)?.label ?? value;
-  return Array.isArray(answer)
-    ? answer.map(label).join(", ")
-    : label(answer as string);
 }

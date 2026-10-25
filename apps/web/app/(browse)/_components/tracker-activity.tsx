@@ -8,7 +8,6 @@ import {
   logPage,
   logView,
   PREVIOUS_PATH_KEY,
-  setIssueContext,
 } from "./board-log";
 
 /**
@@ -68,11 +67,5 @@ export function TrackerActivity() {
       window.removeEventListener("resize", resized);
     };
   }, [inIde]);
-  return null;
-}
-
-/** Rendered by a page about one issue, so its view names the issue and revision. */
-export function IssueContext({ issue }: { issue: { id: string; revision: string } }) {
-  useEffect(() => setIssueContext(issue), [issue.id, issue.revision]);
   return null;
 }

@@ -2,18 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   BOARD_CAPTURE_VERSION,
-  boardResolve,
   boardMove,
-  boardPayloads,
-  boardRecord,
   boardArrival,
-  boardPage,
   boardProfile,
   boardShare,
-  boardReply,
-  boardClose,
+  boardPage,
+  boardRecord,
   boardView,
-  REPLY_LIMIT_BYTES,
 } from "./board";
 
 const base = {
@@ -77,26 +72,6 @@ test("malformed moves are refused rather than stored", () => {
   assert.throws(bad({ data: { ...base.data, onBoardBefore: -1 } }), /count/);
 });
 
-test("records are canonical, stable and found again for export", () => {
-  const record = boardRecord(boardMove(base));
-  assert.equal(record.recordId, "board-4f1c.1");
-  assert.equal(record, record);
-  assert.equal(boardRecord(boardMove(base)).payload, record.payload);
-  assert.deepEqual(
-    boardPayloads([
-      record,
-      {
-        recordId: "workspace-1.1",
-        kind: "observation",
-        participantId: "p",
-        payload: '{"type":"observation.workspace.edit"}',
-      },
-    ]),
-    [record.payload],
-  );
-  assert.deepEqual(JSON.parse(record.payload).data, base.data);
-});
-
 test("only merging a pull request moves an issue to Done", () => {
   const done = {
     ...base.data,
@@ -143,91 +118,6 @@ test("only a replay takes a done issue back, to In progress, without a pull requ
   assert.throws(bad({ from: "todo" }), /replay/);
 });
 
-test("a reply to a review comment is recorded on the board, its text bounded", () => {
-  const reply = boardReply({
-    ...base,
-    data: { issueKey: "PHP-002", pullRequest: 3, comment: "ada-abs", text: "Refunds stay negative." },
-  });
-  assert.equal(reply.type, "observation.board.replied");
-  assert.equal(reply.captureVersion, BOARD_CAPTURE_VERSION);
-  assert.deepEqual(reply.data, {
-    issueKey: "PHP-002",
-    pullRequest: 3,
-    comment: "ada-abs",
-    text: "Refunds stay negative.",
-    textBytes: 22,
-    truncated: false,
-  });
-  const long = boardReply({
-    ...base,
-    data: { issueKey: "PHP-002", pullRequest: 3, comment: "ada-abs", text: "é".repeat(REPLY_LIMIT_BYTES) },
-  });
-  assert.equal(long.data.truncated, true);
-  assert.equal(long.data.textBytes, REPLY_LIMIT_BYTES * 2);
-  assert.ok(new TextEncoder().encode(long.data.text).length <= REPLY_LIMIT_BYTES);
-  assert.deepEqual(boardPayloads([boardRecord(reply)]).length, 1);
-  for (const data of [
-    { issueKey: "PHP-002", pullRequest: 0, comment: "ada-abs", text: "x" },
-    { issueKey: "PHP-002", pullRequest: 3, comment: "ada-abs", text: "  " },
-  ])
-    assert.throws(() => boardReply({ ...base, data }));
-});
-
-test("closing a pull request without merging names it and how", () => {
-  const closed = boardClose({
-    ...base,
-    data: { issueKey: "PHP-002", pullRequest: 1, via: "pointer", nudged: true },
-  });
-  assert.equal(closed.type, "observation.board.closed");
-  assert.deepEqual(closed.data, { issueKey: "PHP-002", pullRequest: 1, via: "pointer", nudged: true });
-  for (const data of [
-    { issueKey: "PHP-002", pullRequest: 0, via: "pointer" as const, nudged: false },
-    { issueKey: "api-2", pullRequest: 1, via: "pointer" as const, nudged: false },
-  ])
-    assert.throws(() => boardClose({ ...base, data }));
-});
-
-test("page views, page state and profile answers; only views may name an issue", () => {
-  const { issue: _, data: __, ...common } = base;
-  const view = boardView({
-    ...common,
-    issue: null,
-    data: { path: "/issues", query: "q=kind%3Abug", previous: "/board" },
-  });
-  assert.equal(view.type, "observation.board.viewed");
-  assert.equal(view.issue, null);
-  assert.equal(view.issueRevision, null);
-  assert.deepEqual(view.data, { path: "/issues", query: "q=kind%3Abug", previous: "/board" });
-  const onIssue = boardView({
-    ...common,
-    issue: base.issue,
-    data: { path: "/issues/PHP-002", query: "", previous: "/issues?q=kind%3Abug" },
-  });
-  assert.equal(onIssue.issue, "reset-link-expiry");
-  assert.throws(
-    () =>
-      boardView({
-        ...common,
-        issue: null,
-        data: { path: "https://elsewhere.example/x", query: "", previous: null },
-      }),
-    /app paths/,
-  );
-  const page = boardPage({
-    ...common,
-    data: { visible: false, focused: false, width: 1280.4, height: 800 },
-  });
-  assert.deepEqual(page.data, { visible: false, focused: false, width: 1280, height: 800 });
-  const profile = boardProfile({
-    ...common,
-    data: { from: "dashboard", answers: { experience: "some", languages: ["python"], answered: ["experience"] } },
-  });
-  assert.equal(profile.type, "observation.board.profile");
-  assert.equal(profile.issue, null);
-  assert.equal(boardPayloads([boardRecord(view), boardRecord(page), boardRecord(profile)]).length, 3);
-  assert.throws(() => boardPage({ ...common, elapsedMs: -1, data: page.data }), /elapsed/);
-});
-
 test("arrivals and shares carry a referral code, never anything that names a person", () => {
   const { issue: _, data: __, ...common } = base;
   const arrived = boardArrival({
@@ -256,32 +146,6 @@ test("arrivals and shares carry a referral code, never anything that names a per
     boardProfile({ ...common, data: { from: "play", answers: { languages: ["go"] } } }).data.from,
     "play",
   );
-});
-
-test("resolving a review finding names the pull request and the finding, nothing else", () => {
-  const issue = { id: "checkout-guest-shipping", revision: "sha256:" + "b".repeat(64) };
-  const resolved = boardResolve({
-    ...base,
-    issue,
-    data: { issueKey: "JS-001", pullRequest: 2, comment: "catch-hides-guests", via: "pointer" },
-  });
-  assert.equal(resolved.type, "observation.board.resolved");
-  assert.equal(resolved.captureVersion, BOARD_CAPTURE_VERSION);
-  assert.deepEqual(resolved.data, {
-    issueKey: "JS-001",
-    pullRequest: 2,
-    comment: "catch-hides-guests",
-    via: "pointer",
-  });
-  const bad = (data: object) => () =>
-    boardResolve({
-      ...base,
-      issue,
-      data: { issueKey: "JS-001", pullRequest: 2, comment: "catch-hides-guests", via: "pointer", ...data },
-    });
-  assert.throws(bad({ pullRequest: 0 }), /pull request/);
-  assert.throws(bad({ comment: "not a slug!" }), /identifier/);
-  assert.throws(bad({ via: "automatic" }), /Unknown way/);
 });
 
 test("board observations keep the exact Terms version accepted, dated or dated with a revision", async () => {
@@ -318,4 +182,51 @@ test("automatic completion records the Submit cause and exact internal submissio
     { via: "automatic" },
   ])
     assert.throws(() => boardMove({ ...base, data: { ...data, ...change } as typeof data }));
+});
+
+test("records are canonical and stable", () => {
+  const record = boardRecord(boardMove(base));
+  assert.equal(record.recordId, "board-4f1c.1");
+  assert.equal(boardRecord(boardMove(base)).payload, record.payload);
+  assert.deepEqual(JSON.parse(record.payload).data, base.data);
+});
+
+test("page views, page state and profile answers; only views may name an issue", () => {
+  const { issue: _, data: __, ...common } = base;
+  const view = boardView({
+    ...common,
+    issue: null,
+    data: { path: "/challenges", query: "q=kind%3Abug", previous: "/" },
+  });
+  assert.equal(view.type, "observation.board.viewed");
+  assert.equal(view.issue, null);
+  assert.equal(view.issueRevision, null);
+  assert.deepEqual(view.data, { path: "/challenges", query: "q=kind%3Abug", previous: "/" });
+  const onIssue = boardView({
+    ...common,
+    issue: base.issue,
+    data: { path: "/work/PHP-002", query: "", previous: "/challenges" },
+  });
+  assert.equal(onIssue.issue, "reset-link-expiry");
+  assert.throws(
+    () =>
+      boardView({
+        ...common,
+        issue: null,
+        data: { path: "https://elsewhere.example/x", query: "", previous: null },
+      }),
+    /app paths/,
+  );
+  const page = boardPage({
+    ...common,
+    data: { visible: false, focused: false, width: 1280.4, height: 800 },
+  });
+  assert.deepEqual(page.data, { visible: false, focused: false, width: 1280, height: 800 });
+  const profile = boardProfile({
+    ...common,
+    data: { from: "settings", answers: { experience: "some", languages: ["python"], answered: ["experience"] } },
+  });
+  assert.equal(profile.type, "observation.board.profile");
+  assert.equal(profile.issue, null);
+  assert.throws(() => boardPage({ ...common, elapsedMs: -1, data: page.data }), /elapsed/);
 });

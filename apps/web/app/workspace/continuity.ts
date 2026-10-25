@@ -171,17 +171,6 @@ export function readView(scope: string): WorkspaceView | null {
   }
 }
 
-/** Whether any attempt at this issue has a saved view: the person is coming back to it. */
-export function hasView(issue: string): boolean {
-  try {
-    return parseViews(localStorage.getItem(WORKSPACE_VIEW_KEY)).some((v) =>
-      v.scope.startsWith(`${issue}@`),
-    );
-  } catch {
-    return false;
-  }
-}
-
 export function writeView(view: WorkspaceView): void {
   try {
     localStorage.setItem(

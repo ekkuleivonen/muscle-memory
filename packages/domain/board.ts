@@ -304,60 +304,6 @@ export function validateBoardMoveData(data: BoardMoveData): BoardMoveData {
   };
 }
 
-/** The longest reply kept; a longer one is cut at a character boundary and marked. */
-export const REPLY_LIMIT_BYTES = 8192;
-
-export function boardReply(input: {
-  participantId: string;
-  sourceId: string;
-  sequence: number;
-  occurredAt: string;
-  elapsedMs: number;
-  termsVersion: string;
-  issue: { id: string; revision: string };
-  data: { issueKey: string; pullRequest: number; comment: string; text: string };
-}): BoardObservation<"observation.board.replied"> {
-  const { data } = input;
-  if (!ISSUE_KEY.test(data.issueKey)) throw new Error("Unknown issue key.");
-  if (!Number.isSafeInteger(data.pullRequest) || data.pullRequest < 1)
-    throw new Error("A reply names its pull request.");
-  safeIdentifier(data.comment);
-  if (!data.text.trim()) throw new Error("A reply needs text.");
-  const cut = boundText(data.text, REPLY_LIMIT_BYTES);
-  return envelope("observation.board.replied", input, {
-    issueKey: data.issueKey,
-    pullRequest: data.pullRequest,
-    comment: data.comment,
-    text: cut.text,
-    textBytes: cut.originalBytes,
-    truncated: cut.truncated,
-  });
-}
-
-export function boardClose(input: {
-  participantId: string;
-  sourceId: string;
-  sequence: number;
-  occurredAt: string;
-  elapsedMs: number;
-  termsVersion: string;
-  issue: { id: string; revision: string };
-  data: BoardCloseData;
-}): BoardObservation<"observation.board.closed"> {
-  const { data } = input;
-  if (!ISSUE_KEY.test(data.issueKey)) throw new Error("Unknown issue key.");
-  if (!Number.isSafeInteger(data.pullRequest) || data.pullRequest < 1)
-    throw new Error("Closing names its pull request.");
-  if (!VIAS.includes(data.via)) throw new Error("Unknown way of closing.");
-  if (typeof data.nudged !== "boolean") throw new Error("nudged is true or false.");
-  return envelope("observation.board.closed", input, {
-    issueKey: data.issueKey,
-    pullRequest: data.pullRequest,
-    via: data.via,
-    nudged: data.nudged,
-  });
-}
-
 function envelope<T extends keyof BoardData>(
   type: T,
   input: {
@@ -463,17 +409,6 @@ export function boardRecord(observation: BoardObservation): WorkspaceRecord {
   };
 }
 
-/** Board observations among stored records, for export. */
-export function boardPayloads(records: readonly WorkspaceRecord[]): string[] {
-  return records
-    .filter(
-      (r) =>
-        r.kind === "observation" &&
-        r.payload.includes('"type":"observation.board.'),
-    )
-    .map((r) => r.payload);
-}
-
 const REFERRAL = /^[a-z0-9]{6,32}$/;
 
 export function boardArrival(
@@ -510,16 +445,4 @@ export function boardResult(
   if (metrics !== 2) throw new Error("Unknown metrics version.");
   if (!/^[a-z+#]{1,16}$/.test(language)) throw new Error("Unknown language.");
   return envelope("observation.board.result", input, { issueKey, pullRequest, language, metrics, values });
-}
-
-export function boardResolve(
-  input: BoardBase & { issue: { id: string; revision: string }; data: BoardResolveData },
-): BoardObservation<"observation.board.resolved"> {
-  const { issueKey, pullRequest, comment, via } = input.data;
-  if (!ISSUE_KEY.test(issueKey)) throw new Error("Unknown issue key.");
-  if (!Number.isSafeInteger(pullRequest) || pullRequest < 1)
-    throw new Error("A resolution names its pull request.");
-  safeIdentifier(comment);
-  if (!VIAS.includes(via)) throw new Error("Unknown way of resolving.");
-  return envelope("observation.board.resolved", input, { issueKey, pullRequest, comment, via });
 }

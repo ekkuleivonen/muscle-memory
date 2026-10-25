@@ -69,19 +69,3 @@ export function toProfile(answers: Readonly<Record<string, Answer>>): Profile {
     QUESTIONS.filter((q) => q.id in answers).map((q) => [q.id, answers[q.id]]),
   ) as Profile;
 }
-
-/** Label/value rows for showing a profile back to its owner. */
-export function describeProfile(profile: Profile): [string, string][] {
-  return QUESTIONS.map((question) => {
-    const value = profile[question.id as keyof Profile];
-    const label = (v: string) =>
-      question.choices.find((c) => c.value === v)?.label ?? v;
-    const text =
-      value === undefined
-        ? "skipped"
-        : Array.isArray(value)
-          ? value.map(label).join(", ")
-          : label(value);
-    return [question.id, text];
-  });
-}

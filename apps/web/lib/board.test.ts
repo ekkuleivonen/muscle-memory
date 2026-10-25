@@ -1,15 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  activeCount,
-  boardIssues,
-  boardFull,
   complete,
   parseBoard,
   serializeBoard,
   setStatus,
   statusOf,
-  type BoardItem,
 } from "./board";
 import { library, summarize } from "./library";
 import { catalog } from "./test-fixtures";
@@ -71,30 +67,6 @@ test("malformed or tampered storage is ignored, not trusted", () => {
   );
 });
 
-test("the soft limit starts at three on the board", () => {
-  const two = ["GO-002", "PHP-002"].reduce<BoardItem[]>(
-    (all, key) => setStatus(all, key, "todo", "t"),
-    [],
-  );
-  assert.equal(boardFull(two), false);
-  assert.equal(boardFull(setStatus(two, "TS-004", "in-progress", "t")), true);
-});
-
-test("the board keeps the order issues were added and skips ones that no longer exist", () => {
-  const items: BoardItem[] = [
-    { key: "CPP-001", addedAt: "a", status: "in-progress" },
-    { key: "GONE-1", addedAt: "b", status: "todo" },
-    { key: "PY-002", addedAt: "c", status: "todo" },
-  ];
-  assert.deepEqual(
-    boardIssues(items, issues).map(({ issue, status }) => [issue.key, status]),
-    [
-      ["CPP-001", "in-progress"],
-      ["PY-002", "todo"],
-    ],
-  );
-});
-
 test("a run passing every check moves an issue to Done, for good", () => {
   const items = setStatus([], "PY-002", "in-progress", "t1");
   const done = complete(items, "PY-002", "t2");
@@ -120,15 +92,4 @@ test("a run passing every check moves an issue to Done, for good", () => {
     ),
     [],
   );
-});
-
-test("done issues leave the queue: they never count toward the soft limit", () => {
-  let items = ["JS-003", "TS-002", "HTML-001"].reduce(
-    (acc, key) => setStatus(acc, key, "todo", "t"),
-    [] as ReturnType<typeof setStatus>,
-  );
-  assert.equal(boardFull(items), true);
-  items = complete(items, "JS-003", "t2");
-  assert.equal(activeCount(items), 2);
-  assert.equal(boardFull(items), false);
 });

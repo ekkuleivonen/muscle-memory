@@ -378,18 +378,6 @@ export function compare(
   };
 }
 
-/** The comparison line, or null when there is nothing to compare with. */
-export function comparisonLine(
-  result: Pick<Result, "fp" | "fn">,
-  language: string,
-): string | null {
-  if (result.fp !== undefined)
-    return `Faster than ${result.fp}% of people who completed it in ${language}.`;
-  if (result.fn !== undefined)
-    return `One of the first ${COMPARE_FROM} people to complete it in ${language}.`;
-  return null;
-}
-
 /** "4 min 12 s", "48 s". */
 export function duration(seconds: number): string {
   if (seconds < 60) return `${seconds} s`;

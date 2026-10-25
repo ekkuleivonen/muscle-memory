@@ -73,34 +73,6 @@ export function safeNext(value: unknown, fallback: string): string {
   }
 }
 
-/** The issue list filtered to the languages someone chose, or unfiltered. */
-export function issuesFor(profile: Profile): string {
-  const languages = profile.languages ?? [];
-  return languages.length
-    ? `/issues?${new URLSearchParams({ q: `lang:${languages.join(",")}` })}`
-    : "/issues";
-}
-
-/** Rebuilds a page's own path and query, for the consent page's return link. */
-export function pathWithQuery(
-  pathname: string,
-  params: Record<string, string | string[] | undefined>,
-): string {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params))
-    for (const v of Array.isArray(value)
-      ? value
-      : value === undefined
-        ? []
-        : [value])
-      search.append(key, v);
-  const query = search.toString();
-  return query ? `${pathname}?${query}` : pathname;
-}
-
-/** "Not now" puts a question off on this device for this long, then it may come back. */
-export const SNOOZE_MS = 3 * 24 * 60 * 60 * 1000;
-
 /**
  * Whether a question is still worth asking: unanswered and not put off. The languages answer
  * counts only once the person gives it; the five-minute test's language is a guess that seeds
@@ -111,14 +83,4 @@ export function isOpen(stored: StoredProfile, id: keyof Profile, now = Date.now(
   if (asked?.snoozedUntil && Date.parse(asked.snoozedUntil) > now) return false;
   if (id === "languages") return !asked?.answeredAt;
   return stored.profile[id] === undefined;
-}
-
-/** The first of `ids` still worth asking, in order, or null. */
-export function nextQuestion(
-  stored: StoredProfile | null,
-  ids: readonly (keyof Profile)[],
-  now = Date.now(),
-): keyof Profile | null {
-  if (!stored) return null;
-  return ids.find((id) => isOpen(stored, id, now)) ?? null;
 }

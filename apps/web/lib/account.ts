@@ -14,7 +14,6 @@ import {
   CONSENT_VALUE,
   PROFILE_KEY,
   PROFILE_VERSION,
-  SNOOZE_MS,
   type Profile,
   type StoredProfile,
 } from "./profile";
@@ -114,29 +113,6 @@ export function playLanguage(language: LanguageId): Profile {
   const profile = { ...stored.profile, languages: [language] };
   write({ ...stored, profile });
   return profile;
-}
-
-/**
- * Answers given where the app asked (a result card, the dashboard, an issue page): merged into
- * the profile and marked as the person's own. Returns the profile as it now stands.
- */
-export function answerQuestions(answers: Partial<Profile>): Profile | null {
-  const stored = readProfile();
-  if (!stored) return null;
-  const at = new Date().toISOString();
-  const asked = { ...stored.asked };
-  for (const id of Object.keys(answers) as (keyof Profile)[]) asked[id] = { answeredAt: at };
-  const profile = { ...stored.profile, ...answers };
-  write({ ...stored, profile, asked });
-  return profile;
-}
-
-/** "Not now": the question is not asked anywhere on this device for a few days. */
-export function snoozeQuestion(id: keyof Profile) {
-  const stored = readProfile();
-  if (!stored) return;
-  const snoozedUntil = new Date(Date.now() + SNOOZE_MS).toISOString();
-  write({ ...stored, asked: { ...stored.asked, [id]: { ...stored.asked?.[id], snoozedUntil } } });
 }
 
 export function setStealth(stealth: boolean) {
