@@ -185,8 +185,9 @@ const TERMINAL = new Set([
  *
  * `f` is the first full check of the attempt on that revision, with counts only when its raw run
  * was scored completely (see `FullCheck.scored`); otherwise null. That is, null when its result is
- * missing or incomplete (errored, cancelled, cut short). `n` counts the full checks that ran
- * (not cancelled) in the attempt through the completing run; nothing after it.
+ * missing or incomplete (errored, cancelled, cut short, or still running at the completion).
+ * `n` counts the full checks started in the attempt through the completing run and not
+ * cancelled as of the completion. Everything is read as of the recorded completion time.
  */
 export function outcomeOf(input: {
   records: readonly WorkspaceRecord[];
@@ -199,11 +200,24 @@ export function outcomeOf(input: {
   const revision = /^sha256:([0-9a-f]{64})$/.exec(completion.revision)?.[1];
   if (!completion.automatic || !revision) return null;
   if (!input.required || input.required.length) return null;
-  const all = fullChecks(
-    attemptRecords(input.records, completion.issue, completion.at),
+  // As of the completion: `attemptRecords` selects the whole attempt, so cut it at the
+  // recorded completion time before reading any check. A run still going then keeps its
+  // place with an unknown result; nothing it reports later (a result, an error, a
+  // cancellation) can change a card already made.
+  const asOf = attemptRecords(
+    input.records,
     completion.issue,
-    completion.revision,
-  );
+    completion.at,
+  ).filter((record) => {
+    if (record.kind !== "observation") return true;
+    try {
+      const at = JSON.parse(record.payload)?.occurredAt;
+      return typeof at === "string" && at <= completion.at;
+    } catch {
+      return false;
+    }
+  });
+  const all = fullChecks(asOf, completion.issue, completion.revision);
   const index = all.findIndex((c) => c.runId === completion.runId);
   const final = all[index]?.result;
   if (

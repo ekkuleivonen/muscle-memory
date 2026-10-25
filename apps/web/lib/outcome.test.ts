@@ -290,6 +290,86 @@ test("f is the first full check only when its run was scored completely; n count
   );
 });
 
+test("a card is fixed at the completion: nothing reported afterwards changes it", () => {
+  const at = (minute: number, second: number) =>
+    `2026-10-25T10:${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")}.000Z`;
+  const late = (minute: number, runId: string, data: object) =>
+    observation("observation.workspace.run", at(minute, 30), {
+      runId,
+      purpose: "pull-request",
+      revision: 1,
+      codeArtifactId: `a-${runId}`,
+      ...data,
+    });
+  const queued = (minute: number, runId: string) =>
+    observation("observation.workspace.run", at(minute, 0), {
+      runId,
+      purpose: "pull-request",
+      revision: 1,
+      codeArtifactId: `a-${runId}`,
+      status: "queued",
+    });
+  // An earlier full check still running when a later one completed the challenge (r-3 at
+  // 10:04:10, completion at 10:05).
+  const overlapping = [queued(1, "r-1"), ...pass(4)];
+  const before = of(overlapping);
+  assert.deepEqual(before, { ...card, f: null, n: 2 });
+  // It finishes after the completion with a complete, scored result: f stays null.
+  const finished = [
+    ...overlapping,
+    late(6, "r-1", {
+      status: "result",
+      outcome: {
+        status: "completed",
+        phase: "tests",
+        cases: Array.from({ length: 15 }, (_, i) => ({
+          index: i,
+          output: { text: i < 11 ? "1" : "0", truncated: false },
+        })),
+      },
+    }),
+    observation("observation.workspace.pull-request", at(6, 31), {
+      number: 1,
+      push: 1,
+      runId: "r-1",
+      passed: 11,
+      total: 15,
+      result: "checks-failed",
+    }),
+  ];
+  assert.deepEqual(of(finished), before);
+  // Or it is cancelled after the completion: n stays 2.
+  const cancelledLate = [
+    ...overlapping,
+    late(7, "r-1", { status: "cancelled", outcome: { status: "cancelled" } }),
+    observation("observation.workspace.pull-request", at(7, 31), {
+      number: 1,
+      push: 1,
+      runId: "r-1",
+      passed: 0,
+      total: 15,
+      result: "cancelled",
+    }),
+  ];
+  assert.deepEqual(of(cancelledLate), before);
+  // The same for the full fixture: anything after 10:05 leaves every fact as it was.
+  assert.deepEqual(
+    of([
+      ...records,
+      late(8, "r-2", { status: "cancelled" }),
+      observation("observation.workspace.pull-request", at(8, 31), {
+        number: 1,
+        push: 9,
+        runId: "r-1",
+        passed: 15,
+        total: 15,
+        result: "checks-passed",
+      }),
+    ]),
+    card,
+  );
+});
+
 test("a v3 link carries exactly the allowlisted facts and reads back exactly", () => {
   const leaky = {
     ...card,
