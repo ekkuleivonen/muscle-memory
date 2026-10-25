@@ -193,14 +193,28 @@ export function CaseDiff({ row }: { row: CheckRow }) {
   );
 }
 
+/**
+ * A check that stopped before the cases' results, when the run includes hidden cases: only the
+ * stage the runner recorded. The error is the code's own text and can carry a hidden input.
+ */
+function stageText(stage: "compile" | "runtime"): string {
+  return stage === "compile"
+    ? "The code didn't compile. Run the tests to see the error."
+    : "The code raised an error before the checks finished. Run the tests to see it.";
+}
+
 /** The failing cases: the public ones in full, the hidden ones by name and how they failed. */
 export function FailedChecks({ diagnosis }: { diagnosis: Diagnosis | null }) {
   if (diagnosis?.kind === "error")
     return (
       <p className="ci-error">
-        <code>
-          {diagnosis.error.type}: {diagnosis.error.message}
-        </code>
+        {diagnosis.error ? (
+          <code>
+            {diagnosis.error.type}: {diagnosis.error.message}
+          </code>
+        ) : (
+          stageText(diagnosis.stage)
+        )}
       </p>
     );
   if (diagnosis?.kind !== "tests" || !diagnosis.failed.length) return null;
@@ -414,7 +428,9 @@ export function Checks({
       {diagnosis.kind === "error" && (
         <div className="pull-error">
           <b>
-            {diagnosis.error.type}: {diagnosis.error.message}
+            {diagnosis.error
+              ? `${diagnosis.error.type}: ${diagnosis.error.message}`
+              : stageText(diagnosis.stage)}
           </b>
           {diagnosis.traceback && <pre>{diagnosis.traceback}</pre>}
         </div>

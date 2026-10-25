@@ -127,10 +127,12 @@ test("a check that never reached the cases gives its error, not per-case guesses
           traceback: { text: "line 3" },
         },
       },
-      cases,
+      // Public cases only: a run with hidden ones shows no error text (hidden-cases.test.ts).
+      cases.filter((c) => c.visible),
     ),
     {
       kind: "error",
+      stage: "compile",
       error: { type: "SyntaxError", message: "invalid syntax" },
       traceback: "line 3",
     },
@@ -198,7 +200,8 @@ test("a crash or timeout part-way through is reported as stopped, not as an erro
   const d = diagnose({ status: "user-error", phase: "tests" }, cases);
   assert.deepEqual(d, {
     kind: "error",
-    error: { type: "Error", message: "the checks did not complete" },
+    stage: "runtime",
+    error: null,
     traceback: null,
   });
 });

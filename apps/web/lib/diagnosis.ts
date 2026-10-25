@@ -49,10 +49,15 @@ export type Diagnosis =
       reason: "timeout" | "runner-error" | "cancelled";
       timeoutMs: number | null;
     }
-  /** The checks did not complete, with the error recorded; the stage it stopped at isn't claimed. */
+  /**
+   * The checks did not complete. `stage` is what the runner recorded (compile, or the code's own
+   * start-up), never inferred. `error` and `traceback` are null when the run includes hidden cases:
+   * user code writes them and can read the hidden inputs while it runs.
+   */
   | {
       kind: "error";
-      error: { type: string; message: string };
+      stage: "compile" | "runtime";
+      error: { type: string; message: string } | null;
       traceback: string | null;
     }
   | { kind: "tests"; rows: CheckRow[]; failed: CheckRow[] };
@@ -156,20 +161,16 @@ export function diagnose(
         typeof outcome.timeoutMs === "number" ? outcome.timeoutMs : null,
     };
   if (outcome.phase !== "tests" || !outcome.cases) {
-    // Compile and load errors come before any input is passed, so they can't carry a hidden
-    // case's data. An error from the cases' stage (or an unknown one) might: user code chooses an
-    // exception's type and message. With hidden cases in the run, it is withheld.
-    const safe =
-      outcome.phase === "compile" ||
-      outcome.phase === "execute" ||
-      cases.every((c) => c.visible);
+    // A run with hidden cases shows no user-written text: module code can read the inputs
+    // (Python's harness has them before the code is even loaded) and put them in an error.
+    const shown = cases.every((c) => c.visible) && outcome.error;
     return {
       kind: "error",
-      error:
-        safe && outcome.error
-          ? { type: outcome.error.type, message: outcome.error.message }
-          : { type: "Error", message: "the checks did not complete" },
-      traceback: safe ? outcome.error?.traceback?.text || null : null,
+      stage: outcome.phase === "compile" ? "compile" : "runtime",
+      error: shown
+        ? { type: outcome.error!.type, message: outcome.error!.message }
+        : null,
+      traceback: shown ? outcome.error!.traceback?.text || null : null,
     };
   }
   const { passed } = runFeedback(cases, outcome.cases);

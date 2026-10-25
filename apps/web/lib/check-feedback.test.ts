@@ -158,6 +158,7 @@ test("checks that stop part-way say what is recorded, not where the code failed"
       latest: { passed: 0, total: 5 },
       diagnosis: {
         kind: "error",
+        stage: "runtime",
         error: { type: "Error", message: "boom" },
         traceback: null,
       },
@@ -165,4 +166,18 @@ test("checks that stop part-way say what is recorded, not where the code failed"
   );
   assert.equal(errored.headline, "The checks did not complete.");
   assert.doesNotMatch(errored.headline, /before any case/);
+  // The recorded compile stage is said as such.
+  const compile = checkFeedbackOf(
+    input({
+      blocker: "checks",
+      latest: { passed: 0, total: 5 },
+      diagnosis: {
+        kind: "error",
+        stage: "compile",
+        error: null,
+        traceback: null,
+      },
+    }),
+  );
+  assert.equal(compile.headline, "Your code didn't compile.");
 });

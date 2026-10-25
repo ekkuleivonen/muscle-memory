@@ -99,7 +99,9 @@ export function checkFeedbackOf(input: CheckFeedbackInput): CheckFeedback {
       diagnosis?.kind === "tests"
         ? `${diagnosis.failed.length} of ${cases(diagnosis.rows.length)} failed.`
         : diagnosis?.kind === "error"
-          ? "The checks did not complete."
+          ? diagnosis.stage === "compile"
+            ? "Your code didn't compile."
+            : "The checks did not complete."
           : diagnosis?.kind === "stopped"
             ? diagnosis.reason === "timeout"
               ? "The check timed out before every case finished. Look for a loop that never ends."

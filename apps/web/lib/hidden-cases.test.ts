@@ -208,18 +208,62 @@ test("an error reported from the cases' stage, with no per-case results, is with
     ],
   ] as const)
     assertNoSecrets(html, surface);
-  // A compile error comes before any input, so it stays useful.
+  // Not even a compile or load error keeps its text: Python's harness has the inputs before the
+  // module runs, so code can read them and raise them. Only the recorded stage shows.
+  for (const phase of ["compile", "execute"]) {
+    const early = {
+      status: "user-error",
+      phase,
+      error: {
+        type: "SECRET_TYPE",
+        message: "SECRET_MESSAGE",
+        traceback: { text: "SECRET_INPUT" },
+      },
+      stdout: { text: "SECRET_INPUT" },
+    };
+    const d = diagnose(early, cases);
+    assert.deepEqual(d, {
+      kind: "error",
+      stage: phase === "compile" ? "compile" : "runtime",
+      error: null,
+      traceback: null,
+    });
+    assertNoSecrets(
+      renderToStaticMarkup(createElement(Checks, { outcome: early, cases })),
+      `Checks (${phase})`,
+    );
+    assertNoSecrets(
+      renderToStaticMarkup(
+        createElement(Findings, {
+          pull,
+          outcome: early,
+          cases,
+          threads: [],
+          revisions: {},
+        }),
+      ),
+      `Findings (${phase})`,
+    );
+  }
+  // A run of public cases only keeps the full error: nothing hidden to give away.
+  const publicOnly = cases.filter((c) => c.visible);
   const compile = diagnose(
     {
       status: "user-error",
       phase: "compile",
-      error: { type: "SyntaxError", message: "line 3" },
+      error: {
+        type: "SyntaxError",
+        message: "line 3",
+        traceback: { text: "  at line 3" },
+      },
     },
-    cases,
+    publicOnly,
   );
-  assert.deepEqual(compile?.kind === "error" && compile.error, {
-    type: "SyntaxError",
-    message: "line 3",
+  assert.deepEqual(compile, {
+    kind: "error",
+    stage: "compile",
+    error: { type: "SyntaxError", message: "line 3" },
+    traceback: "  at line 3",
   });
 });
 
