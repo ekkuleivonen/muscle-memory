@@ -11,7 +11,7 @@ import {
 import { privateCheckFailure } from "./check-feedback";
 import { runFeedback } from "../../../../packages/domain/records";
 import type { CaseResult, CodeError } from "../../../../packages/runner/runner";
-import type { RunView } from "../workspace/session";
+import type { RunView } from "./session";
 
 export type Tone = "out" | "err" | "pass" | "fail" | "dim";
 export interface Line {

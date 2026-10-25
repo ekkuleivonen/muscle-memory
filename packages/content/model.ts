@@ -78,6 +78,8 @@ export interface ChallengeMetadata {
   readonly key: string;
   readonly title: string;
   readonly summary: string;
+  /** Optional: a sharper one-line invitation for shared links, such as a result card's page. */
+  readonly hook?: string;
   readonly difficulty: Difficulty;
   readonly tags: readonly string[];
   /** The live revision's id. */

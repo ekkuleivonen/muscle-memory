@@ -14,9 +14,9 @@ The product centers on solving coding challenges independently: challenge, code,
 
 ## Map
 
-- `app/page.tsx`: the public home page. `app/start`: quick start. `app/challenges`: the challenge picker (search, filters, preview; Enter starts practice). Pages read the catalog (`content/catalog.json`, built from `content/challenges`) through `lib/library.ts` and `lib/queries.ts` (pure, tested). `app/(browse)/_components` holds pieces practice and the share pages use (markdown, examples, feedback, sharing, page tracking).
-- `app/challenges/[key]` (the page) and `app/practice`: practice (`ide.tsx`) on the challenge's live revision: one editable file, Run examples, Submit, feedback, completion and what comes next ([docs/workspace.md](../../docs/workspace.md)).
-- `app/workspace`: the editor (`editor.ts`, CodeMirror 6), the session that records practice (`session.ts`), save state, view continuity and the TypeScript type checker (`type-checker.ts`, its own worker).
+- `app/page.tsx`: the public home page. `app/start`: quick start. `app/challenges`: the challenge picker (search, filters, preview; Enter starts practice). Pages read the catalog (`content/catalog.json`, built from `content/challenges`) through `lib/challenges.ts` and `lib/queries.ts` (pure, tested). `app/_components` holds pieces practice and the share pages use (markdown, examples, feedback, sharing, page tracking).
+- `app/challenges/[key]` (the page) and `app/practice`: practice (`practice.tsx`) on the challenge's live revision: one editable file, Run examples, Submit, feedback, completion and what comes next ([docs/practice.md](../../docs/practice.md)).
+  The same folder holds the editor (`editor.ts`, CodeMirror 6), the session that records practice (`session.ts`), save state, the saved view (`continuity.ts`) and the TypeScript type checker (`type-checker.ts`, its own worker).
 - `lib/progress.ts` (attempts and completions on this device), `lib/start.ts` (where a start came from, handed to practice), `lib/submission.ts` (a Submit's verdict), `lib/site-log.ts` (the site stream), `lib/environment.ts`.
 - `app/_terminal` (the terminal look: banner, status bar, menus, styles), `app/settings`: `/settings` lists the commands, each its own page (`/settings/<command>`, `/settings/profile/<question>`) ([docs/profile.md](../../docs/profile.md)).
 - `app/r/[card]`: a shared result ([docs/start.md](../../docs/start.md)).

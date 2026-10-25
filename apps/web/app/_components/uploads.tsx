@@ -3,11 +3,11 @@ import { useEffect } from "react";
 import {
   openPracticeStore,
   type PracticeStore,
-} from "../../../../../packages/browser/practice-store";
-import { Uploader } from "../../../../../packages/browser/uploader";
-import { readProfile } from "../../../lib/account";
-import { INGEST_URL } from "../../../lib/ingest";
-import { acceptsCurrent } from "../../../lib/legal";
+} from "../../../../packages/browser/practice-store";
+import { Uploader } from "../../../../packages/browser/uploader";
+import { readProfile } from "../../lib/account";
+import { INGEST_URL } from "../../lib/ingest";
+import { acceptsCurrent } from "../../lib/legal";
 
 let uploader: Uploader | null = null;
 

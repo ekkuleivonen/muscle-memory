@@ -7,14 +7,14 @@ import type { Case } from "../../../../packages/content/model";
 import { checkFeedbackOf } from "../../lib/check-feedback";
 import { diagnose } from "../../lib/diagnosis";
 import { transcript } from "./transcript";
-import type { RunView } from "../workspace/session";
+import type { RunView } from "./session";
 
 (globalThis as { React?: unknown }).React = React;
 const { CheckFeedbackView } = await import(
-  "../(browse)/_components/review"
+  "../_components/review"
 );
 const { ChallengeExamples } = await import(
-  "../(browse)/_components/challenge-examples"
+  "../_components/challenge-examples"
 );
 const bounded = (text: string) => ({
   text,

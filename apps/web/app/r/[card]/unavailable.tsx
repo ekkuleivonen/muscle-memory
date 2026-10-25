@@ -5,7 +5,7 @@ import "../../share.css";
 export function SharedHeader() {
   return (
     <header className="legal-head">
-      <Link href="/" className="workspace-name">
+      <Link href="/" className="site-name">
         <img className="logo-mark" src="/logo.svg" alt="" width={22} height={22} />
         muscle memory
       </Link>

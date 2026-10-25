@@ -1,6 +1,6 @@
 # Agents
 
-Muscle Memory is independent coding practice: challenge, code, immediate feedback, then the next challenge. It records granular, raw practice data. Clarity is mandatory; realistic framing is optional and must help explain the problem. Difficulty comes from solving the problem, not decoding the prompt. Start with the README, then `docs/` (`challenges.md` for challenges and content, `workspace.md` for practice and the runners, `telemetry.md` for what is recorded and how it is uploaded, `start.md` for the ways in and sharing, `profile.md` for the profile questions and settings, `model-runs.md` for the planned model runs). App-specific notes: `apps/web/AGENTS.md`.
+Muscle Memory is independent coding practice: challenge, code, immediate feedback, then the next challenge. It records granular, raw practice data. Clarity is mandatory; realistic framing is optional and must help explain the problem. Difficulty comes from solving the problem, not decoding the prompt. Start with the README, then `docs/` (`challenges.md` for challenges and content, `practice.md` for practice and the runners, `telemetry.md` for what is recorded and how it is uploaded, `start.md` for the ways in and sharing, `profile.md` for the profile questions and settings, `model-runs.md` for the planned model runs). App-specific notes: `apps/web/AGENTS.md`.
 
 ## Before launch
 
@@ -12,7 +12,7 @@ Nobody uses Muscle Memory yet. Until launch, the rules on revisions and recorded
 - **Checks are deterministic.** A submission is judged by its cases and static rules, and nothing else.
 - **Revisions are immutable.** A challenge's revision is stored under the hash of its content and never edited; changing it adds a revision (see CONTRIBUTING and `docs/challenges.md`). Challenges are folders of files in `content/challenges/<KEY>/`; `npm run build:content` builds them into `content/catalog.json`, a build output that is never committed or edited.
 - **Recorded data keeps its meaning.** If what an observation records changes, bump the capture version in `packages/domain` and say what changed in its comment.
-- **Code runs only in the browser sandbox** (`packages/runner`): an opaque-origin iframe with a CSP that denies every connection, plus a worker. Never relax the CSP, run user code in the page, or fetch runtime files from anywhere but this origin. The one documented exception: the Java engine's frame allows `eval`, which TeaVM's loader needs (`allowEval`, see `docs/workspace.md`).
+- **Code runs only in the browser sandbox** (`packages/runner`): an opaque-origin iframe with a CSP that denies every connection, plus a worker. Never relax the CSP, run user code in the page, or fetch runtime files from anywhere but this origin. The one documented exception: the Java engine's frame allows `eval`, which TeaVM's loader needs (`allowEval`, see `docs/practice.md`).
 
 ## Runtimes
 

@@ -1,5 +1,5 @@
 /**
- * CodeMirror 6 setup for the IDE. Every feature is listed in editorFeatures() and recorded
+ * CodeMirror 6 setup for practice. Every feature is listed in editorFeatures() and recorded
  * with the session; there is no autocompletion, bracket auto-closing, linting or AI
  * assistance. The editor owns its document, so typing never re-renders React.
  */

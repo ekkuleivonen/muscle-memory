@@ -6,14 +6,14 @@
  */
 import type { Difficulty } from "../../../packages/content/model";
 import { LANGUAGES, type LanguageId } from "./languages";
-import { DIFFICULTIES, languageLabel, type Issue } from "./library";
+import { DIFFICULTIES, languageLabel, type Challenge } from "./challenges";
 
 export const SORTS = ["key", "difficulty", "title"] as const;
 export type Sort = (typeof SORTS)[number];
 /** What a person has marked or done, as search terms: is:starred, is:completed. */
 export const MARKS = ["starred", "completed"] as const;
 export type Mark = (typeof MARKS)[number];
-export interface IssueQuery {
+export interface ChallengeQuery {
   language: LanguageId[];
   difficulty: Difficulty[];
   tag: string[];
@@ -41,7 +41,7 @@ const ALLOWED: Partial<Record<ListKey, readonly string[]>> = {
 const SLUG = /^[a-z0-9][a-z0-9-]{0,127}$/;
 const MAX_QUERY = 200;
 
-export const emptyIssueQuery = (): IssueQuery => ({
+export const emptyIssueQuery = (): ChallengeQuery => ({
   language: [],
   difficulty: [],
   tag: [],
@@ -59,7 +59,7 @@ function add<T extends string>(list: T[], value: T) {
   if (!list.includes(value)) list.push(value);
 }
 
-export function parseIssueQuery(q: string): IssueQuery {
+export function parseChallengeQuery(q: string): ChallengeQuery {
   const query = emptyIssueQuery();
   for (const token of tokens(q)) {
     const match = /^([a-z]+):(.+)$/i.exec(token);
@@ -94,7 +94,7 @@ export function parseIssueQuery(q: string): IssueQuery {
 }
 
 /** The canonical query string: qualifiers first, in a fixed order, then free text. */
-export function formatQuery(query: IssueQuery): string {
+export function formatQuery(query: ChallengeQuery): string {
   const parts: string[] = [];
   if (query.marks.length) parts.push(`is:${query.marks.join(",")}`);
   const lists: [string, readonly string[]][] = [
@@ -111,10 +111,10 @@ export function formatQuery(query: IssueQuery): string {
 
 /** The same query with one filter value switched on or off. */
 export function toggle(
-  query: IssueQuery,
+  query: ChallengeQuery,
   key: ListKey,
   value: string,
-): IssueQuery {
+): ChallengeQuery {
   const current = (query as unknown as Record<ListKey, string[]>)[key];
   return {
     ...query,
@@ -129,16 +129,16 @@ function matchesText(fields: readonly string[], terms: readonly string[]) {
   return terms.every((term) => haystack.includes(term.toLowerCase()));
 }
 
-function issueText(issue: Issue): string[] {
+function challengeText(challenge: Challenge): string[] {
   return [
-    issue.key,
-    issue.title,
-    issue.summary ?? "",
-    issue.task,
-    issue.difficulty ?? "",
-    issue.language ?? "",
-    languageLabel(issue.language),
-    ...issue.tags,
+    challenge.key,
+    challenge.title,
+    challenge.summary ?? "",
+    challenge.task,
+    challenge.difficulty ?? "",
+    challenge.language ?? "",
+    languageLabel(challenge.language),
+    ...challenge.tags,
   ];
 }
 
@@ -146,10 +146,10 @@ const rank = (d: Difficulty | undefined) =>
   d ? DIFFICULTIES.indexOf(d) : DIFFICULTIES.length;
 
 /** Natural order for keys, so NS-10 follows NS-9. */
-const byKey = (a: Issue, b: Issue) =>
+const byKey = (a: Challenge, b: Challenge) =>
   a.key.localeCompare(b.key, "en", { numeric: true });
 
-const SORTERS: Record<Sort, (a: Issue, b: Issue) => number> = {
+const SORTERS: Record<Sort, (a: Challenge, b: Challenge) => number> = {
   key: byKey,
   difficulty: (a, b) => rank(a.difficulty) - rank(b.difficulty) || byKey(a, b),
   title: (a, b) => a.title.localeCompare(b.title) || byKey(a, b),
@@ -157,28 +157,28 @@ const SORTERS: Record<Sort, (a: Issue, b: Issue) => number> = {
 
 /** The marks part of a query, applied where marks are known (the browser): all must hold. */
 export function filterByMarks<T extends { key: string }>(
-  issues: readonly T[],
+  challenges: readonly T[],
   marks: readonly Mark[],
   has: (key: string, mark: Mark) => boolean,
 ): T[] {
-  return issues.filter((issue) => marks.every((mark) => has(issue.key, mark)));
+  return challenges.filter((challenge) => marks.every((mark) => has(challenge.key, mark)));
 }
 
 /** Every filter except marks must match (any value within one); every text term must appear. */
-export function filterIssues(
-  issues: readonly Issue[],
-  query: IssueQuery,
-): Issue[] {
+export function filterChallenges(
+  challenges: readonly Challenge[],
+  query: ChallengeQuery,
+): Challenge[] {
   const within = <T>(selected: readonly T[], value: T | undefined) =>
     selected.length === 0 || (value !== undefined && selected.includes(value));
-  return issues
+  return challenges
     .filter(
-      (issue) =>
-        within(query.language, issue.language) &&
-        within(query.difficulty, issue.difficulty) &&
+      (challenge) =>
+        within(query.language, challenge.language) &&
+        within(query.difficulty, challenge.difficulty) &&
         (query.tag.length === 0 ||
-          issue.tags.some((t) => query.tag.includes(t))) &&
-        matchesText(issueText(issue), query.text),
+          challenge.tags.some((t) => query.tag.includes(t))) &&
+        matchesText(challengeText(challenge), query.text),
     )
     .sort(SORTERS[query.sort]);
 }

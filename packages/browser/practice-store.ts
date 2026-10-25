@@ -95,7 +95,7 @@ export class PracticeStore implements CaptureSink {
         reject(
           failure ??
             transaction.error ??
-            new Error("Workspace activity could not be saved on this device."),
+            new Error("Practice could not be saved on this device."),
         );
       records.forEach((record, index) =>
         guarded(() => {
@@ -325,17 +325,13 @@ export function openPracticeStore(
   factory: IDBFactory = indexedDB,
 ): Promise<PracticeStore> {
   return new Promise((resolve, reject) => {
-    // Version 5 starts recording again from practice and site capture 1.0.0: records of
-    // earlier formats, and their place in the upload queue, are dropped. The device's identity
-    // and secret (settings) stay, so what was uploaded stays deletable.
     const request = factory.open(DATABASE, 5);
-    request.onupgradeneeded = (event) => {
+    request.onupgradeneeded = () => {
       const database = request.result;
-      if (event.oldVersion < 1) database.createObjectStore("settings");
-      for (const legacy of ["events", "workspace", "records", "outbox"])
-        if (database.objectStoreNames.contains(legacy)) database.deleteObjectStore(legacy);
-      database.createObjectStore("records", { keyPath: "recordId" });
-      database.createObjectStore("outbox", { autoIncrement: true });
+      const stores = database.objectStoreNames;
+      if (!stores.contains("settings")) database.createObjectStore("settings");
+      if (!stores.contains("records")) database.createObjectStore("records", { keyPath: "recordId" });
+      if (!stores.contains("outbox")) database.createObjectStore("outbox", { autoIncrement: true });
     };
     request.onsuccess = () => resolve(new PracticeStore(request.result));
     request.onerror = () =>

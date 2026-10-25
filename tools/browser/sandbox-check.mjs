@@ -979,7 +979,7 @@ async function clangCheck(browserType) {
     const results = {};
     const catalog = await (await fetch("/catalog.json")).json();
     // A challenge's live revision, with its cases as the engines take them.
-    const issue = (key) => {
+    const challenge = (key) => {
       const meta = catalog.challenges.find((i) => i.key === key);
       const revision = catalog.revisions[meta.revision];
       return {
@@ -988,9 +988,9 @@ async function clangCheck(browserType) {
         expected: revision.cases.map((c) => c.expected),
       };
     };
-    const ring = issue("C-002");
-    const lru = issue("CPP-001");
-    // One runner for C, kept between runs like the IDE does.
+    const ring = challenge("C-002");
+    const lru = challenge("CPP-001");
+    // One runner for C, kept between runs as practice does.
     const clang = new MMRunner.Runner(MMRunner.ENGINES.clang, host, {
       timeoutMs: 4000,
     });
@@ -1122,7 +1122,7 @@ async function csharpCheck(browserType) {
   const report = await tab.evaluate(async (OUT) => {
     const catalog = await (await fetch("/catalog.json")).json();
     // A challenge's live revision, with its cases as the engines take them.
-    const issue = (key) => {
+    const challenge = (key) => {
       const meta = catalog.challenges.find((i) => i.key === key);
       const revision = catalog.revisions[meta.revision];
       return {
@@ -1131,7 +1131,7 @@ async function csharpCheck(browserType) {
         expected: revision.cases.map((c) => c.expected),
       };
     };
-    const fee = issue("CS-002");
+    const fee = challenge("CS-002");
     const host = document.getElementById("host");
     const run = async (code, extra = {}) => {
       const runner = new MMRunner.Runner(MMRunner.ENGINES.csharp, host, {
@@ -1232,7 +1232,7 @@ async function javaCheck(browserType) {
         expected: revision.cases.map((c) => c.expected),
       };
     };
-    const issue = find("JAVA-002");
+    const challenge = find("JAVA-002");
     const host = document.getElementById("host");
     const run = async (code, extra = {}) => {
       const runner = new MMRunner.Runner(MMRunner.ENGINES.java, host, {
@@ -1242,37 +1242,37 @@ async function javaCheck(browserType) {
         return await runner.run({
           runId: "java",
           code,
-          inputs: issue.inputs,
+          inputs: challenge.inputs,
           filename: "src/main/java/com/acme/accounts/PasswordPolicy.java",
           language: "java",
-          entrypoint: issue.entrypoint,
-          adapter: issue.adapter,
+          entrypoint: challenge.entrypoint,
+          adapter: challenge.adapter,
           ...extra,
         });
       } finally {
         runner.dispose();
       }
     };
-    const results = { expected: issue.expected };
-    results.starter = await run(issue.starter);
+    const results = { expected: challenge.expected };
+    results.starter = await run(challenge.starter);
     results.fixed = await run(
-      issue.starter.replace(
+      challenge.starter.replace(
         'if (password.length() < 8) broken.add("too-short");',
         'System.out.println("checking " + password.length());\n        if (password.length() < 12) broken.add("too-short");\n        if (!password.matches(".*\\\\d.*")) broken.add("no-digit");\n        if (!password.matches(".*[A-Za-z].*")) broken.add("no-letter");\n        if (password.matches(".*\\\\s.*")) broken.add("has-whitespace");',
       ),
     );
     results.syntax = await run(
-      issue.starter.replace("return broken;", "return broken"),
+      challenge.starter.replace("return broken;", "return broken"),
     );
     results.thrown = await run(
-      issue.starter.replace(
+      challenge.starter.replace(
         "return broken;",
         'throw new IllegalStateException("nope");',
       ),
     );
     // TeaVM's inline JavaScript (@JSBody) is not Java; solutions that use it are refused.
     results.jsbody = await run(
-      issue.starter.replace(
+      challenge.starter.replace(
         "return broken;",
         `broken.add("net-" + probe());
         return broken;

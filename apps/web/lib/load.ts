@@ -1,10 +1,10 @@
 import { publishedCatalog } from "./catalog-source";
-import { library, type Library } from "./library";
+import { indexChallenges, type ChallengeIndex } from "./challenges";
 
-let loaded: Promise<Library> | undefined;
+let loaded: Promise<ChallengeIndex> | undefined;
 
-/** The browsable library, built once per server instance from published content. */
-export function getLibrary(): Promise<Library> {
-  loaded ??= publishedCatalog().then(library);
+/** The challenges, indexed once per server instance from published content. */
+export function getChallenges(): Promise<ChallengeIndex> {
+  loaded ??= publishedCatalog().then(indexChallenges);
   return loaded;
 }

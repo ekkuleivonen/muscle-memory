@@ -101,7 +101,7 @@ export function acceptConsent(): StoredProfile {
 
 /**
  * The language picked in quick start, as a first guess at the languages answer: saved
- * when the profile has none yet, so every IDE session's profile snapshot carries it. The
+ * when the profile has none yet, so every practice session's profile snapshot carries it. The
  * languages question still counts as open until the person answers it. Returns the profile.
  */
 export function guessLanguage(language: LanguageId): Profile {

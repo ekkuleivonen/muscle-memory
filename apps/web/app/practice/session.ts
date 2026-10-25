@@ -76,7 +76,7 @@ export interface SessionOptions {
   /** Every editable file and the text it starts with (the revision's, or restored work). */
   readonly files: Readonly<Record<string, EditableFile>>;
   readonly restoredFrom?: number;
-  /** The workspace's language, for the runtime and the editor features recorded; Python unless told otherwise. */
+  /** The challenge's language, for the runtime and the editor features recorded; Python unless told otherwise. */
   readonly language?: FileLanguage;
   readonly keymap?: Keymap;
   /** Type hints (squiggles, hover types) for languages that have them. */
@@ -102,11 +102,11 @@ export interface SessionOptions {
   readonly onEditedAfterRun: () => void;
   /** Called only when the save status shown to the player may have changed. */
   readonly onSaveStatus?: (status: SaveStatus) => void;
-  /** The app page the IDE was opened from, and the window size, for `opened`. */
+  /** The app page practice was opened from, and the window size, for `opened`. */
   readonly entry?: string | null;
   readonly viewport?: { width: number; height: number } | null;
   readonly environment?: Environment | null;
-  /** The self-reported profile when the IDE opened, for `opened`. */
+  /** The self-reported profile when practice opened, for `opened`. */
   readonly profile?: Json | null;
 }
 
@@ -129,7 +129,7 @@ export interface SaveStatus extends CaptureStatus {
   readonly unrecoverableReason?: string;
 }
 
-export class WorkspaceSession {
+export class PracticeSession {
   readonly recorder: CaptureRecorder;
   readonly sourceId = `practice-${randomId()}`;
   /** Editors by path, mounted when their tab is first shown. */
@@ -421,11 +421,11 @@ export class WorkspaceSession {
   }
 
   /**
-   * Records that the IDE was left, writes everything still buffered, then stops capture.
+   * Records that practice was left, writes everything still buffered, then stops capture.
    * `discard` stops at once without writing, for when the caller is about to delete the data.
    */
   async close(discard = false): Promise<void> {
-    // The IDE may already have dropped its runner when it unmounts.
+    // Practice may already have dropped its runner when it unmounts.
     this.options.runner()?.cancel();
     if (!discard && !this.closed) {
       this.closed = true;

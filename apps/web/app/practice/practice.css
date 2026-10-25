@@ -1,9 +1,6 @@
-/* Editor colours for every editor surface: the practice page and the older IDE. */
-.ide,
+/* Syntax colours for the editor, and the surface tooltips sit on. */
 .practice {
-  --ide-bar: #0b0c0e;
-  --ide-side: #121316;
-  --ide-editor: #0f1012;
+  --panel-bg: #121316;
   --syn-keyword: #c678dd;
   --syn-string: #98c379;
   --syn-number: #d19a66;
@@ -16,23 +13,8 @@
   --syn-punctuation: #9da3ad;
   --syn-invalid: #f2555a;
 }
-.ide {
-  --ide-panel: var(--bg);
-  position: fixed;
-  inset: 0;
-  display: grid;
-  grid-template-columns: 48px var(--side-w, 280px) minmax(0, 1fr);
-  grid-template-rows: 40px minmax(0, 1fr) 24px;
-  grid-template-areas:
-    "title title title"
-    "activity side main"
-    "status status status";
-  background: var(--ide-editor);
-  color: var(--fg);
-  font-size: 13px;
-}
-/* A log or receipt in a ticket scrolls inside the narrow side bar instead of being cut off. */
-.ide-link {
+/* A button that reads as a link, such as Retry. */
+.link-button {
   border: 0;
   padding: 0;
   background: none;
@@ -43,60 +25,60 @@
   cursor: pointer;
 }
 
-/* Bottom panel */
-.ide-summary {
+/* Run results: the summary line, each case, traces and output. */
+.run-summary {
   font-weight: 600;
 }
-.ide-summary.pass {
+.run-summary.pass {
   color: var(--green);
 }
-.ide-summary.fail {
+.run-summary.fail {
   color: var(--red);
 }
-.ide-cases {
+.run-cases {
   list-style: none;
   margin: 8px 0 0;
   padding: 0;
   font-size: 12.5px;
 }
-.ide-cases li {
+.run-cases li {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr) auto;
   gap: 8px;
   padding: 5px 0;
   border-top: 1px solid var(--line);
 }
-.ide-case-mark {
+.run-case-mark {
   font-weight: 700;
 }
-.ide-cases .pass .ide-case-mark {
+.run-cases .pass .run-case-mark {
   color: var(--green);
 }
-.ide-cases .fail .ide-case-mark {
+.run-cases .fail .run-case-mark {
   color: var(--red);
 }
-.ide-case-body {
+.run-case-body {
   display: flex;
   flex-direction: column;
   gap: 3px;
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.ide-case-body code {
+.run-case-body code {
   /* Inputs and outputs are data: keep every space. */
   white-space: pre-wrap;
   border: 0;
   background: none;
   padding: 0;
 }
-.ide-case-detail {
+.run-case-detail {
   display: flex;
   flex-direction: column;
   gap: 2px;
   color: var(--dim);
 }
-.ide-trace,
-.ide-output {
+.run-trace,
+.run-output {
   margin: 6px 0;
   padding: 8px 10px;
   border: 1px solid var(--line);
@@ -106,58 +88,29 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.ide-line.err,
-.ide-line.fail {
+.run-line.err,
+.run-line.fail {
   color: var(--red, #d14343);
 }
-.ide-line.pass {
+.run-line.pass {
   color: var(--green);
 }
-.ide-line.dim {
+.run-line.dim {
   color: var(--faint);
 }
-.ide .error {
+.practice .error {
   color: var(--red);
 }
-
-/* Status bar */
-
-@media (max-width: 860px) {
-  .ide {
-    grid-template-columns: 0 0 minmax(0, 1fr);
-  }
-}
-
-/* Pull requests */
-.ide-run-label {
+.run-label {
   margin: 4px 0 0 !important;
   font-size: 12px;
-}
-/* No byte count (starting up): VS Code's sliding indeterminate bar. */
-@keyframes ide-fade-in {
-  from {
-    opacity: 0;
-  }
-}
-@keyframes ide-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-@keyframes ide-slide {
-  from {
-    background-position: -30% 0;
-  }
-  to {
-    background-position: 130% 0;
-  }
 }
 
 /* Type hints: the type under the pointer, like an editor's hover. */
 .cm-tooltip.cm-tooltip-hover {
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: var(--ide-side);
+  background: var(--panel-bg);
   box-shadow: 0 6px 20px rgb(0 0 0 / 0.12);
 }
 .cm-type-hint {
@@ -177,17 +130,7 @@
 .cm-tooltip-lint {
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: var(--ide-side);
-}
-
-/* Small screens retain the ticket and every file through a focus-trapped drawer. */
-dialog::backdrop {
-  background: #0008;
-}
-@media (max-width: 860px) {
-  .ide {
-    grid-template-rows: auto minmax(0, 1fr) auto;
-  }
+  background: var(--panel-bg);
 }
 
 /*

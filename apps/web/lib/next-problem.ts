@@ -3,10 +3,10 @@
  * finishing a Python challenge never lands on a JavaScript one because it comes first in the
  * catalog. Pure, so it is testable.
  */
-import type { IssueSummary } from "./library";
+import type { ChallengeSummary } from "./challenges";
 
 type Candidate = Pick<
-  IssueSummary,
+  ChallengeSummary,
   "key" | "language" | "difficulty" | "runnable"
 >;
 
@@ -25,32 +25,32 @@ export function nextProblems<T extends Candidate>(
   languages: readonly string[] = [],
   count = 1,
 ): T[] {
-  const level = (issue: Candidate) => {
-    const index = LEVELS.indexOf(issue.difficulty);
+  const level = (challenge: Candidate) => {
+    const index = LEVELS.indexOf(challenge.difficulty);
     return index === -1 ? LEVELS.length : index;
   };
-  const closeness = (issue: Candidate) => {
-    const step = level(issue) - level(current);
+  const closeness = (challenge: Candidate) => {
+    const step = level(challenge) - level(current);
     return step >= 0 ? step : 1 - 2 * step;
   };
-  const relevance = (issue: Candidate) =>
-    issue.language && issue.language === current.language
+  const relevance = (challenge: Candidate) =>
+    challenge.language && challenge.language === current.language
       ? 0
-      : issue.language && languages.includes(issue.language)
+      : challenge.language && languages.includes(challenge.language)
         ? 1
         : 2;
   return candidates
-    .map((issue, index) => ({ issue, index }))
+    .map((challenge, index) => ({ challenge, index }))
     .filter(
-      ({ issue }) =>
-        issue.key !== current.key && !completed.has(issue.key),
+      ({ challenge }) =>
+        challenge.key !== current.key && !completed.has(challenge.key),
     )
     .map((entry) => ({
       ...entry,
       rank: [
-        entry.issue.runnable ? 0 : 1,
-        relevance(entry.issue),
-        closeness(entry.issue),
+        entry.challenge.runnable ? 0 : 1,
+        relevance(entry.challenge),
+        closeness(entry.challenge),
         entry.index,
       ],
     }))
@@ -60,7 +60,7 @@ export function nextProblems<T extends Candidate>(
       return 0;
     })
     .slice(0, count)
-    .map(({ issue }) => issue);
+    .map(({ challenge }) => challenge);
 }
 
 /** The single best next challenge, or null when nothing is left. */

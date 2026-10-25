@@ -14,13 +14,15 @@ import { LANGUAGES, type LanguageId } from "./languages";
 
 export const DIFFICULTIES: readonly Difficulty[] = ["easy", "medium", "hard"];
 
-export interface Issue {
+export interface Challenge {
   /** Permanent, as recorded data names it: PY-003, the language's code and a number. */
   key: string;
   /** The live revision: sha256:… of its content. */
   revision: string;
   title: string;
   summary: string;
+  /** A sharper invitation for shared links, when the challenge has one. */
+  hook?: string;
   task: string;
   difficulty: Difficulty;
   language?: LanguageId;
@@ -36,9 +38,9 @@ export interface Issue {
  * heavier, examples cannot cross the server-to-client boundary intact (React's serializer drops
  * a "__proto__" key, which fixtures contain).
  */
-export type IssueSummary = Omit<Issue, "task" | "criteria">;
+export type ChallengeSummary = Omit<Challenge, "task" | "criteria">;
 
-export function summarize({ task: _task, criteria: _criteria, ...summary }: Issue): IssueSummary {
+export function summarize({ task: _task, criteria: _criteria, ...summary }: Challenge): ChallengeSummary {
   return summary;
 }
 
@@ -52,18 +54,19 @@ export function runnable(revision: Revision): boolean {
   return (
     !!engineFor(language) &&
     (language !== "sql" || typeof schema === "string") &&
-    // C, C++ and Java need the issue's adapter to call the function.
+    // C, C++ and Java need the challenge's adapter to call the function.
     ((language !== "c" && language !== "cpp" && language !== "java") ||
       typeof adapter === "string")
   );
 }
 
-function toIssue(meta: ChallengeMetadata, revision: Revision): Issue {
+function toIssue(meta: ChallengeMetadata, revision: Revision): Challenge {
   return {
     key: meta.key,
     revision: meta.revision,
     title: meta.title,
     summary: meta.summary,
+    ...(meta.hook ? { hook: meta.hook } : {}),
     task: revision.task,
     difficulty: meta.difficulty,
     language: LANGUAGES.find((l) => l.id === revision.language)?.id,
@@ -75,22 +78,22 @@ function toIssue(meta: ChallengeMetadata, revision: Revision): Issue {
   };
 }
 
-export interface Library {
+export interface ChallengeIndex {
   /** Every challenge, by key. */
-  issues: Issue[];
+  challenges: Challenge[];
   /** A challenge by its key, in any case. */
-  findIssue(ref: string): Issue | undefined;
+  findChallenge(ref: string): Challenge | undefined;
   /** A live revision by id. */
   revision(id: string): Revision | undefined;
 }
 
-export function library(catalog: Catalog): Library {
-  const issues = catalog.challenges.map((meta) =>
+export function indexChallenges(catalog: Catalog): ChallengeIndex {
+  const challenges = catalog.challenges.map((meta) =>
     toIssue(meta, catalog.revisions[meta.revision]),
   );
   return {
-    issues,
-    findIssue: (ref) => issues.find((i) => i.key === ref.toUpperCase()),
+    challenges,
+    findChallenge: (ref) => challenges.find((i) => i.key === ref.toUpperCase()),
     revision: (id) => catalog.revisions[id],
   };
 }

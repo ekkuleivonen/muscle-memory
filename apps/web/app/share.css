@@ -13,10 +13,10 @@
   color: var(--fg);
   border-color: var(--line-strong);
 }
-.share-issue {
+.share-challenge {
   margin-top: 16px;
 }
-.share-issue p {
+.share-challenge p {
   margin: 6px 0 0;
   font-size: 12px;
 }

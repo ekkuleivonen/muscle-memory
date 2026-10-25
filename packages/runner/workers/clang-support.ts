@@ -1,5 +1,5 @@
 /**
- * The C side of the C/C++ runner (valid C and C++, compiled as the program's language): a small JSON library the issue's adapter uses to turn a
+ * The C side of the C/C++ runner (valid C and C++, compiled as the program's language): a small JSON library the challenge's adapter uses to turn a
  * case's arguments into C or C++ values and the result back into JSON, and the program's
  * main. Compiled with every run, next to the solution and the adapter; the main reads the
  * case from stdin and writes the result to /result.json, so stdout stays the program's own.
@@ -40,7 +40,7 @@ void mm_set(mm_value *object, const char *key, mm_value *item);
 mm_value *mm_parse(const char *text);
 void mm_write(FILE *out, const mm_value *value);
 
-/* The issue's adapter defines this: the arguments arrive as a JSON array. */
+/* The challenge's adapter defines this: the arguments arrive as a JSON array. */
 mm_value *mm_call(const mm_value *args);
 
 #ifdef __cplusplus
@@ -119,7 +119,7 @@ void mm_set(mm_value *object, const char *key, mm_value *item) {
   object->items[object->length++] = item;
 }
 
-/* Parsing: the cases come from the issue, so this trusts their shape. */
+/* Parsing: the cases come from the challenge, so this trusts their shape. */
 static const char *skip(const char *p) {
   while (*p == ' ' || *p == '\n' || *p == '\r' || *p == '\t') p++;
   return p;

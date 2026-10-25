@@ -4,7 +4,7 @@
  * the built catalog.
  *
  *   PY-001/
- *     challenge.json   title, summary, difficulty, tags, file, entrypoint, parameters?
+ *     challenge.json   title, summary, hook?, difficulty, tags, file, entrypoint, parameters?
  *     task.md          what to do
  *     <file>           the starter, under the file's own name (count_words.py)
  *     cases.json       [{ name?, input, expected, hidden? }]
@@ -58,6 +58,7 @@ export function readChallenge(dir: string): ChallengeSource {
   const meta = json(dir, "challenge.json") as {
     title: string;
     summary: string;
+    hook?: string;
     difficulty: Difficulty;
     tags: string[];
     file: string;
@@ -101,7 +102,14 @@ export function readChallenge(dir: string): ChallengeSource {
     ]),
   );
   return {
-    metadata: { key, title: meta.title, summary: meta.summary, difficulty: meta.difficulty, tags: meta.tags },
+    metadata: {
+      key,
+      title: meta.title,
+      summary: meta.summary,
+      ...(meta.hook ? { hook: meta.hook } : {}),
+      difficulty: meta.difficulty,
+      tags: meta.tags,
+    },
     revision,
     private: {
       solution: read(privateDir, `solution${ext}`),

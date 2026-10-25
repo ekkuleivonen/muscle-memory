@@ -9,7 +9,7 @@ import { latestSavedCode } from "../../../../packages/capture/restore";
 import type { Runner } from "../../../../packages/runner/runner";
 import { saveState } from "./save-state";
 import { live } from "../../lib/test-fixtures";
-import { WorkspaceSession, type SaveStatus } from "./session";
+import { PracticeSession, type SaveStatus } from "./session";
 
 const base = live("PY-002");
 const fixture = { ...base, path: base.revision.file, starter: base.revision.starter };
@@ -21,7 +21,7 @@ const SAVED = /^All changes saved/;
 function workspace(sink: CaptureSink, initialCode = "") {
   let state = EditorState.create({ doc: initialCode });
   const updates: SaveStatus[] = [];
-  const session = new WorkspaceSession({
+  const session = new PracticeSession({
     participantId: P,
     termsVersion: "2026-10-01",
     challenge: { key: ISSUE, revision: fixture.revision, revisionId: fixture.id },

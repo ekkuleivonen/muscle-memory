@@ -1,5 +1,5 @@
 import { LEGAL_DRAFT, LEGAL_UPDATED, LEGAL_VERSION } from "../../lib/legal";
-import { Markdown } from "../(browse)/_components/markdown";
+import { Markdown } from "../_components/markdown";
 import { TermFooter } from "../_terminal/footer";
 import "../_terminal/terminal.css";
 

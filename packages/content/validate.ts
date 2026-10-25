@@ -100,6 +100,7 @@ export function validateCatalog(value: unknown): Catalog {
     const where = `challenge ${challenge.key}`;
     text(challenge.title, `${where} title`);
     if (typeof challenge.summary !== "string") fail(where, "needs a summary");
+    if (challenge.hook !== undefined) text(challenge.hook, `${where} hook`);
     if (!DIFFICULTIES.includes(challenge.difficulty)) fail(where, "unknown difficulty");
     if (!Array.isArray(challenge.tags) || !challenge.tags.every((t: string) => TAG.test(t)))
       fail(where, "tags are lowercase slugs");

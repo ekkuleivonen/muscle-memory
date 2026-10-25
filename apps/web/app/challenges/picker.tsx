@@ -8,14 +8,14 @@ import {
   type KeyboardEvent,
 } from "react";
 import { engineFor, warmRuntime } from "../../../../packages/runner/runner";
-import { DIFFICULTIES, languageLabel, type Issue } from "../../lib/library";
+import { DIFFICULTIES, languageLabel, type Challenge } from "../../lib/challenges";
 import {
   filterByMarks,
-  filterIssues,
+  filterChallenges,
   formatQuery,
-  parseIssueQuery,
+  parseChallengeQuery,
   toggle,
-  type IssueQuery,
+  type ChallengeQuery,
   type ListKey,
   type Mark,
 } from "../../lib/queries";
@@ -25,11 +25,9 @@ import { completed } from "../../lib/progress";
 import { useProgress, useStars } from "../../lib/progress-hooks";
 import { logStar } from "../../lib/site-log";
 import { noteStart } from "../../lib/start";
-import { ChallengeExamples } from "../(browse)/_components/challenge-examples";
-import { Markdown } from "../(browse)/_components/markdown";
+import { ChallengeExamples } from "../_components/challenge-examples";
+import { Markdown } from "../_components/markdown";
 
-/** A challenge as the picker lists, searches and previews it. */
-export type PickerChallenge = Issue;
 
 /** How many tags get a toggle; the rest match when typed. */
 const TAGS = 10;
@@ -49,7 +47,7 @@ export function Picker({
 }) {
   const router = useRouter();
   const all = useMemo(
-    () => JSON.parse(challengesJson) as PickerChallenge[],
+    () => JSON.parse(challengesJson) as Challenge[],
     [challengesJson],
   );
   const progress = useProgress();
@@ -61,25 +59,25 @@ export function Picker({
   const input = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLOListElement>(null);
 
-  const query = useMemo(() => parseIssueQuery(text), [text]);
+  const query = useMemo(() => parseChallengeQuery(text), [text]);
   const results = useMemo(() => {
     // Easiest first, unless the search asks for another order.
     const ordered = /(^|\s)sort:/.test(text)
       ? query
       : { ...query, sort: "difficulty" as const };
-    return filterByMarks(filterIssues(all, ordered), query.marks, has);
+    return filterByMarks(filterChallenges(all, ordered), query.marks, has);
   }, [all, query, text, progress, stars]);
   const at = Math.min(cursor, Math.max(0, results.length - 1));
   const current = results[at];
 
   const facets = useMemo(() => {
     const count = new Map<string, number>();
-    for (const issue of all)
-      for (const tag of issue.tags) count.set(tag, (count.get(tag) ?? 0) + 1);
+    for (const challenge of all)
+      for (const tag of challenge.tags) count.set(tag, (count.get(tag) ?? 0) + 1);
     const present = <T,>(
       values: readonly T[],
-      of: (i: Issue) => T | undefined,
-    ) => values.filter((value) => all.some((issue) => of(issue) === value));
+      of: (i: Challenge) => T | undefined,
+    ) => values.filter((value) => all.some((challenge) => of(challenge) === value));
     return [
       {
         name: "mine",
@@ -152,30 +150,30 @@ export function Picker({
     setCursor(0);
   };
   const flip = (key: ListKey, value: string) => {
-    search(formatQuery(toggle(query, key, value) as IssueQuery));
+    search(formatQuery(toggle(query, key, value) as ChallengeQuery));
     input.current?.focus();
   };
   /** Practice records the start, with the search then and the position in the list. */
-  const start = (issue: PickerChallenge) => {
+  const start = (challenge: Challenge) => {
     noteStart({
-      key: issue.key,
+      key: challenge.key,
       from: "picker",
       query: text.trim() || null,
-      position: results.indexOf(issue) + 1,
+      position: results.indexOf(challenge) + 1,
     });
-    router.push(practiceHref(issue.key));
+    router.push(practiceHref(challenge.key));
   };
-  const star = (issue: PickerChallenge) => {
-    const starred = !stars.includes(issue.key);
-    writeStars(toggleStar(stars, issue.key));
+  const star = (challenge: Challenge) => {
+    const starred = !stars.includes(challenge.key);
+    writeStars(toggleStar(stars, challenge.key));
     void logStar(
-      { key: issue.key, revision: issue.revision },
+      { key: challenge.key, revision: challenge.revision },
       starred,
       { from: "picker" },
     );
   };
-  const warm = (issue: PickerChallenge) => {
-    const engine = issue.language && engineFor(issue.language);
+  const warm = (challenge: Challenge) => {
+    const engine = challenge.language && engineFor(challenge.language);
     if (engine) warmRuntime(engine);
   };
 
@@ -258,19 +256,19 @@ export function Picker({
           role="listbox"
           aria-label="Challenges"
         >
-          {results.map((issue, index) => {
-            const starred = has(issue.key, "starred");
-            const completed = has(issue.key, "completed");
+          {results.map((challenge, index) => {
+            const starred = has(challenge.key, "starred");
+            const completed = has(challenge.key, "completed");
             return (
               <li
-                key={issue.key}
-                id={`pick-${issue.key}`}
+                key={challenge.key}
+                id={`pick-${challenge.key}`}
                 data-index={index}
                 role="option"
                 aria-selected={index === at}
                 className={index === at ? "t-current-row" : undefined}
                 onClick={() => setCursor(index)}
-                onDoubleClick={() => start(issue)}
+                onDoubleClick={() => start(challenge)}
               >
                 <span className="t-accent">{index === at ? "❯" : " "}</span>
                 <span
@@ -285,11 +283,11 @@ export function Picker({
                 >
                   {completed ? "✔" : " "}
                 </span>
-                <span className="picker-key t-dim">{issue.key}</span>
-                <span className="picker-title">{issue.title}</span>
+                <span className="picker-key t-dim">{challenge.key}</span>
+                <span className="picker-title">{challenge.title}</span>
                 <span className="t-dim picker-meta">
-                  {languageLabel(issue.language).toLowerCase()} ·{" "}
-                  {issue.difficulty}
+                  {languageLabel(challenge.language).toLowerCase()} ·{" "}
+                  {challenge.difficulty}
                 </span>
               </li>
             );

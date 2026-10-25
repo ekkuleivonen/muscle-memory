@@ -1,21 +1,21 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { requireConsent } from "../../../lib/gate";
-import { summarize } from "../../../lib/library";
+import { summarize } from "../../../lib/challenges";
 import { practiceHref } from "../../../lib/paths";
-import { getLibrary } from "../../../lib/load";
+import { getChallenges } from "../../../lib/load";
 import "../../_terminal/terminal.css";
-import "../../practice/ide.css";
-import { Ide } from "../../practice/ide";
+import "../../practice/practice.css";
+import { Practice } from "../../practice/practice";
 
 type Props = { params: Promise<{ key: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { findIssue } = await getLibrary();
-  const issue = findIssue(decodeURIComponent((await params).key));
+  const { findChallenge } = await getChallenges();
+  const challenge = findChallenge(decodeURIComponent((await params).key));
   return {
-    title: issue
-      ? `${issue.key} · Practice · Muscle Memory`
+    title: challenge
+      ? `${challenge.key} · Practice · Muscle Memory`
       : "Challenge not found · Muscle Memory",
   };
 }
@@ -28,32 +28,32 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PracticePage({ params }: Props) {
   const { key } = await params;
   await requireConsent(practiceHref(key));
-  const { findIssue, revision: revisionOf, issues } = await getLibrary();
-  const issue = findIssue(decodeURIComponent(key));
-  if (!issue) notFound();
-  if (key !== issue.key) redirect(practiceHref(issue.key));
-  const content = revisionOf(issue.revision)!;
+  const { findChallenge, revision: revisionOf, challenges } = await getChallenges();
+  const challenge = findChallenge(decodeURIComponent(key));
+  if (!challenge) notFound();
+  if (key !== challenge.key) redirect(practiceHref(challenge.key));
+  const content = revisionOf(challenge.revision)!;
   return (
-    <Ide
-      key={`${issue.key}:${issue.revision}`}
+    <Practice
+      key={`${challenge.key}:${challenge.revision}`}
       revisionJson={JSON.stringify(content)}
       trail={[
         { label: "challenges", href: "/challenges" },
-        { label: issue.key, href: practiceHref(issue.key) },
+        { label: challenge.key, href: practiceHref(challenge.key) },
       ]}
       candidates={[
-        summarize(issue),
-        ...issues.filter((i) => i.key !== issue.key).map(summarize),
+        summarize(challenge),
+        ...challenges.filter((i) => i.key !== challenge.key).map(summarize),
       ]}
-      issue={{
-        key: issue.key,
-        revision: issue.revision,
-        title: issue.title,
+      challenge={{
+        key: challenge.key,
+        revision: challenge.revision,
+        title: challenge.title,
         task: content.task,
-        difficulty: issue.difficulty,
-        tags: [...issue.tags],
-        language: issue.language!,
-        runnable: issue.runnable,
+        difficulty: challenge.difficulty,
+        tags: [...challenge.tags],
+        language: challenge.language!,
+        runnable: challenge.runnable,
       }}
     />
   );

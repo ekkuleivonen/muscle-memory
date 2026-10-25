@@ -3,7 +3,7 @@ import { PRELUDE } from "./shared";
 
 /**
  * Java on teavm-javac: OpenJDK's javac and the TeaVM compiler, both compiled to WebAssembly.
- * javac compiles the solution, the issue's adapter and a small JSON library; TeaVM turns the
+ * javac compiles the solution, the challenge's adapter and a small JSON library; TeaVM turns the
  * classes into a WebAssembly program, and every case runs as a fresh instance of it, with the
  * case's arguments as main's only argument. System.out arrives through console.log; the
  * harness's own result line is marked so it can be told apart.

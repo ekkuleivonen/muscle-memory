@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Json } from "../../../../../packages/domain/json";
+import type { Json } from "../../../../packages/domain/json";
 import {
   type Revision,
-} from "../../../../../packages/content/model";
-import type { StoredRecord } from "../../../../../packages/domain/records";
-import { LANGUAGES } from "../../../lib/languages";
+} from "../../../../packages/content/model";
+import type { StoredRecord } from "../../../../packages/domain/records";
+import { LANGUAGES } from "../../lib/languages";
 import {
   encodeOutcome,
   completedRun,
@@ -13,7 +13,7 @@ import {
   outcomeSentence,
   publicOutcome,
   type Outcome,
-} from "../../../lib/outcome";
+} from "../../lib/outcome";
 import {
   codeFragment,
   encodeCode,
@@ -21,11 +21,11 @@ import {
   type CodeRefusal,
   solutionOf,
   type SharedFile,
-} from "../../../lib/share";
-import { logShare } from "../../../lib/site-log";
-import { practiceHref } from "../../../lib/paths";
+} from "../../lib/share";
+import { logShare } from "../../lib/site-log";
+import { practiceHref } from "../../lib/paths";
 import { copyText, useReferral } from "./result-card";
-import "../../share.css";
+import "../share.css";
 
 type Channel = "copy" | "x" | "linkedin" | "native";
 
@@ -38,7 +38,7 @@ export function CopyLink({
   label = "Copy link",
   className,
 }: {
-  /** A path on this site, e.g. practiceHref(issue.key). */
+  /** A path on this site, e.g. practiceHref(challenge.key). */
   href: string;
   label?: string;
   className?: string;
@@ -64,12 +64,12 @@ export function CopyLink({
 }
 
 /** The challenge's link, from practice. */
-export function CopyIssueLink({ issueKey }: { issueKey: string }) {
+export function CopyChallengeLink({ challengeKey }: { challengeKey: string }) {
   return (
-    <div className="share-issue">
-      <CopyLink href={practiceHref(issueKey)} label="Copy challenge link" />
+    <div className="share-challenge">
+      <CopyLink href={practiceHref(challengeKey)} label="Copy challenge link" />
       <p className="faint">
-        Opens {issueKey} from its starting code for whoever you send it to.
+        Opens {challengeKey} from its starting code for whoever you send it to.
         Never your code or your attempt.
       </p>
     </div>
@@ -85,12 +85,12 @@ export function CopyIssueLink({ issueKey }: { issueKey: string }) {
  */
 export function ShareResult({
   state,
-  issue,
+  challenge,
   code,
 }: {
   /** The card to share: a v3 outcome. */
   state: { result: Outcome | null; label: string };
-  issue: { key: string; title: string; revision: string };
+  challenge: { key: string; title: string; revision: string };
   /**
    * The solution as checked; only shared when ticked. "missing" when the checked copy wasn't
    * kept: the box is offered and then refuses.
@@ -137,13 +137,13 @@ export function ShareResult({
   const segment = encodeOutcome(card);
   const including = withCode && !!packed;
   const url = `${location.origin}/r/${segment}${including ? codeFragment(packed) : ""}`;
-  const said = outcomeSentence(card, state.label, issue.title, "first");
+  const said = outcomeSentence(card, state.label, challenge.title, "first");
   const text = `${said} Keep your coding skills in practice.`;
   const share = async (channel: Channel) => {
     // Ticked but not packed yet, or refused: never share without saying so, or share part of it.
     if (withCode && !packed) return;
     void logShare(
-      { key: issue.key, revision: issue.revision },
+      { key: challenge.key, revision: challenge.revision },
       {
         channel,
         ref: card.c,
@@ -219,8 +219,8 @@ export function ShareResult({
           <p className="share-text">{text}</p>
           <p className="faint share-note">
             {including
-              ? `Your result, a link to try ${issue.key}, and your solution.`
-              : `Your result and a link to try ${issue.key} from the start. Not your code.`}
+              ? `Your result, a link to try ${challenge.key}, and your solution.`
+              : `Your result and a link to try ${challenge.key} from the start. Not your code.`}
           </p>
           {(file || missing) && (
             <label className="share-code">
@@ -344,7 +344,7 @@ export function ShareOutcome({
   return (
     <ShareResult
       state={{ result: card, label }}
-      issue={{
+      challenge={{
         key: challenge.key,
         title: challenge.title,
         revision: challenge.revision,

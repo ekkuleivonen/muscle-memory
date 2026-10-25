@@ -28,7 +28,7 @@ export function recoveryMessage(recovered: RecoveredCode): string {
   return `Restored the latest code${from} that could be recovered exactly; your last few changes weren't. Check it before you continue.`;
 }
 
-/** A few words for the IDE's status bar; saveState() gives the full story as its tooltip. */
+/** A few words for the code pane's status; saveState() gives the full story as its tooltip. */
 export function saveBadge(status: SaveStatus): {
   label: string;
   tone: "ok" | "busy" | "warn";

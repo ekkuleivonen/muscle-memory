@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import { languageLabel } from "../../lib/library";
-import { getLibrary } from "../../lib/load";
+import { languageLabel } from "../../lib/challenges";
+import { getChallenges } from "../../lib/load";
 import { hasConsent, CONSENT_COOKIE } from "../../lib/profile";
 import { Banner } from "../_terminal/banner";
 import { TermFooter } from "../_terminal/footer";
@@ -24,9 +24,9 @@ export default async function Start({ searchParams }: Props) {
   const { ref, lang } = await searchParams;
   const store = await cookies();
   const consented = hasConsent(store.get(CONSENT_COOKIE)?.value);
-  const { issues } = await getLibrary();
-  const runnable = issues.filter((i) => i.runnable && i.language);
-  const challenges: QuickChallenge[] = runnable.map((i) => ({
+  const { challenges } = await getChallenges();
+  const runnable = challenges.filter((i) => i.runnable && i.language);
+  const quick: QuickChallenge[] = runnable.map((i) => ({
     key: i.key,
     language: i.language!,
     difficulty: i.difficulty,
@@ -46,7 +46,7 @@ export default async function Start({ searchParams }: Props) {
             code.
           </p>
           <QuickStart
-            challengesJson={JSON.stringify(challenges)}
+            challengesJson={JSON.stringify(quick)}
             languages={languages}
             consented={consented}
             referral={ref ?? null}

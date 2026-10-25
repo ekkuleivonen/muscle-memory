@@ -8,7 +8,7 @@ import {
   type WorkspaceView,
 } from "./continuity";
 const view: WorkspaceView = {
-  scope: viewScope("issue", null),
+  scope: viewScope("challenge", null),
   tabs: ["removed", "quote.js", "quote.js"],
   active: "removed",
   side: "explorer",
@@ -21,8 +21,8 @@ const view: WorkspaceView = {
 };
 test("continuity tolerates corrupt local views and separates replays", () => {
   assert.deepEqual(parseViews("bad"), []);
-  assert.deepEqual(parseViews('[{"scope":"issue"}]'), []);
-  assert.notEqual(viewScope("issue", null), viewScope("issue", "replay"));
+  assert.deepEqual(parseViews('[{"scope":"challenge"}]'), []);
+  assert.notEqual(viewScope("challenge", null), viewScope("challenge", "replay"));
   assert.notEqual(viewScope("other", null), view.scope);
 });
 test("changed repo drops missing paths and clamps selections without losing the panel", () => {

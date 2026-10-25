@@ -17,17 +17,17 @@ test("only the current Terms open the app", () => {
 test("next only ever leads to a path on this site, never back to /consent", () => {
   const fallback = "/dashboard";
   assert.equal(
-    safeNext("/issues?q=lang%3Apython", fallback),
-    "/issues?q=lang%3Apython",
+    safeNext("/challenges?q=lang%3Apython", fallback),
+    "/challenges?q=lang%3Apython",
   );
   assert.equal(safeNext("/projects#top", fallback), "/projects#top");
   for (const bad of [
     undefined,
     42,
-    "issues",
+    "challenges",
     "//evil.example/x",
     "https://evil.example/",
-    "/consent?next=/issues",
+    "/consent?next=/challenges",
     "/\\evil.example",
   ])
     assert.equal(safeNext(bad, fallback), fallback, String(bad));

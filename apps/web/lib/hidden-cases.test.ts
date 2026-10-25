@@ -17,7 +17,7 @@ import { diagnose, failureOf, failureText } from "./diagnosis";
 // need React in scope before they load.
 (globalThis as { React?: unknown }).React = React;
 const { CheckFeedbackView } = await import(
-  "../app/(browse)/_components/review"
+  "../app/_components/review"
 );
 const { createElement } = React;
 

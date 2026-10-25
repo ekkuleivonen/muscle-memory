@@ -32,7 +32,7 @@ let text = "";
 let version = 0;
 let service = null;
 
-// No DOM in the issues' runtime; just what a server-side module has.
+// No DOM in the challenges' runtime; just what a server-side module has.
 const GLOBALS = "declare var console: { log(...data: any[]): void; info(...data: any[]): void; warn(...data: any[]): void; error(...data: any[]): void };\n" +
   "declare function setTimeout(handler: (...args: any[]) => void, ms?: number, ...args: any[]): number;\n" +
   "declare function clearTimeout(id: number | undefined): void;\n";

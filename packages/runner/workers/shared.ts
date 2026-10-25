@@ -99,7 +99,7 @@ function codeError(error, filename, urls = []) {
   return { type, message: message.slice(0, 2000), traceback: bounded(text.trimEnd() + "\n") };
 }
 
-/** One argument per case, or a list of arguments when the issue names its parameters. */
+/** One argument per case, or a list of arguments when the challenge names its parameters. */
 function argumentsOf(input, parameters) {
   return Array.isArray(parameters) ? input : [input];
 }

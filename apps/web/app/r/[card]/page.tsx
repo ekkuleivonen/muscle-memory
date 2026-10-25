@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { hookFor } from "../../../lib/hooks";
 import { LANGUAGES } from "../../../lib/languages";
-import { getLibrary } from "../../../lib/load";
+import { getChallenges } from "../../../lib/load";
 import {
   outcomeLines,
   outcomeSentence,
@@ -12,7 +11,7 @@ import { YourTurn } from "./your-turn";
 import { Arrived } from "./arrived";
 import { SharedCode } from "./shared-code";
 import { SharedHeader, Unavailable } from "./unavailable";
-import { Receipt } from "../../(browse)/_components/result-card";
+import { Receipt } from "../../_components/result-card";
 
 type Props = { params: Promise<{ card: string }> };
 
@@ -33,25 +32,25 @@ function view(card: Outcome, label: string, title: string, live: string) {
 
 async function read(props: Props) {
   const link = inspectCard((await props.params).card);
-  const { findIssue } = await getLibrary();
-  if (link.kind !== "outcome") return { link, issue: undefined };
+  const { findChallenge } = await getChallenges();
+  if (link.kind !== "outcome") return { link, challenge: undefined };
   const card = link.outcome;
-  const issue = findIssue(card.k);
+  const challenge = findChallenge(card.k);
   const label = LANGUAGES.find((l) => l.id === card.l)?.label ?? card.l;
   return {
     link,
-    issue,
+    challenge,
     label,
-    shown: issue ? view(card, label, issue.title, issue.revision) : undefined,
+    shown: challenge ? view(card, label, challenge.title, challenge.revision) : undefined,
   };
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
-  const { issue, label, shown } = await read(props);
-  if (!issue || !shown)
+  const { challenge, label, shown } = await read(props);
+  if (!challenge || !shown)
     return { title: "Result not available · Muscle Memory", robots: { index: false } };
   const title = shown.headline;
-  const description = `${issue.summary || issue.title} The same ${label} challenge, from its starting code.`;
+  const description = `${challenge.summary || challenge.title} The same ${label} challenge, from its starting code.`;
   return {
     title,
     description,
@@ -67,7 +66,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
  * so, never something in its place.
  */
 export default async function SharedResult(props: Props) {
-  const { link, issue, shown } = await read(props);
+  const { link, challenge, shown } = await read(props);
   if (link.kind === "malformed")
     return (
       <Unavailable
@@ -75,7 +74,7 @@ export default async function SharedResult(props: Props) {
         body="Part of the link is missing or changed, so there's no result to show. Ask whoever sent it to copy it again."
       />
     );
-  if (!issue || !shown)
+  if (!challenge || !shown)
     return (
       <Unavailable
         title="That challenge isn't available any more"
@@ -89,7 +88,7 @@ export default async function SharedResult(props: Props) {
       <main className="legal-body home-body">
         <section className="result-card shared">
           <Receipt
-            top={`muscle memory · ${issue.key} · shared result`}
+            top={`muscle memory · ${challenge.key} · shared result`}
             headline={shown.headline}
             detail={`${shown.earlier ? "Completed on an earlier version of this challenge; you start from the current one. " : ""}The editor offers no AI completion, chat or generated code: a practice condition, not proof about other tools. As they shared it; not a verified record.`}
             lines={shown.lines}
@@ -103,13 +102,13 @@ export default async function SharedResult(props: Props) {
             <span className="home-punch">Your turn.</span>
           </h1>
           <p className="home-lede">
-            {hookFor(issue) ?? (issue.summary || issue.title)}{" "}
-            {startCopy(issue.key, shown.sameVersion).lede}
+            {challenge.hook ?? (challenge.summary || challenge.title)}{" "}
+            {startCopy(challenge.key, shown.sameVersion).lede}
           </p>
           <div className="home-actions">
             <YourTurn
-              challengeKey={issue.key}
-              label={startCopy(issue.key, shown.sameVersion).cta}
+              challengeKey={challenge.key}
+              label={startCopy(challenge.key, shown.sameVersion).cta}
             />
             <span className="home-note">No email needed.</span>
           </div>

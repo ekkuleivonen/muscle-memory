@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { LANGUAGES } from "../../../lib/languages";
-import { getLibrary } from "../../../lib/load";
+import { getChallenges } from "../../../lib/load";
 import { outcomeLines, outcomeSentence } from "../../../lib/outcome";
 import { inspectCard } from "../../../lib/share";
 
@@ -24,11 +24,11 @@ export default async function Image({
     ? (LANGUAGES.find((l) => l.id === card.l)?.label ?? card.l)
     : "";
   // As on the page: a card for a retired challenge is not shown.
-  const issue = card ? (await getLibrary()).findIssue(card.k) : undefined;
+  const challenge = card ? (await getChallenges()).findChallenge(card.k) : undefined;
   const shown =
-    issue && card
+    challenge && card
       ? {
-          headline: outcomeSentence(card, label, issue.title),
+          headline: outcomeSentence(card, label, challenge.title),
           stats: outcomeLines(card),
         }
       : null;

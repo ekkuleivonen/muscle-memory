@@ -21,7 +21,7 @@ export default async function Consent({ searchParams }: Props) {
   return (
     <div className="legal home">
       <header className="legal-head">
-        <Link href="/" className="workspace-name">
+        <Link href="/" className="site-name">
           <img
             className="logo-mark"
             src="/logo.svg"

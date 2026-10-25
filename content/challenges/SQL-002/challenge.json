@@ -1,6 +1,7 @@
 {
   "title": "Collected-by-partner report overstates split payments",
   "summary": "Sum what was actually paid, and list partners who paid nothing.",
+  "hook": "The payment report overcounts one partner—and leaves out the one who paid nothing. Fix the SQL.",
   "difficulty": "easy",
   "tags": [
     "joins",

@@ -176,7 +176,7 @@ function Privacy() {
     <SettingsFrame title="Privacy">
       <p>
         What you do here is recorded to run the product: keeping your practice
-        history and making better issues. Community comparisons require
+        history and making better challenges. Community comparisons require
         published aggregate data; model benchmarks are planned.
       </p>
       <p>

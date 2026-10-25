@@ -33,7 +33,7 @@ Code is stored once per revision as an `artifact.code-revision` (every editable 
 
 ## The practice stream
 
-Everything inside a challenge at `/challenges/<KEY>` (`packages/domain/practice.ts`, recorded by `apps/web/app/workspace/session.ts` through `packages/capture/recorder.ts`). One source stream per page load: `practice-<id>`.
+Everything inside a challenge at `/challenges/<KEY>` (`packages/domain/practice.ts`, recorded by `apps/web/app/practice/session.ts` through `packages/capture/recorder.ts`). One source stream per page load: `practice-<id>`.
 
 **Attempts.** Practice works in an attempt (`apps/web/lib/progress.ts`). Opening a challenge resumes its attempt; the first open, or a start after the last attempt completed, begins a new one. Every practice observation names its attempt.
 

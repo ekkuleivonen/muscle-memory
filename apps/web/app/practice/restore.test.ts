@@ -10,7 +10,7 @@ import { latestSavedCode } from "../../../../packages/capture/restore";
 import type { StoredRecord } from "../../../../packages/domain/records";
 import type { Runner } from "../../../../packages/runner/runner";
 import { live } from "../../lib/test-fixtures";
-import { WorkspaceSession } from "./session";
+import { PracticeSession } from "./session";
 
 const base = live("PY-002");
 const fixture = { ...base, path: base.revision.file, starter: base.revision.starter };
@@ -31,7 +31,7 @@ function workspace(
   attemptId = ATTEMPT,
 ) {
   let state = EditorState.create({ doc: initialCode, extensions: [history()] });
-  const session = new WorkspaceSession({
+  const session = new PracticeSession({
     participantId,
     termsVersion: "2026-10-01",
     challenge,
@@ -128,7 +128,7 @@ test("only the given attempt's code is restored; a new attempt opens on the star
   // Each attempt restores its own code, though the second one is newer.
   assert.equal(latestSavedCode(all, P, ISSUE, ATTEMPT)!.files[fixture.path], first.text());
   assert.equal(latestSavedCode(all, P, ISSUE, "attempt-2")!.files[fixture.path], second.text());
-  // An attempt with nothing of its own yet: the IDE opens on the starter.
+  // An attempt with nothing of its own yet: practice opens on the starter.
   assert.equal(latestSavedCode(all, P, ISSUE, "attempt-3"), null);
 });
 
@@ -281,7 +281,7 @@ test("a truncated snapshot and an oversize edit are never replayed as complete",
   assert.equal(restore(fits)!.complete, true);
 });
 
-test("streams are never combined; participants and issues are kept apart", async () => {
+test("streams are never combined; participants and challenges are kept apart", async () => {
   const sink = new MemorySink();
   const older = workspace(sink, "old\n");
   older.type("older session");
@@ -340,7 +340,7 @@ test("several editable files are recorded and restored together, each with its o
       mediaType: "text/x-javascript",
     },
   } as const;
-  const session = new WorkspaceSession({
+  const session = new PracticeSession({
     participantId: P,
     termsVersion: "2026-10-01",
     challenge,

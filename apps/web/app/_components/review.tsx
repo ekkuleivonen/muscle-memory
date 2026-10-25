@@ -3,8 +3,8 @@ import {
   failureText,
   type CheckRow,
   type Diagnosis,
-} from "../../../lib/diagnosis";
-import type { CheckFeedback } from "../../../lib/check-feedback";
+} from "../../lib/diagnosis";
+import type { CheckFeedback } from "../../lib/check-feedback";
 import { Markdown } from "./markdown";
 
 /**

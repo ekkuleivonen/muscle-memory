@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import type { RunView } from "../workspace/session";
+import type { RunView } from "./session";
 import type { Revision } from "../../../../packages/content/model";
 import { transcript } from "./transcript";
 

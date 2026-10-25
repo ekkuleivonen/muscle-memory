@@ -15,7 +15,7 @@ export const LANGUAGES = [
   { id: "cpp", label: "C++", color: "#f34b7d" },
   { id: "csharp", label: "C#", color: "#178600" },
   { id: "java", label: "Java", color: "#b07219" },
-  // Still highlighted for existing issues, but not offered: it cannot run in a browser yet.
+  // Still highlighted for existing challenges, but not offered: it cannot run in a browser yet.
   { id: "rust", label: "Rust", color: "#dea584" },
 ] as const;
 

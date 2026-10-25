@@ -1,5 +1,5 @@
 "use client";
-import { isPracticePath } from "../../../lib/paths";
+import { isPracticePath } from "../../lib/paths";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
@@ -9,15 +9,15 @@ import {
   logPage,
   logView,
   PREVIOUS_PATH_KEY,
-} from "../../../lib/site-log";
+} from "../../lib/site-log";
 
 /**
  * Records every page of the app as it is shown, with its query (searches and filters are GET
- * forms and links, so they arrive as queries) and the page before it, and outside the IDE the
- * page becoming visible, hidden, focused or resized. The IDE records its own page state.
+ * forms and links, so they arrive as queries) and the page before it, and outside practice the
+ * page becoming visible, hidden, focused or resized. Practice records its own page state.
  * Nothing is recorded without the current Terms accepted (see lib/site-log.ts).
  */
-export function TrackerActivity() {
+export function SiteTracker() {
   const path = usePathname();
   const params = useSearchParams();
   const query = params.toString();
@@ -35,7 +35,7 @@ export function TrackerActivity() {
       if (previous) sessionStorage.setItem(PREVIOUS_PATH_KEY, previous);
       else sessionStorage.removeItem(PREVIOUS_PATH_KEY);
     } catch {
-      // Storage can be unavailable; the IDE then falls back to document.referrer.
+      // Storage can be unavailable; practice then falls back to document.referrer.
     }
     last.current = here;
     void logView(challengeContext(path), { path, query, previous });

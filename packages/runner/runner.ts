@@ -78,7 +78,7 @@ export interface RunRequest {
   readonly parameters?: readonly string[];
   /** SQL: statements that create the schema before each case. */
   readonly setup?: string;
-  /** C and C++: the issue's adapter from JSON arguments to the function's types. */
+  /** C and C++: the challenge's adapter from JSON arguments to the function's types. */
   readonly adapter?: string;
   /** Fixture inputs only; expected outputs never enter the sandbox. */
   readonly inputs: readonly unknown[];
@@ -410,11 +410,11 @@ export async function loadPinned(
 const warmed = new Set<string>();
 
 /**
- * Fetches an engine's pinned files into the browser's HTTP cache ahead of opening the IDE, at
- * low priority, so the IDE's own load (which checks every hash again) reads them from the cache.
+ * Fetches an engine's pinned files into the browser's HTTP cache ahead of opening practice, at
+ * low priority, so practice's own load (which checks every hash again) reads them from the cache.
  * Same origin and integrity rules as loadPinned; nothing is kept in memory and nothing runs.
  * Once per engine per page, skipped when the browser asks to save data, and failures are left
- * for the IDE's own load to report.
+ * for practice's own load to report.
  */
 export function warmRuntime(engine: Engine, assetBase?: string): void {
   if (warmed.has(engine.basePath)) return;

@@ -4,13 +4,13 @@ import { EditorState, type Transaction } from "@codemirror/state";
 import { MemorySink } from "../../../../packages/capture/recorder";
 import type { Runner } from "../../../../packages/runner/runner";
 import { live } from "../../lib/test-fixtures";
-import { WorkspaceSession, type SessionOptions } from "./session";
+import { PracticeSession, type SessionOptions } from "./session";
 
 const base = live("PY-002");
 const fixture = { ...base, path: base.revision.file, starter: base.revision.starter };
 
 function session(sink: MemorySink, options: Partial<SessionOptions> = {}) {
-  return new WorkspaceSession({
+  return new PracticeSession({
     participantId: "synthetic-participant",
     termsVersion: "2026-10-01",
     challenge: {

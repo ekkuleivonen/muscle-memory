@@ -29,7 +29,7 @@ export interface FileView {
 }
 
 export interface WorkspaceView {
-  /** The issue and attempt it belongs to: see viewScope. */
+  /** The challenge and attempt it belongs to: see viewScope. */
   readonly scope: string;
   readonly tabs: readonly string[];
   readonly active: string;
@@ -39,9 +39,9 @@ export interface WorkspaceView {
   readonly savedAt: string;
 }
 
-/** One attempt at one issue: the issue's id and when the attempt began (null for the first). */
-export function viewScope(issue: string, attemptStart: string | null): string {
-  return `${issue}@${attemptStart ?? "first"}`;
+/** One attempt at one challenge: the challenge's id and when the attempt began (null for the first). */
+export function viewScope(challenge: string, attemptStart: string | null): string {
+  return `${challenge}@${attemptStart ?? "first"}`;
 }
 
 const isCount = (v: unknown): v is number =>

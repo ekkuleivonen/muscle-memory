@@ -3,7 +3,7 @@ import { PRELUDE } from "./shared";
 
 /**
  * C and C++ on Clang/LLD compiled to WebAssembly (YoWASP), targeting WASI. The solution, the
- * issue's adapter (which turns a case's JSON arguments into C or C++ values) and a small JSON
+ * challenge's adapter (which turns a case's JSON arguments into C or C++ values) and a small JSON
  * library are compiled into one program; every case then runs as a fresh instance of it with
  * only WASI imports, so a crash stays with its case and the program never touches this
  * worker's JavaScript. That is also why this sandbox may be kept between runs: LLVM takes

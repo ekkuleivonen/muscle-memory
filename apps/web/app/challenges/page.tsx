@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { requireConsent } from "../../lib/gate";
-import { getLibrary } from "../../lib/load";
+import { getChallenges } from "../../lib/load";
 import { TermFooter } from "../_terminal/footer";
 import "../_terminal/terminal.css";
-import { Picker, type PickerChallenge } from "./picker";
+import { Picker } from "./picker";
 
 export const metadata: Metadata = { title: "Challenges · Muscle Memory" };
 
@@ -21,8 +21,7 @@ export default async function ChallengesPage({
   await requireConsent(
     q ? `/challenges?q=${encodeURIComponent(q)}` : "/challenges",
   );
-  const { issues } = await getLibrary();
-  const challenges: PickerChallenge[] = issues;
+  const { challenges } = await getChallenges();
   return (
     <>
       <Picker challengesJson={JSON.stringify(challenges)} initialQuery={q} />

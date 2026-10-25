@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { openPracticeStore } from "../../../../../packages/browser/practice-store";
+import { openPracticeStore } from "../../../../packages/browser/practice-store";
 
 export function Receipt({
   headline,

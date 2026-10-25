@@ -1,6 +1,6 @@
 # Practice
 
-`/challenges/<KEY>` (for example `/challenges/PY-002`, always on the challenge's live revision) is where a challenge is worked: the challenge on the left, the code over its feedback on the right, as terminal panes (`apps/web/app/practice/ide.tsx`).
+`/challenges/<KEY>` (for example `/challenges/PY-002`, always on the challenge's live revision) is where a challenge is worked: the challenge on the left, the code over its feedback on the right, as terminal panes (`apps/web/app/practice/practice.tsx`).
 
 ## The loop
 
@@ -58,12 +58,12 @@ Limits:
 
 ## Editor
 
-CodeMirror 6 with an explicit extension list (`apps/web/app/workspace/editor.ts`), every feature named in `editorFeatures` and recorded with each session:
+CodeMirror 6 with an explicit extension list (`apps/web/app/practice/editor.ts`), every feature named in `editorFeatures` and recorded with each session:
 
 - Highlighting and indentation for the challenge's language, Tab indenting, undo/redo history, bracket-match highlighting, line numbers, and Mod-Enter to submit.
 - Type hints for TypeScript and JavaScript, as an editor had them before AI: errors as squiggles shortly after typing stops, and the type of whatever is under the pointer. They come from the TypeScript language service (5.9, ES2023 library, strict; JavaScript gets syntax errors and inferred types, not type errors), in a worker of its own that only parses and checks the code (`type-checker.ts`). Its files are pinned like the runners'. `type-diagnostics` and `hover-types` join the recorded features when they are on.
 - Vim keybindings (`@replit/codemirror-vim`) when the profile chose Vim; the pane title shows the mode.
-- A steady block cursor, as in a terminal. Syntax colours come from CSS variables (`--syn-*` in `ide.css`); the site is dark only.
+- A steady block cursor, as in a terminal. Syntax colours come from CSS variables (`--syn-*` in `practice.css`); the site is dark only.
 - No autocompletion, auto-closing brackets, linting or AI assistance. Autocomplete is undecided: ask first (root `AGENTS.md`).
 
 The editor owns its document, so typing does not re-render React, and work survives runs, errors, timeouts and cancels. Tab indents inside the editor; Escape then Tab moves focus out.
@@ -74,7 +74,7 @@ Everything typed is recorded on the device as it happens ([telemetry](telemetry.
 
 - **Restore.** On opening, `packages/capture/restore.ts` rebuilds the attempt's latest saved code exactly, from this participant's practice records for this challenge and attempt only. Each page load's stream is replayed on its own, from a complete copy (the opening code or a snapshot), applying saved change sets in strict order and checking each revision and length. Replay stops at a missing position, a disclosed gap, or a truncated or invalid change, and restores the last exact document; the page says which revision was recovered. A new attempt opens on the starting code. When the challenge changed since the attempt last opened, the page says so.
 - **Save state.** The code pane says **Saved** only when nothing is waiting to be written and the current code can be rebuilt exactly: a complete copy is stored and nothing at or after it is lost, conflicting or without a change set. Otherwise it says **Saving…**, **Save failing, retrying** or **Not fully saved** (a capture gap, an artifact conflict, or a large edit whose copy is truncated) until a later complete copy is stored; every run saves one. Edits still waiting when a page closes abruptly are not recoverable: recording never blocks typing.
-- **View.** The cursor, selection and scroll, and whether the output is open, are kept per attempt under `muscle-memory.workspace-view` (twenty attempts at most), never recorded.
+- **View.** The cursor, selection and scroll, and whether the output is open, are kept per attempt under `muscle-memory.practice-view` (twenty attempts at most), never recorded.
 
 ## Checking it
 

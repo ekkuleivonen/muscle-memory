@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
-import { parseMarkdown, type Inline } from "../../../lib/markdown";
+import { parseMarkdown, type Inline } from "../../lib/markdown";
 
 function inline(nodes: Inline[]): ReactNode {
   return nodes.map((node, i) => {

@@ -35,7 +35,7 @@ import {
   type LoadProgress,
 } from "../../../../packages/runner/runner";
 import { readProfile } from "../../lib/account";
-import { languageLabel } from "../../lib/library";
+import { languageLabel } from "../../lib/challenges";
 import { mediaTypeOf, type FileLanguage, type LanguageId } from "../../lib/languages";
 import { environmentOf } from "../../lib/environment";
 import {
@@ -52,17 +52,17 @@ import {
   PREVIOUS_PATH_KEY,
   setChallengeContext,
 } from "../../lib/site-log";
-import { Markdown } from "../(browse)/_components/markdown";
-import { type Keymap } from "../workspace/editor";
-import { checksTypes, TypeChecker } from "../workspace/type-checker";
+import { Markdown } from "../_components/markdown";
+import { type Keymap } from "./editor";
+import { checksTypes, TypeChecker } from "./type-checker";
 import { caseLabel, transcript } from "./transcript";
-import { recoveryMessage, saveBadge } from "../workspace/save-state";
+import { recoveryMessage, saveBadge } from "./save-state";
 import {
   RUN_TIMEOUT_MS,
-  WorkspaceSession,
+  PracticeSession,
   type RunView,
   type SaveStatus,
-} from "../workspace/session";
+} from "./session";
 
 import {
   fitView,
@@ -70,9 +70,9 @@ import {
   writeView,
   viewScope,
   type FileView,
-} from "../workspace/continuity";
+} from "./continuity";
 
-import { ChallengeExamples } from "../(browse)/_components/challenge-examples";
+import { ChallengeExamples } from "../_components/challenge-examples";
 import { TermFooter, type Crumb } from "../_terminal/footer";
 import {
   CHALLENGE,
@@ -84,15 +84,15 @@ import {
 import { privateCheckFailure } from "./check-feedback";
 import { checkFeedbackOf } from "../../lib/check-feedback";
 import { diagnose } from "../../lib/diagnosis";
-import { CheckFeedbackView } from "../(browse)/_components/review";
-import { CopyIssueLink, ShareOutcome } from "../(browse)/_components/share";
+import { CheckFeedbackView } from "../_components/review";
+import { CopyChallengeLink, ShareOutcome } from "../_components/share";
 import { nextProblem } from "../../lib/next-problem";
 import { isPracticePath, practiceHref } from "../../lib/paths";
-import type { IssueSummary } from "../../lib/library";
+import type { ChallengeSummary } from "../../lib/challenges";
 
-export interface IdeIssue {
+export interface PracticeChallenge {
   key: string;
-  /** The live revision the IDE opens: sha256:… of its content. */
+  /** The live revision practice opens: sha256:… of its content. */
   revision: string;
   title: string;
   task: string;
@@ -137,10 +137,10 @@ function attemptObservations(
  * stay internal. Practice works in an attempt (lib/progress.ts): opening resumes it, and a
  * start after a completed attempt begins a new one.
  */
-export function Ide({
+export function Practice({
   revisionJson,
   candidates,
-  issue,
+  challenge,
   trail,
 }: {
   /**
@@ -150,11 +150,10 @@ export function Ide({
   revisionJson: string;
   /** Where the challenge sits, for the status bar's breadcrumb trail. */
   trail: readonly Crumb[];
-  candidates: IssueSummary[];
-  issue: IdeIssue;
+  candidates: ChallengeSummary[];
+  challenge: PracticeChallenge;
 }) {
   const revision = useMemo(() => JSON.parse(revisionJson) as Revision, [revisionJson]);
-  const challenge = revision;
   const home = revision.file;
   const editable = [{ path: home, text: revision.starter, language: revision.language }];
   const [outputOpen, setOutputOpen] = useState(false);
@@ -188,7 +187,7 @@ export function Ide({
     };
   }, []);
   const [runtime, setRuntime] = useState<Runtime>(
-    issue.runnable ? { state: "loading" } : { state: "none" },
+    challenge.runnable ? { state: "loading" } : { state: "none" },
   );
   const runtimeNow = useRef(runtime);
   runtimeNow.current = runtime;
@@ -256,10 +255,10 @@ export function Ide({
   }, [home]);
   const progress = useProgress();
   const stars = useStars();
-  const starred = stars.includes(issue.key);
+  const starred = stars.includes(challenge.key);
   const star = () => {
-    writeStars(toggleStar(stars, issue.key));
-    void logStar({ key: issue.key, revision: issue.revision }, !starred, {
+    writeStars(toggleStar(stars, challenge.key));
+    void logStar({ key: challenge.key, revision: challenge.revision }, !starred, {
       from: "practice",
     });
   };
@@ -272,7 +271,7 @@ export function Ide({
       ),
     [progress],
   );
-  const currentProblem = candidates.find((i) => i.key === issue.key);
+  const currentProblem = candidates.find((i) => i.key === challenge.key);
   const next = currentProblem
     ? nextProblem(
         currentProblem,
@@ -286,15 +285,15 @@ export function Ide({
   nextRef.current = next;
   const hosts = useRef(new Map<string, HTMLDivElement>());
   const sandboxHost = useRef<HTMLDivElement>(null);
-  const engine = engineFor(issue.language);
+  const engine = engineFor(challenge.language);
   const runner = useRef<Runner | null>(null);
-  const session = useRef<WorkspaceSession | null>(null);
+  const session = useRef<PracticeSession | null>(null);
   const types = useRef<TypeChecker | null>(null);
   const store = useRef<PracticeStore | null>(null);
   // Each mount (twice in development) bumps this; a superseded open installs nothing.
   const generation = useRef(0);
   function startRuntime() {
-    if (!issue.runnable || !engine) return;
+    if (!challenge.runnable || !engine) return;
     runner.current?.dispose();
     const next = new Runner(engine, sandboxHost.current!, {
       timeoutMs: RUN_TIMEOUT_MS,
@@ -318,9 +317,9 @@ export function Ide({
   }
 
   /** The attempt completed: progress says so, and the share card reads the records. */
-  async function completed(current: WorkspaceSession, attemptId: string) {
+  async function completed(current: PracticeSession, attemptId: string) {
     writeProgress(
-      complete(readProgress(), issue.key, attemptId, new Date().toISOString()),
+      complete(readProgress(), challenge.key, attemptId, new Date().toISOString()),
     );
     if (session.current !== current) return;
     setAttempt({ id: attemptId, completed: true });
@@ -347,25 +346,25 @@ export function Ide({
       const homeHost = hosts.current.get(home);
       // A superseded open must not create a session or record anything.
       if (!homeHost || !current()) return;
-      const start = takeStart(issue.key);
+      const start = takeStart(challenge.key);
       const now = new Date().toISOString();
       const chosen = attemptFor(
         readProgress(),
-        issue.key,
+        challenge.key,
         start !== null,
         now,
         randomAttempt,
       );
       if (chosen.fresh) writeProgress(chosen.progress);
       const attemptId = chosen.attempt;
-      const done = chosen.progress[issue.key]?.completedAt != null;
+      const done = chosen.progress[challenge.key]?.completedAt != null;
       setAttempt({ id: attemptId, completed: done });
       if (done) setShareRecords(records);
-      const observed = attemptObservations(records, issue.key, attemptId);
+      const observed = attemptObservations(records, challenge.key, attemptId);
       const recovered = latestSavedCode(
         records,
         participantId,
-        issue.key,
+        challenge.key,
         attemptId,
       );
       if (recovered)
@@ -375,7 +374,7 @@ export function Ide({
             observed.some(
               (o) =>
                 o.type === "practice.opened" &&
-                o.challengeRevision !== issue.revision,
+                o.challengeRevision !== challenge.revision,
             )
               ? "The challenge changed since your last visit. Your code was restored; review the requirements before submitting again."
               : "",
@@ -383,7 +382,7 @@ export function Ide({
             .filter(Boolean)
             .join(" "),
         );
-      savedScope.current = `${participantId}:${viewScope(issue.key, attemptId)}`;
+      savedScope.current = `${participantId}:${viewScope(challenge.key, attemptId)}`;
       const saved = readView(savedScope.current);
       if (saved) {
         const fitted = fitView(saved, {
@@ -399,13 +398,13 @@ export function Ide({
         setOutputOpen(fitted.panel === "output");
         pendingPlaces.current = { ...fitted.files };
       }
-      const opened: WorkspaceSession = new WorkspaceSession({
+      const opened: PracticeSession = new PracticeSession({
         participantId,
         termsVersion: account?.accepted?.version ?? "1970-01-01",
         challenge: {
-          key: issue.key,
+          key: challenge.key,
           revision,
-          revisionId: issue.revision,
+          revisionId: challenge.revision,
         },
         attemptId,
         started: chosen.fresh
@@ -427,10 +426,10 @@ export function Ide({
           ]),
         ),
         restoredFrom: recovered?.revision,
-        language: issue.language,
+        language: challenge.language,
         keymap: keys,
         types: types.current ?? undefined,
-        runtime: issue.runnable && engine ? engine.runtime : null,
+        runtime: challenge.runnable && engine ? engine.runtime : null,
         hasPreviousChecks: observed.some(
           (o) => o.type === "practice.submitted",
         ),
@@ -462,7 +461,7 @@ export function Ide({
       });
       setOpening({ state: "open" });
     } catch (cause) {
-      console.warn("The IDE could not open.", cause);
+      console.warn("Practice could not open.", cause);
       if (current())
         setOpening({
           state: "failed",
@@ -475,8 +474,8 @@ export function Ide({
   useEffect(() => {
     const attempt = ++generation.current;
     startRuntime();
-    if (checksTypes(issue.language))
-      types.current = new TypeChecker(challenge.file);
+    if (checksTypes(challenge.language))
+      types.current = new TypeChecker(revision.file);
     void open(() => attempt === generation.current);
     const saveView = () => persistView();
     window.addEventListener("pagehide", saveView);
@@ -503,8 +502,8 @@ export function Ide({
   }, []);
 
   useEffect(
-    () => setChallengeContext({ key: issue.key, revision: issue.revision }),
-    [issue.key, issue.revision],
+    () => setChallengeContext({ key: challenge.key, revision: challenge.revision }),
+    [challenge.key, challenge.revision],
   );
 
   // The page: visible or hidden, focused or not, its size, and its last moments.
@@ -554,7 +553,7 @@ export function Ide({
 
   const running = run?.status === "queued" || run?.status === "running";
   const ready = runtime.state === "ready" && opening.state === "open";
-  const publishedExamples = challenge.cases.filter((c) => !c.hidden);
+  const publishedExamples = revision.cases.filter((c) => !c.hidden);
   const verdict = submission?.verdict ?? null;
   const done = !!attempt?.completed;
   const check = checkFeedbackOf({
@@ -563,13 +562,13 @@ export function Ide({
     edited: stale && !!verdict,
     verdict,
     diagnosis: verdict
-      ? diagnose(submission?.outcome ?? null, challenge.cases)
+      ? diagnose(submission?.outcome ?? null, revision.cases)
       : null,
   });
   /** Practise this challenge again: a new attempt from the starting code. */
   const again = () => {
-    noteStart({ key: issue.key, from: "again", query: null, position: null });
-    window.location.assign(practiceHref(issue.key));
+    noteStart({ key: challenge.key, from: "again", query: null, position: null });
+    window.location.assign(practiceHref(challenge.key));
   };
   return (
     <div className="practice tui" onClickCapture={persistView}>
@@ -594,7 +593,7 @@ export function Ide({
         >
           <h2 className="pane-title">
             <kbd>[1]</kbd> challenge{" "}
-            <span className="faint">· {issue.key}</span>{" "}
+            <span className="faint">· {challenge.key}</span>{" "}
             <button
               type="button"
               className="pane-star"
@@ -615,17 +614,17 @@ export function Ide({
               )
             }
           >
-            <h1>{issue.title}</h1>
+            <h1>{challenge.title}</h1>
             <h2>Goal and requirements</h2>
-            <Markdown source={issue.task} />
-            {challenge.schema && (
+            <Markdown source={challenge.task} />
+            {revision.schema && (
               <details open>
                 <summary>Data schema</summary>
-                <pre>{challenge.schema}</pre>
+                <pre>{revision.schema}</pre>
               </details>
             )}
             <ChallengeExamples examples={publishedExamples} compact />
-            <CopyIssueLink issueKey={issue.key} />
+            <CopyChallengeLink challengeKey={challenge.key} />
           </div>
         </section>
         <Splitter
@@ -641,7 +640,7 @@ export function Ide({
           <h2 className="pane-title">
             <kbd>[2]</kbd> code{" "}
             <span className="faint">
-              · {languageLabel(issue.language)} ·{" "}
+              · {languageLabel(challenge.language)} ·{" "}
               {keymap === "vim" ? `vim ${vimMode}` : "standard keys"}
             </span>
           </h2>
@@ -745,10 +744,10 @@ export function Ide({
                   <>
                     <h2>Example feedback</h2>
                     <Tests
-                      challenge={challenge}
+                      revision={revision}
                       run={run}
                       stale={stale}
-                      issue={issue}
+                      challenge={challenge}
                       runtime={runtime}
                       onRetry={startRuntime}
                     />
@@ -804,7 +803,7 @@ export function Ide({
                     />
                     {shareRecords && (
                       <ShareOutcome
-                        challenge={issue}
+                        challenge={challenge}
                         attemptId={attempt.id}
                         records={shareRecords}
                         revision={revision}
@@ -822,8 +821,8 @@ export function Ide({
                     <summary>Output</summary>
                     <Output
                       run={run}
-                      challenge={challenge}
-                      runtime={engine?.label ?? issue.language}
+                      revision={revision}
+                      runtime={engine?.label ?? challenge.language}
                     />
                   </details>
                 )}
@@ -902,26 +901,26 @@ function AfterQuestions({
 }
 
 function Tests({
-  challenge,
+  revision,
   run,
   stale,
-  issue,
+  challenge,
   runtime,
   onRetry,
 }: {
-  challenge: Revision;
+  revision: Revision;
   run: RunView | null;
   stale: boolean;
-  issue: IdeIssue;
+  challenge: PracticeChallenge;
   runtime: Runtime;
   onRetry(): void;
 }) {
   /** The examples, which Run examples runs. */
-  const visible = casesRun(challenge.cases, "examples").length;
-  if (!issue.runnable)
+  const visible = casesRun(revision.cases, "examples").length;
+  if (!challenge.runnable)
     return (
       <p className="faint">
-        {languageLabel(issue.language)} can&apos;t run in the browser yet. Your
+        {languageLabel(challenge.language)} can&apos;t run in the browser yet. Your
         edits are saved as you go.
       </p>
     );
@@ -929,7 +928,7 @@ function Tests({
     return (
       <p className="error" role="alert">
         Your environment couldn&apos;t be set up.{" "}
-        <button type="button" className="ide-link" onClick={onRetry}>
+        <button type="button" className="link-button" onClick={onRetry}>
           Retry
         </button>
       </p>
@@ -960,29 +959,29 @@ function Tests({
     );
   if (o.error && o.phase !== "tests")
     return (
-      <pre className="ide-trace">
+      <pre className="run-trace">
         {o.error.traceback.text || `${o.error.type}: ${o.error.message}`}
       </pre>
     );
-  const cases = casesRun(challenge.cases, run.purpose);
+  const cases = casesRun(revision.cases, run.purpose);
   const feedback = runFeedback(cases, o.cases);
   const failed = feedback.total - feedback.correct;
   return (
     <div>
-      <p className="ide-run-label faint">Public examples</p>
-      <p className={`ide-summary ${failed ? "fail" : "pass"}`}>
+      <p className="run-label faint">Public examples</p>
+      <p className={`run-summary ${failed ? "fail" : "pass"}`}>
         {failed ? "✘" : "✔"} {feedback.correct} passed
         {failed > 0 && `, ${failed} failed`} · {o.durationMs} ms
         {stale && <span className="faint"> · you&apos;ve edited since</span>}
       </p>
-      <ol className="ide-cases">
+      <ol className="run-cases">
         {cases.map((check, index) => (
           <Case
             key={index}
             index={index}
             label={
               !check.hidden
-                ? (check.name ?? caseLabel(challenge, check.input))
+                ? (check.name ?? caseLabel(revision, check.input))
                 : `Additional check ${index + 1}`
             }
             visible={!check.hidden}
@@ -1013,21 +1012,21 @@ function Case({
 }) {
   return (
     <li className={passed ? "pass" : "fail"}>
-      <span className="ide-case-mark">{passed ? "✔" : "✘"}</span>
-      <span className="ide-case-body">
+      <span className="run-case-mark">{passed ? "✔" : "✘"}</span>
+      <span className="run-case-body">
         <code>{label}</code>
         {!passed && !visible && (
-          <span className="ide-case-detail">{privateCheckFailure(result)}</span>
+          <span className="run-case-detail">{privateCheckFailure(result)}</span>
         )}
         {!passed && visible && (
-          <span className="ide-case-detail">
+          <span className="run-case-detail">
             <span>
               expected <code>{JSON.stringify(expected)}</code>
             </span>
             {result?.error ? (
-              <pre className="ide-trace">{result.error.traceback.text}</pre>
+              <pre className="run-trace">{result.error.traceback.text}</pre>
             ) : result?.conversionError ? (
-              <pre className="ide-trace">
+              <pre className="run-trace">
                 {result.conversionError.traceback.text ||
                   `${result.conversionError.type}: ${result.conversionError.message}`}
               </pre>
@@ -1041,7 +1040,7 @@ function Case({
           </span>
         )}
       </span>
-      <span className="ide-case-index faint">#{index + 1}</span>
+      <span className="run-case-index faint">#{index + 1}</span>
     </li>
   );
 }
@@ -1071,14 +1070,14 @@ function entryPath(): string | null {
 
 function Output({
   run,
-  challenge,
+  revision,
   runtime,
 }: {
   run: RunView | null;
-  challenge: Revision;
+  revision: Revision;
   runtime: string;
 }) {
-  const log = transcript(run, challenge, runtime);
+  const log = transcript(run, revision, runtime);
   if (!log.length)
     return (
       <p className="faint">
@@ -1086,9 +1085,9 @@ function Output({
       </p>
     );
   return (
-    <pre className="ide-output">
+    <pre className="run-output">
       {log.map((line, index) => (
-        <span key={index} className={`ide-line ${line.tone}`}>
+        <span key={index} className={`run-line ${line.tone}`}>
           {line.text}
           {"\n"}
         </span>
