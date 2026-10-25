@@ -58,7 +58,7 @@ export interface ProjectQuery {
 }
 
 /** Pull request states and checks results as search terms: is:open, checks:failed. */
-export const PULL_STATES = ["open", "merged"] as const;
+export const PULL_STATES = ["open", "merged", "closed"] as const;
 export type PullState = (typeof PULL_STATES)[number];
 export const PULL_CHECKS = ["passed", "failed", "errored", "cancelled"] as const;
 export type PullChecks = (typeof PULL_CHECKS)[number];

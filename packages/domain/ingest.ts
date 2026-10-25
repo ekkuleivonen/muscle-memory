@@ -14,8 +14,16 @@ export const INGEST_PROTOCOL = "ingest-1";
 /** At most this many records, and this many bytes of payload, per batch. */
 export const BATCH_MAX_RECORDS = 500;
 export const BATCH_MAX_BYTES = 1_000_000;
-/** Capture versions the server accepts; older ones were never released. */
-export const ACCEPTED_CAPTURE = [WORKSPACE_CAPTURE_VERSION, BOARD_CAPTURE_VERSION] as const;
+/**
+ * Capture versions the server accepts. Board 6.0.0 was live before closing pull requests
+ * existed (6.1.0 only adds a type), so browsers may still hold queued 6.0.0 records; older
+ * versions were never released.
+ */
+export const ACCEPTED_CAPTURE = [
+  WORKSPACE_CAPTURE_VERSION,
+  BOARD_CAPTURE_VERSION,
+  "board-capture-6.0.0",
+] as const;
 
 export interface Batch {
   readonly protocol: typeof INGEST_PROTOCOL;

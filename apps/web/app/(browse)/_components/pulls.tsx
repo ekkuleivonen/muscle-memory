@@ -26,7 +26,7 @@ import {
 import type { BoardMoveVia } from "../../../../../packages/domain/board";
 import { LanguageTag } from "./bits";
 import { StartWork, useBoard } from "./board";
-import { logReply, logResult, setIssueContext } from "./board-log";
+import { logClose, logReply, logResult, setIssueContext } from "./board-log";
 import { metricsOf } from "../../../lib/result";
 import { Markdown } from "./markdown";
 import { Ask } from "./ask";
@@ -50,6 +50,7 @@ type State = PullSummary["state"];
 const STATE_LABELS: Record<State, string> = {
   open: "Open",
   merged: "Merged",
+  closed: "Closed",
 };
 /** Passing checks; before capture 1.4.0 they were recorded as `merged`. */
 const passed = (result: string) =>
@@ -81,7 +82,14 @@ export function PullIcon({
     >
       <circle cx="4.5" cy="3.5" r="1.7" />
       <circle cx="4.5" cy="12.5" r="1.7" />
-      {state === "merged" ? (
+      {state === "closed" ? (
+        <>
+          <path d="M4.5 5.2v5.6" />
+          <path d="M10 3.5l3 3M13 3.5l-3 3" />
+          <circle cx="11.5" cy="12.5" r="1.7" />
+          <path d="M11.5 10.8V9" />
+        </>
+      ) : state === "merged" ? (
         <>
           <circle cx="11.5" cy="8" r="1.7" />
           <path d="M4.5 5.2v5.6M4.5 5.5c0 2.5 2.5 2.5 5.3 2.5" />
@@ -383,6 +391,14 @@ export function PullView({
     );
     setVersion((v) => v + 1);
   };
+  /** Closing without merging; `nudged` when the page was suggesting it. */
+  const close = async (via: BoardMoveVia, nudged: boolean) => {
+    await logClose(
+      { id: issue.slug, revision: pull.issueRevision },
+      { issueKey: issue.key, pullRequest: number, via, nudged },
+    );
+    setVersion((v) => v + 1);
+  };
   const merge = (via: BoardMoveVia) => {
     // The result card's numbers as they stand at the merge: what the aggregates are made of.
     if (revision)
@@ -481,7 +497,7 @@ export function PullView({
               issue={issue}
               threads={threads}
               revisions={revisions}
-              onReply={pull.state === "merged" ? undefined : reply}
+              onReply={pull.state === "open" ? reply : undefined}
             />
           )}
           {tab === "checks" && (
@@ -494,6 +510,7 @@ export function PullView({
           issue={issue}
           blocking={blocking.length}
           onMerge={merge}
+          onClose={(via) => void close(via, !!pull.otherMerged)}
           share={
             result &&
             resultInput && (
@@ -550,7 +567,7 @@ export function PullView({
             </>
           )}
         </dl>
-        {pull.state !== "merged" && !pull.otherMerged && (
+        {pull.state === "open" && !pull.otherMerged && (
           <Link
             className="pull-continue"
             href={workHref(issue)}
@@ -643,7 +660,7 @@ function TimelineRow({
   children,
 }: {
   at: string;
-  tone: "dim" | "pass" | "fail" | "accent" | "merged";
+  tone: "dim" | "pass" | "fail" | "accent" | "merged" | "closed";
   children: React.ReactNode;
 }) {
   return (
@@ -766,6 +783,12 @@ function Entry({
       return (
         <TimelineRow at={entry.at} tone="merged">
           Merged. {issue.key} moved to Done.
+        </TimelineRow>
+      );
+    case "closed":
+      return (
+        <TimelineRow at={entry.at} tone="closed">
+          Closed without merging.
         </TimelineRow>
       );
   }
@@ -1078,6 +1101,7 @@ function MergeBox({
   issue,
   blocking,
   onMerge,
+  onClose,
   share,
 }: {
   pull: PullSummary;
@@ -1085,6 +1109,7 @@ function MergeBox({
   /** Open blocking review threads. */
   blocking: number;
   onMerge: (via: BoardMoveVia) => void;
+  onClose: (via: BoardMoveVia) => void;
   /** Shown once merged: sharing the result. */
   share?: React.ReactNode;
 }) {
@@ -1098,6 +1123,28 @@ function MergeBox({
         {share}
       </div>
     );
+  // A click from the keyboard (Enter or Space) has no pointer position.
+  const via = (event: React.MouseEvent): BoardMoveVia =>
+    event.detail === 0 ? "keyboard" : "pointer";
+  const closeButton = (
+    <button
+      type="button"
+      className="close-button"
+      onClick={(event) => onClose(via(event))}
+    >
+      Close pull request
+    </button>
+  );
+  if (pull.state === "closed")
+    return (
+      <div className="merge-box closed">
+        <PullIcon state="closed" size={18} />
+        <div className="merge-text">
+          <b>Closed without merging.</b> Your next push from the{" "}
+          <Link href={workHref(issue)}>IDE</Link> opens a new pull request.
+        </div>
+      </div>
+    );
   if (pull.otherMerged)
     return (
       <div className="merge-box blocked">
@@ -1109,8 +1156,9 @@ function MergeBox({
           <Link href={pullHref(issue.key, pull.otherMerged)}>
             #{pull.otherMerged}
           </Link>{" "}
-          was merged, so there is nothing left to merge this into.
+          was merged, so this one has nothing left to do. Close it to tidy up.
         </div>
+        {closeButton}
       </div>
     );
   const checks = passed(pull.result);
@@ -1146,14 +1194,12 @@ function MergeBox({
           </>
         )}
       </div>
+      {closeButton}
       <button
         type="button"
         className="merge-button"
         disabled={!green}
-        // A click from the keyboard (Enter or Space) has no pointer position.
-        onClick={(event) =>
-          onMerge(event.detail === 0 ? "keyboard" : "pointer")
-        }
+        onClick={(event) => onMerge(via(event))}
       >
         Merge pull request
       </button>

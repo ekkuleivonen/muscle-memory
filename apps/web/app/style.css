@@ -1337,6 +1337,9 @@ kbd {
 .pull-icon.open {
   color: var(--green);
 }
+.pull-icon.closed {
+  color: var(--red);
+}
 .pull-filter,
 .pull-tabs {
   display: flex;
@@ -1451,6 +1454,9 @@ kbd {
 .pull-badge.open {
   background: #1a7f37;
 }
+.pull-badge.closed {
+  background: var(--red);
+}
 .pull-tabs {
   margin-bottom: 20px;
 }
@@ -1516,7 +1522,8 @@ kbd {
   background: var(--green);
   border-color: var(--green);
 }
-.pull-timeline .fail .dot {
+.pull-timeline .fail .dot,
+.pull-timeline .closed .dot {
   background: var(--red);
   border-color: var(--red);
 }
@@ -1793,6 +1800,25 @@ kbd {
 }
 .merge-box.merged .pull-icon {
   color: #8250df;
+}
+.merge-box.closed {
+  background: var(--bg-subtle);
+}
+.merge-box.closed .pull-icon {
+  color: var(--red);
+}
+.close-button {
+  flex: none;
+  font: inherit;
+  color: var(--fg);
+  background: none;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 7px 12px;
+  cursor: pointer;
+}
+.close-button:hover {
+  background: var(--hover);
 }
 .merge-mark {
   flex: none;
