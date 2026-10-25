@@ -1,0 +1,129 @@
+# Editorial hook inventory · ENG-331
+
+Prepared for dot's selection under ENG-327. Editorial draft only; no candidate is approved for publication.
+
+## Source and claim boundary
+
+Baseline: `1edfb853356f7ee8cb53d5fef8efe4a5e070bfc8`, verified as this worktree's starting HEAD. The baseline catalog contains 46 current issues in seven projects and 68 retained revisions. This is a bounded editorial review of eight current challenge payoffs, not an audit or endorsement of all 46 challenges. Exact revision identifiers and case references below refer to `content/catalog.json` at that baseline; seed links are pinned to the same commit. Older revisions remain historical sources, not current promises.
+
+The copy follows challenge → code → immediate diagnostic feedback → next challenge. It promises no project explorer, visible test source, hints, teammate comments, review or merge ceremony. Existing seed stories sometimes mention those things; only the problem and stated requirements are used here. Real-world settings below are authored challenge scenarios, not reports from actual companies or participants. Counts, money and dates in them are fixtures, not measured product outcomes.
+
+Each candidate separates proposed opening copy from the internal payoff and spoiler notes. Payoff notes are for editorial review, not text to put before a player. Requirement clarity is allowed: do not conceal necessary rules to create a reveal. None of these candidates establishes single-file readiness in the revised product. ENG-329 owns normalization and diagnostic verification; ENG-328 owns presentation. Recheck the chosen candidate against their final revision before use, recording its new hash and any changed payoff. Do not rewrite a revision or migrate saved work as part of this inventory.
+
+## Small shortlist for selection
+
+Recommend selecting from these five, rather than publishing all of them. They cover JavaScript, SQL, Go and Python, with one optional agency question and no need for invented benchmark data.
+
+### A · An empty post has one word — familiar bug / optional AI-use tension
+
+**Proposed hook:** “An empty post says ‘1 word.’ Can you make the count match the text?”
+
+**Optional agency variant:** “If you usually reach for AI, try this one yourself: make an empty post count as zero words.” This is an invitation, not an assessment of whether someone has lost skill. Dot may select the neutral version alone.
+
+**Exact source:** QUICK-2, `word-count-javascript`, JavaScript. [Seed ticket and cases](https://github.com/ekkuleivonen/muscle-memory/blob/1edfb853356f7ee8cb53d5fef8efe4a5e070bfc8/content/seed.ts#L590). Revision: `sha256:8a7ed6dc808d4ae5559c10a0c7d77102dcc2661ad2659c4326c8f02e08239e21`.
+
+**Payoff / evidence:** The starter returns 1 for an empty string. `case-1` expects 0; `case-3` expects 2 for repeated and surrounding spaces; `case-5` expects 4 across tabs and newlines. The challenge is counting words according to explicit whitespace rules, not building a natural-language tokenizer. The same premise exists as QUICK-1…8 in eight languages; this row verifies the JavaScript source, not equivalence of every runner.
+
+**Spoiler risk:** Low. The symptom and zero-word goal are already in the title/body. Keep regex, split/filter and library suggestions out of the hook.
+
+**Unsupported gaps / readiness:** One editable entry, `src/count-words.js`, plus internal test/docs files at baseline. QUICK is unlisted and has a dedicated `/play` entry; do not promise it appears in the searchable catalog. No evidence of average solve time, AI-related decline, or what a result says about a developer's ability. “Five-minute” is positioning, not a measured guarantee. No runtime AI assistance is implied.
+
+### B · Paid $45, refunded $40.50 — familiar money bug
+
+**Proposed hook:** “They paid $45 for the jacket. The refund is $40.50. Make the refund match the receipt.”
+
+**Exact source:** SHOP-5, `refund-totals`, JavaScript. [Seed ticket and supporting files](https://github.com/ekkuleivonen/muscle-memory/blob/1edfb853356f7ee8cb53d5fef8efe4a5e070bfc8/content/seed.ts#L1470). Revision: `sha256:c4b28311be0a5c974d1e377a9a64d3f1f3ed44f9c69f292a62056e0185b36314`.
+
+**Payoff / evidence:** `case-2` expects −4500 cents for the returned jacket after its allocated discount. `case-8` covers a partial return under a fixed discount; `case-10` covers the leftover allocation cent. A correct refund gives back what was paid for the returned lines. Checkout totals must remain unchanged; this requirement is in the body.
+
+**Spoiler risk:** Low for the hook; high for explaining that a discount is applied twice. Do not put the root cause or the refund arithmetic into opening copy.
+
+**Unsupported gaps / readiness:** One editable entry, `src/cart/totals.js`; read-only money/discount helpers exist. The existing audit says checkout scope is enforced through a text-pattern comment rather than a second tested entry point. Removing comments must not turn this into a claim that checkout behavior was verified. This is a fixture refund, not recovered customer funds or proof of a production fix.
+
+### C · The report loses the partner who paid nothing — SQL / surprising edge case
+
+**Proposed hook:** “The payment report overcounts one partner—and leaves out the one who paid nothing. Fix the SQL.”
+
+**Exact source:** DATA-6, `collected-by-partner`, SQL. [Seed ticket, schema and cases](https://github.com/ekkuleivonen/muscle-memory/blob/1edfb853356f7ee8cb53d5fef8efe4a5e070bfc8/content/more/data-platform.ts#L260). Revision: `sha256:7a455c4e6461678ffae5ae767b85e2a9232bf4f2474642ac5ddd5117f63a3196`.
+
+**Payoff / evidence:** `case-2` expects two $250 payments on one order to total $500. `case-3` keeps Corvid with 0 despite having no payments. `case-5` counts only the $40 collected on a $100 order; `case-6` preserves two equal $50 payments as $100. The body states one row per partner with orders, descending amount and alphabetical ties.
+
+**Spoiler risk:** Medium. The unpaid-partner requirement is necessary clarity. Naming the join type, aggregation expression or a `DISTINCT` mistake would supply an approach; keep those out of the hook.
+
+**Unsupported gaps / readiness:** One editable entry, `queries/collected-by-partner.sql`; the schema must remain available as problem context when test source is internal. SQL is an existing supported language, not a new catalog item. The prior fairness audit did not validate SQL alternatives/wrong fixes. No claim that a particular implementation, runtime performance or real finance reconciliation has been independently validated here.
+
+### D · When do two email addresses mean one account? — bounded decision
+
+**Proposed hook:** “Two sign-ups, one email address—or two different people? Build the lookup key using the stated rules.”
+
+**Exact source:** API-8, `canonical-signup-email`, Go. [Seed requirements and cases](https://github.com/ekkuleivonen/muscle-memory/blob/1edfb853356f7ee8cb53d5fef8efe4a5e070bfc8/content/more/accounts-api.ts#L194). Revision: `sha256:62924f856e628fab0cc713a6f6daccd9b8e359a7728b0b8108999b9cbfca8db4`.
+
+**Payoff / evidence:** `case-3` normalizes a Gmail dotted/tagged address; `case-4` preserves an example.com tag. `case-15` and `case-16` preserve dots on domains that merely resemble Gmail. The body gives exact domains, whitespace rules, case handling and invalid-address behavior. The payoff is applying a bounded policy without widening it.
+
+**Spoiler risk:** Low to medium. Domain-specific rules belong in the description; they are not a hidden trick. Do not publish a normalization pipeline as the hook.
+
+**Unsupported gaps / readiness:** One editable entry, `canonical_email.go`. This is a fixed-policy coding task, not an open-ended design debate or advice for production email identity. Whole-address lowercasing is an explicit scenario assumption, not a universal email fact. No real account merge, identity validation or security outcome is demonstrated. Go fairness remains outside the prior full audit.
+
+### E · “Same as above” stops at the page — distinctive parsing problem
+
+**Proposed hook:** “A notebook says ‘same as above.’ On a new page, what does that mean? Read the marks without inventing missing data.”
+
+**Exact source:** FN-5, `notebook-ditto-marks`, Python. [Seed requirements and cases](https://github.com/ekkuleivonen/muscle-memory/blob/1edfb853356f7ee8cb53d5fef8efe4a5e070bfc8/content/more/field-notes.ts#L959). Revision: `sha256:22a76b5c4c5f9664204ab33cc31be5a1b75bc54ce38f7ee12eccc4c0227a4333`.
+
+**Payoff / evidence:** Expand the three stated ditto forms field by field while keeping page boundaries. `case-4` reports line 4 unresolved after a heading. `case-10` reports lines 2 and 3 unresolved while still recovering an available field for the later valid row. `case-13` keeps quote/“do.” text inside a larger field literal. The rules specify this behavior; guessing is not the challenge.
+
+**Spoiler risk:** Medium. The page-boundary rule is explicit and must stay explicit. Avoid showing state storage or the expansion algorithm. This hook deliberately reveals a requirement, not an implementation.
+
+**Unsupported gaps / readiness:** One editable entry, `notebook/transcribe.py`, with read-only parser support. The task is transcription parsing, not handwriting recognition or AI extraction. “Three of 41 notebooks” is authored context; there is no observed volunteer time saving or actual recovered research dataset.
+
+## Alternatives and holds
+
+### F · Fast cart, stale total — disputed optimization / reserve
+
+**Proposed hook:** “The cart is faster. Change the quantity and the total stays the same. Fix the total while keeping the cache.”
+
+**Exact source:** SHOP-7, `stale-cart-summary`, JavaScript. [Seed requirements and cases](https://github.com/ekkuleivonen/muscle-memory/blob/1edfb853356f7ee8cb53d5fef8efe4a5e070bfc8/content/more/storefront.ts#L657). Revision: `sha256:bdb1f721df1ae40ae17305d5d71b4c92508ecd7e6d927cf9f04c8ba39b0df31f`.
+
+**Payoff / evidence:** `case-1` changes one $59 item to two and expects $118; `case-10` checks replacing/removing a discount code. Keep memoization while making summary output reflect mutations. This is a tension between two stated requirements, not an invitation to argue whether caching is desirable.
+
+**Spoiler risk:** Medium; “keeping the cache” is required context. Avoid naming invalidation sites or a cache-key design.
+
+**Unsupported gaps / readiness:** One editable entry, `src/cart/cart.js`. The body’s 38 ms → 2 ms story is not a measured result from this product. The prior audit flags “keep the memo” as a pattern-based review requirement, not a scaling check. Hold any performance or “both requirements verified” claim until ENG-329 confirms how that requirement survives removal of comments. No real overcharge or recovered revenue occurred.
+
+### G · Fewer logouts, old tokens accepted — security-policy tension / reserve
+
+**Proposed hook:** “The login fix stopped the logouts. It also lets an old token work again. Keep the grace window and reject the replay.”
+
+**Exact source:** API-9, `refresh-token-reuse`, TypeScript. [Seed requirements and cases](https://github.com/ekkuleivonen/muscle-memory/blob/1edfb853356f7ee8cb53d5fef8efe4a5e070bfc8/content/more/accounts-api.ts#L454). Revision: `sha256:a8cc4e1093c210a89927da708b1934e2ac7ac5a75f86b322bb6c9b0e730daef2`.
+
+**Payoff / evidence:** `case-2` accepts a retry after four seconds; `case-3` rejects reuse after three days with family revocation. `case-7` accepts at 10,000 ms and `case-8` rejects at 10,001 ms. Other cases cover revoked/expired sessions and unknown tokens. The goal preserves the valid mobile retry while restoring the specified checks.
+
+**Spoiler risk:** Medium. Do not publish the check order as a teaser or reduce the problem to one boundary condition. All policy requirements must be in the challenge context.
+
+**Unsupported gaps / readiness:** One editable entry, `src/gateway/refresh.ts`, but requirements live partly in read-only `policy.ts`. Before selection, ENG-329/328 must confirm those rules are understandable without navigating source files. No code rewrite is proposed here. The pentest/alert story is a fixture, not an actual incident, deployed security fix or proof that these checks secure a production auth system. TypeScript fairness is not established by the earlier JS/Python audit.
+
+### H · A rejected refund is missing money — recovery potential / hold
+
+**Proposed hook:** “The statement says €59.50. The report says €75 and rejects two rows. Make the numbers agree without hiding bad input.”
+
+**Exact source:** DATA-8, `bracketed-refunds`, Python. [Seed requirements and cases](https://github.com/ekkuleivonen/muscle-memory/blob/1edfb853356f7ee8cb53d5fef8efe4a5e070bfc8/content/more/data-platform.ts#L567). Revision: `sha256:2f67de6d62cbc85c4ba1667172e3da03ac1cfae22e44151cd0e60f8733cbd063`.
+
+**Payoff / evidence:** `case-2` expects 5950 cents and zero rejects for the Bluefin example. `case-4` still reports two genuinely unreadable rows. `case-7` and `case-12` ensure refunds reduce net across sign conventions. Reconciliation means accounting for valid amounts while retaining truthful rejection counts.
+
+**Spoiler risk:** Medium to high if the copy names the sign-handling fix. Accounting-format brackets are already an explicit input requirement and must remain explained.
+
+**Unsupported gaps / readiness:** HOLD for the single-file flow: baseline has three editable files (`pipeline/money.py`, `pipeline/readers.py`, `pipeline/report.py`), and the prior audit identifies reader sign preservation as a pattern-based requirement. Hiding two files does not establish solvability. ENG-329 must supply a normalized revision/contract before use. This gives a recovery-shaped coding problem; there is no observed participant recovery story, real payout released or production reconciliation. Do not claim those outcomes.
+
+## Coverage and editorial decision
+
+Familiar bugs: A/B. Bounded decisions: D/F/G; none is an open-ended architecture vote. AI-use tension: optional A wording only. Surprising edge cases: C/E. Recovery: H is a held reconciliation problem; actual human recovery is unsupported across this source set. An attempted solution failing and later passing would require an actual, permitted evidence record before it could become a participant story. Do not invent a person, quote, struggle, completion time or success rate.
+
+Dot's remaining decision: select a small subset from A–E (or a reserve once its gap is resolved), choose neutral or optional agency wording for A, and approve the final copy after the integration revision check. No public campaign, new challenge, model comparison, skill assessment, consent change or runtime feature is authorized by selection alone. ENG-330 can use the chosen premise in the story; ENG-332 can use it for specific challenge sharing without adding a solution or unverified outcome.
+
+## Verification and limits
+
+Source review compared each candidate's body, editable paths and cited cases/expected results against its current baseline catalog revision and seed. The [existing content audit](audits/content-2026-10-25.md) supplies the stated fairness and pattern-rule limitations; it is not replaced or broadened here. No production code, seed, generated catalog or historical revision was changed.
+
+Local checks passed on Node 22.23.3: `npm test` (198/198), `npm run typecheck`, and `npm run check:content`. A read-only source check confirmed all eight challenge keys, full revision hashes, pinned seed anchors and cited case IDs. `git diff --check` passed. No new runtime tests were added for this editorial document.
+
+Editorial verification does not demonstrate fresh arrival, first edit, diagnostics, completion, next challenge, stale-code handling, reload/resume or recipient sharing in the revised flow. Those integration checks belong to ENG-328/329/332 and the ENG-327 release gate. No browser screenshots or runtime/publication verification are claimed for this document.
