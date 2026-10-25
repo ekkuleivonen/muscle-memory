@@ -199,8 +199,8 @@ export function CaseDiff({ row }: { row: CheckRow }) {
  */
 function stageText(stage: "compile" | "runtime"): string {
   return stage === "compile"
-    ? "The code didn't compile. Run the tests to see the error."
-    : "The code raised an error before the checks finished. Run the tests to see it.";
+    ? "The code didn't compile. Run examples to see the error."
+    : "The code raised an error before the checks finished. Run examples to see it.";
 }
 
 /** The failing cases: the public ones in full, the hidden ones by name and how they failed. */
@@ -469,7 +469,7 @@ export function Checks({
           // The full check includes hidden cases: printing an argument would reveal one.
           <p className="dim pull-output">
             Printed output isn&apos;t shown for the full check, which includes
-            hidden cases. Run the tests to see what your code prints.
+            hidden cases. Run examples to see what your code prints.
           </p>
         ) : (
           <details className="pull-output">
