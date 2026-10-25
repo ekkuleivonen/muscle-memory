@@ -15,33 +15,83 @@ import { inspectCard } from "./share";
 
 const HEX = "de8621e616e78cb42b58d2d189a0b9738171c3345ef3193d1af425130e4ba130";
 const REV = `sha256:${HEX}`;
+const OTHER = "sha256:" + "a".repeat(64);
 let n = 0;
-const full = (
+const observation = (
+  type: string,
   at: string,
-  runId: string,
-  passed: number,
-  total: number,
+  data: object,
   revision = REV,
 ) => ({
   kind: "observation" as const,
   recordId: `o${++n}`,
   participantId: "p",
   payload: JSON.stringify({
-    type: "observation.workspace.pull-request",
+    type,
     issue: "collected-by-partner",
     issueRevision: revision,
     occurredAt: at,
     source: { id: "s", sequence: n },
-    data: {
-      number: 1,
-      push: n,
-      runId,
-      passed,
-      total,
-      result: passed === total ? "checks-passed" : "checks-failed",
-    },
+    data,
   }),
 });
+/** A full check: queued, its terminal run, and (when it reported) its recorded result. */
+const check = (
+  minute: number,
+  runId: string,
+  outcome: {
+    status?: string;
+    passed?: number;
+    total?: number;
+    result?: string;
+  } = {},
+  revision = REV,
+) => {
+  const at = (s: number) =>
+    `2026-10-25T10:${String(minute).padStart(2, "0")}:${String(s).padStart(2, "0")}.000Z`;
+  const status = outcome.status ?? "result";
+  const run = {
+    runId,
+    purpose: "pull-request",
+    revision: 1,
+    codeArtifactId: `a-${runId}`,
+  };
+  return [
+    observation(
+      "observation.workspace.run",
+      at(0),
+      { ...run, status: "queued" },
+      revision,
+    ),
+    observation(
+      "observation.workspace.run",
+      at(10),
+      { ...run, status },
+      revision,
+    ),
+    ...(outcome.total !== undefined
+      ? [
+          observation(
+            "observation.workspace.pull-request",
+            at(11),
+            {
+              number: 1,
+              push: 1,
+              runId,
+              passed: outcome.passed,
+              total: outcome.total,
+              result:
+                outcome.result ??
+                (outcome.passed === outcome.total
+                  ? "checks-passed"
+                  : "checks-failed"),
+            },
+            revision,
+          ),
+        ]
+      : []),
+  ];
+};
 const completion: RecordedCompletion = {
   issue: "collected-by-partner",
   revision: REV,
@@ -51,12 +101,25 @@ const completion: RecordedCompletion = {
   automatic: true,
 };
 const records = [
-  full("2026-10-25T10:00:00.000Z", "r-0", 9, 15, "sha256:" + "a".repeat(64)), // another revision
-  full("2026-10-25T10:01:00.000Z", "r-1", 11, 15),
-  full("2026-10-25T10:03:00.000Z", "r-2", 14, 15),
-  full("2026-10-25T10:04:00.000Z", "r-3", 15, 15),
-  full("2026-10-25T10:09:00.000Z", "r-4", 13, 15), // after the completion
+  ...check(0, "r-0", { passed: 9, total: 15 }, OTHER), // another revision
+  ...check(1, "r-1", { passed: 11, total: 15 }),
+  ...check(2, "r-c", { status: "cancelled" }), // cancelled: not a check that ran
+  ...check(3, "r-2", { passed: 14, total: 15 }),
+  ...check(4, "r-3", { passed: 15, total: 15 }),
+  ...check(9, "r-4", { passed: 13, total: 15 }), // after the completion
 ];
+const of = (
+  r: typeof records,
+  c: Partial<RecordedCompletion> = {},
+  required: readonly unknown[] | null = [],
+) =>
+  outcomeOf({
+    records: r,
+    completion: { ...completion, ...c },
+    required,
+    language: "sql",
+    referral: "ab12cd34ef56",
+  });
 const card: Outcome = {
   v: 3,
   k: "DATA-6",
@@ -69,38 +132,58 @@ const card: Outcome = {
 };
 
 test("a v3 card comes only from a recorded checks-passed completion and its full checks", () => {
-  assert.deepEqual(
-    outcomeOf({
-      records,
-      completion,
-      language: "sql",
-      referral: "ab12cd34ef56",
-    }),
-    card,
-  );
-  const of = (c: Partial<RecordedCompletion>, r = records) =>
-    outcomeOf({
-      records: r,
-      completion: { ...completion, ...c },
-      language: "sql",
-      referral: "ab12cd34ef56",
-    });
+  assert.deepEqual(of(records), card);
   // A legacy merge is never turned into a v3 card, and no v2 merge is invented for this one.
-  assert.equal(of({ automatic: false }), null);
-  // The completing run must be recorded, on this revision, passing every check.
-  assert.equal(of({ runId: "r-9" }), null);
-  assert.equal(of({ runId: "r-2" }), null);
+  assert.equal(of(records, { automatic: false }), null);
+  // The completing run must be a recorded full check on this revision passing every check.
+  assert.equal(of(records, { runId: "r-9" }), null);
+  assert.equal(of(records, { runId: "r-2" }), null);
+  assert.equal(of(records, { revision: OTHER, runId: "r-0" }), null);
+  assert.equal(of(records, { revision: "not-a-hash" }), null);
   assert.equal(
-    of({ revision: "sha256:" + "a".repeat(64), runId: "r-0" }),
+    of([...check(4, "r-3", { passed: 0, total: 0, result: "checks-passed" })]),
     null,
   );
-  assert.equal(of({ revision: "not-a-hash" }), null);
-  // Only the final check recorded: first = final, one full check.
-  assert.deepEqual(of({}, [records[3]]), {
+  assert.equal(of([...check(4, "r-3", { status: "result" })]), null); // ran, never reported
+});
+
+test("a v3 card needs the required rules evaluated and satisfied for the checked code", () => {
+  assert.deepEqual(of(records, {}, []), card);
+  assert.equal(of(records, {}, null), null);
+  assert.equal(of(records, {}, [{ id: "priya-sum-distinct" }]), null);
+});
+
+test("f is the first full check only when complete; n counts checks through the completing run", () => {
+  // Only the completing check: first = final, one check.
+  assert.deepEqual(of(check(4, "r-3", { passed: 15, total: 15 })), {
     ...card,
     f: { passed: 15, total: 15 },
     n: 1,
   });
+  // A first check that errored, was cut short or never reported is not known.
+  for (const first of [
+    check(1, "r-1", { status: "runner-error" }),
+    check(1, "r-1", { status: "timeout" }),
+    check(1, "r-1", { passed: 0, total: 15, result: "checks-errored" }),
+    check(1, "r-1", { passed: 3, total: 12 }), // a different suite size: not comparable
+  ]) {
+    const out = of([...first, ...check(4, "r-3", { passed: 15, total: 15 })]);
+    assert.equal(out?.f, null);
+    assert.equal(out?.n, 2);
+  }
+  // A cancelled first check is an incomplete first check (f is null) and isn't counted.
+  const cancelledFirst = of([
+    ...check(1, "r-c", { status: "cancelled" }),
+    ...check(2, "r-1", { passed: 11, total: 15 }),
+    ...check(4, "r-3", { passed: 15, total: 15 }),
+  ]);
+  assert.equal(cancelledFirst?.f, null);
+  assert.equal(cancelledFirst?.n, 2);
+  // Later activity, even in the same attempt, never changes the card.
+  assert.deepEqual(
+    of([...records, ...check(30, "r-9", { passed: 1, total: 15 })]),
+    card,
+  );
 });
 
 test("a v3 link carries exactly the allowlisted facts and reads back exactly", () => {
@@ -148,6 +231,10 @@ test("a v3 link carries exactly the allowlisted facts and reads back exactly", (
 test("a v3 link we would not have made is refused, never shown in part", () => {
   const raw = (value: unknown) =>
     Buffer.from(JSON.stringify(value)).toString("base64url");
+  // Bounded before decoding: an oversized or non-base64url segment is never parsed.
+  const padded = raw({ ...card, k: "DATA-6", pad: "x".repeat(2000) });
+  assert.equal(decodeOutcome(padded), null);
+  assert.equal(decodeOutcome(encodeOutcome(card) + "!"), null);
   for (const bad of [
     { ...card, fp: 90 },
     { ...card, t: 252 },

@@ -314,13 +314,15 @@ export function ShareResult({
  * Optional sharing for the practice area, after a recorded `checks-passed` completion of the
  * challenge open there; nothing before one, nothing for a legacy merge, and nothing for a
  * completion on another revision. The card is version 3 (`lib/outcome.ts`): the challenge, the
- * checked revision and its recorded full checks, nothing else. Their solution is offered
+ * checked revision and its recorded full checks, nothing else, and only when the gate's
+ * required rules for that code were evaluated and satisfied. Their solution is offered
  * unticked: the editable file exactly as the completing run checked it, refused when that copy
  * is missing or was kept only in part, and never the editor's current code.
  */
 export function ShareOutcome({
   challenge,
   completion,
+  required,
   records,
   revisions,
 }: {
@@ -333,6 +335,12 @@ export function ShareOutcome({
   };
   /** The latest recorded completion for this challenge (`completions(...).at(-1)`), or null. */
   completion: RecordedCompletion | null;
+  /**
+   * The completion gate's outstanding required rules for the completing run's code (ENG-328's
+   * `completionEligibility(...).required`, evaluated for that run): `[]` when every rule is
+   * satisfied. Null when they weren't evaluated for that run; then nothing is offered.
+   */
+  required: readonly unknown[] | null;
   records: readonly WorkspaceRecord[];
   revisions: Readonly<Record<string, Revision>>;
 }) {
@@ -351,11 +359,12 @@ export function ShareOutcome({
         ? outcomeOf({
             records,
             completion: done,
+            required,
             language: challenge.language,
             referral,
           })
         : null,
-    [records, done, referral, challenge.language],
+    [records, done, required, referral, challenge.language],
   );
   const solution = useMemo(() => {
     const revision = done && revisions[done.revision];

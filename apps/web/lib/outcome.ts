@@ -62,62 +62,130 @@ const checks = (v: unknown): v is Checks =>
   count((v as Checks).total, MAX_CASES) &&
   (v as Checks).passed <= (v as Checks).total;
 
+interface FullCheck {
+  runId: string;
+  at: string;
+  seq: number;
+  /** The run's terminal status, when recorded. */
+  status: string | null;
+  /** The recorded full-check result, when there is one. */
+  result: { result: string; passed: number; total: number } | null;
+}
+
+/** Full checks (purpose `pull-request`) of one issue revision in the records given, in order. */
+function fullChecks(
+  records: readonly WorkspaceRecord[],
+  issue: string,
+  revision: string,
+): FullCheck[] {
+  const byRun = new Map<string, FullCheck>();
+  const of = (runId: string, at: string, seq: number) => {
+    let check = byRun.get(runId);
+    if (!check) {
+      check = { runId, at, seq, status: null, result: null };
+      byRun.set(runId, check);
+    }
+    // Ordered by when the run first appears (it is queued before it reports).
+    if (at < check.at || (at === check.at && seq < check.seq)) {
+      check.at = at;
+      check.seq = seq;
+    }
+    return check;
+  };
+  for (const record of records) {
+    if (record.kind !== "observation") continue;
+    try {
+      const o = JSON.parse(record.payload);
+      if (
+        o.issue !== issue ||
+        o.issueRevision !== revision ||
+        typeof o.occurredAt !== "string" ||
+        typeof o.data?.runId !== "string"
+      )
+        continue;
+      const seq = Number(o.source?.sequence ?? 0);
+      if (
+        o.type === "observation.workspace.run" &&
+        o.data.purpose === "pull-request"
+      ) {
+        const check = of(o.data.runId, o.occurredAt, seq);
+        if (TERMINAL.has(o.data.status)) check.status = o.data.status;
+      } else if (o.type === "observation.workspace.pull-request") {
+        const value = { passed: o.data.passed, total: o.data.total };
+        const check = of(o.data.runId, o.occurredAt, seq);
+        if (checks(value) && typeof o.data.result === "string")
+          check.result = { result: o.data.result, ...value };
+      }
+    } catch {
+      // Unreadable records say nothing.
+    }
+  }
+  return [...byRun.values()].sort(
+    (a, b) => a.at.localeCompare(b.at) || a.seq - b.seq,
+  );
+}
+
+const TERMINAL = new Set([
+  "result",
+  "user-error",
+  "runner-error",
+  "timeout",
+  "cancelled",
+]);
+
 /**
- * The card for a recorded completion, or null when the records can't support one exactly: a
- * completion that isn't a `checks-passed` one (a legacy merge stays a v2 card), or a final
- * full check that isn't recorded as passing every check on the completed revision.
+ * The card for a recorded completion, or null when the records can't support one exactly:
+ *
+ * - the completion must be a recorded `checks-passed` one (a legacy merge stays a v2 card);
+ * - its run must be a recorded full check on the completed revision with every check passed
+ *   (`total > 0`, `passed = total`);
+ * - the completion gate's required deterministic rules for that run's code must have been
+ *   evaluated and none left outstanding (`required`, from ENG-328's gate: `[]`; null when
+ *   not evaluated refuses).
+ *
+ * `f` is the first full check of the attempt on that revision, or null when its result is
+ * missing or incomplete (errored, cancelled, cut short). `n` counts the full checks that ran
+ * (not cancelled) in the attempt through the completing run; nothing after it.
  */
 export function outcomeOf(input: {
   records: readonly WorkspaceRecord[];
   completion: RecordedCompletion;
+  required: readonly unknown[] | null;
   language: string;
   referral: string;
 }): Outcome | null {
   const { completion } = input;
   const revision = /^sha256:([0-9a-f]{64})$/.exec(completion.revision)?.[1];
   if (!completion.automatic || !revision) return null;
-  const full: { at: string; seq: number; runId: string; checks: Checks }[] = [];
-  for (const record of attemptRecords(
-    input.records,
+  if (!input.required || input.required.length) return null;
+  const all = fullChecks(
+    attemptRecords(input.records, completion.issue, completion.at),
     completion.issue,
-    completion.at,
-  )) {
-    if (record.kind !== "observation") continue;
-    try {
-      const o = JSON.parse(record.payload);
-      if (
-        o.type === "observation.workspace.pull-request" &&
-        o.issue === completion.issue &&
-        o.issueRevision === completion.revision &&
-        typeof o.occurredAt === "string" &&
-        o.occurredAt <= completion.at
-      ) {
-        const value = { passed: o.data?.passed, total: o.data?.total };
-        if (checks(value))
-          full.push({
-            at: o.occurredAt,
-            seq: o.source?.sequence ?? 0,
-            runId: String(o.data.runId),
-            checks: value,
-          });
-      }
-    } catch {
-      // Unreadable records say nothing.
-    }
-  }
-  full.sort((a, b) => a.at.localeCompare(b.at) || a.seq - b.seq);
-  const final = full.find((f) => f.runId === completion.runId);
-  if (!final || final.checks.total === 0) return null;
-  if (final.checks.passed !== final.checks.total) return null;
-  const upTo = full.slice(0, full.indexOf(final) + 1);
+    completion.revision,
+  );
+  const index = all.findIndex((c) => c.runId === completion.runId);
+  const final = all[index]?.result;
+  if (
+    !final ||
+    final.result !== "checks-passed" ||
+    final.total === 0 ||
+    final.passed !== final.total
+  )
+    return null;
+  const through = all.slice(0, index + 1);
+  const first = through[0].result;
+  const complete = (r: FullCheck["result"]) =>
+    !!r &&
+    (r.result === "checks-passed" || r.result === "checks-failed") &&
+    r.total === final.total;
   return publicOutcome({
     v: 3,
     k: completion.key,
     l: input.language,
     rv: revision,
-    o: final.checks,
-    f: upTo[0].checks,
-    n: upTo.length,
+    o: { passed: final.passed, total: final.total },
+    f: complete(first) ? { passed: first!.passed, total: first!.total } : null,
+    n: through.filter((c) => c.status !== "cancelled").length,
     c: input.referral,
   });
 }
@@ -156,9 +224,14 @@ export function encodeOutcome(card: Outcome): string {
 
 const FIELDS = new Set(["v", "k", "l", "rv", "o", "f", "n", "c"]);
 
+/** Longer than any card we make: refused before decoding. */
+const MAX_SEGMENT = 1024;
+
 /** A v3 card from a link, or null when it is not one we would have made. */
 export function decodeOutcome(segment: string): Outcome | null {
   try {
+    if (segment.length > MAX_SEGMENT || !/^[A-Za-z0-9_-]+$/.test(segment))
+      return null;
     const binary = atob(segment.replace(/-/g, "+").replace(/_/g, "/"));
     const value = JSON.parse(
       new TextDecoder("utf-8", { fatal: true }).decode(
