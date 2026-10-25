@@ -1,0 +1,107 @@
+/* Shared links: copy-link controls, the code opt-in, /try/KEY and the pages for links that can't be shown. */
+.copy-link {
+  font: inherit;
+  font-size: 12.5px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: none;
+  color: var(--dim);
+  cursor: pointer;
+}
+.copy-link:hover {
+  color: var(--fg);
+  border-color: var(--line-strong);
+}
+.share-issue {
+  margin-top: 16px;
+}
+.share-issue p {
+  margin: 6px 0 0;
+  font-size: 12px;
+}
+.share-code {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 1.45;
+  cursor: pointer;
+}
+.share-code input {
+  margin-top: 3px;
+}
+.share-code-error {
+  color: var(--red, #cf222e);
+}
+.share-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.try-title {
+  font-size: 28px;
+  line-height: 1.2;
+  margin: 4px 0 8px;
+}
+.try-ticket h2 {
+  font-size: 14px;
+  margin: 18px 0 8px;
+}
+.try-ticket > :first-child {
+  margin-top: 0;
+}
+.try-criteria {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+.try-start .home-actions {
+  align-items: center;
+  flex-wrap: wrap;
+}
+.try-note,
+.try-other {
+  font-size: 13px;
+}
+.shared-code {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+}
+.shared-code summary {
+  cursor: pointer;
+  font-size: 13.5px;
+}
+.shared-code figure {
+  margin: 12px 0 0;
+}
+.shared-code figcaption {
+  font-size: 12px;
+  color: var(--dim);
+  margin-bottom: 4px;
+}
+.shared-code pre {
+  margin: 0;
+  max-height: 420px;
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--bg-subtle);
+  font-size: 12.5px;
+}
+.shared-code-note {
+  margin-top: 12px;
+  font-size: 13px;
+}
+.shared-unavailable h1 {
+  font-size: 26px;
+}
+.shared-code pre code {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: inherit;
+}
