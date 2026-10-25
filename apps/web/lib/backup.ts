@@ -1,14 +1,14 @@
 /**
  * A backup of everything this browser holds, so practice can move to another browser or
- * survive clearing this one: the profile, board and settings (localStorage), and the practice
+ * survive clearing this one: the profile, progress, stars and settings (localStorage), and the practice
  * store (identity, device secret, every record, and the upload queue). There are no accounts;
  * this file is the account. It carries the device secret, which can delete what was uploaded,
  * so it is to be kept private.
  */
 import { openPracticeStore, type StoreDump } from "../../../packages/browser/practice-store";
-import type { WorkspaceRecord } from "../../../packages/domain/workspace";
+import type { StoredRecord } from "../../../packages/domain/records";
 import { ACCOUNT_CHANGE, acceptConsent, parseStoredProfile } from "./account";
-import { BOARD_CHANGE } from "./board";
+import { PROGRESS_CHANGE } from "./progress";
 import { acceptsCurrent } from "./legal";
 import { PROFILE_KEY } from "./profile";
 
@@ -36,13 +36,13 @@ export interface BackupSummary {
 }
 
 const isString = (value: unknown): value is string => typeof value === "string";
-const isRecord = (value: unknown): value is WorkspaceRecord =>
+const isRecord = (value: unknown): value is StoredRecord =>
   !!value &&
   typeof value === "object" &&
-  isString((value as WorkspaceRecord).recordId) &&
-  isString((value as WorkspaceRecord).kind) &&
-  isString((value as WorkspaceRecord).participantId) &&
-  isString((value as WorkspaceRecord).payload);
+  isString((value as StoredRecord).recordId) &&
+  isString((value as StoredRecord).kind) &&
+  isString((value as StoredRecord).participantId) &&
+  isString((value as StoredRecord).payload);
 const isStringMap = (value: unknown): value is Record<string, string> =>
   !!value &&
   typeof value === "object" &&
@@ -133,7 +133,7 @@ export async function restoreBackup(backup: Backup): Promise<void> {
     if (key.startsWith(PREFIX)) localStorage.removeItem(key);
   for (const [key, value] of Object.entries(backup.local)) localStorage.setItem(key, value);
   window.dispatchEvent(new Event(ACCOUNT_CHANGE));
-  window.dispatchEvent(new Event(BOARD_CHANGE));
+  window.dispatchEvent(new Event(PROGRESS_CHANGE));
   const profile = parseStoredProfile(backup.local[PROFILE_KEY] ?? null);
   if (profile && !profile.signedOut && acceptsCurrent(profile.accepted)) acceptConsent();
 }

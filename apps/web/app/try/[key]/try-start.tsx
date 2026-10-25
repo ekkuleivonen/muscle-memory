@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { acceptConsent } from "../../../lib/account";
-import { statusOf } from "../../../lib/board";
-import { useBoard } from "../../(browse)/_components/board";
-import { logArrival, noteArrival } from "../../(browse)/_components/board-log";
+import { useProgress } from "../../../lib/progress-hooks";
+import { noteStart } from "../../../lib/start";
+import { logArrival, noteArrival } from "../../../lib/site-log";
 
 /**
  * Starting a shared challenge. For someone new it also accepts the Terms, which the line above
@@ -23,18 +23,19 @@ export function TryStart({
   runnable: boolean;
 }) {
   const router = useRouter();
-  const { items, move } = useBoard();
+  const progress = useProgress();
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => noteArrival(null), []);
-  const status = consented ? statusOf(items, issue.key) : undefined;
-  const start = async (via: "pointer" | "keyboard") => {
+  const mine = consented ? progress[issue.slug] : undefined;
+  const underway = !!mine && mine.completedAt === null;
+  const start = async () => {
     setStarting(true);
     setError("");
     try {
       if (!consented) acceptConsent();
       await logArrival().catch(() => undefined);
-      move(issue, "in-progress", via, { trigger: "start-work" });
+      noteStart({ key: issue.key, from: "link", query: null, position: null });
       router.push(practiceHref(issue.key));
     } catch {
       setStarting(false);
@@ -59,11 +60,11 @@ export function TryStart({
           type="button"
           className="home-cta"
           disabled={starting}
-          onClick={(event) => void start(event.detail === 0 ? "keyboard" : "pointer")}
+          onClick={() => void start()}
         >
           {starting
             ? "Opening…"
-            : status === "in-progress"
+            : underway
               ? `Continue your attempt at ${issue.key} →`
               : `Start ${issue.key} yourself →`}
         </button>

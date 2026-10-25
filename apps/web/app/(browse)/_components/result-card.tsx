@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { openPracticeStore } from "../../../../../packages/browser/practice-store";
 import type { Revision } from "../../../../../packages/content/model";
-import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
+import type { StoredRecord } from "../../../../../packages/domain/records";
 
 export function Receipt({
   headline,
@@ -71,7 +71,7 @@ export interface ResultInput {
   number: number;
   issue: { key: string; slug: string; title: string; revision: string };
   language: string;
-  records: readonly WorkspaceRecord[];
+  records: readonly StoredRecord[];
   mergedAt: string;
   revisions: Record<string, Revision>;
 }

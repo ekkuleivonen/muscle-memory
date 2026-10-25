@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { acceptConsent, readProfile } from "../../lib/account";
 import { acceptsCurrent } from "../../lib/legal";
-import { logArrival, noteArrival } from "../(browse)/_components/board-log";
+import { logArrival, noteArrival } from "../../lib/site-log";
 
 /**
  * Accepts the current Terms and goes on; says so when the Terms changed since the last

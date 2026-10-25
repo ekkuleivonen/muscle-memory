@@ -9,7 +9,7 @@
  * challenge has one file to edit, so a link normally carries one; the format takes up to
  * `MAX_FILES`, so links made when challenges had several still read back whole.
  */
-import { ISSUE_KEY } from "../../../packages/domain/board";
+import { CHALLENGE_KEY } from "../../../packages/domain/records";
 import { decodeOutcome, type Outcome } from "./outcome";
 
 /** The public page of a challenge: what it is, and a fresh start on it. */
@@ -39,7 +39,7 @@ export function inspectCard(segment: string): CardLink {
       return {
         kind: "older",
         key:
-          typeof value.k === "string" && ISSUE_KEY.test(value.k)
+          typeof value.k === "string" && CHALLENGE_KEY.test(value.k)
             ? value.k
             : null,
       };
@@ -225,7 +225,7 @@ export function solutionOf(
     try {
       const o = JSON.parse(record.payload);
       if (
-        o.type === "observation.workspace.run" &&
+        o.type === "practice.run" &&
         o.data?.runId === runId &&
         typeof o.data.codeArtifactId === "string"
       )

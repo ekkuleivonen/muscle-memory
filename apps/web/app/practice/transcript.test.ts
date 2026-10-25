@@ -22,7 +22,7 @@ const run = (outcome: RunView["outcome"]): RunView => ({
   runId: "r",
   revision: 3,
   status: "result",
-  purpose: "local",
+  purpose: "examples",
   outcome,
 });
 const text = (view: RunView) =>
@@ -54,7 +54,7 @@ test("a thrown error shows with its trace under its case, after what was printed
   assert.equal(
     out,
     [
-      "dim|$ run tests · JavaScript",
+      "dim|$ run examples · JavaScript",
       "out|checking",
       "err|careful",
       "fail|✘ formatPrice(123456)",
@@ -144,7 +144,7 @@ test("additional checks reveal categories, never hidden names, values, traces or
       stderr: bounded(secret + " stderr"),
       durationMs: 1,
     }),
-    purpose: "pull-request",
+    purpose: "submit",
   };
   const result = transcript(hiddenRun, hidden, "JavaScript")
     .map((line) => line.text)
@@ -200,7 +200,7 @@ test("full Submit never reveals run-level compile/load error text with hidden ca
         cases: [],
         durationMs: 2,
       }),
-      purpose: "pull-request",
+      purpose: "submit",
     };
     const rendered = transcript(view, hidden, "JavaScript")
       .map((l) => l.text)

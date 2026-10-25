@@ -1,6 +1,7 @@
 /**
- * One open workspace: editor transactions and runs become ordered raw observations, then
- * feedback is derived from the stored run outcome. No React state is touched per keystroke.
+ * One practice session on a challenge: editor transactions, runs and submissions become ordered
+ * raw observations (the practice stream), and feedback is derived from the stored run outcome.
+ * No React state is touched per keystroke.
  */
 import { randomId } from "../../../../packages/browser/random-id";
 import { Text, Transaction } from "@codemirror/state";
@@ -10,22 +11,27 @@ import type {
   CaptureSink,
   CaptureStatus,
 } from "../../../../packages/capture/recorder";
-import { casesRun, type Executable } from "../../../../packages/content/model";
+import { PAGE_SESSION_ID } from "../../../../packages/browser/page-session";
+import { boundText } from "../../../../packages/domain/capture";
+import {
+  casesRun,
+  type Executable,
+  type Revision,
+} from "../../../../packages/content/model";
 import type { Json } from "../../../../packages/domain/json";
 import {
-  codeRevision,
-  type CodeRevisionArtifact,
   EDIT_CHANGES_LIMIT_BYTES,
+  PRACTICE_CAPTURE_GAPS,
+  PRACTICE_CAPTURE_VERSION,
+  type Environment,
   type KeyEvent,
-  type ObservationData,
-  type ObservationType,
-  type ViewTarget,
-  pullRequestResult,
-  type PullRequestResult,
+  type PracticeData,
+  type PracticeType,
   type RunPurpose,
-  WORKSPACE_CAPTURE_GAPS,
   type RunStatus,
-} from "../../../../packages/domain/workspace";
+} from "../../../../packages/domain/practice";
+import { codeRevision, type CodeRevisionArtifact } from "../../../../packages/domain/records";
+import { verdictOf, type Verdict } from "../../lib/submission";
 import {
   engineFor,
   type Engine,
@@ -51,29 +57,21 @@ export interface RunView {
   readonly status: RunStatus;
   readonly outcome?: RunOutcome;
   readonly purpose: RunPurpose;
-  /** For a pull request's checks: its number, and its result once they finish. */
-  readonly pullRequest?: PullRequestView;
-}
-
-export interface PullRequestView {
-  readonly number: number;
-  /** 1 when opened, 2+ for pushes to it. */
-  readonly push: number;
-  readonly runId: string;
-  readonly revision: number;
-  readonly result?: PullRequestResult;
-  readonly passed?: number;
-  readonly total?: number;
-  readonly at: string;
+  /** For a Submit, once its run finished: cases and rules, and whether it completed. */
+  readonly verdict?: Verdict;
 }
 
 export interface SessionOptions {
   readonly participantId: string;
-  readonly consentVersion: string;
-  /** The issue and the revision worked against; recorded with every observation. */
-  readonly issue: string;
-  readonly issueRevision: string;
-  /** What CI runs: the entry point and the revision's cases. */
+  /** The accepted Terms version, such as 2026-10-25.1. */
+  readonly termsVersion: string;
+  /** The challenge and the revision worked against; recorded with every observation. */
+  readonly challenge: { readonly id: string; readonly key: string; readonly revision: Revision; readonly revisionId: string };
+  /** The attempt this session belongs to. */
+  readonly attemptId: string;
+  /** Set when this session begins the attempt: recorded as `started`, before `opened`. */
+  readonly started?: PracticeData["practice.started"] | null;
+  /** What Submit and Run examples run: the entry point and the revision's cases. */
   readonly executable: Executable;
   readonly sink: CaptureSink;
   /** Every editable file and the text it starts with (the revision's, or restored work). */
@@ -92,19 +90,16 @@ export interface SessionOptions {
    */
   readonly runtime?: Engine["runtime"] | null;
   readonly onVimMode?: (mode: string) => void;
-  /** Pull requests opened for this issue in earlier sessions, so numbers continue. */
-  readonly pullRequestsBefore?: number;
-  /**
-   * The open pull request for this issue, if any, read when the person opens one: new work
-   * is pushed to it instead of opening another.
-   */
-  readonly openPullRequest?: () => { number: number; pushes: number } | null;
+  /** The challenge suggested next, by key, recorded with a completion. */
+  readonly suggestNext?: () => string | null;
+  /** A Submit completed the attempt; its `completed` is recorded. */
+  readonly onCompleted?: (run: RunView) => void;
   /** The page's current runner; it changes when the runtime is reloaded. */
   readonly runner: () => Runner;
   readonly onRun: (run: RunView) => void;
-  /** Practice maps both existing editor check shortcuts to its deliberate full Submit. */
+  /** Mod-Enter in the editor: the page decides whether Submit can run now. */
   readonly onSubmit?: (via: "keyboard" | "pointer") => void;
-  /** A prior PR's checks were restored; its first edit also invalidates the shown result. */
+  /** A prior submission's feedback is shown; its first edit also marks it out of date. */
   readonly hasPreviousChecks?: boolean;
   /** Called once on the first edit after current or restored checks, to mark them stale. */
   readonly onEditedAfterRun: () => void;
@@ -113,6 +108,7 @@ export interface SessionOptions {
   /** The app page the IDE was opened from, and the window size, for `opened`. */
   readonly entry?: string | null;
   readonly viewport?: { width: number; height: number } | null;
+  readonly environment?: Environment | null;
   /** The self-reported profile when the IDE opened, for `opened`. */
   readonly profile?: Json | null;
 }
@@ -138,7 +134,7 @@ export interface SaveStatus extends CaptureStatus {
 
 export class WorkspaceSession {
   readonly recorder: CaptureRecorder;
-  readonly sourceId = `workspace-${randomId()}`;
+  readonly sourceId = `practice-${randomId()}`;
   /** Editors by path, mounted when their tab is first shown. */
   private readonly views = new Map<string, EditorView>();
   /** Every editable file's current text, kept per transaction so snapshots never lag. */
@@ -156,7 +152,6 @@ export class WorkspaceSession {
   private unsafeAt = 0;
   private unsafeReason = "";
   private statusKey = "";
-  private pullRequests = 0;
   /** Key events waiting to be written, by file. */
   private readonly keys = new Map<string, KeyEvent[]>();
   private keysTimer: ReturnType<typeof setTimeout> | undefined;
@@ -173,36 +168,38 @@ export class WorkspaceSession {
   }
 
   constructor(private readonly options: SessionOptions) {
-    this.pullRequests = options.pullRequestsBefore ?? 0;
     this.staleNotified = !options.hasPreviousChecks;
     this.recorder = new CaptureRecorder({
       participantId: options.participantId,
+      sessionId: PAGE_SESSION_ID,
       sourceId: this.sourceId,
-      consentVersion: options.consentVersion,
-      issue: options.issue,
-      issueRevision: options.issueRevision,
+      termsVersion: options.termsVersion,
+      challenge: { id: options.challenge.id, revision: options.challenge.revisionId },
+      attemptId: options.attemptId,
       sink: options.sink,
       onTransition: () => this.notify(),
     });
+    if (options.started) this.record("practice.started", options.started);
     for (const [path, file] of Object.entries(options.files))
       this.docs.set(path, Text.of(file.text.split(/\r\n?|\n/)));
     const code = this.artifact();
     this.markCopy(
       this.record(
-        "observation.workspace.opened",
+        "practice.opened",
         {
           revision: 0,
           codeArtifactId: code.artifactId,
           entry: options.entry ?? null,
           profile: options.profile ?? null,
           viewport: options.viewport ?? null,
+          environment: options.environment ?? null,
           editor: editorFeatures(
             options.language ?? "python",
             options.keymap ?? "standard",
             Boolean(options.types),
           ),
           runtime: this.runtime,
-          captureGaps: WORKSPACE_CAPTURE_GAPS,
+          captureGaps: PRACTICE_CAPTURE_GAPS,
         },
         [code],
       ),
@@ -244,14 +241,10 @@ export class WorkspaceSession {
       this.docs.get(path)!.toString(),
       {
         onChange: (transaction) => this.recordEdit(path, transaction),
-        onRun: () =>
+        onSubmit: () =>
           this.options.onSubmit
             ? this.options.onSubmit("keyboard")
-            : void this.run("local", "keyboard"),
-        onPullRequest: () =>
-          this.options.onSubmit
-            ? this.options.onSubmit("keyboard")
-            : void this.pullRequest("keyboard"),
+            : void this.submit("keyboard"),
         onVimMode: this.options.onVimMode,
       },
       {
@@ -326,15 +319,28 @@ export class WorkspaceSession {
   }
 
   /**
-   * Opens a pull request, or pushes to the open one: this exact code, checked by a run of
-   * every case.
+   * Submits this exact code: a run of every case, then the verdict (cases and rules) and, when
+   * it holds, completion.
    */
-  pullRequest(via: "pointer" | "keyboard" = "pointer"): Promise<void> {
-    return this.run("pull-request", via);
+  submit(via: "pointer" | "keyboard" = "pointer"): Promise<void> {
+    return this.run("submit", via);
+  }
+
+  /** The challenge's text was copied: what, bounded. It is the challenge's own text. */
+  copiedChallenge(text: string): void {
+    if (this.closed || !text) return;
+    const cut = boundText(text, 4096);
+    this.record("practice.clipboard", {
+      source: "challenge",
+      kind: "copy",
+      text: cut.text,
+      textBytes: cut.originalBytes,
+      truncated: cut.truncated,
+    });
   }
 
   async run(
-    purpose: RunPurpose = "local",
+    purpose: RunPurpose = "examples",
     via: "pointer" | "keyboard" = "pointer",
   ): Promise<void> {
     if (!this.views.size || !this.runnable || this.options.runner().running)
@@ -354,28 +360,16 @@ export class WorkspaceSession {
       runtime: this.runtime,
       timeoutMs: this.options.runner().timeoutMs ?? RUN_TIMEOUT_MS,
     };
-    const open =
-      purpose === "pull-request" ? this.options.openPullRequest?.() : null;
-    if (open) this.pullRequests = Math.max(this.pullRequests, open.number);
-    const pullRequest =
-      purpose === "pull-request"
-        ? {
-            number: open ? open.number : ++this.pullRequests,
-            push: open ? open.pushes + 1 : 1,
-            runId,
-            revision,
-            at: new Date().toISOString(),
-          }
-        : undefined;
+    const files = this.code();
     this.snapshot(code, "run");
     this.editsSinceSnapshot = 0;
-    const update = (status: RunStatus, outcome?: RunOutcome) => {
-      this.record("observation.workspace.run", {
+    const update = (status: RunStatus, outcome?: RunOutcome, verdict?: Verdict) => {
+      this.record("practice.run", {
         ...base,
         status,
         ...(outcome ? { outcome: outcome as unknown as Json } : {}),
       });
-      this.lastRun = { runId, revision, status, outcome, purpose, pullRequest };
+      this.lastRun = { runId, revision, status, outcome, purpose, ...(verdict ? { verdict } : {}) };
       this.staleNotified = revision !== this.revision;
       this.options.onRun(this.lastRun);
     };
@@ -406,19 +400,27 @@ export class WorkspaceSession {
       () => update("running"),
     );
     // The outcome belongs to `revision`, even if the editor has moved on since.
-    if (pullRequest) {
-      const verdict = pullRequestResult(this.options.executable.cases, outcome);
-      Object.assign(pullRequest, verdict);
-      this.record("observation.workspace.pull-request", {
-        number: pullRequest.number,
-        push: pullRequest.push,
+    if (purpose !== "submit") return update(statusOf(outcome), outcome);
+    const verdict = verdictOf(this.options.challenge.revision, outcome, files);
+    this.record("practice.submitted", {
+      runId,
+      revision,
+      codeArtifactId: code.artifactId,
+      result: verdict.result,
+      passed: verdict.passed,
+      total: verdict.total,
+      rules: verdict.rules.map((rule) => rule.id),
+    });
+    if (verdict.complete)
+      this.record("practice.completed", {
         runId,
-        revision,
         codeArtifactId: code.artifactId,
-        ...verdict,
+        suggested: this.options.suggestNext?.() ?? null,
       });
-    }
-    update(statusOf(outcome), outcome);
+    update(statusOf(outcome), outcome, verdict);
+    if (verdict.complete) this.options.onCompleted?.(this.lastRun!);
+    return;
+
   }
 
   cancel(): void {
@@ -436,7 +438,7 @@ export class WorkspaceSession {
       this.closed = true;
       this.settle();
       this.writeKeys();
-      this.record("observation.workspace.closed", { reason: "left" });
+      this.record("practice.closed", { reason: "left" });
       await this.recorder.flush().catch(() => undefined);
     }
     for (const view of this.views.values()) view.destroy();
@@ -452,7 +454,7 @@ export class WorkspaceSession {
     if (this.closed) return;
     this.settle();
     this.writeKeys();
-    this.record("observation.workspace.closed", {
+    this.record("practice.closed", {
       reason: "page-hidden-for-unload",
     });
     void this.recorder.flush().catch(() => undefined);
@@ -465,29 +467,14 @@ export class WorkspaceSession {
     width: number;
     height: number;
   }): void {
-    this.record("observation.workspace.page", state);
-  }
-
-  /** A file, side bar view or panel opened, shown or closed. */
-  navigated(
-    target: ViewTarget,
-    action: "open" | "show" | "close",
-    value: string,
-    via: "pointer" | "keyboard" | "app",
-  ): void {
-    this.record("observation.workspace.navigated", {
-      target,
-      action,
-      value,
-      via,
-    });
+    this.record("practice.page", state);
   }
 
   runtimeState(
     state: "loading" | "ready" | "unavailable",
     message?: string,
   ): void {
-    this.record("observation.workspace.runtime", {
+    this.record("practice.runtime", {
       state,
       ...(message ? { message } : {}),
     });
@@ -496,10 +483,10 @@ export class WorkspaceSession {
   /** What one file's editor reports besides its edits; read-only files too. */
   activity(file: string): ActivityHooks {
     return {
-      onKey: (kind, key, modifiers, repeat) => {
+      onKey: (kind, key, code, modifiers, repeat) => {
         if (this.closed) return;
         const waiting = this.keys.get(file) ?? [];
-        waiting.push([this.recorder.elapsed(), kind, key, modifiers, repeat]);
+        waiting.push([this.recorder.elapsed(), kind, key, code, modifiers, repeat]);
         this.keys.set(file, waiting);
         if (waiting.length >= KEYS_AT_MOST) this.writeKeys();
         else
@@ -511,7 +498,7 @@ export class WorkspaceSession {
         const moves =
           this.burst?.key === key ? (this.merging as number) + 1 : 1;
         this.merge(key, SELECTION_MERGE_MS, moves, () =>
-          this.record("observation.workspace.selection", {
+          this.record("practice.selection", {
             file,
             selection: selection as Json,
             userEvent,
@@ -522,23 +509,24 @@ export class WorkspaceSession {
       onScroll: (fromLine, toLine) =>
         !this.restoring.has(file) &&
         this.merge(`scroll:${file}`, SCROLL_MERGE_MS, 0, () =>
-          this.record("observation.workspace.scroll", {
+          this.record("practice.scroll", {
             file,
             fromLine,
             toLine,
           }),
         ),
       onFocus: (focused) =>
-        this.record("observation.workspace.focus", { file, focused }),
+        this.record("practice.focus", { file, focused }),
       onClipboard: (kind, ranges, wholeLines) =>
-        this.record("observation.workspace.clipboard", {
+        this.record("practice.clipboard", {
+          source: "editor",
           file,
           kind,
           ranges,
           wholeLines,
         }),
       onAssist: (kind, items) =>
-        this.record("observation.workspace.assist", {
+        this.record("practice.assist", {
           file,
           kind,
           items: items as Json,
@@ -579,7 +567,7 @@ export class WorkspaceSession {
     this.keysTimer = undefined;
     for (const [file, keys] of this.keys)
       if (keys.length)
-        this.recorder.observe("observation.workspace.keys", { file, keys });
+        this.recorder.observe("practice.keys", { file, keys });
     this.keys.clear();
   }
 
@@ -587,9 +575,9 @@ export class WorkspaceSession {
    * Every observation but keys goes through here, so a merged burst is written before what
    * follows it and source order matches what happened. Keys carry their own times instead.
    */
-  private record<T extends ObservationType>(
+  private record<T extends PracticeType>(
     type: T,
-    data: ObservationData[T],
+    data: PracticeData[T],
     artifacts?: readonly CodeRevisionArtifact[],
   ) {
     this.settle();
@@ -606,7 +594,7 @@ export class WorkspaceSession {
       JSON.stringify(changes),
     ).length;
     const oversize = changesBytes > EDIT_CHANGES_LIMIT_BYTES;
-    const edit = this.record("observation.workspace.edit", {
+    const edit = this.record("practice.edit", {
       file,
       revision: this.revision,
       changes: oversize ? null : changes,
@@ -645,7 +633,7 @@ export class WorkspaceSession {
   ): void {
     this.markCopy(
       this.record(
-        "observation.workspace.snapshot",
+        "practice.snapshot",
         { revision: code.revision, codeArtifactId: code.artifactId, reason },
         [code],
       ),
@@ -712,6 +700,7 @@ export class WorkspaceSession {
       this.options.participantId,
       this.sourceId,
       this.revision,
+      PRACTICE_CAPTURE_VERSION,
       Object.fromEntries(
         [...this.docs].map(([path, doc]) => [
           path,

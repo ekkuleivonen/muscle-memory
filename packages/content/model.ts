@@ -126,21 +126,18 @@ export function sourceFiles(workspace: Workspace): Record<string, WorkspaceFile>
   );
 }
 
-/**
- * The cases a run checks: Run tests runs the repo's own tests (the visible cases); CI on a pull
- * request runs every case, CI-only ones included.
- */
+/** The cases a run checks: Run examples runs the examples; Submit runs every case. */
 export function casesRun<C extends { readonly visible: boolean }>(
   cases: readonly C[],
-  purpose: "local" | "pull-request",
+  purpose: "examples" | "submit",
 ): C[] {
-  return purpose === "pull-request" ? [...cases] : cases.filter((c) => c.visible);
+  return purpose === "submit" ? [...cases] : cases.filter((c) => c.visible);
 }
 
-/** What CI needs to run a revision's code: the engine's inputs, without the repo. */
+/** What a run needs from a revision: the engine's inputs. */
 export interface Executable {
   readonly language: string;
-  /** The source file CI loads, and the program's other source files by path. */
+  /** The source file a run loads. */
   readonly entry: string;
   readonly entrypoint: string;
   readonly parameters?: readonly string[];

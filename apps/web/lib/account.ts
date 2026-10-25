@@ -4,7 +4,7 @@
  */
 import { openPracticeStore } from "../../../packages/browser/practice-store";
 import { eraseUploaded } from "./ingest";
-import { BOARD_CHANGE, BOARD_KEY } from "./board";
+import { PROGRESS_CHANGE, PROGRESS_KEY } from "./progress";
 import { HANDLE_PATTERN, randomHandle } from "./handle";
 import type { LanguageId } from "./languages";
 import { LEGAL_VERSION, type Acceptance } from "./legal";
@@ -121,7 +121,7 @@ export function setStealth(stealth: boolean) {
 }
 
 /**
- * Ends the session; profile, board and history stay in this browser, and the consent page
+ * Ends the session; profile, progress and history stay in this browser, and the consent page
  * offers to sign back in rather than doing it silently.
  */
 export function logOut() {
@@ -135,9 +135,9 @@ export function logOut() {
  * the device identity stay, so anything already uploaded can still be deleted later.
  */
 export async function resetProgress(identity = false) {
-  localStorage.removeItem(BOARD_KEY);
+  localStorage.removeItem(PROGRESS_KEY);
   localStorage.removeItem("muscle-memory.workspace-view");
-  window.dispatchEvent(new Event(BOARD_CHANGE));
+  window.dispatchEvent(new Event(PROGRESS_CHANGE));
   const store = await openPracticeStore();
   try {
     await store.clear(identity);

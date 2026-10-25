@@ -5,11 +5,11 @@ import { useEffect, useRef } from "react";
 
 const CURRENT_PATH_KEY = "muscle-memory.current-path";
 import {
-  issueContext,
+  challengeContext,
   logPage,
   logView,
   PREVIOUS_PATH_KEY,
-} from "./board-log";
+} from "../../../lib/site-log";
 
 /**
  * Records every page of the app as it is shown, with its query (searches and filters are GET
@@ -38,7 +38,7 @@ export function TrackerActivity() {
       // Storage can be unavailable; the IDE then falls back to document.referrer.
     }
     last.current = here;
-    void logView(issueContext(path), { path, query, previous });
+    void logView(challengeContext(path), { path, query, previous });
   }, [path, query]);
 
   const inIde = isPracticePath(path);

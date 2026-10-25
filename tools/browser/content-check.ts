@@ -14,7 +14,7 @@ import { chromium } from "playwright";
 import { SEED_ISSUES } from "../../content/seed";
 import { editableFiles, executableOf, sourceFiles, type Revision } from "../../packages/content/model";
 import { verifyCatalog } from "../../packages/content/revision";
-import { runFeedback } from "../../packages/domain/workspace";
+import { runFeedback } from "../../packages/domain/records";
 
 const root = resolve(import.meta.dirname, "../..");
 const catalog = verifyCatalog(

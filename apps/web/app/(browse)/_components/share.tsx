@@ -5,15 +5,15 @@ import {
   editableFiles,
   type Revision,
 } from "../../../../../packages/content/model";
-import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
+import type { StoredRecord } from "../../../../../packages/domain/records";
 import { LANGUAGES } from "../../../lib/languages";
 import {
   encodeOutcome,
+  completedRun,
   outcomeOf,
   outcomeSentence,
   publicOutcome,
   type Outcome,
-  type RecordedCompletion,
 } from "../../../lib/outcome";
 import {
   codeFragment,
@@ -24,7 +24,7 @@ import {
   tryHref,
   type SharedFile,
 } from "../../../lib/share";
-import { logShare } from "./board-log";
+import { logShare } from "../../../lib/site-log";
 import { copyText, useReferral, type ResultInput } from "./result-card";
 import "../../share.css";
 
@@ -146,7 +146,7 @@ export function ShareResult({
     void logShare(
       { id: issue.slug, revision: issue.revision },
       {
-        issueKey: issue.key,
+        challengeKey: issue.key,
         channel,
         ref: card.c,
         card: card as unknown as Json,
@@ -302,71 +302,48 @@ export function ShareResult({
 }
 
 /**
- * Optional sharing for the practice area, after a recorded `checks-passed` completion of the
- * challenge open there; nothing before one, nothing for a legacy merge, and nothing for a
- * completion on another revision. The card is version 3 (`lib/outcome.ts`): the challenge, the
- * checked revision and its recorded full checks, nothing else, and only when the gate's
- * required rules for that code were evaluated and satisfied. Their solution is offered
- * unticked: the editable file exactly as the completing run checked it, refused when that copy
- * is missing or was kept only in part, and never the editor's current code.
+ * Optional sharing for the practice area, after the attempt open there was recorded as
+ * completed. The card is version 3 (`lib/outcome.ts`): the challenge, the checked revision and
+ * the attempt's recorded submissions, nothing else. Their solution is offered unticked: the
+ * editable file exactly as the completing run checked it, refused when that copy is missing or
+ * was kept only in part, and never the editor's current code.
  */
 export function ShareOutcome({
   challenge,
-  completion,
-  required,
+  attemptId,
   records,
-  revisions,
+  revision,
 }: {
   challenge: {
+    id: string;
     key: string;
     slug: string;
     title: string;
     revision: string;
     language: string;
   };
-  /** The latest recorded completion for this challenge (`completions(...).at(-1)`), or null. */
-  completion: RecordedCompletion | null;
-  /**
-   * The completion gate's outstanding required rules for the completing run's code (ENG-328's
-   * `completionEligibility(...).required`, evaluated for that run): `[]` when every rule is
-   * satisfied. Null when they weren't evaluated for that run; then nothing is offered.
-   */
-  required: readonly unknown[] | null;
-  records: readonly WorkspaceRecord[];
-  revisions: Readonly<Record<string, Revision>>;
+  attemptId: string;
+  records: readonly StoredRecord[];
+  revision: Revision;
 }) {
   const referral = useReferral();
-  const done =
-    completion &&
-    completion.automatic &&
-    completion.issue === challenge.slug &&
-    completion.key === challenge.key &&
-    completion.revision === challenge.revision
-      ? completion
-      : null;
   const card = useMemo(
     () =>
-      done && referral
+      referral
         ? outcomeOf({
             records,
-            completion: done,
-            required,
+            challenge: { id: challenge.id, key: challenge.key, revision: challenge.revision },
+            attemptId,
             language: challenge.language,
             referral,
           })
         : null,
-    [records, done, required, referral, challenge.language],
+    [records, attemptId, referral, challenge.id, challenge.key, challenge.revision, challenge.language],
   );
   const solution = useMemo(() => {
-    const revision = done && revisions[done.revision];
-    return revision
-      ? solutionOf(
-          records,
-          done.runId,
-          Object.keys(editableFiles(revision.workspace)),
-        )
-      : null;
-  }, [records, done, revisions]);
+    const runId = completedRun(records, challenge.id, attemptId);
+    return runId ? solutionOf(records, runId, Object.keys(editableFiles(revision.workspace))) : null;
+  }, [records, challenge.id, attemptId, revision]);
   if (!card) return null;
   const label =
     LANGUAGES.find((l) => l.id === challenge.language)?.label ??

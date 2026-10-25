@@ -1,8 +1,7 @@
-name: Erasure and aggregates
+name: Erasure
 
 # Deletes the rows of every participant who deleted their account (tools/erasure/erase.py,
-# docs/telemetry.md), then recomputes the percentiles result cards compare with
-# (tools/aggregates/aggregate.py, docs/play.md) from what is left. Daily, and on demand.
+# docs/telemetry.md). Daily, and on demand.
 on:
   schedule:
     - cron: "17 3 * * *"
@@ -35,4 +34,3 @@ jobs:
           python-version: "3.13"
       - run: pip install -r tools/erasure/requirements.txt
       - run: python tools/erasure/erase.py
-      - run: python tools/aggregates/aggregate.py

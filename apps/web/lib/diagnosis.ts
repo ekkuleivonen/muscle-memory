@@ -8,7 +8,7 @@
  */
 import type { Case } from "../../../packages/content/model";
 import type { Json } from "../../../packages/domain/json";
-import { runFeedback } from "../../../packages/domain/workspace";
+import { runFeedback } from "../../../packages/domain/records";
 
 /** How a case failed, said the same way for public and hidden cases. */
 export type FailureCategory =

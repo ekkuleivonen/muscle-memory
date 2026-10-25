@@ -11,9 +11,14 @@ const fixture = live("frequency-map");
 function session(sink: MemorySink, options: Partial<SessionOptions> = {}) {
   return new WorkspaceSession({
     participantId: "synthetic-participant",
-    consentVersion: "workspace-session-v1",
-    issue: "frequency-map",
-    issueRevision: fixture.id,
+    termsVersion: "2026-10-01",
+    challenge: {
+      id: "frequency-map",
+      key: "PY-002",
+      revision: fixture.revision,
+      revisionId: fixture.id,
+    },
+    attemptId: "attempt-1",
     executable: fixture.executable,
     sink,
     files: {
@@ -53,7 +58,7 @@ function snapshots(sink: MemorySink) {
       .map((record) => [record.artifactId, record]),
   );
   return records
-    .filter((record) => record.type === "observation.workspace.snapshot")
+    .filter((record) => record.type === "practice.snapshot")
     .map((record) => ({
       reason: record.data.reason,
       revision: record.data.revision,
@@ -94,7 +99,7 @@ test("an oversize edit inside a batch is snapshotted at its own revision", async
     .map((record) => JSON.parse(record.payload))
     .find(
       (record) =>
-        record.type === "observation.workspace.edit" &&
+        record.type === "practice.edit" &&
         record.data.revision === 2,
     );
   assert.equal(edit.data.changes, null);
@@ -112,9 +117,9 @@ test("keys are batched with their own times; cursor bursts merge and are written
   const workspace = session(sink);
   const hooks = workspace.activity(fixture.path);
   hooks.onFocus(true);
-  hooks.onKey("down", "a", "", false);
-  hooks.onKey("up", "a", "", false);
-  hooks.onKey("down", "Escape", "", false);
+  hooks.onKey("down", "a", "KeyA", "", false);
+  hooks.onKey("up", "a", "KeyA", "", false);
+  hooks.onKey("down", "Escape", "Escape", "", false);
   // A burst of cursor moves, then an edit: the moves are written first, as one observation.
   hooks.onSelection({ ranges: [{ anchor: 1, head: 1 }], main: 0 }, "select.pointer");
   hooks.onSelection({ ranges: [{ anchor: 2, head: 2 }], main: 0 }, "select.pointer");
@@ -123,11 +128,10 @@ test("keys are batched with their own times; cursor bursts merge and are written
   hooks.onScroll(1, 20);
   hooks.onScroll(5, 24);
   hooks.onClipboard("copy", [{ from: 0, to: 1 }], false);
-  workspace.navigated("panel", "show", "output", "pointer");
   workspace.page({ visible: false, focused: false, width: 800, height: 600 });
   await workspace.close();
   const all = observations(sink);
-  const types = all.map((o) => o.type.replace("observation.workspace.", ""));
+  const types = all.map((o) => o.type.replace("practice.", ""));
   assert.deepEqual(types, [
     "opened",
     "focus",
@@ -135,25 +139,24 @@ test("keys are batched with their own times; cursor bursts merge and are written
     "edit",
     "scroll",
     "clipboard",
-    "navigated",
     "page",
     "keys",
     "closed",
   ]);
-  const selection = all.find((o) => o.type === "observation.workspace.selection");
+  const selection = all.find((o) => o.type === "practice.selection");
   assert.equal(selection.data.moves, 3);
   assert.deepEqual(selection.data.selection.ranges, [{ anchor: 3, head: 3 }]);
   assert.deepEqual(
-    all.find((o) => o.type === "observation.workspace.scroll").data,
+    all.find((o) => o.type === "practice.scroll").data,
     { file: fixture.path, fromLine: 5, toLine: 24 },
   );
-  const keys = all.find((o) => o.type === "observation.workspace.keys").data.keys;
+  const keys = all.find((o) => o.type === "practice.keys").data.keys;
   assert.deepEqual(
     keys.map((k: unknown[]) => k.slice(1)),
     [
-      ["down", "a", "", false],
-      ["up", "a", "", false],
-      ["down", "Escape", "", false],
+      ["down", "a", "KeyA", "", false],
+      ["up", "a", "KeyA", "", false],
+      ["down", "Escape", "Escape", "", false],
     ],
   );
   // Every observation has a monotonic time, and they never go backwards.
@@ -165,19 +168,19 @@ test("keys are batched with their own times; cursor bursts merge and are written
 test("closing writes what is still buffered; discarding does not", async () => {
   const kept = new MemorySink();
   const one = session(kept);
-  one.activity(fixture.path).onKey("down", "b", "", false);
+  one.activity(fixture.path).onKey("down", "b", "KeyB", "", false);
   await one.close();
-  assert.ok(observations(kept).some((o) => o.type === "observation.workspace.keys"));
+  assert.ok(observations(kept).some((o) => o.type === "practice.keys"));
   assert.equal(observations(kept).at(-1).data.reason, "left");
 
   const dropped = new MemorySink();
   const two = session(dropped);
-  two.activity(fixture.path).onKey("down", "b", "", false);
+  two.activity(fixture.path).onKey("down", "b", "KeyB", "", false);
   await two.close(true);
-  assert.ok(!observations(dropped).some((o) => o.type === "observation.workspace.keys"));
+  assert.ok(!observations(dropped).some((o) => o.type === "practice.keys"));
 });
 
-// A resumed PR has no local RunView yet, but editing must withdraw Review immediately.
+// A resumed attempt has no local RunView yet, but editing must mark its last submission stale.
 test("restored checks are invalidated on the first edit only, without per-keystroke UI updates", async () => {
   let changes = 0;
   const workspace = session(new MemorySink(), {

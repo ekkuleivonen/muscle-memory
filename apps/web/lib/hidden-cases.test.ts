@@ -71,20 +71,22 @@ const outcome = {
   durationMs: 4,
 };
 
+/** Check feedback for a failed submission of the three cases, with this diagnosis. */
+const failing = (diagnosis: ReturnType<typeof diagnose>) => ({
+  running: false,
+  completed: false,
+  edited: false,
+  verdict: { result: "failed" as const, passed: 0, total: 3, rules: [], complete: false },
+  diagnosis,
+});
+
 function assertNoSecrets(html: string, surface: string) {
   for (const secret of SECRET)
     assert.ok(!html.includes(secret), `${surface} leaks ${secret}`);
 }
 
 test("the practice area's check feedback carries no hidden values", () => {
-  const feedback = checkFeedbackOf({
-    blocker: "checks",
-    running: false,
-    completed: false,
-    latest: { passed: 0, total: 3 },
-    diagnosis: diagnose(outcome, cases),
-    required: [],
-  });
+  const feedback = checkFeedbackOf(failing(diagnose(outcome, cases)));
   const html = renderToStaticMarkup(
     createElement(CheckFeedbackView, { feedback }),
   );
@@ -128,14 +130,7 @@ test("an error reported from the cases' stage, with no per-case results, is with
       "CheckFeedbackView",
       renderToStaticMarkup(
         createElement(CheckFeedbackView, {
-          feedback: checkFeedbackOf({
-            blocker: "checks",
-            running: false,
-            completed: false,
-            latest: { passed: 0, total: 3 },
-            diagnosis,
-            required: [],
-          }),
+          feedback: checkFeedbackOf(failing(diagnosis)),
         }),
       ),
     ],
@@ -164,14 +159,7 @@ test("an error reported from the cases' stage, with no per-case results, is with
     assertNoSecrets(
       renderToStaticMarkup(
         createElement(CheckFeedbackView, {
-          feedback: checkFeedbackOf({
-            blocker: "checks",
-            running: false,
-            completed: false,
-            latest: { passed: 0, total: 3 },
-            diagnosis: d,
-            required: [],
-          }),
+          feedback: checkFeedbackOf(failing(d)),
         }),
       ),
       `CheckFeedbackView (${phase})`,

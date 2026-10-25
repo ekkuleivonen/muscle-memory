@@ -9,7 +9,7 @@ import {
   type Executable,
 } from "../../../../packages/content/model";
 import { privateCheckFailure } from "./check-feedback";
-import { runFeedback } from "../../../../packages/domain/workspace";
+import { runFeedback } from "../../../../packages/domain/records";
 import type { CaseResult, CodeError } from "../../../../packages/runner/runner";
 import type { RunView } from "../workspace/session";
 
@@ -90,7 +90,7 @@ export function transcript(
 ): Line[] {
   if (!run) return [];
   const header: Line = {
-    text: `$ ${run.pullRequest ? "submit" : "run tests"} · ${toolchain(runtimeLabel)}`,
+    text: `$ ${run.purpose === "submit" ? "submit" : "run examples"} · ${toolchain(runtimeLabel)}`,
     tone: "dim",
   };
   const o = run.outcome;

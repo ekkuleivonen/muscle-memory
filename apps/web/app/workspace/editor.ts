@@ -196,8 +196,7 @@ export function editorFeatures(
       "undo-redo-history",
       "bracket-match-highlight",
       "line-numbers",
-      "mod-enter-runs",
-      "mod-shift-enter-opens-pull-request",
+      "mod-enter-submits",
       keys === "vim" ? "vim-keybindings" : "standard-keybindings",
       ...(typeChecked ? TYPE_CHECK_FEATURES : []),
     ],
@@ -210,9 +209,11 @@ export function editorFeatures(
  * the help the editor showed. The clipboard itself is never read.
  */
 export interface ActivityHooks {
+  /** `key` is what the key typed ("ä"); `code` the physical key ("Quote"). */
   onKey(
     kind: "down" | "up" | "compose-start" | "compose-end",
     key: string,
+    code: string,
     modifiers: string,
     repeat: boolean,
   ): void;
@@ -270,18 +271,22 @@ function watch(view: EditorView, hooks: ActivityHooks): void {
   };
   view.dom.addEventListener(
     "keydown",
-    (e) => hooks.onKey("down", e.key, modifiers(e), e.repeat),
+    (e) => hooks.onKey("down", e.key, e.code, modifiers(e), e.repeat),
     true,
   );
-  view.dom.addEventListener("keyup", (e) => hooks.onKey("up", e.key, modifiers(e), false), true);
+  view.dom.addEventListener(
+    "keyup",
+    (e) => hooks.onKey("up", e.key, e.code, modifiers(e), false),
+    true,
+  );
   view.dom.addEventListener(
     "compositionstart",
-    (e) => hooks.onKey("compose-start", e.data ?? "", "", false),
+    (e) => hooks.onKey("compose-start", e.data ?? "", "", "", false),
     true,
   );
   view.dom.addEventListener(
     "compositionend",
-    (e) => hooks.onKey("compose-end", e.data ?? "", "", false),
+    (e) => hooks.onKey("compose-end", e.data ?? "", "", "", false),
     true,
   );
   view.dom.addEventListener("copy", () => clipboard("copy"), true);
@@ -296,8 +301,8 @@ function watch(view: EditorView, hooks: ActivityHooks): void {
 export interface EditorHooks {
   /** Called once per document-changing transaction, after it is applied. */
   onChange(transaction: Transaction, view: EditorView): void;
-  onRun(): void;
-  onPullRequest?(): void;
+  /** Mod-Enter: Submit. */
+  onSubmit(): void;
   /** Vim mode changes: normal, insert, visual, replace. */
   onVimMode?(mode: string): void;
 }
@@ -331,14 +336,7 @@ export function createEditor(
           {
             key: "Mod-Enter",
             run: () => {
-              hooks.onRun();
-              return true;
-            },
-          },
-          {
-            key: "Mod-Shift-Enter",
-            run: () => {
-              hooks.onPullRequest?.();
+              hooks.onSubmit();
               return true;
             },
           },

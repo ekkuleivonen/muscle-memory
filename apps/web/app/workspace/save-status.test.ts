@@ -14,6 +14,7 @@ import { WorkspaceSession, type SaveStatus } from "./session";
 const fixture = live("frequency-map");
 const ISSUE = "frequency-map";
 const P = "synthetic-participant";
+const ATTEMPT = "attempt-1";
 const SAVED = /^All changes saved/;
 
 function workspace(sink: CaptureSink, initialCode = "") {
@@ -21,9 +22,9 @@ function workspace(sink: CaptureSink, initialCode = "") {
   const updates: SaveStatus[] = [];
   const session = new WorkspaceSession({
     participantId: P,
-    consentVersion: "workspace-device-local-v1",
-    issue: "frequency-map",
-    issueRevision: fixture.id,
+    termsVersion: "2026-10-01",
+    challenge: { id: ISSUE, key: "PY-002", revision: fixture.revision, revisionId: fixture.id },
+    attemptId: ATTEMPT,
     executable: fixture.executable,
     sink,
     files: {
@@ -100,7 +101,7 @@ test("a truncated large paste is never labelled saved until a complete copy is s
   assert.match(editor.label(), /isn't fully saved/);
   assert.match(editor.session.saveStatus().unrecoverableReason ?? "", /64 KiB/);
   assert.equal(
-    latestSavedCode([...sink.records.values()], P, ISSUE)!.complete,
+    latestSavedCode([...sink.records.values()], P, ISSUE, ATTEMPT)!.complete,
     false,
   );
   // Removing the paste is a normal edit, but replay still has no exact starting point.
@@ -112,7 +113,7 @@ test("a truncated large paste is never labelled saved until a complete copy is s
   await settle(editor);
   assert.equal(editor.session.saveStatus().recoverable, true);
   assert.match(editor.label(), SAVED);
-  const recovered = latestSavedCode([...sink.records.values()], P, ISSUE)!;
+  const recovered = latestSavedCode([...sink.records.values()], P, ISSUE, ATTEMPT)!;
   assert.equal(recovered.files[fixture.path], editor.text());
   assert.equal(recovered.complete, true);
 });
@@ -124,7 +125,7 @@ test("an oversize edit within 64 KiB is recoverable through its complete snapsho
   await settle(editor);
   assert.match(editor.label(), SAVED);
   assert.equal(
-    latestSavedCode([...sink.records.values()], P, ISSUE)!.files[fixture.path],
+    latestSavedCode([...sink.records.values()], P, ISSUE, ATTEMPT)!.files[fixture.path],
     editor.text(),
   );
 });
@@ -150,7 +151,7 @@ test("an artifact conflict is not labelled saved until a later complete copy is 
   await settle(editor);
   assert.match(editor.label(), SAVED);
   assert.equal(
-    latestSavedCode([...sink.records.values()], P, ISSUE)!.files[fixture.path],
+    latestSavedCode([...sink.records.values()], P, ISSUE, ATTEMPT)!.files[fixture.path],
     "ab",
   );
 });
@@ -202,7 +203,7 @@ test("a later snapshot that only references a conflicted artifact never clears t
   }
   // The conflicting payload is kept, never overwritten.
   assert.equal(sink.records.get(id)!.payload, "{}");
-  const stuck = latestSavedCode([...sink.records.values()], P, ISSUE)!;
+  const stuck = latestSavedCode([...sink.records.values()], P, ISSUE, ATTEMPT)!;
   assert.notEqual(stuck.files[fixture.path], editor.text());
   assert.equal(stuck.complete, false);
   // A genuinely new complete copy, stored without conflict, makes the code safe again.
@@ -211,7 +212,7 @@ test("a later snapshot that only references a conflicted artifact never clears t
   await settle(editor);
   assert.equal(editor.session.saveStatus().recoverable, true);
   assert.match(editor.label(), SAVED);
-  const recovered = latestSavedCode([...sink.records.values()], P, ISSUE)!;
+  const recovered = latestSavedCode([...sink.records.values()], P, ISSUE, ATTEMPT)!;
   assert.equal(recovered.files[fixture.path], editor.text());
   assert.equal(recovered.complete, true);
 });

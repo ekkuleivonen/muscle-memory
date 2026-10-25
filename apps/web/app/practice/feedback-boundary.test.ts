@@ -4,8 +4,6 @@ import assert from "node:assert/strict";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { Case } from "../../../../packages/content/model";
-import type { WorkspaceRecord } from "../../../../packages/domain/workspace";
-import type { PullSummary } from "../../lib/pulls";
 import { checkFeedbackOf } from "../../lib/check-feedback";
 import { diagnose } from "../../lib/diagnosis";
 import { transcript } from "./transcript";
@@ -47,22 +45,6 @@ const hidden = [
   "HIDDEN_EXPECTED_TOKEN",
   "HIDDEN_SOLUTION_TOKEN",
 ];
-const pull: PullSummary = {
-  issue: "boundary-test",
-  issueRevision: "fixture",
-  number: 1,
-  runId: "boundary-run",
-  codeRevision: 1,
-  codeArtifactId: "fixture-code",
-  result: "checks-failed",
-  passed: 0,
-  total: 2,
-  at: "2026-10-25T10:00:00.000Z",
-  openedAt: "2026-10-25T10:00:00.000Z",
-  pushes: 1,
-  state: "open",
-};
-
 test("public expected/actual stay visible while nested hidden expected outputs and solutions stay private across shell feedback", () => {
   for (const hiddenPasses of [false, true]) {
     const outcome: NonNullable<RunView["outcome"]> = {
@@ -88,13 +70,19 @@ test("public expected/actual stay visible while nested hidden expected outputs a
       stdout: bounded(hidden.join(" ")),
       stderr: bounded(hidden.join(" ")),
     };
+    // The public case fails either way, so the submission failed.
     const feedback = checkFeedbackOf({
-      blocker: "checks",
       running: false,
       completed: false,
-      latest: { passed: hiddenPasses ? 1 : 0, total: 2 },
+      edited: false,
+      verdict: {
+        result: "failed",
+        passed: hiddenPasses ? 1 : 0,
+        total: 2,
+        rules: [],
+        complete: false,
+      },
       diagnosis: diagnose(outcome, cases),
-      required: [],
     });
     const render = (component: React.ElementType, props: object) =>
       renderToStaticMarkup(React.createElement(component, props));
@@ -102,10 +90,10 @@ test("public expected/actual stay visible while nested hidden expected outputs a
       Practice: render(CheckFeedbackView, { feedback }),
       Output: transcript(
         {
-          runId: pull.runId,
+          runId: "boundary-run",
           revision: 1,
           status: "result",
-          purpose: "pull-request",
+          purpose: "submit",
           outcome,
         },
         {

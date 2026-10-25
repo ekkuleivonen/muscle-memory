@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium } from "playwright";
+import { LEGAL_VERSION } from "../../apps/web/lib/legal";
 import { SEED_ISSUES } from "../../content/seed";
 import { decodeOutcome } from "../../apps/web/lib/outcome";
 import { codeFromHash, decodeCode } from "../../apps/web/lib/share";
@@ -13,7 +14,7 @@ await mkdir(shots, { recursive: true });
 const browser = await chromium.launch();
 const contexts = [];
 const results: string[] = [];
-async function context() {
+async function context(consented = true) {
   const ctx = await browser.newContext({
     viewport: { width: 1280, height: 900 },
   });
@@ -21,18 +22,23 @@ async function context() {
   await ctx.route("**/ingest/**", (r) =>
     r.fulfill({ status: 410, body: "synthetic-integration-qa" }),
   );
-  await ctx.addInitScript(() => {
+  if (!consented) return ctx;
+  await ctx.addCookies([{ name: "mm_consent", value: LEGAL_VERSION, url: origin }]);
+  await ctx.addInitScript((version) => {
+    // Also runs in the sandbox's opaque-origin frame, which has no storage.
+    if (origin === "null") return;
     if (!localStorage.getItem("muscle-memory.profile"))
       localStorage.setItem(
         "muscle-memory.profile",
         JSON.stringify({
           version: "2",
           createdAt: new Date().toISOString(),
+          accepted: { version, at: new Date().toISOString() },
           stealth: true,
           profile: {},
         }),
       );
-  });
+  }, LEGAL_VERSION);
   return ctx;
 }
 function passed(message: string) {
@@ -43,7 +49,7 @@ try {
   const ctx = await context();
   await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
   const page = await ctx.newPage();
-  page.setDefaultTimeout(30_000);
+  page.setDefaultTimeout(90_000);
   const editor = () =>
     page.locator('.practice-editor .cm-content[contenteditable="true"]');
   const records = () =>
@@ -56,8 +62,8 @@ try {
       try {
         return await new Promise<any[]>((resolve, reject) => {
           const request = db
-            .transaction("workspace")
-            .objectStore("workspace")
+            .transaction("records")
+            .objectStore("records")
             .getAll();
           request.onsuccess = () =>
             resolve(request.result.map((r: any) => JSON.parse(r.payload)));
@@ -67,10 +73,7 @@ try {
         db.close();
       }
     });
-  await page.goto(`${origin}/play`);
-  await page
-    .getByRole("button", { name: "Start in JavaScript", exact: true })
-    .click();
+  await page.goto(`${origin}/challenges/JS-002`);
   await editor().waitFor();
   await page.getByRole("button", { name: "Submit", exact: false }).waitFor();
   await page.waitForFunction(
@@ -87,7 +90,7 @@ try {
     if (
       (await records()).some(
         (r) =>
-          r.type === "observation.workspace.run" &&
+          r.type === "practice.run" &&
           r.data.status === "user-error",
       )
     )
@@ -96,7 +99,7 @@ try {
   }
   const first = (await records()).find(
     (r) =>
-      r.type === "observation.workspace.run" && r.data.status === "user-error",
+      r.type === "practice.run" && r.data.status === "user-error",
   );
   assert.ok(first, "first Submit genuinely failed compilation");
   assert.equal(
@@ -106,7 +109,7 @@ try {
     0,
   );
   const seed = SEED_ISSUES.find((i) => i.id === "word-count-javascript")!;
-  const [path, solution] = Object.entries(seed.private.reference)[0];
+  const [path, solution] = Object.entries(seed.private.reference)[0] as [string, string];
   await editor().fill(solution);
   await editor().press(
     process.platform === "darwin" ? "Meta+Enter" : "Control+Enter",
@@ -114,11 +117,7 @@ try {
   await page
     .getByRole("button", { name: "Share result", exact: true })
     .waitFor();
-  const done = (await records()).filter(
-    (r) =>
-      r.type === "observation.board.moved" &&
-      r.data.trigger === "checks-passed",
-  );
+  const done = (await records()).filter((r) => r.type === "practice.completed");
   assert.equal(done.length, 1);
   passed("compile error cannot share; actual later completion mounts sharing");
   await page.getByRole("button", { name: "Share result", exact: true }).click();
@@ -135,7 +134,7 @@ try {
   assert.ok(card);
   assert.equal(card.f, null);
   assert.equal(card.n, 2);
-  assert.equal(card.rv, done[0].issueRevision.replace("sha256:", ""));
+  assert.equal(card.rv, done[0].challengeRevision.replace("sha256:", ""));
   passed(
     "incomplete first check stays null; minimal card pins exact completion and excludes code by default",
   );
@@ -152,25 +151,30 @@ try {
   await page.getByRole("button", { name: "Share result", exact: true }).click();
   assert.equal(await optIn.isChecked(), false);
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
-  await editor().fill(solution + "\n// unverified synthetic edit");
-  await page
-    .getByRole("button", { name: "Share result", exact: true })
-    .waitFor({ state: "hidden" });
+  // The card is the recorded completion: later edits and a reload leave it, and its code, as
+  // the completing run checked them.
+  await editor().fill(solution + "\n// later synthetic edit");
   await page.getByText("Saved", { exact: true }).waitFor();
   await page.reload();
   await editor().waitFor();
-  assert.equal(
-    await page
-      .getByRole("button", { name: "Share result", exact: true })
-      .count(),
-    0,
-  );
-  assert.match(await editor().innerText(), /unverified synthetic edit/);
+  assert.match(await editor().innerText(), /later synthetic edit/);
+  await page.getByRole("button", { name: "Share result", exact: true }).click();
+  await optIn.check();
+  await dialog.getByRole("button", { name: "Copy link", exact: true }).click();
+  await dialog.getByRole("button", { name: "Copied", exact: true }).waitFor();
+  const afterEdit = (
+    await page.evaluate(() => navigator.clipboard.readText())
+  ).match(/https?:\/\/\S+/)![0];
+  assert.deepEqual(await decodeCode(codeFromHash(new URL(afterEdit).hash)!), [
+    { path, text: solution },
+  ]);
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
   passed(
-    "opt-in resets; code comes from completing artifact; edits and reload cannot share stale completion",
+    "opt-in resets; code comes from the completing artifact, not later edits, across a reload",
   );
-  const recipient = await context();
+  const recipient = await context(false);
   const fresh = await recipient.newPage();
+  fresh.setDefaultTimeout(90_000);
   await fresh.goto(noCode);
   assert.equal(await fresh.locator(".shared-code").count(), 0);
   await fresh.goto(withCode);

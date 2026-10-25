@@ -1,7 +1,7 @@
 "use client";
 import { practiceHref } from "../../lib/paths";
 import Link from "next/link";
-import { useBoard } from "../(browse)/_components/board";
+import { noteStart } from "../../lib/start";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { acceptConsent, playLanguage } from "../../lib/account";
@@ -10,7 +10,7 @@ import {
   logArrival,
   logProfile,
   noteArrival,
-} from "../(browse)/_components/board-log";
+} from "../../lib/site-log";
 
 interface Choice {
   key: string;
@@ -38,7 +38,6 @@ export function PlayStart({
   preferred: string | null;
 }) {
   const router = useRouter();
-  const { move } = useBoard();
   const [error, setError] = useState("");
   const [starting, setStarting] = useState<string | null>(null);
   useEffect(() => noteArrival(referral), [referral]);
@@ -46,7 +45,7 @@ export function PlayStart({
     ...choices.filter((c) => c.language === preferred),
     ...choices.filter((c) => c.language !== preferred),
   ];
-  const start = async (choice: Choice, via: "pointer" | "keyboard") => {
+  const start = async (choice: Choice) => {
     setStarting(choice.key);
     setError("");
     try {
@@ -55,8 +54,8 @@ export function PlayStart({
       // the language they picked, as a first guess at the languages answer.
       await logArrival().catch(() => undefined);
       playLanguage(choice.language as LanguageId);
-      await logProfile("play").catch(() => undefined);
-      move(choice, "in-progress", via, { trigger: "start-work" });
+      await logProfile("quick-start").catch(() => undefined);
+      noteStart({ key: choice.key, from: "quick-start", query: null, position: null });
       router.push(practiceHref(choice.key));
     } catch {
       setStarting(null);
@@ -95,9 +94,7 @@ export function PlayStart({
                 : "play-lang"
             }
             disabled={starting !== null}
-            onClick={(event) =>
-              void start(choice, event.detail === 0 ? "keyboard" : "pointer")
-            }
+            onClick={() => void start(choice)}
           >
             {starting === choice.key ? "Opening…" : `Start in ${choice.label}`}
           </button>

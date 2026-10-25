@@ -7,13 +7,11 @@
  * a card cannot verify that, so it never claims it. The referral code `c` is the existing
  * referral mechanism (an arrival noted from a shared link); nothing else tracks anyone.
  *
- * A card is made only from a recorded completion (`checks-passed`, board capture 7.2.0, written
- * by ENG-328) and the full checks recorded before it in the same attempt. Nothing is
- * recomputed or inferred. Like v2, a link is a brag, not a record: anyone could edit one.
+ * A card is made only from a recorded completion (`practice.completed`) and the submissions
+ * recorded before it in the same attempt. Nothing is recomputed or inferred. A link is a brag,
+ * not a record: anyone could edit one.
  */
-import { ISSUE_KEY } from "../../../packages/domain/board";
-import type { WorkspaceRecord } from "../../../packages/domain/workspace";
-import { attemptRecords } from "./attempts";
+import { CHALLENGE_KEY, type StoredRecord } from "../../../packages/domain/records";
 
 export interface Checks {
   readonly passed: number;
@@ -38,16 +36,6 @@ export interface Outcome {
   readonly c: string;
 }
 
-/** A completion as ENG-328's `completions()` reads one. */
-export interface RecordedCompletion {
-  readonly issue: string;
-  readonly revision: string;
-  readonly key: string;
-  readonly at: string;
-  readonly runId: string;
-  readonly automatic: boolean;
-}
-
 const LANGUAGE = /^[a-z+#]{1,16}$/;
 const REFERRAL = /^[a-z0-9]{6,32}$/;
 const HEX = /^[0-9a-f]{64}$/;
@@ -62,192 +50,94 @@ const checks = (v: unknown): v is Checks =>
   count((v as Checks).total, MAX_CASES) &&
   (v as Checks).passed <= (v as Checks).total;
 
-interface FullCheck {
+interface Submission {
   runId: string;
   at: string;
   seq: number;
-  /** The run's terminal status, when recorded. */
-  status: string | null;
-  /**
-   * How many cases the raw run scored completely, when it did: it finished without a
-   * run-level error in the tests phase, and every case either returned an untruncated output
-   * or raised. Null for anything else (compile error, cancelled, timed out, crashed part-way,
-   * cut-short output), whatever summary counts were recorded for it.
-   */
-  scored: number | null;
-  /** The recorded full-check result, when there is one. */
-  result: { result: string; passed: number; total: number } | null;
+  result: string;
+  passed: number;
+  total: number;
+  rules: number;
 }
 
-/** Full checks (purpose `pull-request`) of one issue revision in the records given, in order. */
-function fullChecks(
-  records: readonly WorkspaceRecord[],
-  issue: string,
-  revision: string,
-): FullCheck[] {
-  const byRun = new Map<string, FullCheck>();
-  const of = (runId: string, at: string, seq: number) => {
-    let check = byRun.get(runId);
-    if (!check) {
-      check = { runId, at, seq, status: null, scored: null, result: null };
-      byRun.set(runId, check);
-    }
-    // Ordered by when the run first appears (it is queued before it reports).
-    if (at < check.at || (at === check.at && seq < check.seq)) {
-      check.at = at;
-      check.seq = seq;
-    }
-    return check;
-  };
+/** One attempt's recorded submissions, in order, and the run that completed it, if any. */
+function submissions(
+  records: readonly StoredRecord[],
+  challenge: string,
+  attemptId: string,
+): { list: Submission[]; completedRun: string | null } {
+  const list: Submission[] = [];
+  let completedRun: string | null = null;
   for (const record of records) {
     if (record.kind !== "observation") continue;
     try {
       const o = JSON.parse(record.payload);
-      if (
-        o.issue !== issue ||
-        o.issueRevision !== revision ||
-        typeof o.occurredAt !== "string" ||
-        typeof o.data?.runId !== "string"
-      )
+      if (o.challenge !== challenge || o.attemptId !== attemptId) continue;
+      if (o.type === "practice.completed" && typeof o.data?.runId === "string")
+        completedRun = o.data.runId;
+      if (o.type !== "practice.submitted") continue;
+      const { runId, result, passed, total, rules } = o.data ?? {};
+      if (typeof runId !== "string" || !checks({ passed, total }) || !Array.isArray(rules))
         continue;
-      const seq = Number(o.source?.sequence ?? 0);
-      if (
-        o.type === "observation.workspace.run" &&
-        o.data.purpose === "pull-request"
-      ) {
-        const check = of(o.data.runId, o.occurredAt, seq);
-        if (TERMINAL.has(o.data.status)) {
-          check.status = o.data.status;
-          check.scored = scored(o.data.status, o.data.outcome);
-        }
-      } else if (o.type === "observation.workspace.pull-request") {
-        const value = { passed: o.data.passed, total: o.data.total };
-        const check = of(o.data.runId, o.occurredAt, seq);
-        if (checks(value) && typeof o.data.result === "string")
-          check.result = { result: o.data.result, ...value };
-      }
+      list.push({
+        runId,
+        at: String(o.occurredAt),
+        seq: Number(o.source?.sequence ?? 0),
+        result: String(result),
+        passed,
+        total,
+        rules: rules.length,
+      });
     } catch {
       // Unreadable records say nothing.
     }
   }
-  return [...byRun.values()].sort(
-    (a, b) => a.at.localeCompare(b.at) || a.seq - b.seq,
-  );
+  list.sort((a, b) => a.at.localeCompare(b.at) || a.seq - b.seq);
+  return { list, completedRun };
 }
 
-/** See `FullCheck.scored`: the raw outcome, never the summary record's synthesized counts. */
-function scored(status: unknown, outcome: unknown): number | null {
-  const o = outcome as {
-    status?: unknown;
-    phase?: unknown;
-    cases?: unknown;
-  } | null;
-  if (
-    status !== "result" ||
-    !o ||
-    o.status !== "completed" ||
-    o.phase !== "tests" ||
-    !Array.isArray(o.cases)
-  )
-    return null;
-  const decided = (c: {
-    output?: { truncated?: unknown; text?: unknown };
-    error?: unknown;
-    conversionError?: unknown;
-    unserializable?: unknown;
-  }) =>
-    (!!c?.output &&
-      c.output.truncated === false &&
-      typeof c.output.text === "string") ||
-    c?.error !== undefined ||
-    c?.conversionError !== undefined ||
-    c?.unserializable !== undefined;
-  return o.cases.every(decided) ? o.cases.length : null;
+/** The run that completed an attempt, from its recorded completion, or null. */
+export function completedRun(
+  records: readonly StoredRecord[],
+  challenge: string,
+  attemptId: string,
+): string | null {
+  return submissions(records, challenge, attemptId).completedRun;
 }
-
-const TERMINAL = new Set([
-  "result",
-  "user-error",
-  "runner-error",
-  "timeout",
-  "cancelled",
-]);
 
 /**
- * The card for a recorded completion, or null when the records can't support one exactly:
- *
- * - the completion must be a recorded `checks-passed` one (a legacy merge stays a v2 card);
- * - its run must be a recorded full check on the completed revision with every check passed
- *   (`total > 0`, `passed = total`);
- * - the completion gate's required deterministic rules for that run's code must have been
- *   evaluated and none left outstanding (`required`, from ENG-328's gate: `[]`; null when
- *   not evaluated refuses).
- *
- * `f` is the first full check of the attempt on that revision, with counts only when its raw run
- * was scored completely (see `FullCheck.scored`); otherwise null. That is, null when its result is
- * missing or incomplete (errored, cancelled, cut short, or still running at the completion).
- * `n` counts the full checks started in the attempt through the completing run and not
- * cancelled as of the completion. Everything is read as of the recorded completion time.
+ * The card for an attempt's recorded completion, or null when the records can't support one
+ * exactly: the completing submission must be recorded, with every case passed (`total > 0`) and
+ * no rule firing. `f` is the attempt's first submission when its cases were all decided (passed
+ * or failed, on the same cases), otherwise null; `n` counts the submissions through the
+ * completing one, cancelled ones aside.
  */
 export function outcomeOf(input: {
-  records: readonly WorkspaceRecord[];
-  completion: RecordedCompletion;
-  required: readonly unknown[] | null;
+  records: readonly StoredRecord[];
+  challenge: { id: string; key: string; revision: string };
+  attemptId: string;
   language: string;
   referral: string;
 }): Outcome | null {
-  const { completion } = input;
-  const revision = /^sha256:([0-9a-f]{64})$/.exec(completion.revision)?.[1];
-  if (!completion.automatic || !revision) return null;
-  if (!input.required || input.required.length) return null;
-  // As of the completion: `attemptRecords` selects the whole attempt, so cut it at the
-  // recorded completion time before reading any check. A run still going then keeps its
-  // place with an unknown result; nothing it reports later (a result, an error, a
-  // cancellation) can change a card already made.
-  const asOf = attemptRecords(
-    input.records,
-    completion.issue,
-    completion.at,
-  ).filter((record) => {
-    if (record.kind !== "observation") return true;
-    try {
-      const at = JSON.parse(record.payload)?.occurredAt;
-      return typeof at === "string" && at <= completion.at;
-    } catch {
-      return false;
-    }
-  });
-  const all = fullChecks(asOf, completion.issue, completion.revision);
-  const index = all.findIndex((c) => c.runId === completion.runId);
-  const final = all[index]?.result;
-  if (
-    !final ||
-    all[index].scored !== final.total ||
-    final.result !== "checks-passed" ||
-    final.total === 0 ||
-    final.passed !== final.total
-  )
+  const revision = /^sha256:([0-9a-f]{64})$/.exec(input.challenge.revision)?.[1];
+  if (!revision) return null;
+  const { list, completedRun } = submissions(input.records, input.challenge.id, input.attemptId);
+  const index = list.findIndex((s) => s.runId === completedRun);
+  const final = list[index];
+  if (!final || final.result !== "passed" || final.total === 0 || final.passed !== final.total || final.rules)
     return null;
-  const through = all.slice(0, index + 1);
+  const through = list.slice(0, index + 1);
   const first = through[0];
-  // Counts only for a first check whose raw run was scored completely, on the whole suite;
-  // a synthesized 0/N for a cancelled, errored or cut-short run is not an observed result.
-  const complete = (c: FullCheck) =>
-    !!c.result &&
-    (c.result.result === "checks-passed" ||
-      c.result.result === "checks-failed") &&
-    c.result.total === final.total &&
-    c.scored === c.result.total;
+  const decided =
+    (first.result === "passed" || first.result === "failed") && first.total === final.total;
   return publicOutcome({
     v: 3,
-    k: completion.key,
+    k: input.challenge.key,
     l: input.language,
     rv: revision,
     o: { passed: final.passed, total: final.total },
-    f: complete(first)
-      ? { passed: first.result!.passed, total: first.result!.total }
-      : null,
-    n: through.filter((c) => c.status !== "cancelled").length,
+    f: decided ? { passed: first.passed, total: first.total } : null,
+    n: through.filter((s) => s.result !== "cancelled").length,
     c: input.referral,
   });
 }
@@ -306,7 +196,7 @@ export function decodeOutcome(segment: string): Outcome | null {
       value.v === 3 &&
       Object.keys(value).every((k) => FIELDS.has(k)) &&
       typeof value.k === "string" &&
-      ISSUE_KEY.test(value.k) &&
+      CHALLENGE_KEY.test(value.k) &&
       typeof value.l === "string" &&
       LANGUAGE.test(value.l) &&
       typeof value.rv === "string" &&

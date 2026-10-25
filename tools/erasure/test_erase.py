@@ -34,7 +34,7 @@ def rows(participant: str, count: int, table_schema: Schema) -> pa.Table:
         kind=["observation"] * count,
         participant_id=[participant] * count,
         received_at=["2026-10-25T10:00:00Z"] * count,
-        type=["observation.workspace.keys"] * count,
+        type=["practice.keys"] * count,
         payload=["{}"] * count,
     )
     return pa.Table.from_pydict(data, schema=table_schema.as_arrow())

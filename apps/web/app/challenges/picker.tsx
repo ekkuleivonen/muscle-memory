@@ -5,11 +5,9 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
   type KeyboardEvent,
 } from "react";
 import { engineFor, warmRuntime } from "../../../../packages/runner/runner";
-import { statusOf } from "../../lib/board";
 import { DIFFICULTIES, languageLabel, type Issue } from "../../lib/library";
 import {
   filterByMarks,
@@ -21,15 +19,12 @@ import {
   type ListKey,
   type Mark,
 } from "../../lib/queries";
-import {
-  parseStars,
-  STARS_CHANGE,
-  STARS_KEY,
-  toggleStar,
-  writeStars,
-} from "../../lib/stars";
+import { toggleStar, writeStars } from "../../lib/stars";
 import { practiceHref } from "../../lib/paths";
-import { useBoard } from "../(browse)/_components/board";
+import { completed } from "../../lib/progress";
+import { useProgress, useStars } from "../../lib/progress-hooks";
+import { logStar } from "../../lib/site-log";
+import { noteStart } from "../../lib/start";
 import { ChallengeExamples } from "../(browse)/_components/challenge-examples";
 import { Markdown } from "../(browse)/_components/markdown";
 
@@ -39,29 +34,10 @@ export type PickerChallenge = Issue;
 /** How many tags get a toggle; the rest match when typed. */
 const TAGS = 10;
 
-function subscribeStars(onChange: () => void) {
-  window.addEventListener("storage", onChange);
-  window.addEventListener(STARS_CHANGE, onChange);
-  return () => {
-    window.removeEventListener("storage", onChange);
-    window.removeEventListener(STARS_CHANGE, onChange);
-  };
-}
-
-/** Starred keys in this browser, kept in sync across tabs. */
-function useStars(): string[] {
-  const raw = useSyncExternalStore(
-    subscribeStars,
-    () => localStorage.getItem(STARS_KEY),
-    () => null,
-  );
-  return useMemo(() => parseStars(raw), [raw]);
-}
-
 /**
  * The challenge picker: type to narrow (plain words, or lang: difficulty: tag:, and
  * is:starred or is:completed), click the filter toggles, move with ↑↓ (or Ctrl-n/p), Ctrl-s
- * stars, Enter starts practice. Completed is a verified completion (the board's done). Easiest first
+ * stars, Enter starts practice. Completed: an attempt on this device passed every check. Easiest first
  * unless the search says sort:. The search line is mirrored into the URL.
  */
 export function Picker({
@@ -76,12 +52,10 @@ export function Picker({
     () => JSON.parse(challengesJson) as PickerChallenge[],
     [challengesJson],
   );
-  const board = useBoard();
+  const progress = useProgress();
   const stars = useStars();
   const has = (key: string, mark: Mark) =>
-    mark === "starred"
-      ? stars.includes(key)
-      : statusOf(board.items, key) === "done";
+    mark === "starred" ? stars.includes(key) : completed(progress, key);
   const [text, setText] = useState(initialQuery);
   const [cursor, setCursor] = useState(0);
   const input = useRef<HTMLInputElement>(null);
@@ -94,7 +68,7 @@ export function Picker({
       ? query
       : { ...query, sort: "difficulty" as const };
     return filterByMarks(filterIssues(all, ordered), query.marks, has);
-  }, [all, query, text, board.items, stars]);
+  }, [all, query, text, progress, stars]);
   const at = Math.min(cursor, Math.max(0, results.length - 1));
   const current = results[at];
 
@@ -181,13 +155,25 @@ export function Picker({
     search(formatQuery(toggle(query, key, value) as IssueQuery));
     input.current?.focus();
   };
-  /** Starting is a board move to In progress, recorded as before, then practice. */
-  const start = (issue: PickerChallenge, via: "keyboard" | "pointer") => {
-    board.move(issue, "in-progress", via, { trigger: "start-work" });
+  /** Practice records the start, with the search then and the position in the list. */
+  const start = (issue: PickerChallenge) => {
+    noteStart({
+      key: issue.key,
+      from: "picker",
+      query: text.trim() || null,
+      position: results.indexOf(issue) + 1,
+    });
     router.push(practiceHref(issue.key));
   };
-  const star = (issue: PickerChallenge) =>
+  const star = (issue: PickerChallenge) => {
+    const starred = !stars.includes(issue.key);
     writeStars(toggleStar(stars, issue.key));
+    void logStar(
+      { id: issue.slug, revision: issue.revision },
+      starred,
+      { challengeKey: issue.key, from: "picker" },
+    );
+  };
   const warm = (issue: PickerChallenge) => {
     const engine = issue.language && engineFor(issue.language);
     if (engine) warmRuntime(engine);
@@ -208,7 +194,7 @@ export function Picker({
       star(current);
     } else if (event.key === "Enter" && current) {
       event.preventDefault();
-      start(current, "keyboard");
+      start(current);
     } else if (event.key === "Escape") {
       event.preventDefault();
       if (text) search("");
@@ -284,7 +270,7 @@ export function Picker({
                 aria-selected={index === at}
                 className={index === at ? "t-current-row" : undefined}
                 onClick={() => setCursor(index)}
-                onDoubleClick={() => start(issue, "pointer")}
+                onDoubleClick={() => start(issue)}
               >
                 <span className="t-accent">{index === at ? "❯" : " "}</span>
                 <span
@@ -326,7 +312,7 @@ export function Picker({
               <button
                 type="button"
                 className="t-row t-action t-primary t-current-row picker-start"
-                onClick={() => start(current, "pointer")}
+                onClick={() => start(current)}
                 onPointerEnter={() => warm(current)}
                 onFocus={() => warm(current)}
               >

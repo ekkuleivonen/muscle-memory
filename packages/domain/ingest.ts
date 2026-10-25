@@ -7,40 +7,23 @@
  * verbatim as the raw record.
  */
 import { safeIdentifier } from "./capture";
-import {
-  BOARD_CAPTURE_VERSION,
-  CHECKS_PASSED_CAPTURE,
-  validateBoardMoveData,
-  type BoardMoveData,
-} from "./board";
-import { WORKSPACE_CAPTURE_VERSION, type WorkspaceRecord } from "./workspace";
+import { PRACTICE_CAPTURE_VERSION } from "./practice";
+import type { StoredRecord } from "./records";
+import { SITE_CAPTURE_VERSION } from "./site";
 
 export const INGEST_PROTOCOL = "ingest-1";
 /** At most this many records, and this many bytes of payload, per batch. */
 export const BATCH_MAX_RECORDS = 500;
 export const BATCH_MAX_BYTES = 1_000_000;
-/**
- * Capture versions the server accepts. Earlier board versions were live and browsers may
- * still hold queued records of them: 6.0.0, 6.1.0 (closing), 7.0.0 (replays, deploys), 7.1.0
- * (resolving), 7.2.0 (automatic completion; project-based keys). Each
- * record keeps the meaning of its own version; older versions were never released.
- */
-export const ACCEPTED_CAPTURE = [
-  WORKSPACE_CAPTURE_VERSION,
-  BOARD_CAPTURE_VERSION,
-  "board-capture-7.2.0",
-  "board-capture-7.1.0",
-  "board-capture-7.0.0",
-  "board-capture-6.1.0",
-  "board-capture-6.0.0",
-] as const;
+/** Capture versions the server accepts: the current one of each stream. */
+export const ACCEPTED_CAPTURE = [PRACTICE_CAPTURE_VERSION, SITE_CAPTURE_VERSION] as const;
 
 export interface Batch {
   readonly protocol: typeof INGEST_PROTOCOL;
   readonly participantId: string;
   /** Hex SHA-256 of the device secret. */
   readonly proof: string;
-  readonly records: readonly WorkspaceRecord[];
+  readonly records: readonly StoredRecord[];
 }
 
 /** One row of the events table: the envelope as columns, the payload verbatim. */
@@ -52,13 +35,15 @@ export interface EventRow {
   readonly received_at: string;
   readonly type: string;
   readonly capture_version: string | null;
+  readonly session_id: string | null;
   readonly source_id: string | null;
   readonly sequence: number | null;
   readonly occurred_at: string | null;
   readonly elapsed_ms: number | null;
-  readonly issue: string | null;
-  readonly issue_revision: string | null;
-  readonly consent_version: string | null;
+  readonly challenge: string | null;
+  readonly challenge_revision: string | null;
+  readonly attempt_id: string | null;
+  readonly terms_version: string | null;
   /** The record exactly as the device stored it (canonical JSON). */
   readonly payload: string;
 }
@@ -89,7 +74,7 @@ export function checkBatch(value: unknown): Batch {
 
 /** Validates one record against its batch and turns it into a row. Never throws. */
 export function checkRecord(
-  record: WorkspaceRecord,
+  record: StoredRecord,
   participantId: string,
   receivedAt: string,
 ): Verdict {
@@ -115,7 +100,7 @@ export function checkRecord(
   if (record.kind === "artifact") {
     if (type !== "artifact.code-revision" || value.artifactId !== recordId)
       return refuse("not a code revision artifact");
-    if (capture !== WORKSPACE_CAPTURE_VERSION) return refuse("unknown capture version");
+    if (capture !== PRACTICE_CAPTURE_VERSION) return refuse("unknown capture version");
     return {
       ok: true,
       row: {
@@ -125,39 +110,27 @@ export function checkRecord(
         received_at: receivedAt,
         type,
         capture_version: capture,
+        session_id: null,
         source_id: null,
         sequence: null,
         occurred_at: null,
         elapsed_ms: null,
-        issue: null,
-        issue_revision: null,
-        consent_version: null,
+        challenge: null,
+        challenge_revision: null,
+        attempt_id: null,
+        terms_version: null,
         payload: record.payload,
       },
     };
   }
-  if (!type.startsWith("observation.workspace.") && !type.startsWith("observation.board."))
-    return refuse("unknown observation type");
+  const stream = type.startsWith("practice.")
+    ? PRACTICE_CAPTURE_VERSION
+    : type.startsWith("site.")
+      ? SITE_CAPTURE_VERSION
+      : null;
+  if (!stream) return refuse("unknown observation type");
   if (value.observationId !== recordId) return refuse("record id does not match");
-  if (!capture || !(ACCEPTED_CAPTURE as readonly string[]).includes(capture))
-    return refuse("unknown capture version");
-  const moved = value.data as BoardMoveData | undefined;
-  if (type === "observation.board.moved" && moved?.trigger === "checks-passed") {
-    if (!CHECKS_PASSED_CAPTURE.includes(capture))
-      return refuse("checks-passed requires board capture 7.2.0 or later");
-    if (
-      typeof value.issue !== "string" ||
-      !value.issue ||
-      typeof value.issueRevision !== "string" ||
-      !/^sha256:[0-9a-f]{64}$/.test(value.issueRevision)
-    )
-      return refuse("checks-passed requires its issue and pinned revision");
-    try {
-      validateBoardMoveData(moved);
-    } catch {
-      return refuse("invalid checks-passed completion");
-    }
-  }
+  if (capture !== stream) return refuse("unknown capture version");
   const source = value.source as { id?: unknown; sequence?: unknown } | undefined;
   if (typeof source?.id !== "string" || !Number.isSafeInteger(source.sequence))
     return refuse("no source position");
@@ -173,13 +146,15 @@ export function checkRecord(
       received_at: receivedAt,
       type,
       capture_version: capture,
+      session_id: text(value.sessionId),
       source_id: source.id,
       sequence: source.sequence as number,
       occurred_at: value.occurredAt,
       elapsed_ms: typeof value.elapsedMs === "number" ? value.elapsedMs : null,
-      issue: text(value.issue),
-      issue_revision: text(value.issueRevision),
-      consent_version: text(value.consentVersion),
+      challenge: text(value.challenge),
+      challenge_revision: text(value.challengeRevision),
+      attempt_id: text(value.attemptId),
+      terms_version: text(value.termsVersion),
       payload: record.payload,
     },
   };

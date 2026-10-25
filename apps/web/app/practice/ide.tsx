@@ -12,20 +12,14 @@ import {
   openPracticeStore,
   type PracticeStore,
 } from "../../../../packages/browser/practice-store";
-import {
-  latestSavedCode,
-  type RecoveredCode,
-} from "../../../../packages/capture/restore";
+import { latestSavedCode } from "../../../../packages/capture/restore";
 import {
   casesRun,
   executableOf,
   type Difficulty,
   type Revision,
 } from "../../../../packages/content/model";
-import {
-  runFeedback,
-  type WorkspaceRecord,
-} from "../../../../packages/domain/workspace";
+import { runFeedback, type StoredRecord } from "../../../../packages/domain/records";
 import type { Json } from "../../../../packages/domain/json";
 import {
   engineFor,
@@ -34,18 +28,19 @@ import {
   type LoadProgress,
 } from "../../../../packages/runner/runner";
 import { readProfile } from "../../lib/account";
-import { pullRequestHistory, type PullRequestRecord } from "../../lib/activity";
-import { attemptAt, attemptRecords } from "../../lib/attempts";
-import { statusOf } from "../../lib/board";
-import { closedPullRequests, mergedPullRequests } from "../../lib/pulls";
 import { languageLabel } from "../../lib/library";
 import type { LanguageId } from "../../lib/languages";
 import { mediaTypeOf, type FileLanguage } from "../../lib/entry";
-import { StartWork, useBoard } from "../(browse)/_components/board";
+import { environmentOf } from "../../lib/environment";
+import { attemptFor, complete, readProgress, writeProgress } from "../../lib/progress";
+import { useProgress, useStars } from "../../lib/progress-hooks";
+import { noteStart, takeStart } from "../../lib/start";
+import { toggleStar, writeStars } from "../../lib/stars";
 import {
+  logStar,
   PREVIOUS_PATH_KEY,
-  setIssueContext,
-} from "../(browse)/_components/board-log";
+  setChallengeContext,
+} from "../../lib/site-log";
 import { Markdown } from "../(browse)/_components/markdown";
 import { type Keymap } from "../workspace/editor";
 import { checksTypes, TypeChecker } from "../workspace/type-checker";
@@ -76,16 +71,10 @@ import {
   usePracticeLayout,
 } from "./splitter";
 import { privateCheckFailure } from "./check-feedback";
-import {
-  completionEligibility,
-  type CompletionGate,
-} from "../../lib/completion";
-import { completePractice } from "../../lib/complete-practice";
 import { checkFeedbackOf } from "../../lib/check-feedback";
 import { diagnose } from "../../lib/diagnosis";
 import { CheckFeedbackView } from "../(browse)/_components/review";
 import { CopyIssueLink, ShareOutcome } from "../(browse)/_components/share";
-import { shareCompletionProof } from "../../lib/share-completion";
 import { nextProblem } from "../../lib/next-problem";
 import { isPracticePath, practiceHref } from "../../lib/paths";
 import type { IssueSummary } from "../../lib/library";
@@ -114,9 +103,25 @@ type Opening =
   | { state: "open" }
   | { state: "failed"; message: string };
 
+const randomAttempt = () => `attempt-${crypto.randomUUID()}`;
+
+/** Every observation of one attempt at one challenge, parsed. */
+function attemptObservations(records: readonly StoredRecord[], challenge: string, attempt: string) {
+  return records.flatMap((r) => {
+    if (r.kind !== "observation") return [];
+    try {
+      const o = JSON.parse(r.payload);
+      return o.challenge === challenge && o.attemptId === attempt ? [o] : [];
+    } catch {
+      return [];
+    }
+  });
+}
+
 /**
  * One editable challenge entry, immediate feedback and continuation. Support/test files
- * stay internal; recorded work remains pinned to its published revision.
+ * stay internal. Practice works in an attempt (lib/progress.ts): opening resumes it, and a
+ * start after a completed attempt begins a new one.
  */
 export function Ide({
   revisionsJson,
@@ -125,9 +130,8 @@ export function Ide({
   trail,
 }: {
   /**
-   * Every published revision of the issue by id, as a JSON string: React's serializer would
-   * drop a "__proto__" fixture key. The IDE opens the live one; feedback recorded against
-   * earlier ones is read from theirs.
+   * The challenge's live revision by id, as a JSON string: React's serializer would drop a
+   * "__proto__" fixture key.
    */
   revisionsJson: string;
   /** Where the challenge sits, for the status bar's breadcrumb trail. */
@@ -144,29 +148,23 @@ export function Ide({
   const home = revision.workspace.entry;
   const source = revision.workspace.files[home];
   const editable = [{ path: home, ...source }];
-  const view = "ticket" as const; // Existing observation value for the visible challenge.
-  const tabs = useMemo(() => [home], [home]); // View continuity metadata only; there is no project navigation UI.
-  const active = home;
-  const [panel, setPanel] = useState<"tests" | "output" | "pulls">("tests");
+  const [outputOpen, setOutputOpen] = useState(false);
   const savedScope = useRef<string | null>(null);
   const pendingPlaces = useRef<Record<string, FileView>>({});
-  const viewNow = useRef({ tabs, active, side: view, panel });
-  viewNow.current = { tabs, active, side: view, panel };
+  const panelNow = useRef<"tests" | "output">("tests");
+  panelNow.current = outputOpen ? "output" : "tests";
   const persistView = () => {
     if (savedScope.current && session.current)
       writeView({
         scope: savedScope.current,
-        ...viewNow.current,
+        tabs: [home],
+        active: home,
+        side: "ticket",
+        panel: panelNow.current,
         files: { ...session.current.places(), ...pendingPlaces.current },
         savedAt: new Date().toISOString(),
       });
   };
-  /** This person's pull requests for the issue, newest first, across sessions. */
-  const [pulls, setPulls] = useState<PullRequestRecord[]>([]);
-  /** Which of them the person has merged (on the pull request's page). */
-  const [merged, setMerged] = useState<ReadonlySet<number>>(new Set());
-  /** Which of them the person closed without merging. */
-  const [closed, setClosed] = useState<ReadonlySet<number>>(new Set());
   const [opening, setOpening] = useState<Opening>({ state: "opening" });
   const [message, setMessage] = useState("");
   const [offline, setOffline] = useState(false);
@@ -186,107 +184,21 @@ export function Ide({
   const runtimeNow = useRef(runtime);
   runtimeNow.current = runtime;
   const [run, setRun] = useState<RunView | null>(null);
+  /** The latest submission in this page, with its verdict. */
+  const [submission, setSubmission] = useState<RunView | null>(null);
   const [stale, setStale] = useState(false);
   const [capture, setCapture] = useState<SaveStatus | null>(null);
   const [keymap, setKeymap] = useState<Keymap>("standard");
   const [vimMode, setVimMode] = useState("normal");
-  const [verification, setVerification] = useState<CompletionGate | null>(null);
-  const [shareSnapshot, setShareSnapshot] = useState<{
-    records: readonly WorkspaceRecord[];
-    proof: NonNullable<ReturnType<typeof shareCompletionProof>>;
-  } | null>(null);
-  const [lastOutcome, setLastOutcome] = useState<unknown>(null);
-  const refreshQueue = useRef(Promise.resolve());
-  function refreshPractice(complete = false) {
-    refreshQueue.current = refreshQueue.current.then(async () => {
-      const current = session.current;
-      const opened = store.current;
-      if (!current || !opened) return;
-      try {
-        await current.recorder.flush();
-        const records = await opened.workspaceRecords();
-        const gate = completionEligibility({
-          records,
-          issue: issue.slug,
-          revision: issue.revision,
-          revisionFor: (id) => revisions[id],
-          currentFiles: current.code(),
-        });
-        const terminal = records
-          .flatMap((r) => {
-            try {
-              const v = JSON.parse(r.payload);
-              return v.type === "observation.workspace.run" &&
-                v.data?.runId === gate.latest?.runId &&
-                v.data.outcome
-                ? [v.data.outcome]
-                : [];
-            } catch {
-              return [];
-            }
-          })
-          .at(-1);
-        if (session.current !== current) return;
-        setVerification(gate);
-        setLastOutcome(terminal ?? null);
-        if (complete && gate.blocker === null && readProfile()?.accepted) {
-          await completePractice(opened, {
-            participantId: participant.current,
-            termsVersion: readProfile()!.accepted!.version,
-            issue: { ...issue, language: issue.language },
-            revisionFor: (id) => revisions[id],
-            currentFiles: () => current.code(),
-            ready: () => {
-              const state = current.saveStatus();
-              return (
-                session.current === current &&
-                !runner.current?.running &&
-                state.recoverable &&
-                !state.buffered &&
-                !state.retrying
-              );
-            },
-          });
-        }
-        const snapshot = complete ? await opened.workspaceRecords() : records;
-        if (session.current !== current) return;
-        const state = current.saveStatus();
-        const proof = shareCompletionProof({
-          records: snapshot,
-          issue: issue.slug,
-          revision: issue.revision,
-          revisionFor: (id) => revisions[id],
-          currentFiles: current.code(),
-          ready:
-            !runner.current?.running &&
-            state.recoverable &&
-            !state.buffered &&
-            !state.retrying,
-        });
-        setShareSnapshot(proof ? { records: snapshot, proof } : null);
-        setVerification(
-          completionEligibility({
-            records: snapshot,
-            issue: issue.slug,
-            revision: issue.revision,
-            revisionFor: (id) => revisions[id],
-            currentFiles: current.code(),
-          }),
-        );
-      } catch (error) {
-        setShareSnapshot(null);
-        console.warn("Practice verification could not be saved.", error);
-        setVerification((current) =>
-          current ? { ...current, blocker: "code-unconfirmed" } : null,
-        );
-        setMessage("Your result could not be saved. Submit again to retry.");
-      }
-    });
-  }
+  /** The attempt under way, and whether it is completed. */
+  const [attempt, setAttempt] = useState<{ id: string; completed: boolean } | null>(null);
+  /** The store's records once the attempt completed, for the share card. */
+  const [shareRecords, setShareRecords] = useState<readonly StoredRecord[] | null>(null);
+
   function submit(how: "pointer" | "keyboard") {
-    if (runner.current?.running || runtime.state !== "ready") return;
+    if (runner.current?.running || runtimeNow.current.state !== "ready") return;
     setStale(false);
-    void session.current?.pullRequest(how);
+    void session.current?.submit(how);
   }
 
   const mainRef = useRef<HTMLElement>(null);
@@ -328,24 +240,33 @@ export function Ide({
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [home]);
-  const board = useBoard();
+  const progress = useProgress();
+  const stars = useStars();
+  const starred = stars.includes(issue.key);
+  const star = () => {
+    writeStars(toggleStar(stars, issue.key));
+    void logStar(
+      { id: issue.slug, revision: issue.revision },
+      !starred,
+      { challengeKey: issue.key, from: "practice" },
+    );
+  };
+  const completedKeys = useMemo(
+    () =>
+      new Set(
+        Object.values(progress)
+          .filter((p) => p.completions > 0)
+          .map((p) => p.key),
+      ),
+    [progress],
+  );
   const currentProblem = candidates.find((i) => i.key === issue.key);
   const next = currentProblem
-    ? nextProblem(currentProblem, candidates, board.items)
+    ? nextProblem(currentProblem, candidates, completedKeys, readProfileLanguages())
     : null;
-  // The session's callbacks outlive renders; they read the latest board through this.
-  const done = statusOf(board.items, issue.key) === "done";
-  /** The pull request new work is pushed to: the latest one, unless it was merged or closed. */
-  const openPull =
-    pulls[0] &&
-    !done &&
-    pulls[0].result !== "merged" &&
-    !merged.has(pulls[0].number) &&
-    !closed.has(pulls[0].number)
-      ? pulls[0]
-      : null;
-  const openPullRef = useRef(openPull);
-  openPullRef.current = openPull;
+  // The session's callbacks outlive renders; they read the latest suggestion through this.
+  const nextRef = useRef(next);
+  nextRef.current = next;
   const hosts = useRef(new Map<string, HTMLDivElement>());
   const sandboxHost = useRef<HTMLDivElement>(null);
   const engine = engineFor(issue.language);
@@ -355,7 +276,6 @@ export function Ide({
   const store = useRef<PracticeStore | null>(null);
   // Each mount (twice in development) bumps this; a superseded open installs nothing.
   const generation = useRef(0);
-  const participant = useRef("");
   function startRuntime() {
     if (!issue.runnable || !engine) return;
     runner.current?.dispose();
@@ -380,7 +300,21 @@ export function Ide({
     );
   }
 
-  /** Opens the session on the editable files, restoring the latest saved code. */
+  /** The attempt completed: progress says so, and the share card reads the records. */
+  async function completed(current: WorkspaceSession, attemptId: string) {
+    writeProgress(complete(readProgress(), issue.slug, attemptId, new Date().toISOString()));
+    if (session.current !== current) return;
+    setAttempt({ id: attemptId, completed: true });
+    try {
+      await current.recorder.flush();
+      const records = await store.current!.records();
+      if (session.current === current) setShareRecords(records);
+    } catch (error) {
+      console.warn("The result card could not be read.", error);
+    }
+  }
+
+  /** Opens the attempt under way (or a new one), restoring its latest saved code. */
   async function open(current: () => boolean) {
     try {
       const account = readProfile();
@@ -389,53 +323,46 @@ export function Ide({
       setKeymap(keys);
       store.current ??= await openPracticeStore();
       const participantId = await store.current.participantId();
-      participant.current = participantId;
-      const all = await store.current.workspaceRecords();
-      // Only the attempt under way (a replay starts a new one); earlier ones stay recorded.
-      const records = attemptRecords(all, issue.slug);
-      const savedCode: RecoveredCode | null = latestSavedCode(
-        records,
-        participantId,
-        issue.slug,
-      );
-      const recovered = savedCode;
-      const history = pullRequestHistory(records, participantId, issue.slug);
-      // Numbers continue across attempts, so they come from every pull request.
-      const numbered = pullRequestHistory(all, participantId, issue.slug);
-      const mergedNumbers = mergedPullRequests(all, issue.slug);
-      const closedNumbers = closedPullRequests(all, issue.slug);
+      const environment = await environmentOf();
+      const records = await store.current.records();
       const homeHost = hosts.current.get(home);
       // A superseded open must not create a session or record anything.
       if (!homeHost || !current()) return;
-      if (recovered) {
+      const start = takeStart(issue.key);
+      const now = new Date().toISOString();
+      const chosen = attemptFor(
+        readProgress(),
+        { id: issue.slug, key: issue.key },
+        start !== null,
+        now,
+        randomAttempt,
+      );
+      if (chosen.fresh) writeProgress(chosen.progress);
+      const attemptId = chosen.attempt;
+      const done = chosen.progress[issue.slug]?.completedAt != null;
+      setAttempt({ id: attemptId, completed: done });
+      if (done) setShareRecords(records);
+      const observed = attemptObservations(records, issue.slug, attemptId);
+      const recovered = latestSavedCode(records, participantId, issue.slug, attemptId);
+      if (recovered)
         setMessage(
           [
             recoveryMessage(recovered),
-            records.some((r) => {
-              try {
-                const o = JSON.parse(r.payload);
-                return (
-                  o.type === "observation.workspace.opened" &&
-                  o.issue === issue.slug &&
-                  o.issueRevision !== issue.revision
-                );
-              } catch {
-                return false;
-              }
-            })
-              ? "The challenge changed since your last visit. Your code was restored; review the requirements before checking again."
+            observed.some(
+              (o) => o.type === "practice.opened" && o.challengeRevision !== issue.revision,
+            )
+              ? "The challenge changed since your last visit. Your code was restored; review the requirements before submitting again."
               : "",
           ]
             .filter(Boolean)
             .join(" "),
         );
-      }
-      savedScope.current = `${participantId}:${viewScope(issue.slug, attemptAt(all, issue.slug).start)}`;
+      savedScope.current = `${participantId}:${viewScope(issue.slug, attemptId)}`;
       const saved = readView(savedScope.current);
       if (saved) {
         const fitted = fitView(saved, {
           paths: editable.map((f) => f.path),
-          tabs: [home, ...editable.map((f) => f.path)],
+          tabs: [home],
           lengths: Object.fromEntries(
             editable.map((f) => [
               f.path,
@@ -443,17 +370,27 @@ export function Ide({
             ]),
           ),
         });
-        setPanel(fitted.panel === "output" ? "output" : "tests");
+        setOutputOpen(fitted.panel === "output");
         pendingPlaces.current = { ...fitted.files };
       }
-      setPulls(history);
-      setMerged(mergedNumbers);
-      setClosed(closedNumbers);
-      session.current = new WorkspaceSession({
+      const opened: WorkspaceSession = new WorkspaceSession({
         participantId,
-        consentVersion: `terms-${account?.accepted?.version ?? "unknown"}`,
-        issue: issue.slug,
-        issueRevision: issue.revision,
+        termsVersion: account?.accepted?.version ?? "1970-01-01",
+        challenge: {
+          id: issue.slug,
+          key: issue.key,
+          revision,
+          revisionId: issue.revision,
+        },
+        attemptId,
+        started: chosen.fresh
+          ? {
+              challengeKey: issue.key,
+              from: start?.from ?? "direct",
+              query: start?.query ?? null,
+              position: start?.position ?? null,
+            }
+          : null,
         executable: challenge,
         sink: store.current,
         files: Object.fromEntries(
@@ -476,41 +413,16 @@ export function Ide({
         keymap: keys,
         types: types.current ?? undefined,
         runtime: issue.runnable && engine ? engine.runtime : null,
-        pullRequestsBefore: numbered[0]?.number ?? 0,
-        hasPreviousChecks: numbered.length > 0,
-        openPullRequest: () => {
-          const open = openPullRef.current;
-          return open ? { number: open.number, pushes: open.pushes } : null;
-        },
+        hasPreviousChecks: observed.some((o) => o.type === "practice.submitted"),
         // Read at use time, so a runtime reloaded with Retry is the one that runs.
         runner: () => runner.current!,
-        onSubmit: (how) => {
-          if (runtimeNow.current.state === "ready")
-            void session.current?.pullRequest(how);
-        },
+        onSubmit: (how) => submit(how),
+        suggestNext: () => nextRef.current?.key ?? null,
+        onCompleted: () => void completed(opened, attemptId),
         onRun: (next) => {
           setRun(next);
           setStale(next.revision !== session.current?.currentRevision);
-          const pr = next.pullRequest;
-          // Terminal full-suite runs may complete; example runs cannot.
-          if (next.status !== "queued" && next.status !== "running")
-            void refreshPractice(next.purpose === "pull-request");
-          if (!pr) return;
-          // Opening shows the pull request at once; its checks fill in when they finish.
-          setPulls((current) => [
-            {
-              number: pr.number,
-              pushes: pr.push,
-              runId: pr.runId,
-              revision: pr.revision,
-              result: pr.result ?? "running",
-              passed: pr.passed ?? 0,
-              total: pr.total ?? challenge.cases.length,
-              at: pr.at,
-            },
-            ...current.filter((p) => p.number !== pr.number),
-          ]);
-          // Keep internal submission numbering for backward-compatible capture.
+          if (next.purpose === "submit" && next.verdict) setSubmission(next);
         },
         onEditedAfterRun: () => setStale(true),
         onSaveStatus: setCapture,
@@ -518,16 +430,17 @@ export function Ide({
         entry: entryPath(),
         profile: account?.profile ? ({ ...account.profile } as Json) : null,
         viewport: { width: window.innerWidth, height: window.innerHeight },
+        environment,
       });
-      session.current.mount(home, homeHost);
-      session.current.page({
+      session.current = opened;
+      opened.mount(home, homeHost);
+      opened.page({
         visible: document.visibilityState === "visible",
         focused: document.hasFocus(),
         width: window.innerWidth,
         height: window.innerHeight,
       });
       setOpening({ state: "open" });
-      void refreshPractice();
     } catch (cause) {
       console.warn("The IDE could not open.", cause);
       if (current())
@@ -552,7 +465,6 @@ export function Ide({
       // Counts refresh each second; state changes arrive at once through onSaveStatus.
       setCapture(session.current?.saveStatus() ?? null);
     }, 1000);
-    // Practice shows requirements directly; no hidden hint/comment releases are generated.
     return () => {
       window.removeEventListener("pagehide", saveView);
       generation.current++;
@@ -570,25 +482,13 @@ export function Ide({
     };
   }, []);
 
-  /** The last input, so a navigation can say whether a person or the app made it. */
-  const input = useRef<{ kind: "pointer" | "keyboard"; at: number } | null>(
-    null,
-  );
-  const via = (): "pointer" | "keyboard" | "app" =>
-    input.current && performance.now() - input.current.at < 1000
-      ? input.current.kind
-      : "app";
   useEffect(
-    () => setIssueContext({ id: issue.slug, revision: issue.revision }),
+    () => setChallengeContext({ id: issue.slug, revision: issue.revision }),
     [issue.slug, issue.revision],
   );
 
   // The page: visible or hidden, focused or not, its size, and its last moments.
   useEffect(() => {
-    const noteInput = (kind: "pointer" | "keyboard") => () =>
-      (input.current = { kind, at: performance.now() });
-    const pointer = noteInput("pointer");
-    const keyboard = noteInput("keyboard");
     let resize: ReturnType<typeof setTimeout> | undefined;
     const page = () =>
       session.current?.page({
@@ -602,8 +502,6 @@ export function Ide({
       resize = setTimeout(page, 250);
     };
     const hidden = () => session.current?.pageHidden();
-    window.addEventListener("pointerdown", pointer, true);
-    window.addEventListener("keydown", keyboard, true);
     document.addEventListener("visibilitychange", page);
     window.addEventListener("focus", page);
     window.addEventListener("blur", page);
@@ -611,8 +509,6 @@ export function Ide({
     window.addEventListener("pagehide", hidden);
     return () => {
       clearTimeout(resize);
-      window.removeEventListener("pointerdown", pointer, true);
-      window.removeEventListener("keydown", keyboard, true);
       document.removeEventListener("visibilitychange", page);
       window.removeEventListener("focus", page);
       window.removeEventListener("blur", page);
@@ -621,40 +517,13 @@ export function Ide({
     };
   }, []);
 
-  // What was open: tabs opened and closed, the file shown, the side bar and the panel.
-  const shownTabs = useRef<string[]>([]);
   const isOpen = opening.state === "open";
-  useEffect(() => {
-    const current = session.current;
-    if (!isOpen || !current) return;
-    const before = shownTabs.current;
-    for (const path of tabs)
-      if (!before.includes(path))
-        current.navigated("file", "open", path, via());
-    for (const path of before)
-      if (!tabs.includes(path)) current.navigated("file", "close", path, via());
-    shownTabs.current = tabs;
-  }, [tabs, isOpen]);
   useLayoutEffect(() => {
     if (!isOpen) return;
-    const how = via();
-    const place = pendingPlaces.current[active];
-    session.current?.restorePlace(
-      active,
-      place,
-      how !== "app" || Boolean(place),
-    );
-    delete pendingPlaces.current[active];
-    session.current?.navigated("file", "show", active, how);
-    // Opening a file is investigation, which teammates may respond to.
-    // File navigation keeps its existing observation; it does not release invisible hints.
-  }, [active, isOpen]);
-  useEffect(() => {
-    if (isOpen) session.current?.navigated("side", "show", view, via());
-  }, [view, isOpen]);
-  useEffect(() => {
-    if (isOpen) session.current?.navigated("panel", "show", panel, via());
-  }, [panel, isOpen]);
+    const place = pendingPlaces.current[home];
+    session.current?.restorePlace(home, place, Boolean(place));
+    delete pendingPlaces.current[home];
+  }, [home, isOpen]);
   useEffect(() => {
     if (!isOpen || runtime.state === "none") return;
     session.current?.runtimeState(
@@ -666,29 +535,20 @@ export function Ide({
   const running = run?.status === "queued" || run?.status === "running";
   const ready = runtime.state === "ready" && opening.state === "open";
   const publishedExamples = challenge.cases.filter((c) => c.visible);
+  const verdict = submission?.verdict ?? null;
+  const done = !!attempt?.completed;
   const check = checkFeedbackOf({
-    blocker: stale
-      ? "code-changed"
-      : verification?.latest
-        ? verification.blocker
-        : undefined,
-    completed:
-      !running &&
-      !stale &&
-      run?.purpose !== "local" &&
-      verification?.blocker === null &&
-      !!verification.completedAt,
-    running: !!running,
-    latest: verification?.latest ?? null,
-    diagnosis: diagnose(lastOutcome, challenge.cases),
-    required: verification?.required ?? [],
+    running: running && run?.purpose === "submit",
+    completed: done && !stale && (!verdict || verdict.complete),
+    edited: stale && !!verdict,
+    verdict,
+    diagnosis: verdict ? diagnose(submission?.outcome ?? null, challenge.cases) : null,
   });
-  const verified =
-    !running &&
-    !stale &&
-    run?.purpose !== "local" &&
-    verification?.blocker === null &&
-    verification.completedInAttempt;
+  /** Practise this challenge again: a new attempt from the starting code. */
+  const again = () => {
+    noteStart({ key: issue.key, from: "again", query: null, position: null });
+    window.location.assign(practiceHref(issue.key));
+  };
   return (
     <div className="practice tui" onClickCapture={persistView}>
       <main
@@ -712,9 +572,27 @@ export function Ide({
         >
           <h2 className="pane-title">
             <kbd>[1]</kbd> challenge{" "}
-            <span className="faint">· {issue.key}</span>
+            <span className="faint">· {issue.key}</span>{" "}
+            <button
+              type="button"
+              className="pane-star"
+              aria-pressed={starred}
+              title={starred ? "Unstar" : "Star"}
+              onClick={star}
+            >
+              {starred ? "★" : "☆"}
+            </button>
           </h2>
-          <div className="pane-body" tabIndex={0} ref={challengeBody}>
+          <div
+            className="pane-body"
+            tabIndex={0}
+            ref={challengeBody}
+            onCopy={() =>
+              session.current?.copiedChallenge(
+                window.getSelection()?.toString() ?? "",
+              )
+            }
+          >
             <h1>{issue.title}</h1>
             <h2>Goal and requirements</h2>
             <Markdown source={issue.task} />
@@ -795,7 +673,7 @@ export function Ide({
                     disabled={!ready}
                     onClick={(event) =>
                       void session.current?.run(
-                        "local",
+                        "examples",
                         event.detail === 0 ? "keyboard" : "pointer",
                       )
                     }
@@ -803,7 +681,7 @@ export function Ide({
                     Run examples
                   </button>
                   <button
-                    className={`btn${verified ? "" : " primary"}`}
+                    className={`btn${done ? "" : " primary"}`}
                     disabled={!ready}
                     onClick={(event) =>
                       submit(event.detail === 0 ? "keyboard" : "pointer")
@@ -841,7 +719,7 @@ export function Ide({
             )}
             {opening.state === "open" && (
               <div className="practice-feedback">
-                {run?.purpose === "local" ? (
+                {run?.purpose === "examples" ? (
                   <>
                     <h2>Example feedback</h2>
                     <Tests
@@ -857,54 +735,55 @@ export function Ide({
                 ) : (
                   <CheckFeedbackView feedback={check} />
                 )}
-                {verified && (
+                {done && attempt && (
                   <section
                     className="practice-next"
                     aria-label="Next challenge"
                   >
-                    <h2>
-                      {verification.completedAt
-                        ? "Next challenge"
-                        : "Current code verified"}
-                    </h2>
+                    <h2>Next challenge</h2>
                     {next ? (
                       <>
                         <p>Next: {next.title}</p>
-                        <StartWork
-                          issue={next}
+                        <Link
+                          className="btn primary"
                           href={practiceHref(next.key)}
-                          label="Next challenge"
-                        />
+                          onClick={() =>
+                            noteStart({ key: next.key, from: "next", query: null, position: null })
+                          }
+                        >
+                          Next challenge →
+                        </Link>{" "}
+                        <button type="button" className="btn" onClick={again}>
+                          Practise this again
+                        </button>
                         <p className="faint">
                           Suggested by language and difficulty.
                         </p>
                       </>
                     ) : (
-                      <Link className="btn primary" href="/challenges">
-                        Explore challenges
-                      </Link>
+                      <>
+                        <Link className="btn primary" href="/challenges">
+                          Explore challenges
+                        </Link>{" "}
+                        <button type="button" className="btn" onClick={again}>
+                          Practise this again
+                        </button>
+                      </>
                     )}
-                    {shareSnapshot &&
-                      shareSnapshot.proof.completion.runId ===
-                        verification.latest?.runId &&
-                      shareSnapshot.proof.completion.at ===
-                        verification.completedAt && (
-                        <ShareOutcome
-                          challenge={issue}
-                          completion={shareSnapshot.proof.completion}
-                          required={shareSnapshot.proof.required}
-                          records={shareSnapshot.records}
-                          revisions={revisions}
-                        />
-                      )}
+                    {shareRecords && (
+                      <ShareOutcome
+                        challenge={{ ...issue, id: issue.slug }}
+                        attemptId={attempt.id}
+                        records={shareRecords}
+                        revision={revision}
+                      />
+                    )}
                   </section>
                 )}
                 {run && (
                   <details
-                    open={panel === "output"}
-                    onToggle={(event) =>
-                      setPanel(event.currentTarget.open ? "output" : "tests")
-                    }
+                    open={outputOpen}
+                    onToggle={(event) => setOutputOpen(event.currentTarget.open)}
                   >
                     <summary>Output</summary>
                     <Output
@@ -949,7 +828,7 @@ function Tests({
   onRetry(): void;
 }) {
   /** The cases in the repo's test file, which Run tests runs. */
-  const visible = casesRun(challenge.cases, "local").length;
+  const visible = casesRun(challenge.cases, "examples").length;
   if (!issue.runnable)
     return (
       <p className="faint">
@@ -1076,6 +955,12 @@ function Case({
       <span className="ide-case-index faint">#{index + 1}</span>
     </li>
   );
+}
+
+/** The languages in the person's profile, for suggestions after the current one's run out. */
+function readProfileLanguages(): string[] {
+  if (typeof window === "undefined") return [];
+  return [...(readProfile()?.profile.languages ?? [])];
 }
 
 function entryPath(): string | null {

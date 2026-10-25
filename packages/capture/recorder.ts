@@ -1,35 +1,43 @@
 /**
- * Bounded, asynchronous capture buffer for workspace observations. Recording never waits for
+ * Bounded, asynchronous capture buffer for practice observations. Recording never waits for
  * storage: observations get a source position and stable ID immediately and are written in
  * ordered batches later. Failed writes retry with backoff. When the buffer is full the
  * observation is dropped, its position stays consumed, and an explicit capture-gap
  * observation records the lost range once there is room again.
  */
 import {
+  PRACTICE_CAPTURE_VERSION,
+  type PracticeData,
+  type PracticeObservation,
+  type PracticeType,
+} from "../domain/practice";
+import {
+  envelope,
   toRecord,
-  WORKSPACE_CAPTURE_VERSION,
+  type Assignments,
   type CodeRevisionArtifact,
-  type ObservationData,
-  type ObservationType,
-  type WorkspaceObservation,
-  type WorkspaceRecord,
-} from "../domain/workspace";
+  type StoredRecord,
+} from "../domain/records";
 import { safeIdentifier } from "../domain/capture";
 
 export type WriteOutcome = "written" | "duplicate" | "conflict";
 
 /** Durable or session storage. Identical records deduplicate; a changed payload is a conflict. */
 export interface CaptureSink {
-  write(records: readonly WorkspaceRecord[]): Promise<WriteOutcome[]>;
+  write(records: readonly StoredRecord[]): Promise<WriteOutcome[]>;
 }
 
 export interface RecorderOptions {
   readonly participantId: string;
+  /** The page load this recording belongs to. */
+  readonly sessionId: string;
   readonly sourceId: string;
-  readonly consentVersion: string;
-  /** The issue and the revision this session works against. */
-  readonly issue: string;
-  readonly issueRevision: string;
+  /** The accepted Terms version, such as 2026-10-25.1. */
+  readonly termsVersion: string;
+  readonly assignments?: Assignments;
+  /** The challenge, the revision worked against, and the attempt. */
+  readonly challenge: { readonly id: string; readonly revision: string };
+  readonly attemptId: string;
   readonly sink: CaptureSink;
   readonly maxRecords?: number;
   readonly maxBytes?: number;
@@ -63,7 +71,7 @@ export interface CaptureStatus {
 }
 
 interface Entry {
-  readonly record: WorkspaceRecord;
+  readonly record: StoredRecord;
   readonly bytes: number;
   readonly sequence?: number;
 }
@@ -106,29 +114,14 @@ export class CaptureRecorder {
    * Records one observation with any artifacts it references. Returns the observation, or
    * null when it was dropped (its position becomes an explicit gap).
    */
-  observe<T extends ObservationType>(
+  observe<T extends PracticeType>(
     type: T,
-    data: ObservationData[T],
+    data: PracticeData[T],
     artifacts: readonly CodeRevisionArtifact[] = [],
-  ): WorkspaceObservation<T> | null {
+  ): PracticeObservation<T> | null {
     if (this.stopped) return null;
     const sequence = ++this.sequence;
-    const observation: WorkspaceObservation<T> = {
-      schemaVersion: "1.0.0",
-      type,
-      observationId: `${this.options.sourceId}.${sequence}`,
-      participantId: this.options.participantId,
-      source: { id: this.options.sourceId, sequence },
-      occurredAt: (this.options.now?.() ?? new Date()).toISOString(),
-      elapsedMs: this.elapsed(),
-      serverReceipt: { status: "absent", reason: "local-only" },
-      captureVersion: WORKSPACE_CAPTURE_VERSION,
-      consentVersion: this.options.consentVersion,
-      researchConsent: false,
-      issue: this.options.issue,
-      issueRevision: this.options.issueRevision,
-      data,
-    };
+    const observation = this.envelope(type, sequence, data);
     // An artifact (one code revision) is stored once, however many observations cite it.
     const fresh = artifacts.filter(
       (artifact) => !this.artifacts.has(artifact.artifactId),
@@ -150,6 +143,25 @@ export class CaptureRecorder {
     return observation;
   }
 
+  private envelope<T extends PracticeType>(
+    type: T,
+    sequence: number,
+    data: PracticeData[T],
+  ): PracticeObservation<T> {
+    return envelope(type, PRACTICE_CAPTURE_VERSION, {
+      participantId: this.options.participantId,
+      sessionId: this.options.sessionId,
+      sourceId: this.options.sourceId,
+      sequence,
+      occurredAt: (this.options.now?.() ?? new Date()).toISOString(),
+      elapsedMs: this.elapsed(),
+      termsVersion: this.options.termsVersion,
+      assignments: this.options.assignments,
+      challenge: this.options.challenge,
+      attemptId: this.options.attemptId,
+    }, data);
+  }
+
   /** Milliseconds since this source stream started, on the monotonic clock. */
   elapsed(): number {
     return Math.round((this.clock() - this.origin) * 10) / 10;
@@ -160,7 +172,7 @@ export class CaptureRecorder {
   }
 
   /** Stores a record that is not participant activity, such as shared content. */
-  include(record: WorkspaceRecord): void {
+  include(record: StoredRecord): void {
     if (this.stopped) return;
     this.enqueue([entry(record)]);
     this.schedule(this.options.flushDelayMs ?? 250);
@@ -279,26 +291,13 @@ export class CaptureRecorder {
     while (this.dropped.length) {
       const range = this.dropped[0];
       const sequence = ++this.sequence;
-      const gap = toRecord({
-        schemaVersion: "1.0.0",
-        type: "observation.workspace.capture-gap",
-        observationId: `${this.options.sourceId}.${sequence}`,
-        participantId: this.options.participantId,
-        source: { id: this.options.sourceId, sequence },
-        occurredAt: (this.options.now?.() ?? new Date()).toISOString(),
-        elapsedMs: this.elapsed(),
-        serverReceipt: { status: "absent", reason: "local-only" },
-        captureVersion: WORKSPACE_CAPTURE_VERSION,
-        consentVersion: this.options.consentVersion,
-        researchConsent: false,
-        issue: this.options.issue,
-      issueRevision: this.options.issueRevision,
-        data: {
+      const gap = toRecord(
+        this.envelope("practice.capture-gap", sequence, {
           fromSequence: range.from,
           toSequence: range.to,
           reason: range.reason,
-        },
-      });
+        }),
+      );
       const item = entry(gap, sequence);
       if (!this.fits([item], 0, 0)) {
         this.sequence--;
@@ -349,14 +348,14 @@ export class CaptureRecorder {
   }
 }
 
-function entry(record: WorkspaceRecord, sequence?: number): Entry {
+function entry(record: StoredRecord, sequence?: number): Entry {
   return { record, bytes: record.payload.length * 2, sequence };
 }
 
 /** Session-only default: records live in this page's memory and vanish when it closes. */
 export class MemorySink implements CaptureSink {
-  readonly records = new Map<string, WorkspaceRecord>();
-  async write(records: readonly WorkspaceRecord[]): Promise<WriteOutcome[]> {
+  readonly records = new Map<string, StoredRecord>();
+  async write(records: readonly StoredRecord[]): Promise<WriteOutcome[]> {
     return records.map((record) => {
       const existing = this.records.get(record.recordId);
       if (!existing) {

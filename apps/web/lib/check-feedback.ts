@@ -1,33 +1,24 @@
 /**
- * What the practice area says about the latest full check, read from the one gate that decides
- * completion (lib/merge.ts `mergeEligibility`), so feedback and completion never disagree. One
- * headline and at most one next step; failing cases come from lib/diagnosis.ts (public cases in
- * full, hidden ones by name and failure category). Edited, stale, pending and failing states
- * never read as done. No pull request vocabulary: this is the challenge's own check.
+ * What practice says about the latest submission, read from its verdict (lib/submission.ts), so
+ * feedback and completion never disagree. One headline and at most one next step; failing cases
+ * come from lib/diagnosis.ts (examples in full, hidden cases by position and failure category).
+ * Edited, running and failing states never read as done.
  */
 import type { Diagnosis } from "./diagnosis";
-import type { MergeBlocker } from "./merge";
+import type { Verdict } from "./submission";
 
 export type CheckState =
   | "unchecked"
   | "running"
   | "failing"
   | "edited"
-  | "unconfirmed"
-  | "revision"
   | "required"
-  | "passed"
-  | "completed"
-  /** The attempt ended without a recorded completion (closed, or another one completed). */
-  | "closed";
+  | "completed";
 
-/**
- * A deterministic correctness or safety rule the checked code still triggers: it blocks until the
- * code changes. Shown as the requirement it enforces, with no teammate and no Resolve.
- */
+/** A rule the submitted code fires: it holds until the code changes. */
 export interface RequiredRule {
   id: string;
-  /** Markdown: the requirement, as the challenge states it. */
+  /** Markdown: what to change, as the challenge states it. */
   text: string;
 }
 
@@ -37,64 +28,56 @@ export interface CheckFeedback {
   headline: string;
   /** What to do next, when there is something to do. */
   next: string | null;
-  /** Failing cases, when the check failed. */
+  /** Failing cases, when the submission failed. */
   diagnosis: Diagnosis | null;
-  /** Rules still triggered, when every case passed. */
+  /** Rules fired, when every case passed. */
   required: RequiredRule[];
 }
 
 export interface CheckFeedbackInput {
-  /**
-   * The gate's verdict for the latest check: null when it can complete, undefined when nothing
-   * was checked yet in this attempt.
-   */
-  blocker: MergeBlocker | null | undefined;
-  /** A full check is running now in this page. */
+  /** A submission is running now in this page. */
   running: boolean;
-  /**
-   * The challenge's completion is recorded for this attempt (a `pull-request-merged` or
-   * `checks-passed` move to Done). The only source of "completed": the gate's `not-open` also
-   * covers an attempt closed without completing.
-   */
+  /** The attempt is completed: its completion is recorded. */
   completed: boolean;
-  /** The latest check's counts, when one was recorded. */
-  latest: { passed: number; total: number } | null;
-  /** The latest check's failing cases (lib/diagnosis `diagnose`). */
+  /** The code changed since the latest submission. */
+  edited: boolean;
+  /** The latest submission's verdict in this attempt, or null before the first. */
+  verdict: Verdict | null;
+  /** The latest submission's failing cases (lib/diagnosis `diagnose`). */
   diagnosis: Diagnosis | null;
-  required: readonly RequiredRule[];
 }
 
 const cases = (n: number) => `${n} ${n === 1 ? "case" : "cases"}`;
-const CHECK_AGAIN = "Check your code again.";
+const AGAIN = "Submit again.";
 
 export function checkFeedbackOf(input: CheckFeedbackInput): CheckFeedback {
-  const { blocker, running, latest, diagnosis } = input;
+  const { verdict, diagnosis } = input;
   const base = { diagnosis: null, required: [] as RequiredRule[], next: null };
-  if (input.completed)
-    return { ...base, state: "completed", tone: "pass", headline: "Done." };
-  if (running || blocker === "checks-pending")
+  if (input.completed) return { ...base, state: "completed", tone: "pass", headline: "Done." };
+  if (input.running)
     return {
       ...base,
       state: "running",
       tone: "busy",
       headline: "Checking your code against every case…",
     };
-  if (blocker === undefined || !latest)
+  if (!verdict)
     return {
       ...base,
       state: "unchecked",
       tone: "neutral",
-      headline: "Not checked yet.",
-      next: "Check your code to run every case, including hidden ones.",
+      headline: "Not submitted yet.",
+      next: "Submit to run every case, including hidden ones.",
     };
-  if (blocker === "not-open" || blocker === "other-merged")
+  if (input.edited)
     return {
       ...base,
-      state: "closed",
+      state: "edited",
       tone: "neutral",
-      headline: "This attempt ended without being completed.",
+      headline: "You've edited the code since the last submission.",
+      next: AGAIN,
     };
-  if (blocker === "checks") {
+  if (verdict.result !== "passed") {
     const headline =
       diagnosis?.kind === "tests"
         ? `${diagnosis.failed.length} of ${cases(diagnosis.rows.length)} failed.`
@@ -108,7 +91,7 @@ export function checkFeedbackOf(input: CheckFeedbackInput): CheckFeedback {
               : diagnosis.reason === "runner-error"
                 ? "The test runner crashed; this wasn't your code."
                 : "The check was cancelled."
-            : `${latest.total - latest.passed} of ${latest.total} cases failed.`;
+            : `${verdict.total - verdict.passed} of ${verdict.total} cases failed.`;
     return {
       ...base,
       state: "failing",
@@ -117,51 +100,18 @@ export function checkFeedbackOf(input: CheckFeedbackInput): CheckFeedback {
       diagnosis,
       next:
         diagnosis?.kind === "stopped" && diagnosis.reason !== "timeout"
-          ? CHECK_AGAIN
-          : "Fix the code, then check again.",
+          ? AGAIN
+          : "Fix the code, then submit again.",
     };
   }
-  if (blocker === "code-changed")
-    return {
-      ...base,
-      state: "edited",
-      tone: "neutral",
-      headline: "You've edited the code since the last check.",
-      next: CHECK_AGAIN,
-    };
-  if (blocker === "code-unconfirmed")
-    return {
-      ...base,
-      state: "unconfirmed",
-      tone: "neutral",
-      headline: "Your saved code can't be matched to the last check.",
-      next: CHECK_AGAIN,
-    };
-  if (blocker === "revision")
-    return {
-      ...base,
-      state: "revision",
-      tone: "neutral",
-      headline: "The challenge changed after your last check.",
-      next: "Check your code against the current version.",
-    };
-  if (blocker === "review")
-    return {
-      ...base,
-      state: "required",
-      tone: "fail",
-      headline: `All ${cases(latest.total)} pass, but ${
-        input.required.length === 1
-          ? "a required rule still applies"
-          : "required rules still apply"
-      }.`,
-      required: [...input.required],
-      next: "Change the code so it no longer does this, then check again.",
-    };
   return {
     ...base,
-    state: "passed",
-    tone: "pass",
-    headline: `All ${cases(latest.total)} pass.`,
+    state: "required",
+    tone: "fail",
+    headline: `All ${cases(verdict.total)} pass, but ${
+      verdict.rules.length === 1 ? "a rule still applies" : "rules still apply"
+    }.`,
+    required: verdict.rules.map((rule) => ({ id: rule.id, text: rule.message })),
+    next: "Change the code so it no longer does this, then submit again.",
   };
 }

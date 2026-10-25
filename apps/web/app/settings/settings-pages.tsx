@@ -33,7 +33,7 @@ import { LEGAL_UPDATED } from "../../lib/legal";
 import type { Profile } from "../../lib/profile";
 import { QUESTIONS, toProfile } from "../../lib/questions";
 import type { Answer } from "../_terminal/prompts";
-import { logProfile } from "../(browse)/_components/board-log";
+import { logProfile } from "../../lib/site-log";
 import type { CommandName } from "./commands";
 import { KeyActions, type KeyAction } from "../_terminal/key-actions";
 

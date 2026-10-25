@@ -215,7 +215,7 @@ test("the solution offered is the checked artifact's editable file, exactly, or 
     kind: "observation",
     recordId: `o-${runId}`,
     payload: JSON.stringify({
-      type: "observation.workspace.run",
+      type: "practice.run",
       data: { runId, codeArtifactId, status: "result" },
     }),
   });

@@ -7,181 +7,55 @@ import {
   outcomeOf,
   publicOutcome,
   type Outcome,
-  type RecordedCompletion,
 } from "./outcome";
 import { inspectCard } from "./share";
 
 const HEX = "de8621e616e78cb42b58d2d189a0b9738171c3345ef3193d1af425130e4ba130";
 const REV = `sha256:${HEX}`;
-const OTHER = "sha256:" + "a".repeat(64);
 let n = 0;
-const observation = (
-  type: string,
-  at: string,
-  data: object,
-  revision = REV,
-) => ({
+const observation = (type: string, data: object, attemptId = "attempt-1") => ({
   kind: "observation" as const,
   recordId: `o${++n}`,
   participantId: "p",
   payload: JSON.stringify({
     type,
-    issue: "collected-by-partner",
-    issueRevision: revision,
-    occurredAt: at,
+    challenge: "collected-by-partner",
+    challengeRevision: REV,
+    attemptId,
+    occurredAt: `2026-10-25T10:${String(n).padStart(2, "0")}:00.000Z`,
     source: { id: "s", sequence: n },
     data,
   }),
 });
-type Raw =
-  /** Every case scored: `passed` of `total` outputs match. */
-  | { kind: "scored"; passed: number; total: number; truncate?: boolean }
-  | { kind: "compile-error"; total: number }
-  | { kind: "partial"; ran: number; passed: number; total: number }
-  | { kind: "timeout"; total: number }
-  | { kind: "cancelled"; total: number }
-  | { kind: "runner-error"; total: number }
-  /** Ran, but no summary was ever recorded for it. */
-  | { kind: "unreported"; total: number };
-
-/**
- * A full check as the app records it: queued, then its terminal run with the raw outcome, then
- * the summary record, whose counts for a run that didn't score are synthesized as PR40's
- * `pullRequestResult` does (0/N, cancelled or checks-errored), or partial counts.
- */
-const check = (minute: number, runId: string, raw: Raw, revision = REV) => {
-  const at = (s: number) =>
-    `2026-10-25T10:${String(minute).padStart(2, "0")}:${String(s).padStart(2, "0")}.000Z`;
-  const run = {
-    runId,
-    purpose: "pull-request",
-    revision: 1,
-    codeArtifactId: `a-${runId}`,
-  };
-  const outputs = (n: number, passed: number, truncate = false) =>
-    Array.from({ length: n }, (_, i) => ({
-      index: i,
-      output: {
-        text: i < passed ? "1" : "0",
-        truncated: truncate && i === n - 1,
-      },
-    }));
-  const [status, outcome, summary] = ((): [
-    string,
-    unknown,
-    [string, number] | null,
-  ] => {
-    switch (raw.kind) {
-      case "scored":
-        return [
-          "result",
-          {
-            status: "completed",
-            phase: "tests",
-            cases: outputs(raw.total, raw.passed, raw.truncate),
-          },
-          [
-            raw.passed === raw.total ? "checks-passed" : "checks-failed",
-            raw.passed,
-          ],
-        ];
-      case "compile-error":
-        return [
-          "user-error",
-          { status: "user-error", phase: "compile", cases: [] },
-          ["checks-errored", 0],
-        ];
-      case "partial":
-        return [
-          "user-error",
-          {
-            status: "user-error",
-            phase: "tests",
-            cases: outputs(raw.ran, raw.passed),
-          },
-          ["checks-failed", raw.passed],
-        ];
-      case "timeout":
-        return [
-          "timeout",
-          { status: "timeout", timeoutMs: 10000 },
-          ["checks-errored", 0],
-        ];
-      case "cancelled":
-        return ["cancelled", { status: "cancelled" }, ["cancelled", 0]];
-      case "runner-error":
-        return [
-          "runner-error",
-          { status: "runner-error", phase: "execution", message: "x" },
-          ["checks-errored", 0],
-        ];
-      case "unreported":
-        return [
-          "result",
-          { status: "completed", phase: "tests", cases: outputs(raw.total, 0) },
-          null,
-        ];
-    }
-  })();
-  return [
-    observation(
-      "observation.workspace.run",
-      at(0),
-      { ...run, status: "queued" },
-      revision,
-    ),
-    observation(
-      "observation.workspace.run",
-      at(10),
-      { ...run, status, outcome },
-      revision,
-    ),
-    ...(summary
-      ? [
-          observation(
-            "observation.workspace.pull-request",
-            at(11),
-            {
-              number: 1,
-              push: 1,
-              runId,
-              passed: summary[1],
-              total: raw.total,
-              result: summary[0],
-            },
-            revision,
-          ),
-        ]
-      : []),
-  ];
-};
-const pass = (minute: number, runId = "r-3") =>
-  check(minute, runId, { kind: "scored", passed: 15, total: 15 });
-const completion: RecordedCompletion = {
-  issue: "collected-by-partner",
-  revision: REV,
-  key: "SQL-002",
-  at: "2026-10-25T10:05:00.000Z",
-  runId: "r-3",
-  automatic: true,
-};
-const records = [
-  ...check(0, "r-0", { kind: "scored", passed: 9, total: 15 }, OTHER), // another revision
-  ...check(1, "r-1", { kind: "scored", passed: 11, total: 15 }),
-  ...check(2, "r-c", { kind: "cancelled", total: 15 }), // cancelled: not a check that ran
-  ...check(3, "r-2", { kind: "scored", passed: 14, total: 15 }),
-  ...pass(4),
-  ...check(9, "r-4", { kind: "scored", passed: 13, total: 15 }), // after the completion
-];
-const of = (
-  r: typeof records,
-  c: Partial<RecordedCompletion> = {},
-  required: readonly unknown[] | null = [],
+const submitted = (
+  runId: string,
+  result: string,
+  passed: number,
+  total = 15,
+  rules: string[] = [],
+  attemptId?: string,
 ) =>
+  observation(
+    "practice.submitted",
+    { runId, revision: 1, codeArtifactId: `a-${runId}`, result, passed, total, rules },
+    attemptId,
+  );
+const completed = (runId: string, attemptId?: string) =>
+  observation("practice.completed", { runId, codeArtifactId: `a-${runId}`, suggested: null }, attemptId);
+
+const records = [
+  submitted("r-0", "passed", 15, 15, [], "attempt-0"), // an earlier attempt
+  submitted("r-1", "failed", 11),
+  submitted("r-c", "cancelled", 0), // cancelled: not a check that ran
+  submitted("r-2", "failed", 14),
+  submitted("r-3", "passed", 15),
+  completed("r-3"),
+];
+const of = (r: typeof records, attemptId = "attempt-1", revision = REV) =>
   outcomeOf({
     records: r,
-    completion: { ...completion, ...c },
-    required,
+    challenge: { id: "collected-by-partner", key: "SQL-002", revision },
+    attemptId,
     language: "sql",
     referral: "ab12cd34ef56",
   });
@@ -196,176 +70,38 @@ const card: Outcome = {
   c: "ab12cd34ef56",
 };
 
-test("a v3 card comes only from a recorded checks-passed completion and its full checks", () => {
+test("a card comes only from an attempt's recorded completion and its submissions", () => {
   assert.deepEqual(of(records), card);
-  // A legacy merge is never turned into a v3 card, and no v2 merge is invented for this one.
-  assert.equal(of(records, { automatic: false }), null);
-  // The completing run must be a recorded full check on this revision passing every check.
-  assert.equal(of(records, { runId: "r-9" }), null);
-  assert.equal(of(records, { runId: "r-2" }), null);
-  assert.equal(of(records, { revision: OTHER, runId: "r-0" }), null);
-  assert.equal(of(records, { revision: "not-a-hash" }), null);
-  assert.equal(
-    of(check(4, "r-3", { kind: "scored", passed: 0, total: 0 })),
-    null,
-  );
-  assert.equal(of(check(4, "r-3", { kind: "unreported", total: 15 })), null);
-  // A completing summary without a completely scored raw run is not a completion we can show.
-  assert.equal(
-    of(
-      check(4, "r-3", {
-        kind: "scored",
-        passed: 15,
-        total: 15,
-        truncate: true,
-      }),
-    ),
-    null,
-  );
+  // No completion recorded, or another attempt's: nothing to show.
+  assert.equal(of(records.slice(0, -1)), null);
+  assert.equal(of(records, "attempt-2"), null);
+  assert.equal(of(records, "attempt-1", "not-a-hash"), null);
+  // The completing submission must pass every case with no rule firing.
+  assert.equal(of([submitted("r-3", "passed", 0, 0), completed("r-3")]), null);
+  assert.equal(of([submitted("r-3", "passed", 15, 15, ["sum-distinct"]), completed("r-3")]), null);
+  assert.equal(of([completed("r-3")]), null);
 });
 
-test("a v3 card needs the required rules evaluated and satisfied for the checked code", () => {
-  assert.deepEqual(of(records, {}, []), card);
-  assert.equal(of(records, {}, null), null);
-  assert.equal(of(records, {}, [{ id: "priya-sum-distinct" }]), null);
-});
-
-test("f is the first full check only when its run was scored completely; n counts checks that ran", () => {
-  // Only the completing check: first = final, one check.
-  assert.deepEqual(of(pass(4)), {
+test("f is the first submission only when its cases were decided; n counts submissions that ran", () => {
+  assert.deepEqual(of([submitted("r-3", "passed", 15), completed("r-3")]), {
     ...card,
     f: { passed: 15, total: 15 },
     n: 1,
   });
-  // A first Submit that never produced a complete, scorable result → later pass. Its summary
-  // record says 0/15 (or partial counts), but that is not an observed result: f is null. It
-  // still ran, so it still counts in n.
-  for (const [name, first] of [
-    ["compile error", { kind: "compile-error", total: 15 }],
-    ["timed out", { kind: "timeout", total: 15 }],
-    ["runner error", { kind: "runner-error", total: 15 }],
-    ["partly executed", { kind: "partial", ran: 6, passed: 2, total: 15 }],
-    [
-      "cut-short output",
-      { kind: "scored", passed: 14, total: 15, truncate: true },
-    ],
-    ["never reported", { kind: "unreported", total: 15 }],
-    ["different suite size", { kind: "scored", passed: 3, total: 12 }],
-  ] as [string, Raw][]) {
-    const out = of([...check(1, "r-1", first), ...pass(4)]);
-    assert.ok(out, name);
-    assert.equal(out.f, null, name);
-    assert.equal(out.n, 2, name);
-    assert.deepEqual(
-      outcomeLines(out)[1],
-      ["first full check", "not known"],
-      name,
-    );
-  }
-  // A cancelled first Submit: f is null and it isn't counted.
+  const errored = of([submitted("r-1", "errored", 0), submitted("r-3", "passed", 15), completed("r-3")]);
+  assert.equal(errored?.f, null);
+  assert.equal(errored?.n, 2);
+  assert.deepEqual(outcomeLines(errored!)[1], ["first full check", "not known"]);
   const cancelled = of([
-    ...check(1, "r-c", { kind: "cancelled", total: 15 }),
-    ...check(2, "r-1", { kind: "scored", passed: 11, total: 15 }),
-    ...pass(4),
+    submitted("r-c", "cancelled", 0),
+    submitted("r-1", "failed", 11),
+    submitted("r-3", "passed", 15),
+    completed("r-3"),
   ]);
   assert.equal(cancelled?.f, null);
   assert.equal(cancelled?.n, 2);
-  // A first check that ran every case and failed some is an observed result.
-  assert.deepEqual(
-    of([
-      ...check(1, "r-1", { kind: "scored", passed: 0, total: 15 }),
-      ...pass(4),
-    ])?.f,
-    { passed: 0, total: 15 },
-  );
-  // Later activity, even in the same attempt, never changes the card.
-  assert.deepEqual(
-    of([
-      ...records,
-      ...check(30, "r-9", { kind: "scored", passed: 1, total: 15 }),
-    ]),
-    card,
-  );
-});
-
-test("a card is fixed at the completion: nothing reported afterwards changes it", () => {
-  const at = (minute: number, second: number) =>
-    `2026-10-25T10:${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")}.000Z`;
-  const late = (minute: number, runId: string, data: object) =>
-    observation("observation.workspace.run", at(minute, 30), {
-      runId,
-      purpose: "pull-request",
-      revision: 1,
-      codeArtifactId: `a-${runId}`,
-      ...data,
-    });
-  const queued = (minute: number, runId: string) =>
-    observation("observation.workspace.run", at(minute, 0), {
-      runId,
-      purpose: "pull-request",
-      revision: 1,
-      codeArtifactId: `a-${runId}`,
-      status: "queued",
-    });
-  // An earlier full check still running when a later one completed the challenge (r-3 at
-  // 10:04:10, completion at 10:05).
-  const overlapping = [queued(1, "r-1"), ...pass(4)];
-  const before = of(overlapping);
-  assert.deepEqual(before, { ...card, f: null, n: 2 });
-  // It finishes after the completion with a complete, scored result: f stays null.
-  const finished = [
-    ...overlapping,
-    late(6, "r-1", {
-      status: "result",
-      outcome: {
-        status: "completed",
-        phase: "tests",
-        cases: Array.from({ length: 15 }, (_, i) => ({
-          index: i,
-          output: { text: i < 11 ? "1" : "0", truncated: false },
-        })),
-      },
-    }),
-    observation("observation.workspace.pull-request", at(6, 31), {
-      number: 1,
-      push: 1,
-      runId: "r-1",
-      passed: 11,
-      total: 15,
-      result: "checks-failed",
-    }),
-  ];
-  assert.deepEqual(of(finished), before);
-  // Or it is cancelled after the completion: n stays 2.
-  const cancelledLate = [
-    ...overlapping,
-    late(7, "r-1", { status: "cancelled", outcome: { status: "cancelled" } }),
-    observation("observation.workspace.pull-request", at(7, 31), {
-      number: 1,
-      push: 1,
-      runId: "r-1",
-      passed: 0,
-      total: 15,
-      result: "cancelled",
-    }),
-  ];
-  assert.deepEqual(of(cancelledLate), before);
-  // The same for the full fixture: anything after 10:05 leaves every fact as it was.
-  assert.deepEqual(
-    of([
-      ...records,
-      late(8, "r-2", { status: "cancelled" }),
-      observation("observation.workspace.pull-request", at(8, 31), {
-        number: 1,
-        push: 9,
-        runId: "r-1",
-        passed: 15,
-        total: 15,
-        result: "checks-passed",
-      }),
-    ]),
-    card,
-  );
+  // Submissions after the completion never change the card.
+  assert.deepEqual(of([...records, submitted("r-9", "failed", 1)]), card);
 });
 
 test("a v3 link carries exactly the allowlisted facts and reads back exactly", () => {

@@ -7,28 +7,35 @@ import {
   type CaptureSink,
 } from "../../../../packages/capture/recorder";
 import { latestSavedCode } from "../../../../packages/capture/restore";
-import type { WorkspaceRecord } from "../../../../packages/domain/workspace";
+import type { StoredRecord } from "../../../../packages/domain/records";
 import type { Runner } from "../../../../packages/runner/runner";
-import { attemptRecords } from "../../lib/attempts";
 import { live } from "../../lib/test-fixtures";
 import { WorkspaceSession } from "./session";
 
 const fixture = live("frequency-map");
 const ISSUE = "frequency-map";
 const P = "synthetic-participant";
+const ATTEMPT = "attempt-1";
+const challenge = {
+  id: ISSUE,
+  key: "PY-002",
+  revision: fixture.revision,
+  revisionId: fixture.id,
+};
 
 /** A workspace driven by real CodeMirror transactions, without a DOM. */
 function workspace(
   sink: CaptureSink,
   initialCode = fixture.starter,
   participantId = P,
+  attemptId = ATTEMPT,
 ) {
   let state = EditorState.create({ doc: initialCode, extensions: [history()] });
   const session = new WorkspaceSession({
     participantId,
-    consentVersion: "workspace-device-local-v1",
-    issue: "frequency-map",
-    issueRevision: fixture.id,
+    termsVersion: "2026-10-01",
+    challenge,
+    attemptId,
     executable: fixture.executable,
     sink,
     files: {
@@ -77,65 +84,53 @@ function workspace(
 }
 
 const restore = (sink: MemorySink, participantId = P) =>
-  latestSavedCode([...sink.records.values()], participantId, ISSUE);
+  latestSavedCode([...sink.records.values()], participantId, ISSUE, ATTEMPT);
 
-test("viewing or merging the issue in the tracker is not a newer workspace session", async () => {
+test("site activity about the challenge is not a newer practice session", async () => {
   const sink = new MemorySink();
   const editor = workspace(sink);
   editor.type("# saved");
   await editor.session.recorder.flush();
-  const board: WorkspaceRecord = {
-    recordId: "board.1",
+  const view: StoredRecord = {
+    recordId: "site.1",
     kind: "observation",
     participantId: P,
     payload: JSON.stringify({
-      observationId: "board.1",
-      type: "observation.board.moved",
-      issue: ISSUE,
-      source: { id: "board", sequence: 1 },
+      observationId: "site.1",
+      type: "site.viewed",
+      challenge: ISSUE,
+      attemptId: null,
+      source: { id: "site", sequence: 1 },
       occurredAt: "2099-01-01T00:00:00.000Z",
-      data: { to: "done" },
+      data: { path: "/challenges", query: "", previous: null },
     }),
   };
   const recovered = latestSavedCode(
-    [...sink.records.values(), board],
+    [...sink.records.values(), view],
     P,
     ISSUE,
+    ATTEMPT,
   )!;
   assert.equal(recovered.complete, true);
   assert.equal(recovered.fromEarlierSession, false);
   assert.equal(recovered.files[fixture.path], editor.text());
 });
 
-test("a replay opens on the starter, and the earlier attempt's code stays recoverable", async () => {
+test("only the given attempt's code is restored; a new attempt opens on the starter", async () => {
   const sink = new MemorySink();
   const first = workspace(sink);
   first.type("# my fix");
   await first.session.recorder.flush();
-  const replay: WorkspaceRecord = {
-    recordId: "board.replay",
-    kind: "observation",
-    participantId: P,
-    payload: JSON.stringify({
-      observationId: "board.replay",
-      type: "observation.board.moved",
-      issue: ISSUE,
-      source: { id: "board", sequence: 1 },
-      occurredAt: new Date(Date.now() + 60_000).toISOString(),
-      data: { from: "done", to: "in-progress", trigger: "replay" },
-    }),
-  };
-  const all = [...sink.records.values(), replay];
-  // The replay has nothing of its own yet: the IDE opens on the starter.
-  assert.equal(latestSavedCode(attemptRecords(all, ISSUE), P, ISSUE), null);
-  // Nothing was deleted: the first attempt still restores exactly.
-  const before = latestSavedCode(
-    attemptRecords(all, ISSUE, new Date().toISOString()),
-    P,
-    ISSUE,
-  )!;
-  assert.equal(before.files[fixture.path], first.text());
-  assert.equal(all.length, sink.records.size + 1);
+  await new Promise((done) => setTimeout(done, 5));
+  const second = workspace(sink, fixture.starter, P, "attempt-2");
+  second.type("# second try");
+  await second.session.recorder.flush();
+  const all = [...sink.records.values()];
+  // Each attempt restores its own code, though the second one is newer.
+  assert.equal(latestSavedCode(all, P, ISSUE, ATTEMPT)!.files[fixture.path], first.text());
+  assert.equal(latestSavedCode(all, P, ISSUE, "attempt-2")!.files[fixture.path], second.text());
+  // An attempt with nothing of its own yet: the IDE opens on the starter.
+  assert.equal(latestSavedCode(all, P, ISSUE, "attempt-3"), null);
 });
 
 test("1 to 24 ordinary edits since opening restore exactly", async () => {
@@ -211,7 +206,7 @@ function edited(
   change: (
     value: Record<string, unknown> & { data: Record<string, unknown> },
   ) => unknown,
-): WorkspaceRecord[] {
+): StoredRecord[] {
   return [...sink.records.values()].flatMap((record) => {
     const result = change(JSON.parse(record.payload));
     if (result === null) return [];
@@ -229,11 +224,11 @@ test("a missing position stops replay at the last exact document and says so", a
   for (const word of ["one", " two", " three", " four"]) editor.type(word);
   await editor.session.recorder.flush();
   const records = edited(sink, (value) =>
-    value.type === "observation.workspace.edit" && value.data.revision === 3
+    value.type === "practice.edit" && value.data.revision === 3
       ? null
       : undefined,
   );
-  const recovered = latestSavedCode(records, P, ISSUE)!;
+  const recovered = latestSavedCode(records, P, ISSUE, ATTEMPT)!;
   assert.equal(recovered.files[fixture.path], "one two");
   assert.equal(recovered.revision, 2);
   assert.equal(recovered.complete, false);
@@ -250,18 +245,18 @@ test("an invalid change is not applied; a later complete snapshot is a new safe 
   editor.type("ghi");
   await editor.session.recorder.flush();
   const corrupt = edited(sink, (value) =>
-    value.type === "observation.workspace.edit" && value.data.revision === 1
+    value.type === "practice.edit" && value.data.revision === 1
       ? { ...value, data: { ...value.data, changes: [999, [0, "zzz"]] } }
       : undefined,
   );
-  const recovered = latestSavedCode(corrupt, P, ISSUE)!;
+  const recovered = latestSavedCode(corrupt, P, ISSUE, ATTEMPT)!;
   assert.equal(recovered.files[fixture.path], "abcdefghi");
   assert.equal(recovered.complete, true);
   // Without the snapshot, replay stops before the bad change.
   const noSnapshot = corrupt.filter(
     (record) => !JSON.parse(record.payload).data?.reason?.startsWith?.("run"),
   );
-  const fallback = latestSavedCode(noSnapshot, P, ISSUE)!;
+  const fallback = latestSavedCode(noSnapshot, P, ISSUE, ATTEMPT)!;
   assert.equal(fallback.files[fixture.path], "");
   assert.equal(fallback.complete, false);
 });
@@ -306,7 +301,7 @@ test("streams are never combined; participants and issues are kept apart", async
   assert.ok(recovered.complete);
   assert.equal(restore(sink, "someone-else"), null);
   assert.equal(
-    latestSavedCode([...sink.records.values()], P, "other-issue"),
+    latestSavedCode([...sink.records.values()], P, "other-issue", ATTEMPT),
     null,
   );
 });
@@ -326,7 +321,7 @@ test("when the latest session has nothing recoverable, an earlier one is used an
       ? null
       : undefined,
   );
-  const recovered = latestSavedCode(records, P, ISSUE)!;
+  const recovered = latestSavedCode(records, P, ISSUE, ATTEMPT)!;
   assert.equal(recovered.files[fixture.path], "kept");
   assert.equal(recovered.fromEarlierSession, true);
   assert.equal(recovered.complete, false);
@@ -348,9 +343,9 @@ test("several editable files are recorded and restored together, each with its o
   } as const;
   const session = new WorkspaceSession({
     participantId: P,
-    consentVersion: "workspace-device-local-v1",
-    issue: ISSUE,
-    issueRevision: fixture.id,
+    termsVersion: "2026-10-01",
+    challenge,
+    attemptId: ATTEMPT,
     executable: fixture.executable,
     sink,
     files,
@@ -376,7 +371,7 @@ test("several editable files are recorded and restored together, each with its o
   type("src/a.js", "three");
   assert.deepEqual(session.editedFiles().sort(), ["src/a.js", "src/b.js"]);
   await session.recorder.flush();
-  const recovered = latestSavedCode([...sink.records.values()], P, ISSUE)!;
+  const recovered = latestSavedCode([...sink.records.values()], P, ISSUE, ATTEMPT)!;
   assert.deepEqual(recovered.files, {
     "src/a.js": "a\nonethree",
     "src/b.js": "b\ntwo",
@@ -386,7 +381,7 @@ test("several editable files are recorded and restored together, each with its o
   // Every edit names its file.
   const edits = [...sink.records.values()]
     .map((r) => JSON.parse(r.payload))
-    .filter((o) => o.type === "observation.workspace.edit")
+    .filter((o) => o.type === "practice.edit")
     .map((o) => o.data.file);
   assert.deepEqual(edits, ["src/a.js", "src/b.js", "src/a.js"]);
   await session.close();

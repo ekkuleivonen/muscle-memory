@@ -1,63 +1,54 @@
 /**
- * Records tracker activity (page views, the page's visibility, board moves, replies to review
- * comments, profile answers) on this device for accounts that accepted the current Terms, stamped
- * with that version. Nothing is uploaded yet. One source
- * stream per page load; positions are assigned in call order and writes retry with the same
- * IDs, so retried records deduplicate.
+ * Records site activity (page views, the page's state, arrival, profile answers, sharing,
+ * stars) on this device for anyone who accepted the current Terms, stamped with that version,
+ * for the uploader to send. One source stream per page load; positions are assigned in call
+ * order and writes retry with the same ids, so retried records deduplicate.
  */
+import { PAGE_SESSION_ID } from "../../../packages/browser/page-session";
 import {
   openPracticeStore,
   type PracticeStore,
-} from "../../../../../packages/browser/practice-store";
-import { randomId } from "../../../../../packages/browser/random-id";
+} from "../../../packages/browser/practice-store";
+import { randomId } from "../../../packages/browser/random-id";
+import type { Json } from "../../../packages/domain/json";
+import type { EnvelopeInput, StoredRecord } from "../../../packages/domain/records";
 import {
-  boardArrival,
-  boardMove,
-  boardShare,
-  boardPage,
-  boardProfile,
-  boardRecord,
-  boardView,
-  type BoardBase,
-  type BoardArrivalData,
-  type BoardMoveData,
-  type BoardShareData,
-  type BoardObservation,
-  type BoardPageData,
-  type BoardProfileData,
-  type BoardViewData,
-} from "../../../../../packages/domain/board";
-import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
-import type { Json } from "../../../../../packages/domain/json";
-import { readProfile } from "../../../lib/account";
-import { acceptsCurrent } from "../../../lib/legal";
+  siteArrival,
+  sitePage,
+  siteProfile,
+  siteRecord,
+  siteShare,
+  siteStar,
+  siteView,
+  type ArrivalData,
+  type PageData,
+  type ProfileData,
+  type ShareData,
+  type SiteObservation,
+  type StarData,
+  type ViewData,
+} from "../../../packages/domain/site";
+import { readProfile } from "./account";
+import { acceptsCurrent } from "./legal";
 
-const sourceId = `board-${randomId()}`;
+const sourceId = `site-${randomId()}`;
 let sequence = 0;
 let store: Promise<PracticeStore> | null = null;
-const pending: WorkspaceRecord[] = [];
+const pending: StoredRecord[] = [];
 
-/** The app page before the current one in this tab, for the IDE's `entry` (client navigation leaves document.referrer stale). */
+/** The app page before the current one in this tab, for practice's `entry`. */
 export const PREVIOUS_PATH_KEY = "muscle-memory.previous-path";
-
-export function logBoardMove(
-  issue: { id: string; revision: string },
-  data: BoardMoveData,
-): Promise<boolean> {
-  return log((base) => boardMove({ ...base, issue, data }), "Board move");
-}
 
 /** Where an arrival is remembered until the Terms are accepted and it can be recorded. */
 const ARRIVAL_KEY = "muscle-memory.arrival";
+
+type Challenge = { id: string; revision: string };
 
 /**
  * Remembers the first landing page and any referral code, before anything may be recorded.
  * Only the first landing counts; a later shared link does not overwrite it.
  */
-export function noteArrival(
-  ref: string | null,
-  landing = location.pathname + location.search,
-): void {
+export function noteArrival(ref: string | null, landing = location.pathname + location.search): void {
   try {
     if (localStorage.getItem(ARRIVAL_KEY)) return;
     const arrival = {
@@ -74,7 +65,7 @@ export function noteArrival(
 
 /** Records the remembered arrival once the Terms are accepted; once only. */
 export async function logArrival(): Promise<void> {
-  let arrival: (BoardArrivalData & { recorded: boolean }) | null = null;
+  let arrival: (ArrivalData & { recorded: boolean }) | null = null;
   try {
     arrival = JSON.parse(localStorage.getItem(ARRIVAL_KEY) ?? "null");
   } catch {
@@ -83,62 +74,60 @@ export async function logArrival(): Promise<void> {
   if (!arrival || arrival.recorded) return;
   const { ref, landing, landedAt } = arrival;
   localStorage.setItem(ARRIVAL_KEY, JSON.stringify({ ...arrival, recorded: true }));
-  await log((base) => boardArrival({ ...base, data: { ref, landing, landedAt } }), "Arrival");
+  await log((base) => siteArrival({ ...base, data: { ref, landing, landedAt } }), "Arrival");
 }
 
-export function logShare(
-  issue: { id: string; revision: string },
-  data: BoardShareData,
-): Promise<boolean> {
-  return log((base) => boardShare({ ...base, issue, data }), "Share");
+export function logShare(challenge: Challenge, data: ShareData): Promise<boolean> {
+  return log((base) => siteShare({ ...base, challenge, data }), "Share");
 }
 
-export function logView(
-  issue: { id: string; revision: string } | null,
-  data: BoardViewData,
-): Promise<boolean> {
-  return log((base) => boardView({ ...base, issue, data }), "Page view");
+export function logView(challenge: Challenge | null, data: ViewData): Promise<boolean> {
+  return log((base) => siteView({ ...base, challenge, data }), "Page view");
 }
 
-export function logPage(data: BoardPageData): Promise<boolean> {
-  return log((base) => boardPage({ ...base, data }), "Page state");
+export function logPage(data: PageData): Promise<boolean> {
+  return log((base) => sitePage({ ...base, data }), "Page state");
+}
+
+export function logStar(challenge: Challenge, starred: boolean, data: StarData): Promise<boolean> {
+  return log((base) => siteStar({ ...base, challenge, starred, data }), "Star");
 }
 
 /**
  * The profile as now saved, after an answer given `from` somewhere: every answer, which ones
  * the person gave themselves, and stealth.
  */
-export function logProfile(from: BoardProfileData["from"]): Promise<boolean> {
+export function logProfile(from: ProfileData["from"]): Promise<boolean> {
   const stored = readProfile();
   if (!stored) return Promise.resolve(false);
   const answered = Object.entries(stored.asked ?? {})
     .filter(([, asked]) => asked?.answeredAt)
     .map(([id]) => id);
   const answers = { ...stored.profile, answered, stealth: stored.stealth ?? false } as Json;
-  return log((base) => boardProfile({ ...base, data: { from, answers } }), "Profile answers");
+  return log((base) => siteProfile({ ...base, data: { from, answers } }), "Profile answers");
 }
 
 /**
- * The issue the page on screen is about, set by that page so its view names the issue and the
- * revision live at the time. Children's effects run before the layout's, so it is set by the
- * time the view is recorded.
+ * The challenge the page on screen is about, set by that page so its view names the challenge
+ * and the revision live at the time. Children's effects run before the layout's, so it is set by
+ * the time the view is recorded.
  */
-let context: { path: string; issue: { id: string; revision: string } } | null = null;
+let context: { path: string; challenge: Challenge } | null = null;
 
-export function setIssueContext(issue: { id: string; revision: string } | null): () => void {
+export function setChallengeContext(challenge: Challenge | null): () => void {
   const path = location.pathname;
-  context = issue ? { path, issue } : null;
+  context = challenge ? { path, challenge } : null;
   return () => {
     if (context?.path === path) context = null;
   };
 }
 
-export function issueContext(path: string): { id: string; revision: string } | null {
-  return context?.path === path ? context.issue : null;
+export function challengeContext(path: string): Challenge | null {
+  return context?.path === path ? context.challenge : null;
 }
 
 async function log(
-  build: (base: BoardBase) => BoardObservation,
+  build: (base: EnvelopeInput) => SiteObservation,
   what: string,
 ): Promise<boolean> {
   const accepted = readProfile()?.accepted;
@@ -153,9 +142,10 @@ async function log(
     store ??= openPracticeStore();
     const opened = await store;
     pending.push(
-      boardRecord(
+      siteRecord(
         build({
           participantId: await opened.participantId(),
+          sessionId: PAGE_SESSION_ID,
           sourceId,
           sequence: position,
           occurredAt,
