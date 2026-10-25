@@ -1,15 +1,17 @@
 /**
- * Shared links: an issue (`/try/RG-4`), a merged pull request's result (`/r/<card>`), and the
- * code someone chose to include with a result (`#code=…`, after the card).
+ * Shared links: a challenge (`/try/RG-4`), a completed challenge's result (`/r/<card>`), and
+ * the solution someone chose to include with a result (`#code=…`, after the card).
  *
- * A link carries only what is in it. An issue link is the issue's permanent key, so it opens
- * the same problem for anyone and never the sender's editor, attempt or records. A result link
- * is the allowlisted card (`publicResult`). Code travels only when the sharer ticks the box,
- * and then in the URL fragment, which browsers never send to the server: nothing stores it.
+ * A link carries only what is in it. A challenge link is its permanent key, so it opens the
+ * same problem for anyone and never the sender's editor, attempt or records. A result link is
+ * the allowlisted card (`publicResult`). Code travels only when the sharer ticks the box, and
+ * then in the URL fragment, which browsers never send to the server: nothing stores it. A
+ * challenge has one file to edit, so a link normally carries one; the format takes up to
+ * `MAX_FILES`, so links made when challenges had several still read back whole.
  */
 import { decodeResult, type Result } from "./result";
 
-/** The public page of an issue: what it is, and a fresh start on it. */
+/** The public page of a challenge: what it is, and a fresh start on it. */
 export const tryHref = (key: string) => `/try/${key}`;
 
 /** What a result link turned out to be, so a bad or old one gets an honest page. */
@@ -110,11 +112,10 @@ export type CodeRefusal =
 
 /** What the person is told when their code can't be included. */
 export const REFUSALS: Record<CodeRefusal, string> = {
-  empty: "There are no changed files to include.",
-  "too-many-files": `This pull request changed more than ${MAX_FILES} files, too many to fit in a link.`,
-  "invalid-path": "A changed file has a name that can't go in a link.",
-  incomplete:
-    "A changed file wasn't saved in full, so your code can't be shared exactly.",
+  empty: "There is no code to include.",
+  "too-many-files": `You changed more than ${MAX_FILES} files, too many to fit in a link.`,
+  "invalid-path": "Your file has a name that can't go in a link.",
+  incomplete: "Your code wasn't saved in full, so it can't be shared exactly.",
   "too-large": "Your code is too long to fit in a link.",
 };
 

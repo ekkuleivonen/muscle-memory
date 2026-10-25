@@ -274,3 +274,31 @@ test("public evidence survives the result link and strips nested private fields"
     assert.equal(read.result.ev?.findings.open, 0);
   }
 });
+
+test("one solution file is the usual link, and a link from a multi-file challenge still reads back whole", async () => {
+  // A link made before challenges had one file: the bytes `encodeCode` wrote then (format v1,
+  // unchanged), with three files. Every one comes back, in order and in full.
+  const legacy = [
+    {
+      path: "src/composer.ts",
+      text: "export const words = (s: string) =>\r\n  s.trim() ? s.trim().split(/\\s+/).length : 0;\n",
+    },
+    {
+      path: "src/plural.ts",
+      text: 'export const plural = (n: number) => (n === 1 ? "word" : "words");\n',
+    },
+    {
+      path: "README.md",
+      text: "# Composer\n\nCounts words — “smart quotes” and 界 included.\n",
+    },
+  ];
+  const packed = await packedOf(legacy);
+  assert.deepEqual(await decodeCode(packed), legacy);
+  const solution = [
+    {
+      path: "solution.sql",
+      text: "SELECT customer_id, SUM(total)\nFROM orders\nGROUP BY customer_id;\n",
+    },
+  ];
+  assert.deepEqual(await decodeCode(await packedOf(solution)), solution);
+});

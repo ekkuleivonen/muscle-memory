@@ -17,8 +17,8 @@ import "../../share.css";
 type Channel = "copy" | "x" | "linkedin" | "native";
 
 /**
- * A small, secondary "Copy link" for anything with a public page: the issue (`/try/KEY`) or a
- * shared result. It copies the absolute URL and says so; it never opens anything.
+ * A small, secondary "Copy link" for anything with a public page: the challenge (`/try/KEY`) or
+ * a shared result. It copies the absolute URL and says so; it never opens anything.
  */
 export function CopyLink({
   href,
@@ -50,24 +50,25 @@ export function CopyLink({
   );
 }
 
-/** The issue's public link, for the issue page and a pull request's details. */
+/** The challenge's public link, for the challenge page and wherever it is worked on. */
 export function CopyIssueLink({ issueKey }: { issueKey: string }) {
   return (
     <div className="share-issue">
-      <CopyLink href={tryHref(issueKey)} label="Copy issue link" />
+      <CopyLink href={tryHref(issueKey)} label="Copy challenge link" />
       <p className="faint">
         Opens {issueKey} from its starting code for whoever you send it to.
-        Never your work.
+        Never your code or your attempt.
       </p>
     </div>
   );
 }
 
 /**
- * Share a merged pull request's result, with a preview of exactly what a post or chat will
+ * Share a completed challenge's outcome, with a preview of exactly what a post or chat will
  * show (the shared link's image), then copy, X, LinkedIn or the system share sheet. Code is
- * left out unless the person ticks the box, every time the dialog opens; when ticked, the
- * files they changed go into the link itself (its fragment), so no copy is kept anywhere.
+ * left out unless the person ticks the box, every time the dialog opens; when ticked, their
+ * solution file (every changed file, for a challenge that had several) goes into the link
+ * itself (its fragment), complete or not at all, so no copy is kept anywhere.
  */
 export function ShareResult({
   state,
@@ -76,7 +77,7 @@ export function ShareResult({
 }: {
   state: ResultState;
   issue: ResultInput["issue"];
-  /** The files the pull request changed, as pushed; only shared when ticked. */
+  /** The solution as checked: the file edited (or every file changed); only shared when ticked. */
   code?: readonly SharedFile[];
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -112,7 +113,7 @@ export function ShareResult({
   const segment = encodeResult(card);
   const including = withCode && !!packed;
   const url = `${location.origin}/r/${segment}${including ? codeFragment(packed) : ""}`;
-  const text = `${sentence(card, state.label)} Keep your coding skills in practice.`;
+  const text = `${sentence(card, state.label, issue.title)} Keep your coding skills in practice.`;
   const share = async (channel: Channel) => {
     // Ticked but not packed yet, or refused: never share without saying so, or share part of it.
     if (withCode && !packed) return;
@@ -195,7 +196,7 @@ export function ShareResult({
           <p className="share-text">{text}</p>
           <p className="faint share-note">
             {including
-              ? `Your numbers, a link to try ${issue.key}, and your code.`
+              ? `Your numbers, a link to try ${issue.key}, and your solution.`
               : `Your numbers and a link to try ${issue.key} from the start. Not your code.`}
           </p>
           {count > 0 && (
@@ -212,10 +213,16 @@ export function ShareResult({
                 <b>Include my code</b>
                 <span className="faint">
                   {" "}
-                  Adds the {count === 1 ? "file" : `${count} files`} you changed
-                  to the link itself. Anyone with the link can read it,
-                  including your fix. We don&apos;t keep a copy; untick to share
-                  without it.
+                  {count === 1 ? (
+                    <>
+                      Adds your solution, <code>{files![0].path}</code>, to the
+                      link itself, in full.
+                    </>
+                  ) : (
+                    `Adds all ${count} files you changed to the link itself, in full.`
+                  )}{" "}
+                  Anyone with the link can read it. We don&apos;t keep a copy;
+                  untick to share without it.
                 </span>
                 {withCode && refusal && (
                   <span className="share-code-error" role="alert">
