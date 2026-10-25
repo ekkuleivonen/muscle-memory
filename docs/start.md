@@ -4,7 +4,7 @@ The ways in, and how a result or a challenge gets shared. Every way in leads to 
 
 ## Ways in
 
-- **`/`**, public: what this is, in one screen, and **start a challenge →** to quick start. The manifesto (`/manifesto`) says why.
+- **`/`**, public: what this is, in one screen, **try your first challenge →** to quick start and **explore all challenges** to the list. The manifesto (`/manifesto`, "I read code every day. Then I tried writing some.") tells the story behind it and what the data can and can't say.
 - **Quick start (`/start`)**, public: pick a language and get an easy challenge in it at once, the easiest one this device hasn't completed (`apps/web/lib/quick-start.ts`). The language a link names (`?lang=go`), or the profile's first, is offered first and highlighted, so Enter starts it. Starting accepts the Terms for someone new (the line above the list says so, including that every keystroke is recorded); the language picked is saved as a first guess at the profile's languages when there is none ([profile](profile.md)). Practice records the start as from `quick-start`.
 - **The list (`/challenges`)**: every challenge in one picker, like fzf. Type to narrow (plain words, or `lang:python`, `difficulty:easy`, `tag:strings`, `is:starred`, `is:completed`, `sort:`), toggle the filters, move with ↑↓, star with Ctrl-s, and read the highlighted challenge's task and examples in the preview. Easiest first. Enter opens practice, which records the start with the search and the position picked.
 - **A challenge's URL (`/challenges/<KEY>`)** opens practice on it directly: its attempt if there is one, otherwise a new one started `direct`.

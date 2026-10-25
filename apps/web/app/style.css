@@ -520,12 +520,6 @@ kbd {
 }
 
 /* Board: columns fill themselves; nothing to drag */
-.board {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  align-items: start;
-}
 .column {
   background: var(--bg-subtle);
   border: 1px solid var(--line);
@@ -547,11 +541,6 @@ kbd {
 }
 .column .hint {
   margin: 8px 4px;
-}
-@media (max-width: 860px) {
-  .board {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* Pages outside the app shell: consent, the shared result, a shared challenge. */
@@ -683,19 +672,6 @@ kbd {
     font-size: 17px;
   }
 }
-
-/* Pull requests: the record of each attempt */
-.pull {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 240px;
-  gap: 32px;
-  max-width: 1040px;
-}
-.pull h1 {
-  font-size: 22px;
-  letter-spacing: -0.2px;
-  margin: 4px 0 10px;
-}
 /* A review comment: a card hanging on the timeline, with its replies. */
 .diff {
   border: 1px solid var(--line);
@@ -725,12 +701,6 @@ kbd {
 }
 .diff tr.del {
   background: color-mix(in srgb, var(--red) 12%, transparent);
-}
-/* Review and merge, under the pull request. */
-@media (max-width: 900px) {
-  .pull {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* Dashboard */

@@ -1,58 +1,51 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { cookies } from "next/headers";
-import { CONSENT_COOKIE, hasConsent } from "../lib/profile";
 import { Banner } from "./_terminal/banner";
 import { TermFooter } from "./_terminal/footer";
 import "./_terminal/terminal.css";
 
+export const metadata: Metadata = {
+  title: "Muscle Memory",
+  description:
+    "You can ship with AI. Can you still code without it? Pick a challenge, write the solution yourself, and see what comes back naturally.",
+};
+
 /**
- * The public front door, in one screen: what this is, a challenge to start, and a pointer to the
- * manifesto for the why. Outside the consent gate. The challenge to start is quick start's: an
- * easy one in your language.
+ * The public front door, in one screen: the question, a challenge to start, and the story
+ * behind it on the manifesto. Outside the consent gate; the challenge to start is quick
+ * start's, an easy one in your language.
  */
-export default async function Home() {
-  const store = await cookies();
-  const returning = hasConsent(store.get(CONSENT_COOKIE)?.value);
+export default function Home() {
   return (
     <>
       <div className="term home">
         <Banner description="Practice without AI." />
         <main className="t-prose home-fold">
           <p className="t-line home-headline">
-            <strong>Use AI at work.</strong>
+            <strong>You can ship with AI.</strong>
             <br />
-            <strong className="t-brand">Write this one yourself.</strong>
+            <strong className="t-brand">Can you still code without it?</strong>
           </p>
           <p className="t-line">
-            Pick a coding challenge, write the code yourself and get feedback in
-            seconds. Twelve languages, in your browser, with no completion, chat
-            or generated code.
-          </p>
-          <p className="t-line home-dare">
-            {returning
-              ? "Your next one is waiting. Still sharp?"
-              : "An easy one in your language. No AI. Can you still write it yourself?"}
+            Pick a challenge. Write the solution yourself. See what comes back
+            naturally, and what doesn&apos;t.
           </p>
           <div className="home-start">
-            <Link
-              className="t-btn t-btn-primary"
-              href="/start"
-              autoFocus
-            >
-              {returning
-                ? "find your next challenge →"
-                : "start a challenge →"}
+            <Link className="t-btn t-btn-primary" href="/start" autoFocus>
+              try your first challenge →
             </Link>
             <Link className="t-cmd" href="/challenges">
-              browse every challenge
+              explore all challenges
             </Link>
           </div>
           <p className="t-line t-dim home-teaser">
-            Why this exists, and what we record about your practice:{" "}
+            I use AI for almost everything. Then I tried writing some code on
+            my own, and it caught me completely off guard. I built Muscle
+            Memory to find out whether others feel the same, and to put some
+            data behind the debate.{" "}
             <Link className="t-cmd" href="/manifesto">
-              read the manifesto
+              Why I built this →
             </Link>
-            .
           </p>
         </main>
       </div>

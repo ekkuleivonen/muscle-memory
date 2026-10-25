@@ -213,10 +213,6 @@
 .home-fold > p {
   margin: 0 0 1.2em;
 }
-.home-dare {
-  margin-top: 2em !important;
-  font-weight: 700;
-}
 .home-start {
   display: flex;
   flex-wrap: wrap;
