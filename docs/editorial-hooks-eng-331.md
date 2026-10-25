@@ -2,21 +2,21 @@
 
 ## Dot’s selection and normalized-source recheck · 25 October 2026
 
-**Selected:** B / SHOP-5, C / DATA-6 and D / API-8 are primaries. A / QUICK-2 is the low-friction starter, not the flagship viral hook. E / FN-5 is a reserve. The five additional alternatives below await dot’s review and do not replace or block this selection. No public post or automatic production-copy change is authorized.
+**Selected:** B / SHOP-5, C / DATA-6 and D / API-8 are primaries. A / QUICK-2 is the low-friction starter, not the flagship viral hook. E / FN-5 is a reserve. Final campaign/debate selection: I is retained as an identity campaign draft; K is retained as an opinion/tradeoff draft. J and M are secondary reserves. L is held: its publication constraint is met, but meaningful verification of cache reuse is not established. No further variants are needed. These draft selections do not replace or block the artifact hooks. No public post or automatic production-copy change is authorized.
 
-This section supersedes the original baseline inventory for new artifact mapping. Source inspected: ENG-329 draft PR #38 at exact pushed head `7c09d35f05291aeac6b4d4a4d1f7393f872cd874`, the latest remote head at recheck. These are proposed current revisions on that branch, not a claim that they are live in production. The editorial branch still starts from the required live baseline; no ENG-329 production/content commits are imported.
+This section supersedes the original baseline inventory for new artifact mapping. Source inspected: ENG-329 draft PR #38 at exact pushed head `3719e600d2419617d71a018deae7fa389282fc27`, confirmed as the latest remote head at this final recheck. Compared with the previous recheck at `7c09d35f05291aeac6b4d4a4d1f7393f872cd874`, all seven mapped revision hashes and their complete revision objects are unchanged: A/B/C/D artifact mappings, E reserve, F/L cache source and G/M token source. No selected payoff changed. These are proposed current revisions on that branch, not a claim that they are live in production. The editorial branch still starts from the required live baseline; no ENG-329 production/content commits are imported.
 
 For A/B/C/D, compared each normalized body, entry, cases and required rules with the original baseline: the full case objects (IDs, inputs, expected values and visibility) are byte-for-byte equal after JSON serialization. Each has exactly one editable entry. Reviewed E/F/G as well to ground the reserve and new alternatives. Hash changes reflect normalized descriptions/feedback content; unchanged case outcomes do not mean all requirements are independently behavior-tested. Source inspection is not a rerun of the browser publish suite.
 
-ENG-329’s latest review still flags unrelated SHOP-8, DATA-8 and EDGE-1/2 contract issues. Do not turn the selected-source recheck into blanket catalog acceptance. Recheck the destination revision at integration: if it differs from the hash below, compare its body/cases/rules before carrying this copy forward. Old baseline hashes below are historical only and must not enter new artifacts.
+This recheck covers the selected sources only, not closure of unrelated catalog review findings or blanket catalog acceptance. Recheck the destination revision at integration: if it differs from the hash below, compare its body/cases/rules before carrying this copy forward. Old baseline hashes below are historical only and must not enter new artifacts.
 
 ### Handoff to ENG-332
 
-Proceed with selected B/C/D and starter A using truthful fallback. These hooks describe the challenge, not an individual result. Use the destination catalog’s actual revision and existing honest outcome projection; when completion or outcome evidence is absent, say so. Extra variants are editorial options, not a dependency for sharing mechanics. No solution, implementation hint or unverified completion claim belongs in preview copy. D uses a stated provider-policy distinction, not manufactured uncertainty about identity.
+Proceed with selected B/C/D and starter A using truthful fallback. These hooks describe the challenge, not an individual result. Use the destination catalog’s actual revision and existing honest outcome projection; when completion or outcome evidence is absent, say so. B/C/D stay plain, short challenge prompts; A stays the starter. Do not put long I/K campaign copy into every share card. Use the exact final revision hashes in the current register below; campaign drafts are separate editorial options, not a dependency for sharing mechanics. No solution, implementation hint or unverified completion claim belongs in preview copy. D uses a stated provider-policy distinction, not manufactured uncertainty about identity.
 
 ### A / QUICK-2 · Starter, not flagship
 
-**Current source:** `word-count-javascript`, [normalized seed](https://github.com/ekkuleivonen/muscle-memory/blob/7c09d35f05291aeac6b4d4a4d1f7393f872cd874/content/seed.ts#L579); revision `sha256:55f86f1b8bf7069f92738a17e5839b45269fd3214ac6f47cac5458ec49f7f394`; sole editable entry `src/count-words.js`.
+**Current source:** `word-count-javascript`, [normalized seed](https://github.com/ekkuleivonen/muscle-memory/blob/3719e600d2419617d71a018deae7fa389282fc27/content/seed.ts#L579); revision `sha256:55f86f1b8bf7069f92738a17e5839b45269fd3214ac6f47cac5458ec49f7f394`; sole editable entry `src/count-words.js`.
 
 **Hook:** “An empty post says “1 word.” Can you make the count match the text?”
 
@@ -24,7 +24,7 @@ Proceed with selected B/C/D and starter A using truthful fallback. These hooks d
 
 ### B / SHOP-5 · Primary
 
-**Current source:** `refund-totals`, [normalized seed](https://github.com/ekkuleivonen/muscle-memory/blob/7c09d35f05291aeac6b4d4a4d1f7393f872cd874/content/seed.ts#L1358); revision `sha256:68ed6a0dcc9d8270bef73e4ac44602d6e2e5d35d4d634bb08402aa437b672254`; sole editable entry `src/cart/totals.js`.
+**Current source:** `refund-totals`, [normalized seed](https://github.com/ekkuleivonen/muscle-memory/blob/3719e600d2419617d71a018deae7fa389282fc27/content/seed.ts#L1358); revision `sha256:68ed6a0dcc9d8270bef73e4ac44602d6e2e5d35d4d634bb08402aa437b672254`; sole editable entry `src/cart/totals.js`.
 
 **Hook:** “They paid $45 for the jacket. The refund is $40.50. Make the refund match the receipt.”
 
@@ -32,7 +32,7 @@ Proceed with selected B/C/D and starter A using truthful fallback. These hooks d
 
 ### C / DATA-6 · Primary
 
-**Current source:** `collected-by-partner`, [normalized seed](https://github.com/ekkuleivonen/muscle-memory/blob/7c09d35f05291aeac6b4d4a4d1f7393f872cd874/content/more/data-platform.ts#L207); revision `sha256:de8621e616e78cb42b58d2d189a0b9738171c3345ef3193d1af425130e4ba130`; sole editable entry `queries/collected-by-partner.sql`.
+**Current source:** `collected-by-partner`, [normalized seed](https://github.com/ekkuleivonen/muscle-memory/blob/3719e600d2419617d71a018deae7fa389282fc27/content/more/data-platform.ts#L207); revision `sha256:de8621e616e78cb42b58d2d189a0b9738171c3345ef3193d1af425130e4ba130`; sole editable entry `queries/collected-by-partner.sql`.
 
 **Hook:** “The payment report overcounts one partner—and leaves out the one who paid nothing. Fix the SQL.”
 
@@ -40,7 +40,7 @@ Proceed with selected B/C/D and starter A using truthful fallback. These hooks d
 
 ### D / API-8 · Primary
 
-**Current source:** `canonical-signup-email`, [normalized seed](https://github.com/ekkuleivonen/muscle-memory/blob/7c09d35f05291aeac6b4d4a4d1f7393f872cd874/content/more/accounts-api.ts#L169); revision `sha256:a7d434b1858edc7bc26cd2fbf95f53959221cd9cf5e7ea33afff7cdecd0a2c59`; sole editable entry `canonical_email.go`.
+**Current source:** `canonical-signup-email`, [normalized seed](https://github.com/ekkuleivonen/muscle-memory/blob/3719e600d2419617d71a018deae7fa389282fc27/content/more/accounts-api.ts#L169); revision `sha256:a7d434b1858edc7bc26cd2fbf95f53959221cd9cf5e7ea33afff7cdecd0a2c59`; sole editable entry `canonical_email.go`.
 
 **Hook:** “Fix duplicate sign-ups without treating every email provider like Gmail.”
 
@@ -48,7 +48,7 @@ Proceed with selected B/C/D and starter A using truthful fallback. These hooks d
 
 ### E / FN-5 · Reserve
 
-**Current source:** `notebook-ditto-marks`, [normalized seed](https://github.com/ekkuleivonen/muscle-memory/blob/7c09d35f05291aeac6b4d4a4d1f7393f872cd874/content/more/field-notes.ts#L849); revision `sha256:30bf6730b7b3943290630f07b8f32679f3db45d88c9ae6a06e82c0cfb7a46c90`; sole editable entry `notebook/transcribe.py`.
+**Current source:** `notebook-ditto-marks`, [normalized seed](https://github.com/ekkuleivonen/muscle-memory/blob/3719e600d2419617d71a018deae7fa389282fc27/content/more/field-notes.ts#L849); revision `sha256:30bf6730b7b3943290630f07b8f32679f3db45d88c9ae6a06e82c0cfb7a46c90`; sole editable entry `notebook/transcribe.py`.
 
 **Hook:** “A notebook says “same as above.” Read the marks without inventing missing data.”
 
@@ -56,7 +56,7 @@ Proceed with selected B/C/D and starter A using truthful fallback. These hooks d
 
 ### F / SHOP-7 · Unselected source for alternative L
 
-**Current source:** `stale-cart-summary`, [normalized seed](https://github.com/ekkuleivonen/muscle-memory/blob/7c09d35f05291aeac6b4d4a4d1f7393f872cd874/content/more/storefront.ts#L571); revision `sha256:b6c151c3f9ec3fe33713a0be00af54b0a1a03e741d1eaf96a325d4f36ede1d6a`; sole editable entry `src/cart/cart.js`.
+**Current source:** `stale-cart-summary`, [normalized seed](https://github.com/ekkuleivonen/muscle-memory/blob/3719e600d2419617d71a018deae7fa389282fc27/content/more/storefront.ts#L571); revision `sha256:b6c151c3f9ec3fe33713a0be00af54b0a1a03e741d1eaf96a325d4f36ede1d6a`; sole editable entry `src/cart/cart.js`.
 
 **Hook:** “The cart is faster. Change the quantity and the total stays the same. Fix the total while keeping the cache.”
 
@@ -64,25 +64,25 @@ Proceed with selected B/C/D and starter A using truthful fallback. These hooks d
 
 ### G / API-9 · Unselected source for alternative M
 
-**Current source:** `refresh-token-reuse`, [normalized seed](https://github.com/ekkuleivonen/muscle-memory/blob/7c09d35f05291aeac6b4d4a4d1f7393f872cd874/content/more/accounts-api.ts#L397); revision `sha256:6045d32f4490600279eed6a41ade3c3d41a610b4c452b59ab6f8fe61f1326ebd`; sole editable entry `src/gateway/refresh.ts`.
+**Current source:** `refresh-token-reuse`, [normalized seed](https://github.com/ekkuleivonen/muscle-memory/blob/3719e600d2419617d71a018deae7fa389282fc27/content/more/accounts-api.ts#L397); revision `sha256:6045d32f4490600279eed6a41ade3c3d41a610b4c452b59ab6f8fe61f1326ebd`; sole editable entry `src/gateway/refresh.ts`.
 
 **Hook:** “The login fix stopped the logouts. It also lets an old token work again. Keep the grace window and reject the replay.”
 
 **Recheck / changed payoff:** No changed payoff; all 17 case objects are unchanged. The full ordered policy, inclusive 10-second grace, imported API and no-console requirement are now in the description. It no longer requires browsing policy.ts. This is a fixed-policy exercise, not authorization to choose a different security policy or a verified production security outcome.
 
-## Additional craft and debate alternatives · review only
+## Final campaign/debate drafts and reserves · parent review only
 
-These are editorial positions/questions for dot to select, not fabricated participant quotations. Disagreement concerns the broader craft choice; every challenge still has clear mandatory rules and a deterministic answer. Existing selected hooks remain available unchanged except D’s clarity correction.
+I and K are retained drafts; J and M are secondary reserves. L is held under the verification condition below. First-person wording is optional copy only for an actual person who chooses to say it. Never generate it as a claim about a player’s feelings or AI use, infer that sentiment from a result, or present it as a testimonial. These are editorial positions/questions, not fabricated participant quotations. Disagreement concerns the broader craft choice; every challenge still has clear mandatory rules and a deterministic answer. Existing selected hooks remain available unchanged except D’s clarity correction.
 
-### I · Deliberate fluency alongside AI use — B / SHOP-5
+### I · Identity campaign draft · retained — B / SHOP-5
 
 **Opening:** “I use AI at work. I still want to be able to fix this myself. Paid $45. Refunded $40.50.”
 
 **Edge / opinion split:** Is keeping an independent coding practice valuable when assistance is available? This voices a preference without claiming everyone should share it. **Actual anchor / payoff:** B’s normalized source above, especially case-2 (−4500 cents) and case-8 (partial return). The challenge supplies the concrete thing to try; no claim that solving it measures independence.
 
-**Spoiler risk:** Low; no cause or method given. **Limits:** First-person draft voice needs dot’s adoption, not attribution to an invented user. No claim AI caused decline, no requirement to abandon workplace tools, no “real developer” threshold or model comparison.
+**Spoiler risk:** Low; no cause or method given. **Limits:** An actual speaker must choose this first-person voice for themselves; dot’s editorial selection does not make it true of any player. No claim AI caused decline, no requirement to abandon workplace tools, no “real developer” threshold or model comparison.
 
-### J · Zero belongs in the report — C / DATA-6
+### J · Zero belongs in the report · secondary reserve — C / DATA-6
 
 **Opening:** “A tidy payment report can still tell the wrong story. I want the partner who paid nothing to stay in it.”
 
@@ -90,7 +90,7 @@ These are editorial positions/questions for dot to select, not fabricated partic
 
 **Spoiler risk:** Low to medium; reveals a stated inclusion requirement, not the join/aggregation fix. **Limits:** Do not turn it into a claim that every report must include zeros or that someone actually made a finance decision from this exercise.
 
-### K · Normalization should know when to stop — D / API-8
+### K · Opinion/tradeoff draft · retained — D / API-8
 
 **Opening:** “I don’t want ‘cleaner’ data if it changes who an address belongs to. Gmail’s rules aren’t every provider’s rules.”
 
@@ -98,15 +98,17 @@ These are editorial positions/questions for dot to select, not fabricated partic
 
 **Spoiler risk:** Medium; the domain boundary is required context, not a secret. No sequence of normalization steps is given. **Limits:** The first sentence expresses the reason to avoid collapsing distinct keys, not evidence of an account takeover or proof that email keys establish a person’s identity. Do not broaden the exercise into production email advice.
 
-### L · The easy fix is deleting the optimization — F / SHOP-7
+### L · Technical-debate draft · held, condition not established — F / SHOP-7
 
-**Opening:** “Would you delete the cache to fix the stale total? In this challenge, the cache has to stay.”
+**Eligibility:** Not retained for artifact/campaign use in this batch. The current normalized description explicitly publishes “summary() must not reprice the cart when nothing changed since the last call.” However, `ada-keep-memo` only looks for a field name resembling cache/memo/version/etc.; the 16 output cases do not observe whether unchanged calls reprice. An otherwise uncached implementation can retain a matching unused field, so field presence is not a meaningful check of reuse. No cache instrumentation/performance test is present in this revision. This is a source-level limitation, not a newly executed runtime test. Reconsider only if a later revision meaningfully checks the published constraint; no production/test rewrite is included here.
+
+**Held opening:** “Would you delete the cache to fix the stale total? In this challenge, the cache has to stay.”
 
 **Edge / opinion split:** Debate simplification versus retaining an optimization. **Actual anchor / payoff:** F’s normalized source above; case-1 checks changed quantities and case-10 checks changed/removed codes. The prompt explicitly requires keeping the memo. Deleting it may be a defensible choice in another product; it is not an accepted answer to this task.
 
 **Spoiler risk:** Medium; names the required constraint, not invalidation sites or cache-key design. **Limits:** No actual speedup claim or assertion that retaining a cache is universally better. Output cases and the memo-field text rule do not establish performance; retain that limitation if selected.
 
-### M · Strict rejection can break a valid retry — G / API-9
+### M · Strict rejection can break a valid retry · secondary reserve — G / API-9
 
 **Opening:** “Reject every reused token? Two screens can race with the same login. Keep the retry working without letting an old token back in.”
 
@@ -118,7 +120,7 @@ These are editorial positions/questions for dot to select, not fabricated partic
 
 Read-only comparison verified seven current revision hashes, pinned seed anchors, keys and sole editable entries; A–G retain identical full case objects to the baseline. Source review covered each selected requirement/helper addition and each alternative’s cited cases. No runtime, seed, catalog, schema or historical-record changes. The earlier 198-test/typecheck/content-check results below apply to the original editorial commit, not execution of ENG-329’s normalized branch. This follow-up changes documentation only; focused source/link checks and whitespace validation are sufficient and do not compete with the shared heavy-check queue.
 
-Dot still selects any additional alternatives. ENG-332 may proceed now; final destination-revision matching and integrated flow validation remain with ENG-329/328/332 and the ENG-327 release gate. No merge or deployment.
+Editorial selections and constraints are recorded; this deliverable is ready for ENG-327 parent review. No more variants are needed. ENG-332 may proceed with B/C/D and A, using the final exact revisions above; final destination-revision matching and integrated flow validation remain with ENG-329/328/332 and the ENG-327 release gate. No merge or deployment.
 
 ## Historical baseline inventory · superseded for artifact mapping
 
