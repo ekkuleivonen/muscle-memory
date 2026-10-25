@@ -1,37 +1,29 @@
 /**
  * The challenge search: one `q` string with qualifiers such as
- * `kind:bug lang:python,go difficulty:easy label:maps is:todo`, plus free text. Commas mean "any of"; different qualifiers must all match. Unknown qualifiers
+ * `kind:bug lang:python,go difficulty:easy label:maps is:starred`, plus free text. Commas mean "any of"; different qualifiers must all match. Unknown qualifiers
  * and values are kept as plain text rather than rejected, so hand-typed queries still work.
  */
-import type {
-  Difficulty,
-  IssueKind,
-} from "../../../packages/content/model";
-import type { Status } from "./board";
+import type { Difficulty, IssueKind } from "../../../packages/content/model";
 import { LANGUAGES, type LanguageId } from "./languages";
 import { DIFFICULTIES, KINDS, languageLabel, type Issue } from "./library";
 
 export const SORTS = ["key", "difficulty", "title"] as const;
 export type Sort = (typeof SORTS)[number];
-/** Board statuses as search terms: is:todo, is:backlog,done. */
-export const STATUSES: readonly Status[] = [
-  "backlog",
-  "todo",
-  "in-progress",
-  "done",
-];
+/** What a person has marked or done, as search terms: is:starred, is:completed. */
+export const MARKS = ["starred", "completed"] as const;
+export type Mark = (typeof MARKS)[number];
 export interface IssueQuery {
   language: LanguageId[];
   kind: IssueKind[];
   difficulty: Difficulty[];
   label: string[];
-  /** Board status lives in the browser, so the server leaves this filter to the client. */
-  status: Status[];
+  /** Marks live in the browser, so the server leaves this filter to the client. */
+  marks: Mark[];
   sort: Sort;
   text: string[];
 }
 
-export type ListKey = "language" | "kind" | "difficulty" | "label" | "status";
+export type ListKey = "language" | "kind" | "difficulty" | "label" | "marks";
 
 const LANGUAGE_IDS = LANGUAGES.map((l) => l.id);
 /** Qualifier names people type, mapped to the filter they set. */
@@ -57,7 +49,7 @@ export const emptyIssueQuery = (): IssueQuery => ({
   kind: [],
   difficulty: [],
   label: [],
-  status: [],
+  marks: [],
   sort: "key",
   text: [],
 });
@@ -77,12 +69,10 @@ export function parseIssueQuery(q: string): IssueQuery {
     const match = /^([a-z]+):(.+)$/i.exec(token);
     const name = match?.[1].toLowerCase();
     if (name === "is") {
-      // Board statuses as is:todo or is:backlog,done. (is:runnable from older links is
-      // ignored: every issue runs now.)
+      // is:starred, is:completed; anything else (is:runnable, old board statuses) is dropped.
       for (const raw of match![2].toLowerCase().split(",")) {
         const value = raw.trim();
-        if (STATUSES.includes(value as Status))
-          add(query.status, value as Status);
+        if (MARKS.includes(value as Mark)) add(query.marks, value as Mark);
       }
       continue;
     }
@@ -103,17 +93,14 @@ export function parseIssueQuery(q: string): IssueQuery {
     }
   }
   query.text = query.text.filter(Boolean);
-  query.status = STATUSES.filter((st) => query.status.includes(st));
+  query.marks = MARKS.filter((m) => query.marks.includes(m));
   return query;
 }
 
 /** The canonical query string: qualifiers first, in a fixed order, then free text. */
 export function formatQuery(query: IssueQuery): string {
   const parts: string[] = [];
-  if (query.status.length)
-    parts.push(
-      `is:${STATUSES.filter((s) => query.status.includes(s)).join(",")}`,
-    );
+  if (query.marks.length) parts.push(`is:${query.marks.join(",")}`);
   const lists: [string, readonly string[]][] = [
     ["kind", query.kind],
     ["lang", query.language],
@@ -175,18 +162,16 @@ const SORTERS: Record<Sort, (a: Issue, b: Issue) => number> = {
   title: (a, b) => a.title.localeCompare(b.title) || byKey(a, b),
 };
 
-/** The board-status part of a query, applied where the board is known (the browser). */
-export function filterByStatus<T extends { key: string }>(
+/** The marks part of a query, applied where marks are known (the browser): all must hold. */
+export function filterByMarks<T extends { key: string }>(
   issues: readonly T[],
-  statuses: readonly Status[],
-  statusOf: (key: string) => Status,
+  marks: readonly Mark[],
+  has: (key: string, mark: Mark) => boolean,
 ): T[] {
-  return statuses.length
-    ? issues.filter((issue) => statuses.includes(statusOf(issue.key)))
-    : [...issues];
+  return issues.filter((issue) => marks.every((mark) => has(issue.key, mark)));
 }
 
-/** Every filter except board status must match (any value within one); every text term must appear. */
+/** Every filter except marks must match (any value within one); every text term must appear. */
 export function filterIssues(
   issues: readonly Issue[],
   query: IssueQuery,

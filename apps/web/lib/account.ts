@@ -8,6 +8,7 @@ import { BOARD_CHANGE, BOARD_KEY } from "./board";
 import { HANDLE_PATTERN, randomHandle } from "./handle";
 import type { LanguageId } from "./languages";
 import { LEGAL_VERSION, type Acceptance } from "./legal";
+import { STARS_KEY } from "./stars";
 import {
   CONSENT_COOKIE,
   CONSENT_VALUE,
@@ -183,6 +184,7 @@ export async function deleteAccount() {
   }
   await resetProgress(true);
   localStorage.removeItem(PROFILE_KEY);
+  localStorage.removeItem(STARS_KEY);
   localStorage.removeItem(LEGACY_ACTIVITY_KEY);
   window.dispatchEvent(new Event(ACCOUNT_CHANGE));
   logOut();

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { library, summarize } from "./library";
 import {
-  filterByStatus,
+  filterByMarks,
   filterIssues,
   formatQuery,
   parseIssueQuery,
@@ -79,7 +79,10 @@ test("retired issues leave lists, but every published revision still resolves", 
     (id) => catalog.revisions[id].issue === "lru-cache",
   );
   assert.ok(own.includes(meta.revision) && own.length > 1);
-  assert.deepEqual(Object.keys(retired.revisionsOf("lru-cache")).sort(), own.sort());
+  assert.deepEqual(
+    Object.keys(retired.revisionsOf("lru-cache")).sort(),
+    own.sort(),
+  );
 });
 
 test("issues run when their language has an engine", () => {
@@ -233,30 +236,34 @@ test("summaries for client components leave out fixtures and long text", () => {
   assert.equal(JSON.stringify(summary).includes("__proto__"), false);
 });
 
-test("board statuses parse as is: qualifiers and filter wherever the board is known", () => {
-  const query = parseIssueQuery("is:done,todo is:runnable lang:python");
-  assert.deepEqual(query.status, ["todo", "done"]);
-  assert.equal(formatQuery(query), "is:todo,done lang:python");
-  assert.deepEqual(parseIssueQuery("is:nonsense").status, []);
-  const onBoard = new Set(["API-2", "FN-1"]);
-  const statusOf = (key: string) =>
-    onBoard.has(key) ? ("todo" as const) : ("backlog" as const);
+test("marks parse as is: qualifiers and filter wherever marks are known", () => {
+  const query = parseIssueQuery(
+    "is:completed,starred is:runnable is:todo lang:python",
+  );
+  assert.deepEqual(query.marks, ["starred", "completed"]);
+  assert.equal(formatQuery(query), "is:starred,completed lang:python");
+  assert.deepEqual(parseIssueQuery("is:nonsense").marks, []);
+  const starred = new Set(["API-2", "FN-1"]);
+  const completed = new Set(["FN-1"]);
+  const has = (key: string, mark: "starred" | "completed") =>
+    (mark === "starred" ? starred : completed).has(key);
   const keys = (q: string) =>
-    filterByStatus(merged.issues, parseIssueQuery(q).status, statusOf)
+    filterByMarks(merged.issues, parseIssueQuery(q).marks, has)
       .map((i) => i.key)
       .sort();
-  assert.deepEqual(keys("is:todo"), ["API-2", "FN-1"]);
-  assert.equal(keys("is:backlog").length, merged.issues.length - 2);
-  assert.equal(keys("is:todo,backlog").length, merged.issues.length);
-  assert.deepEqual(keys("is:done"), []);
+  assert.deepEqual(keys("is:starred"), ["API-2", "FN-1"]);
+  assert.deepEqual(keys("is:starred,completed"), ["FN-1"]);
+  assert.equal(keys("").length, merged.issues.length);
 });
-
 test("content revisions stay published and never strand work in progress", () => {
   // Every live revision id on main just before the incident was merged (3c40dd4), checked in
   // so the comparison never depends on git history being available. Since then the ENG-325
   // audit revised many issues; their earlier revisions stay, because recorded work names them.
   const before = JSON.parse(
-    readFileSync(new URL("./pre-incident-revisions.json", import.meta.url), "utf8"),
+    readFileSync(
+      new URL("./pre-incident-revisions.json", import.meta.url),
+      "utf8",
+    ),
   ) as Record<string, string>;
   assert.equal(Object.keys(before).length, 45);
   // INC-1 as it was played while it was the incident, with its chat.
@@ -265,11 +272,22 @@ test("content revisions stay published and never strand work in progress", () =>
   for (const [id, revision] of Object.entries(before)) {
     assert.ok(catalog.revisions[revision], `${id} revision kept`);
     // Saved code is restored by path onto the live revision: nothing it had may disappear.
-    const live = catalog.revisions[catalog.issues.find((i) => i.id === id)!.revision];
-    assert.deepEqual(continuityProblems(catalog.revisions[revision], live), [], id);
+    const live =
+      catalog.revisions[catalog.issues.find((i) => i.id === id)!.revision];
+    assert.deepEqual(
+      continuityProblems(catalog.revisions[revision], live),
+      [],
+      id,
+    );
   }
   // The chat lives on only in the revision that had it, read as stored.
-  const chat = (revision: string) => (catalog.revisions[revision] as { chat?: unknown[] }).chat;
+  const chat = (revision: string) =>
+    (catalog.revisions[revision] as { chat?: unknown[] }).chat;
   assert.ok(chat(before["checkout-guest-shipping"])?.length);
-  assert.equal(chat(catalog.issues.find((i) => i.id === "checkout-guest-shipping")!.revision), undefined);
+  assert.equal(
+    chat(
+      catalog.issues.find((i) => i.id === "checkout-guest-shipping")!.revision,
+    ),
+    undefined,
+  );
 });

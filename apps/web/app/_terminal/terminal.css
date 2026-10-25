@@ -625,11 +625,14 @@
   width: 1ch;
   flex: none;
 }
-.picker-mark.done {
+.picker-mark.completed {
   color: var(--t-ok);
 }
-.picker-mark.in-progress {
+.picker-mark.starred {
   color: #f0b03c;
+}
+.term button.picker-star {
+  margin: 0;
 }
 .picker-key {
   width: 8ch;
