@@ -1,5 +1,5 @@
 # Security and privacy
 
-This is a local Foundation prototype verified with synthetic data. Optional practice history is stored only in the player’s browser after explicit opt-in, with local clear/export controls. It has no authentication, hosted API or arbitrary-code sandbox and must not be exposed as a participant service.
+Muscle Memory runs every submission in the browser, inside an opaque-origin, network-denied sandbox (`packages/runner`, [practice](docs/practice.md)); nothing a player writes runs on a server or in the app's own page. Practice records are stored on the device and uploaded to the ingest Worker under a random participant ID, with a device secret proving ownership for uploads and deletion ([telemetry](docs/telemetry.md)). There are no passwords, names or emails.
 
-Never execute untrusted submissions in the developer process or on a private network. Keep private records and exports outside git. Do not post secrets or participant data in public issues. For a security report, use GitHub's private vulnerability reporting if available; otherwise contact the maintainer through their GitHub profile before sharing sensitive details.
+Never relax the sandbox's CSP or run user code outside it. Keep participant records, exports and credentials out of git, and never post them in public issues. To report a vulnerability, use GitHub's private vulnerability reporting, or email support@rowandreason.com, before sharing details publicly.

@@ -73,7 +73,7 @@ Everything outside a challenge (`packages/domain/site.ts`, `apps/web/lib/site-lo
 
 ## Declared gaps
 
-Not recorded: visits before the Terms are accepted, keystrokes in text fields other than the editor, pointer movement and hovering (except type tooltips), pane focus and layout resizing, activity in other tabs and apps (only that the page was hidden or lost focus), and writes cut short when the page closes. Each stream lists its own in `PRACTICE_CAPTURE_GAPS` and `SITE_CAPTURE_GAPS`, and `opened` carries them.
+Not recorded: visits before the Terms are accepted, keystrokes in text fields other than the editor, pointer movement and hovering (except type tooltips), pane focus and layout resizing, activity in other tabs and apps (only that the page was hidden or lost focus), and writes cut short when the page closes. Practice lists its own in `PRACTICE_CAPTURE_GAPS`, and every `practice.opened` carries them.
 
 ## On the device
 

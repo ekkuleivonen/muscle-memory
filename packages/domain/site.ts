@@ -16,15 +16,6 @@ import {
 } from "./records";
 
 export const SITE_CAPTURE_VERSION = "site-capture-1.0.0";
-/** What this capture does not record. Absence is a gap, not evidence of no activity. */
-export const SITE_CAPTURE_GAPS = [
-  "visits-before-accepting-the-terms",
-  "keystrokes-in-text-fields",
-  "pointer-movement-and-hover",
-  "activity-in-other-tabs-and-apps",
-  "writes-cut-short-by-closing-the-page",
-] as const;
-
 /** A page of the app was shown: its path, its query string, and the app page before it. */
 export interface ViewData {
   readonly path: string;

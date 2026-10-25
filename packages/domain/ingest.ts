@@ -16,7 +16,6 @@ export const INGEST_PROTOCOL = "ingest-1";
 export const BATCH_MAX_RECORDS = 500;
 export const BATCH_MAX_BYTES = 1_000_000;
 /** Capture versions the server accepts: the current one of each stream. */
-export const ACCEPTED_CAPTURE = [PRACTICE_CAPTURE_VERSION, SITE_CAPTURE_VERSION] as const;
 
 export interface Batch {
   readonly protocol: typeof INGEST_PROTOCOL;
