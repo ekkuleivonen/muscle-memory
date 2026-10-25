@@ -487,7 +487,7 @@ export function PullView({
             </Link>
           </span>
         </p>
-        {/* A merged pull request's outcome goes here, before what to practise next. */}
+        {/* The pull request's outcome (open or merged) goes here, before what to practise next. */}
         {pull.state === "merged" && (
           <NextPractice candidates={candidates} current={issue.key} />
         )}
@@ -531,7 +531,9 @@ export function PullView({
           {tab === "timeline" && (
             <Timeline
               detail={
-                mergedNow
+                // Shown at once on merging, until the stored merge is read back.
+                mergedNow &&
+                !detail.timeline.some((entry) => entry.kind === "merged")
                   ? {
                       ...detail,
                       timeline: [
