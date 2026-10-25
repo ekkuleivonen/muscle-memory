@@ -91,7 +91,7 @@ test("f is the first submission only when its cases were decided; n counts submi
   const errored = of([submitted("r-1", "errored", 0), submitted("r-3", "passed", 15), completed("r-3")]);
   assert.equal(errored?.f, null);
   assert.equal(errored?.n, 2);
-  assert.deepEqual(outcomeLines(errored!)[1], ["first full check", "not known"]);
+  assert.deepEqual(outcomeLines(errored!)[1], ["first submission", "not known"]);
   const cancelled = of([
     submitted("r-c", "cancelled", 0),
     submitted("r-1", "failed", 11),

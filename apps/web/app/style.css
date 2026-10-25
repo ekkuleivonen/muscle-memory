@@ -1028,7 +1028,7 @@ button.home-cta:disabled {
   font-size: 11px;
   color: var(--dim);
 }
-/* The latest full check in the practice area (review.tsx CheckFeedbackView). */
+/* The latest submission in practice (review.tsx CheckFeedbackView). */
 .check-feedback {
   padding: 10px 12px;
   border: 1px solid var(--line-strong);

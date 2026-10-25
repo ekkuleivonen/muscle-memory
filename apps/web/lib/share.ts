@@ -35,7 +35,7 @@ export function inspectCard(segment: string): CardLink {
   return { kind: "malformed" };
 }
 
-/** One file as shared: its path in the repo and the text pushed. */
+/** One file as shared: its path and the text checked. */
 export interface SharedFile {
   readonly path: string;
   readonly text: string;

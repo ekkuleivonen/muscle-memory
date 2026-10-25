@@ -766,7 +766,6 @@ export function Ide({
                       run={run}
                       stale={stale}
                       issue={issue}
-                      testsPath="the public examples"
                       runtime={runtime}
                       onRetry={startRuntime}
                     />
@@ -924,7 +923,6 @@ function Tests({
   run,
   stale,
   issue,
-  testsPath,
   runtime,
   onRetry,
 }: {
@@ -932,17 +930,16 @@ function Tests({
   run: RunView | null;
   stale: boolean;
   issue: IdeIssue;
-  testsPath: string;
   runtime: Runtime;
   onRetry(): void;
 }) {
-  /** The cases in the repo's test file, which Run tests runs. */
+  /** The examples, which Run examples runs. */
   const visible = casesRun(challenge.cases, "examples").length;
   if (!issue.runnable)
     return (
       <p className="faint">
-        This repo has no test runner set up yet. Your edits are saved as you go;
-        the {visible} cases are in {testsPath}.
+        {languageLabel(issue.language)} can&apos;t run in the browser yet. Your
+        edits are saved as you go.
       </p>
     );
   if (runtime.state === "unavailable")
@@ -957,9 +954,9 @@ function Tests({
   if (!run)
     return (
       <p className="faint">
-        Start in {challenge.entry}: change the code to meet the requirements,
-        then run tests (<Shortcut />
-        ). {visible} acceptance checks are in {testsPath}.
+        Change the code to meet the requirements, then run the {visible}{" "}
+        {visible === 1 ? "example" : "examples"} as often as you like. Submit (
+        <Shortcut />) checks every case.
       </p>
     );
   const o = run.outcome;

@@ -2,7 +2,7 @@
  * Version 3 of a shared outcome card: a completed challenge, as a link may carry it.
  *
  * Exactly these facts and nothing else: which challenge, in which language, on which revision,
- * the final full check, and optionally the first full check and how many full checks ran. No
+ * the completing submission, and optionally the first submission and how many submissions ran. No
  * timing, speed, example runs, rank or comparison, and nothing about how the person worked:
  * a card cannot verify that, so it never claims it. The referral code `c` is the existing
  * referral mechanism (an arrival noted from a shared link); nothing else tracks anyone.
@@ -26,11 +26,11 @@ export interface Outcome {
   readonly l: string;
   /** The checked revision's sha256, hex. */
   readonly rv: string;
-  /** The final full check, the one that completed the challenge: every check passed. */
+  /** The completing submission: every case passed. */
   readonly o: Checks;
-  /** The first full check of the attempt, or null when it isn't known. */
+  /** The attempt's first submission, or null when it isn't known. */
   readonly f?: Checks | null;
-  /** Full checks run in the attempt, the final one included. */
+  /** Submissions in the attempt, the completing one included. */
   readonly n?: number;
   /** The sharer's referral code. */
   readonly c: string;
@@ -238,13 +238,13 @@ export function outcomeLines(card: Outcome): [string, string, boolean?][] {
     ...(card.f !== undefined
       ? [
           [
-            "first full check",
+            "first submission",
             card.f ? `${card.f.passed}/${card.f.total}` : "not known",
           ] as [string, string],
         ]
       : []),
     ...(card.n !== undefined
-      ? [["full checks run", String(card.n)] as [string, string]]
+      ? [["submissions", String(card.n)] as [string, string]]
       : []),
   ];
 }

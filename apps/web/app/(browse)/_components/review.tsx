@@ -15,11 +15,11 @@ import { Markdown } from "./markdown";
 
 const show = (value: unknown) => JSON.stringify(value);
 
-/** Marks a hidden case: only the full check runs it, and its values stay hidden. */
+/** Marks a hidden case: only Submit runs it, and its values stay hidden. */
 const HiddenCase = () => (
   <span
     className="ci-only"
-    title="Not in the repo's test file. Its input and expected value stay hidden."
+    title="Not one of the examples. Its input and expected value stay hidden."
   >
     hidden case
   </span>
@@ -101,7 +101,7 @@ export function FailedChecks({ diagnosis }: { diagnosis: Diagnosis | null }) {
 }
 
 /**
- * The latest full check, in the practice area (lib/check-feedback.ts): one headline, what to do
+ * The latest submission, in practice (lib/check-feedback.ts): one headline, what to do
  * next, failing cases (hidden ones by name and how they failed) and any required rule the code
  * still triggers. It holds no state and records nothing; the parent re-reads it after a check.
  */

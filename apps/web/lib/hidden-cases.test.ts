@@ -66,7 +66,7 @@ const outcome = {
     // JavaScript code can set an error's name from its input: the type is no safe category.
     { error: { type: "SECRET_TYPE", message: "SECRET_MESSAGE" } },
   ],
-  // Printing an argument during the full check would reveal a hidden input.
+  // Printing an argument during a submission would reveal a hidden input.
   stdout: { text: "SECRET_INPUT" },
   durationMs: 4,
 };
