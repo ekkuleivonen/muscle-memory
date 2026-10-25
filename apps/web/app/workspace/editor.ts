@@ -168,7 +168,8 @@ const highlight = HighlightStyle.define([
 const shared = (language: FileLanguage): Extension[] => [
   lineNumbers(),
   highlightActiveLineGutter(),
-  drawSelection(),
+  // A steady cursor, as in a terminal; the block shape is the stylesheet's.
+  drawSelection({ cursorBlinkRate: 0 }),
   indentUnit.of(indent(language)),
   EditorState.tabSize.of(4),
   ...(language === "text" ? [] : [languageSupport(language)]),

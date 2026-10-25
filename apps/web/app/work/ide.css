@@ -1187,8 +1187,12 @@ dialog::backdrop {
 .practice-editor .cm-activeLineGutter {
   background: color-mix(in srgb, var(--fg) 5%, transparent);
 }
+/* A terminal's block cursor, steady, translucent so the character under it still reads. */
 .practice-editor .cm-cursor {
-  border-left-color: var(--accent);
+  width: 1ch;
+  margin-left: 0;
+  border-left: 0;
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
 }
 .practice-editor .cm-selectionBackground,
 .practice-editor .cm-focused .cm-selectionBackground {
