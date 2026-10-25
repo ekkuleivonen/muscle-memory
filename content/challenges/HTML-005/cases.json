@@ -10,7 +10,7 @@
   },
   {
     "input": [
-      "ol > li > a",
+      "ol > li a",
       "text"
     ],
     "expected": [
@@ -20,7 +20,7 @@
   },
   {
     "input": [
-      "ol > li > a",
+      "ol > li a",
       "href"
     ],
     "expected": [
@@ -83,6 +83,26 @@
       "count"
     ],
     "expected": 0,
+    "hidden": true
+  },
+  {
+    "input": [
+      "ol > li:nth-child(1) a",
+      "href"
+    ],
+    "expected": [
+      "/guides/arrays"
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      "ol > li:nth-child(2) a",
+      "href"
+    ],
+    "expected": [
+      "/guides/maps"
+    ],
     "hidden": true
   }
 ]

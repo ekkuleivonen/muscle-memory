@@ -130,3 +130,7 @@ publication. HTML checks parse the DOM with linkedom in the browser sandbox;
 they do not exercise rendered layout, image loading, keyboard interactions or a
 screen reader. Existing-content corrections belong to ENG-335 and must be
 composed with this branch by the coordinator. No merge or deployment is included.
+
+## Integration regression: HTML-005 descendants
+
+A list item may contain a link inside valid wrapper markup. Checks accept descendant anchors and verify each item’s own destination. A nested paragraph/span alternative passes; a wrong variant with both links in the first item fails. No direct-anchor-child restriction was added to the task.
