@@ -15,7 +15,6 @@ import { PAGE_SESSION_ID } from "../../../../packages/browser/page-session";
 import { boundText } from "../../../../packages/domain/capture";
 import {
   casesRun,
-  type Executable,
   type Revision,
 } from "../../../../packages/content/model";
 import type { Json } from "../../../../packages/domain/json";
@@ -41,7 +40,7 @@ import {
   type RunOutcome,
 } from "../../../../packages/runner/runner";
 import { fileViewOf, restoreFileView, type FileView } from "./continuity";
-import type { FileLanguage } from "../../lib/entry";
+import type { FileLanguage } from "../../lib/languages";
 import {
   createEditor,
   editorFeatures,
@@ -68,18 +67,14 @@ export interface SessionOptions {
   /** The accepted Terms version, such as 2026-10-25.1. */
   readonly termsVersion: string;
   /** The challenge and the revision worked against; recorded with every observation. */
-  readonly challenge: { readonly id: string; readonly key: string; readonly revision: Revision; readonly revisionId: string };
+  readonly challenge: { readonly key: string; readonly revision: Revision; readonly revisionId: string };
   /** The attempt this session belongs to. */
   readonly attemptId: string;
   /** Set when this session begins the attempt: recorded as `started`, before `opened`. */
   readonly started?: PracticeData["practice.started"] | null;
-  /** What Submit and Run examples run: the entry point and the revision's cases. */
-  readonly executable: Executable;
   readonly sink: CaptureSink;
   /** Every editable file and the text it starts with (the revision's, or restored work). */
   readonly files: Readonly<Record<string, EditableFile>>;
-  /** Source files the code may use but not change, by path; sent to CI with the edits. */
-  readonly sources?: Readonly<Record<string, string>>;
   readonly restoredFrom?: number;
   /** The workspace's language, for the runtime and the editor features recorded; Python unless told otherwise. */
   readonly language?: FileLanguage;
@@ -176,7 +171,7 @@ export class WorkspaceSession {
       sessionId: PAGE_SESSION_ID,
       sourceId: this.sourceId,
       termsVersion: options.termsVersion,
-      challenge: { id: options.challenge.id, revision: options.challenge.revisionId },
+      challenge: { key: options.challenge.key, revision: options.challenge.revisionId },
       attemptId: options.attemptId,
       sink: options.sink,
       onTransition: () => this.notify(),
@@ -255,7 +250,7 @@ export class WorkspaceSession {
         label: `Code editor: ${path}`,
         // The type checker knows one file: the entry file.
         types:
-          path === this.options.executable.entry
+          path === this.options.challenge.revision.file
             ? this.options.types
             : undefined,
         activity: this.activity(path),
@@ -355,9 +350,7 @@ export class WorkspaceSession {
       return;
     const revision = this.revision;
     const code = this.artifact();
-    // The program: the entry file CI loads, and every other source file it may import.
-    const program = { ...this.options.sources, ...this.code() };
-    const { entry } = this.options.executable;
+    const challenge = this.options.challenge.revision;
     const runId = randomId();
     const base = {
       runId,
@@ -385,23 +378,15 @@ export class WorkspaceSession {
     const outcome = await this.options.runner().run(
       {
         runId,
-        code: program[entry] ?? "",
-        filename: entry,
-        files: Object.fromEntries(
-          Object.entries(program).filter(([path]) => path !== entry),
-        ),
+        code: files[challenge.file] ?? "",
+        filename: challenge.file,
+        files: {},
         language: this.options.language ?? "python",
-        entrypoint: this.options.executable.entrypoint,
-        ...(this.options.executable.parameters
-          ? { parameters: this.options.executable.parameters }
-          : {}),
-        ...(this.options.executable.schema
-          ? { setup: this.options.executable.schema }
-          : {}),
-        ...(this.options.executable.adapter
-          ? { adapter: this.options.executable.adapter }
-          : {}),
-        inputs: casesRun(this.options.executable.cases, purpose).map(
+        entrypoint: challenge.entrypoint,
+        ...(challenge.parameters ? { parameters: challenge.parameters } : {}),
+        ...(challenge.schema ? { setup: challenge.schema } : {}),
+        ...(challenge.adapter ? { adapter: challenge.adapter } : {}),
+        inputs: casesRun(challenge.cases, purpose).map(
           (c) => c.input,
         ),
       },
@@ -409,7 +394,7 @@ export class WorkspaceSession {
     );
     // The outcome belongs to `revision`, even if the editor has moved on since.
     if (purpose !== "submit") return update(statusOf(outcome), outcome);
-    const verdict = verdictOf(this.options.challenge.revision, outcome, files);
+    const verdict = verdictOf(challenge, outcome, files[challenge.file] ?? "");
     this.record("practice.submitted", {
       runId,
       revision,

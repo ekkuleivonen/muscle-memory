@@ -1,0 +1,142 @@
+[
+  {
+    "input": "page=2&per_page=50",
+    "expected": {
+      "page": 2,
+      "perPage": 50
+    }
+  },
+  {
+    "input": "",
+    "expected": {
+      "page": 1,
+      "perPage": 20
+    }
+  },
+  {
+    "input": "per_page=500",
+    "expected": {
+      "page": 1,
+      "perPage": 100
+    }
+  },
+  {
+    "input": "page=-1&per_page=abc",
+    "expected": {
+      "page": 1,
+      "perPage": 20
+    }
+  },
+  {
+    "input": "page=3",
+    "expected": {
+      "page": 3,
+      "perPage": 20
+    },
+    "hidden": true
+  },
+  {
+    "input": "per_page=100",
+    "expected": {
+      "page": 1,
+      "perPage": 100
+    },
+    "hidden": true
+  },
+  {
+    "input": "per_page=101",
+    "expected": {
+      "page": 1,
+      "perPage": 100
+    },
+    "hidden": true
+  },
+  {
+    "input": "page=0&per_page=0",
+    "expected": {
+      "page": 1,
+      "perPage": 20
+    },
+    "hidden": true
+  },
+  {
+    "input": "per_page=-5",
+    "expected": {
+      "page": 1,
+      "perPage": 20
+    },
+    "hidden": true
+  },
+  {
+    "input": "per_page=-500",
+    "expected": {
+      "page": 1,
+      "perPage": 20
+    },
+    "hidden": true
+  },
+  {
+    "input": "page=abc",
+    "expected": {
+      "page": 1,
+      "perPage": 20
+    },
+    "hidden": true
+  },
+  {
+    "input": "per_page=1",
+    "expected": {
+      "page": 1,
+      "perPage": 1
+    },
+    "hidden": true
+  },
+  {
+    "input": "per_page=50&page=4",
+    "expected": {
+      "page": 4,
+      "perPage": 50
+    },
+    "hidden": true
+  },
+  {
+    "input": "page=7&per_page=20&sort=name",
+    "expected": {
+      "page": 7,
+      "perPage": 20
+    },
+    "hidden": true
+  },
+  {
+    "input": "page=&per_page=",
+    "expected": {
+      "page": 1,
+      "perPage": 20
+    },
+    "hidden": true
+  },
+  {
+    "input": "page=5&per_page=abc",
+    "expected": {
+      "page": 5,
+      "perPage": 20
+    },
+    "hidden": true
+  },
+  {
+    "input": "page=1000000",
+    "expected": {
+      "page": 1000000,
+      "perPage": 20
+    },
+    "hidden": true
+  },
+  {
+    "input": "perPage=50",
+    "expected": {
+      "page": 1,
+      "perPage": 20
+    },
+    "hidden": true
+  }
+]

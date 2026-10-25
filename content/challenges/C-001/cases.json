@@ -1,0 +1,109 @@
+[
+  {
+    "input": [
+      "Example.COM"
+    ],
+    "expected": "example.com"
+  },
+  {
+    "input": [
+      "example.com:8443"
+    ],
+    "expected": "example.com"
+  },
+  {
+    "input": [
+      "[2001:db8::1]:8080"
+    ],
+    "expected": "[2001:db8::1]"
+  },
+  {
+    "input": [
+      "cdn.example.com."
+    ],
+    "expected": "cdn.example.com"
+  },
+  {
+    "input": [
+      "[::1]"
+    ],
+    "expected": "[::1]"
+  },
+  {
+    "input": [
+      ""
+    ],
+    "expected": null,
+    "hidden": true
+  },
+  {
+    "input": [
+      ":8080"
+    ],
+    "expected": null,
+    "hidden": true
+  },
+  {
+    "input": [
+      "[2001:DB8::A]:443"
+    ],
+    "expected": "[2001:db8::a]",
+    "hidden": true
+  },
+  {
+    "input": [
+      "[::1"
+    ],
+    "expected": null,
+    "hidden": true
+  },
+  {
+    "input": [
+      "[::1]x"
+    ],
+    "expected": null,
+    "hidden": true
+  },
+  {
+    "input": [
+      "EXAMPLE.com.:443"
+    ],
+    "expected": "example.com",
+    "hidden": true
+  },
+  {
+    "input": [
+      "localhost"
+    ],
+    "expected": "localhost",
+    "hidden": true
+  },
+  {
+    "input": [
+      "[::ffff:192.0.2.1]"
+    ],
+    "expected": "[::ffff:192.0.2.1]",
+    "hidden": true
+  },
+  {
+    "input": [
+      "."
+    ],
+    "expected": null,
+    "hidden": true
+  },
+  {
+    "input": [
+      "[::ffff:192.0.2.1]:443"
+    ],
+    "expected": "[::ffff:192.0.2.1]",
+    "hidden": true
+  },
+  {
+    "input": [
+      "Shop.Example.com:80"
+    ],
+    "expected": "shop.example.com",
+    "hidden": true
+  }
+]

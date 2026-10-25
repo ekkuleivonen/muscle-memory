@@ -1,0 +1,116 @@
+[
+  {
+    "input": "1h30m",
+    "expected": 5400
+  },
+  {
+    "input": "45s",
+    "expected": 45
+  },
+  {
+    "input": "2h",
+    "expected": 7200
+  },
+  {
+    "input": "1h1h",
+    "expected": null
+  },
+  {
+    "input": "90",
+    "expected": null
+  },
+  {
+    "input": "",
+    "expected": null
+  },
+  {
+    "input": "30m",
+    "expected": 1800,
+    "hidden": true
+  },
+  {
+    "input": "1m30s",
+    "expected": 90,
+    "hidden": true
+  },
+  {
+    "input": "1h2m3s",
+    "expected": 3723,
+    "hidden": true
+  },
+  {
+    "input": "2h45s",
+    "expected": 7245,
+    "hidden": true
+  },
+  {
+    "input": "0s",
+    "expected": 0,
+    "hidden": true
+  },
+  {
+    "input": "0h0m0s",
+    "expected": 0,
+    "hidden": true
+  },
+  {
+    "input": "90m",
+    "expected": 5400,
+    "hidden": true
+  },
+  {
+    "input": "100s",
+    "expected": 100,
+    "hidden": true
+  },
+  {
+    "input": "1m1h",
+    "expected": null,
+    "hidden": true
+  },
+  {
+    "input": "1s1m",
+    "expected": null,
+    "hidden": true
+  },
+  {
+    "input": "1d",
+    "expected": null,
+    "hidden": true
+  },
+  {
+    "input": "h",
+    "expected": null,
+    "hidden": true
+  },
+  {
+    "input": "1.5h",
+    "expected": null,
+    "hidden": true
+  },
+  {
+    "input": "-1h",
+    "expected": null,
+    "hidden": true
+  },
+  {
+    "input": "1h 30m",
+    "expected": null,
+    "hidden": true
+  },
+  {
+    "input": "1h30",
+    "expected": null,
+    "hidden": true
+  },
+  {
+    "input": "10ms",
+    "expected": null,
+    "hidden": true
+  },
+  {
+    "input": "1H",
+    "expected": null,
+    "hidden": true
+  }
+]

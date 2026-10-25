@@ -36,21 +36,21 @@ const cases: Case[] = [
     name: "public case",
     input: ["PUBLIC_INPUT"],
     expected: "PUBLIC_EXPECTED",
-    visible: true,
+    hidden: false,
   },
   {
     id: "h",
     name: "SECRET_NAME",
     input: ["SECRET_INPUT"],
     expected: "SECRET_EXPECTED",
-    visible: false,
+    hidden: true,
   },
   {
     id: "e",
     name: "SECRET_NAME",
     input: ["SECRET_INPUT"],
     expected: "SECRET_EXPECTED",
-    visible: false,
+    hidden: true,
   },
 ];
 
@@ -166,7 +166,7 @@ test("an error reported from the cases' stage, with no per-case results, is with
     );
   }
   // A run of public cases only keeps the full error: nothing hidden to give away.
-  const publicOnly = cases.filter((c) => c.visible);
+  const publicOnly = cases.filter((c) => !c.hidden);
   const compile = diagnose(
     {
       status: "user-error",

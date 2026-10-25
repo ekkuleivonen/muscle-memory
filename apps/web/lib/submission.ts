@@ -19,9 +19,9 @@ export interface Verdict {
 export function verdictOf(
   revision: Revision,
   outcome: Parameters<typeof submitResult>[1],
-  files: Readonly<Record<string, string>>,
+  code: string,
 ): Verdict {
-  const { result, passed, total } = submitResult(revision.checks.cases, outcome);
-  const rules = broken(revision.checks.rules, files);
+  const { result, passed, total } = submitResult(revision.cases, outcome);
+  const rules = broken(revision.rules, code, revision.file);
   return { result, passed, total, rules, complete: result === "passed" && !rules.length };
 }

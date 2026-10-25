@@ -4,32 +4,20 @@
  */
 import type { Rule, RuleTrigger } from "./model";
 
-/** Editable files' text by path. */
-export type Files = Readonly<Record<string, string>>;
-
-export function fires(trigger: RuleTrigger, files: Files): boolean {
-  if ("all" in trigger) return trigger.all.every((t) => fires(t, files));
-  if ("any" in trigger) return trigger.any.some((t) => fires(t, files));
-  if ("not" in trigger) return !fires(trigger.not, files);
-  if ("metric" in trigger)
-    return texts(files, trigger.file).some(
-      ([path, text]) => metric(trigger.metric, text, path) > trigger.above,
-    );
-  const pattern = new RegExp(trigger.pattern, "m");
-  const found = texts(files, trigger.file).some(([, text]) => pattern.test(text));
-  return found === trigger.present;
+/** Whether the trigger holds for `code`, the challenge's file (named `file`). */
+export function fires(trigger: RuleTrigger, code: string, file: string): boolean {
+  if ("all" in trigger) return trigger.all.every((t) => fires(t, code, file));
+  if ("any" in trigger) return trigger.any.some((t) => fires(t, code, file));
+  if ("not" in trigger) return !fires(trigger.not, code, file);
+  if ("metric" in trigger) return metric(trigger.metric, code, file) > trigger.above;
+  return new RegExp(trigger.pattern, "m").test(code) === trigger.present;
 }
 
 /** The rules this code breaks, in their order. */
-export function broken(rules: readonly Rule[], files: Files): Rule[] {
-  return rules.filter((rule) => fires(rule.when, files));
+export function broken(rules: readonly Rule[], code: string, file: string): Rule[] {
+  return rules.filter((rule) => fires(rule.when, code, file));
 }
 
-/** The named file, or every editable file. */
-function texts(files: Files, file?: string): [string, string][] {
-  const all = Object.entries(files);
-  return file ? all.filter(([path]) => path === file) : all;
-}
 const INDENTED = /\.(py|rb)$/;
 const CONTROL = /^\s*(}\s*)?(if|else|for|foreach|while|do|switch|case|catch|try|finally|with|return|elif|unless|until)\b/;
 

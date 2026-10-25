@@ -1,0 +1,10 @@
+[
+  {
+    "id": "rescan",
+    "message": "Don't go over all the lines once for each site: the summary has to stay fast on a 40,000-line export.",
+    "when": {
+      "pattern": "==\\s*site\\b",
+      "present": true
+    }
+  }
+]

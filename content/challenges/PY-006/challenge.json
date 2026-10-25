@@ -1,0 +1,12 @@
+{
+  "title": "Site summary undercounts since last week's speed-up",
+  "summary": "Since the season summary got faster, its per-site lots and first visits are wrong.",
+  "difficulty": "medium",
+  "tags": [
+    "debugging",
+    "reading-code",
+    "iteration"
+  ],
+  "file": "sites.py",
+  "entrypoint": "site_summary"
+}

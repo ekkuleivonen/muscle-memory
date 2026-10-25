@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Json } from "../../../../../packages/domain/json";
 import {
-  editableFiles,
   type Revision,
 } from "../../../../../packages/content/model";
 import type { StoredRecord } from "../../../../../packages/domain/records";
@@ -25,7 +24,7 @@ import {
 } from "../../../lib/share";
 import { logShare } from "../../../lib/site-log";
 import { practiceHref } from "../../../lib/paths";
-import { copyText, useReferral, type ResultInput } from "./result-card";
+import { copyText, useReferral } from "./result-card";
 import "../../share.css";
 
 type Channel = "copy" | "x" | "linkedin" | "native";
@@ -81,8 +80,8 @@ export function CopyIssueLink({ issueKey }: { issueKey: string }) {
  * Share a completed challenge's outcome, with a preview of exactly what a post or chat will
  * show (the shared link's image), then copy, X, LinkedIn or the system share sheet. Code is
  * left out unless the person ticks the box, every time the dialog opens; when ticked, their
- * solution file (every changed file, for a challenge that had several) goes into the link
- * itself (its fragment), complete or not at all, so no copy is kept anywhere.
+ * solution goes into the link itself (its fragment), complete or not at all, so no copy is
+ * kept anywhere.
  */
 export function ShareResult({
   state,
@@ -91,12 +90,12 @@ export function ShareResult({
 }: {
   /** The card to share: a v3 outcome. */
   state: { result: Outcome | null; label: string };
-  issue: ResultInput["issue"];
+  issue: { key: string; title: string; revision: string };
   /**
-   * The solution as checked: the file edited (or every file changed); only shared when ticked.
-   * "missing" when the checked copy wasn't kept: the box is offered and then refuses.
+   * The solution as checked; only shared when ticked. "missing" when the checked copy wasn't
+   * kept: the box is offered and then refuses.
    */
-  code?: readonly SharedFile[] | "missing";
+  code?: SharedFile | "missing";
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [copied, setCopied] = useState(false);
@@ -104,23 +103,23 @@ export function ShareResult({
   /** Once ticked: undefined while packing, then the fragment or why the code can't go in. */
   const [packed, setPacked] = useState<string | undefined>(undefined);
   const [refusal, setRefusal] = useState<CodeRefusal | null>(null);
-  // By content: the caller may build a new array on every render.
   const missing = code === "missing";
-  const files = useMemo(
-    () => (Array.isArray(code) && code.length ? code : null),
-    [JSON.stringify(code ?? [])],
-  ); // eslint-disable-line react-hooks/exhaustive-deps
+  // By content: the caller may build a new object on every render.
+  const file = useMemo(
+    () => (code && code !== "missing" ? code : null),
+    [code === "missing" ? "missing" : code?.path, code === "missing" ? "" : code?.text, code === "missing" ? false : code?.truncated], // eslint-disable-line react-hooks/exhaustive-deps
+  );
   useEffect(() => {
     if (withCode && missing) {
       setPacked(undefined);
       setRefusal("missing");
       return;
     }
-    if (!withCode || !files) return;
+    if (!withCode || !file) return;
     let live = true;
     setPacked(undefined);
     setRefusal(null);
-    encodeCode(files)
+    encodeCode(file)
       .then((value) => {
         if (!live) return;
         if (value.ok) setPacked(value.packed);
@@ -130,7 +129,7 @@ export function ShareResult({
     return () => {
       live = false;
     };
-  }, [withCode, files, missing]);
+  }, [withCode, file, missing]);
   const { result } = state;
   if (!result) return null;
   // Only allowlisted fields leave the browser.
@@ -144,9 +143,8 @@ export function ShareResult({
     // Ticked but not packed yet, or refused: never share without saying so, or share part of it.
     if (withCode && !packed) return;
     void logShare(
-      { id: issue.slug, revision: issue.revision },
+      { key: issue.key, revision: issue.revision },
       {
-        challengeKey: issue.key,
         channel,
         ref: card.c,
         card: card as unknown as Json,
@@ -167,7 +165,6 @@ export function ShareResult({
       );
     else await navigator.share?.({ text, url }).catch(() => undefined);
   };
-  const count = files?.length ?? 0;
   const blocked = withCode && !packed;
   return (
     <>
@@ -225,7 +222,7 @@ export function ShareResult({
               ? `Your result, a link to try ${issue.key}, and your solution.`
               : `Your result and a link to try ${issue.key} from the start. Not your code.`}
           </p>
-          {(count > 0 || missing) && (
+          {(file || missing) && (
             <label className="share-code">
               <input
                 type="checkbox"
@@ -239,15 +236,13 @@ export function ShareResult({
                 <b>Include my code</b>
                 <span className="faint">
                   {" "}
-                  {missing ? (
-                    "Adds your solution, exactly as it was checked, to the link itself."
-                  ) : count === 1 ? (
+                  {file ? (
                     <>
-                      Adds your solution, <code>{files![0].path}</code>, to the
-                      link itself, in full.
+                      Adds your solution, <code>{file.path}</code>, to the link
+                      itself, in full.
                     </>
                   ) : (
-                    `Adds all ${count} files you changed to the link itself, in full.`
+                    "Adds your solution, exactly as it was checked, to the link itself."
                   )}{" "}
                   Anyone with the link can read it. We don&apos;t keep a copy;
                   untick to share without it.
@@ -315,9 +310,7 @@ export function ShareOutcome({
   revision,
 }: {
   challenge: {
-    id: string;
     key: string;
-    slug: string;
     title: string;
     revision: string;
     language: string;
@@ -332,18 +325,18 @@ export function ShareOutcome({
       referral
         ? outcomeOf({
             records,
-            challenge: { id: challenge.id, key: challenge.key, revision: challenge.revision },
+            challenge: { key: challenge.key, revision: challenge.revision },
             attemptId,
             language: challenge.language,
             referral,
           })
         : null,
-    [records, attemptId, referral, challenge.id, challenge.key, challenge.revision, challenge.language],
+    [records, attemptId, referral, challenge.key, challenge.revision, challenge.language],
   );
   const solution = useMemo(() => {
-    const runId = completedRun(records, challenge.id, attemptId);
-    return runId ? solutionOf(records, runId, Object.keys(editableFiles(revision.workspace))) : null;
-  }, [records, challenge.id, attemptId, revision]);
+    const runId = completedRun(records, challenge.key, attemptId);
+    return runId ? solutionOf(records, runId, revision.file) : null;
+  }, [records, challenge.key, attemptId, revision]);
   if (!card) return null;
   const label =
     LANGUAGES.find((l) => l.id === challenge.language)?.label ??
@@ -353,7 +346,6 @@ export function ShareOutcome({
       state={{ result: card, label }}
       issue={{
         key: challenge.key,
-        slug: challenge.slug,
         title: challenge.title,
         revision: challenge.revision,
       }}

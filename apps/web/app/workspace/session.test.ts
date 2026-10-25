@@ -6,20 +6,19 @@ import type { Runner } from "../../../../packages/runner/runner";
 import { live } from "../../lib/test-fixtures";
 import { WorkspaceSession, type SessionOptions } from "./session";
 
-const fixture = live("frequency-map");
+const base = live("PY-002");
+const fixture = { ...base, path: base.revision.file, starter: base.revision.starter };
 
 function session(sink: MemorySink, options: Partial<SessionOptions> = {}) {
   return new WorkspaceSession({
     participantId: "synthetic-participant",
     termsVersion: "2026-10-01",
     challenge: {
-      id: "frequency-map",
       key: "PY-002",
       revision: fixture.revision,
       revisionId: fixture.id,
     },
     attemptId: "attempt-1",
-    executable: fixture.executable,
     sink,
     files: {
       [fixture.path]: {

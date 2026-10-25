@@ -1,16 +1,21 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { RunView } from "../workspace/session";
-import { transcript, type Executable } from "./transcript";
+import type { Revision } from "../../../../packages/content/model";
+import { transcript } from "./transcript";
 
-const challenge: Executable = {
+const challenge: Revision = {
+  challenge: "JS-003",
+  task: "Format a price.",
   language: "javascript",
-  entry: "src/format-price.js",
+  file: "format-price.js",
+  starter: "",
   entrypoint: "formatPrice",
   cases: [
-    { id: "case-1", input: 123456, expected: "$1,234.56", visible: true },
-    { id: "case-2", input: -500, expected: "-$5.00", visible: true },
+    { id: "case-1", input: 123456, expected: "$1,234.56", hidden: false },
+    { id: "case-2", input: -500, expected: "-$5.00", hidden: false },
   ],
+  rules: [],
 };
 
 const bounded = (text: string) => ({
@@ -118,7 +123,7 @@ test("compile errors, timeouts and runtime failures are all shown", () => {
 
 test("additional checks reveal categories, never hidden names, values, traces or printed inputs", () => {
   const secret = "PRIVATE_SENTINEL";
-  const hidden: Executable = {
+  const hidden: Revision = {
     ...challenge,
     cases: [
       {
@@ -126,7 +131,7 @@ test("additional checks reveal categories, never hidden names, values, traces or
         name: secret + " name",
         input: secret + " input",
         expected: secret + " expected",
-        visible: false,
+        hidden: true,
       },
     ],
   };
@@ -173,7 +178,7 @@ test("additional checks reveal categories, never hidden names, values, traces or
 });
 
 test("full Submit never reveals run-level compile/load error text with hidden cases", () => {
-  const hidden: Executable = {
+  const hidden: Revision = {
     ...challenge,
     cases: [
       ...challenge.cases,
@@ -181,7 +186,7 @@ test("full Submit never reveals run-level compile/load error text with hidden ca
         id: "secret",
         input: "SECRET_INPUT",
         expected: "SECRET_EXPECTED",
-        visible: false,
+        hidden: true,
       },
     ],
   };

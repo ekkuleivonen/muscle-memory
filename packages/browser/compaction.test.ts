@@ -32,9 +32,9 @@ const artifact = (source: string, revision: number): StoredRecord => ({
   payload: "{}",
 });
 
-const first = { challenge: "frequency-map", attemptId: "attempt-1" };
-const second = { challenge: "frequency-map", attemptId: "attempt-2" };
-const other = { challenge: "format-price", attemptId: "attempt-3" };
+const first = { challenge: "PY-002", attemptId: "attempt-1" };
+const second = { challenge: "PY-002", attemptId: "attempt-2" };
+const other = { challenge: "JS-003", attemptId: "attempt-3" };
 const records = [
   observation("site.viewed", "site-a"),
   observation("practice.started", "practice-a", first),

@@ -1,8 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import { openPracticeStore } from "../../../../../packages/browser/practice-store";
-import type { Revision } from "../../../../../packages/content/model";
-import type { StoredRecord } from "../../../../../packages/domain/records";
 
 export function Receipt({
   headline,
@@ -24,7 +22,7 @@ export function Receipt({
     <div className="receipt">
       <div className="receipt-top">
         <span>{top}</span>
-        <span className="receipt-merged">
+        <span className="receipt-status">
           {completed ? "✔ completed" : "not completed"}
         </span>
       </div>
@@ -67,14 +65,6 @@ export function useReferral(): string | null {
   return code;
 }
 
-export interface ResultInput {
-  number: number;
-  issue: { key: string; slug: string; title: string; revision: string };
-  language: string;
-  records: readonly StoredRecord[];
-  mergedAt: string;
-  revisions: Record<string, Revision>;
-}
 
 /**
  * Copies text: the Clipboard API where the page is a secure context (HTTPS, localhost), else

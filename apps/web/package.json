@@ -2,9 +2,9 @@
   "name": "@muscle-memory/web",
   "private": true,
   "scripts": {
-    "predev": "node ../../tools/build-runtimes.mjs",
+    "predev": "node ../../tools/build-runtimes.mjs && node --import tsx ../../tools/build-content.ts",
     "dev": "next dev --webpack",
-    "prebuild": "node ../../tools/build-runtimes.mjs",
+    "prebuild": "node ../../tools/build-runtimes.mjs && node --import tsx ../../tools/build-content.ts",
     "build": "next build --webpack",
     "build:cloudflare": "opennextjs-cloudflare build",
     "preview": "opennextjs-cloudflare preview"

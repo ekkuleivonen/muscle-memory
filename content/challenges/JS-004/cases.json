@@ -1,0 +1,240 @@
+[
+  {
+    "input": {
+      "code": null,
+      "lines": [
+        {
+          "sku": "tee",
+          "price": 2500,
+          "quantity": 1
+        }
+      ]
+    },
+    "expected": "Spend $25.00 more for free shipping"
+  },
+  {
+    "input": {
+      "code": null,
+      "lines": [
+        {
+          "sku": "rain-jacket",
+          "price": 5000,
+          "quantity": 1
+        }
+      ]
+    },
+    "expected": "Your order ships free"
+  },
+  {
+    "input": {
+      "code": {
+        "percent": 10
+      },
+      "lines": [
+        {
+          "sku": "rain-jacket",
+          "price": 5000,
+          "quantity": 1
+        }
+      ]
+    },
+    "expected": "Spend $5.00 more for free shipping"
+  },
+  {
+    "input": {
+      "code": {
+        "percent": 10
+      },
+      "lines": []
+    },
+    "expected": null
+  },
+  {
+    "input": {
+      "code": null,
+      "lines": [
+        {
+          "sku": "tee",
+          "price": 2500,
+          "quantity": 2
+        }
+      ]
+    },
+    "expected": "Your order ships free"
+  },
+  {
+    "input": {
+      "code": null,
+      "lines": [
+        {
+          "sku": "beanie",
+          "price": 4999,
+          "quantity": 1
+        }
+      ]
+    },
+    "expected": "Spend $0.01 more for free shipping",
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": {
+        "amount": 1500
+      },
+      "lines": [
+        {
+          "sku": "mug",
+          "price": 1000,
+          "quantity": 1
+        }
+      ]
+    },
+    "expected": "Spend $50.00 more for free shipping",
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": {
+        "percent": 10
+      },
+      "lines": [
+        {
+          "sku": "boots",
+          "price": 3000,
+          "quantity": 2
+        },
+        {
+          "sku": "gift-wrap",
+          "price": 0,
+          "quantity": 1
+        }
+      ]
+    },
+    "expected": "Your order ships free",
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": null,
+      "lines": []
+    },
+    "expected": null,
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": null,
+      "lines": [
+        {
+          "sku": "socks",
+          "price": 1200,
+          "quantity": 4
+        }
+      ]
+    },
+    "expected": "Spend $2.00 more for free shipping",
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": {
+        "percent": 10
+      },
+      "lines": [
+        {
+          "sku": "fleece",
+          "price": 5555,
+          "quantity": 1
+        }
+      ]
+    },
+    "expected": "Spend $0.01 more for free shipping",
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": {
+        "amount": 500
+      },
+      "lines": [
+        {
+          "sku": "tee",
+          "price": 2500,
+          "quantity": 1
+        },
+        {
+          "sku": "socks",
+          "price": 1200,
+          "quantity": 1
+        },
+        {
+          "sku": "mug",
+          "price": 1000,
+          "quantity": 1
+        }
+      ]
+    },
+    "expected": "Spend $8.00 more for free shipping",
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": null,
+      "lines": [
+        {
+          "sku": "gift-wrap",
+          "price": 0,
+          "quantity": 1
+        }
+      ]
+    },
+    "expected": "Spend $50.00 more for free shipping",
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": {
+        "percent": 10
+      },
+      "lines": [
+        {
+          "sku": "fleece",
+          "price": 5556,
+          "quantity": 1
+        }
+      ]
+    },
+    "expected": "Your order ships free",
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": {
+        "amount": 1500
+      },
+      "lines": [
+        {
+          "sku": "sofa",
+          "price": 129900,
+          "quantity": 1
+        }
+      ]
+    },
+    "expected": "Your order ships free",
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": null,
+      "lines": [
+        {
+          "sku": "scarf",
+          "price": 4995,
+          "quantity": 1
+        }
+      ]
+    },
+    "expected": "Spend $0.05 more for free shipping",
+    "hidden": true
+  }
+]

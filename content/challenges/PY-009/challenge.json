@@ -1,0 +1,12 @@
+{
+  "title": "Volunteers have to expand ditto marks by hand",
+  "summary": "Expand ditto marks the way the paper notebook means them, and list the rows that can't be expanded.",
+  "difficulty": "hard",
+  "tags": [
+    "parsing",
+    "state",
+    "edge-cases"
+  ],
+  "file": "transcribe.py",
+  "entrypoint": "read_notebook"
+}

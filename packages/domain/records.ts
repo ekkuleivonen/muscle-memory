@@ -45,7 +45,7 @@ export interface Envelope<T extends string, D> {
   /** The Terms and Privacy Notice version the participant accepted. */
   readonly termsVersion: string;
   readonly assignments: Assignments;
-  /** The challenge's permanent id, when the observation is about one. */
+  /** The challenge's key, such as PY-003, when the observation is about one. */
   readonly challenge: string | null;
   /** Its revision, sha256:… of its content. */
   readonly challengeRevision: string | null;
@@ -64,7 +64,7 @@ export interface EnvelopeInput {
   readonly elapsedMs: number;
   readonly termsVersion: string;
   readonly assignments?: Assignments;
-  readonly challenge?: { readonly id: string; readonly revision: string } | null;
+  readonly challenge?: { readonly key: string; readonly revision: string } | null;
   readonly attemptId?: string | null;
 }
 
@@ -89,7 +89,7 @@ export function envelope<T extends string, D>(
     throw new Error("Observations name the accepted Terms version.");
   const challenge = input.challenge ?? null;
   if (challenge) {
-    safeIdentifier(challenge.id);
+    if (!CHALLENGE_KEY.test(challenge.key)) throw new Error("Observations name a challenge by its key.");
     if (!REVISION.test(challenge.revision))
       throw new Error("Observations name the challenge's exact revision.");
   }
@@ -114,7 +114,7 @@ export function envelope<T extends string, D>(
     captureVersion,
     termsVersion,
     assignments,
-    challenge: challenge?.id ?? null,
+    challenge: challenge?.key ?? null,
     challengeRevision: challenge?.revision ?? null,
     attemptId,
     data,

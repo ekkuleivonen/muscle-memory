@@ -1,0 +1,15 @@
+{
+  "title": "Compute nearest-rank percentiles for the latency panel",
+  "summary": "Compute nearest-rank percentiles for the metrics endpoint.",
+  "difficulty": "medium",
+  "tags": [
+    "sorting",
+    "statistics"
+  ],
+  "file": "percentile.go",
+  "entrypoint": "Percentile",
+  "parameters": [
+    "samples",
+    "p"
+  ]
+}

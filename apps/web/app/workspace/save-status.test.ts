@@ -11,8 +11,9 @@ import { saveState } from "./save-state";
 import { live } from "../../lib/test-fixtures";
 import { WorkspaceSession, type SaveStatus } from "./session";
 
-const fixture = live("frequency-map");
-const ISSUE = "frequency-map";
+const base = live("PY-002");
+const fixture = { ...base, path: base.revision.file, starter: base.revision.starter };
+const ISSUE = "PY-002";
 const P = "synthetic-participant";
 const ATTEMPT = "attempt-1";
 const SAVED = /^All changes saved/;
@@ -23,9 +24,8 @@ function workspace(sink: CaptureSink, initialCode = "") {
   const session = new WorkspaceSession({
     participantId: P,
     termsVersion: "2026-10-01",
-    challenge: { id: ISSUE, key: "PY-002", revision: fixture.revision, revisionId: fixture.id },
+    challenge: { key: ISSUE, revision: fixture.revision, revisionId: fixture.id },
     attemptId: ATTEMPT,
-    executable: fixture.executable,
     sink,
     files: {
       [fixture.path]: {

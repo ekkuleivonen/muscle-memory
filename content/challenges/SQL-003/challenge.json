@@ -1,0 +1,11 @@
+{
+  "title": "Find orders with no matching payment",
+  "summary": "Reconcile orders against payments before month-end close.",
+  "difficulty": "medium",
+  "tags": [
+    "joins",
+    "reconciliation"
+  ],
+  "file": "queries/unpaid-orders.sql",
+  "entrypoint": "query"
+}

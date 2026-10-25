@@ -7,8 +7,10 @@ __pycache__/
 !apps/web/.env.production
 *.db
 *.sqlite*
-private/
-exports/
+/private/
+/exports/
+# Built from content/challenges by npm run build:content.
+content/catalog.json
 node_modules/
 .next/
 .open-next/

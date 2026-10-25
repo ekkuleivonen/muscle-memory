@@ -1,0 +1,12 @@
+{
+  "title": "Sign-up creates a second account for the same email",
+  "summary": "Look accounts up by a canonical form of the address, so case, spaces and Gmail dots don't make a new account.",
+  "difficulty": "medium",
+  "tags": [
+    "strings",
+    "validation",
+    "normalization"
+  ],
+  "file": "canonical_email.go",
+  "entrypoint": "CanonicalEmail"
+}

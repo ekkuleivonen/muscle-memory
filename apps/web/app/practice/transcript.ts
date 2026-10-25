@@ -6,14 +6,13 @@
 import {
   casesRun,
   type Case,
-  type Executable,
+  type Revision,
 } from "../../../../packages/content/model";
 import { privateCheckFailure } from "./check-feedback";
 import { runFeedback } from "../../../../packages/domain/records";
 import type { CaseResult, CodeError } from "../../../../packages/runner/runner";
 import type { RunView } from "../workspace/session";
 
-export type { Executable };
 export type Tone = "out" | "err" | "pass" | "fail" | "dim";
 export interface Line {
   text: string;
@@ -21,7 +20,7 @@ export interface Line {
 }
 
 /** How a case reads: the call, or for SQL the rows it starts with. */
-export function caseLabel(challenge: Executable, input: unknown): string {
+export function caseLabel(challenge: Revision, input: unknown): string {
   if (challenge.schema && input && typeof input === "object")
     return Object.entries(input as Record<string, unknown[]>)
       .map(
@@ -47,15 +46,15 @@ function errorLines(error: CodeError, indent = ""): Line[] {
 }
 
 function caseLines(
-  challenge: Executable,
+  challenge: Revision,
   check: Case,
   passed: boolean,
   result?: CaseResult,
 ): Line[] {
-  const label = check.visible
+  const label = !check.hidden
     ? (check.name ?? caseLabel(challenge, check.input))
     : "Additional check";
-  if (!check.visible)
+  if (check.hidden)
     return [
       {
         text: `${passed ? "✔" : "✘"} ${label}${passed ? "" : `: ${privateCheckFailure(result)}`}`,
@@ -85,7 +84,7 @@ export function toolchain(label: string): string {
 
 export function transcript(
   run: RunView | null,
-  challenge: Executable,
+  challenge: Revision,
   runtimeLabel: string,
 ): Line[] {
   if (!run) return [];
@@ -115,7 +114,7 @@ export function transcript(
     ];
   const out: Line[] = [header];
   const privateCases = casesRun(challenge.cases, run.purpose).some(
-    (check) => !check.visible,
+    (check) => check.hidden,
   );
   if (privateCases)
     out.push({

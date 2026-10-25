@@ -36,7 +36,7 @@ export interface RecorderOptions {
   readonly termsVersion: string;
   readonly assignments?: Assignments;
   /** The challenge, the revision worked against, and the attempt. */
-  readonly challenge: { readonly id: string; readonly revision: string };
+  readonly challenge: { readonly key: string; readonly revision: string };
   readonly attemptId: string;
   readonly sink: CaptureSink;
   readonly maxRecords?: number;

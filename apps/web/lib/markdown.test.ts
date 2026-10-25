@@ -4,7 +4,7 @@ import { parseInline, parseMarkdown, safeHref } from "./markdown";
 import { live } from "./test-fixtures";
 
 test("SQL challenge schemas render as structured tables without interpreting HTML", () => {
-  const blocks = parseMarkdown(live("collected-by-partner").revision.body);
+  const blocks = parseMarkdown(live("SQL-002").revision.task);
   const table = blocks.find((block) => block.type === "table");
   assert.ok(table && table.type === "table");
   assert.equal(table.header.length, 4);

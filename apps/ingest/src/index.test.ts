@@ -44,7 +44,7 @@ function observation(participantId: string, sequence: number, extra: Record<stri
     captureVersion: PRACTICE_CAPTURE_VERSION,
     termsVersion: "2026-10-25",
     assignments: {},
-    challenge: "frequency-map",
+    challenge: "PY-002",
     challengeRevision: "sha256:" + "a".repeat(64),
     attemptId: "attempt-a",
     data: { file: "x.py", keys: [[1, "down", "a", "KeyA", "", false]] },
@@ -92,7 +92,7 @@ test("a batch becomes one row per record, the payload kept verbatim", async () =
   assert.deepEqual(
     sent.map((r) => [r.kind, r.type, r.sequence, r.elapsed_ms, r.challenge, r.attempt_id, r.session_id, r.terms_version]),
     [
-      ["observation", "practice.keys", 1, 12.5, "frequency-map", "attempt-a", "session-a", "2026-10-25"],
+      ["observation", "practice.keys", 1, 12.5, "PY-002", "attempt-a", "session-a", "2026-10-25"],
       ["artifact", "artifact.code-revision", null, null, null, null, null, null],
       ["observation", "site.page", 5, 62.5, null, null, "session-a", "2026-10-25"],
     ],

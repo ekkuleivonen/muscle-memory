@@ -1,0 +1,18 @@
+[
+  {
+    "id": "line-taxes",
+    "message": "Keep the exported `lineTaxes(amounts, rate)`, returning each line's share of the order's tax, and take the receipt's line taxes from it: the finance export calls it too.",
+    "when": {
+      "pattern": "(?<!function\\s+)\\blineTaxes\\s*\\(",
+      "present": false
+    }
+  },
+  {
+    "id": "to-fixed",
+    "message": "Keep money in whole cents: no `toFixed` or `parseFloat`.",
+    "when": {
+      "pattern": "\\.toFixed\\(|parseFloat\\(",
+      "present": true
+    }
+  }
+]

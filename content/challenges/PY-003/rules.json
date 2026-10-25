@@ -1,0 +1,10 @@
+[
+  {
+    "id": "shared-helper",
+    "message": "Species names must come from `canonical_name`, not from a naming rule of your own.",
+    "when": {
+      "pattern": "^(?!\\s*def ).*\\bcanonical_name\\(",
+      "present": false
+    }
+  }
+]

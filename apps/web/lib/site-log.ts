@@ -42,7 +42,7 @@ export const PREVIOUS_PATH_KEY = "muscle-memory.previous-path";
 /** Where an arrival is remembered until the Terms are accepted and it can be recorded. */
 const ARRIVAL_KEY = "muscle-memory.arrival";
 
-type Challenge = { id: string; revision: string };
+type Challenge = { key: string; revision: string };
 
 /**
  * Remembers the first landing page and any referral code, before anything may be recorded.

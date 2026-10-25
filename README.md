@@ -29,7 +29,7 @@ npm run build:cloudflare
 
 See [Cloudflare build notes](docs/cloudflare-build.md). No account or deployment is required for local builds.
 
-Content is seed data for now: `content/seed.ts` (and `content/more/`) holds the challenges, and `npm run build:content` turns it into `content/catalog.json` (each challenge's files laid out, each revision hashed). `npm run check:content` fails if the catalog is out of date. An admin system with a database will replace the seed.
+Challenges are folders of plain files in `content/challenges/<KEY>/` ([challenges](docs/challenges.md)); `npm run build:content` checks them and builds `content/catalog.json` (each revision hashed), before dev, builds and tests. An admin system with a database will replace the folders.
 
 ## Monorepo
 
@@ -40,7 +40,7 @@ Content is seed data for now: `content/seed.ts` (and `content/more/`) holds the 
 - `packages/capture`: bounded, ordered capture with retry and gap disclosure, and exact code restore.
 - `packages/browser`: device-local storage (IndexedDB), compaction and the uploader.
 - `packages/runner`: sandboxed in-browser runtimes, one engine per language (Pyodide, the browser's JavaScript engine with Sucrase, PGlite, linkedom, php-wasm, ruby.wasm, Yaegi for Go, Clang for C and C++, Roslyn on .NET for C#, teavm-javac for Java) behind one opaque-origin, network-denied iframe.
-- `content`: the seed (`seed.ts`) and the built catalog (`catalog.json`).
+- `content/challenges`: every challenge, one folder each.
 - `docs`: [getting started and sharing](docs/start.md), [challenges](docs/challenges.md), [practice and runners](docs/workspace.md), [what we record](docs/telemetry.md), [the profile](docs/profile.md), [legal](docs/legal.md) and the planned [model runs](docs/model-runs.md).
 
 See [contributing](CONTRIBUTING.md) and [security](SECURITY.md). Licensed under MIT.

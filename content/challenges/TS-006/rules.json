@@ -1,0 +1,18 @@
+[
+  {
+    "id": "keep-grace",
+    "message": "Keep the grace window for a just-rotated token, measured with `REFRESH_GRACE_MS`.",
+    "when": {
+      "pattern": "^(?!\\s*(\\*|//|const REFRESH_GRACE_MS\\b)).*\\bREFRESH_GRACE_MS\\b",
+      "present": false
+    }
+  },
+  {
+    "id": "no-console",
+    "message": "No console logging in the gateway: no `console.log`, `info`, `debug`, `warn` or `error`.",
+    "when": {
+      "pattern": "console\\.(log|info|debug|warn|error)\\(",
+      "present": true
+    }
+  }
+]

@@ -169,9 +169,9 @@ export function Picker({
     const starred = !stars.includes(issue.key);
     writeStars(toggleStar(stars, issue.key));
     void logStar(
-      { id: issue.slug, revision: issue.revision },
+      { key: issue.key, revision: issue.revision },
       starred,
-      { challengeKey: issue.key, from: "picker" },
+      { from: "picker" },
     );
   };
   const warm = (issue: PickerChallenge) => {

@@ -1,0 +1,13 @@
+{
+  "title": "Receipt tax lines don't add up to the tax charged",
+  "summary": "Line taxes on receipts and in the finance export don't sum to the order's tax, and gift cards get taxed.",
+  "difficulty": "hard",
+  "tags": [
+    "money",
+    "rounding",
+    "debugging",
+    "reading-code"
+  ],
+  "file": "src/checkout/receipt.ts",
+  "entrypoint": "receipt"
+}

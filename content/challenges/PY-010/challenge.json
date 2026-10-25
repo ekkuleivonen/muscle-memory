@@ -1,0 +1,13 @@
+{
+  "title": "Bluefin settlements don't match their statements",
+  "summary": "Bluefin's new export writes refunds and fees in brackets; the report loses or misreads them.",
+  "difficulty": "hard",
+  "tags": [
+    "debugging",
+    "parsing",
+    "money",
+    "reading-code"
+  ],
+  "file": "report.py",
+  "entrypoint": "settlement_summary"
+}

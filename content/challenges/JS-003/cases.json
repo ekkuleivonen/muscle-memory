@@ -1,0 +1,87 @@
+[
+  {
+    "input": 123456,
+    "expected": "$1,234.56"
+  },
+  {
+    "input": 5,
+    "expected": "$0.05"
+  },
+  {
+    "input": 0,
+    "expected": "$0.00"
+  },
+  {
+    "input": -500,
+    "expected": "-$5.00"
+  },
+  {
+    "input": 100000000,
+    "expected": "$1,000,000.00"
+  },
+  {
+    "input": 1,
+    "expected": "$0.01",
+    "hidden": true
+  },
+  {
+    "input": 10,
+    "expected": "$0.10",
+    "hidden": true
+  },
+  {
+    "input": 99,
+    "expected": "$0.99",
+    "hidden": true
+  },
+  {
+    "input": 100,
+    "expected": "$1.00",
+    "hidden": true
+  },
+  {
+    "input": 1050,
+    "expected": "$10.50",
+    "hidden": true
+  },
+  {
+    "input": 99999,
+    "expected": "$999.99",
+    "hidden": true
+  },
+  {
+    "input": 100000,
+    "expected": "$1,000.00",
+    "hidden": true
+  },
+  {
+    "input": 123456789,
+    "expected": "$1,234,567.89",
+    "hidden": true
+  },
+  {
+    "input": 12345678901,
+    "expected": "$123,456,789.01",
+    "hidden": true
+  },
+  {
+    "input": -1,
+    "expected": "-$0.01",
+    "hidden": true
+  },
+  {
+    "input": -99,
+    "expected": "-$0.99",
+    "hidden": true
+  },
+  {
+    "input": -123456,
+    "expected": "-$1,234.56",
+    "hidden": true
+  },
+  {
+    "input": -100000000,
+    "expected": "-$1,000,000.00",
+    "hidden": true
+  }
+]

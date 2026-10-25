@@ -1,0 +1,10 @@
+[
+  {
+    "id": "debug-print",
+    "message": "Don't print anything: the scanner job ships everything on stdout to the warehouse logs.",
+    "when": {
+      "pattern": "^\\s*print\\(",
+      "present": true
+    }
+  }
+]

@@ -1,0 +1,11 @@
+{
+  "title": "Timeouts in config must be written in seconds",
+  "summary": "Accept durations like 1h30m in config files.",
+  "difficulty": "easy",
+  "tags": [
+    "parsing",
+    "config"
+  ],
+  "file": "parse_duration.go",
+  "entrypoint": "ParseDuration"
+}

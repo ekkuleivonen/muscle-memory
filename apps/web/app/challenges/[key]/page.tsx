@@ -35,8 +35,8 @@ export default async function PracticePage({ params }: Props) {
   const content = revisionOf(issue.revision)!;
   return (
     <Ide
-      key={`${issue.slug}:${issue.revision}`}
-      revisionsJson={JSON.stringify({ [issue.revision]: content })}
+      key={`${issue.key}:${issue.revision}`}
+      revisionJson={JSON.stringify(content)}
       trail={[
         { label: "challenges", href: "/challenges" },
         { label: issue.key, href: practiceHref(issue.key) },
@@ -47,10 +47,9 @@ export default async function PracticePage({ params }: Props) {
       ]}
       issue={{
         key: issue.key,
-        slug: issue.slug,
         revision: issue.revision,
         title: issue.title,
-        task: content.body,
+        task: content.task,
         difficulty: issue.difficulty,
         tags: [...issue.tags],
         language: issue.language!,

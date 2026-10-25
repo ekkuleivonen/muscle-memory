@@ -1,0 +1,11 @@
+{
+  "title": "The composer says 1 word when the post is empty",
+  "summary": "A small bug: the word count under the text box is off.",
+  "difficulty": "easy",
+  "tags": [
+    "strings",
+    "edge-cases"
+  ],
+  "file": "count_words.go",
+  "entrypoint": "CountWords"
+}

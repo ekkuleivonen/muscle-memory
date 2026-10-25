@@ -16,7 +16,6 @@ import {
 import { latestSavedCode } from "../../../../packages/capture/restore";
 import {
   casesRun,
-  executableOf,
   type Difficulty,
   type Revision,
 } from "../../../../packages/content/model";
@@ -37,8 +36,7 @@ import {
 } from "../../../../packages/runner/runner";
 import { readProfile } from "../../lib/account";
 import { languageLabel } from "../../lib/library";
-import type { LanguageId } from "../../lib/languages";
-import { mediaTypeOf, type FileLanguage } from "../../lib/entry";
+import { mediaTypeOf, type FileLanguage, type LanguageId } from "../../lib/languages";
 import { environmentOf } from "../../lib/environment";
 import {
   attemptFor,
@@ -57,7 +55,7 @@ import {
 import { Markdown } from "../(browse)/_components/markdown";
 import { type Keymap } from "../workspace/editor";
 import { checksTypes, TypeChecker } from "../workspace/type-checker";
-import { caseLabel, transcript, type Executable } from "./transcript";
+import { caseLabel, transcript } from "./transcript";
 import { recoveryMessage, saveBadge } from "../workspace/save-state";
 import {
   RUN_TIMEOUT_MS,
@@ -94,7 +92,6 @@ import type { IssueSummary } from "../../lib/library";
 
 export interface IdeIssue {
   key: string;
-  slug: string;
   /** The live revision the IDE opens: sha256:… of its content. */
   revision: string;
   title: string;
@@ -141,7 +138,7 @@ function attemptObservations(
  * start after a completed attempt begins a new one.
  */
 export function Ide({
-  revisionsJson,
+  revisionJson,
   candidates,
   issue,
   trail,
@@ -150,21 +147,16 @@ export function Ide({
    * The challenge's live revision by id, as a JSON string: React's serializer would drop a
    * "__proto__" fixture key.
    */
-  revisionsJson: string;
+  revisionJson: string;
   /** Where the challenge sits, for the status bar's breadcrumb trail. */
   trail: readonly Crumb[];
   candidates: IssueSummary[];
   issue: IdeIssue;
 }) {
-  const revisions = useMemo(
-    () => JSON.parse(revisionsJson) as Record<string, Revision>,
-    [revisionsJson],
-  );
-  const revision = revisions[issue.revision];
-  const challenge = useMemo(() => executableOf(revision), [revision]);
-  const home = revision.workspace.entry;
-  const source = revision.workspace.files[home];
-  const editable = [{ path: home, ...source }];
+  const revision = useMemo(() => JSON.parse(revisionJson) as Revision, [revisionJson]);
+  const challenge = revision;
+  const home = revision.file;
+  const editable = [{ path: home, text: revision.starter, language: revision.language }];
   const [outputOpen, setOutputOpen] = useState(false);
   const savedScope = useRef<string | null>(null);
   const pendingPlaces = useRef<Record<string, FileView>>({});
@@ -267,17 +259,16 @@ export function Ide({
   const starred = stars.includes(issue.key);
   const star = () => {
     writeStars(toggleStar(stars, issue.key));
-    void logStar({ id: issue.slug, revision: issue.revision }, !starred, {
-      challengeKey: issue.key,
+    void logStar({ key: issue.key, revision: issue.revision }, !starred, {
       from: "practice",
     });
   };
   const completedKeys = useMemo(
     () =>
       new Set(
-        Object.values(progress)
-          .filter((p) => p.completions > 0)
-          .map((p) => p.key),
+        Object.entries(progress)
+          .filter(([, p]) => p.completions > 0)
+          .map(([key]) => key),
       ),
     [progress],
   );
@@ -329,7 +320,7 @@ export function Ide({
   /** The attempt completed: progress says so, and the share card reads the records. */
   async function completed(current: WorkspaceSession, attemptId: string) {
     writeProgress(
-      complete(readProgress(), issue.slug, attemptId, new Date().toISOString()),
+      complete(readProgress(), issue.key, attemptId, new Date().toISOString()),
     );
     if (session.current !== current) return;
     setAttempt({ id: attemptId, completed: true });
@@ -360,21 +351,21 @@ export function Ide({
       const now = new Date().toISOString();
       const chosen = attemptFor(
         readProgress(),
-        { id: issue.slug, key: issue.key },
+        issue.key,
         start !== null,
         now,
         randomAttempt,
       );
       if (chosen.fresh) writeProgress(chosen.progress);
       const attemptId = chosen.attempt;
-      const done = chosen.progress[issue.slug]?.completedAt != null;
+      const done = chosen.progress[issue.key]?.completedAt != null;
       setAttempt({ id: attemptId, completed: done });
       if (done) setShareRecords(records);
-      const observed = attemptObservations(records, issue.slug, attemptId);
+      const observed = attemptObservations(records, issue.key, attemptId);
       const recovered = latestSavedCode(
         records,
         participantId,
-        issue.slug,
+        issue.key,
         attemptId,
       );
       if (recovered)
@@ -392,7 +383,7 @@ export function Ide({
             .filter(Boolean)
             .join(" "),
         );
-      savedScope.current = `${participantId}:${viewScope(issue.slug, attemptId)}`;
+      savedScope.current = `${participantId}:${viewScope(issue.key, attemptId)}`;
       const saved = readView(savedScope.current);
       if (saved) {
         const fitted = fitView(saved, {
@@ -412,7 +403,6 @@ export function Ide({
         participantId,
         termsVersion: account?.accepted?.version ?? "1970-01-01",
         challenge: {
-          id: issue.slug,
           key: issue.key,
           revision,
           revisionId: issue.revision,
@@ -420,13 +410,11 @@ export function Ide({
         attemptId,
         started: chosen.fresh
           ? {
-              challengeKey: issue.key,
               from: start?.from ?? "direct",
               query: start?.query ?? null,
               position: start?.position ?? null,
             }
           : null,
-        executable: challenge,
         sink: store.current,
         files: Object.fromEntries(
           editable.map((f) => [
@@ -437,11 +425,6 @@ export function Ide({
               mediaType: mediaTypeOf(f.language as LanguageId),
             },
           ]),
-        ),
-        sources: Object.fromEntries(
-          Object.entries(revision.workspace.files)
-            .filter(([, file]) => file.role === "read")
-            .map(([path, file]) => [path, file.text]),
         ),
         restoredFrom: recovered?.revision,
         language: issue.language,
@@ -493,7 +476,7 @@ export function Ide({
     const attempt = ++generation.current;
     startRuntime();
     if (checksTypes(issue.language))
-      types.current = new TypeChecker(challenge.entry);
+      types.current = new TypeChecker(challenge.file);
     void open(() => attempt === generation.current);
     const saveView = () => persistView();
     window.addEventListener("pagehide", saveView);
@@ -520,8 +503,8 @@ export function Ide({
   }, []);
 
   useEffect(
-    () => setChallengeContext({ id: issue.slug, revision: issue.revision }),
-    [issue.slug, issue.revision],
+    () => setChallengeContext({ key: issue.key, revision: issue.revision }),
+    [issue.key, issue.revision],
   );
 
   // The page: visible or hidden, focused or not, its size, and its last moments.
@@ -571,7 +554,7 @@ export function Ide({
 
   const running = run?.status === "queued" || run?.status === "running";
   const ready = runtime.state === "ready" && opening.state === "open";
-  const publishedExamples = challenge.cases.filter((c) => c.visible);
+  const publishedExamples = challenge.cases.filter((c) => !c.hidden);
   const verdict = submission?.verdict ?? null;
   const done = !!attempt?.completed;
   const check = checkFeedbackOf({
@@ -821,7 +804,7 @@ export function Ide({
                     />
                     {shareRecords && (
                       <ShareOutcome
-                        challenge={{ ...issue, id: issue.slug }}
+                        challenge={issue}
                         attemptId={attempt.id}
                         records={shareRecords}
                         revision={revision}
@@ -926,7 +909,7 @@ function Tests({
   runtime,
   onRetry,
 }: {
-  challenge: Executable;
+  challenge: Revision;
   run: RunView | null;
   stale: boolean;
   issue: IdeIssue;
@@ -998,12 +981,12 @@ function Tests({
             key={index}
             index={index}
             label={
-              check.visible
+              !check.hidden
                 ? (check.name ?? caseLabel(challenge, check.input))
                 : `Additional check ${index + 1}`
             }
-            visible={check.visible}
-            expected={check.visible ? check.expected : undefined}
+            visible={!check.hidden}
+            expected={!check.hidden ? check.expected : undefined}
             passed={feedback.passed[index]}
             result={o.cases[index]}
           />
@@ -1092,7 +1075,7 @@ function Output({
   runtime,
 }: {
   run: RunView | null;
-  challenge: Executable;
+  challenge: Revision;
   runtime: string;
 }) {
   const log = transcript(run, challenge, runtime);

@@ -19,7 +19,7 @@ const observation = (type: string, data: object, attemptId = "attempt-1") => ({
   participantId: "p",
   payload: JSON.stringify({
     type,
-    challenge: "collected-by-partner",
+    challenge: "SQL-002",
     challengeRevision: REV,
     attemptId,
     occurredAt: `2026-10-25T10:${String(n).padStart(2, "0")}:00.000Z`,
@@ -54,7 +54,7 @@ const records = [
 const of = (r: typeof records, attemptId = "attempt-1", revision = REV) =>
   outcomeOf({
     records: r,
-    challenge: { id: "collected-by-partner", key: "SQL-002", revision },
+    challenge: { key: "SQL-002", revision },
     attemptId,
     language: "sql",
     referral: "ab12cd34ef56",

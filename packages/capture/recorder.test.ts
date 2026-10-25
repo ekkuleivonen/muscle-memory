@@ -22,7 +22,7 @@ function recorder(sink: CaptureSink, options: Partial<RecorderOptions> = {}) {
     sessionId: "session-1",
     sourceId: S,
     termsVersion: "2026-10-25",
-    challenge: { id: "frequency-map", revision: "sha256:" + "0".repeat(64) },
+    challenge: { key: "PY-002", revision: "sha256:" + "0".repeat(64) },
     attemptId: "attempt-1",
     sink,
     flushDelayMs: 0,
@@ -77,7 +77,7 @@ test("observations keep source order across batches and get stable IDs", async (
   assert.equal(stored[0].captureVersion, PRACTICE_CAPTURE_VERSION);
   assert.equal(stored[0].sessionId, "session-1");
   assert.equal(stored[0].attemptId, "attempt-1");
-  assert.equal(stored[0].challenge, "frequency-map");
+  assert.equal(stored[0].challenge, "PY-002");
   const stream = orderSource(
     P,
     S,

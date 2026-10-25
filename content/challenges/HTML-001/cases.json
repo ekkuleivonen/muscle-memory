@@ -1,0 +1,156 @@
+[
+  {
+    "input": [
+      "form input[type=checkbox]",
+      "name"
+    ],
+    "expected": [
+      "in-stock",
+      "on-sale"
+    ]
+  },
+  {
+    "input": [
+      "form input[type=checkbox]",
+      "id"
+    ],
+    "expected": [
+      "filter-in-stock",
+      "filter-on-sale"
+    ]
+  },
+  {
+    "input": [
+      "form input[type=checkbox]",
+      "label"
+    ],
+    "expected": [
+      "in-stock",
+      "on-sale"
+    ]
+  },
+  {
+    "input": [
+      "form label",
+      "text"
+    ],
+    "expected": [
+      "in-stock",
+      "on-sale"
+    ]
+  },
+  {
+    "input": [
+      "form",
+      "count"
+    ],
+    "expected": 1,
+    "hidden": true
+  },
+  {
+    "input": [
+      "input[type=checkbox]",
+      "count"
+    ],
+    "expected": 2,
+    "hidden": true
+  },
+  {
+    "input": [
+      "label",
+      "count"
+    ],
+    "expected": 2,
+    "hidden": true
+  },
+  {
+    "input": [
+      "form input[type=checkbox]",
+      "type"
+    ],
+    "expected": [
+      "checkbox",
+      "checkbox"
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      "form label",
+      "for"
+    ],
+    "expected": [
+      "filter-in-stock",
+      "filter-on-sale"
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      "#filter-in-stock",
+      "name"
+    ],
+    "expected": [
+      "in-stock"
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      "#filter-on-sale",
+      "name"
+    ],
+    "expected": [
+      "on-sale"
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      "#filter-in-stock",
+      "label"
+    ],
+    "expected": [
+      "in-stock"
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      "#filter-on-sale",
+      "label"
+    ],
+    "expected": [
+      "on-sale"
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      "label[for=filter-in-stock]",
+      "text"
+    ],
+    "expected": [
+      "in-stock"
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      "label[for=filter-on-sale]",
+      "text"
+    ],
+    "expected": [
+      "on-sale"
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      "form #filter-in-stock, form #filter-on-sale",
+      "count"
+    ],
+    "expected": 2,
+    "hidden": true
+  }
+]

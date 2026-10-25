@@ -1,0 +1,156 @@
+[
+  {
+    "input": [
+      100,
+      1
+    ],
+    "expected": 0.5
+  },
+  {
+    "input": [
+      101,
+      1
+    ],
+    "expected": 0.51
+  },
+  {
+    "input": [
+      1,
+      1
+    ],
+    "expected": 0.01
+  },
+  {
+    "input": [
+      250,
+      30
+    ],
+    "expected": 25
+  },
+  {
+    "input": [
+      99.9,
+      3
+    ],
+    "expected": 1.5
+  },
+  {
+    "input": [
+      80,
+      0
+    ],
+    "expected": 0
+  },
+  {
+    "input": [
+      5,
+      1
+    ],
+    "expected": 0.03,
+    "hidden": true
+  },
+  {
+    "input": [
+      9,
+      1
+    ],
+    "expected": 0.05,
+    "hidden": true
+  },
+  {
+    "input": [
+      21,
+      1
+    ],
+    "expected": 0.11,
+    "hidden": true
+  },
+  {
+    "input": [
+      33.3,
+      1
+    ],
+    "expected": 0.17,
+    "hidden": true
+  },
+  {
+    "input": [
+      10.1,
+      1
+    ],
+    "expected": 0.05,
+    "hidden": true
+  },
+  {
+    "input": [
+      100,
+      20
+    ],
+    "expected": 10,
+    "hidden": true
+  },
+  {
+    "input": [
+      100,
+      21
+    ],
+    "expected": 10,
+    "hidden": true
+  },
+  {
+    "input": [
+      5.05,
+      20
+    ],
+    "expected": 0.51,
+    "hidden": true
+  },
+  {
+    "input": [
+      5.05,
+      30
+    ],
+    "expected": 0.51,
+    "hidden": true
+  },
+  {
+    "input": [
+      80,
+      -3
+    ],
+    "expected": 0,
+    "hidden": true
+  },
+  {
+    "input": [
+      0,
+      10
+    ],
+    "expected": 0,
+    "hidden": true
+  },
+  {
+    "input": [
+      1234.5,
+      7
+    ],
+    "expected": 43.21,
+    "hidden": true
+  },
+  {
+    "input": [
+      1000000,
+      365
+    ],
+    "expected": 100000,
+    "hidden": true
+  },
+  {
+    "input": [
+      0.01,
+      1
+    ],
+    "expected": 0,
+    "hidden": true
+  }
+]

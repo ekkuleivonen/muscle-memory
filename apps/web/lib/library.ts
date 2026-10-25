@@ -15,9 +15,7 @@ import { LANGUAGES, type LanguageId } from "./languages";
 export const DIFFICULTIES: readonly Difficulty[] = ["easy", "medium", "hard"];
 
 export interface Issue {
-  /** The challenge's permanent id, as recorded data names it. */
-  slug: string;
-  /** Permanent identifier such as PY-003: the language's code and a number. */
+  /** Permanent, as recorded data names it: PY-003, the language's code and a number. */
   key: string;
   /** The live revision: sha256:… of its content. */
   revision: string;
@@ -50,7 +48,7 @@ export function languageLabel(id: string | undefined): string {
 
 /** Whether the browser can run this revision's code: an engine, plus what that engine needs. */
 export function runnable(revision: Revision): boolean {
-  const { language, schema, adapter } = revision.workspace;
+  const { language, schema, adapter } = revision;
   return (
     !!engineFor(language) &&
     (language !== "sql" || typeof schema === "string") &&
@@ -62,17 +60,16 @@ export function runnable(revision: Revision): boolean {
 
 function toIssue(meta: ChallengeMetadata, revision: Revision): Issue {
   return {
-    slug: meta.id,
     key: meta.key,
     revision: meta.revision,
     title: meta.title,
     summary: meta.summary,
-    task: revision.body,
+    task: revision.task,
     difficulty: meta.difficulty,
-    language: LANGUAGES.find((l) => l.id === revision.workspace.language)?.id,
+    language: LANGUAGES.find((l) => l.id === revision.language)?.id,
     tags: meta.tags,
-    criteria: revision.checks.cases
-      .filter((c) => c.visible)
+    criteria: revision.cases
+      .filter((c) => !c.hidden)
       .map(({ input, expected }) => ({ input, expected })),
     runnable: runnable(revision),
   };
@@ -81,7 +78,7 @@ function toIssue(meta: ChallengeMetadata, revision: Revision): Issue {
 export interface Library {
   /** Every challenge, by key. */
   issues: Issue[];
-  /** A challenge by key (any case) or its permanent id. */
+  /** A challenge by its key, in any case. */
   findIssue(ref: string): Issue | undefined;
   /** A live revision by id. */
   revision(id: string): Revision | undefined;
@@ -93,8 +90,7 @@ export function library(catalog: Catalog): Library {
   );
   return {
     issues,
-    findIssue: (ref) =>
-      issues.find((i) => i.key === ref.toUpperCase()) ?? issues.find((i) => i.slug === ref),
+    findIssue: (ref) => issues.find((i) => i.key === ref.toUpperCase()),
     revision: (id) => catalog.revisions[id],
   };
 }

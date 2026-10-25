@@ -1,10 +1,6 @@
 /** The real catalog, for tests: verified like the app verifies it. */
 import { readFileSync } from "node:fs";
-import {
-  editableFiles,
-  executableOf,
-  type Revision,
-} from "../../../packages/content/model";
+import type { Revision } from "../../../packages/content/model";
 import { verifyCatalog } from "../../../packages/content/revision";
 
 export const catalog = verifyCatalog(
@@ -13,23 +9,9 @@ export const catalog = verifyCatalog(
   ),
 );
 
-/** A challenge's live revision, with what a practice session needs from it. */
-export function live(issue: string): {
-  id: string;
-  revision: Revision;
-  executable: ReturnType<typeof executableOf>;
-  /** The entry file's path and starting text. */
-  path: string;
-  starter: string;
-} {
-  const meta = catalog.challenges.find((c) => c.id === issue);
-  if (!meta) throw new Error(`No challenge ${issue} in the catalog.`);
-  const revision = catalog.revisions[meta.revision];
-  return {
-    id: meta.revision,
-    revision,
-    executable: executableOf(revision),
-    path: revision.workspace.entry,
-    starter: editableFiles(revision.workspace)[revision.workspace.entry].text,
-  };
+/** A challenge's live revision and its id, by key. */
+export function live(key: string): { id: string; revision: Revision } {
+  const meta = catalog.challenges.find((c) => c.key === key);
+  if (!meta) throw new Error(`No challenge ${key} in the catalog.`);
+  return { id: meta.revision, revision: catalog.revisions[meta.revision] };
 }

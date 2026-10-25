@@ -114,14 +114,14 @@ export function completedRun(
  */
 export function outcomeOf(input: {
   records: readonly StoredRecord[];
-  challenge: { id: string; key: string; revision: string };
+  challenge: { key: string; revision: string };
   attemptId: string;
   language: string;
   referral: string;
 }): Outcome | null {
   const revision = /^sha256:([0-9a-f]{64})$/.exec(input.challenge.revision)?.[1];
   if (!revision) return null;
-  const { list, completedRun } = submissions(input.records, input.challenge.id, input.attemptId);
+  const { list, completedRun } = submissions(input.records, input.challenge.key, input.attemptId);
   const index = list.findIndex((s) => s.runId === completedRun);
   const final = list[index];
   if (!final || final.result !== "passed" || final.total === 0 || final.passed !== final.total || final.rules)

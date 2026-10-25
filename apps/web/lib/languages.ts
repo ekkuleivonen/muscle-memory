@@ -39,3 +39,12 @@ export const OFFERED: readonly LanguageId[] = [
   "csharp",
   "java",
 ];
+
+/** A file's language in the editor: a challenge's language, or plain text. */
+export type FileLanguage = LanguageId | "markdown" | "text";
+
+/** The media type a code revision is recorded with. */
+export function mediaTypeOf(language: LanguageId): string {
+  if (language === "html") return "text/html; charset=utf-8";
+  return `text/x-${language}; charset=utf-8`;
+}

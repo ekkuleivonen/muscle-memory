@@ -4,13 +4,11 @@
  */
 import { keyProblem } from "./keys";
 import type { Catalog, Difficulty, Revision, RuleTrigger } from "./model";
-import { engineFor } from "../runner/engines";
 
 const ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const TAG = /^[a-z0-9][a-z0-9-]{0,31}$/;
 const REVISION = /^sha256:[0-9a-f]{64}$/;
 const DIFFICULTIES: readonly Difficulty[] = ["easy", "medium", "hard"];
-const ROLES = ["edit", "read"];
 const METRICS = ["lines", "function-lines", "nesting"];
 
 function fail(where: string, problem: string): never {
@@ -50,43 +48,34 @@ function checkTrigger(trigger: RuleTrigger, where: string): void {
 }
 
 export function validateRevision(revision: Revision, where: string): void {
-  if (!ID.test(revision.challenge)) fail(where, "challenge id is not a slug");
-  text(revision.body, `${where} body`);
-  const { workspace } = revision;
-  text(workspace.language, `${where} language`);
-  text(workspace.entrypoint, `${where} entrypoint`);
-  const files = Object.entries(workspace.files);
-  const editable = files.filter(([, f]) => f.role === "edit");
-  // One file to change: the entry. Anything else is source it reads.
-  if (editable.length !== 1 || editable[0][0] !== workspace.entry)
-    fail(where, `the entry ${workspace.entry} must be the one editable file`);
-  // Only some runners load more than one file (engines.ts `multiFile`).
-  if (files.length > 1 && !engineFor(workspace.language)?.multiFile)
-    fail(where, `${workspace.language} cannot load more than one source file yet`);
-  for (const [path, file] of files) {
-    if (!/^[\w./-]+$/.test(path) || path.startsWith("/") || path.includes(".."))
-      fail(where, `unsafe file path ${path}`);
-    if (!ROLES.includes(file.role)) fail(where, `${path} has an unknown role`);
-    if (typeof file.text !== "string") fail(where, `${path} has no text`);
-  }
-  const cases = revision.checks.cases;
+  const problem = keyProblem(revision.challenge, revision.language);
+  if (problem) fail(where, problem);
+  text(revision.task, `${where} task`);
+  text(revision.entrypoint, `${where} entrypoint`);
+  if (typeof revision.starter !== "string") fail(where, "needs a starter");
+  const { file } = revision;
+  if (!/^[\w./-]+$/.test(file) || file.startsWith("/") || file.includes(".."))
+    fail(where, `unsafe file name ${file}`);
+  const cases = revision.cases;
   if (!cases.length) fail(where, "needs at least one case");
-  if (!cases.some((c) => c.visible)) fail(where, "needs at least one example");
+  if (!cases.some((c) => !c.hidden)) fail(where, "needs at least one example");
   unique(
     cases.map((c) => c.id),
     `${where} cases`,
   );
-  if (workspace.parameters)
+  if (revision.parameters)
     for (const c of cases)
-      if (!Array.isArray(c.input) || c.input.length !== workspace.parameters.length)
+      if (!Array.isArray(c.input) || c.input.length !== revision.parameters.length)
         fail(where, `case ${c.id} must list one argument per parameter`);
-  for (const c of cases) if (c.name !== undefined) text(c.name, `${where} case ${c.id} name`);
-  const rules = revision.checks.rules;
+  for (const c of cases) {
+    if (typeof c.hidden !== "boolean") fail(where, `case ${c.id} says whether it is hidden`);
+    if (c.name !== undefined) text(c.name, `${where} case ${c.id} name`);
+  }
   unique(
-    rules.map((r) => r.id),
+    revision.rules.map((r) => r.id),
     `${where} rules`,
   );
-  for (const rule of rules) {
+  for (const rule of revision.rules) {
     if (!ID.test(rule.id)) fail(where, `rule id ${rule.id} is not a slug`);
     text(rule.message, `${where} rule ${rule.id}`);
     checkTrigger(rule.when, `${where} rule ${rule.id}`);
@@ -104,16 +93,11 @@ export function validateCatalog(value: unknown): Catalog {
     validateRevision(revision, `revision ${id}`);
   }
   unique(
-    catalog.challenges.map((c) => c.id),
-    "challenge ids",
-  );
-  unique(
     catalog.challenges.map((c) => c.key),
     "challenge keys",
   );
   for (const challenge of catalog.challenges) {
-    const where = `challenge ${challenge.id}`;
-    if (!ID.test(challenge.id)) fail(where, "id is not a slug");
+    const where = `challenge ${challenge.key}`;
     text(challenge.title, `${where} title`);
     if (typeof challenge.summary !== "string") fail(where, "needs a summary");
     if (!DIFFICULTIES.includes(challenge.difficulty)) fail(where, "unknown difficulty");
@@ -121,9 +105,7 @@ export function validateCatalog(value: unknown): Catalog {
       fail(where, "tags are lowercase slugs");
     const revision = revisions[challenge.revision];
     if (!revision) fail(where, `revision ${challenge.revision} is missing`);
-    if (revision.challenge !== challenge.id) fail(where, "its revision belongs to another challenge");
-    const problem = keyProblem(challenge.key, revision.workspace.language);
-    if (problem) fail(where, problem);
+    if (revision.challenge !== challenge.key) fail(where, "its revision belongs to another challenge");
   }
   return catalog;
 }

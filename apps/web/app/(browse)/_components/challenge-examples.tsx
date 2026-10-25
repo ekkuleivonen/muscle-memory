@@ -7,7 +7,7 @@ function compactJson(value: unknown): string {
 }
 
 /**
- * Published, visible examples only. Requirements are shown literally, never inferred.
+ * Examples only, never hidden cases. Requirements are shown literally, never inferred.
  * `compact` lays them out as rows of input → expected, for the practice pane.
  */
 export function ChallengeExamples({
@@ -19,12 +19,12 @@ export function ChallengeExamples({
     name?: string;
     input: unknown;
     expected: unknown;
-    visible?: boolean;
+    hidden?: boolean;
   }[];
   heading?: ReactNode;
   compact?: boolean;
 }) {
-  const published = examples.filter((example) => example.visible !== false);
+  const published = examples.filter((example) => example.hidden !== true);
   if (!published.length) return null;
   if (compact)
     return (

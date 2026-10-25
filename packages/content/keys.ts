@@ -1,6 +1,6 @@
 /**
  * Challenge keys: the language's file extension and a three-digit number, PY-003 or CPP-001.
- * A key is permanent once published: written into the seed, never renumbered, never reused.
+ * A key is permanent once published: it names the challenge's folder, and is never renumbered or reused.
  */
 export const KEY_CODES: Readonly<Record<string, string>> = {
   python: "PY",

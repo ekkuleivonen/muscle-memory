@@ -35,9 +35,8 @@ const v3: Outcome = {
 const share = (card: unknown) =>
   siteShare({
     ...common(),
-    challenge: { id: "collected-by-partner", revision: REV },
+    challenge: { key: "SQL-002", revision: REV },
     data: {
-      challengeKey: "SQL-002",
       channel: "copy",
       ref: "ab12cd34ef56",
       card: card as never,

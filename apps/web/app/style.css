@@ -754,7 +754,7 @@ kbd {
   color: #8b90a0;
   margin-bottom: 16px;
 }
-.receipt-merged {
+.receipt-status {
   color: #b69cff;
   border: 1px solid #6e56cf;
   border-radius: 999px;

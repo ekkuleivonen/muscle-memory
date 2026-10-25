@@ -1,0 +1,12 @@
+{
+  "title": "Herbarium import creates duplicate species from the tally sheet",
+  "summary": "Monday's import added 14 \"new\" species the herbarium already had.",
+  "difficulty": "easy",
+  "tags": [
+    "refactoring",
+    "reading-code",
+    "strings"
+  ],
+  "file": "tally.py",
+  "entrypoint": "species_tally"
+}

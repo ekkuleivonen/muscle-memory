@@ -1,0 +1,10 @@
+[
+  {
+    "id": "transcribe-print",
+    "message": "The code must not print anything: the transcription job's standard output goes into the volunteers' upload log.",
+    "when": {
+      "pattern": "^\\s*print\\(",
+      "present": true
+    }
+  }
+]

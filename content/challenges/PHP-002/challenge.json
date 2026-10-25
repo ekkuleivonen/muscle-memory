@@ -1,0 +1,16 @@
+{
+  "title": "Password reset links expire after a minute",
+  "summary": "The TTL is in minutes but the check compares seconds.",
+  "difficulty": "easy",
+  "tags": [
+    "time",
+    "units"
+  ],
+  "file": "src/isExpired.php",
+  "entrypoint": "isExpired",
+  "parameters": [
+    "issuedAt",
+    "now",
+    "ttlMinutes"
+  ]
+}

@@ -57,18 +57,16 @@ export interface ArrivalData {
   readonly landedAt: string;
 }
 
-/** A result card shared: where to, and the card. */
+/** A result card shared (the envelope names the challenge): where to, and the card. */
 export interface ShareData {
-  readonly challengeKey: string;
   readonly channel: "copy" | "x" | "linkedin" | "native";
   /** This device's referral code, carried by the shared link. */
   readonly ref: string;
   readonly card: Json;
 }
 
-/** A challenge starred or unstarred, and where. */
+/** A challenge starred or unstarred (the envelope names it), and where. */
 export interface StarData {
-  readonly challengeKey: string;
   readonly from: "picker" | "practice";
 }
 
@@ -133,20 +131,20 @@ export function siteArrival(
 export function siteShare(
   input: EnvelopeInput & { data: ShareData },
 ): SiteObservation<"site.shared"> {
-  const { challengeKey, channel, ref, card } = input.data;
-  if (!CHALLENGE_KEY.test(challengeKey)) throw new Error("Unknown challenge key.");
+  const { channel, ref, card } = input.data;
+  if (!input.challenge || !CHALLENGE_KEY.test(input.challenge.key)) throw new Error("A share names its challenge.");
   if (!["copy", "x", "linkedin", "native"].includes(channel)) throw new Error("Unknown channel.");
   if (!REFERRAL.test(ref)) throw new Error("Unknown referral code.");
-  return site("site.shared", input, { challengeKey, channel, ref, card });
+  return site("site.shared", input, { channel, ref, card });
 }
 
 export function siteStar(
   input: EnvelopeInput & { starred: boolean; data: StarData },
 ): SiteObservation<"site.starred" | "site.unstarred"> {
-  const { challengeKey, from } = input.data;
-  if (!CHALLENGE_KEY.test(challengeKey)) throw new Error("Unknown challenge key.");
+  const { from } = input.data;
+  if (!input.challenge || !CHALLENGE_KEY.test(input.challenge.key)) throw new Error("A star names its challenge.");
   if (from !== "picker" && from !== "practice") throw new Error("Unknown place to star from.");
-  return site(input.starred ? "site.starred" : "site.unstarred", input, { challengeKey, from });
+  return site(input.starred ? "site.starred" : "site.unstarred", input, { from });
 }
 
 /** Stored like every observation: one canonical payload per stable id. */

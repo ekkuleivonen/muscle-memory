@@ -1,0 +1,721 @@
+[
+  {
+    "input": [
+      [
+        "add",
+        "jeans",
+        5900,
+        1
+      ],
+      [
+        "summary"
+      ],
+      [
+        "quantity",
+        "jeans",
+        2
+      ],
+      [
+        "summary"
+      ]
+    ],
+    "expected": [
+      {
+        "items": 1,
+        "subtotal": 5900,
+        "discount": 0,
+        "total": 5900
+      },
+      {
+        "items": 2,
+        "subtotal": 11800,
+        "discount": 0,
+        "total": 11800
+      }
+    ]
+  },
+  {
+    "input": [
+      [
+        "add",
+        "rain-jacket",
+        5000,
+        1
+      ],
+      [
+        "code",
+        {
+          "name": "SPRING10",
+          "percent": 10
+        }
+      ],
+      [
+        "summary"
+      ],
+      [
+        "add",
+        "rain-jacket",
+        5000,
+        1
+      ],
+      [
+        "summary"
+      ]
+    ],
+    "expected": [
+      {
+        "items": 1,
+        "subtotal": 5000,
+        "discount": 500,
+        "total": 4500
+      },
+      {
+        "items": 2,
+        "subtotal": 10000,
+        "discount": 1000,
+        "total": 9000
+      }
+    ]
+  },
+  {
+    "input": [
+      [
+        "add",
+        "tee",
+        2500,
+        2
+      ],
+      [
+        "add",
+        "socks",
+        1200,
+        1
+      ],
+      [
+        "summary"
+      ],
+      [
+        "remove",
+        "tee"
+      ],
+      [
+        "summary"
+      ],
+      [
+        "code",
+        {
+          "name": "SPRING10",
+          "percent": 10
+        }
+      ],
+      [
+        "summary"
+      ]
+    ],
+    "expected": [
+      {
+        "items": 3,
+        "subtotal": 6200,
+        "discount": 0,
+        "total": 6200
+      },
+      {
+        "items": 1,
+        "subtotal": 1200,
+        "discount": 0,
+        "total": 1200
+      },
+      {
+        "items": 1,
+        "subtotal": 1200,
+        "discount": 120,
+        "total": 1080
+      }
+    ]
+  },
+  {
+    "input": [
+      [
+        "summary"
+      ]
+    ],
+    "expected": [
+      {
+        "items": 0,
+        "subtotal": 0,
+        "discount": 0,
+        "total": 0
+      }
+    ]
+  },
+  {
+    "input": [
+      [
+        "add",
+        "tee",
+        2500,
+        1
+      ],
+      [
+        "add",
+        "socks",
+        1200,
+        2
+      ],
+      [
+        "summary"
+      ],
+      [
+        "quantity",
+        "tee",
+        2
+      ],
+      [
+        "quantity",
+        "socks",
+        1
+      ],
+      [
+        "summary"
+      ]
+    ],
+    "expected": [
+      {
+        "items": 3,
+        "subtotal": 4900,
+        "discount": 0,
+        "total": 4900
+      },
+      {
+        "items": 3,
+        "subtotal": 6200,
+        "discount": 0,
+        "total": 6200
+      }
+    ]
+  },
+  {
+    "input": [
+      [
+        "add",
+        "tee",
+        2500,
+        1
+      ],
+      [
+        "summary"
+      ],
+      [
+        "quantity",
+        "tee",
+        0
+      ],
+      [
+        "add",
+        "tee",
+        2500,
+        2
+      ],
+      [
+        "summary"
+      ]
+    ],
+    "expected": [
+      {
+        "items": 1,
+        "subtotal": 2500,
+        "discount": 0,
+        "total": 2500
+      },
+      {
+        "items": 2,
+        "subtotal": 5000,
+        "discount": 0,
+        "total": 5000
+      }
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      [
+        "add",
+        "mug",
+        1000,
+        1
+      ],
+      [
+        "code",
+        {
+          "name": "WELCOME15",
+          "amount": 1500
+        }
+      ],
+      [
+        "summary"
+      ],
+      [
+        "quantity",
+        "mug",
+        2
+      ],
+      [
+        "summary"
+      ]
+    ],
+    "expected": [
+      {
+        "items": 1,
+        "subtotal": 1000,
+        "discount": 1000,
+        "total": 0
+      },
+      {
+        "items": 2,
+        "subtotal": 2000,
+        "discount": 1500,
+        "total": 500
+      }
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      [
+        "add",
+        "jeans",
+        5900,
+        3
+      ],
+      [
+        "summary"
+      ],
+      [
+        "quantity",
+        "jeans",
+        1
+      ],
+      [
+        "summary"
+      ]
+    ],
+    "expected": [
+      {
+        "items": 3,
+        "subtotal": 17700,
+        "discount": 0,
+        "total": 17700
+      },
+      {
+        "items": 1,
+        "subtotal": 5900,
+        "discount": 0,
+        "total": 5900
+      }
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      [
+        "add",
+        "cap",
+        1800
+      ],
+      [
+        "summary"
+      ],
+      [
+        "add",
+        "cap",
+        1800
+      ],
+      [
+        "summary"
+      ]
+    ],
+    "expected": [
+      {
+        "items": 1,
+        "subtotal": 1800,
+        "discount": 0,
+        "total": 1800
+      },
+      {
+        "items": 2,
+        "subtotal": 3600,
+        "discount": 0,
+        "total": 3600
+      }
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      [
+        "add",
+        "boots",
+        3000,
+        1
+      ],
+      [
+        "code",
+        {
+          "name": "SPRING10",
+          "percent": 10
+        }
+      ],
+      [
+        "summary"
+      ],
+      [
+        "code",
+        {
+          "name": "WELCOME15",
+          "amount": 1500
+        }
+      ],
+      [
+        "summary"
+      ],
+      [
+        "code",
+        null
+      ],
+      [
+        "summary"
+      ]
+    ],
+    "expected": [
+      {
+        "items": 1,
+        "subtotal": 3000,
+        "discount": 300,
+        "total": 2700
+      },
+      {
+        "items": 1,
+        "subtotal": 3000,
+        "discount": 1500,
+        "total": 1500
+      },
+      {
+        "items": 1,
+        "subtotal": 3000,
+        "discount": 0,
+        "total": 3000
+      }
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      [
+        "add",
+        "tee",
+        2500,
+        1
+      ],
+      [
+        "summary"
+      ],
+      [
+        "quantity",
+        "hat",
+        3
+      ],
+      [
+        "summary"
+      ]
+    ],
+    "expected": [
+      {
+        "items": 1,
+        "subtotal": 2500,
+        "discount": 0,
+        "total": 2500
+      },
+      {
+        "items": 1,
+        "subtotal": 2500,
+        "discount": 0,
+        "total": 2500
+      }
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      [
+        "add",
+        "tee",
+        2500,
+        1
+      ],
+      [
+        "summary"
+      ],
+      [
+        "summary"
+      ],
+      [
+        "quantity",
+        "tee",
+        4
+      ],
+      [
+        "summary"
+      ]
+    ],
+    "expected": [
+      {
+        "items": 1,
+        "subtotal": 2500,
+        "discount": 0,
+        "total": 2500
+      },
+      {
+        "items": 1,
+        "subtotal": 2500,
+        "discount": 0,
+        "total": 2500
+      },
+      {
+        "items": 4,
+        "subtotal": 10000,
+        "discount": 0,
+        "total": 10000
+      }
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      [
+        "code",
+        {
+          "name": "SPRING10",
+          "percent": 10
+        }
+      ],
+      [
+        "summary"
+      ],
+      [
+        "add",
+        "boots",
+        3000,
+        1
+      ],
+      [
+        "summary"
+      ]
+    ],
+    "expected": [
+      {
+        "items": 0,
+        "subtotal": 0,
+        "discount": 0,
+        "total": 0
+      },
+      {
+        "items": 1,
+        "subtotal": 3000,
+        "discount": 300,
+        "total": 2700
+      }
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      [
+        "add",
+        "tee",
+        2500,
+        1
+      ],
+      [
+        "summary"
+      ],
+      [
+        "remove",
+        "tee"
+      ],
+      [
+        "summary"
+      ],
+      [
+        "add",
+        "tee",
+        3000,
+        1
+      ],
+      [
+        "summary"
+      ]
+    ],
+    "expected": [
+      {
+        "items": 1,
+        "subtotal": 2500,
+        "discount": 0,
+        "total": 2500
+      },
+      {
+        "items": 0,
+        "subtotal": 0,
+        "discount": 0,
+        "total": 0
+      },
+      {
+        "items": 1,
+        "subtotal": 3000,
+        "discount": 0,
+        "total": 3000
+      }
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      [
+        "add",
+        "mug",
+        1000,
+        1
+      ],
+      [
+        "add",
+        "tee",
+        2500,
+        1
+      ],
+      [
+        "code",
+        {
+          "name": "WELCOME15",
+          "amount": 1500
+        }
+      ],
+      [
+        "summary"
+      ],
+      [
+        "quantity",
+        "mug",
+        3
+      ],
+      [
+        "summary"
+      ],
+      [
+        "remove",
+        "tee"
+      ],
+      [
+        "summary"
+      ],
+      [
+        "add",
+        "mug",
+        1000,
+        2
+      ],
+      [
+        "summary"
+      ],
+      [
+        "code",
+        {
+          "name": "SPRING10",
+          "percent": 10
+        }
+      ],
+      [
+        "summary"
+      ]
+    ],
+    "expected": [
+      {
+        "items": 2,
+        "subtotal": 3500,
+        "discount": 1500,
+        "total": 2000
+      },
+      {
+        "items": 4,
+        "subtotal": 5500,
+        "discount": 1500,
+        "total": 4000
+      },
+      {
+        "items": 3,
+        "subtotal": 3000,
+        "discount": 1500,
+        "total": 1500
+      },
+      {
+        "items": 5,
+        "subtotal": 5000,
+        "discount": 1500,
+        "total": 3500
+      },
+      {
+        "items": 5,
+        "subtotal": 5000,
+        "discount": 500,
+        "total": 4500
+      }
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      [
+        "add",
+        "socks",
+        1200,
+        1
+      ],
+      [
+        "add",
+        "socks",
+        1200,
+        1
+      ],
+      [
+        "add",
+        "socks",
+        1200,
+        1
+      ],
+      [
+        "summary"
+      ],
+      [
+        "quantity",
+        "socks",
+        3
+      ],
+      [
+        "summary"
+      ]
+    ],
+    "expected": [
+      {
+        "items": 3,
+        "subtotal": 3600,
+        "discount": 0,
+        "total": 3600
+      },
+      {
+        "items": 3,
+        "subtotal": 3600,
+        "discount": 0,
+        "total": 3600
+      }
+    ],
+    "hidden": true
+  }
+]

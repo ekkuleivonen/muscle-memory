@@ -1,0 +1,10 @@
+[
+  {
+    "id": "catch-hides-guests",
+    "message": "Do not use catch: handle guests and lapsed members explicitly, so a missing loyalty record can never turn into a silently wrong quote.",
+    "when": {
+      "pattern": "catch\\s*[({]",
+      "present": true
+    }
+  }
+]

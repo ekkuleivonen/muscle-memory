@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium } from "playwright";
 import { LEGAL_VERSION } from "../../apps/web/lib/legal";
-import { SEED_ISSUES } from "../../content/seed";
+import { readChallenge } from "../../packages/content/source";
 import { decodeOutcome } from "../../apps/web/lib/outcome";
 import { codeFromHash, decodeCode } from "../../apps/web/lib/share";
 
@@ -108,8 +108,11 @@ try {
       .count(),
     0,
   );
-  const seed = SEED_ISSUES.find((i) => i.id === "word-count-javascript")!;
-  const [path, solution] = Object.entries(seed.private!.reference)[0] as [string, string];
+  const challenge = readChallenge(
+    new URL("../../content/challenges/JS-002", import.meta.url).pathname,
+  );
+  const path = challenge.revision.file;
+  const solution = challenge.private.solution;
   await editor().fill(solution);
   await editor().press(
     process.platform === "darwin" ? "Meta+Enter" : "Control+Enter",
@@ -144,9 +147,10 @@ try {
   const withCode = (
     await page.evaluate(() => navigator.clipboard.readText())
   ).match(/https?:\/\/\S+/)![0];
-  assert.deepEqual(await decodeCode(codeFromHash(new URL(withCode).hash)!), [
-    { path, text: solution },
-  ]);
+  assert.deepEqual(await decodeCode(codeFromHash(new URL(withCode).hash)!), {
+    path,
+    text: solution,
+  });
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
   await page.getByRole("button", { name: "Share result", exact: true }).click();
   assert.equal(await optIn.isChecked(), false);
@@ -165,9 +169,10 @@ try {
   const afterEdit = (
     await page.evaluate(() => navigator.clipboard.readText())
   ).match(/https?:\/\/\S+/)![0];
-  assert.deepEqual(await decodeCode(codeFromHash(new URL(afterEdit).hash)!), [
-    { path, text: solution },
-  ]);
+  assert.deepEqual(await decodeCode(codeFromHash(new URL(afterEdit).hash)!), {
+    path,
+    text: solution,
+  });
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
   passed(
     "opt-in resets; code comes from the completing artifact, not later edits, across a reload",

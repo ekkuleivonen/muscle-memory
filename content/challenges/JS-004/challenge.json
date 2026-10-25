@@ -1,0 +1,12 @@
+{
+  "title": "Show how far the cart is from free shipping",
+  "summary": "A banner in the cart drawer telling shoppers what's left to spend for free shipping.",
+  "difficulty": "easy",
+  "tags": [
+    "money",
+    "reading-code",
+    "ui-copy"
+  ],
+  "file": "shipping.js",
+  "entrypoint": "shippingBanner"
+}

@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { chromium } from "playwright";
 import { LEGAL_VERSION } from "../../apps/web/lib/legal";
-import { SEED_ISSUES } from "../../content/seed";
+import { readChallenge } from "../../packages/content/source";
 import { PRACTICE_CAPTURE_VERSION } from "../../packages/domain/practice";
 
 const origin = process.env.LOOP_ORIGIN ?? "http://localhost:3000";
@@ -87,8 +87,9 @@ const until = async (type: string, count = 1) => {
 const shot = async (name: string) => {
   if (screenshots) await page.screenshot({ path: `${screenshots}/${name}.png` });
 };
-const seed = SEED_ISSUES.find((i) => i.id === "word-count-javascript")!;
-const solution = Object.values(seed.private!.reference)[0] as string;
+const solution = readChallenge(
+  new URL("../../content/challenges/JS-002", import.meta.url).pathname,
+).private.solution;
 
 try {
   // A start from the picker: its search and the position of the pick.
@@ -107,7 +108,7 @@ try {
   await ready();
   const [started] = await until("practice.started");
   assert.equal(started.data.from, "picker");
-  assert.equal(started.data.challengeKey, "JS-002");
+  assert.equal(started.challenge, "JS-002");
   assert.equal(started.data.position, 1);
   assert.match(started.data.query, /composer/);
   assert.equal(started.captureVersion, PRACTICE_CAPTURE_VERSION);
@@ -186,10 +187,10 @@ try {
   await ready();
   const after = (await until("practice.started", 3)).at(-1);
   assert.equal(after.data.from, "next");
-  assert.equal(after.data.challengeKey, nextHref.split("/").at(-1));
+  assert.equal(after.challenge, nextHref.split("/").at(-1));
   assert.equal(
     (await ofType("practice.completed")).at(-1).data.suggested,
-    after.data.challengeKey,
+    after.challenge,
   );
   console.log(
     "PASS: picker start, challenge copy, failing and passing submissions, completion, questions after it, resume, star, practise again, next challenge",

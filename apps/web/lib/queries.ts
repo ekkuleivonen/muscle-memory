@@ -132,7 +132,6 @@ function matchesText(fields: readonly string[], terms: readonly string[]) {
 function issueText(issue: Issue): string[] {
   return [
     issue.key,
-    issue.slug,
     issue.title,
     issue.summary ?? "",
     issue.task,

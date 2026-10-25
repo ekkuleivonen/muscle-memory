@@ -1,0 +1,16 @@
+{
+  "title": "Upstream weights are ignored",
+  "summary": "The balancer round-robins evenly, so the 10% canary would get half the traffic.",
+  "difficulty": "medium",
+  "tags": [
+    "load-balancing",
+    "concurrency",
+    "algorithms"
+  ],
+  "file": "pick_order.go",
+  "entrypoint": "PickOrder",
+  "parameters": [
+    "backends",
+    "n"
+  ]
+}

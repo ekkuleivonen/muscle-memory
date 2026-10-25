@@ -14,16 +14,16 @@ const merged = library(catalog);
 
 test("challenges are live metadata over their revisions", () => {
   const issue = merged.findIssue("PY-002")!;
-  const meta = catalog.challenges.find((c) => c.id === "frequency-map")!;
+  const meta = catalog.challenges.find((c) => c.key === "PY-002")!;
   assert.deepEqual(
-    [issue.slug, issue.revision, issue.runnable, issue.difficulty],
-    ["frequency-map", meta.revision, true, "easy"],
+    [issue.key, issue.revision, issue.runnable, issue.difficulty],
+    ["PY-002", meta.revision, true, "easy"],
   );
   assert.equal(issue.title, "Nightly vial tally is empty");
   assert.deepEqual(issue.tags, ["iteration", "maps", "edge-cases"]);
   // The examples are the visible cases, as they are shown.
   assert.deepEqual(issue.criteria[1], { input: [], expected: {} });
-  assert.equal(merged.revision(meta.revision)?.challenge, "frequency-map");
+  assert.equal(merged.revision(meta.revision)?.challenge, "PY-002");
 });
 
 test("every challenge is listed, by key, and runs in the browser", () => {
@@ -36,18 +36,11 @@ test("every challenge is listed, by key, and runs in the browser", () => {
   );
 });
 
-test("keys are the language's code and a number", () => {
-  const keys = Object.fromEntries(merged.issues.map((i) => [i.slug, i.key]));
-  assert.equal(keys["frequency-map"], "PY-002");
-  assert.equal(keys["parse-log-line"], "GO-003");
-  assert.equal(keys["lru-cache"], "CPP-001");
-});
-
-test("challenges are found by key, in any case, or by their id", () => {
+test("challenges are found by key, in any case", () => {
   const lru = merged.findIssue("CPP-001")!;
-  assert.equal(lru.slug, "lru-cache");
+  assert.equal(lru.language, "cpp");
   assert.equal(merged.findIssue("cpp-001"), lru);
-  assert.equal(merged.findIssue("lru-cache"), lru);
+  assert.equal(merged.findIssue("lru-cache"), undefined);
   assert.equal(merged.findIssue("CPP-099"), undefined);
 });
 

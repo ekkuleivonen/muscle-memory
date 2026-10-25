@@ -1,0 +1,10 @@
+[
+  {
+    "id": "no-malloc",
+    "message": "normalize_host must not allocate on the heap (no malloc, calloc, realloc, strdup or strndup): write the result into out.",
+    "when": {
+      "pattern": "\\b(malloc|calloc|realloc|strdup|strndup)\\s*\\(",
+      "present": true
+    }
+  }
+]

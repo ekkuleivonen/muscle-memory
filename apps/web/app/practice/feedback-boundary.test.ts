@@ -26,7 +26,7 @@ const cases: Case[] = [
     id: "public",
     input: "PUBLIC_INPUT",
     expected: { answer: "PUBLIC_EXPECTED" },
-    visible: true,
+    hidden: false,
   },
   {
     id: "hidden",
@@ -36,7 +36,7 @@ const cases: Case[] = [
       answer: "HIDDEN_EXPECTED_TOKEN",
       solution: "HIDDEN_SOLUTION_TOKEN",
     },
-    visible: false,
+    hidden: true,
   },
 ];
 const hidden = [
@@ -97,10 +97,14 @@ test("public expected/actual stay visible while nested hidden expected outputs a
           outcome,
         },
         {
+          challenge: "JS-001",
+          task: "Solve it.",
           language: "javascript",
-          entry: "solution.js",
+          file: "solution.js",
+          starter: "",
           entrypoint: "solve",
           cases,
+          rules: [],
         },
         "JavaScript",
       )

@@ -1,0 +1,16 @@
+{
+  "title": "Cache evicts entries that were just used",
+  "summary": "Reads must refresh recency in the LRU cache.",
+  "difficulty": "hard",
+  "tags": [
+    "caching",
+    "linked-lists",
+    "maps"
+  ],
+  "file": "src/simulate.cpp",
+  "entrypoint": "simulate",
+  "parameters": [
+    "capacity",
+    "ops"
+  ]
+}

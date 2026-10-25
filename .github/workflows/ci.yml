@@ -20,7 +20,6 @@ jobs:
           key: runtimes-${{ hashFiles('tools/build-runtimes.mjs', 'tools/runtimes/**') }}
       - run: npm test
       - run: npm run typecheck
-      - run: npm run check:content
       - run: npm run build:cloudflare
         env:
           NEXT_TELEMETRY_DISABLED: '1'

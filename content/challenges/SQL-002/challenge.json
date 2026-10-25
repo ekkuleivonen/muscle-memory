@@ -1,0 +1,12 @@
+{
+  "title": "Collected-by-partner report overstates split payments",
+  "summary": "Sum what was actually paid, and list partners who paid nothing.",
+  "difficulty": "easy",
+  "tags": [
+    "joins",
+    "aggregation",
+    "reconciliation"
+  ],
+  "file": "queries/collected-by-partner.sql",
+  "entrypoint": "query"
+}

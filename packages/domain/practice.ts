@@ -88,7 +88,6 @@ export interface PracticeData {
    * completed. Where from, and for a pick from the list, the search then and the position.
    */
   "practice.started": {
-    readonly challengeKey: string;
     readonly from: StartedFrom;
     readonly query: string | null;
     /** Its place in the list shown, from 1. */

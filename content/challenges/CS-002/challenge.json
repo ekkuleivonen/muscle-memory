@@ -1,0 +1,16 @@
+{
+  "title": "Late fees are a cent off on some invoices",
+  "summary": "Round late fees the way finance does: halves away from zero.",
+  "difficulty": "easy",
+  "tags": [
+    "rounding",
+    "decimals",
+    "finance"
+  ],
+  "file": "src/LateFees.cs",
+  "entrypoint": "LateFee",
+  "parameters": [
+    "balance",
+    "daysLate"
+  ]
+}

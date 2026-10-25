@@ -1,0 +1,16 @@
+{
+  "title": "Discount codes fail when typed in lowercase",
+  "summary": "Match promo codes case-insensitively and ignore stray spaces.",
+  "difficulty": "easy",
+  "tags": [
+    "strings",
+    "validation"
+  ],
+  "file": "src/apply-discount.ts",
+  "entrypoint": "applyDiscount",
+  "parameters": [
+    "totalCents",
+    "code",
+    "codes"
+  ]
+}

@@ -12,8 +12,6 @@ export const PROGRESS_KEY = "muscle-memory.progress";
 export const PROGRESS_CHANGE = "muscle-memory:progress";
 
 export interface ChallengeProgress {
-  /** The challenge's key, such as PY-003, for lists that go by key. */
-  readonly key: string;
   /** The current, or last, attempt. */
   readonly attempt: string;
   readonly startedAt: string;
@@ -23,7 +21,7 @@ export interface ChallengeProgress {
   readonly completions: number;
 }
 
-/** By challenge id. */
+/** By challenge key, such as PY-003. */
 export type Progress = Readonly<Record<string, ChallengeProgress>>;
 
 const ATTEMPT = /^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$/;
@@ -34,17 +32,16 @@ export function parseProgress(raw: string | null): Progress {
     const value = JSON.parse(raw ?? "{}") as Record<string, Partial<ChallengeProgress>>;
     if (!value || typeof value !== "object" || Array.isArray(value)) return {};
     return Object.fromEntries(
-      Object.entries(value).flatMap(([id, p]) =>
+      Object.entries(value).flatMap(([key, p]) =>
         p &&
-        typeof p.key === "string" &&
-        CHALLENGE_KEY.test(p.key) &&
+        CHALLENGE_KEY.test(key) &&
         typeof p.attempt === "string" &&
         ATTEMPT.test(p.attempt) &&
         typeof p.startedAt === "string" &&
         (p.completedAt === null || typeof p.completedAt === "string") &&
         Number.isSafeInteger(p.completions) &&
         p.completions! >= 0
-          ? [[id, p as ChallengeProgress]]
+          ? [[key, p as ChallengeProgress]]
           : [],
       ),
     );
@@ -55,7 +52,7 @@ export function parseProgress(raw: string | null): Progress {
 
 /** Whether the challenge with this key was ever completed on this device. */
 export function completed(progress: Progress, key: string): boolean {
-  return Object.values(progress).some((p) => p.key === key && p.completions > 0);
+  return (progress[key]?.completions ?? 0) > 0;
 }
 
 /**
@@ -65,20 +62,19 @@ export function completed(progress: Progress, key: string): boolean {
  */
 export function attemptFor(
   progress: Progress,
-  challenge: { id: string; key: string },
+  key: string,
   start: boolean,
   now: string,
   newId: () => string,
 ): { progress: Progress; attempt: string; fresh: boolean } {
-  const current = progress[challenge.id];
+  const current = progress[key];
   if (current && !(start && current.completedAt))
     return { progress, attempt: current.attempt, fresh: false };
   const attempt = newId();
   return {
     progress: {
       ...progress,
-      [challenge.id]: {
-        key: challenge.key,
+      [key]: {
         attempt,
         startedAt: now,
         completedAt: null,
@@ -91,12 +87,12 @@ export function attemptFor(
 }
 
 /** The attempt completed: once, however many times it is reported. */
-export function complete(progress: Progress, id: string, attempt: string, at: string): Progress {
-  const current = progress[id];
+export function complete(progress: Progress, key: string, attempt: string, at: string): Progress {
+  const current = progress[key];
   if (!current || current.attempt !== attempt || current.completedAt) return progress;
   return {
     ...progress,
-    [id]: { ...current, completedAt: at, completions: current.completions + 1 },
+    [key]: { ...current, completedAt: at, completions: current.completions + 1 },
   };
 }
 

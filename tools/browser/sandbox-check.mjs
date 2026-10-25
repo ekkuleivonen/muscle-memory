@@ -978,19 +978,18 @@ async function clangCheck(browserType) {
     const host = document.getElementById("host");
     const results = {};
     const catalog = await (await fetch("/catalog.json")).json();
-    // An issue's live revision, flattened to what the engines take.
-    const issue = (id) => {
-      const meta = catalog.challenges.find((i) => i.id === id);
-      const { workspace, checks } = catalog.revisions[meta.revision];
+    // A challenge's live revision, with its cases as the engines take them.
+    const issue = (key) => {
+      const meta = catalog.challenges.find((i) => i.key === key);
+      const revision = catalog.revisions[meta.revision];
       return {
-        ...workspace,
-        inputs: checks.cases.map((c) => c.input),
-        expected: checks.cases.map((c) => c.expected),
-        starter: Object.values(workspace.files).find((f) => f.role === "edit").text,
+        ...revision,
+        inputs: revision.cases.map((c) => c.input),
+        expected: revision.cases.map((c) => c.expected),
       };
     };
-    const ring = issue("ring-buffer");
-    const lru = issue("lru-cache");
+    const ring = issue("C-002");
+    const lru = issue("CPP-001");
     // One runner for C, kept between runs like the IDE does.
     const clang = new MMRunner.Runner(MMRunner.ENGINES.clang, host, {
       timeoutMs: 4000,
@@ -1122,18 +1121,17 @@ async function csharpCheck(browserType) {
   await tab.goto(APP + "/");
   const report = await tab.evaluate(async (OUT) => {
     const catalog = await (await fetch("/catalog.json")).json();
-    // An issue's live revision, flattened to what the engines take.
-    const issue = (id) => {
-      const meta = catalog.challenges.find((i) => i.id === id);
-      const { workspace, checks } = catalog.revisions[meta.revision];
+    // A challenge's live revision, with its cases as the engines take them.
+    const issue = (key) => {
+      const meta = catalog.challenges.find((i) => i.key === key);
+      const revision = catalog.revisions[meta.revision];
       return {
-        ...workspace,
-        inputs: checks.cases.map((c) => c.input),
-        expected: checks.cases.map((c) => c.expected),
-        starter: Object.values(workspace.files).find((f) => f.role === "edit").text,
+        ...revision,
+        inputs: revision.cases.map((c) => c.input),
+        expected: revision.cases.map((c) => c.expected),
       };
     };
-    const fee = issue("late-fee-rounding");
+    const fee = issue("CS-002");
     const host = document.getElementById("host");
     const run = async (code, extra = {}) => {
       const runner = new MMRunner.Runner(MMRunner.ENGINES.csharp, host, {
@@ -1224,18 +1222,17 @@ async function javaCheck(browserType) {
   await tab.goto(APP + "/");
   const report = await tab.evaluate(async (OUT) => {
     const catalog = await (await fetch("/catalog.json")).json();
-    // An issue's live revision, flattened to what the engines take.
-    const find = (id) => {
-      const meta = catalog.challenges.find((i) => i.id === id);
-      const { workspace, checks } = catalog.revisions[meta.revision];
+    // A challenge's live revision, with its cases as the engines take them.
+    const find = (key) => {
+      const meta = catalog.challenges.find((i) => i.key === key);
+      const revision = catalog.revisions[meta.revision];
       return {
-        ...workspace,
-        inputs: checks.cases.map((c) => c.input),
-        expected: checks.cases.map((c) => c.expected),
-        starter: Object.values(workspace.files).find((f) => f.role === "edit").text,
+        ...revision,
+        inputs: revision.cases.map((c) => c.input),
+        expected: revision.cases.map((c) => c.expected),
       };
     };
-    const issue = find("password-policy");
+    const issue = find("JAVA-002");
     const host = document.getElementById("host");
     const run = async (code, extra = {}) => {
       const runner = new MMRunner.Runner(MMRunner.ENGINES.java, host, {

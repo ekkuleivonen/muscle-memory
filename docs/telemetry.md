@@ -26,7 +26,7 @@ Every observation (`packages/domain/records.ts`) carries:
 | `captureVersion` | `practice-capture-1.0.0` or `site-capture-1.0.0` |
 | `termsVersion` | the Terms and Privacy Notice version accepted |
 | `assignments` | experiment arms in force, by experiment id (`{}` until there are experiments) |
-| `challenge`, `challengeRevision` | the challenge's permanent id and the exact revision, when it is about one |
+| `challenge`, `challengeRevision` | the challenge's key (such as `PY-003`) and the exact revision, when it is about one |
 | `attemptId` | the attempt, for practice |
 
 Code is stored once per revision as an `artifact.code-revision` (every editable file by path, each bounded) and cited by id.
@@ -39,7 +39,7 @@ Everything inside a challenge at `/challenges/<KEY>` (`packages/domain/practice.
 
 | Type | Recorded |
 | --- | --- |
-| `practice.started` | an attempt began: the challenge key, where from (`picker`, `quick-start`, `link` for a shared result's invitation, `next`, `again`, or `direct` for practice opened by its URL), and for a pick from the list the search then and the position in the list (from 1) |
+| `practice.started` | an attempt began: where from (`picker`, `quick-start`, `link` for a shared result's invitation, `next`, `again`, or `direct` for practice opened by its URL), and for a pick from the list the search then and the position in the list (from 1) |
 | `practice.opened` | the code revision and artifact, the app page it was opened from, the profile then, the window size, the environment, the editor's features and keymap, the runtime, and the declared capture gaps |
 | `practice.keys` | every key down and up and IME composition in the editor: `[elapsedMs, kind, key, code, modifiers, repeat]`, with both the character typed and the physical key, about a second at a time |
 | `practice.edit` | one per document-changing transaction: the CodeMirror change set (up to 16 KiB, else a snapshot), the user event (`input.type`, `input.paste`, `undo`, …), the selection and length |
@@ -68,7 +68,7 @@ Everything outside a challenge (`packages/domain/site.ts`, `apps/web/lib/site-lo
 | `site.page` | outside practice (which records its own): visible or hidden, focused, resized |
 | `site.arrived` | once per browser, after the Terms are accepted: the first landing page and when, and the referral code of the shared link that brought them |
 | `site.profile` | the whole profile as saved after an answer, and where it was given (`settings`, or `quick-start` for the language picked, a guess) ([profile](profile.md)) |
-| `site.shared` | a result card shared: the challenge key, the channel, the card and this device's referral code |
+| `site.shared` | a result card shared: the channel, the card and this device's referral code |
 | `site.starred`, `site.unstarred` | a star toggled, and where (`picker` or `practice`) |
 
 ## Declared gaps

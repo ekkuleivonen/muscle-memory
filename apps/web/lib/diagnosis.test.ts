@@ -9,15 +9,15 @@ const cases: Case[] = [
     name: "counts words",
     input: ["a a"],
     expected: { a: 2 },
-    visible: true,
+    hidden: false,
   },
-  { id: "b", input: [""], expected: {}, visible: true },
+  { id: "b", input: [""], expected: {}, hidden: false },
   {
     id: "c",
     name: "ignores case",
     input: ["A a"],
     expected: { a: 2 },
-    visible: false,
+    hidden: true,
   },
 ];
 const out = (value: unknown) => ({
@@ -128,7 +128,7 @@ test("a check that never reached the cases gives its error, not per-case guesses
         },
       },
       // Public cases only: a run with hidden ones shows no error text (hidden-cases.test.ts).
-      cases.filter((c) => c.visible),
+      cases.filter((c) => !c.hidden),
     ),
     {
       kind: "error",
@@ -175,8 +175,8 @@ test("the practice area's live results get the same categories, with no values o
 test("a hidden case is labelled by position, never by its call or its name", () => {
   assert.equal(hiddenLabel(6), "hidden case 7");
   const d = diagnose({ status: "completed", phase: "tests", cases: [{}, {}] }, [
-    { id: "x", input: [1], expected: 1, visible: true },
-    { id: "y", input: ["secret"], expected: 2, visible: false },
+    { id: "x", input: [1], expected: 1, hidden: false },
+    { id: "y", input: ["secret"], expected: 2, hidden: true },
   ]);
   if (d?.kind !== "tests") return assert.fail("expected per-case results");
   assert.deepEqual(

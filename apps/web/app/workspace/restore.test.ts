@@ -12,13 +12,13 @@ import type { Runner } from "../../../../packages/runner/runner";
 import { live } from "../../lib/test-fixtures";
 import { WorkspaceSession } from "./session";
 
-const fixture = live("frequency-map");
-const ISSUE = "frequency-map";
+const base = live("PY-002");
+const fixture = { ...base, path: base.revision.file, starter: base.revision.starter };
+const ISSUE = "PY-002";
 const P = "synthetic-participant";
 const ATTEMPT = "attempt-1";
 const challenge = {
-  id: ISSUE,
-  key: "PY-002",
+  key: ISSUE,
   revision: fixture.revision,
   revisionId: fixture.id,
 };
@@ -36,7 +36,6 @@ function workspace(
     termsVersion: "2026-10-01",
     challenge,
     attemptId,
-    executable: fixture.executable,
     sink,
     files: {
       [fixture.path]: {
@@ -301,7 +300,7 @@ test("streams are never combined; participants and issues are kept apart", async
   assert.ok(recovered.complete);
   assert.equal(restore(sink, "someone-else"), null);
   assert.equal(
-    latestSavedCode([...sink.records.values()], P, "other-issue", ATTEMPT),
+    latestSavedCode([...sink.records.values()], P, "PY-099", ATTEMPT),
     null,
   );
 });
@@ -346,7 +345,6 @@ test("several editable files are recorded and restored together, each with its o
     termsVersion: "2026-10-01",
     challenge,
     attemptId: ATTEMPT,
-    executable: fixture.executable,
     sink,
     files,
     runner: () =>

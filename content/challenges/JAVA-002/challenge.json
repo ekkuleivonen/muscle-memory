@@ -1,0 +1,12 @@
+{
+  "title": "Password policy still allows 8-character passwords",
+  "summary": "Enforce the new password rules and report every one that is broken.",
+  "difficulty": "easy",
+  "tags": [
+    "validation",
+    "strings",
+    "security"
+  ],
+  "file": "src/main/java/com/acme/accounts/PasswordPolicy.java",
+  "entrypoint": "violations"
+}

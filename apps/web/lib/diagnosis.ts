@@ -163,7 +163,7 @@ export function diagnose(
   if (outcome.phase !== "tests" || !outcome.cases) {
     // A run with hidden cases shows no user-written text: module code can read the inputs
     // (Python's harness has them before the code is even loaded) and put them in an error.
-    const shown = cases.every((c) => c.visible) && outcome.error;
+    const shown = cases.every((c) => !c.hidden) && outcome.error;
     return {
       kind: "error",
       stage: outcome.phase === "compile" ? "compile" : "runtime",
@@ -177,11 +177,11 @@ export function diagnose(
   const rows = cases.map((c, i): CheckRow => {
     const result = outcome.cases![i];
     return {
-      name: c.visible ? (c.name ?? `case ${i + 1}`) : hiddenLabel(i),
-      visible: c.visible,
+      name: !c.hidden ? (c.name ?? `case ${i + 1}`) : hiddenLabel(i),
+      visible: !c.hidden,
       passed: passed[i],
       failure: passed[i] ? null : failureOf(result),
-      detail: c.visible
+      detail: !c.hidden
         ? {
             input: c.input,
             expected: c.expected,
