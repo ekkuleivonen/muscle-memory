@@ -37,7 +37,7 @@ const show = (value: unknown) => JSON.stringify(value, null, 2);
 
 /**
  * A challenge's public page, where a shared challenge link lands: its goal and requirements,
- * its published examples, and a fresh start on it. Public, like /play: the link names only the
+ * its published examples, and a fresh start on it. Public, like /start: the link names only the
  * challenge, so nobody's work, attempt or records come with it. Only the examples anyone can
  * run are shown; the checks beyond them stay hidden, as in practice.
  */

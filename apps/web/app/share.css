@@ -85,8 +85,7 @@
   align-items: center;
   flex-wrap: wrap;
 }
-.try-note,
-.try-other {
+.try-note {
   font-size: 13px;
 }
 .shared-code {

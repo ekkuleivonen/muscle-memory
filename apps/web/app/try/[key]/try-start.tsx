@@ -10,7 +10,7 @@ import { logArrival, noteArrival } from "../../../lib/site-log";
 
 /**
  * Starting a shared challenge. For someone new it also accepts the Terms, which the line above
- * the button says plainly, as on /play. It opens the visitor's own attempt: from the starting
+ * the button says plainly, as on /start. It opens the visitor's own attempt: from the starting
  * code, or where they left it if they had started it here before.
  */
 export function TryStart({

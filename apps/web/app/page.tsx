@@ -7,8 +7,8 @@ import "./_terminal/terminal.css";
 
 /**
  * The public front door, in one screen: what this is, a challenge to start, and a pointer to the
- * manifesto for the why. Outside the consent gate; someone who has accepted the Terms goes
- * straight to the challenges, everyone else to the five-minute test.
+ * manifesto for the why. Outside the consent gate. The challenge to start is quick start's: an
+ * easy one in your language.
  */
 export default async function Home() {
   const store = await cookies();
@@ -31,17 +31,17 @@ export default async function Home() {
           <p className="t-line home-dare">
             {returning
               ? "Your next one is waiting. Still sharp?"
-              : "A five-minute bug. No AI. Can you still fix it yourself?"}
+              : "An easy one in your language. No AI. Can you still write it yourself?"}
           </p>
           <div className="home-start">
             <Link
               className="t-btn t-btn-primary"
-              href={returning ? "/challenges" : "/play"}
+              href="/start"
               autoFocus
             >
               {returning
                 ? "find your next challenge →"
-                : "take the five-minute challenge →"}
+                : "start a challenge →"}
             </Link>
             <Link className="t-cmd" href="/challenges">
               browse every challenge

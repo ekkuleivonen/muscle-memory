@@ -11,7 +11,7 @@ export const TERMS = `## The short version
 - **Solve issues yourself.** No AI assistants in your runs: comparing people with LLMs only works if the people are people.
 - It's an early product, provided as is. Things will change, and occasionally break.
 
-These Terms are an agreement between you and **rowandreason.com** ("we", "us"). By accepting them (before your first page, or when you start the five-minute test), you agree to them.
+These Terms are an agreement between you and **rowandreason.com** ("we", "us"). By accepting them (before your first page, or when you start a challenge before that), you agree to them.
 
 ## Your account
 

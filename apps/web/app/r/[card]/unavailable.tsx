@@ -21,7 +21,7 @@ export function SharedHeader() {
 /**
  * A shared link that cannot be shown: says so plainly, shows nothing in its place (never this
  * browser's own work, never a made-up result), and offers the challenge it named when it still
- * exists, else the five-minute test.
+ * exists, else quick start.
  */
 export function Unavailable({
   title,
@@ -44,8 +44,8 @@ export function Unavailable({
               Try the current version of {issue.key}: {issue.title} →
             </Link>
           ) : (
-            <Link className="home-cta" href="/play">
-              Try the five-minute test →
+            <Link className="home-cta" href="/start">
+              Start a challenge →
             </Link>
           )}
         </div>

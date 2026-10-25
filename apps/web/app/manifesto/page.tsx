@@ -85,7 +85,7 @@ export default function ManifestoPage() {
             <p>
               Pick a challenge and write it yourself. It&apos;s an early
               preview, with more challenges to come.{" "}
-              <Link href="/play">Try a challenge →</Link>
+              <Link href="/start">Try a challenge →</Link>
             </p>
           </div>
         </main>

@@ -67,7 +67,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
 /**
  * A shared outcome: what someone did on one challenge, named by its title, and the same
- * challenge to try. Public, like /play. The card is whatever the link says; it is a brag, not
+ * challenge to try. Public, like /start. The card is whatever the link says; it is a brag, not
  * a record. A link that does not decode, or names a challenge that is gone, gets a page saying
  * so, never something in its place.
  */

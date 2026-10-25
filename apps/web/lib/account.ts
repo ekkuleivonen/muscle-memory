@@ -80,7 +80,7 @@ export function ensureHandle(): string | null {
 }
 
 /**
- * Accept the current Terms (/consent, /play): the only thing any page needs. Keeps whatever
+ * Accept the current Terms (/consent, /start): the only thing any page needs. Keeps whatever
  * this browser already has and signs it back in; a newcomer gets a handle and an empty profile,
  * which the app's questions fill in as they go. Opens every page.
  */
@@ -102,11 +102,11 @@ export function acceptConsent(): StoredProfile {
 }
 
 /**
- * The language picked for the five-minute test, as a first guess at the languages answer: saved
+ * The language picked in quick start, as a first guess at the languages answer: saved
  * when the profile has none yet, so every IDE session's profile snapshot carries it. The
  * languages question still counts as open until the person answers it. Returns the profile.
  */
-export function playLanguage(language: LanguageId): Profile {
+export function guessLanguage(language: LanguageId): Profile {
   const stored = readProfile();
   if (!stored) return { languages: [language] };
   if (stored.profile.languages?.length) return stored.profile;

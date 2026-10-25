@@ -10,7 +10,7 @@ export const PROFILE_VERSION = "2";
 export const PROFILE_KEY = "muscle-memory.profile";
 /**
  * Accepting the current Terms is the only thing any page requires: one click on /consent or
- * /play. This cookie says it was done; the profile questions are asked in the app, never required.
+ * /start. This cookie says it was done; the profile questions are asked in the app, never required.
  */
 export const CONSENT_COOKIE = "mm_consent";
 export const CONSENT_VALUE = LEGAL_VERSION;
@@ -26,7 +26,7 @@ export interface Profile {
 
 /** One profile question's history on this device: answered by the person, or put off. */
 export interface Asked {
-  /** When the person answered it themselves (not a guess, like the five-minute test's language). */
+  /** When the person answered it themselves (not a guess, like quick start's language). */
   answeredAt?: string;
   /** "Not now": not asked again anywhere until then. */
   snoozedUntil?: string;
@@ -52,7 +52,7 @@ export interface StoredProfile {
   profile: Profile;
 }
 
-/** Accepted the current Terms, at /consent or /play. */
+/** Accepted the current Terms, at /consent or /start. */
 export function hasConsent(consent: string | undefined): boolean {
   return consent === CONSENT_VALUE;
 }
@@ -75,7 +75,7 @@ export function safeNext(value: unknown, fallback: string): string {
 
 /**
  * Whether a question is still worth asking: unanswered and not put off. The languages answer
- * counts only once the person gives it; the five-minute test's language is a guess that seeds
+ * counts only once the person gives it; quick start's language is a guess that seeds
  * it, not an answer.
  */
 export function isOpen(stored: StoredProfile, id: keyof Profile, now = Date.now()): boolean {
