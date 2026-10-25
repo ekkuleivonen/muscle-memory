@@ -31,7 +31,7 @@ import {
 
 /**
  * Settings as terminal commands, one page each. Without a command it lists them; with one it
- * runs it on a clean screen, then offers the way back. `question` asks just that profile
+ * runs it on a clean screen, then offers the way back. The status bar says where you are. `question` asks just that profile
  * question (/settings/profile/languages), for links from where the answer matters.
  */
 export function SettingsTerminal({
@@ -79,15 +79,6 @@ const DONE: Prompt = {
   escape: "goes back too",
 };
 
-/** The prompt line a page opens with, as if the command had been typed. */
-function promptLine(typed: string) {
-  return (
-    <span>
-      <span className="t-dim">~/settings $</span> {typed}
-    </span>
-  );
-}
-
 async function settings(
   t: TerminalApi,
   command?: CommandName,
@@ -102,12 +93,10 @@ async function settings(
     );
   }
   if (!command) {
-    t.print(promptLine("ls"), "");
     const picked = await t.ask(MENU, { skipped: "closed" });
     if (picked === null) return t.back();
     return t.open(`/settings/${String(picked)}`);
   }
-  t.print(promptLine(question ? `${command} ${question}` : command), "");
   const outcome = await (question ? profile(t, [question]) : RUN[command](t));
   if (outcome === "left") return;
   t.print("");
