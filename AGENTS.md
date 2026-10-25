@@ -2,10 +2,14 @@
 
 Muscle Memory is independent coding practice: challenge, code, immediate feedback, then the next challenge. It records granular, raw practice data. Clarity is mandatory; realistic framing is optional and must help explain the problem. Difficulty comes from solving the problem, not decoding the prompt. Start with the README, then `docs/` (`issue-model.md` for issues and content, `workspace.md` for the IDE and runners, `telemetry.md` for uploads, `play.md` for the entry points, the five-minute test, sharing and legacy links, `profile.md` for the profile questions and settings, `model-runs.md` for the planned model runs). App-specific notes: `apps/web/AGENTS.md`.
 
+## Before launch
+
+Nobody uses Muscle Memory yet. Until launch, the rules on revisions and recorded data below describe the design, not a duty to stay compatible: schemas, capture versions, stored formats, catalog revisions and links can be reset freely, with no migrations, legacy readers or redirects. Keep the current version simple and correct instead. The other rules (no AI at runtime, deterministic checks, the sandbox) hold now.
+
 ## Rules that are easy to break
 
-- **No AI at runtime.** Nothing a model generates while someone plays reaches them: no completion, chat, suggestions, code generation or live review, and no player data goes to a model. Classic tooling (syntax highlighting, type errors, hover types) is fine and must be listed in `editorFeatures` so recorded data says what help was on. Autocomplete is undecided: ask first. AI may draft issues, teammate comments and hints offline; a person reviews them before publishing, and they fire at runtime only through deterministic triggers.
-- **CI is deterministic.** Checks are rule-driven (cases, static rules) and decide merging.
+- **No AI at runtime.** Nothing a model generates while someone plays reaches them: no completion, chat, suggestions, code generation or live review, and no player data goes to a model. Classic tooling (syntax highlighting, type errors, hover types) is fine and must be listed in `editorFeatures` so recorded data says what help was on. Autocomplete is undecided: ask first. AI may draft challenges and their rules offline; a person reviews them before publishing, and rules fire at runtime only deterministically.
+- **Checks are deterministic.** A submission is judged by its cases and static rules, and nothing else.
 - **Revisions are immutable.** An issue's revision is stored under the hash of its content and never edited; changing it adds a revision (see CONTRIBUTING and `docs/issue-model.md`). Content is seed data: edit `content/seed.ts`, run `npm run build:content`, and never edit `content/catalog.json` by hand.
 - **Recorded data keeps its meaning.** If what an observation records changes, bump the capture version in `packages/domain` and say what changed in its comment.
 - **Code runs only in the browser sandbox** (`packages/runner`): an opaque-origin iframe with a CSP that denies every connection, plus a worker. Never relax the CSP, run user code in the page, or fetch runtime files from anywhere but this origin. The one documented exception: the Java engine's frame allows `eval`, which TeaVM's loader needs (`allowEval`, see `docs/workspace.md`).
