@@ -2750,3 +2750,35 @@ button.home-cta:disabled {
   font-size: 12.5px;
   color: var(--dim);
 }
+/* The PR's current next step precedes its inspectable history. */
+.pull-action-controls,
+.practice-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.pull-action-controls {
+  justify-content: flex-end;
+}
+.merge-box .pull-next-action {
+  color: var(--accent-fg);
+  background: var(--accent);
+}
+.practice-actions .btn.start {
+  margin-right: 0;
+}
+.practice-actions .share-open {
+  color: var(--fg);
+  background: none;
+  border: 1px solid var(--line-strong);
+}
+@media (max-width: 700px) {
+  .pull .merge-box {
+    flex-wrap: wrap;
+  }
+  .pull-action-controls {
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+}

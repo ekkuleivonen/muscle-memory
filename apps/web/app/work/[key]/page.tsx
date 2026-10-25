@@ -47,7 +47,10 @@ export default async function WorkPage({ params, searchParams }: Props) {
   return (
     <Ide
       revisionsJson={JSON.stringify(published)}
-      candidates={issues.map(summarize)}
+      candidates={[
+        summarize(issue),
+        ...issues.filter((i) => i.key !== issue.key).map(summarize),
+      ]}
       issue={{
         key: issue.key,
         slug: issue.slug,

@@ -106,6 +106,7 @@ import {
   type FileView,
 } from "../workspace/continuity";
 
+import { nextAction } from "./next-action";
 import { nextProblem } from "../../lib/next-problem";
 import type { IssueSummary } from "../../lib/library";
 
@@ -805,6 +806,24 @@ export function Ide({
 
   const running = run?.status === "queued" || run?.status === "running";
   const ready = runtime.state === "ready" && opening.state === "open";
+  const localFeedback =
+    run?.purpose === "local" && run.outcome?.status === "completed"
+      ? runFeedback(casesRun(challenge.cases, "local"), run.outcome.cases)
+      : null;
+  const action = nextAction({
+    done,
+    running,
+    unavailable: runtime.state === "unavailable",
+    openPull: !!openPull,
+    blocker:
+      mergeable?.number === openPull?.number ? mergeable?.blocker : undefined,
+    stale,
+    localPassed:
+      !!localFeedback &&
+      localFeedback.total > 0 &&
+      localFeedback.correct === localFeedback.total,
+  });
+  const reviewTarget = action === "review" ? openPull : null;
   const booting =
     !booted &&
     (opening.state === "opening" ||
@@ -883,7 +902,11 @@ export function Ide({
             }}
           />
           {issue.runnable ? (
-            running ? (
+            action === "retry" ? (
+              <button type="button" className="ide-run" onClick={startRuntime}>
+                Retry environment
+              </button>
+            ) : running ? (
               <button
                 type="button"
                 className="ide-run cancel"
@@ -895,7 +918,7 @@ export function Ide({
               <>
                 <button
                   type="button"
-                  className="ide-run secondary"
+                  className={`ide-run${action === "test" ? "" : " secondary"}`}
                   disabled={!ready}
                   onClick={(event) =>
                     void session.current?.run(
@@ -909,7 +932,7 @@ export function Ide({
                 </button>
                 <button
                   type="button"
-                  className={`ide-run${reviewable ? " secondary" : ""}`}
+                  className={`ide-run${action === "push" ? "" : " secondary"}`}
                   disabled={!ready}
                   onClick={(event) =>
                     void session.current?.pullRequest(
@@ -930,13 +953,21 @@ export function Ide({
                       : "Open pull request"}{" "}
                   <Shortcut shift />
                 </button>
-                {reviewable && (
+                {action === "continue" &&
+                  (next ? (
+                    <StartWork issue={next} href={`/work/${next.key}`} />
+                  ) : (
+                    <Link className="ide-run" href="/issues">
+                      Browse issues →
+                    </Link>
+                  ))}
+                {reviewTarget && (
                   <Link
                     className="ide-run"
-                    href={pullHref(issue.key, reviewable.number)}
-                    title="Read your changes and the review, then merge: merging moves the issue to Done"
+                    href={pullHref(issue.key, reviewTarget.number)}
                   >
-                    Review and merge #{reviewable.number} →
+                    {reviewable ? "Review and merge" : "Resolve findings on"} #
+                    {reviewTarget.number} →
                   </Link>
                 )}
               </>
@@ -1177,7 +1208,6 @@ export function Ide({
             )}
             {panel === "pulls" ? (
               <PullRequests
-                next={next}
                 pulls={pulls}
                 merged={merged}
                 closed={closed}
@@ -1447,9 +1477,9 @@ function Tests({
   if (!run)
     return (
       <p className="faint">
-        Run the tests (<Shortcut />) to check your code against the {visible}{" "}
-        cases in {testsPath}.
-        {visible < challenge.cases.length && " CI runs more on a pull request."}
+        Start in {challenge.entry}: change the code to match the ticket, then
+        run tests (<Shortcut />
+        ). {visible} acceptance checks are in {testsPath}.
       </p>
     );
   const o = run.outcome;
@@ -1568,7 +1598,6 @@ const CLOSED = { mark: "×", label: "Closed", tone: "faint" };
 const PULLS_NEWEST = 3;
 
 function PullRequests({
-  next,
   pulls,
   merged,
   closed,
@@ -1580,7 +1609,6 @@ function PullRequests({
   done,
   runnable,
 }: {
-  next: IssueSummary | null;
   pulls: PullRequestRecord[];
   /** The pull request that can be merged now (lib/merge), if any. */
   mergeable: number | null;
@@ -1672,9 +1700,6 @@ function PullRequests({
               threads={threads.filter((t) => t.number === latest.number)}
               revisions={revisions}
             />
-            <Link className="ide-run" href={pullHref(issue.key, latest.number)}>
-              Review and merge #{latest.number} →
-            </Link>
           </div>
         ) : (
           <p className="ide-review">
@@ -1693,13 +1718,6 @@ function PullRequests({
           <Link href={pullHref(issue.key, mergedPull.number)}>
             View outcome
           </Link>{" "}
-          ·{" "}
-          {next && (
-            <>
-              <StartWork issue={next} href={`/work/${next.key}`} /> ·{" "}
-            </>
-          )}{" "}
-          <Link href="/issues">pick the next one</Link>.
         </p>
       )}
       {pulls.length === 0 ? (

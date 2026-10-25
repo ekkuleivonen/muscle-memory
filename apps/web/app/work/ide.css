@@ -1008,3 +1008,9 @@ dialog::backdrop {
     -webkit-line-clamp: 5;
   }
 }
+
+.ide-actions .btn.start {
+  height: 28px;
+  padding: 0 12px;
+  font-size: 13px;
+}
