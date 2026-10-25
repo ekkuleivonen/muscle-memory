@@ -62,7 +62,7 @@ export interface Issue {
   estimate: number;
   language?: LanguageId;
   labels: readonly string[];
-  /** The visible cases: hidden ones only run in CI. */
+  /** The cases in the repo's test file; the rest only run in CI. */
   criteria: { input: Json; expected: Json }[];
   comments: readonly IssueComment[];
   /** Runs in this browser: its language has an engine and the issue has what the engine needs. */

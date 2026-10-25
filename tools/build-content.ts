@@ -39,7 +39,7 @@ function revisionOf(seed: SeedIssue, key: string, project: (typeof SEED_PROJECTS
     id: `case-${index + 1}`,
     input: input as Json,
     expected: seed.expected[index] as Json,
-    // Hidden cases only run in CI; the repo's test file shows the rest.
+    // Cases listed in `hidden` are left out of the repo's test file and only run in CI.
     visible: !seed.hidden?.includes(index),
   }));
   if (seed.entry && !["javascript", "typescript", "python"].includes(seed.language))

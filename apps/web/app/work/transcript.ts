@@ -47,13 +47,6 @@ function caseLines(
   passed: boolean,
   result?: CaseResult,
 ): Line[] {
-  // CI runs hidden cases on a pull request; their input and output stay hidden.
-  if (!check.visible)
-    return [
-      passed
-        ? { text: `✔ hidden case ${check.id}`, tone: "pass" }
-        : { text: `✘ hidden case ${check.id}`, tone: "fail" },
-    ];
   const label = caseLabel(challenge, check.input);
   if (passed) return [{ text: `✔ ${label}`, tone: "pass" }];
   const out: Line[] = [{ text: `✘ ${label}`, tone: "fail" }];
