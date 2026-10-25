@@ -76,7 +76,7 @@ Every live revision changed; every earlier revision stays published (`apps/web/l
 | SHOP-5  | `refund-totals`              | `c4b28311be0a` | `68ed6a0dcc9d` | 1 → 1          | 2             | 2                | `ada-order-total`                    |
 | SHOP-6  | `free-shipping-banner`       | `e244ffe65bc0` | `f37d06e59e92` | 1 → 1          | 2             | 4                | —                                    |
 | SHOP-7  | `stale-cart-summary`         | `bdb1f721df1a` | `b6c151c3f9ec` | 1 → 1          | 2             | 3                | `ada-keep-memo`                      |
-| SHOP-8  | `receipt-tax-split`          | `675596eb25cb` | `2fd025fb6c47` | 2 → 1          | 3             | 4                | `mateo-line-taxes`, `mateo-to-fixed` |
+| SHOP-8  | `receipt-tax-split`          | `675596eb25cb` | `d52b73c22792` | 2 → 1          | 3             | 4                | `mateo-line-taxes`, `mateo-to-fixed` |
 | API-1   | `pagination-params`          | `0ac43ce5c978` | `8405f3d99a66` | 1 → 1          | 0             | 1                | —                                    |
 | API-2   | `reset-link-expiry`          | `dd747fae33d5` | `4daaf106a045` | 1 → 1          | 0             | 1                | —                                    |
 | API-3   | `rate-limiter`               | `4bdbc7acd15b` | `d5f535f60c66` | 1 → 1          | 1             | 1                | —                                    |
@@ -93,7 +93,7 @@ Every live revision changed; every earlier revision stays published (`apps/web/l
 | DATA-5  | `late-fee-rounding`          | `4329b9cf7754` | `f9fdd679d880` | 1 → 1          | 1             | 1                | —                                    |
 | DATA-6  | `collected-by-partner`       | `7a455c4e6461` | `de8621e616e7` | 1 → 1          | 2             | 2                | `priya-sum-distinct`                 |
 | DATA-7  | `dedupe-phone-customers`     | `c524922bdcd7` | `70941e23d1f9` | 1 → 1          | 2             | 3                | `priya-pairwise`                     |
-| DATA-8  | `bracketed-refunds`          | `2f67de6d62cb` | `5d9a5155881d` | 3 → 1          | 2             | 4                | —                                    |
+| DATA-8  | `bracketed-refunds`          | `2f67de6d62cb` | `6663cb7589ec` | 3 → 1          | 2             | 4                | —                                    |
 | EDGE-1  | `ring-buffer`                | `ca784ee406e2` | `ceedbc834572` | 1 → 1          | 0             | 1                | —                                    |
 | EDGE-2  | `p99-latency`                | `467834317f13` | `8851fe342864` | 1 → 1          | 0             | 1                | —                                    |
 | EDGE-3  | `lru-cache`                  | `fd4017b09f9f` | `3fe599731b07` | 1 → 1          | 1             | 1                | —                                    |
