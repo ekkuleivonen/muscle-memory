@@ -1,19 +1,16 @@
-/*
- * Terminal: settings and the pages moving to its look. Light or dark like the rest of the app: the chosen theme (data-theme on
- * <html>), else the OS's. Each palette is written for its background, not inverted.
- */
+/* Terminal: settings and the pages moving to its look. Dark only. */
 .term,
 .t-footer {
-  --t-bg: #fbfbfc;
-  --t-fg: #1d1f24;
-  --t-dim: #6b6f78;
-  --t-accent: #5e6ad2;
-  --t-ok: #1f8a55;
-  --t-err: #d93f44;
-  --t-select: #5e6ad233;
-  --t-current: #0000000a;
-  --t-bar: #eef0f3;
-  color-scheme: light;
+  --t-bg: #0f1012;
+  --t-fg: #e5e6e9;
+  --t-dim: #8b8f99;
+  --t-accent: #7d86f1;
+  --t-ok: #3dbb7f;
+  --t-err: #f2555a;
+  --t-select: #7d86f155;
+  --t-current: #ffffff0d;
+  --t-bar: #1a1b1f;
+  color-scheme: dark;
 }
 .term {
   position: fixed;
@@ -26,34 +23,6 @@
     ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   font-size: 15px;
   line-height: 1.6;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .term,
-  :root:not([data-theme="light"]) .t-footer {
-    --t-bg: #0f1012;
-    --t-fg: #e5e6e9;
-    --t-dim: #8b8f99;
-    --t-accent: #7d86f1;
-    --t-ok: #3dbb7f;
-    --t-err: #f2555a;
-    --t-select: #7d86f155;
-    --t-current: #ffffff0d;
-    --t-bar: #1a1b1f;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] .term,
-:root[data-theme="dark"] .t-footer {
-  --t-bg: #0f1012;
-  --t-fg: #e5e6e9;
-  --t-dim: #8b8f99;
-  --t-accent: #7d86f1;
-  --t-ok: #3dbb7f;
-  --t-err: #f2555a;
-  --t-select: #7d86f155;
-  --t-current: #ffffff0d;
-  --t-bar: #1a1b1f;
-  color-scheme: dark;
 }
 .term ::selection {
   background: var(--t-select);

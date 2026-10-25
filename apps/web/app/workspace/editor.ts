@@ -99,7 +99,7 @@ function indent(language: FileLanguage): string {
   return "  ";
 }
 
-/** Colours come from CSS variables, so the IDE follows light and dark mode. */
+/** Colours come from CSS variables (--syn-*), set with the rest of the palette. */
 const highlight = HighlightStyle.define([
   {
     tag: [

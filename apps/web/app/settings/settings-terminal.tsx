@@ -17,7 +17,6 @@ import {
   summarize,
 } from "../../lib/backup";
 import { LEGAL_UPDATED } from "../../lib/legal";
-import { readTheme, setTheme, type Theme } from "../../lib/theme";
 import type { Profile } from "../../lib/profile";
 import { logProfile } from "../(browse)/_components/board-log";
 import type { Answer, Prompt } from "../_terminal/prompts";
@@ -54,7 +53,6 @@ const COMMANDS: Record<
   string,
   { hint: string; run: (t: TerminalApi) => Promise<Outcome> }
 > = {
-  theme: { hint: "light, dark, or follow your system", run: theme },
   profile: {
     hint: "your answers: experience, AI use, languages, goal, editor",
     run: profile,
@@ -161,35 +159,6 @@ async function profile(t: TerminalApi, only?: string[]): Promise<Outcome> {
   saveProfile(toProfile(answers));
   void logProfile("settings");
   t.print(<span className="t-ok">Saved.</span>);
-  return "menu";
-}
-
-const THEMES: { value: Theme; label: string; hint: string }[] = [
-  { value: "system", label: "system", hint: "follow your OS" },
-  { value: "light", label: "light", hint: "" },
-  { value: "dark", label: "dark", hint: "" },
-];
-
-async function theme(t: TerminalApi): Promise<Outcome> {
-  const current = readTheme();
-  const picked = await t.ask(
-    {
-      kind: "select",
-      id: "theme",
-      message: "Theme",
-      choices: THEMES.map(({ value, label, hint }) => ({
-        value,
-        label,
-        ...(hint ? { hint } : {}),
-      })),
-      initial: THEMES.findIndex((choice) => choice.value === current),
-      escape: "keeps current",
-    },
-    { skipped: "unchanged" },
-  );
-  if (picked === null) return "menu";
-  setTheme(picked as Theme);
-  t.print(<span className="t-ok">Theme: {String(picked)}.</span>);
   return "menu";
 }
 

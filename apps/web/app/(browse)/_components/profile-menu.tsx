@@ -39,7 +39,7 @@ export function useAccount() {
 
 /**
  * Bottom of the sidebar: one way into settings, the terminal, where everything about the
- * account lives (theme, answers, stealth, backups, log out, reset, delete). Reading the
+ * account lives (answers, stealth, backups, log out, reset, delete). Reading the
  * account here also sends anyone whose profile is gone back to /consent, on every page.
  */
 export function SettingsLink() {

@@ -60,7 +60,7 @@ CodeMirror 6 with an explicit extension list (`apps/web/app/workspace/editor.ts`
 - Highlighting and indentation for the issue's language (Python, JavaScript, TypeScript, SQL, HTML, PHP, Ruby, Go, C, C++, C#, Java, Rust; Markdown for the README), Tab indenting, undo/redo history, bracket-match highlighting, line numbers, and Mod-Enter to run.
 - Type hints for TypeScript and JavaScript, as an editor had them before AI: errors as squiggles shortly after typing stops, and the type of whatever is under the pointer. They come from the TypeScript language service (5.9, ES2023 library, strict; JavaScript gets syntax errors and inferred types, not type errors), running in a worker of its own that only parses and checks the code. Its files are pinned like the runners'. There is no completion, and nothing AI-assisted; `type-diagnostics` and `hover-types` join the recorded editor features when they are on.
 - Vim keybindings (`@replit/codemirror-vim`) when setup chose Vim; the status bar shows the mode.
-- Syntax colours come from CSS variables, so the IDE follows light and dark mode.
+- Syntax colours come from CSS variables (`--syn-*` in `ide.css`). The site is dark only.
 - No autocompletion, auto-closing brackets, linting or AI assistance.
 
 The editor owns its document, so typing does not re-render React, and work survives runs, errors, timeouts and cancels.

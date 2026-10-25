@@ -1,11 +1,9 @@
 /*
  * Neutral, developer-tool palette (in the spirit of GitHub and Linear): greys plus one
- * indigo accent, light and dark following the OS unless settings chose one (data-theme on
- * <html>, see lib/theme.ts). Each dark block is written twice: chosen, and the OS's when
- * nothing was chosen. Project colours are hues 0-7 (--hue-n).
+ * indigo accent. Dark only. Project colours are hues 0-7 (--hue-n).
  */
 :root {
-  color-scheme: light dark;
+  color-scheme: dark;
   --font:
     Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
@@ -14,54 +12,6 @@
     monospace;
   --radius: 6px;
 
-  --bg: #ffffff;
-  --bg-subtle: #f7f8f9;
-  --panel: #ffffff;
-  --hover: #f1f2f4;
-  --active: #e9eaee;
-  --line: #e4e5e9;
-  --line-strong: #d1d3d9;
-  --fg: #1d1f24;
-  --dim: #5f636d;
-  --faint: #646975;
-  --accent: #5e6ad2;
-  --accent-fg: #ffffff;
-  --accent-soft: #5e6ad21a;
-  --red: #d93f44;
-  --green: #217c50;
-  --amber: #8c6007;
-  --blue: #2f7fe0;
-  --label-l: 38%;
-  --shadow: 0 4px 16px #0000001a, 0 0 0 1px var(--line);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0f1012;
-    --bg-subtle: #141518;
-    --panel: #17181b;
-    --hover: #1e1f23;
-    --active: #25262b;
-    --line: #26272c;
-    --line-strong: #35373d;
-    --fg: #e5e6e9;
-    --dim: #9b9ea6;
-    --faint: #969aa5;
-    --accent: #7d86f1;
-    --accent-fg: #0f1012;
-    --accent-soft: #7d86f122;
-    --red: #f2555a;
-    --green: #3dbb7f;
-    --amber: #f0b03c;
-    --blue: #5aa2ff;
-    --label-l: 74%;
-    --shadow: 0 8px 24px #00000066, 0 0 0 1px var(--line-strong);
-  }
-}
-:root[data-theme="light"] {
-  color-scheme: light;
-}
-:root[data-theme="dark"] {
-  color-scheme: dark;
   --bg: #0f1012;
   --bg-subtle: #141518;
   --panel: #17181b;
@@ -1192,13 +1142,8 @@ kbd {
   color: #fff;
   filter: brightness(1.08);
 }
-/* Dark mode's lighter accent is too pale behind white text; deepen it to keep AA. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .home-cta {
-    background: color-mix(in srgb, var(--accent), #000 25%);
-  }
-}
-:root[data-theme="dark"] .home-cta {
+/* The accent is too pale behind white text; deepen it to keep AA. */
+.home-cta {
   background: color-mix(in srgb, var(--accent), #000 25%);
 }
 .home-cta:focus-visible {

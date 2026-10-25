@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { TrackerActivity } from "./(browse)/_components/tracker-activity";
 import { Uploads } from "./(browse)/_components/uploads";
-import { THEME_SCRIPT } from "../lib/theme";
 import "./style.css";
 export const metadata: Metadata = {
   // Absolute links for shared previews (og:image); the production hostname unless set.
@@ -17,11 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    // The theme script sets data-theme before React hydrates, hence the warning suppressed.
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
-      </head>
+    <html lang="en">
       <body>
         {children}
         {/* Reads the URL's query, which needs a boundary on statically rendered pages. */}

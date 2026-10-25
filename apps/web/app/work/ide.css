@@ -1,58 +1,7 @@
-/* The IDE: VS Code proportions in the app's colours, light and dark. */
-/* Syntax colours for every editor surface: the practice page and the older IDE. */
+/* The IDE: VS Code proportions in the app's colours. */
+/* Editor colours for every editor surface: the practice page and the older IDE. */
 .ide,
 .practice {
-  --syn-keyword: #a626a4;
-  --syn-string: #347b33;
-  --syn-number: #986801;
-  --syn-comment: #666b76;
-  --syn-function: #2860d2;
-  --syn-type: #886000;
-  --syn-property: #b53730;
-  --syn-tag: #b53730;
-  --syn-variable: #383a42;
-  --syn-punctuation: #6b6e76;
-  --syn-invalid: #b53730;
-}
-.ide {
-  --ide-bar: var(--bg-subtle);
-  --ide-side: var(--bg-subtle);
-  --ide-editor: var(--bg);
-  --ide-panel: var(--bg);
-  position: fixed;
-  inset: 0;
-  display: grid;
-  grid-template-columns: 48px var(--side-w, 280px) minmax(0, 1fr);
-  grid-template-rows: 40px minmax(0, 1fr) 24px;
-  grid-template-areas:
-    "title title title"
-    "activity side main"
-    "status status status";
-  background: var(--ide-editor);
-  color: var(--fg);
-  font-size: 13px;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .ide,
-  :root:not([data-theme="light"]) .practice {
-    --ide-bar: #0b0c0e;
-    --ide-side: #121316;
-    --ide-editor: #0f1012;
-    --syn-keyword: #c678dd;
-    --syn-string: #98c379;
-    --syn-number: #d19a66;
-    --syn-comment: #969caa;
-    --syn-function: #61afef;
-    --syn-type: #e5c07b;
-    --syn-property: #e06c75;
-    --syn-tag: #e06c75;
-    --syn-variable: #d7dae0;
-    --syn-punctuation: #9da3ad;
-    --syn-invalid: #f2555a;
-  }
-}
-:root[data-theme="dark"] .ide,
-:root[data-theme="dark"] .practice {
   --ide-bar: #0b0c0e;
   --ide-side: #121316;
   --ide-editor: #0f1012;
@@ -67,6 +16,21 @@
   --syn-variable: #d7dae0;
   --syn-punctuation: #9da3ad;
   --syn-invalid: #f2555a;
+}
+.ide {
+  --ide-panel: var(--bg);
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 48px var(--side-w, 280px) minmax(0, 1fr);
+  grid-template-rows: 40px minmax(0, 1fr) 24px;
+  grid-template-areas:
+    "title title title"
+    "activity side main"
+    "status status status";
+  background: var(--ide-editor);
+  color: var(--fg);
+  font-size: 13px;
 }
 
 /* Title bar */
