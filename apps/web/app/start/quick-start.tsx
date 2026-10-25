@@ -60,6 +60,14 @@ export function QuickStart({
   const start = async (language: string, challenge: QuickChallenge) => {
     setStarting(true);
     setError("");
+    // The language's runtime starts downloading now, while practice loads, as the picker does
+    // on hover. Imported here so this page doesn't carry the runner.
+    void import("../../../../packages/runner/runner")
+      .then(({ engineFor, warmRuntime }) => {
+        const engine = engineFor(language);
+        if (engine) warmRuntime(engine);
+      })
+      .catch(() => undefined);
     try {
       if (!consented) acceptConsent();
       // Recorded only now that the Terms are accepted: how they came (once per browser), and
