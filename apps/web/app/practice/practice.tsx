@@ -224,6 +224,12 @@ export function Practice({
         return;
       const target = event.target as HTMLElement | null;
       if (
+        !target ||
+        !mainRef.current?.contains(target) ||
+        target.closest("dialog")
+      )
+        return;
+      if (
         target?.closest(
           "input, textarea, select, [contenteditable='true'], .cm-editor",
         )
@@ -560,6 +566,7 @@ export function Practice({
       >
         <section
           className="pane practice-challenge"
+          id="practice-challenge"
           aria-label="Challenge"
           ref={challengePane}
         >
@@ -602,6 +609,7 @@ export function Practice({
         <Splitter
           axis="x"
           label="Resize the challenge pane"
+          controls="practice-challenge"
           value={() => challengePane.current?.offsetWidth ?? 0}
           min={CHALLENGE.min}
           max={() => (mainRef.current?.clientWidth ?? 0) - CODE_MIN.width}
@@ -650,35 +658,48 @@ export function Practice({
                 >
                   Retry checks
                 </button>
-              ) : running ? (
-                <button
-                  className="btn"
-                  onClick={() => session.current?.cancel()}
-                >
-                  Cancel check
-                </button>
               ) : (
                 <>
                   <button
                     className="btn"
                     disabled={!ready}
-                    onClick={(event) =>
+                    aria-disabled={running && run?.purpose !== "examples"}
+                    onClick={(event) => {
+                      if (running) {
+                        if (run?.purpose === "examples")
+                          session.current?.cancel();
+                        return;
+                      }
                       void session.current?.run(
                         "examples",
                         event.detail === 0 ? "keyboard" : "pointer",
-                      )
-                    }
+                      );
+                    }}
                   >
-                    Run examples
+                    {running && run?.purpose === "examples"
+                      ? "Cancel check"
+                      : "Run examples"}
                   </button>
                   <button
                     className={`btn${done ? "" : " primary"}`}
                     disabled={!ready}
-                    onClick={(event) =>
-                      submit(event.detail === 0 ? "keyboard" : "pointer")
-                    }
+                    aria-disabled={running && run?.purpose !== "submit"}
+                    onClick={(event) => {
+                      if (running) {
+                        if (run?.purpose === "submit")
+                          session.current?.cancel();
+                        return;
+                      }
+                      submit(event.detail === 0 ? "keyboard" : "pointer");
+                    }}
                   >
-                    Submit <Shortcut />
+                    {running && run?.purpose === "submit" ? (
+                      "Cancel check"
+                    ) : (
+                      <>
+                        Submit <Shortcut />
+                      </>
+                    )}
                   </button>
                 </>
               )}
@@ -688,6 +709,7 @@ export function Practice({
         <Splitter
           axis="y"
           label="Resize the feedback pane"
+          controls="practice-feedback"
           value={() => resultsPane.current?.offsetHeight ?? 0}
           min={FEEDBACK.min}
           max={() => (mainRef.current?.clientHeight ?? 0) - CODE_MIN.height}
@@ -696,6 +718,7 @@ export function Practice({
         />
         <section
           className="pane practice-results"
+          id="practice-feedback"
           aria-label="Feedback"
           ref={resultsPane}
         >
@@ -703,6 +726,9 @@ export function Practice({
             <kbd>[3]</kbd> feedback
           </h2>
           <div className="pane-body" tabIndex={0} ref={resultsBody}>
+            <p className="t-sr" role="status" aria-atomic="true">
+              {exampleAnnouncement(run, revision)}
+            </p>
             {message && (
               <p className="practice-notice" role="status">
                 {message}
@@ -805,6 +831,14 @@ export function Practice({
         <span>
           <Shortcut /> submits · Esc, then Tab leaves the editor · 1 2 3 switch
           panes · <Link href="/settings/profile/editor">editor keys</Link>
+          {(challenge.language === "javascript" ||
+            challenge.language === "typescript") && (
+            <>
+              {" "}
+              · F1 type info · F8 / Shift-F8 diagnostics ·{" "}
+              <Shortcut shift keyName="M" /> diagnostics panel
+            </>
+          )}
         </span>
       </p>
       <TermFooter trail={trail} />
@@ -868,6 +902,27 @@ function AfterQuestions({
       ))}
     </div>
   );
+}
+
+/** A brief announcement; detailed examples remain available in the feedback pane. */
+function exampleAnnouncement(run: RunView | null, revision: Revision): string {
+  if (run?.purpose !== "examples") return "";
+  if (run.status === "queued" || run.status === "running")
+    return "Running examples…";
+  const outcome = run.outcome;
+  if (!outcome) return "";
+  if (outcome.status === "cancelled") return "Example check cancelled.";
+  if (outcome.status === "timeout")
+    return "Example check timed out. Look for a loop that never ends.";
+  if (outcome.status === "runner-error")
+    return "The test runner crashed; this wasn't your code.";
+  if (outcome.error && outcome.phase !== "tests")
+    return `Example check failed: ${outcome.error.type}: ${outcome.error.message}`;
+  const feedback = runFeedback(
+    casesRun(revision.cases, "examples"),
+    outcome.cases,
+  );
+  return `Examples: ${feedback.correct} passed, ${feedback.total - feedback.correct} failed.`;
 }
 
 function Tests({
@@ -1066,14 +1121,20 @@ function Output({
   );
 }
 
-function Shortcut({ shift = false }: { shift?: boolean }) {
+function Shortcut({
+  shift = false,
+  keyName = "Enter",
+}: {
+  shift?: boolean;
+  keyName?: string;
+}) {
   const [mac, setMac] = useState(false);
   useEffect(() => setMac(/Mac|iPhone|iPad/.test(navigator.platform)), []);
   return (
     <kbd>
       {mac ? "⌘" : "Ctrl+"}
       {shift ? (mac ? "⇧" : "Shift+") : ""}
-      {mac ? "↵" : "Enter"}
+      {keyName === "Enter" && mac ? "↵" : keyName}
     </kbd>
   );
 }

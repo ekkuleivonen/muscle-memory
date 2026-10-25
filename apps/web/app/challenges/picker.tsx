@@ -58,6 +58,7 @@ export function Picker({
   const [cursor, setCursor] = useState(0);
   const input = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLOListElement>(null);
+  const root = useRef<HTMLDivElement>(null);
 
   const query = useMemo(() => parseChallengeQuery(text), [text]);
   const results = useMemo(() => {
@@ -133,11 +134,24 @@ export function Picker({
       ?.scrollIntoView({ block: "nearest" });
   }, [at]);
 
-  // "/" finds the search from anywhere on the page, as before.
+  // Character shortcuts only act while this picker has focus.
   useEffect(() => {
     const onKey = (event: globalThis.KeyboardEvent) => {
       if (event.key !== "/" || document.activeElement === input.current) return;
-      if ((event.target as HTMLElement).closest("input, textarea")) return;
+      if (
+        event.defaultPrevented ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.altKey
+      )
+        return;
+      if (!root.current?.contains(event.target as Node)) return;
+      if (
+        (event.target as HTMLElement).closest(
+          "input, textarea, [contenteditable]",
+        )
+      )
+        return;
       event.preventDefault();
       input.current?.focus();
     };
@@ -151,7 +165,6 @@ export function Picker({
   };
   const flip = (key: ListKey, value: string) => {
     search(formatQuery(toggle(query, key, value) as ChallengeQuery));
-    input.current?.focus();
   };
   /** Practice records the start, with the search then and the position in the list. */
   const start = (challenge: Challenge) => {
@@ -177,7 +190,7 @@ export function Picker({
     if (engine) warmRuntime(engine);
   };
 
-  function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+  function onKeyDown(event: KeyboardEvent<HTMLElement>) {
     const move = (by: number) => {
       event.preventDefault();
       setCursor(Math.min(results.length - 1, Math.max(0, at + by)));
@@ -197,11 +210,17 @@ export function Picker({
       event.preventDefault();
       if (text) search("");
       else input.current?.blur();
+    } else if (event.currentTarget === list.current && event.key === "Home") {
+      event.preventDefault();
+      setCursor(0);
+    } else if (event.currentTarget === list.current && event.key === "End") {
+      event.preventDefault();
+      setCursor(Math.max(0, results.length - 1));
     }
   }
 
   return (
-    <div className="term picker">
+    <div className="term picker" ref={root}>
       <div className="picker-search">
         <label className="picker-line">
           <span className="t-accent" aria-hidden>
@@ -215,6 +234,9 @@ export function Picker({
             onKeyDown={onKeyDown}
             placeholder="search: words, or lang:python difficulty:easy is:starred"
             aria-label="Search challenges"
+            role="combobox"
+            aria-expanded="true"
+            aria-autocomplete="list"
             aria-controls="picker-list"
             aria-activedescendant={current ? `pick-${current.key}` : undefined}
             autoComplete="off"
@@ -222,7 +244,7 @@ export function Picker({
             autoCorrect="off"
             spellCheck={false}
           />
-          <span className="t-dim">
+          <span className="t-dim" role="status">
             {results.length} of {all.length}
           </span>
         </label>
@@ -255,6 +277,9 @@ export function Picker({
           className="picker-list"
           role="listbox"
           aria-label="Challenges"
+          aria-activedescendant={current ? `pick-${current.key}` : undefined}
+          tabIndex={0}
+          onKeyDown={onKeyDown}
         >
           {results.map((challenge, index) => {
             const starred = has(challenge.key, "starred");
@@ -267,7 +292,10 @@ export function Picker({
                 role="option"
                 aria-selected={index === at}
                 className={index === at ? "t-current-row" : undefined}
-                onClick={() => setCursor(index)}
+                onClick={() => {
+                  setCursor(index);
+                  list.current?.focus({ preventScroll: true });
+                }}
                 onDoubleClick={() => start(challenge)}
               >
                 <span className="t-accent">{index === at ? "❯" : " "}</span>

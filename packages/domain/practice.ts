@@ -8,7 +8,8 @@
 import { runFeedback, type Envelope } from "./records";
 import type { Json } from "./json";
 
-export const PRACTICE_CAPTURE_VERSION = "practice-capture-1.0.0";
+/** 1.1: type tooltips in practice.assist may be opened by keyboard as well as pointer. */
+export const PRACTICE_CAPTURE_VERSION = "practice-capture-1.1.0";
 /** An edit whose change set is larger than this is recorded without it, plus a snapshot. */
 export const EDIT_CHANGES_LIMIT_BYTES = 16384;
 /** What this capture does not record. Absence is a gap, not evidence of no activity. */
@@ -49,7 +50,13 @@ export type SubmitResult = "passed" | "failed" | "errored" | "cancelled";
  * after completing one, practising a completed challenge again, or practice opened by its URL
  * with no attempt under way (direct).
  */
-export type StartedFrom = "picker" | "quick-start" | "link" | "next" | "again" | "direct";
+export type StartedFrom =
+  | "picker"
+  | "quick-start"
+  | "link"
+  | "next"
+  | "again"
+  | "direct";
 
 /**
  * Asked after completing a challenge, every one optional: how hard it felt, how sure they were
@@ -100,9 +107,15 @@ export interface PracticeData {
     readonly entry: string | null;
     /** The self-reported profile at this moment, or null. */
     readonly profile: Json | null;
-    readonly viewport: { readonly width: number; readonly height: number } | null;
+    readonly viewport: {
+      readonly width: number;
+      readonly height: number;
+    } | null;
     readonly environment: Environment | null;
-    readonly editor: { readonly name: string; readonly features: readonly string[] };
+    readonly editor: {
+      readonly name: string;
+      readonly features: readonly string[];
+    };
     readonly runtime: Json;
     readonly captureGaps: readonly string[];
   };
@@ -120,7 +133,12 @@ export interface PracticeData {
   "practice.snapshot": {
     readonly revision: number;
     readonly codeArtifactId: string;
-    readonly reason: "opened" | "periodic" | "run" | "oversize-edit" | "restored";
+    readonly reason:
+      | "opened"
+      | "periodic"
+      | "run"
+      | "oversize-edit"
+      | "restored";
   };
   /** Key events in the editor, in order, about a second at a time. */
   "practice.keys": {
@@ -153,7 +171,10 @@ export interface PracticeData {
         readonly source: "editor";
         readonly file: string;
         readonly kind: "copy" | "cut";
-        readonly ranges: readonly { readonly from: number; readonly to: number }[];
+        readonly ranges: readonly {
+          readonly from: number;
+          readonly to: number;
+        }[];
         /** Nothing was selected, so the editor took the cursors' whole lines. */
         readonly wholeLines: boolean;
       }
@@ -164,7 +185,7 @@ export interface PracticeData {
         readonly textBytes: number;
         readonly truncated: boolean;
       };
-  /** Help the editor showed: type errors after a pause in typing, or a hover type. */
+  /** Help the editor showed: diagnostics, or a type tooltip opened by pointer or keyboard. */
   "practice.assist": {
     readonly file: string;
     readonly kind: "diagnostics" | "hover";
@@ -232,10 +253,8 @@ export interface PracticeData {
 }
 
 export type PracticeType = keyof PracticeData;
-export type PracticeObservation<T extends PracticeType = PracticeType> = Envelope<
-  T,
-  PracticeData[T]
->;
+export type PracticeObservation<T extends PracticeType = PracticeType> =
+  Envelope<T, PracticeData[T]>;
 
 /**
  * A submission's result from its run outcome. Passed needs a completed test phase in which every
@@ -253,7 +272,8 @@ export function submitResult(
     | undefined,
 ): { result: SubmitResult; passed: number; total: number } {
   const total = checks.length;
-  if (!outcome || outcome.status === "cancelled") return { result: "cancelled", passed: 0, total };
+  if (!outcome || outcome.status === "cancelled")
+    return { result: "cancelled", passed: 0, total };
   if (
     (outcome.status !== "completed" && outcome.status !== "user-error") ||
     outcome.phase !== "tests" ||

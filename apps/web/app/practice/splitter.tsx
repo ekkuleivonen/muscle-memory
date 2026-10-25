@@ -62,7 +62,7 @@ export function usePracticeLayout() {
 /**
  * A drag handle between two panes. `axis` x resizes a width (dragging right grows it), y a
  * height measured from below (dragging up grows it). Arrow keys nudge it (Shift for more),
- * Home and End go to the limits, double-click resets to the default.
+ * Home and End go to the limits, Enter or double-click resets to the default.
  */
 export function Splitter({
   axis,
@@ -70,6 +70,7 @@ export function Splitter({
   min,
   max,
   label,
+  controls,
   onChange,
   onReset,
   className = "",
@@ -80,12 +81,33 @@ export function Splitter({
   min: number;
   max(): number;
   label: string;
+  controls: string;
   onChange(value: number): void;
   onReset(): void;
   className?: string;
 }) {
   const drag = useRef<{ start: number; value: number } | null>(null);
+  const handle = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
+  const [range, setRange] = useState({ value: min, max: min });
+  useEffect(() => {
+    const measure = () => {
+      const upper = Math.max(min, Math.round(max()));
+      const current = clamp(value(), min, upper);
+      setRange((previous) =>
+        previous.value === current && previous.max === upper
+          ? previous
+          : { value: current, max: upper },
+      );
+    };
+    const observer = new ResizeObserver(measure);
+    const pane = document.getElementById(controls);
+    if (pane) observer.observe(pane);
+    if (handle.current?.parentElement)
+      observer.observe(handle.current.parentElement);
+    measure();
+    return () => observer.disconnect();
+  }, [controls, min, max, value]);
   const set = (next: number) =>
     onChange(clamp(next, min, Math.max(min, max())));
 
@@ -119,17 +141,25 @@ export function Splitter({
     else if (event.key === shrink) set(value() - step);
     else if (event.key === "Home") set(min);
     else if (event.key === "End") set(max());
+    else if (event.key === "Enter") onReset();
     else return;
     event.preventDefault();
   }
 
   return (
     <div
+      ref={handle}
       role="separator"
       aria-orientation={axis === "x" ? "vertical" : "horizontal"}
       aria-label={label}
+      aria-controls={controls}
+      aria-valuemin={min}
+      aria-valuemax={range.max}
+      aria-valuenow={range.value}
+      aria-valuetext={`${range.value} pixels`}
+      aria-description="Arrow keys resize. Shift moves faster. Home and End move to the limits. Enter resets."
       tabIndex={0}
-      title="Drag to resize · double-click to reset"
+      title="Drag or arrow keys to resize · Enter or double-click to reset"
       className={`pane-splitter ${axis} ${dragging ? "dragging" : ""} ${className}`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}

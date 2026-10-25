@@ -15,11 +15,15 @@ const origin = process.env.LOOP_ORIGIN ?? "http://localhost:3000";
 const screenshots = process.env.PRACTICE_SCREENSHOTS;
 if (screenshots) await mkdir(screenshots, { recursive: true });
 const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+const context = await browser.newContext({
+  viewport: { width: 1280, height: 900 },
+});
 await context.route("**/ingest/**", (route) =>
   route.fulfill({ status: 410, body: "synthetic-integration-qa" }),
 );
-await context.addCookies([{ name: "mm_consent", value: LEGAL_VERSION, url: origin }]);
+await context.addCookies([
+  { name: "mm_consent", value: LEGAL_VERSION, url: origin },
+]);
 await context.addInitScript((version) => {
   // Also runs in the sandbox's opaque-origin frame, which has no storage.
   if (origin === "null") return;
@@ -42,12 +46,17 @@ const editor = () => page.locator(".practice-editor:not([hidden]) .cm-content");
 const ready = async () => {
   await editor().waitFor();
   await page.waitForFunction(
-    () => !document.querySelector<HTMLButtonElement>(".practice-controls button:last-child")?.disabled,
+    () =>
+      !document.querySelector<HTMLButtonElement>(
+        ".practice-controls button:last-child",
+      )?.disabled,
   );
 };
 const submit = async () => {
   await editor().focus();
-  await page.keyboard.press(process.platform === "darwin" ? "Meta+Enter" : "Control+Enter");
+  await page.keyboard.press(
+    process.platform === "darwin" ? "Meta+Enter" : "Control+Enter",
+  );
 };
 const records = async () =>
   page.evaluate(async () => {
@@ -74,7 +83,8 @@ const records = async () =>
       db.close();
     }
   });
-const ofType = async (type: string) => (await records()).filter((v) => v.type === type);
+const ofType = async (type: string) =>
+  (await records()).filter((v) => v.type === type);
 /** Records of a type once there are at least `count`: writes are batched. */
 const until = async (type: string, count = 1) => {
   for (let i = 0; i < 100; i++) {
@@ -85,23 +95,74 @@ const until = async (type: string, count = 1) => {
   throw new Error(`Expected ${count} ${type} records`);
 };
 const shot = async (name: string) => {
-  if (screenshots) await page.screenshot({ path: `${screenshots}/${name}.png` });
+  if (screenshots)
+    await page.screenshot({ path: `${screenshots}/${name}.png` });
 };
 const solution = readChallenge(
   new URL("../../content/challenges/JS-002", import.meta.url).pathname,
 ).private.solution;
 
 try {
+  // Keyboard selection survives pointer movement, and quick start reflows at 320px.
+  await page.goto(`${origin}/start`);
+  const language = page.locator("#quick-start-1");
+  await language.focus();
+  await page.locator("#quick-start-4").hover();
+  assert.equal(
+    await language.evaluate((button) => button === document.activeElement),
+    true,
+  );
+  assert.match((await language.getAttribute("class")) ?? "", /t-current-row/);
+  await page.setViewportSize({ width: 320, height: 640 });
+  assert.equal(
+    await page
+      .locator(".term")
+      .evaluate((term) => term.scrollWidth <= term.clientWidth),
+    true,
+  );
+  await page.keyboard.press("End");
+  assert.equal(
+    await page.locator("#quick-start-11").evaluate((button) => {
+      const box = button.getBoundingClientRect();
+      return (
+        button === document.activeElement &&
+        box.top >= 0 &&
+        box.bottom <= innerHeight - 32
+      );
+    }),
+    true,
+  );
+  await page.setViewportSize({ width: 1280, height: 900 });
+
   // A start from the picker: its search and the position of the pick.
-  await page.goto(`${origin}/challenges?q=${encodeURIComponent("lang:javascript composer")}`);
+  await page.goto(
+    `${origin}/challenges?q=${encodeURIComponent("lang:javascript composer")}`,
+  );
   const search = page.locator(".picker input");
   await search.waitFor();
+  await page.locator("#pick-JS-002").click();
+  assert.equal(
+    await page
+      .locator("#picker-list")
+      .evaluate((list) => list === document.activeElement),
+    true,
+  );
+  await page.keyboard.press("/");
+  assert.equal(
+    await search.evaluate((input) => input === document.activeElement),
+    true,
+  );
   // Enter does nothing until the picker has hydrated, which the page doesn't announce.
   for (let tries = 0; ; tries++) {
     await search.press("Enter");
     const moved = await page
-      .waitForFunction(() => location.pathname === "/challenges/JS-002", null, { timeout: 3000 })
-      .then(() => true, () => false);
+      .waitForFunction(() => location.pathname === "/challenges/JS-002", null, {
+        timeout: 3000,
+      })
+      .then(
+        () => true,
+        () => false,
+      );
     if (moved) break;
     assert.ok(tries < 20, "Enter in the picker starts practice");
   }
@@ -116,14 +177,49 @@ try {
   assert.equal(opened.attemptId, started.attemptId);
   assert.ok(opened.data.environment?.browser);
 
+  // Pane dimensions are exposed to assistive technology; Enter resets the size.
+  const splitter = page.getByRole("separator", {
+    name: "Resize the challenge pane",
+  });
+  const initialWidth = await splitter.getAttribute("aria-valuenow");
+  await splitter.focus();
+  await page.keyboard.press("ArrowRight");
+  await page.waitForFunction(
+    (initial) =>
+      document
+        .querySelector(".pane-splitter.x")
+        ?.getAttribute("aria-valuenow") !== initial,
+    initialWidth,
+  );
+  assert.equal(
+    Number(await splitter.getAttribute("aria-valuenow")),
+    await page
+      .locator("#practice-challenge")
+      .evaluate((pane) => pane.offsetWidth),
+  );
+  await page.keyboard.press("Enter");
+  await page.waitForFunction(
+    (initial) =>
+      document
+        .querySelector(".pane-splitter.x")
+        ?.getAttribute("aria-valuenow") === initial,
+    initialWidth,
+  );
+
   // Copying from the challenge records what was copied.
   await page.locator(".practice-challenge h1").selectText();
-  await page.keyboard.press(process.platform === "darwin" ? "Meta+c" : "Control+c");
+  await page.keyboard.press(
+    process.platform === "darwin" ? "Meta+c" : "Control+c",
+  );
   // A failing submission: hidden cases say a category, never a value.
-  await editor().fill('export function countWords(text) { return text.split(" ").length; }');
+  await editor().fill(
+    'export function countWords(text) { return text.split(" ").length; }',
+  );
   await submit();
   await page.locator(".ci-failing").waitFor();
-  const hidden = page.locator(".ci-failing li").filter({ hasText: "hidden case" });
+  const hidden = page
+    .locator(".ci-failing li")
+    .filter({ hasText: "hidden case" });
   assert.equal(await hidden.locator("code, pre, dl").count(), 0);
   const [failed] = await until("practice.submitted");
   assert.equal(failed.data.result, "failed");
@@ -132,20 +228,45 @@ try {
 
   // Examples never complete; a passing submission does.
   await editor().fill(solution);
-  await page.getByRole("button", { name: "Run examples", exact: true }).click();
+  const examples = page.getByRole("button", {
+    name: "Run examples",
+    exact: true,
+  });
+  await examples.focus();
+  await examples.press("Enter");
   await page.locator(".run-summary.pass").waitFor();
-  assert.equal((await ofType("practice.completed")).length, 0, "examples cannot complete");
+  assert.equal(
+    await examples.evaluate((button) => button === document.activeElement),
+    true,
+  );
+  assert.match(
+    await page
+      .locator(".practice-results > .pane-body > [role=status]")
+      .innerText(),
+    /Examples: \d+ passed, 0 failed/,
+  );
+  assert.equal(
+    (await ofType("practice.completed")).length,
+    0,
+    "examples cannot complete",
+  );
   await submit();
-  await page.getByRole("heading", { name: "Next challenge", exact: true }).waitFor();
+  await page
+    .getByRole("heading", { name: "Next challenge", exact: true })
+    .waitFor();
   const [completed] = await until("practice.completed");
   assert.equal(completed.attemptId, started.attemptId);
   const passed = (await ofType("practice.submitted")).at(-1);
   assert.equal(passed.data.result, "passed");
   assert.equal(completed.data.runId, passed.data.runId);
-  const progress = await page.evaluate(() => JSON.parse(localStorage.getItem("muscle-memory.progress")!));
+  const progress = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("muscle-memory.progress")!),
+  );
   assert.equal(progress["JS-002"].completions, 1);
   assert.equal(
-    (await ofType("practice.clipboard")).filter((v) => v.data.source === "challenge").length,
+    (await ofType("practice.clipboard")).filter(
+      (v) => v.data.source === "challenge",
+    ).length,
     1,
   );
   // The questions after completing are optional, one click each.
@@ -159,14 +280,20 @@ try {
   await page.reload();
   await ready();
   assert.equal((await ofType("practice.started")).length, 1);
-  await page.getByRole("heading", { name: "Next challenge", exact: true }).waitFor();
+  await page
+    .getByRole("heading", { name: "Next challenge", exact: true })
+    .waitFor();
 
   // Stars from practice are recorded.
   await page.locator(".pane-star").click();
-  await page.waitForFunction(() => localStorage.getItem("muscle-memory.stars")?.includes("JS-002"));
+  await page.waitForFunction(() =>
+    localStorage.getItem("muscle-memory.stars")?.includes("JS-002"),
+  );
 
   // Practising again begins a new attempt from the starting code.
-  await page.getByRole("button", { name: "Practise this again", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Practise this again", exact: true })
+    .click();
   await page.waitForURL(`${origin}/challenges/JS-002`);
   await ready();
   const starts = await until("practice.started", 2);
@@ -179,7 +306,9 @@ try {
   // The next challenge after completing again is recorded as such.
   await editor().fill(solution);
   await submit();
-  await page.getByRole("heading", { name: "Next challenge", exact: true }).waitFor();
+  await page
+    .getByRole("heading", { name: "Next challenge", exact: true })
+    .waitFor();
   const nextLink = page.locator(".practice-next a.btn.primary");
   const nextHref = (await nextLink.getAttribute("href"))!;
   await nextLink.click();
@@ -197,7 +326,8 @@ try {
   );
 } catch (error) {
   console.error("at", page.url());
-  if (screenshots) await page.screenshot({ path: `${screenshots}/failure.png` });
+  if (screenshots)
+    await page.screenshot({ path: `${screenshots}/failure.png` });
   throw error;
 } finally {
   await context.close();

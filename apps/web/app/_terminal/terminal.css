@@ -81,6 +81,7 @@
   }
   .t-art-narrow {
     display: block;
+    font-size: clamp(8px, 3.5vw, 15px);
   }
 }
 .t-banner-text {
@@ -279,11 +280,11 @@
   font-weight: 700;
 }
 .t-md h3::before {
-  content: "## ";
+  content: "## " / "";
   color: var(--t-accent);
 }
 .t-md h4::before {
-  content: "### ";
+  content: "### " / "";
   color: var(--t-accent);
 }
 .t-md > h3:first-child {
@@ -355,10 +356,17 @@
   font-weight: 400;
 }
 .t-group::before {
-  content: "# ";
+  content: "# " / "";
 }
 .t-keymenu {
   outline: none;
+}
+.t-keymenu:focus-visible {
+  outline: 2px solid var(--t-accent);
+  outline-offset: 3px;
+}
+.term .t-row:hover {
+  background: var(--t-current);
 }
 .term .t-row {
   display: flex;
@@ -375,8 +383,22 @@
   background: var(--t-current);
 }
 .t-row-name {
-  white-space: pre;
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   font-weight: 700;
+}
+.t-row > .t-dim {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.t-row > .t-dim:nth-child(2) {
+  flex: none;
+}
+@media (max-width: 760px) {
+  .t-row-name {
+    white-space: normal;
+  }
 }
 .t-current-row .t-row-name {
   color: var(--t-accent);

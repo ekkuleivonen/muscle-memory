@@ -622,3 +622,11 @@ kbd {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* Busy actions stay focusable while their own check runs. */
+.btn[aria-disabled="true"] {
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--faint);
+  cursor: default;
+}

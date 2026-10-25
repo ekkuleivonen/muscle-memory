@@ -49,13 +49,25 @@ export const KeyActions = forwardRef<
   const [cursor, setCursor] = useState(0);
   const list = useRef<HTMLDivElement>(null);
   useImperativeHandle(ref, () => ({
-    focus: () => list.current?.focus({ preventScroll: false }),
+    focus: () =>
+      list.current?.querySelector<HTMLElement>('[tabindex="0"]')?.focus(),
   }));
   useEffect(() => {
-    if (autoFocus) list.current?.focus({ preventScroll: true });
-  }, [autoFocus]);
+    if (autoFocus)
+      list.current?.querySelector<HTMLElement>('[tabindex="0"]')?.focus();
+  }, [autoFocus, id]);
   // A shorter list (a confirm replacing the actions) keeps the cursor on a row.
   const at = Math.min(cursor, actions.length - 1);
+  useEffect(() => {
+    if (list.current?.contains(document.activeElement))
+      document
+        .getElementById(`${id}-${at}`)
+        ?.scrollIntoView({ block: "nearest" });
+  }, [at, id]);
+  const moveTo = (index: number) => {
+    setCursor(index);
+    document.getElementById(`${id}-${index}`)?.focus();
+  };
 
   const run = (index: number) => {
     const action = actions[index];
@@ -68,9 +80,9 @@ export const KeyActions = forwardRef<
     if (event.metaKey || event.ctrlKey || event.altKey) return;
     const move = MOVES[event.key];
     let handled = true;
-    if (move) setCursor((at + move + actions.length) % actions.length);
-    else if (event.key === "Home") setCursor(0);
-    else if (event.key === "End") setCursor(actions.length - 1);
+    if (move) moveTo((at + move + actions.length) % actions.length);
+    else if (event.key === "Home") moveTo(0);
+    else if (event.key === "End") moveTo(actions.length - 1);
     else if (event.key === "Enter" || event.key === " ") run(at);
     else if (event.key === "Escape" && onEscape) onEscape();
     else if (/^[1-9]$/.test(event.key) && Number(event.key) <= actions.length)
@@ -97,8 +109,6 @@ export const KeyActions = forwardRef<
         role="toolbar"
         aria-label={message ?? "Actions"}
         aria-orientation="vertical"
-        aria-activedescendant={`${id}-${at}`}
-        tabIndex={0}
         className="t-keymenu"
         onKeyDown={onKeyDown}
       >
@@ -106,13 +116,13 @@ export const KeyActions = forwardRef<
           const current = index === at;
           return (
             <button
-              key={action.label}
+              key={`${id}-${index}`}
               id={`${id}-${index}`}
               type="button"
-              tabIndex={-1}
+              tabIndex={current ? 0 : -1}
               aria-disabled={action.disabled ? true : undefined}
               className={`t-row t-action t-${action.kind ?? "plain"}${current ? " t-current-row" : ""}${action.disabled ? " t-disabled" : ""}`}
-              onMouseEnter={() => setCursor(index)}
+              onFocus={() => setCursor(index)}
               onClick={() => run(index)}
             >
               <span className="t-accent">{current ? "❯" : " "}</span>
@@ -127,7 +137,8 @@ export const KeyActions = forwardRef<
         })}
       </div>
       <p className="t-line t-dim t-keys">
-        ↑↓ move · enter runs{onEscape ? " · esc back" : ""} · or click
+        {actions.length > 1 ? "↑↓ move · " : ""}enter runs
+        {onEscape ? " · esc back" : ""} · or click
       </p>
     </div>
   );

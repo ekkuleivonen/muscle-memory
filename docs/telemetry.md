@@ -23,7 +23,7 @@ Every observation (`packages/domain/records.ts`) carries:
 | `sessionId` | the page load (`packages/browser/page-session.ts`), shared by every stream recording during it |
 | `source` | `{ id, sequence }`: one stream per page load and recorder, positions from 1 with no reuse |
 | `occurredAt`, `elapsedMs` | wall clock, and a monotonic clock from the stream's start in 0.1 ms steps |
-| `captureVersion` | `practice-capture-1.0.0` or `site-capture-1.0.0` |
+| `captureVersion` | `practice-capture-1.1.0` or `site-capture-1.0.0` |
 | `termsVersion` | the Terms and Privacy Notice version accepted |
 | `assignments` | experiment arms in force, by experiment id (`{}` until there are experiments) |
 | `challenge`, `challengeRevision` | the challenge's key (such as `PY-003`) and the exact revision, when it is about one |
@@ -46,13 +46,15 @@ Everything inside a challenge at `/challenges/<KEY>` (`packages/domain/practice.
 | `practice.snapshot` | a complete copy of the code, on opening, every 25 edits, after an oversize edit, on every run and after a restore |
 | `practice.selection`, `practice.scroll`, `practice.focus` | cursor moves that change no text (bursts within 100 ms merge), the lines in view (merged within 250 ms), the editor gaining or losing focus |
 | `practice.clipboard` | a copy or cut in the editor (where, never the clipboard), or text copied from the challenge itself (what, bounded to 4 KiB: it is our text) |
-| `practice.assist` | help the editor showed: the type errors displayed, each hover type opened |
+| `practice.assist` | help the editor showed: the type errors displayed, each type tooltip opened by pointer or keyboard (kind `hover`) |
 | `practice.run` | `queued`, `running`, then the terminal status with the raw bounded outcome; the run's purpose (`examples` or `submit`), how it was started, the code revision and artifact, runtime and timeout |
 | `practice.submitted` | a Submit's verdict: result (`passed`, `failed`, `errored`, `cancelled`), cases passed of total, and the ids of the rules the submitted code fires |
 | `practice.completed` | the submission that completed the attempt (every case passed, no rule fired), and the challenge suggested next |
 | `practice.answered` | an answer to one of the questions after completing: how hard it was, how sure they were before submitting, whether they would have used AI for it at work |
 | `practice.page`, `practice.runtime`, `practice.closed` | the page visible or hidden, focused, resized; the runtime loading, ready or failing; practice left, or the page hidden as it unloads |
 | `practice.capture-gap` | an explicit lost range of positions (`buffer-full` or `write-conflict`) |
+
+Practice capture 1.1 adds keyboard access to type tooltips: `practice.assist` kind `hover` now covers pointer and keyboard opening. The opened editor features also name `keyboard-type-info` and `keyboard-diagnostics`.
 
 **The environment** in `opened` is coarse and comparable, never identifying (`apps/web/lib/environment.ts`): browser and OS family, the primary pointer (fine, coarse, none), the browser language, the IANA time zone and UTC offset, what a few physical keys type where Chromium says (enough to tell QWERTY, QWERTZ, AZERTY and Nordic layouts apart).
 
@@ -98,7 +100,7 @@ browser (IndexedDB) ──outbox──▶ ingest Worker ──▶ Pipelines stre
 
 `apps/ingest` serves `musclememory.run/ingest/*`: same origin as the app, behind the same Access gate during the owner preview.
 
-- `POST /ingest/v1/batches`: a batch (`packages/domain/ingest.ts`). The whole batch is refused (400) only if its shape is wrong; single records are checked one by one and refused with a reason in a successful reply (another participant, an unknown capture version, a type from the other stream, a payload that does not match its envelope). Only `practice-capture-1.0.0` and `site-capture-1.0.0` are accepted. Release the Worker with the domain package before the app whenever a capture version changes, or the new records are refused.
+- `POST /ingest/v1/batches`: a batch (`packages/domain/ingest.ts`). The whole batch is refused (400) only if its shape is wrong; single records are checked one by one and refused with a reason in a successful reply (another participant, an unknown capture version, a type from the other stream, a payload that does not match its envelope). Only `practice-capture-1.1.0` and `site-capture-1.0.0` are accepted. Release the Worker with the domain package before the app whenever a capture version changes, or the new records are refused.
 - **Rate limits** (Workers rate limiting bindings, approximate and per Cloudflare location): 600 requests a minute per address, checked before the body is read, and 120 a minute per participant. Over a limit the reply is 429 with `Retry-After: 60`, and the device keeps its records and backs off.
 - `POST /ingest/v1/participants/<id>/delete` with `{ "secret": … }`: writes a tombstone (`deleted/<id>` in the control bucket), after which uploads for that ID get 410 and the uploader stops.
 - Each accepted record becomes one row (`EventRow`): the envelope as columns (`record_id`, `kind`, `participant_id`, `received_at`, `country`, `type`, `capture_version`, `session_id`, `source_id`, `sequence`, `occurred_at`, `elapsed_ms`, `challenge`, `challenge_revision`, `attempt_id`, `terms_version`) and `payload`, the record exactly as the device stored it. The table is the raw archive too: anything can be re-derived from `payload`. `apps/ingest/events.schema.json` is the stream's schema; a test keeps it in step with the rows.
