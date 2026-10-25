@@ -1,9 +1,7 @@
 /* The IDE: VS Code proportions in the app's colours, light and dark. */
-.ide {
-  --ide-bar: var(--bg-subtle);
-  --ide-side: var(--bg-subtle);
-  --ide-editor: var(--bg);
-  --ide-panel: var(--bg);
+/* Syntax colours for every editor surface: the practice page and the older IDE. */
+.ide,
+.practice {
   --syn-keyword: #a626a4;
   --syn-string: #347b33;
   --syn-number: #986801;
@@ -15,6 +13,12 @@
   --syn-variable: #383a42;
   --syn-punctuation: #6b6e76;
   --syn-invalid: #b53730;
+}
+.ide {
+  --ide-bar: var(--bg-subtle);
+  --ide-side: var(--bg-subtle);
+  --ide-editor: var(--bg);
+  --ide-panel: var(--bg);
   position: fixed;
   inset: 0;
   display: grid;
@@ -29,7 +33,8 @@
   font-size: 13px;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .ide {
+  :root:not([data-theme="light"]) .ide,
+  :root:not([data-theme="light"]) .practice {
     --ide-bar: #0b0c0e;
     --ide-side: #121316;
     --ide-editor: #0f1012;
@@ -46,7 +51,8 @@
     --syn-invalid: #f2555a;
   }
 }
-:root[data-theme="dark"] .ide {
+:root[data-theme="dark"] .ide,
+:root[data-theme="dark"] .practice {
   --ide-bar: #0b0c0e;
   --ide-side: #121316;
   --ide-editor: #0f1012;
@@ -1057,6 +1063,14 @@ dialog::backdrop {
 .practice-editor[hidden] { display: none; }
 .practice-editor .cm-scroller { overflow: auto; font-family: var(--mono); font-size: 14px; line-height: 1.65; }
 .practice-editor .cm-editor.cm-focused { outline: none; }
+.practice-editor .cm-editor { background: var(--bg); color: var(--syn-variable); }
+.practice-editor .cm-gutters { background: var(--bg); border-right: 0; color: var(--faint); }
+.practice-editor .cm-activeLine, .practice-editor .cm-activeLineGutter { background: color-mix(in srgb, var(--fg) 5%, transparent); }
+.practice-editor .cm-cursor { border-left-color: var(--accent); }
+.practice-editor .cm-selectionBackground, .practice-editor .cm-focused .cm-selectionBackground { background: color-mix(in srgb, var(--accent) 28%, transparent) !important; }
+.practice-editor .cm-matchingBracket { background: color-mix(in srgb, var(--accent) 22%, transparent); outline: 1px solid color-mix(in srgb, var(--accent) 50%, transparent); }
+/* Vim's block cursor. */
+.practice-editor .cm-fat-cursor { background: color-mix(in srgb, var(--accent) 70%, transparent) !important; }
 .practice-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 14px 0; }
 .practice-controls > span:first-child { flex: 1; color: var(--dim); font-size: 12px; }
 .practice-controls .btn { height: 36px; padding: 0 16px; }
