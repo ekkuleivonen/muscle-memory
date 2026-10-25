@@ -114,19 +114,18 @@ export function Picker({
     ];
   }, [all]);
 
-  // The search line lives in the URL, so a search can be linked or reloaded.
+  // The search line lives in the URL, so a search can be linked or reloaded. The history API
+  // updates it without asking the server to render the page (and every challenge) again;
+  // usePathname and useSearchParams still see the change.
   useEffect(() => {
     const timer = setTimeout(() => {
       const q = text.trim();
-      router.replace(
-        q ? `/challenges?q=${encodeURIComponent(q)}` : "/challenges",
-        {
-          scroll: false,
-        },
-      );
+      const href = q ? `/challenges?q=${encodeURIComponent(q)}` : "/challenges";
+      if (href !== location.pathname + location.search)
+        window.history.replaceState(null, "", href);
     }, 300);
     return () => clearTimeout(timer);
-  }, [text, router]);
+  }, [text]);
 
   useEffect(() => {
     list.current
