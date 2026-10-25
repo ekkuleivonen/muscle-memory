@@ -41,7 +41,9 @@ export function CopyLink({
       type="button"
       className={className ? `copy-link ${className}` : "copy-link"}
       data-href={href}
-      onClick={async () => setCopied(await copyText(new URL(href, location.origin).href))}
+      onClick={async () =>
+        setCopied(await copyText(new URL(href, location.origin).href))
+      }
     >
       {copied ? "Link copied" : label}
     </button>
@@ -84,7 +86,10 @@ export function ShareResult({
   const [packed, setPacked] = useState<string | undefined>(undefined);
   const [refusal, setRefusal] = useState<CodeRefusal | null>(null);
   // By content: the caller may build a new array on every render.
-  const files = useMemo(() => (code?.length ? code : null), [JSON.stringify(code ?? [])]); // eslint-disable-line react-hooks/exhaustive-deps
+  const files = useMemo(
+    () => (code?.length ? code : null),
+    [JSON.stringify(code ?? [])],
+  ); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!withCode || !files) return;
     let live = true;
@@ -113,7 +118,12 @@ export function ShareResult({
     if (withCode && !packed) return;
     void logShare(
       { id: issue.slug, revision: issue.revision },
-      { issueKey: issue.key, channel, ref: card.c, card: card as unknown as Json },
+      {
+        issueKey: issue.key,
+        channel,
+        ref: card.c,
+        card: card as unknown as Json,
+      },
     );
     if (channel === "copy") setCopied(await copyText(`${text} ${url}`));
     else if (channel === "x")
@@ -137,7 +147,13 @@ export function ShareResult({
       <button
         type="button"
         className="share-open"
-        onClick={() => dialog.current?.showModal()}
+        onClick={() => {
+          setWithCode(false);
+          setPacked(undefined);
+          setRefusal(null);
+          setCopied(false);
+          dialog.current?.showModal();
+        }}
       >
         Share result
       </button>
@@ -196,8 +212,8 @@ export function ShareResult({
                 <b>Include my code</b>
                 <span className="faint">
                   {" "}
-                  Adds the {count === 1 ? "file" : `${count} files`} you
-                  changed to the link itself. Anyone with the link can read it,
+                  Adds the {count === 1 ? "file" : `${count} files`} you changed
+                  to the link itself. Anyone with the link can read it,
                   including your fix. We don&apos;t keep a copy; untick to share
                   without it.
                 </span>
@@ -220,7 +236,11 @@ export function ShareResult({
             >
               {copied ? "Copied" : "Copy link"}
             </button>
-            <button type="button" disabled={blocked} onClick={() => void share("x")}>
+            <button
+              type="button"
+              disabled={blocked}
+              onClick={() => void share("x")}
+            >
               Post on X
             </button>
             <button

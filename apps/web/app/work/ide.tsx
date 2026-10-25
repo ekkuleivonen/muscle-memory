@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -739,17 +740,15 @@ export function Ide({
       if (!tabs.includes(path)) current.navigated("file", "close", path, via());
     shownTabs.current = tabs;
   }, [tabs, isOpen]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isOpen) return;
     const how = via();
     const place = pendingPlaces.current[active];
-    requestAnimationFrame(() => {
-      session.current?.restorePlace(
-        active,
-        place,
-        how !== "app" || Boolean(place),
-      );
-    });
+    session.current?.restorePlace(
+      active,
+      place,
+      how !== "app" || Boolean(place),
+    );
     delete pendingPlaces.current[active];
     session.current?.navigated("file", "show", active, how);
     // Opening a file is investigation, which teammates may respond to.

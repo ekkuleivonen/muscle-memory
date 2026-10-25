@@ -222,4 +222,7 @@ export function restoreFileView(view: EditorView, file: FileView): void {
     ),
     effects: EditorView.scrollIntoView(line.from, { y: "start" }),
   });
+  // The selected file now has a layout box. Set its position immediately as well as
+  // asking CodeMirror to refine it after measurement; persistence must not see zero.
+  view.scrollDOM.scrollTop = view.lineBlockAt(line.from).top;
 }
