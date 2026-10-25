@@ -1,27 +1,47 @@
 import { LEGAL_DRAFT, LEGAL_UPDATED, LEGAL_VERSION } from "../../lib/legal";
-import { Markdown } from "../(browse)/_components/markdown";
+import { Markdown } from "../_components/markdown";
+import { TermFooter } from "../_terminal/footer";
+import "../_terminal/terminal.css";
 
+/**
+ * Terms or Privacy as a document read in the terminal: the title and version, then the
+ * Markdown as a terminal reader shows it; the status bar says which. The text itself lives
+ * in terms.ts and privacy.ts; changing it means a new LEGAL_VERSION.
+ */
 export function LegalPage({
   title,
   source,
+  file,
+  href,
 }: {
   title: string;
   source: string;
+  /** The file it is, e.g. terms.md: the status bar names it without the extension. */
+  file: string;
+  href: string;
 }) {
+  const crumb = file.replace(/\.md$/, "");
   return (
-    <article>
-      {LEGAL_DRAFT && (
-        <p className="legal-draft" role="note">
-          <b>Draft.</b> This hasn&apos;t been reviewed by a lawyer yet, and the
-          bits in [brackets] are placeholders. Don&apos;t rely on it until this
-          box is gone.
-        </p>
-      )}
-      <h1>{title}</h1>
-      <p className="faint">
-        Last updated {LEGAL_UPDATED} · version {LEGAL_VERSION}
-      </p>
-      <Markdown source={source} className="legal-text" />
-    </article>
+    <>
+      <div className="term">
+        <main className="t-prose">
+          <article>
+            {LEGAL_DRAFT && (
+              <p className="t-line t-note" role="note">
+                <strong>! Draft.</strong> This hasn&apos;t been reviewed by a
+                lawyer yet, and the bits in [brackets] are placeholders.
+                Don&apos;t rely on it until this note is gone.
+              </p>
+            )}
+            <h1 className="t-doc-title">{title}</h1>
+            <p className="t-line t-dim">
+              Last updated {LEGAL_UPDATED} · version {LEGAL_VERSION}
+            </p>
+            <Markdown source={source} className="t-md" />
+          </article>
+        </main>
+      </div>
+      <TermFooter trail={[{ label: crumb, href }]} />
+    </>
   );
 }

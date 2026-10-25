@@ -1,0 +1,297 @@
+{
+  "challenge": "PY-005",
+  "task": "The season report fails as soon as it reaches the sheets from the Oregon volunteers:\n\n```text\n  File \"report.py\", line 9, in to_mm\n    return float(value) * MM_PER[unit]\nKeyError: 'in'\n```\n\nTheir sheets differ from ours: lengths can be in inches (`0.6 in`), sometimes with no space before the unit or with the unit in capitals (`12mm`, `1.3 CM`, `0.5in`), and lots nobody measured have the length left blank, or a `?` when the volunteer wasn't sure. We take the sheets the way the volunteers write them.\n\n`length_report(lines)` takes the season's notebook lines (a list of strings, one specimen lot each) and returns a dict keyed by species name, exactly as written on the line. For each species:\n\n- `measured`: how many of its lots have a length. Each lot counts once, whatever its individual count.\n- `min_mm`, `max_mm`, `mean_mm`: the shortest, longest and mean of those lengths in millimetres, each rounded to one decimal (the mean is taken over the unrounded lengths).\n\nA line reads `date | site | species | length | count`, for example `2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2`. `parse_line(line)`, further down the file, returns it as a dict with the keys `date`, `site`, `species` and `length` (strings, stripped of surrounding spaces) and `count` (an int).\n\nA length is a number (digits, optionally with a decimal part), then any amount of space or none, then a unit: `mm`, `cm` (10 mm) or `in` (25.4 mm), in any mix of upper and lower case. A blank length or `?` means the lot wasn't measured: it doesn't count towards any of the numbers, but its species still appears. A species with no measured lot shows `measured: 0` and `None` for the three lengths. No lines gives `{}`.\n",
+  "language": "python",
+  "file": "report.py",
+  "starter": "\"\"\"Body lengths per species for the season report.\"\"\"\n\nMM_PER = {\"mm\": 1, \"cm\": 10}\n\n\ndef to_mm(text):\n    \"\"\"'14.5 mm' or '1.2 cm' in millimetres.\"\"\"\n    value, unit = text.split()\n    return float(value) * MM_PER[unit]\n\n\ndef length_report(lines):\n    \"\"\"Per species: how many lots were measured, and the shortest, longest and mean length in\n    millimetres, each to one decimal.\"\"\"\n    lengths = {}\n    for line in lines:\n        row = parse_line(line)\n        lengths.setdefault(row[\"species\"], []).append(to_mm(row[\"length\"]))\n    return {\n        species: {\n            \"measured\": len(values),\n            \"min_mm\": min(values),\n            \"max_mm\": max(values),\n            \"mean_mm\": round(sum(values) / len(values), 1),\n        }\n        for species, values in lengths.items()\n    }\n\n\n# ---- labels: helpers this code uses. You shouldn't need to change them. ----\n\n# Notebook lines, as typed up from the paper field notebook. One line per specimen lot:\n#\n#     2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\n#\n# date | site | species | body length | individuals in the lot. The length is left blank when\n# nothing was measured.\n\nFIELDS = (\"date\", \"site\", \"species\", \"length\", \"count\")\n\n\ndef fields(line):\n    \"\"\"The five fields of a line, stripped, as written.\"\"\"\n    parts = [part.strip() for part in line.split(\"|\")]\n    if len(parts) != len(FIELDS):\n        raise ValueError(f\"expected {len(FIELDS)} fields: {line!r}\")\n    return parts\n\n\ndef parse_line(line):\n    \"\"\"A line as a dict: every field as written, the count as a number.\"\"\"\n    row = dict(zip(FIELDS, fields(line)))\n    row[\"count\"] = int(row[\"count\"])\n    return row\n",
+  "entrypoint": "length_report",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": [
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 14.6 mm | 1",
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 1.7 cm | 1"
+      ],
+      "expected": {
+        "Carabus nemoralis": {
+          "measured": 2,
+          "min_mm": 14.6,
+          "max_mm": 17,
+          "mean_mm": 15.8
+        }
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": [
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 0.6 in | 1",
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 0.7 in | 2"
+      ],
+      "expected": {
+        "Carabus nemoralis": {
+          "measured": 2,
+          "min_mm": 15.2,
+          "max_mm": 17.8,
+          "mean_mm": 16.5
+        }
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": [
+        "2026-06-03 | Alder Creek | Pterostichus niger | 12mm | 1",
+        "2026-06-03 | Alder Creek | Pterostichus niger | 1.3 CM | 1"
+      ],
+      "expected": {
+        "Pterostichus niger": {
+          "measured": 2,
+          "min_mm": 12,
+          "max_mm": 13,
+          "mean_mm": 12.5
+        }
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-4",
+      "input": [
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 15 mm | 1",
+        "2026-06-03 | Alder Creek | Carabus nemoralis |  | 1",
+        "2026-06-03 | Alder Creek | Pterostichus niger | ? | 1",
+        "2026-06-03 | Alder Creek | Pterostichus niger |  | 3"
+      ],
+      "expected": {
+        "Carabus nemoralis": {
+          "measured": 1,
+          "min_mm": 15,
+          "max_mm": 15,
+          "mean_mm": 15
+        },
+        "Pterostichus niger": {
+          "measured": 0,
+          "min_mm": null,
+          "max_mm": null,
+          "mean_mm": null
+        }
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-5",
+      "input": [],
+      "expected": {},
+      "hidden": false
+    },
+    {
+      "id": "case-6",
+      "input": [
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 0.5in | 1"
+      ],
+      "expected": {
+        "Carabus nemoralis": {
+          "measured": 1,
+          "min_mm": 12.7,
+          "max_mm": 12.7,
+          "mean_mm": 12.7
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": [
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 2 cm | 1",
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 18 mm | 1"
+      ],
+      "expected": {
+        "Carabus nemoralis": {
+          "measured": 2,
+          "min_mm": 18,
+          "max_mm": 20,
+          "mean_mm": 19
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": [
+        "2026-06-03 | Alder Creek | Pterostichus niger | ? | 1"
+      ],
+      "expected": {
+        "Pterostichus niger": {
+          "measured": 0,
+          "min_mm": null,
+          "max_mm": null,
+          "mean_mm": null
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": [
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 14 mm | 1",
+        "2026-06-03 | Alder Creek | Pterostichus niger | 11 mm | 1",
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 16 mm | 1",
+        "2026-06-03 | Alder Creek | Pterostichus niger | 1.3 cm | 1"
+      ],
+      "expected": {
+        "Carabus nemoralis": {
+          "measured": 2,
+          "min_mm": 14,
+          "max_mm": 16,
+          "mean_mm": 15
+        },
+        "Pterostichus niger": {
+          "measured": 2,
+          "min_mm": 11,
+          "max_mm": 13,
+          "mean_mm": 12
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": [
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 0.55 in | 1"
+      ],
+      "expected": {
+        "Carabus nemoralis": {
+          "measured": 1,
+          "min_mm": 14,
+          "max_mm": 14,
+          "mean_mm": 14
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": [
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 0.7 In | 1",
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 0.6 IN | 1"
+      ],
+      "expected": {
+        "Carabus nemoralis": {
+          "measured": 2,
+          "min_mm": 15.2,
+          "max_mm": 17.8,
+          "mean_mm": 16.5
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": [
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 15  mm | 1",
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 1.6  cm | 1"
+      ],
+      "expected": {
+        "Carabus nemoralis": {
+          "measured": 2,
+          "min_mm": 15,
+          "max_mm": 16,
+          "mean_mm": 15.5
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": [
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 14.26 mm | 1",
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 15.34 mm | 1"
+      ],
+      "expected": {
+        "Carabus nemoralis": {
+          "measured": 2,
+          "min_mm": 14.3,
+          "max_mm": 15.3,
+          "mean_mm": 14.8
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": [
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 10 mm | 1",
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 1 cm | 1",
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 0.4 in | 1"
+      ],
+      "expected": {
+        "Carabus nemoralis": {
+          "measured": 3,
+          "min_mm": 10,
+          "max_mm": 10.2,
+          "mean_mm": 10.1
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": [
+        "2026-06-03 | Alder Creek | Pterostichus niger |  | 1",
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 13 mm | 1"
+      ],
+      "expected": {
+        "Pterostichus niger": {
+          "measured": 0,
+          "min_mm": null,
+          "max_mm": null,
+          "mean_mm": null
+        },
+        "Carabus nemoralis": {
+          "measured": 1,
+          "min_mm": 13,
+          "max_mm": 13,
+          "mean_mm": 13
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-16",
+      "input": [
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 13 mm | 1",
+        "2026-06-03 | Alder Creek | Carabus nemoralis | ? | 1",
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 1.45 cm | 1",
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 0.5 in | 1",
+        "2026-06-03 | Alder Creek | Carabus nemoralis |  | 4",
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 12.5mm | 1"
+      ],
+      "expected": {
+        "Carabus nemoralis": {
+          "measured": 4,
+          "min_mm": 12.5,
+          "max_mm": 14.5,
+          "mean_mm": 13.2
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-17",
+      "input": [
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 0.6 in | 1",
+        "2026-06-03 | Alder Creek | Carabus nemoralis | 15.24 mm | 1"
+      ],
+      "expected": {
+        "Carabus nemoralis": {
+          "measured": 2,
+          "min_mm": 15.2,
+          "max_mm": 15.2,
+          "mean_mm": 15.2
+        }
+      },
+      "hidden": true
+    }
+  ],
+  "rules": []
+}

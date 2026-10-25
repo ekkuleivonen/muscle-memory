@@ -268,7 +268,7 @@ public final class Json {
 export const RESULT_MARK = "\u001eMM:";
 
 export const MAIN_JAVA =
-  String.raw`/** Runs the issue's adapter for one case; the arguments are args[0], as JSON. */
+  String.raw`/** Runs the challenge's adapter for one case; the arguments are args[0], as JSON. */
 public final class MmMain {
     public static void main(String[] args) {
         String result;

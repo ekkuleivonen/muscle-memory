@@ -1,8 +1,8 @@
 /**
- * Publish checks that need code to run, in the browser sandbox like every run: for each live
- * issue with a private reference solution, the reference passes every case and gives the same
- * outputs on a second run, and the starter fails at least one case. Issues without a reference
- * are listed as unchecked. The checks that need no code to run happen in the content build.
+ * Publish checks that need code to run, in the browser sandbox like every run: for each
+ * challenge in content/challenges, the solution passes every case and gives the same outputs on
+ * a second run, the starter fails at least one case, every alternative passes and every wrong
+ * solution fails something. The checks that need no code to run happen in the content build.
  *
  *   node --import tsx tools/browser/content-check.ts
  */
@@ -11,15 +11,12 @@ import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { build } from "esbuild";
 import { chromium } from "playwright";
-import { SEED_ISSUES } from "../../content/seed";
-import { editableFiles, executableOf, sourceFiles, type Revision } from "../../packages/content/model";
-import { verifyCatalog } from "../../packages/content/revision";
-import { runFeedback } from "../../packages/domain/workspace";
+import type { Revision } from "../../packages/content/model";
+import { readChallenges } from "../../packages/content/source";
+import { runFeedback } from "../../packages/domain/records";
 
 const root = resolve(import.meta.dirname, "../..");
-const catalog = verifyCatalog(
-  JSON.parse(await readFile(join(root, "content/catalog.json"), "utf8")),
-);
+const challenges = readChallenges(join(root, "content/challenges"));
 const bundle = (
   await build({
     entryPoints: [join(root, "packages/runner/runner.ts")],
@@ -54,27 +51,19 @@ await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
 const address = server.address();
 const origin = `http://127.0.0.1:${typeof address === "object" && address ? address.port : 0}`;
 
-/** A run request as the IDE makes it: the entry file, plus every other source file. */
-function request(revision: Revision, edits: Record<string, string>) {
-  const executable = executableOf(revision);
-  const program = {
-    ...Object.fromEntries(
-      Object.entries(sourceFiles(revision.workspace)).map(([path, f]) => [path, f.text]),
-    ),
-    ...edits,
-  };
-  const { entry } = executable;
+/** A run request as practice makes it: the file, with the challenge's cases. */
+function request(revision: Revision, code: string) {
   return {
     runId: "publish",
-    code: program[entry],
-    filename: entry,
-    files: Object.fromEntries(Object.entries(program).filter(([path]) => path !== entry)),
-    language: revision.workspace.language,
-    entrypoint: executable.entrypoint,
-    ...(executable.parameters ? { parameters: executable.parameters } : {}),
-    ...(executable.schema ? { setup: executable.schema } : {}),
-    ...(executable.adapter ? { adapter: executable.adapter } : {}),
-    inputs: executable.cases.map((c) => c.input),
+    code,
+    filename: revision.file,
+    files: {},
+    language: revision.language,
+    entrypoint: revision.entrypoint,
+    ...(revision.parameters ? { parameters: revision.parameters } : {}),
+    ...(revision.schema ? { setup: revision.schema } : {}),
+    ...(revision.adapter ? { adapter: revision.adapter } : {}),
+    inputs: revision.cases.map((c) => c.input),
   };
 }
 
@@ -82,19 +71,8 @@ const browser = await chromium.launch();
 const tab = await browser.newPage();
 await tab.goto(origin + "/");
 const failures: string[] = [];
-const unchecked: string[] = [];
-for (const meta of catalog.issues) {
-  const revision = catalog.revisions[meta.revision];
-  const secret = SEED_ISSUES.find((s) => s.id === meta.id)?.private;
-  const project = catalog.projects.find((p) => p.id === meta.project)!;
-  const key = `${project.key}-${meta.number}`;
-  if (!secret) {
-    unchecked.push(key);
-    continue;
-  }
-  const starter = Object.fromEntries(
-    Object.entries(editableFiles(revision.workspace)).map(([path, f]) => [path, f.text]),
-  );
+for (const { metadata, revision, private: secret } of challenges) {
+  const { key } = metadata;
   const runs = await tab.evaluate(
     async ({ requests }) => {
       const outcomes = [];
@@ -114,45 +92,45 @@ for (const meta of catalog.issues) {
     },
     {
       requests: [
-        request(revision, secret.reference),
-        request(revision, secret.reference),
-        request(revision, starter),
-        ...(secret.alternatives ?? []).map((change) => request(revision, change)),
-        ...(secret.wrong ?? []).map((change) => request(revision, change)),
+        request(revision, secret.solution),
+        request(revision, secret.solution),
+        request(revision, revision.starter),
+        ...secret.alternatives.map((code) => request(revision, code)),
+        ...secret.wrong.map((code) => request(revision, code)),
       ],
     },
   );
   const [first, second, start, ...others] = runs.map((outcome: any) => ({
     outcome,
-    feedback: runFeedback(revision.checks.cases, outcome.cases ?? []),
+    feedback: runFeedback(revision.cases, outcome.cases ?? []),
   }));
-  const alternatives = others.slice(0, secret.alternatives?.length ?? 0);
+  const alternatives = others.slice(0, secret.alternatives.length);
   const wrong = others.slice(alternatives.length);
   const problems: string[] = [];
   if (first.outcome.phase !== "tests" || first.feedback.correct !== first.feedback.total)
     problems.push(
-      `the reference passes ${first.feedback.correct}/${first.feedback.total} cases (${first.outcome.status}${first.outcome.error ? `: ${first.outcome.error.message}` : ""})`,
+      `the solution passes ${first.feedback.correct}/${first.feedback.total} cases (${first.outcome.status}${first.outcome.error ? `: ${first.outcome.error.message}` : ""})`,
     );
   const outputs = (o: any) => JSON.stringify((o.cases ?? []).map((c: any) => c.output?.text ?? c.error));
   if (outputs(first.outcome) !== outputs(second.outcome))
-    problems.push("the reference gives different outputs on a second run");
+    problems.push("the solution gives different outputs on a second run");
   if (start.outcome.phase === "tests" && start.feedback.correct === start.feedback.total)
     problems.push("the starter already passes every case");
-  // Other correct designs must pass everything; plausible wrong fixes must fail something.
+  // Other correct designs must pass everything; plausible wrong solutions must fail something.
   alternatives.forEach((run, i) => {
     if (run.outcome.phase !== "tests" || run.feedback.correct !== run.feedback.total)
       problems.push(`alternative ${i + 1} passes ${run.feedback.correct}/${run.feedback.total} cases`);
   });
   wrong.forEach((run, i) => {
     if (run.outcome.phase === "tests" && run.feedback.correct === run.feedback.total)
-      problems.push(`wrong fix ${i + 1} passes every case`);
+      problems.push(`wrong solution ${i + 1} passes every case`);
   });
-  if (problems.length) failures.push(`FAIL ${key} ${meta.id}: ${problems.join("; ")}`);
+  if (problems.length) failures.push(`FAIL ${key}: ${problems.join("; ")}`);
   else
     console.log(
-      `ok   ${key} ${meta.id}: reference ${first.feedback.correct}/${first.feedback.total} twice, starter ${start.feedback.correct}/${start.feedback.total}${
+      `ok   ${key}: solution ${first.feedback.correct}/${first.feedback.total} twice, starter ${start.feedback.correct}/${start.feedback.total}${
         alternatives.length || wrong.length
-          ? `, ${alternatives.length} alternative${alternatives.length === 1 ? "" : "s"} pass, ${wrong.length} wrong fix${wrong.length === 1 ? "" : "es"} fail (${wrong.map((w) => `${w.feedback.correct}/${w.feedback.total}`).join(", ")})`
+          ? `, ${alternatives.length} alternative${alternatives.length === 1 ? "" : "s"} pass, ${wrong.length} wrong solution${wrong.length === 1 ? "" : "s"} fail (${wrong.map((w) => `${w.feedback.correct}/${w.feedback.total}`).join(", ")})`
           : ""
       }`,
     );
@@ -160,5 +138,4 @@ for (const meta of catalog.issues) {
 await browser.close();
 server.close();
 for (const failure of failures) console.log(failure);
-console.log(`unchecked (no reference yet): ${unchecked.join(", ") || "none"}`);
 process.exit(failures.length ? 1 : 0);

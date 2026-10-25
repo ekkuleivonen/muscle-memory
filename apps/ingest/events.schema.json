@@ -21,12 +21,22 @@
       "required": true
     },
     {
+      "name": "country",
+      "type": "string",
+      "required": false
+    },
+    {
       "name": "type",
       "type": "string",
       "required": true
     },
     {
       "name": "capture_version",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "session_id",
       "type": "string",
       "required": false
     },
@@ -51,17 +61,22 @@
       "required": false
     },
     {
-      "name": "issue",
+      "name": "challenge",
       "type": "string",
       "required": false
     },
     {
-      "name": "issue_revision",
+      "name": "challenge_revision",
       "type": "string",
       "required": false
     },
     {
-      "name": "consent_version",
+      "name": "attempt_id",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "terms_version",
       "type": "string",
       "required": false
     },

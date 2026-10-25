@@ -1,57 +1,53 @@
-/** Real sandbox/runtime + storage regression for ENG-328. Synthetic participant only.
- * LOOP_ORIGIN=http://localhost:3128 node --import tsx tools/browser/practice-check.ts
+/**
+ * Practice in a real browser, sandbox and runtime, with a synthetic participant: a start from
+ * the picker, failing and passing submissions, completion, the next challenge, practising
+ * again, stars and copying from the challenge, and what each records.
+ * LOOP_ORIGIN=http://localhost:3000 node --import tsx tools/browser/practice-check.ts
  */
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { chromium } from "playwright";
-import { codeRevision, toRecord } from "../../packages/domain/workspace";
-import { catalog } from "../../apps/web/lib/test-fixtures";
-import { library } from "../../apps/web/lib/library";
-import { editableFiles } from "../../packages/content/model";
-import { SEED_ISSUES } from "../../content/seed";
+import { LEGAL_VERSION } from "../../apps/web/lib/legal";
+import { readChallenge } from "../../packages/content/source";
+import { PRACTICE_CAPTURE_VERSION } from "../../packages/domain/practice";
+
 const origin = process.env.LOOP_ORIGIN ?? "http://localhost:3000";
 const screenshots = process.env.PRACTICE_SCREENSHOTS;
 if (screenshots) await mkdir(screenshots, { recursive: true });
 const browser = await chromium.launch();
-const context = await browser.newContext({
-  viewport: { width: 1280, height: 900 },
-});
+const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
 await context.route("**/ingest/**", (route) =>
   route.fulfill({ status: 410, body: "synthetic-integration-qa" }),
 );
-await context.addInitScript(() => {
+await context.addCookies([{ name: "mm_consent", value: LEGAL_VERSION, url: origin }]);
+await context.addInitScript((version) => {
+  // Also runs in the sandbox's opaque-origin frame, which has no storage.
+  if (origin === "null") return;
   if (!localStorage.getItem("muscle-memory.profile"))
     localStorage.setItem(
       "muscle-memory.profile",
       JSON.stringify({
         version: "2",
         createdAt: new Date().toISOString(),
+        accepted: { version, at: new Date().toISOString() },
         stealth: true,
         profile: {},
       }),
     );
-});
+}, LEGAL_VERSION);
 const page = await context.newPage();
-page.setDefaultTimeout(25_000);
+page.setDefaultTimeout(90_000);
+page.on("pageerror", (error) => console.warn("page error:", error.message));
 const editor = () => page.locator(".practice-editor:not([hidden]) .cm-content");
-const activate = async (selector: ReturnType<typeof page.locator>) => {
-  await selector.focus();
-  await page.keyboard.press("Enter");
-};
 const ready = async () => {
   await editor().waitFor();
   await page.waitForFunction(
-    () =>
-      !document.querySelector<HTMLButtonElement>(
-        ".practice-controls button:last-child",
-      )?.disabled,
+    () => !document.querySelector<HTMLButtonElement>(".practice-controls button:last-child")?.disabled,
   );
 };
 const submit = async () => {
   await editor().focus();
-  await page.keyboard.press(
-    process.platform === "darwin" ? "Meta+Enter" : "Control+Enter",
-  );
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+Enter" : "Control+Enter");
 };
 const records = async () =>
   page.evaluate(async () => {
@@ -62,375 +58,147 @@ const records = async () =>
     });
     try {
       return await new Promise<any[]>((resolve, reject) => {
-        const r = db.transaction("workspace").objectStore("workspace").getAll();
+        const r = db.transaction("records").objectStore("records").getAll();
+        // Stored by id; in the order they happened.
         r.onsuccess = () =>
-          resolve(r.result.map((r: any) => JSON.parse(r.payload)));
+          resolve(
+            r.result
+              .map((r: any) => JSON.parse(r.payload))
+              .sort((a: any, b: any) =>
+                String(a.occurredAt).localeCompare(String(b.occurredAt)),
+              ),
+          );
         r.onerror = () => reject(r.error);
       });
     } finally {
       db.close();
     }
   });
-const finished = async () =>
-  (await records()).filter(
-    (v) =>
-      v.type === "observation.board.moved" &&
-      v.data.trigger === "checks-passed",
-  );
-const shot = async (name: string) => {
-  if (screenshots) {
-    await page.evaluate(() => scrollTo(0, 0));
-    await page.screenshot({ path: `${screenshots}/${name}.png` });
+const ofType = async (type: string) => (await records()).filter((v) => v.type === type);
+/** Records of a type once there are at least `count`: writes are batched. */
+const until = async (type: string, count = 1) => {
+  for (let i = 0; i < 100; i++) {
+    const found = await ofType(type);
+    if (found.length >= count) return found;
+    await page.waitForTimeout(100);
   }
+  throw new Error(`Expected ${count} ${type} records`);
 };
+const shot = async (name: string) => {
+  if (screenshots) await page.screenshot({ path: `${screenshots}/${name}.png` });
+};
+const solution = readChallenge(
+  new URL("../../content/challenges/JS-002", import.meta.url).pathname,
+).private.solution;
+
 try {
-  // Failed asset load leaves editing possible, with one recovery action.
-  await page.route("**/runtime/javascript-*/**", (r) => r.abort("failed"));
-  await page.goto(`${origin}/play`);
-  await activate(
-    page.getByRole("button", { name: "Start in JavaScript", exact: true }),
-  );
-  await editor().waitFor();
-  await page
-    .getByRole("button", { name: "Retry checks", exact: true })
-    .waitFor();
-  await editor().fill(
-    'export function countWords(text) { return text.split(" ").length; }',
-  );
-  await page.unroute("**/runtime/javascript-*/**");
-  await activate(
-    page.getByRole("button", { name: "Retry checks", exact: true }),
-  );
+  // A start from the picker: its search and the position of the pick.
+  await page.goto(`${origin}/challenges?q=${encodeURIComponent("lang:javascript composer")}`);
+  const search = page.locator(".picker input");
+  await search.waitFor();
+  // Enter does nothing until the picker has hydrated, which the page doesn't announce.
+  for (let tries = 0; ; tries++) {
+    await search.press("Enter");
+    const moved = await page
+      .waitForFunction(() => location.pathname === "/challenges/JS-002", null, { timeout: 3000 })
+      .then(() => true, () => false);
+    if (moved) break;
+    assert.ok(tries < 20, "Enter in the picker starts practice");
+  }
   await ready();
-  await shot("practice-before-submit");
-  assert.equal(
-    await page.locator(".ide-activity, .ide-explorer, .status-trigger").count(),
-    0,
-  );
+  const [started] = await until("practice.started");
+  assert.equal(started.data.from, "picker");
+  assert.equal(started.challenge, "JS-002");
+  assert.equal(started.data.position, 1);
+  assert.match(started.data.query, /composer/);
+  assert.equal(started.captureVersion, PRACTICE_CAPTURE_VERSION);
+  const [opened] = await until("practice.opened");
+  assert.equal(opened.attemptId, started.attemptId);
+  assert.ok(opened.data.environment?.browser);
+
+  // Copying from the challenge records what was copied.
+  await page.locator(".practice-challenge h1").selectText();
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+c" : "Control+c");
+  // A failing submission: hidden cases say a category, never a value.
+  await editor().fill('export function countWords(text) { return text.split(" ").length; }');
   await submit();
-  await page.getByText("14 of 19 cases failed.", { exact: true }).waitFor();
-  const hidden = page
-    .locator(".ci-failing li")
-    .filter({ hasText: "hidden case" });
-  assert.ok((await hidden.count()) > 0);
+  await page.locator(".ci-failing").waitFor();
+  const hidden = page.locator(".ci-failing li").filter({ hasText: "hidden case" });
   assert.equal(await hidden.locator("code, pre, dl").count(), 0);
-  assert.equal((await finished()).length, 0);
+  const [failed] = await until("practice.submitted");
+  assert.equal(failed.data.result, "failed");
+  assert.equal((await ofType("practice.completed")).length, 0);
   await shot("practice-failure");
-  await activate(page.getByText("Output", { exact: true }));
-  assert.match(
-    await page.locator(".ide-output").innerText(),
-    /Detailed output is hidden/,
-  );
-  assert.doesNotMatch(
-    await page.locator(".ide-output").innerText(),
-    /pull request/i,
-  );
-  await page.getByText("Output", { exact: true }).click();
-  // Cancellation never completes; the keyboard can leave and re-enter the editor.
-  await editor().fill("export function countWords(text) { while (true) {} }");
+
+  // Examples never complete; a passing submission does.
+  await editor().fill(solution);
+  await page.getByRole("button", { name: "Run examples", exact: true }).click();
+  await page.locator(".run-summary.pass").waitFor();
+  assert.equal((await ofType("practice.completed")).length, 0, "examples cannot complete");
   await submit();
-  await activate(
-    page.getByRole("button", { name: "Cancel check", exact: true }),
-  );
-  await page.getByText("The check was cancelled.", { exact: true }).waitFor();
-  assert.equal((await finished()).length, 0);
-  const good =
-    "export function countWords(text) { return text.trim() ? text.trim().split(/\\s+/).length : 0; }";
-  await editor().fill(good);
-  await editor().focus();
-  await page.keyboard.press("Escape");
-  await page.keyboard.press("Tab");
+  await page.getByRole("heading", { name: "Next challenge", exact: true }).waitFor();
+  const [completed] = await until("practice.completed");
+  assert.equal(completed.attemptId, started.attemptId);
+  const passed = (await ofType("practice.submitted")).at(-1);
+  assert.equal(passed.data.result, "passed");
+  assert.equal(completed.data.runId, passed.data.runId);
+  const progress = await page.evaluate(() => JSON.parse(localStorage.getItem("muscle-memory.progress")!));
+  assert.equal(progress["JS-002"].completions, 1);
   assert.equal(
-    await editor().evaluate((el) => el === document.activeElement),
-    false,
-  );
-  await activate(
-    page.getByRole("button", { name: "Run examples", exact: true }),
-  );
-  await page.locator(".ide-summary").filter({ hasText: "5 passed" }).waitFor();
-  assert.equal((await finished()).length, 0, "public examples cannot complete");
-  await submit();
-  await page
-    .getByRole("heading", { name: "Next challenge", exact: true })
-    .waitFor();
-  assert.equal(
-    await editor().evaluate((el) => el === document.activeElement),
-    true,
-    "feedback retains editing focus",
-  );
-  await page.getByText("Done.", { exact: true }).waitFor();
-  const done = await finished();
-  assert.equal(done.length, 1);
-  assert.equal(done[0].captureVersion, "board-capture-7.2.0");
-  assert.equal(done[0].data.via, "keyboard");
-  const all = await records();
-  assert.equal(
-    all.filter((v) => v.type === "observation.board.result").length,
+    (await ofType("practice.clipboard")).filter((v) => v.data.source === "challenge").length,
     1,
   );
-  assert.equal(
-    all.filter(
-      (v) =>
-        v.type === "observation.board.resolved" ||
-        v.data?.trigger === "pull-request-merged",
-    ).length,
-    0,
-  );
-  assert.ok(
-    all.some(
-      (v) =>
-        v.type === "observation.workspace.run" &&
-        v.captureVersion === "workspace-capture-6.0.0" &&
-        v.data.runId === done[0].data.runId,
-    ),
-  );
-  assert.equal(await page.locator(".practice-controls .primary").count(), 0);
-  assert.equal(await page.locator(".practice-next .btn.start").count(), 1);
+  // The questions after completing are optional, one click each.
+  await page.getByRole("button", { name: "about right", exact: true }).click();
+  const [answered] = await until("practice.answered");
+  assert.deepEqual(answered.data, { question: "difficulty", answer: "right" });
+  assert.equal(answered.attemptId, started.attemptId);
   await shot("practice-after-completion");
-  // Editing immediately withdraws current verification; past completion remains immutable.
-  await editor().press("End");
-  await editor().press("Space");
-  await page
-    .getByText("You've edited the code since the last check.", { exact: true })
-    .waitFor();
-  assert.equal(await page.locator(".practice-next").count(), 0);
-  await page.getByText("Saved", { exact: true }).waitFor();
+
+  // A reload resumes the completed attempt; no new start.
   await page.reload();
   await ready();
-  assert.match(await editor().innerText(), /countWords/);
-  assert.equal((await finished()).length, 1);
-  await page.goto(`${origin}/profile`);
-  await page.getByText(/Verified completion/).waitFor();
-  // Old submission URLs are read-only, with no merge/Resolve/reply writer.
-  await page.goto(`${origin}/pulls/QUICK-2/${done[0].data.pullRequest}`);
-  await page.getByText(/saved submission record/).waitFor();
-  assert.equal(
-    await page.getByRole("button", { name: /Merge|Resolve|Reply/ }).count(),
-    0,
-  );
-  // An authored correctness/safety blocker persists despite all cases passing.
-  await page.goto(`${origin}/work/FN-1`);
+  assert.equal((await ofType("practice.started")).length, 1);
+  await page.getByRole("heading", { name: "Next challenge", exact: true }).waitFor();
+
+  // Stars from practice are recorded.
+  await page.locator(".pane-star").click();
+  await page.waitForFunction(() => localStorage.getItem("muscle-memory.stars")?.includes("JS-002"));
+
+  // Practising again begins a new attempt from the starting code.
+  await page.getByRole("button", { name: "Practise this again", exact: true }).click();
+  await page.waitForURL(`${origin}/challenges/JS-002`);
   await ready();
-  const fn = SEED_ISSUES.find((i) => i.id === "frequency-map")!;
-  const solution = Object.values(fn.private.reference)[0];
-  assert.equal(typeof solution, "string");
-  await editor().fill('print("debug")\n' + solution);
-  await submit();
-  await page
-    .getByText(/All .* cases pass, but a required rule still applies/)
-    .waitFor();
-  assert.equal((await finished()).length, 1);
+  const starts = await until("practice.started", 2);
+  assert.equal(starts.length, 2);
+  assert.equal(starts[1].data.from, "again");
+  assert.notEqual(starts[1].attemptId, started.attemptId);
+  assert.doesNotMatch(await editor().innerText(), /trim|\\s\+/);
+  assert.equal((await until("site.starred")).length, 1);
+
+  // The next challenge after completing again is recorded as such.
   await editor().fill(solution);
   await submit();
-  await page
-    .getByRole("heading", { name: "Next challenge", exact: true })
-    .waitFor();
-  assert.equal((await finished()).length, 2);
-  // The normalized TypeScript challenge is really one editable source and still runs.
-  await page.goto(`${origin}/work/SHOP-8`);
-  await ready();
-  assert.equal(await page.locator(".practice-editor").count(), 1);
-  assert.equal(
-    await page.getByRole("combobox", { name: "Editable source" }).count(),
-    0,
-  );
-  assert.equal(
-    await page
-      .locator(".practice-context, .practice-requirements, [role=tablist]")
-      .count(),
-    0,
-  );
-  const shop = library(catalog).findIssue("SHOP-8")!;
-  const shopSeed = SEED_ISSUES.find((i) => i.id === shop.slug)!;
-  await editor().fill(Object.values(shopSeed.private.reference)[0]);
-  await submit();
-  await page
-    .getByRole("heading", { name: "Next challenge", exact: true })
-    .waitFor();
-  assert.equal((await finished()).length, 3);
-
-  // Historical multi-file bundles remain intact, but are never made one-file by hiding a source.
-  const legacyRevision =
-    "sha256:675596eb25cb85f7ed035b3f24ad21a489ffc4b37bb5214aa3ef196ba9b0c068";
-  const beforeHistorical = (await records()).filter(
-    (v) => v.type === "observation.workspace.opened",
-  ).length;
-  await page.goto(`${origin}/work/SHOP-8?revision=${legacyRevision}`);
-  await page
-    .getByRole("heading", {
-      name: "This older version is not supported in one-file practice",
-    })
-    .waitFor();
-  assert.equal(await page.locator(".cm-content").count(), 0);
-  assert.equal(
-    (await records()).filter((v) => v.type === "observation.workspace.opened")
-      .length,
-    beforeHistorical,
-  );
-  const legacy = catalog.revisions[legacyRevision];
-  const participantId = all[0].participantId;
-  const previousOpen = all.find(
-    (v) => v.type === "observation.workspace.opened",
-  )!;
-  async function seedLegacy(suffix: string) {
-    const sourceId = `legacy-recovery-${suffix}`;
-    const files = Object.fromEntries(
-      Object.entries(editableFiles(legacy.workspace)).map(([path, file]) => [
-        path,
-        {
-          mediaType: "text/typescript",
-          text:
-            file.text +
-            (path === legacy.workspace.entry
-              ? "\n// LEGACY_ENTRY_SENTINEL"
-              : "\n// LEGACY_HELPER_SENTINEL"),
-        },
-      ]),
-    );
-    const artifact = toRecord(codeRevision(participantId, sourceId, 1, files));
-    const observed = {
-      ...previousOpen,
-      observationId: `${sourceId}.1`,
-      source: { id: sourceId, sequence: 1 },
-      occurredAt: new Date().toISOString(),
-      issue: shop.slug,
-      issueRevision: legacyRevision,
-      data: {
-        ...previousOpen.data,
-        revision: 1,
-        codeArtifactId: artifact.recordId,
-      },
-    };
-    const fixture = [
-      artifact,
-      {
-        recordId: observed.observationId,
-        kind: "observation",
-        participantId,
-        payload: JSON.stringify(observed),
-      },
-    ];
-    await page.evaluate(async (fixture) => {
-      const db = await new Promise<IDBDatabase>((resolve, reject) => {
-        const r = indexedDB.open("muscle-memory-local-practice");
-        r.onsuccess = () => resolve(r.result);
-        r.onerror = () => reject(r.error);
-      });
-      try {
-        await new Promise<void>((resolve, reject) => {
-          const tx = db.transaction("workspace", "readwrite");
-          for (const r of fixture) tx.objectStore("workspace").add(r);
-          tx.oncomplete = () => resolve();
-          tx.onabort = () => reject(tx.error);
-        });
-      } finally {
-        db.close();
-      }
-    }, fixture);
-    return JSON.parse(artifact.payload);
-  }
-  const retainedEntry = await seedLegacy("entry");
-  const beforeChoice = (await records()).filter(
-    (v) =>
-      v.type.startsWith("observation.workspace.") ||
-      v.type === "artifact.code-revision",
-  ).length;
-  await page.goto(`${origin}/work/SHOP-8`);
-  await page.getByRole("region", { name: "Saved version recovery" }).waitFor();
-  assert.equal(await editor().count(), 0);
-  assert.equal(
-    (await records()).filter(
-      (v) =>
-        v.type.startsWith("observation.workspace.") ||
-        v.type === "artifact.code-revision",
-    ).length,
-    beforeChoice,
-    "no new workspace records before a lossy restoration choice",
-  );
-  await activate(
-    page.getByRole("button", { name: "Restore saved entry only", exact: true }),
-  );
-  await ready();
-  assert.match(await editor().innerText(), /LEGACY_ENTRY_SENTINEL/);
-  await page.getByText("Saved", { exact: true }).waitFor();
-  assert.deepEqual(
-    (await records()).find((v) => v.artifactId === retainedEntry.artifactId),
-    retainedEntry,
-  );
-  await page.reload();
-  await ready();
-  assert.match(await editor().innerText(), /LEGACY_ENTRY_SENTINEL/);
-  // Explicit starter choice appends a new source without rewriting old entry/helper artifacts.
-  await page.goto(`${origin}/profile`);
-  const retainedStarter = await seedLegacy("starter");
-  await page.goto(`${origin}/work/SHOP-8`);
-  await page.getByRole("region", { name: "Saved version recovery" }).waitFor();
-  await shot("practice-version-recovery");
-  await activate(
-    page.getByRole("button", { name: "Use current starter", exact: true }),
-  );
-  await ready();
-  assert.doesNotMatch(await editor().innerText(), /LEGACY_ENTRY_SENTINEL/);
-  assert.deepEqual(
-    (await records()).find((v) => v.artifactId === retainedStarter.artifactId),
-    retainedStarter,
-  );
-
-  // SQL is a first-class one-file challenge: schema is public; harness and test code stay internal.
-  await page.goto(`${origin}/work/DATA-3`);
-  await ready();
-  await page.getByText("Data schema", { exact: true }).waitFor();
-  assert.match(
-    await page
-      .locator(".practice-challenge details")
-      .filter({ has: page.getByText("Data schema", { exact: true }) })
-      .innerText(),
-    /CREATE TABLE/i,
-  );
-  assert.equal(await page.locator(".practice-editor").count(), 1);
-  const sql = library(catalog).findIssue("DATA-3")!;
-  const sqlSeed = SEED_ISSUES.find((i) => i.id === sql.slug)!;
-  await editor().fill(Object.values(sqlSeed.private.reference)[0]);
-  await submit();
-  await page
-    .getByRole("heading", { name: "Next challenge", exact: true })
-    .waitFor();
-  assert.equal((await finished()).length, 4);
-  // Mobile keeps the public requirements, examples and code accessible without an overlay.
-  await page.setViewportSize({ width: 390, height: 844 });
-  assert.equal(await page.getByRole("dialog").count(), 0);
-  assert.equal(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-    true,
-  );
-  await shot("practice-mobile");
-  // Next challenge uses client navigation: it must open a fresh session for the new key.
-  await page.setViewportSize({ width: 1280, height: 900 });
-  const nextLink = page.locator(".practice-next .btn.start");
-  const nextHref = await nextLink.getAttribute("href");
-  assert.ok(nextHref);
-  await activate(nextLink);
+  await page.getByRole("heading", { name: "Next challenge", exact: true }).waitFor();
+  const nextLink = page.locator(".practice-next a.btn.primary");
+  const nextHref = (await nextLink.getAttribute("href"))!;
+  await nextLink.click();
   await page.waitForURL(`${origin}${nextHref}`);
   await ready();
-  const nextKey = new URL(page.url()).pathname.split("/").at(-1)!;
-  const nextIssue = library(catalog).findIssue(nextKey)!;
-  assert.match(
-    await page.locator(".practice-header > span").innerText(),
-    new RegExp(nextKey),
-  );
-  assert.ok(
-    (await records()).some(
-      (v) =>
-        v.type === "observation.workspace.opened" &&
-        v.issue === nextIssue.slug &&
-        v.issueRevision === nextIssue.revision,
-    ),
+  const after = (await until("practice.started", 3)).at(-1);
+  assert.equal(after.data.from, "next");
+  assert.equal(after.challenge, nextHref.split("/").at(-1));
+  assert.equal(
+    (await ofType("practice.completed")).at(-1).data.suggested,
+    after.challenge,
   );
   console.log(
-    "PASS: actual full-suite Submit, failed hidden checks, cancel/retry, public-only green, automatic completion, stale/edit/reload, atomic records, required-rule recovery, profile, one-file TypeScript/SQL, safe historical revision recovery, keyboard focus and mobile",
+    "PASS: picker start, challenge copy, failing and passing submissions, completion, questions after it, resume, star, practise again, next challenge",
   );
+} catch (error) {
+  console.error("at", page.url());
+  if (screenshots) await page.screenshot({ path: `${screenshots}/failure.png` });
+  throw error;
 } finally {
   await context.close();
   await browser.close();

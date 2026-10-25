@@ -1,0 +1,87 @@
+[
+  {
+    "input": 30,
+    "expected": "Too many attempts. Try again in 1 minute."
+  },
+  {
+    "input": 900,
+    "expected": "Too many attempts. Try again in 15 minutes."
+  },
+  {
+    "input": 61,
+    "expected": "Too many attempts. Try again in 2 minutes."
+  },
+  {
+    "input": 0,
+    "expected": "You can try again now."
+  },
+  {
+    "input": 3600,
+    "expected": "Too many attempts. Try again in 1 hour."
+  },
+  {
+    "input": 86400,
+    "expected": "Too many attempts. Try again in 24 hours.",
+    "hidden": true
+  },
+  {
+    "input": 3541,
+    "expected": "Too many attempts. Try again in 1 hour.",
+    "hidden": true
+  },
+  {
+    "input": 3601,
+    "expected": "Too many attempts. Try again in 2 hours.",
+    "hidden": true
+  },
+  {
+    "input": -4,
+    "expected": "You can try again now.",
+    "hidden": true
+  },
+  {
+    "input": 1,
+    "expected": "Too many attempts. Try again in 1 minute.",
+    "hidden": true
+  },
+  {
+    "input": 60,
+    "expected": "Too many attempts. Try again in 1 minute.",
+    "hidden": true
+  },
+  {
+    "input": 120,
+    "expected": "Too many attempts. Try again in 2 minutes.",
+    "hidden": true
+  },
+  {
+    "input": 3540,
+    "expected": "Too many attempts. Try again in 59 minutes.",
+    "hidden": true
+  },
+  {
+    "input": 7200,
+    "expected": "Too many attempts. Try again in 2 hours.",
+    "hidden": true
+  },
+  {
+    "input": 7201,
+    "expected": "Too many attempts. Try again in 3 hours.",
+    "hidden": true
+  },
+  {
+    "input": 59,
+    "expected": "Too many attempts. Try again in 1 minute.",
+    "hidden": true
+  },
+  {
+    "input": 86399,
+    "expected": "Too many attempts. Try again in 24 hours.",
+    "hidden": true
+  },
+  {
+    "input": 600,
+    "expected": "Too many attempts. Try again in 10 minutes.",
+    "hidden": true
+  }
+]

@@ -1,0 +1,433 @@
+{
+  "challenge": "PY-009",
+  "task": "The volunteers typing up the 2026 notebooks are expanding every ditto mark by hand, and it's slow: three of 41 notebooks done. From Marta, who leads the fieldwork:\n\n> We've always written \" under the row above when nothing changed. Some of the older volunteers write 〃 or do. Please let them type the page as it looks.\n\n`read_notebook(text)` reads a typed-up notebook (one string, lines separated by newlines) and returns `{\"rows\": [...], \"unresolved\": [...]}`.\n\n**Lines.** A specimen row reads `date | site | species | length | count`, for example `2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2`. Three kinds of line are not specimen rows: blank lines (empty or only whitespace), notes (starting with `#` once leading spaces are removed), and page headings (starting with `==`, for example `== p. 14 ==`).\n\n**Rows.** Each specimen row becomes a dict with the keys `date`, `site`, `species` and `length` (strings, stripped of surrounding spaces) and `count` (an int), in the order the rows appear. The helpers further down the file provide:\n\n- `parse_line(line)`: that dict for one line, with no ditto expansion;\n- `fields(line)`: the line's five fields as a list of stripped strings, in that order (raises `ValueError` if there aren't five);\n- `FIELDS`: the field names, `(\"date\", \"site\", \"species\", \"length\", \"count\")`.\n\n**Ditto marks.**\n\n- A field that is exactly `\"`, `〃` or `do.` once stripped is a ditto. A field that only contains one of them among other text is not.\n- A ditto means the same field as the nearest specimen row above it on the same page, as that row reads once its own dittos are expanded. This applies to every field, the count included.\n- Blank lines and notes are skipped and are never the row above.\n- A page heading starts a new sheet of paper: a ditto never reaches back across it. The first row after a heading has no row above.\n- A ditto with nothing to copy (no row above, or the field above was itself a ditto with nothing to copy) can't be resolved. Its row can't be read: it is left out of `rows`, and its line number goes in `unresolved`. It still counts as the row above for the next row, whose dittos copy the fields it had and can't resolve the ones it didn't.\n- Line numbers start at 1 and count every line of the text, including blank lines, notes and headings, so they match the line numbers in the volunteer's editor. `unresolved` lists them in order.\n\nEmpty text gives `{\"rows\": [], \"unresolved\": []}`.\n\nRequirement: the code must not print anything. The transcription job's standard output goes into the volunteers' upload log.\n",
+  "language": "python",
+  "file": "transcribe.py",
+  "starter": "\"\"\"Reads typed-up notebook pages into specimen rows.\"\"\"\n\n\ndef read_notebook(text):\n    \"\"\"The specimen rows in a typed-up notebook, and the line numbers (from 1) of rows that could\n    not be read. Blank lines and notes (lines starting with #) are skipped.\"\"\"\n    rows = []\n    for line in text.splitlines():\n        if not line.strip() or line.strip().startswith(\"#\"):\n            continue\n        rows.append(parse_line(line))\n    return {\"rows\": rows, \"unresolved\": []}\n\n\n# ---- labels: helpers this code uses. You shouldn't need to change them. ----\n\n# Notebook lines, as typed up from the paper field notebook. One line per specimen lot:\n#\n#     2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\n#\n# date | site | species | body length | individuals in the lot. The length is left blank when\n# nothing was measured.\n\nFIELDS = (\"date\", \"site\", \"species\", \"length\", \"count\")\n\n\ndef fields(line):\n    \"\"\"The five fields of a line, stripped, as written.\"\"\"\n    parts = [part.strip() for part in line.split(\"|\")]\n    if len(parts) != len(FIELDS):\n        raise ValueError(f\"expected {len(FIELDS)} fields: {line!r}\")\n    return parts\n\n\ndef parse_line(line):\n    \"\"\"A line as a dict: every field as written, the count as a number.\"\"\"\n    row = dict(zip(FIELDS, fields(line)))\n    row[\"count\"] = int(row[\"count\"])\n    return row\n",
+  "entrypoint": "read_notebook",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": "# p. 12, rain all morning\n2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\n\n2026-06-03 | Ridge B | Pterostichus niger | 11 mm | 1",
+      "expected": {
+        "rows": [
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Carabus nemoralis",
+            "length": "14.5 mm",
+            "count": 2
+          },
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Pterostichus niger",
+            "length": "11 mm",
+            "count": 1
+          }
+        ],
+        "unresolved": []
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": "2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\n\" | \" | Pterostichus niger | 11 mm | 1\n\" | Alder Creek | Carabus nemoralis |  | 3",
+      "expected": {
+        "rows": [
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Carabus nemoralis",
+            "length": "14.5 mm",
+            "count": 2
+          },
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Pterostichus niger",
+            "length": "11 mm",
+            "count": 1
+          },
+          {
+            "date": "2026-06-03",
+            "site": "Alder Creek",
+            "species": "Carabus nemoralis",
+            "length": "",
+            "count": 3
+          }
+        ],
+        "unresolved": []
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": "2026-06-04 | Alder Creek | Carabus nemoralis | 15 mm | 1\n〃 | 〃 | 〃 | 16 mm | 〃\ndo. | do. | Pterostichus niger | do. | 2",
+      "expected": {
+        "rows": [
+          {
+            "date": "2026-06-04",
+            "site": "Alder Creek",
+            "species": "Carabus nemoralis",
+            "length": "15 mm",
+            "count": 1
+          },
+          {
+            "date": "2026-06-04",
+            "site": "Alder Creek",
+            "species": "Carabus nemoralis",
+            "length": "16 mm",
+            "count": 1
+          },
+          {
+            "date": "2026-06-04",
+            "site": "Alder Creek",
+            "species": "Pterostichus niger",
+            "length": "16 mm",
+            "count": 2
+          }
+        ],
+        "unresolved": []
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-4",
+      "input": "== p. 14 ==\n2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\n== p. 15 ==\n\" | Alder Creek | Carabus nemoralis | 15 mm | 1\n2026-06-05 | Alder Creek | Pterostichus niger |  | 1",
+      "expected": {
+        "rows": [
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Carabus nemoralis",
+            "length": "14.5 mm",
+            "count": 2
+          },
+          {
+            "date": "2026-06-05",
+            "site": "Alder Creek",
+            "species": "Pterostichus niger",
+            "length": "",
+            "count": 1
+          }
+        ],
+        "unresolved": [
+          4
+        ]
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-5",
+      "input": "",
+      "expected": {
+        "rows": [],
+        "unresolved": []
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-6",
+      "input": "\" | Ridge B | Carabus nemoralis | 14.5 mm | 1\n2026-06-03 | Ridge B | Pterostichus niger | 11 mm | 1",
+      "expected": {
+        "rows": [
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Pterostichus niger",
+            "length": "11 mm",
+            "count": 1
+          }
+        ],
+        "unresolved": [
+          1
+        ]
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": "2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\n# moved trap 3 into the shade\n\n\" | \" | Pterostichus niger | 11 mm | 1",
+      "expected": {
+        "rows": [
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Carabus nemoralis",
+            "length": "14.5 mm",
+            "count": 2
+          },
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Pterostichus niger",
+            "length": "11 mm",
+            "count": 1
+          }
+        ],
+        "unresolved": []
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": "2026-06-03 | Ridge B | Carabus nemoralis |  | 2\n\" | \" | Pterostichus niger | \" | 1",
+      "expected": {
+        "rows": [
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Carabus nemoralis",
+            "length": "",
+            "count": 2
+          },
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Pterostichus niger",
+            "length": "",
+            "count": 1
+          }
+        ],
+        "unresolved": []
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": "2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 4\n\" | \" | \" | 15 mm | \"",
+      "expected": {
+        "rows": [
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Carabus nemoralis",
+            "length": "14.5 mm",
+            "count": 4
+          },
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Carabus nemoralis",
+            "length": "15 mm",
+            "count": 4
+          }
+        ],
+        "unresolved": []
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": "== p. 15 ==\n\" | Alder Creek | Carabus nemoralis | 15 mm | 1\n\" | \" | Pterostichus niger | 11 mm | 1\n2026-06-05 | \" | Pterostichus niger |  | 2",
+      "expected": {
+        "rows": [
+          {
+            "date": "2026-06-05",
+            "site": "Alder Creek",
+            "species": "Pterostichus niger",
+            "length": "",
+            "count": 2
+          }
+        ],
+        "unresolved": [
+          2,
+          3
+        ]
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": "# p. 9\n\n2026-06-01 | Ridge B | Carabus nemoralis |  | 1\n\n# trap 4 flooded\n\" | Ridge C | \" |  | 1\n== p. 14 ==\n\" | \" | \" |  | 1",
+      "expected": {
+        "rows": [
+          {
+            "date": "2026-06-01",
+            "site": "Ridge B",
+            "species": "Carabus nemoralis",
+            "length": "",
+            "count": 1
+          },
+          {
+            "date": "2026-06-01",
+            "site": "Ridge C",
+            "species": "Carabus nemoralis",
+            "length": "",
+            "count": 1
+          }
+        ],
+        "unresolved": [
+          8
+        ]
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": "== p. 14 ==\n2026-06-03 | Ridge B | Carabus nemoralis |  | 1\n\" | \" | Pterostichus niger |  | 1\n== p. 15 ==\n2026-06-04 | Alder Creek | Pterostichus niger |  | 2\n\" | \" | Carabus nemoralis |  | 1",
+      "expected": {
+        "rows": [
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Carabus nemoralis",
+            "length": "",
+            "count": 1
+          },
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Pterostichus niger",
+            "length": "",
+            "count": 1
+          },
+          {
+            "date": "2026-06-04",
+            "site": "Alder Creek",
+            "species": "Pterostichus niger",
+            "length": "",
+            "count": 2
+          },
+          {
+            "date": "2026-06-04",
+            "site": "Alder Creek",
+            "species": "Carabus nemoralis",
+            "length": "",
+            "count": 1
+          }
+        ],
+        "unresolved": []
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": "2026-06-03 | Bob's \"big\" pond | Carabus nemoralis |  | 1\n\" | \" | Dytiscus do. marginalis |  | 1",
+      "expected": {
+        "rows": [
+          {
+            "date": "2026-06-03",
+            "site": "Bob's \"big\" pond",
+            "species": "Carabus nemoralis",
+            "length": "",
+            "count": 1
+          },
+          {
+            "date": "2026-06-03",
+            "site": "Bob's \"big\" pond",
+            "species": "Dytiscus do. marginalis",
+            "length": "",
+            "count": 1
+          }
+        ],
+        "unresolved": []
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": "== p. 14 ==\n\" | \" | \" | \" | \"\n2026-06-03 | Ridge B | Carabus nemoralis |  | 1\n\" | \" | \" | \" | \"",
+      "expected": {
+        "rows": [
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Carabus nemoralis",
+            "length": "",
+            "count": 1
+          },
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Carabus nemoralis",
+            "length": "",
+            "count": 1
+          }
+        ],
+        "unresolved": [
+          2
+        ]
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": "2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\n    \"   |  〃  |  do.  | \" | 3",
+      "expected": {
+        "rows": [
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Carabus nemoralis",
+            "length": "14.5 mm",
+            "count": 2
+          },
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Carabus nemoralis",
+            "length": "14.5 mm",
+            "count": 3
+          }
+        ],
+        "unresolved": []
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-16",
+      "input": "2026-06-03 | Ridge B | Carabus nemoralis |  | 1\n# moved | wet | trap 2 | gone | ?\n\" | \" | Pterostichus niger |  | 2",
+      "expected": {
+        "rows": [
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Carabus nemoralis",
+            "length": "",
+            "count": 1
+          },
+          {
+            "date": "2026-06-03",
+            "site": "Ridge B",
+            "species": "Pterostichus niger",
+            "length": "",
+            "count": 2
+          }
+        ],
+        "unresolved": []
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-17",
+      "input": "== p. 3 ==\n== p. 4 ==\n2026-05-20 | Fen Margin | Abax parallelepipedus | 21 mm | 1\n== p. 5 ==\n# nothing today\n\" | Fen Margin | Abax parallelepipedus | 20 mm | 1",
+      "expected": {
+        "rows": [
+          {
+            "date": "2026-05-20",
+            "site": "Fen Margin",
+            "species": "Abax parallelepipedus",
+            "length": "21 mm",
+            "count": 1
+          }
+        ],
+        "unresolved": [
+          6
+        ]
+      },
+      "hidden": true
+    }
+  ],
+  "rules": [
+    {
+      "id": "transcribe-print",
+      "message": "The code must not print anything: the transcription job's standard output goes into the volunteers' upload log.",
+      "when": {
+        "pattern": "^\\s*print\\(",
+        "present": true
+      }
+    }
+  ]
+}

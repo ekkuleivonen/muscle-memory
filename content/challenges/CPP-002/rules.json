@@ -1,0 +1,10 @@
+[
+  {
+    "id": "flat-table",
+    "message": "The index must stay an allocation-free flat table: no std::map, std::unordered_map, std::set, std::unordered_set or std::list, no new and no make_unique or make_shared.",
+    "when": {
+      "pattern": "#include\\s*<(unordered_map|map|list|unordered_set|set)>|std::(unordered_map|map|list|unordered_set|set)\\s*<|\\bnew\\s+[A-Za-z_]|make_(unique|shared)\\s*<",
+      "present": true
+    }
+  }
+]

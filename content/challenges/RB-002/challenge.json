@@ -1,0 +1,12 @@
+{
+  "title": "Workspace URLs break on names with accents",
+  "summary": "Make URL slugs from workspace names, accents and all.",
+  "difficulty": "easy",
+  "tags": [
+    "strings",
+    "unicode",
+    "urls"
+  ],
+  "file": "lib/slugify.rb",
+  "entrypoint": "slugify"
+}

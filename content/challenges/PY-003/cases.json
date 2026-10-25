@@ -1,0 +1,168 @@
+[
+  {
+    "input": [
+      "2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2",
+      "2026-06-03 | Ridge B | carabus nemoralis | 14.5 mm | 1"
+    ],
+    "expected": {
+      "Carabus nemoralis": 3
+    }
+  },
+  {
+    "input": [],
+    "expected": {}
+  },
+  {
+    "input": [
+      "2026-06-03 | Ridge B | Pterostichus  niger | 14.5 mm | 3",
+      "2026-06-03 | Ridge B | Pterostichus niger | 14.5 mm | 2"
+    ],
+    "expected": {
+      "Pterostichus niger": 5
+    }
+  },
+  {
+    "input": [
+      "2026-06-03 | Ridge B | Carabus sp. | 14.5 mm | 4"
+    ],
+    "expected": {
+      "Carabus sp.": 4
+    }
+  },
+  {
+    "input": [
+      "2026-06-03 | Ridge B | ABAX PARALLELEPIPEDUS | 14.5 mm | 2",
+      "2026-06-03 | Ridge B | Abax parallelepipedus | 14.5 mm | 1"
+    ],
+    "expected": {
+      "Abax parallelepipedus": 3
+    }
+  },
+  {
+    "input": [
+      "2026-06-03 | Ridge B | carabus   NEMORALIS | 14.5 mm | 1",
+      "2026-06-03 | Ridge B | Carabus Nemoralis | 14.5 mm | 1"
+    ],
+    "expected": {
+      "Carabus nemoralis": 2
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "",
+      "2026-06-03 | Ridge B | Nebria brevicollis | 14.5 mm | 2",
+      "   ",
+      "2026-06-03 | Ridge B | nebria brevicollis | 14.5 mm | 5",
+      ""
+    ],
+    "expected": {
+      "Nebria brevicollis": 7
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Ridge B | Carabus problematicus | 14.5 mm | 0"
+    ],
+    "expected": {
+      "Carabus problematicus": 0
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2",
+      "2026-06-03 | Ridge B | Pterostichus niger | 14.5 mm | 1",
+      "2026-06-03 | Ridge B | carabus nemoralis | 14.5 mm | 3",
+      "2026-06-03 | Ridge B | Abax parallelepipedus | 14.5 mm | 4",
+      "2026-06-03 | Ridge B | PTEROSTICHUS NIGER | 14.5 mm | 2"
+    ],
+    "expected": {
+      "Carabus nemoralis": 5,
+      "Pterostichus niger": 3,
+      "Abax parallelepipedus": 4
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Ridge B | Carabus cf. nemoralis | 14.5 mm | 1",
+      "2026-06-03 | Ridge B | carabus CF. Nemoralis | 14.5 mm | 2"
+    ],
+    "expected": {
+      "Carabus cf. nemoralis": 3
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Ridge B | Carabus auro-nitens | 14.5 mm | 1",
+      "2026-06-03 | Ridge B | carabus Auro-Nitens | 14.5 mm | 1"
+    ],
+    "expected": {
+      "Carabus auro-nitens": 2
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Ridge B | Carabus | 14.5 mm | 3",
+      "2026-06-03 | Ridge B | CARABUS | 14.5 mm | 1"
+    ],
+    "expected": {
+      "Carabus": 4
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Ridge B | CARABUS nemoralis | 14.5 mm | 1",
+      "2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 1"
+    ],
+    "expected": {
+      "Carabus nemoralis": 2
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Ridge B | Carabus\tnemoralis | 14.5 mm | 2",
+      "2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 1"
+    ],
+    "expected": {
+      "Carabus nemoralis": 3
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Ridge B | Carabus nemoralis NEMORALIS | 14.5 mm | 1",
+      "2026-06-03 | Ridge B | carabus nemoralis nemoralis | 14.5 mm | 1"
+    ],
+    "expected": {
+      "Carabus nemoralis nemoralis": 2
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Ridge B | ötiorhynchus sulcatus | 14.5 mm | 2",
+      "2026-06-03 | Ridge B | Ötiorhynchus Sulcatus | 14.5 mm | 1"
+    ],
+    "expected": {
+      "Ötiorhynchus sulcatus": 3
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Ridge B | Leistus o'brieni | 14.5 mm | 1",
+      "2026-06-03 | Ridge B | Leistus O'Brieni | 14.5 mm | 1"
+    ],
+    "expected": {
+      "Leistus o'brieni": 2
+    },
+    "hidden": true
+  }
+]

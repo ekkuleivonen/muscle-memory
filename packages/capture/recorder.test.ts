@@ -10,18 +10,20 @@ import {
 } from "./recorder";
 import { openPracticeStore } from "../browser/practice-store";
 import { orderSource } from "../domain/source-order";
-import { codeRevision, type WorkspaceRecord } from "../domain/workspace";
+import { PRACTICE_CAPTURE_VERSION } from "../domain/practice";
+import { codeRevision, type StoredRecord } from "../domain/records";
 
 const P = "synthetic-participant";
-const S = "workspace-source-1";
+const S = "practice-source-1";
 
 function recorder(sink: CaptureSink, options: Partial<RecorderOptions> = {}) {
   return new CaptureRecorder({
     participantId: P,
+    sessionId: "session-1",
     sourceId: S,
-    consentVersion: "workspace-local-v1",
-    issue: "frequency-map",
-    issueRevision: "sha256:" + "0".repeat(64),
+    termsVersion: "2026-10-25",
+    challenge: { key: "PY-002", revision: "sha256:" + "0".repeat(64) },
+    attemptId: "attempt-1",
     sink,
     flushDelayMs: 0,
     retryBaseMs: 1,
@@ -31,6 +33,7 @@ function recorder(sink: CaptureSink, options: Partial<RecorderOptions> = {}) {
 
 function edit(revision: number) {
   return {
+    file: "solution.py",
     revision,
     changes: [0, [0, "x"]],
     changesBytes: 11,
@@ -60,7 +63,7 @@ test("observations keep source order across batches and get stable IDs", async (
     { batchSize: 100 },
   );
   for (let revision = 1; revision <= 250; revision++)
-    capture.observe("observation.workspace.edit", edit(revision));
+    capture.observe("practice.edit", edit(revision));
   await capture.flush();
   assert.deepEqual(
     batches.map((batch) => batch.length),
@@ -71,11 +74,10 @@ test("observations keep source order across batches and get stable IDs", async (
     Array.from({ length: 250 }, (_, i) => `${S}.${i + 1}`),
   );
   const stored = observations(sink);
-  assert.equal(stored[0].researchConsent, false);
-  assert.deepEqual(stored[0].serverReceipt, {
-    status: "absent",
-    reason: "local-only",
-  });
+  assert.equal(stored[0].captureVersion, PRACTICE_CAPTURE_VERSION);
+  assert.equal(stored[0].sessionId, "session-1");
+  assert.equal(stored[0].attemptId, "attempt-1");
+  assert.equal(stored[0].challenge, "PY-002");
   const stream = orderSource(
     P,
     S,
@@ -103,8 +105,8 @@ test("a failed write retries the same records; partial earlier writes deduplicat
       return sink.write(records);
     },
   });
-  capture.observe("observation.workspace.edit", edit(1));
-  capture.observe("observation.workspace.edit", edit(2));
+  capture.observe("practice.edit", edit(1));
+  capture.observe("practice.edit", edit(2));
   await capture.flush();
   assert.equal(capture.status().retrying, true);
   assert.match(capture.status().lastError!, /interrupted/);
@@ -133,12 +135,12 @@ test("a full buffer drops observations and discloses the exact gap; artifacts dr
   for (let revision = 1; revision <= 10; revision++) {
     const artifacts =
       revision === 8 ? [
-            codeRevision(P, S, 8, {
+            codeRevision(P, S, 8, PRACTICE_CAPTURE_VERSION, {
               "solution.py": { text: "def f(): pass", mediaType: "text/x-python" },
             }),
           ] : [];
     kept.push(
-      capture.observe("observation.workspace.edit", edit(revision), artifacts)
+      capture.observe("practice.edit", edit(revision), artifacts)
         ?.source.sequence ?? null,
     );
   }
@@ -150,7 +152,7 @@ test("a full buffer drops observations and discloses the exact gap; artifacts dr
   await capture.flush();
   const stored = observations(sink);
   const gap = stored.find(
-    (record) => record.type === "observation.workspace.capture-gap",
+    (record) => record.type === "practice.capture-gap",
   );
   assert.deepEqual(gap.data, {
     fromSequence: 6,
@@ -174,11 +176,11 @@ test("a full buffer drops observations and discloses the exact gap; artifacts dr
 test("a conflicting stored payload is not overwritten and becomes a disclosed gap", async () => {
   const sink = new MemorySink();
   const capture = recorder(sink);
-  const first = capture.observe("observation.workspace.edit", edit(1))!;
+  const first = capture.observe("practice.edit", edit(1))!;
   await capture.flush();
   // A second recorder reusing the same source (a bug) conflicts at position 1.
   const reused = recorder(sink);
-  reused.observe("observation.workspace.edit", edit(99));
+  reused.observe("practice.edit", edit(99));
   await reused.flush();
   await reused.flush();
   assert.equal(
@@ -186,7 +188,7 @@ test("a conflicting stored payload is not overwritten and becomes a disclosed ga
     1,
   );
   const gap = observations(sink).find(
-    (record) => record.type === "observation.workspace.capture-gap",
+    (record) => record.type === "practice.capture-gap",
   );
   assert.deepEqual(gap.data, {
     fromSequence: 1,
@@ -210,8 +212,8 @@ test("stop waits for the in-flight write, then discards the buffer and writes no
     },
     { batchSize: 1 },
   );
-  capture.observe("observation.workspace.edit", edit(1));
-  capture.observe("observation.workspace.edit", edit(2));
+  capture.observe("practice.edit", edit(1));
+  capture.observe("practice.edit", edit(2));
   await new Promise((done) => setTimeout(done, 5));
   const stopping = capture.stop();
   release();
@@ -220,11 +222,11 @@ test("stop waits for the in-flight write, then discards the buffer and writes no
   await new Promise((done) => setTimeout(done, 20));
   assert.equal(writes, 1);
   assert.equal(sink.records.size, 0);
-  assert.equal(capture.observe("observation.workspace.edit", edit(3)), null);
+  assert.equal(capture.observe("practice.edit", edit(3)), null);
   assert.equal(capture.status().buffered, 0);
 });
 
-function record(recordId: string, payload: string): WorkspaceRecord {
+function record(recordId: string, payload: string): StoredRecord {
   return { recordId, kind: "observation", participantId: P, payload };
 }
 
@@ -250,7 +252,7 @@ test("IndexedDB batches commit atomically, deduplicate, reject conflicts and cle
   store = await openPracticeStore(factory);
   try {
     assert.deepEqual(
-      (await store.workspaceRecords()).map((row) => row.recordId),
+      (await store.records()).map((row) => row.recordId),
       ["a", "b"],
     );
     assert.deepEqual(
@@ -258,41 +260,14 @@ test("IndexedDB batches commit atomically, deduplicate, reject conflicts and cle
       ["duplicate", "conflict"],
     );
     assert.equal(
-      (await store.workspaceRecords()).find((row) => row.recordId === "b")!
+      (await store.records()).find((row) => row.recordId === "b")!
         .payload,
       "2",
     );
     assert.equal(await store.participantId(), id);
     await store.clear();
-    assert.deepEqual(await store.workspaceRecords(), []);
+    assert.deepEqual(await store.records(), []);
     assert.notEqual(await store.participantId(), id);
-  } finally {
-    store.close();
-  }
-});
-
-test("upgrading an earlier database drops its old records but keeps the identity", async () => {
-  const factory = new IDBFactory();
-  await new Promise<void>((resolve) => {
-    const request = factory.open("muscle-memory-local-practice", 2);
-    request.onupgradeneeded = () => {
-      request.result.createObjectStore("events", { keyPath: "eventId" });
-      request.result.createObjectStore("settings");
-      request.result.createObjectStore("workspace", { keyPath: "recordId" });
-      request.transaction!.objectStore("settings").put("old-id", "participantId");
-      request
-        .transaction!.objectStore("workspace")
-        .add({ recordId: "legacy-1", payload: "{}" });
-    };
-    request.onsuccess = () => {
-      request.result.close();
-      resolve();
-    };
-  });
-  const store = await openPracticeStore(factory);
-  try {
-    assert.equal(await store.participantId(), "old-id");
-    assert.deepEqual(await store.workspaceRecords(), []);
   } finally {
     store.close();
   }

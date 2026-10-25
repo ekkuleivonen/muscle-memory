@@ -1,0 +1,137 @@
+[
+  {
+    "input": "correct horse battery",
+    "expected": [
+      "no-digit",
+      "has-whitespace"
+    ]
+  },
+  {
+    "input": "Tr0ub4dor&3",
+    "expected": [
+      "too-short"
+    ]
+  },
+  {
+    "input": "hunter2hunter2",
+    "expected": []
+  },
+  {
+    "input": "123456789012",
+    "expected": [
+      "no-letter"
+    ]
+  },
+  {
+    "input": "",
+    "expected": [
+      "too-short",
+      "no-digit",
+      "no-letter"
+    ]
+  },
+  {
+    "input": "abcdefghijk1",
+    "expected": [],
+    "hidden": true
+  },
+  {
+    "input": "abcdefghij1",
+    "expected": [
+      "too-short"
+    ],
+    "hidden": true
+  },
+  {
+    "input": "abcdefghijkl",
+    "expected": [
+      "no-digit"
+    ],
+    "hidden": true
+  },
+  {
+    "input": "passwordpassword",
+    "expected": [
+      "no-digit"
+    ],
+    "hidden": true
+  },
+  {
+    "input": "abcdef 12345",
+    "expected": [
+      "has-whitespace"
+    ],
+    "hidden": true
+  },
+  {
+    "input": "abc\tdefgh1234",
+    "expected": [
+      "has-whitespace"
+    ],
+    "hidden": true
+  },
+  {
+    "input": "zzzzzzzzzzz9 ",
+    "expected": [
+      "has-whitespace"
+    ],
+    "hidden": true
+  },
+  {
+    "input": "!!!!!!!!!!!!",
+    "expected": [
+      "no-digit",
+      "no-letter"
+    ],
+    "hidden": true
+  },
+  {
+    "input": "            ",
+    "expected": [
+      "no-digit",
+      "no-letter",
+      "has-whitespace"
+    ],
+    "hidden": true
+  },
+  {
+    "input": "a1",
+    "expected": [
+      "too-short"
+    ],
+    "hidden": true
+  },
+  {
+    "input": "a b",
+    "expected": [
+      "too-short",
+      "no-digit",
+      "has-whitespace"
+    ],
+    "hidden": true
+  },
+  {
+    "input": "1 2",
+    "expected": [
+      "too-short",
+      "no-letter",
+      "has-whitespace"
+    ],
+    "hidden": true
+  },
+  {
+    "input": " ",
+    "expected": [
+      "too-short",
+      "no-digit",
+      "no-letter",
+      "has-whitespace"
+    ],
+    "hidden": true
+  },
+  {
+    "input": "ALLCAPSLETTERS9",
+    "expected": [],
+    "hidden": true
+  }
+]

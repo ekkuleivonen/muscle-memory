@@ -1,0 +1,10 @@
+[
+  {
+    "id": "order-total",
+    "message": "Leave `orderTotal` as it is: checkout uses it, and it must keep taking the code's discount off the order's subtotal. Keep the change to refunds.",
+    "when": {
+      "pattern": "discountFor\\(\\s*order\\.code",
+      "present": false
+    }
+  }
+]

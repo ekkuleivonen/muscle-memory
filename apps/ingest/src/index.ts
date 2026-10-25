@@ -5,13 +5,13 @@
  *
  *   POST /ingest/v1/batches                          a batch (packages/domain/ingest.ts)
  *   POST /ingest/v1/participants/<id>/delete         { secret }: stop and erase a participant
- *   GET  /ingest/v1/aggregates                       percentiles per issue (tools/aggregates)
  *
  * Bodies may be gzipped (header `x-mm-encoding: gzip`). Nothing here runs participant code.
  */
 import {
   checkBatch,
   checkRecord,
+  countryOf,
   sha256Hex,
   type EventRow,
 } from "../../../packages/domain/ingest";
@@ -75,17 +75,6 @@ export async function handle(request: Request, env: Env): Promise<Response> {
     }
     if (request.method === "POST" && path === "/ingest/v1/batches")
       return await batches(request, env, reply);
-    if (request.method === "GET" && path === "/ingest/v1/aggregates") {
-      const stored = await env.CONTROL.get("aggregates/v1.json");
-      return new Response(stored ? await stored.text() : JSON.stringify({ version: 1, issues: {} }), {
-        headers: {
-          ...cors,
-          "content-type": "application/json",
-          // Made once a day: an hour of caching keeps it cheap and fresh enough.
-          "cache-control": "public, max-age=3600",
-        },
-      });
-    }
     const deletion = /^\/ingest\/v1\/participants\/([^/]+)\/delete$/.exec(path);
     if (request.method === "POST" && deletion)
       return await erase(request, env, decodeURIComponent(deletion[1]), reply);
@@ -135,10 +124,12 @@ async function batches(
   await claim(env, participantId, proof);
 
   const receivedAt = new Date().toISOString();
+  // Where Cloudflare places the connection, as a country only; the IP address is not kept.
+  const country = countryOf((request as { cf?: { country?: unknown } }).cf?.country);
   const rows: EventRow[] = [];
   const rejected: { recordId: string; reason: string }[] = [];
   for (const record of batch.records) {
-    const verdict = checkRecord(record, participantId, receivedAt);
+    const verdict = checkRecord(record, participantId, receivedAt, country);
     if (verdict.ok) rows.push(verdict.row);
     else rejected.push({ recordId: verdict.recordId, reason: verdict.reason });
   }
@@ -250,7 +241,7 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
   if (!origin || !allowed.includes(origin)) return {};
   return {
     "access-control-allow-origin": origin,
-    "access-control-allow-methods": "GET, POST, OPTIONS",
+    "access-control-allow-methods": "POST, OPTIONS",
     "access-control-allow-headers": "content-type, x-mm-encoding",
     "access-control-max-age": "600",
     vary: "origin",

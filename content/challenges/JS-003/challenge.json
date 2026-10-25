@@ -1,0 +1,12 @@
+{
+  "title": "Cart shows prices as raw cents",
+  "summary": "Format amounts as dollars with separators, including refunds.",
+  "difficulty": "easy",
+  "tags": [
+    "formatting",
+    "strings",
+    "numbers"
+  ],
+  "file": "src/format-price.js",
+  "entrypoint": "formatPrice"
+}

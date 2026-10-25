@@ -1,0 +1,394 @@
+{
+  "challenge": "PY-006",
+  "task": "Last week's change to `site_summary` took the season summary from 9 s to under a second on the 40,000-line export. Since then the numbers are wrong. From Lena:\n\n> Ridge B shows 6 lots. We have 19 on paper, I counted them twice. And Alder Creek's first visit says June 14, but we set the traps there on May 28.\n\n`site_summary(lines)` takes the season's notebook lines (a list of strings, one specimen lot each) and returns a dict keyed by site name. For each site:\n\n- `lots`: how many lines are for that site;\n- `individuals`: the sum of their counts;\n- `species`: how many distinct species names they have, compared exactly as written;\n- `first` and `last`: the earliest and latest date the site appears, as written. Dates are `YYYY-MM-DD`.\n\nA line reads `date | site | species | length | count`, for example `2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2`. `parse_line(line)`, further down the file, returns it as a dict with the keys `date`, `site`, `species` and `length` (strings, stripped of surrounding spaces) and `count` (an int).\n\nThe lines are in the order they were typed up, which is neither grouped by site nor sorted by date: the team goes back to the same sites all season, and pages are often typed up days late. No lines gives `{}`.\n\nRequirement: it must stay fast. Don't go over all the lines once for each site.\n",
+  "language": "python",
+  "file": "sites.py",
+  "starter": "\"\"\"Per-site totals for the season summary.\"\"\"\nfrom itertools import groupby\n\n\ndef site_summary(lines):\n    \"\"\"Per site: lots, individuals, distinct species, and the first and last date it was\n    visited.\"\"\"\n    # One pass instead of rescanning the notebook for every site: the export is in notebook\n    # order, so each site's lines come together.\n    rows = [parse_line(line) for line in lines]\n    summary = {}\n    for site, group in groupby(rows, key=lambda row: row[\"site\"]):\n        group = list(group)\n        summary[site] = {\n            \"lots\": len(group),\n            \"individuals\": sum(row[\"count\"] for row in group),\n            \"species\": len({row[\"species\"] for row in group}),\n            \"first\": group[0][\"date\"],\n            \"last\": group[-1][\"date\"],\n        }\n    return summary\n\n\n# ---- labels: helpers this code uses. You shouldn't need to change them. ----\n\n# Notebook lines, as typed up from the paper field notebook. One line per specimen lot:\n#\n#     2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\n#\n# date | site | species | body length | individuals in the lot. The length is left blank when\n# nothing was measured.\n\nFIELDS = (\"date\", \"site\", \"species\", \"length\", \"count\")\n\n\ndef fields(line):\n    \"\"\"The five fields of a line, stripped, as written.\"\"\"\n    parts = [part.strip() for part in line.split(\"|\")]\n    if len(parts) != len(FIELDS):\n        raise ValueError(f\"expected {len(FIELDS)} fields: {line!r}\")\n    return parts\n\n\ndef parse_line(line):\n    \"\"\"A line as a dict: every field as written, the count as a number.\"\"\"\n    row = dict(zip(FIELDS, fields(line)))\n    row[\"count\"] = int(row[\"count\"])\n    return row\n",
+  "entrypoint": "site_summary",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": [
+        "2026-05-28 | Alder Creek | Carabus nemoralis | 14.5 mm | 2",
+        "2026-05-28 | Alder Creek | Pterostichus niger | 11 mm | 1",
+        "2026-06-03 | Ridge B | Carabus nemoralis | 15 mm | 3"
+      ],
+      "expected": {
+        "Alder Creek": {
+          "lots": 2,
+          "individuals": 3,
+          "species": 2,
+          "first": "2026-05-28",
+          "last": "2026-05-28"
+        },
+        "Ridge B": {
+          "lots": 1,
+          "individuals": 3,
+          "species": 1,
+          "first": "2026-06-03",
+          "last": "2026-06-03"
+        }
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": [
+        "2026-06-03 | Ridge B | Carabus nemoralis | 15 mm | 2",
+        "2026-06-04 | Alder Creek | Pterostichus niger | 11 mm | 1",
+        "2026-06-10 | Ridge B | Abax parallelepipedus |  | 4"
+      ],
+      "expected": {
+        "Ridge B": {
+          "lots": 2,
+          "individuals": 6,
+          "species": 2,
+          "first": "2026-06-03",
+          "last": "2026-06-10"
+        },
+        "Alder Creek": {
+          "lots": 1,
+          "individuals": 1,
+          "species": 1,
+          "first": "2026-06-04",
+          "last": "2026-06-04"
+        }
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": [],
+      "expected": {},
+      "hidden": false
+    },
+    {
+      "id": "case-4",
+      "input": [
+        "2026-06-03 | Ridge B | Carabus nemoralis | 15 mm | 1",
+        "2026-06-05 | Ridge B | Carabus nemoralis | 14 mm | 2",
+        "2026-06-09 | Ridge B | Pterostichus niger |  | 1"
+      ],
+      "expected": {
+        "Ridge B": {
+          "lots": 3,
+          "individuals": 4,
+          "species": 2,
+          "first": "2026-06-03",
+          "last": "2026-06-09"
+        }
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-5",
+      "input": [
+        "2026-06-14 | Alder Creek | Carabus nemoralis | 15 mm | 1",
+        "2026-05-28 | Alder Creek | Pterostichus niger | 11 mm | 2",
+        "2026-06-02 | Alder Creek | Carabus nemoralis |  | 1"
+      ],
+      "expected": {
+        "Alder Creek": {
+          "lots": 3,
+          "individuals": 4,
+          "species": 2,
+          "first": "2026-05-28",
+          "last": "2026-06-14"
+        }
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-6",
+      "input": [
+        "2026-06-01 | Ridge B | Carabus nemoralis |  | 1",
+        "2026-06-01 | Alder Creek | Carabus nemoralis |  | 1",
+        "2026-06-01 | Fen Margin | Pterostichus niger |  | 1",
+        "2026-06-08 | Ridge B | Pterostichus niger |  | 2",
+        "2026-06-08 | Alder Creek | Carabus nemoralis |  | 2",
+        "2026-06-08 | Fen Margin | Pterostichus niger |  | 2"
+      ],
+      "expected": {
+        "Ridge B": {
+          "lots": 2,
+          "individuals": 3,
+          "species": 2,
+          "first": "2026-06-01",
+          "last": "2026-06-08"
+        },
+        "Alder Creek": {
+          "lots": 2,
+          "individuals": 3,
+          "species": 1,
+          "first": "2026-06-01",
+          "last": "2026-06-08"
+        },
+        "Fen Margin": {
+          "lots": 2,
+          "individuals": 3,
+          "species": 1,
+          "first": "2026-06-01",
+          "last": "2026-06-08"
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": [
+        "2026-06-20 | Ridge B | Carabus nemoralis |  | 1",
+        "2026-06-02 | Alder Creek | Carabus nemoralis |  | 1",
+        "2026-06-11 | Ridge B | Pterostichus niger |  | 1",
+        "2026-05-30 | Alder Creek | Abax parallelepipedus |  | 1",
+        "2026-06-06 | Ridge B | Carabus nemoralis |  | 1"
+      ],
+      "expected": {
+        "Ridge B": {
+          "lots": 3,
+          "individuals": 3,
+          "species": 2,
+          "first": "2026-06-06",
+          "last": "2026-06-20"
+        },
+        "Alder Creek": {
+          "lots": 2,
+          "individuals": 2,
+          "species": 2,
+          "first": "2026-05-30",
+          "last": "2026-06-02"
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": [
+        "2026-06-03 | Ridge B | Carabus nemoralis |  | 0",
+        "2026-06-04 | Ridge B | Pterostichus niger |  | 2"
+      ],
+      "expected": {
+        "Ridge B": {
+          "lots": 2,
+          "individuals": 2,
+          "species": 2,
+          "first": "2026-06-03",
+          "last": "2026-06-04"
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": [
+        "2026-06-03 | Ridge B | Carabus nemoralis |  | 1",
+        "2026-06-03 | Alder Creek | Carabus nemoralis |  | 1",
+        "2026-06-04 | Alder Creek | Pterostichus niger |  | 1"
+      ],
+      "expected": {
+        "Ridge B": {
+          "lots": 1,
+          "individuals": 1,
+          "species": 1,
+          "first": "2026-06-03",
+          "last": "2026-06-03"
+        },
+        "Alder Creek": {
+          "lots": 2,
+          "individuals": 2,
+          "species": 2,
+          "first": "2026-06-03",
+          "last": "2026-06-04"
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": [
+        "2026-07-01 | Fen Margin | Abax parallelepipedus | 21 mm | 1"
+      ],
+      "expected": {
+        "Fen Margin": {
+          "lots": 1,
+          "individuals": 1,
+          "species": 1,
+          "first": "2026-07-01",
+          "last": "2026-07-01"
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": [
+        "2025-12-30 | Fen Margin | Carabus nemoralis |  | 1",
+        "2026-01-02 | Fen Margin | Carabus nemoralis |  | 1",
+        "2025-12-29 | Ridge B | Pterostichus niger |  | 1"
+      ],
+      "expected": {
+        "Fen Margin": {
+          "lots": 2,
+          "individuals": 2,
+          "species": 1,
+          "first": "2025-12-30",
+          "last": "2026-01-02"
+        },
+        "Ridge B": {
+          "lots": 1,
+          "individuals": 1,
+          "species": 1,
+          "first": "2025-12-29",
+          "last": "2025-12-29"
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": [
+        "2026-06-10 | Ridge B | Carabus nemoralis |  | 1",
+        "2026-06-12 | Alder Creek | Carabus nemoralis |  | 1",
+        "2026-06-01 | Ridge B | Carabus nemoralis |  | 1"
+      ],
+      "expected": {
+        "Ridge B": {
+          "lots": 2,
+          "individuals": 2,
+          "species": 1,
+          "first": "2026-06-01",
+          "last": "2026-06-10"
+        },
+        "Alder Creek": {
+          "lots": 1,
+          "individuals": 1,
+          "species": 1,
+          "first": "2026-06-12",
+          "last": "2026-06-12"
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": [
+        "2026-06-01 | Ridge B | Carabus nemoralis |  | 1",
+        "2026-06-02 | Ridge B | Pterostichus niger |  | 2",
+        "2026-06-03 | Ridge B | Abax parallelepipedus |  | 3",
+        "2026-06-04 | Ridge B | Carabus nemoralis |  | 4",
+        "2026-06-05 | Ridge B | Pterostichus niger |  | 5",
+        "2026-06-06 | Ridge B | Abax parallelepipedus |  | 6",
+        "2026-06-07 | Ridge B | Carabus nemoralis |  | 7"
+      ],
+      "expected": {
+        "Ridge B": {
+          "lots": 7,
+          "individuals": 28,
+          "species": 3,
+          "first": "2026-06-01",
+          "last": "2026-06-07"
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": [
+        "2026-06-01 | Ridge B | Carabus nemoralis |  | 5",
+        "2026-06-02 | Alder Creek | Carabus nemoralis |  | 1",
+        "2026-06-03 | Ridge B | Carabus nemoralis |  | 5",
+        "2026-06-04 | Alder Creek | Pterostichus niger |  | 1",
+        "2026-06-05 | Ridge B | Pterostichus niger |  | 5",
+        "2026-06-06 | Alder Creek | Carabus nemoralis |  | 1"
+      ],
+      "expected": {
+        "Ridge B": {
+          "lots": 3,
+          "individuals": 15,
+          "species": 2,
+          "first": "2026-06-01",
+          "last": "2026-06-05"
+        },
+        "Alder Creek": {
+          "lots": 3,
+          "individuals": 3,
+          "species": 2,
+          "first": "2026-06-02",
+          "last": "2026-06-06"
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": [
+        "2026-06-03 | Fen Margin | Carabus nemoralis |  | 1",
+        "2026-06-03 | Fen Margin | Pterostichus niger |  | 1",
+        "2026-06-03 | Fen Margin | Abax parallelepipedus |  | 1"
+      ],
+      "expected": {
+        "Fen Margin": {
+          "lots": 3,
+          "individuals": 3,
+          "species": 3,
+          "first": "2026-06-03",
+          "last": "2026-06-03"
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-16",
+      "input": [
+        "2026-06-09 | Alder Creek | Carabus nemoralis |  | 1",
+        "2026-06-09 | Ridge B | Carabus nemoralis |  | 1",
+        "2026-06-02 | Alder Creek | Pterostichus niger |  | 3",
+        "2026-06-15 | Alder Creek | Abax parallelepipedus |  | 1"
+      ],
+      "expected": {
+        "Alder Creek": {
+          "lots": 3,
+          "individuals": 5,
+          "species": 3,
+          "first": "2026-06-02",
+          "last": "2026-06-15"
+        },
+        "Ridge B": {
+          "lots": 1,
+          "individuals": 1,
+          "species": 1,
+          "first": "2026-06-09",
+          "last": "2026-06-09"
+        }
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-17",
+      "input": [
+        "2026-06-12 | Ridge B | Carabus nemoralis |  | 2",
+        "2026-06-05 | Ridge B | Carabus nemoralis |  | 1",
+        "2026-06-08 | Ridge B | Carabus nemoralis |  | 1"
+      ],
+      "expected": {
+        "Ridge B": {
+          "lots": 3,
+          "individuals": 4,
+          "species": 1,
+          "first": "2026-06-05",
+          "last": "2026-06-12"
+        }
+      },
+      "hidden": true
+    }
+  ],
+  "rules": [
+    {
+      "id": "rescan",
+      "message": "Don't go over all the lines once for each site: the summary has to stay fast on a 40,000-line export.",
+      "when": {
+        "pattern": "==\\s*site\\b",
+        "present": true
+      }
+    }
+  ]
+}

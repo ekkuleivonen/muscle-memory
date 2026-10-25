@@ -1,0 +1,301 @@
+[
+  {
+    "input": {
+      "code": null,
+      "lines": [
+        {
+          "sku": "tee",
+          "price": 2500,
+          "quantity": 2,
+          "discount": 0
+        }
+      ]
+    },
+    "expected": -5000
+  },
+  {
+    "input": {
+      "code": {
+        "percent": 10
+      },
+      "lines": [
+        {
+          "sku": "rain-jacket",
+          "price": 5000,
+          "quantity": 1,
+          "discount": 500
+        }
+      ]
+    },
+    "expected": -4500
+  },
+  {
+    "input": {
+      "code": {
+        "amount": 1000
+      },
+      "lines": [
+        {
+          "sku": "boots",
+          "price": 3000,
+          "quantity": 1,
+          "discount": 600
+        },
+        {
+          "sku": "socks",
+          "price": 2000,
+          "quantity": 1,
+          "discount": 400
+        }
+      ]
+    },
+    "expected": -4000
+  },
+  {
+    "input": {
+      "code": {
+        "percent": 20
+      },
+      "lines": [
+        {
+          "sku": "mug",
+          "price": 1000,
+          "quantity": 3,
+          "discount": 600
+        }
+      ]
+    },
+    "expected": -2400,
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": {
+        "percent": 10
+      },
+      "lines": []
+    },
+    "expected": 0,
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": {
+        "amount": 500
+      },
+      "lines": [
+        {
+          "sku": "gift-wrap",
+          "price": 0,
+          "quantity": 1,
+          "discount": 0
+        }
+      ]
+    },
+    "expected": 0,
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": {
+        "percent": 10
+      },
+      "lines": [
+        {
+          "sku": "tee",
+          "price": 2500,
+          "quantity": 2,
+          "discount": 500
+        }
+      ]
+    },
+    "expected": -4500,
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": {
+        "amount": 1000
+      },
+      "lines": [
+        {
+          "sku": "boots",
+          "price": 3000,
+          "quantity": 1,
+          "discount": 600
+        }
+      ]
+    },
+    "expected": -2400,
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": {
+        "percent": 15
+      },
+      "lines": [
+        {
+          "sku": "pin-a",
+          "price": 333,
+          "quantity": 1,
+          "discount": 50
+        }
+      ]
+    },
+    "expected": -283,
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": {
+        "amount": 100
+      },
+      "lines": [
+        {
+          "sku": "card-c",
+          "price": 1000,
+          "quantity": 1,
+          "discount": 34
+        }
+      ]
+    },
+    "expected": -966,
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": {
+        "amount": 5000
+      },
+      "lines": [
+        {
+          "sku": "belt",
+          "price": 3000,
+          "quantity": 1,
+          "discount": 3000
+        }
+      ]
+    },
+    "expected": 0,
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": {
+        "percent": 5
+      },
+      "lines": [
+        {
+          "sku": "socks",
+          "price": 799,
+          "quantity": 12,
+          "discount": 479
+        }
+      ]
+    },
+    "expected": -9109,
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": {
+        "percent": 25
+      },
+      "lines": [
+        {
+          "sku": "hoodie",
+          "price": 4000,
+          "quantity": 1,
+          "discount": 1000
+        },
+        {
+          "sku": "beanie",
+          "price": 1200,
+          "quantity": 2,
+          "discount": 600
+        }
+      ]
+    },
+    "expected": -4800,
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": {
+        "percent": 10
+      },
+      "lines": [
+        {
+          "sku": "rain-jacket",
+          "price": 5000,
+          "quantity": 2,
+          "discount": 1000
+        }
+      ]
+    },
+    "expected": -9000,
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": null,
+      "lines": [
+        {
+          "sku": "poster",
+          "price": 1999,
+          "quantity": 1,
+          "discount": 0
+        },
+        {
+          "sku": "sticker",
+          "price": 1,
+          "quantity": 3,
+          "discount": 0
+        }
+      ]
+    },
+    "expected": -2002,
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": {
+        "percent": 33
+      },
+      "lines": [
+        {
+          "sku": "lamp",
+          "price": 4999,
+          "quantity": 1,
+          "discount": 1649
+        },
+        {
+          "sku": "shade",
+          "price": 1250,
+          "quantity": 1,
+          "discount": 414
+        }
+      ]
+    },
+    "expected": -4186,
+    "hidden": true
+  },
+  {
+    "input": {
+      "code": {
+        "percent": 33
+      },
+      "lines": [
+        {
+          "sku": "bulb",
+          "price": 350,
+          "quantity": 4,
+          "discount": 461
+        }
+      ]
+    },
+    "expected": -939,
+    "hidden": true
+  }
+]

@@ -1,0 +1,266 @@
+[
+  {
+    "input": [
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 14.6 mm | 1",
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 1.7 cm | 1"
+    ],
+    "expected": {
+      "Carabus nemoralis": {
+        "measured": 2,
+        "min_mm": 14.6,
+        "max_mm": 17,
+        "mean_mm": 15.8
+      }
+    }
+  },
+  {
+    "input": [
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 0.6 in | 1",
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 0.7 in | 2"
+    ],
+    "expected": {
+      "Carabus nemoralis": {
+        "measured": 2,
+        "min_mm": 15.2,
+        "max_mm": 17.8,
+        "mean_mm": 16.5
+      }
+    }
+  },
+  {
+    "input": [
+      "2026-06-03 | Alder Creek | Pterostichus niger | 12mm | 1",
+      "2026-06-03 | Alder Creek | Pterostichus niger | 1.3 CM | 1"
+    ],
+    "expected": {
+      "Pterostichus niger": {
+        "measured": 2,
+        "min_mm": 12,
+        "max_mm": 13,
+        "mean_mm": 12.5
+      }
+    }
+  },
+  {
+    "input": [
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 15 mm | 1",
+      "2026-06-03 | Alder Creek | Carabus nemoralis |  | 1",
+      "2026-06-03 | Alder Creek | Pterostichus niger | ? | 1",
+      "2026-06-03 | Alder Creek | Pterostichus niger |  | 3"
+    ],
+    "expected": {
+      "Carabus nemoralis": {
+        "measured": 1,
+        "min_mm": 15,
+        "max_mm": 15,
+        "mean_mm": 15
+      },
+      "Pterostichus niger": {
+        "measured": 0,
+        "min_mm": null,
+        "max_mm": null,
+        "mean_mm": null
+      }
+    }
+  },
+  {
+    "input": [],
+    "expected": {}
+  },
+  {
+    "input": [
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 0.5in | 1"
+    ],
+    "expected": {
+      "Carabus nemoralis": {
+        "measured": 1,
+        "min_mm": 12.7,
+        "max_mm": 12.7,
+        "mean_mm": 12.7
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 2 cm | 1",
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 18 mm | 1"
+    ],
+    "expected": {
+      "Carabus nemoralis": {
+        "measured": 2,
+        "min_mm": 18,
+        "max_mm": 20,
+        "mean_mm": 19
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Alder Creek | Pterostichus niger | ? | 1"
+    ],
+    "expected": {
+      "Pterostichus niger": {
+        "measured": 0,
+        "min_mm": null,
+        "max_mm": null,
+        "mean_mm": null
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 14 mm | 1",
+      "2026-06-03 | Alder Creek | Pterostichus niger | 11 mm | 1",
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 16 mm | 1",
+      "2026-06-03 | Alder Creek | Pterostichus niger | 1.3 cm | 1"
+    ],
+    "expected": {
+      "Carabus nemoralis": {
+        "measured": 2,
+        "min_mm": 14,
+        "max_mm": 16,
+        "mean_mm": 15
+      },
+      "Pterostichus niger": {
+        "measured": 2,
+        "min_mm": 11,
+        "max_mm": 13,
+        "mean_mm": 12
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 0.55 in | 1"
+    ],
+    "expected": {
+      "Carabus nemoralis": {
+        "measured": 1,
+        "min_mm": 14,
+        "max_mm": 14,
+        "mean_mm": 14
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 0.7 In | 1",
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 0.6 IN | 1"
+    ],
+    "expected": {
+      "Carabus nemoralis": {
+        "measured": 2,
+        "min_mm": 15.2,
+        "max_mm": 17.8,
+        "mean_mm": 16.5
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 15  mm | 1",
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 1.6  cm | 1"
+    ],
+    "expected": {
+      "Carabus nemoralis": {
+        "measured": 2,
+        "min_mm": 15,
+        "max_mm": 16,
+        "mean_mm": 15.5
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 14.26 mm | 1",
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 15.34 mm | 1"
+    ],
+    "expected": {
+      "Carabus nemoralis": {
+        "measured": 2,
+        "min_mm": 14.3,
+        "max_mm": 15.3,
+        "mean_mm": 14.8
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 10 mm | 1",
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 1 cm | 1",
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 0.4 in | 1"
+    ],
+    "expected": {
+      "Carabus nemoralis": {
+        "measured": 3,
+        "min_mm": 10,
+        "max_mm": 10.2,
+        "mean_mm": 10.1
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Alder Creek | Pterostichus niger |  | 1",
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 13 mm | 1"
+    ],
+    "expected": {
+      "Pterostichus niger": {
+        "measured": 0,
+        "min_mm": null,
+        "max_mm": null,
+        "mean_mm": null
+      },
+      "Carabus nemoralis": {
+        "measured": 1,
+        "min_mm": 13,
+        "max_mm": 13,
+        "mean_mm": 13
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 13 mm | 1",
+      "2026-06-03 | Alder Creek | Carabus nemoralis | ? | 1",
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 1.45 cm | 1",
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 0.5 in | 1",
+      "2026-06-03 | Alder Creek | Carabus nemoralis |  | 4",
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 12.5mm | 1"
+    ],
+    "expected": {
+      "Carabus nemoralis": {
+        "measured": 4,
+        "min_mm": 12.5,
+        "max_mm": 14.5,
+        "mean_mm": 13.2
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 0.6 in | 1",
+      "2026-06-03 | Alder Creek | Carabus nemoralis | 15.24 mm | 1"
+    ],
+    "expected": {
+      "Carabus nemoralis": {
+        "measured": 2,
+        "min_mm": 15.2,
+        "max_mm": 15.2,
+        "mean_mm": 15.2
+      }
+    },
+    "hidden": true
+  }
+]

@@ -1,0 +1,11 @@
+{
+  "title": "Guest checkout fails with a server error",
+  "summary": "Since Thursday's release, guests get an error instead of a quote at checkout. Members are fine.",
+  "difficulty": "easy",
+  "tags": [
+    "debugging",
+    "reading-logs"
+  ],
+  "file": "quote.js",
+  "entrypoint": "quoteOrder"
+}

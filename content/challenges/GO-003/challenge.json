@@ -1,0 +1,11 @@
+{
+  "title": "Access log parser drops fields on 5xx lines",
+  "summary": "Turn an access log line into a structured record.",
+  "difficulty": "easy",
+  "tags": [
+    "parsing",
+    "strings"
+  ],
+  "file": "parse_line.go",
+  "entrypoint": "ParseLine"
+}

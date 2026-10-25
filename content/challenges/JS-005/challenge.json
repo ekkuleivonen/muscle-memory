@@ -1,0 +1,13 @@
+{
+  "title": "Refunds give back less than the customer paid",
+  "summary": "Refunds on orders with a promo code give back less than the customer paid.",
+  "hook": "They paid $45 for the jacket. The refund is $40.50. Make the refund match the receipt.",
+  "difficulty": "medium",
+  "tags": [
+    "debugging",
+    "money",
+    "reading-code"
+  ],
+  "file": "totals.js",
+  "entrypoint": "refundTotal"
+}

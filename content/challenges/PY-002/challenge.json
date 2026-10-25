@@ -1,0 +1,12 @@
+{
+  "title": "Nightly vial tally is empty",
+  "summary": "The vial scanner's labels need counting for the nightly sheet; the counter returns nothing.",
+  "difficulty": "easy",
+  "tags": [
+    "iteration",
+    "maps",
+    "edge-cases"
+  ],
+  "file": "frequency_map.py",
+  "entrypoint": "frequency_map"
+}

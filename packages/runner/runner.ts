@@ -63,11 +63,11 @@ export type LoadProgress =
 
 export interface RunRequest {
   readonly runId: string;
-  /** The entry file's source: CI loads it and calls the entry point. */
+  /** The challenge's file: the runner loads it and calls the entry point. */
   readonly code: string;
   /**
-   * The program's other source files by path, relative to the repo root, for engines that load
-   * more than one file (see `multiFile` in engines.ts). The entry file can import them.
+   * Other source files by path, which the JavaScript, TypeScript and Python workers let the file
+   * import. Challenges are one file, so practice sends none; the sandbox checks still cover it.
    */
   readonly files?: Readonly<Record<string, string>>;
   /** The entry file's path, used in error locations and to resolve relative imports. */
@@ -78,7 +78,7 @@ export interface RunRequest {
   readonly parameters?: readonly string[];
   /** SQL: statements that create the schema before each case. */
   readonly setup?: string;
-  /** C and C++: the issue's adapter from JSON arguments to the function's types. */
+  /** C and C++: the challenge's adapter from JSON arguments to the function's types. */
   readonly adapter?: string;
   /** Fixture inputs only; expected outputs never enter the sandbox. */
   readonly inputs: readonly unknown[];
@@ -410,11 +410,11 @@ export async function loadPinned(
 const warmed = new Set<string>();
 
 /**
- * Fetches an engine's pinned files into the browser's HTTP cache ahead of opening the IDE, at
- * low priority, so the IDE's own load (which checks every hash again) reads them from the cache.
+ * Fetches an engine's pinned files into the browser's HTTP cache ahead of opening practice, at
+ * low priority, so practice's own load (which checks every hash again) reads them from the cache.
  * Same origin and integrity rules as loadPinned; nothing is kept in memory and nothing runs.
  * Once per engine per page, skipped when the browser asks to save data, and failures are left
- * for the IDE's own load to report.
+ * for practice's own load to report.
  */
 export function warmRuntime(engine: Engine, assetBase?: string): void {
   if (warmed.has(engine.basePath)) return;

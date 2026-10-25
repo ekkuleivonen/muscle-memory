@@ -1,0 +1,10 @@
+[
+  {
+    "id": "keep-memo",
+    "message": "Keep `summary()` memoised: cache its result in a field of the cart (such as `this.cache`, a version number or a dirty flag) instead of repricing on every call.",
+    "when": {
+      "pattern": "this\\.#?\\w*([Cc]ache|[Mm]emo|[Dd]irty|[Ss]tale|[Vv]ersion|[Cc]hanged|[Pp]riced|[Ll]ast|[Ss]aved)",
+      "present": false
+    }
+  }
+]

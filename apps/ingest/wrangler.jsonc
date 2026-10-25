@@ -10,7 +10,7 @@
   "compatibility_date": "2026-10-23",
   "r2_buckets": [{ "binding": "CONTROL", "bucket_name": "muscle-memory-control" }],
   // The stream muscle_memory_events (docs/telemetry.md).
-  "pipelines": [{ "binding": "EVENTS", "stream": "4ccd18f15b5845159747f7c4f42a5c5e" }],
+  "pipelines": [{ "binding": "EVENTS", "stream": "e54c4a2140c94890b714985878beab26" }],
   "vars": { "ALLOWED_ORIGINS": "" },
   // Per participant and per address; see Env in src/index.ts.
   "ratelimits": [

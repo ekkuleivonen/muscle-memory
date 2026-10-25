@@ -1,0 +1,11 @@
+{
+  "title": "Deduplicate customer records by email",
+  "summary": "Keep the first record per email before the newsletter sync.",
+  "difficulty": "medium",
+  "tags": [
+    "maps",
+    "data-cleaning"
+  ],
+  "file": "dedupe.py",
+  "entrypoint": "dedupe"
+}

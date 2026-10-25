@@ -1,0 +1,12 @@
+{
+  "title": "Cart drawer shows the old total after changing quantity",
+  "summary": "Since the cart summary was memoised, some changes don't show up in the drawer.",
+  "difficulty": "medium",
+  "tags": [
+    "caching",
+    "debugging",
+    "code-review"
+  ],
+  "file": "cart.js",
+  "entrypoint": "replay"
+}

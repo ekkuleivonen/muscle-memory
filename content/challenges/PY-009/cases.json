@@ -1,0 +1,393 @@
+[
+  {
+    "input": "# p. 12, rain all morning\n2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\n\n2026-06-03 | Ridge B | Pterostichus niger | 11 mm | 1",
+    "expected": {
+      "rows": [
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Carabus nemoralis",
+          "length": "14.5 mm",
+          "count": 2
+        },
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Pterostichus niger",
+          "length": "11 mm",
+          "count": 1
+        }
+      ],
+      "unresolved": []
+    }
+  },
+  {
+    "input": "2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\n\" | \" | Pterostichus niger | 11 mm | 1\n\" | Alder Creek | Carabus nemoralis |  | 3",
+    "expected": {
+      "rows": [
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Carabus nemoralis",
+          "length": "14.5 mm",
+          "count": 2
+        },
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Pterostichus niger",
+          "length": "11 mm",
+          "count": 1
+        },
+        {
+          "date": "2026-06-03",
+          "site": "Alder Creek",
+          "species": "Carabus nemoralis",
+          "length": "",
+          "count": 3
+        }
+      ],
+      "unresolved": []
+    }
+  },
+  {
+    "input": "2026-06-04 | Alder Creek | Carabus nemoralis | 15 mm | 1\n〃 | 〃 | 〃 | 16 mm | 〃\ndo. | do. | Pterostichus niger | do. | 2",
+    "expected": {
+      "rows": [
+        {
+          "date": "2026-06-04",
+          "site": "Alder Creek",
+          "species": "Carabus nemoralis",
+          "length": "15 mm",
+          "count": 1
+        },
+        {
+          "date": "2026-06-04",
+          "site": "Alder Creek",
+          "species": "Carabus nemoralis",
+          "length": "16 mm",
+          "count": 1
+        },
+        {
+          "date": "2026-06-04",
+          "site": "Alder Creek",
+          "species": "Pterostichus niger",
+          "length": "16 mm",
+          "count": 2
+        }
+      ],
+      "unresolved": []
+    }
+  },
+  {
+    "input": "== p. 14 ==\n2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\n== p. 15 ==\n\" | Alder Creek | Carabus nemoralis | 15 mm | 1\n2026-06-05 | Alder Creek | Pterostichus niger |  | 1",
+    "expected": {
+      "rows": [
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Carabus nemoralis",
+          "length": "14.5 mm",
+          "count": 2
+        },
+        {
+          "date": "2026-06-05",
+          "site": "Alder Creek",
+          "species": "Pterostichus niger",
+          "length": "",
+          "count": 1
+        }
+      ],
+      "unresolved": [
+        4
+      ]
+    }
+  },
+  {
+    "input": "",
+    "expected": {
+      "rows": [],
+      "unresolved": []
+    }
+  },
+  {
+    "input": "\" | Ridge B | Carabus nemoralis | 14.5 mm | 1\n2026-06-03 | Ridge B | Pterostichus niger | 11 mm | 1",
+    "expected": {
+      "rows": [
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Pterostichus niger",
+          "length": "11 mm",
+          "count": 1
+        }
+      ],
+      "unresolved": [
+        1
+      ]
+    },
+    "hidden": true
+  },
+  {
+    "input": "2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\n# moved trap 3 into the shade\n\n\" | \" | Pterostichus niger | 11 mm | 1",
+    "expected": {
+      "rows": [
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Carabus nemoralis",
+          "length": "14.5 mm",
+          "count": 2
+        },
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Pterostichus niger",
+          "length": "11 mm",
+          "count": 1
+        }
+      ],
+      "unresolved": []
+    },
+    "hidden": true
+  },
+  {
+    "input": "2026-06-03 | Ridge B | Carabus nemoralis |  | 2\n\" | \" | Pterostichus niger | \" | 1",
+    "expected": {
+      "rows": [
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Carabus nemoralis",
+          "length": "",
+          "count": 2
+        },
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Pterostichus niger",
+          "length": "",
+          "count": 1
+        }
+      ],
+      "unresolved": []
+    },
+    "hidden": true
+  },
+  {
+    "input": "2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 4\n\" | \" | \" | 15 mm | \"",
+    "expected": {
+      "rows": [
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Carabus nemoralis",
+          "length": "14.5 mm",
+          "count": 4
+        },
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Carabus nemoralis",
+          "length": "15 mm",
+          "count": 4
+        }
+      ],
+      "unresolved": []
+    },
+    "hidden": true
+  },
+  {
+    "input": "== p. 15 ==\n\" | Alder Creek | Carabus nemoralis | 15 mm | 1\n\" | \" | Pterostichus niger | 11 mm | 1\n2026-06-05 | \" | Pterostichus niger |  | 2",
+    "expected": {
+      "rows": [
+        {
+          "date": "2026-06-05",
+          "site": "Alder Creek",
+          "species": "Pterostichus niger",
+          "length": "",
+          "count": 2
+        }
+      ],
+      "unresolved": [
+        2,
+        3
+      ]
+    },
+    "hidden": true
+  },
+  {
+    "input": "# p. 9\n\n2026-06-01 | Ridge B | Carabus nemoralis |  | 1\n\n# trap 4 flooded\n\" | Ridge C | \" |  | 1\n== p. 14 ==\n\" | \" | \" |  | 1",
+    "expected": {
+      "rows": [
+        {
+          "date": "2026-06-01",
+          "site": "Ridge B",
+          "species": "Carabus nemoralis",
+          "length": "",
+          "count": 1
+        },
+        {
+          "date": "2026-06-01",
+          "site": "Ridge C",
+          "species": "Carabus nemoralis",
+          "length": "",
+          "count": 1
+        }
+      ],
+      "unresolved": [
+        8
+      ]
+    },
+    "hidden": true
+  },
+  {
+    "input": "== p. 14 ==\n2026-06-03 | Ridge B | Carabus nemoralis |  | 1\n\" | \" | Pterostichus niger |  | 1\n== p. 15 ==\n2026-06-04 | Alder Creek | Pterostichus niger |  | 2\n\" | \" | Carabus nemoralis |  | 1",
+    "expected": {
+      "rows": [
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Carabus nemoralis",
+          "length": "",
+          "count": 1
+        },
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Pterostichus niger",
+          "length": "",
+          "count": 1
+        },
+        {
+          "date": "2026-06-04",
+          "site": "Alder Creek",
+          "species": "Pterostichus niger",
+          "length": "",
+          "count": 2
+        },
+        {
+          "date": "2026-06-04",
+          "site": "Alder Creek",
+          "species": "Carabus nemoralis",
+          "length": "",
+          "count": 1
+        }
+      ],
+      "unresolved": []
+    },
+    "hidden": true
+  },
+  {
+    "input": "2026-06-03 | Bob's \"big\" pond | Carabus nemoralis |  | 1\n\" | \" | Dytiscus do. marginalis |  | 1",
+    "expected": {
+      "rows": [
+        {
+          "date": "2026-06-03",
+          "site": "Bob's \"big\" pond",
+          "species": "Carabus nemoralis",
+          "length": "",
+          "count": 1
+        },
+        {
+          "date": "2026-06-03",
+          "site": "Bob's \"big\" pond",
+          "species": "Dytiscus do. marginalis",
+          "length": "",
+          "count": 1
+        }
+      ],
+      "unresolved": []
+    },
+    "hidden": true
+  },
+  {
+    "input": "== p. 14 ==\n\" | \" | \" | \" | \"\n2026-06-03 | Ridge B | Carabus nemoralis |  | 1\n\" | \" | \" | \" | \"",
+    "expected": {
+      "rows": [
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Carabus nemoralis",
+          "length": "",
+          "count": 1
+        },
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Carabus nemoralis",
+          "length": "",
+          "count": 1
+        }
+      ],
+      "unresolved": [
+        2
+      ]
+    },
+    "hidden": true
+  },
+  {
+    "input": "2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\n    \"   |  〃  |  do.  | \" | 3",
+    "expected": {
+      "rows": [
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Carabus nemoralis",
+          "length": "14.5 mm",
+          "count": 2
+        },
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Carabus nemoralis",
+          "length": "14.5 mm",
+          "count": 3
+        }
+      ],
+      "unresolved": []
+    },
+    "hidden": true
+  },
+  {
+    "input": "2026-06-03 | Ridge B | Carabus nemoralis |  | 1\n# moved | wet | trap 2 | gone | ?\n\" | \" | Pterostichus niger |  | 2",
+    "expected": {
+      "rows": [
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Carabus nemoralis",
+          "length": "",
+          "count": 1
+        },
+        {
+          "date": "2026-06-03",
+          "site": "Ridge B",
+          "species": "Pterostichus niger",
+          "length": "",
+          "count": 2
+        }
+      ],
+      "unresolved": []
+    },
+    "hidden": true
+  },
+  {
+    "input": "== p. 3 ==\n== p. 4 ==\n2026-05-20 | Fen Margin | Abax parallelepipedus | 21 mm | 1\n== p. 5 ==\n# nothing today\n\" | Fen Margin | Abax parallelepipedus | 20 mm | 1",
+    "expected": {
+      "rows": [
+        {
+          "date": "2026-05-20",
+          "site": "Fen Margin",
+          "species": "Abax parallelepipedus",
+          "length": "21 mm",
+          "count": 1
+        }
+      ],
+      "unresolved": [
+        6
+      ]
+    },
+    "hidden": true
+  }
+]

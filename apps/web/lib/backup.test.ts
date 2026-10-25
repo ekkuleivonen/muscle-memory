@@ -11,10 +11,9 @@ const good = {
     [PROFILE_KEY]: JSON.stringify({
       version: PROFILE_VERSION,
       createdAt: "2026-10-24T10:00:00.000Z",
-      handle: "Quiet-Compiler-4821",
       profile: {},
     }),
-    "muscle-memory.board": "{}",
+    "muscle-memory.stars": "[]",
   },
   store: {
     settings: { participantId: "p-1", deviceSecret: "s" },
@@ -27,7 +26,6 @@ test("a backup reads back with what it holds", () => {
   const backup = parseBackup(JSON.stringify(good));
   assert.ok(!(backup instanceof Error));
   assert.deepEqual(summarize(backup), {
-    handle: "Quiet-Compiler-4821",
     participantId: "p-1",
     records: 1,
     exportedAt: "2026-10-25T10:00:00.000Z",
@@ -46,10 +44,6 @@ test("anything else is refused with a reason, before it can replace anything", (
   for (const reason of reasons) assert.ok(reason instanceof Error, String(reason));
 });
 
-test("the file is named for the handle and the day", () => {
-  assert.equal(
-    backupName("Quiet-Compiler-4821", new Date("2026-10-25T23:00:00Z")),
-    "muscle-memory-quiet-compiler-4821-2026-10-25.json",
-  );
-  assert.equal(backupName(null, new Date("2026-10-25T00:00:00Z")), "muscle-memory-backup-2026-10-25.json");
+test("the file is named for the day", () => {
+  assert.equal(backupName(new Date("2026-10-25T00:00:00Z")), "muscle-memory-backup-2026-10-25.json");
 });

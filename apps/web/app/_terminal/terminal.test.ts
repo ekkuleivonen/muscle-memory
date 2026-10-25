@@ -1,13 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { describeProfile, QUESTIONS, toProfile } from "../../lib/questions";
+import { QUESTIONS, toProfile } from "../../lib/questions";
 import {
   choose,
-  confirmKey,
-  formatAnswer,
   initialList,
   listKey,
-  startState,
   type ListResult,
   type ListState,
   type Prompt,
@@ -79,26 +76,19 @@ test("pointer choice submits a select and toggles a multiselect", () => {
   assert.deepEqual(toggled.type === "state" && toggled.state.picked, [1]);
 });
 
-test("confirm takes y/n and falls back to its default on Enter", () => {
-  const confirm = {
-    kind: "confirm",
-    id: "c",
-    message: "Sure?",
-    initial: false,
-  } as const;
-  assert.equal(confirmKey(confirm, "Y"), true);
-  assert.equal(confirmKey(confirm, "n"), false);
-  assert.equal(confirmKey(confirm, "Enter"), false);
-  assert.equal(confirmKey(confirm, "x"), null);
-  assert.equal(formatAnswer(confirm, true), "yes");
-});
-
 test("answers become a profile; skipped questions are left out", () => {
   const answers = {
     experience: "professional",
-    aiUse: "daily",
+    role: "software",
+    learned: "self-taught",
+    context: "startup",
     languages: ["typescript", "cpp"],
+    aiUse: "daily",
+    aiTools: ["completion", "chat"],
+    aiShare: "half",
     goal: "sharp",
+    touchTyping: "yes",
+    age: "25-34",
     editor: "vim",
   };
   assert.deepEqual(
@@ -106,38 +96,5 @@ test("answers become a profile; skipped questions are left out", () => {
     Object.keys(answers),
   );
   assert.deepEqual(toProfile(answers), answers);
-  assert.equal(
-    formatAnswer(QUESTIONS[2], answers.languages),
-    "TypeScript, C++",
-  );
-  const partial = toProfile({ languages: ["go"] });
-  assert.deepEqual(partial, { languages: ["go"] });
-  assert.deepEqual(describeProfile(partial), [
-    ["experience", "skipped"],
-    ["aiUse", "skipped"],
-    ["languages", "Go"],
-    ["goal", "skipped"],
-    ["editor", "skipped"],
-  ]);
-});
-
-test("prompts can start from the current answer, as settings does", () => {
-  assert.deepEqual(startState({ ...select, initial: 2 }), {
-    cursor: 2,
-    picked: [],
-    error: "",
-  });
-  assert.deepEqual(startState({ ...multi, initialPicked: [2, 0] }), {
-    cursor: 0,
-    picked: [0, 2],
-    error: "",
-  });
-  assert.equal(startState(select).cursor, 0);
-  assert.equal(
-    formatAnswer(
-      { kind: "text", id: "t", message: "Type it" },
-      "Quiet-Compiler-4821",
-    ),
-    "Quiet-Compiler-4821",
-  );
+  assert.deepEqual(toProfile({ languages: ["go"] }), { languages: ["go"] });
 });

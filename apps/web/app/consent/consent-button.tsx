@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { acceptConsent, readProfile } from "../../lib/account";
 import { acceptsCurrent } from "../../lib/legal";
-import { logArrival, noteArrival } from "../(browse)/_components/board-log";
+import { logArrival, noteArrival } from "../../lib/site-log";
 
 /**
  * Accepts the current Terms and goes on; says so when the Terms changed since the last
@@ -15,14 +15,14 @@ export function ConsentButton({ next }: { next: string }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [renewal, setRenewal] = useState(false);
-  const [returning, setReturning] = useState<string | null>(null);
+  const [returning, setReturning] = useState(false);
   useEffect(() => {
     try {
       const stored = readProfile();
       const accepted = stored?.accepted;
       if (accepted && acceptsCurrent(accepted)) {
         // Logged out on purpose: ask, rather than signing them straight back in.
-        if (stored?.signedOut) return setReturning(stored.handle ?? null);
+        if (stored?.signedOut) return setReturning(true);
         // Already accepted these Terms in this browser (the cookie was only missing): go on.
         acceptConsent();
         router.replace(next);
@@ -63,7 +63,7 @@ export function ConsentButton({ next }: { next: string }) {
         {busy
           ? "Opening…"
           : returning
-            ? `Sign back in as ${returning}`
+            ? "Sign back in"
             : "I'm 16 or older and accept"}
       </button>
       <span className="home-note">

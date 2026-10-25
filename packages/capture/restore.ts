@@ -1,6 +1,6 @@
 /**
- * Recovers every editable file this participant saved on this device for one issue, whichever
- * revision it was written against. Each
+ * Recovers the editable file this participant saved on this device in one attempt at a
+ * challenge, whichever revision it was written against. Each
  * source stream (one page load) is replayed on its own: start from a complete code artifact
  * (the opening document or a snapshot), then apply saved edit change sets in strict source
  * order. Replay stops at the first missing position, explicit gap, truncated or invalid
@@ -8,11 +8,8 @@
  * snapshot is a new safe starting point. Streams are never combined.
  */
 import { ChangeSet, Text } from "@codemirror/state";
-import type {
-  CodeRevisionArtifact,
-  WorkspaceObservation,
-  WorkspaceRecord,
-} from "../domain/workspace";
+import type { PracticeObservation } from "../domain/practice";
+import type { CodeRevisionArtifact, StoredRecord } from "../domain/records";
 
 export interface RecoveredCode {
   /** Every editable file, by path. */
@@ -42,12 +39,13 @@ interface StreamResult {
 }
 
 export function latestSavedCode(
-  records: readonly WorkspaceRecord[],
+  records: readonly StoredRecord[],
   participantId: string,
-  issue: string,
+  challenge: string,
+  attemptId: string,
 ): RecoveredCode | null {
   const artifacts = new Map<string, CodeRevisionArtifact>();
-  const streams = new Map<string, WorkspaceObservation[]>();
+  const streams = new Map<string, PracticeObservation[]>();
   for (const record of records) {
     if (record.participantId !== participantId) continue;
     const value = JSON.parse(record.payload);
@@ -55,8 +53,9 @@ export function latestSavedCode(
       artifacts.set(value.artifactId, value);
     else if (
       value.observationId &&
-      value.type?.startsWith("observation.workspace.") &&
-      value.issue === issue
+      value.type?.startsWith("practice.") &&
+      value.challenge === challenge &&
+      value.attemptId === attemptId
     ) {
       const stream = streams.get(value.source.id) ?? [];
       stream.push(value);
@@ -88,7 +87,7 @@ export function latestSavedCode(
 
 function replay(
   sourceId: string,
-  observations: WorkspaceObservation[],
+  observations: PracticeObservation[],
   artifacts: ReadonlyMap<string, CodeRevisionArtifact>,
   participantId: string,
 ): StreamResult {
@@ -115,8 +114,8 @@ function replay(
     if (typeof data.revision === "number")
       latestRevision = Math.max(latestRevision, data.revision);
     switch (observation.type) {
-      case "observation.workspace.opened":
-      case "observation.workspace.snapshot": {
+      case "practice.opened":
+      case "practice.snapshot": {
         const artifact = artifacts.get(data.codeArtifactId as string);
         const usable =
           artifact &&
@@ -142,14 +141,14 @@ function replay(
         reason = undefined;
         break;
       }
-      case "observation.workspace.edit": {
+      case "practice.edit": {
         const next: Replayed | null = current ? apply(current, data) : null;
         if (next) current = next;
         else if (current)
           lose("a saved edit was truncated or could not be applied");
         break;
       }
-      case "observation.workspace.capture-gap":
+      case "practice.capture-gap":
         lose("some activity was not saved");
         break;
     }

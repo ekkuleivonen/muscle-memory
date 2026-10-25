@@ -1,5 +1,5 @@
 /**
- * Hidden cases are no oracle, on every feedback surface ENG-329 owns: Findings, the Checks tab,
+ * Hidden cases are no oracle, on every feedback surface practice shows:
  * the practice area's check feedback and the completion outcome. Each renders a check whose hidden
  * case carries sentinel values in its name, input, expected value, returned value and error
  * message; none may appear in the HTML, while the public case's input, expected value and
@@ -12,13 +12,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { Case } from "../../../packages/content/model";
 import { checkFeedbackOf } from "./check-feedback";
 import { diagnose, failureOf, failureText } from "./diagnosis";
-import type { PullSummary } from "./pulls";
 
 // The root test runner compiles JSX the classic way (React.createElement), so the components
 // need React in scope before they load.
 (globalThis as { React?: unknown }).React = React;
-const { CheckFeedbackView, Checks, Findings } = await import(
-  "../app/(browse)/_components/review"
+const { CheckFeedbackView } = await import(
+  "../app/_components/review"
 );
 const { createElement } = React;
 
@@ -37,21 +36,21 @@ const cases: Case[] = [
     name: "public case",
     input: ["PUBLIC_INPUT"],
     expected: "PUBLIC_EXPECTED",
-    visible: true,
+    hidden: false,
   },
   {
     id: "h",
     name: "SECRET_NAME",
     input: ["SECRET_INPUT"],
     expected: "SECRET_EXPECTED",
-    visible: false,
+    hidden: true,
   },
   {
     id: "e",
     name: "SECRET_NAME",
     input: ["SECRET_INPUT"],
     expected: "SECRET_EXPECTED",
-    visible: false,
+    hidden: true,
   },
 ];
 
@@ -67,71 +66,27 @@ const outcome = {
     // JavaScript code can set an error's name from its input: the type is no safe category.
     { error: { type: "SECRET_TYPE", message: "SECRET_MESSAGE" } },
   ],
-  // Printing an argument during the full check would reveal a hidden input.
+  // Printing an argument during a submission would reveal a hidden input.
   stdout: { text: "SECRET_INPUT" },
   durationMs: 4,
 };
 
-const pull: PullSummary = {
-  issue: "x",
-  issueRevision: "r",
-  number: 1,
-  runId: "run",
-  codeRevision: 1,
-  codeArtifactId: "a",
-  result: "checks-failed",
-  passed: 0,
-  total: 3,
-  at: "2026-10-25T10:00:00.000Z",
-  openedAt: "2026-10-25T10:00:00.000Z",
-  pushes: 1,
-  state: "open",
-};
+/** Check feedback for a failed submission of the three cases, with this diagnosis. */
+const failing = (diagnosis: ReturnType<typeof diagnose>) => ({
+  running: false,
+  completed: false,
+  edited: false,
+  verdict: { result: "failed" as const, passed: 0, total: 3, rules: [], complete: false },
+  diagnosis,
+});
 
 function assertNoSecrets(html: string, surface: string) {
   for (const secret of SECRET)
     assert.ok(!html.includes(secret), `${surface} leaks ${secret}`);
 }
 
-test("Findings: hidden cases by position and failure category; the public case in full", () => {
-  const html = renderToStaticMarkup(
-    createElement(Findings, {
-      pull,
-      outcome,
-      cases,
-      threads: [],
-      revisions: {},
-    }),
-  );
-  assertNoSecrets(html, "Findings");
-  for (const shown of [
-    "PUBLIC_INPUT",
-    "PUBLIC_EXPECTED",
-    "PUBLIC_GOT",
-    "hidden case 2",
-    "hidden case 3",
-  ])
-    assert.ok(html.includes(shown), `Findings should show ${shown}`);
-  assert.ok(html.includes("Raised an error."));
-  assert.ok(html.includes("Returned a different value from the one expected."));
-});
-
-test("the Checks tab: no hidden values, and no printed output from a full check", () => {
-  const html = renderToStaticMarkup(createElement(Checks, { outcome, cases }));
-  assertNoSecrets(html, "Checks");
-  assert.ok(html.includes("PUBLIC_EXPECTED"));
-  assert.ok(html.includes("Printed output isn&#x27;t shown"));
-});
-
 test("the practice area's check feedback carries no hidden values", () => {
-  const feedback = checkFeedbackOf({
-    blocker: "checks",
-    running: false,
-    completed: false,
-    latest: { passed: 0, total: 3 },
-    diagnosis: diagnose(outcome, cases),
-    required: [],
-  });
+  const feedback = checkFeedbackOf(failing(diagnose(outcome, cases)));
   const html = renderToStaticMarkup(
     createElement(CheckFeedbackView, { feedback }),
   );
@@ -150,10 +105,6 @@ test("a passing check shows a hidden case's position only", () => {
       out("SECRET_EXPECTED"),
     ],
   };
-  const html = renderToStaticMarkup(
-    createElement(Checks, { outcome: passing, cases }),
-  );
-  assertNoSecrets(html, "Checks (passing)");
   assertNoSecrets(
     JSON.stringify(diagnose(passing, cases)),
     "diagnose (passing)",
@@ -176,33 +127,10 @@ test("an error reported from the cases' stage, with no per-case results, is with
   assertNoSecrets(JSON.stringify(diagnosis), "diagnose (run-level error)");
   for (const [surface, html] of [
     [
-      "Checks",
-      renderToStaticMarkup(createElement(Checks, { outcome: crashed, cases })),
-    ],
-    [
-      "Findings",
-      renderToStaticMarkup(
-        createElement(Findings, {
-          pull,
-          outcome: crashed,
-          cases,
-          threads: [],
-          revisions: {},
-        }),
-      ),
-    ],
-    [
       "CheckFeedbackView",
       renderToStaticMarkup(
         createElement(CheckFeedbackView, {
-          feedback: checkFeedbackOf({
-            blocker: "checks",
-            running: false,
-            completed: false,
-            latest: { passed: 0, total: 3 },
-            diagnosis,
-            required: [],
-          }),
+          feedback: checkFeedbackOf(failing(diagnosis)),
         }),
       ),
     ],
@@ -229,24 +157,16 @@ test("an error reported from the cases' stage, with no per-case results, is with
       traceback: null,
     });
     assertNoSecrets(
-      renderToStaticMarkup(createElement(Checks, { outcome: early, cases })),
-      `Checks (${phase})`,
-    );
-    assertNoSecrets(
       renderToStaticMarkup(
-        createElement(Findings, {
-          pull,
-          outcome: early,
-          cases,
-          threads: [],
-          revisions: {},
+        createElement(CheckFeedbackView, {
+          feedback: checkFeedbackOf(failing(d)),
         }),
       ),
-      `Findings (${phase})`,
+      `CheckFeedbackView (${phase})`,
     );
   }
   // A run of public cases only keeps the full error: nothing hidden to give away.
-  const publicOnly = cases.filter((c) => c.visible);
+  const publicOnly = cases.filter((c) => !c.hidden);
   const compile = diagnose(
     {
       status: "user-error",

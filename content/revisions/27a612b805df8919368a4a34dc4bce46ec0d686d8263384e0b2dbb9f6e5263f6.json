@@ -1,0 +1,624 @@
+{
+  "challenge": "PY-008",
+  "task": "Rui, first thing Monday:\n\n> Monday's active-customers report says **18,406**. Last Monday it was **18,618**, and nobody closed 212 accounts over the weekend. I spot-checked three of the missing ones and they're all phone orders from the Leeds store:\n\n```text\nid       name               email   phone\nC-20931  Hollis Bakery              0113 496 0021\nC-20977  Marsh & Daughters          0113 496 0088\nC-21012  T. Okafor                  0113 496 0140\n```\n\nThe dedupe step was sped up on Tuesday: it used to compare every pair of records, which took 40 minutes on Northwind's 180k-row file, and now it makes one pass with a dict. This is the first Monday report since.\n\n`dedupe_customers(rows)` takes the night's customer records (a list of dicts, each with fields such as `id`, `name`, `email` and `phone`; a field's value may be `None`) and returns one record per customer, in the order customers were first seen.\n\n- Records whose emails match once normalised are the same customer. `normalize_email(email)`, further down the file, does the normalising: it returns the email trimmed of surrounding whitespace and lowercased, or `None` when there is no usable email (`None`, empty, or only whitespace). Phone and in-store customers often have none.\n- For each customer, the first record is kept. A later duplicate only fills in fields the kept record left blank (`None` or `\"\"`, or missing): each such field takes the duplicate's value, so the earliest later duplicate with a value wins. Nothing else changes; in particular the kept record's email stays as written.\n- A record without a usable email can't be matched to anything, so it is always kept, as it is, in its place.\n- The input rows (and their dicts) must not be changed. No rows gives `[]`.\n\nThe starter's `_fill_blanks(customer, duplicate)` already fills a kept record's blank fields from a duplicate, in place.\n\nRequirement: keep it to one pass with a lookup by email. Don't compare each record against the customers kept so far: the nightly window is two hours.\n",
+  "language": "python",
+  "file": "dedupe.py",
+  "starter": "\n\ndef _fill_blanks(customer, duplicate):\n    \"\"\"Fields the first record left blank are taken from a later duplicate.\"\"\"\n    for field, value in duplicate.items():\n        if customer.get(field) in (None, \"\"):\n            customer[field] = value\n\n\ndef dedupe_customers(rows):\n    \"\"\"One record per customer, in the order customers were first seen.\n\n    Records whose emails match after normalising are the same customer: the first one is\n    kept, and later duplicates only fill in fields it left blank. A record without an email\n    cannot be matched to anything, so it is always kept as it is. Input rows are not changed.\n    \"\"\"\n    # One pass with a dict instead of comparing every pair: the Northwind file has 180k rows.\n    customers = {}\n    for row in rows:\n        key = normalize_email(row.get(\"email\"))\n        if key in customers:\n            _fill_blanks(customers[key], row)\n            continue\n        customers[key] = dict(row)\n    return list(customers.values())\n\n\n# ---- normalize: helpers this code uses. You shouldn't need to change them. ----\n\n# Normalising fields before records are compared or loaded.\n\n\ndef normalize_email(email):\n    \"\"\"An email as we compare it: trimmed and lowercased.\n\n    None when there is no usable email on file (missing, empty or only spaces): phone and\n    in-store customers often have none.\n    \"\"\"\n    if email is None:\n        return None\n    email = email.strip().lower()\n    return email or None\n",
+  "entrypoint": "dedupe_customers",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": [
+        {
+          "id": "C-1001",
+          "name": "Ann Ives",
+          "email": "Ann@Example.com",
+          "phone": "0113 496 0001"
+        },
+        {
+          "id": "C-1002",
+          "name": "Ann Ives",
+          "email": " ann@example.com ",
+          "phone": ""
+        },
+        {
+          "id": "C-1003",
+          "name": "Bo Chen",
+          "email": "bo@example.com",
+          "phone": ""
+        }
+      ],
+      "expected": [
+        {
+          "id": "C-1001",
+          "name": "Ann Ives",
+          "email": "Ann@Example.com",
+          "phone": "0113 496 0001"
+        },
+        {
+          "id": "C-1003",
+          "name": "Bo Chen",
+          "email": "bo@example.com",
+          "phone": ""
+        }
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": [
+        {
+          "id": "C-20931",
+          "name": "Hollis Bakery",
+          "email": null,
+          "phone": "0113 496 0021"
+        },
+        {
+          "id": "C-20977",
+          "name": "Marsh & Daughters",
+          "email": "",
+          "phone": "0113 496 0088"
+        },
+        {
+          "id": "C-21012",
+          "name": "T. Okafor",
+          "email": null,
+          "phone": "0113 496 0140"
+        }
+      ],
+      "expected": [
+        {
+          "id": "C-20931",
+          "name": "Hollis Bakery",
+          "email": null,
+          "phone": "0113 496 0021"
+        },
+        {
+          "id": "C-20977",
+          "name": "Marsh & Daughters",
+          "email": "",
+          "phone": "0113 496 0088"
+        },
+        {
+          "id": "C-21012",
+          "name": "T. Okafor",
+          "email": null,
+          "phone": "0113 496 0140"
+        }
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": [
+        {
+          "id": "C-3001",
+          "name": "Cy Park",
+          "email": "cy@example.com",
+          "phone": ""
+        },
+        {
+          "id": "C-3002",
+          "name": "Cyrus Park",
+          "email": "CY@example.com",
+          "phone": "0161 496 0302"
+        }
+      ],
+      "expected": [
+        {
+          "id": "C-3001",
+          "name": "Cy Park",
+          "email": "cy@example.com",
+          "phone": "0161 496 0302"
+        }
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-4",
+      "input": [],
+      "expected": [],
+      "hidden": false
+    },
+    {
+      "id": "case-5",
+      "input": [
+        {
+          "id": "C-4001",
+          "name": "Dee Lam",
+          "email": "dee@example.com",
+          "phone": ""
+        },
+        {
+          "id": "C-4002",
+          "name": "Leeds walk-in",
+          "email": null,
+          "phone": "0113 496 0400"
+        },
+        {
+          "id": "C-4003",
+          "name": "Dee Lam",
+          "email": "Dee@Example.com",
+          "phone": "0113 496 0401"
+        },
+        {
+          "id": "C-4004",
+          "name": "Eli Ross",
+          "email": "eli@example.com",
+          "phone": "0113 496 0402"
+        }
+      ],
+      "expected": [
+        {
+          "id": "C-4001",
+          "name": "Dee Lam",
+          "email": "dee@example.com",
+          "phone": "0113 496 0401"
+        },
+        {
+          "id": "C-4002",
+          "name": "Leeds walk-in",
+          "email": null,
+          "phone": "0113 496 0400"
+        },
+        {
+          "id": "C-4004",
+          "name": "Eli Ross",
+          "email": "eli@example.com",
+          "phone": "0113 496 0402"
+        }
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-6",
+      "input": [
+        {
+          "id": "C-5001",
+          "name": "Fen Wu",
+          "email": "   ",
+          "phone": "0113 496 0500"
+        },
+        {
+          "id": "C-5002",
+          "name": "Gus Hale",
+          "email": null,
+          "phone": "0113 496 0501"
+        },
+        {
+          "id": "C-5003",
+          "name": "Hana Ito",
+          "email": "\t",
+          "phone": "0113 496 0502"
+        }
+      ],
+      "expected": [
+        {
+          "id": "C-5001",
+          "name": "Fen Wu",
+          "email": "   ",
+          "phone": "0113 496 0500"
+        },
+        {
+          "id": "C-5002",
+          "name": "Gus Hale",
+          "email": null,
+          "phone": "0113 496 0501"
+        },
+        {
+          "id": "C-5003",
+          "name": "Hana Ito",
+          "email": "\t",
+          "phone": "0113 496 0502"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": [
+        {
+          "id": "C-6001",
+          "name": "Ivy Stone",
+          "email": null,
+          "phone": ""
+        },
+        {
+          "id": "C-6002",
+          "name": "Ivy Stone",
+          "email": null,
+          "phone": "0113 496 0600"
+        }
+      ],
+      "expected": [
+        {
+          "id": "C-6001",
+          "name": "Ivy Stone",
+          "email": null,
+          "phone": ""
+        },
+        {
+          "id": "C-6002",
+          "name": "Ivy Stone",
+          "email": null,
+          "phone": "0113 496 0600"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": [
+        {
+          "id": "C-7001",
+          "name": "Jo Kim",
+          "email": "jo@example.com",
+          "phone": "0113 496 0700"
+        }
+      ],
+      "expected": [
+        {
+          "id": "C-7001",
+          "name": "Jo Kim",
+          "email": "jo@example.com",
+          "phone": "0113 496 0700"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": [
+        {
+          "id": "C-8001",
+          "name": "Kai Bell",
+          "email": "kai@example.com",
+          "phone": null,
+          "city": ""
+        },
+        {
+          "id": "C-8002",
+          "name": "Kai Bell",
+          "email": "KAI@example.com",
+          "phone": "0113 496 0800",
+          "city": ""
+        },
+        {
+          "id": "C-8003",
+          "name": "K. Bell",
+          "email": "kai@example.com ",
+          "phone": "0113 496 0899",
+          "city": "Leeds"
+        }
+      ],
+      "expected": [
+        {
+          "id": "C-8001",
+          "name": "Kai Bell",
+          "email": "kai@example.com",
+          "phone": "0113 496 0800",
+          "city": "Leeds"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": [
+        {
+          "id": "C-9001",
+          "name": "Lou Ng",
+          "email": "lou@example.com",
+          "phone": "0113 496 0900"
+        },
+        {
+          "id": "C-9002",
+          "name": "Louise Ng",
+          "email": "lou@example.com",
+          "phone": "0113 496 0999"
+        }
+      ],
+      "expected": [
+        {
+          "id": "C-9001",
+          "name": "Lou Ng",
+          "email": "lou@example.com",
+          "phone": "0113 496 0900"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": [
+        {
+          "id": "C-9101",
+          "name": "Mo Diaz",
+          "email": "  Mo@Example.COM ",
+          "phone": ""
+        },
+        {
+          "id": "C-9102",
+          "name": "Mo Diaz",
+          "email": "mo@example.com",
+          "phone": "0113 496 0910"
+        }
+      ],
+      "expected": [
+        {
+          "id": "C-9101",
+          "name": "Mo Diaz",
+          "email": "  Mo@Example.COM ",
+          "phone": "0113 496 0910"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": [
+        {
+          "id": "C-9201",
+          "name": "Leeds phone order 1",
+          "email": null,
+          "phone": "0113 496 0901"
+        },
+        {
+          "id": "C-9202",
+          "name": "Leeds phone order 2",
+          "email": "",
+          "phone": "0113 496 0902"
+        },
+        {
+          "id": "C-9203",
+          "name": "Leeds phone order 3",
+          "email": null,
+          "phone": "0113 496 0903"
+        },
+        {
+          "id": "C-9204",
+          "name": "Leeds phone order 4",
+          "email": " ",
+          "phone": "0113 496 0904"
+        },
+        {
+          "id": "C-9205",
+          "name": "Leeds phone order 5",
+          "email": null,
+          "phone": "0113 496 0905"
+        },
+        {
+          "id": "C-9206",
+          "name": "Leeds phone order 6",
+          "email": "",
+          "phone": "0113 496 0906"
+        }
+      ],
+      "expected": [
+        {
+          "id": "C-9201",
+          "name": "Leeds phone order 1",
+          "email": null,
+          "phone": "0113 496 0901"
+        },
+        {
+          "id": "C-9202",
+          "name": "Leeds phone order 2",
+          "email": "",
+          "phone": "0113 496 0902"
+        },
+        {
+          "id": "C-9203",
+          "name": "Leeds phone order 3",
+          "email": null,
+          "phone": "0113 496 0903"
+        },
+        {
+          "id": "C-9204",
+          "name": "Leeds phone order 4",
+          "email": " ",
+          "phone": "0113 496 0904"
+        },
+        {
+          "id": "C-9205",
+          "name": "Leeds phone order 5",
+          "email": null,
+          "phone": "0113 496 0905"
+        },
+        {
+          "id": "C-9206",
+          "name": "Leeds phone order 6",
+          "email": "",
+          "phone": "0113 496 0906"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": [
+        {
+          "id": "C-9301",
+          "name": "Nia Shaw",
+          "email": null,
+          "phone": "0113 496 0930"
+        },
+        {
+          "id": "C-9302",
+          "name": "Nia Shaw",
+          "email": "nia@example.com",
+          "phone": ""
+        },
+        {
+          "id": "C-9303",
+          "name": "Nia Shaw",
+          "email": "NIA@example.com",
+          "phone": "0113 496 0931"
+        }
+      ],
+      "expected": [
+        {
+          "id": "C-9301",
+          "name": "Nia Shaw",
+          "email": null,
+          "phone": "0113 496 0930"
+        },
+        {
+          "id": "C-9302",
+          "name": "Nia Shaw",
+          "email": "nia@example.com",
+          "phone": "0113 496 0931"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": [
+        {
+          "id": "C-9401",
+          "name": "Oli Gray",
+          "email": "oli@example.com",
+          "phone": ""
+        },
+        {
+          "id": "C-9402",
+          "name": "Shop till",
+          "email": null,
+          "phone": ""
+        },
+        {
+          "id": "C-9403",
+          "name": "Shop till",
+          "email": null,
+          "phone": ""
+        },
+        {
+          "id": "C-9404",
+          "name": "Shop till",
+          "email": "",
+          "phone": ""
+        },
+        {
+          "id": "C-9405",
+          "name": "Oliver Gray",
+          "email": "oli@example.com",
+          "phone": "0113 496 0940"
+        }
+      ],
+      "expected": [
+        {
+          "id": "C-9401",
+          "name": "Oli Gray",
+          "email": "oli@example.com",
+          "phone": "0113 496 0940"
+        },
+        {
+          "id": "C-9402",
+          "name": "Shop till",
+          "email": null,
+          "phone": ""
+        },
+        {
+          "id": "C-9403",
+          "name": "Shop till",
+          "email": null,
+          "phone": ""
+        },
+        {
+          "id": "C-9404",
+          "name": "Shop till",
+          "email": "",
+          "phone": ""
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": [
+        {
+          "id": "C-9501",
+          "name": "Pat Roe",
+          "email": "pat@example.com",
+          "phone": ""
+        },
+        {
+          "id": "C-9502",
+          "name": "Pat Roe",
+          "email": "pat@example.co",
+          "phone": "0113 496 0950"
+        }
+      ],
+      "expected": [
+        {
+          "id": "C-9501",
+          "name": "Pat Roe",
+          "email": "pat@example.com",
+          "phone": ""
+        },
+        {
+          "id": "C-9502",
+          "name": "Pat Roe",
+          "email": "pat@example.co",
+          "phone": "0113 496 0950"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-16",
+      "input": [
+        {
+          "id": "C-9601",
+          "name": "Quin Hart",
+          "email": "quin@example.com",
+          "phone": ""
+        },
+        {
+          "id": "C-9602",
+          "name": "",
+          "email": "Quin@example.com",
+          "phone": ""
+        },
+        {
+          "id": "C-9603",
+          "name": "Quin Hart",
+          "email": "quin@example.com",
+          "phone": "0113 496 0960"
+        }
+      ],
+      "expected": [
+        {
+          "id": "C-9601",
+          "name": "Quin Hart",
+          "email": "quin@example.com",
+          "phone": "0113 496 0960"
+        }
+      ],
+      "hidden": true
+    }
+  ],
+  "rules": [
+    {
+      "id": "pairwise",
+      "message": "Keep it to one pass with a lookup by email: don't compare each record against the customers kept so far.",
+      "when": {
+        "any": [
+          {
+            "pattern": "^\\s+for \\w+ in (customers|kept|seen|result|results|out|output|deduped|unique)\\b",
+            "present": true
+          },
+          {
+            "pattern": "\\bany\\(",
+            "present": true
+          },
+          {
+            "pattern": "in range\\(len\\(",
+            "present": true
+          }
+        ]
+      }
+    }
+  ]
+}

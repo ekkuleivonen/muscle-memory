@@ -1,0 +1,16 @@
+{
+  "title": "Rate-limit login attempts",
+  "summary": "Allow at most n attempts in any sliding window.",
+  "difficulty": "medium",
+  "tags": [
+    "sliding-window",
+    "queues"
+  ],
+  "file": "src/allow.ts",
+  "entrypoint": "allow",
+  "parameters": [
+    "times",
+    "limit",
+    "windowMs"
+  ]
+}

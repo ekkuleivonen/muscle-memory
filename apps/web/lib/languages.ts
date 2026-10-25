@@ -15,7 +15,7 @@ export const LANGUAGES = [
   { id: "cpp", label: "C++", color: "#f34b7d" },
   { id: "csharp", label: "C#", color: "#178600" },
   { id: "java", label: "Java", color: "#b07219" },
-  // Still highlighted for existing issues, but not offered: it cannot run in a browser yet.
+  // Still highlighted for existing challenges, but not offered: it cannot run in a browser yet.
   { id: "rust", label: "Rust", color: "#dea584" },
 ] as const;
 
@@ -39,3 +39,12 @@ export const OFFERED: readonly LanguageId[] = [
   "csharp",
   "java",
 ];
+
+/** A file's language in the editor: a challenge's language, or plain text. */
+export type FileLanguage = LanguageId | "markdown" | "text";
+
+/** The media type a code revision is recorded with. */
+export function mediaTypeOf(language: LanguageId): string {
+  if (language === "html") return "text/html; charset=utf-8";
+  return `text/x-${language}; charset=utf-8`;
+}

@@ -1,0 +1,140 @@
+[
+  {
+    "input": "a,b,c",
+    "expected": [
+      "a",
+      "b",
+      "c"
+    ]
+  },
+  {
+    "input": "\"Acme, Inc.\",42,\"NY\"",
+    "expected": [
+      "Acme, Inc.",
+      "42",
+      "NY"
+    ]
+  },
+  {
+    "input": "\"say \"\"hi\"\"\",x",
+    "expected": [
+      "say \"hi\"",
+      "x"
+    ]
+  },
+  {
+    "input": "",
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "input": "a",
+    "expected": [
+      "a"
+    ],
+    "hidden": true
+  },
+  {
+    "input": "a,,b",
+    "expected": [
+      "a",
+      "",
+      "b"
+    ],
+    "hidden": true
+  },
+  {
+    "input": ",",
+    "expected": [
+      "",
+      ""
+    ],
+    "hidden": true
+  },
+  {
+    "input": "a,",
+    "expected": [
+      "a",
+      ""
+    ],
+    "hidden": true
+  },
+  {
+    "input": ",a",
+    "expected": [
+      "",
+      "a"
+    ],
+    "hidden": true
+  },
+  {
+    "input": "\"\"",
+    "expected": [
+      ""
+    ],
+    "hidden": true
+  },
+  {
+    "input": "\"\",\"\"",
+    "expected": [
+      "",
+      ""
+    ],
+    "hidden": true
+  },
+  {
+    "input": "\"a,b,c\"",
+    "expected": [
+      "a,b,c"
+    ],
+    "hidden": true
+  },
+  {
+    "input": "\"\"\"\"",
+    "expected": [
+      "\""
+    ],
+    "hidden": true
+  },
+  {
+    "input": "\"x\"\",\"\"y\"",
+    "expected": [
+      "x\",\"y"
+    ],
+    "hidden": true
+  },
+  {
+    "input": " a , b ",
+    "expected": [
+      " a ",
+      " b "
+    ],
+    "hidden": true
+  },
+  {
+    "input": "\"Acme, Inc.\",\"Smith, John\",\"\"",
+    "expected": [
+      "Acme, Inc.",
+      "Smith, John",
+      ""
+    ],
+    "hidden": true
+  },
+  {
+    "input": "\"line1\nline2\",x",
+    "expected": [
+      "line1\nline2",
+      "x"
+    ],
+    "hidden": true
+  },
+  {
+    "input": "\"Café, Ltd\",€5",
+    "expected": [
+      "Café, Ltd",
+      "€5"
+    ],
+    "hidden": true
+  }
+]

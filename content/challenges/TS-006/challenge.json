@@ -1,0 +1,18 @@
+{
+  "title": "Old refresh tokens work again since the grace window",
+  "summary": "A stolen refresh token kept a session alive for three days, and the reuse alert has gone quiet.",
+  "difficulty": "hard",
+  "tags": [
+    "security",
+    "sessions",
+    "code-review",
+    "reading-code"
+  ],
+  "file": "refresh.ts",
+  "entrypoint": "refresh",
+  "parameters": [
+    "family",
+    "presented",
+    "now"
+  ]
+}

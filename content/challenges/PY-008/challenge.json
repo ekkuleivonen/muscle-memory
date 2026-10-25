@@ -1,0 +1,13 @@
+{
+  "title": "Active customers report is short 212 customers",
+  "summary": "Monday's report lost 212 customers, all phone orders from the Leeds store.",
+  "difficulty": "medium",
+  "tags": [
+    "debugging",
+    "data-cleaning",
+    "reading-code",
+    "maps"
+  ],
+  "file": "dedupe.py",
+  "entrypoint": "dedupe_customers"
+}

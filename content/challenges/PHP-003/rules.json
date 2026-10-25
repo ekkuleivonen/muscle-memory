@@ -1,0 +1,10 @@
+[
+  {
+    "id": "round-down",
+    "message": "Never round the time left down: no `floor()` or `intdiv()`.",
+    "when": {
+      "pattern": "\\b(floor|intdiv)\\(",
+      "present": true
+    }
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "title": "Keep the last N request latencies in memory",
+  "summary": "A fixed-size buffer that overwrites its oldest entry.",
+  "difficulty": "medium",
+  "tags": [
+    "arrays",
+    "modular-arithmetic"
+  ],
+  "file": "src/ring_buffer.c",
+  "entrypoint": "ring_buffer",
+  "parameters": [
+    "capacity",
+    "values"
+  ]
+}

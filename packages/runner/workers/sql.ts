@@ -2,7 +2,7 @@ import { PRELUDE } from "./shared";
 
 /**
  * SQL on PGlite, Postgres compiled to WebAssembly, so queries behave like the Postgres used at
- * work. Every case runs in its own transaction that is rolled back afterwards: the issue's
+ * work. Every case runs in its own transaction that is rolled back afterwards: the challenge's
  * schema is created, the case's rows are inserted, then the solution's statements run. The
  * last statement that returns rows is the case's output, as an array of rows.
  */

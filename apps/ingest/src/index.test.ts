@@ -1,9 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { canonical, type Json } from "../../../packages/domain/json";
-import { codeRevision, toRecord, type WorkspaceRecord } from "../../../packages/domain/workspace";
+import { codeRevision, toRecord, type StoredRecord } from "../../../packages/domain/records";
+import { PRACTICE_CAPTURE_VERSION } from "../../../packages/domain/practice";
+import { SITE_CAPTURE_VERSION } from "../../../packages/domain/site";
 import { INGEST_PROTOCOL, sha256Hex, type EventRow } from "../../../packages/domain/ingest";
 import { handle, type Env } from "./index";
+import { countryOf } from "../../../packages/domain/ingest";
 
 function fakes() {
   const objects = new Map<string, string>();
@@ -29,20 +32,23 @@ async function device() {
   return { participantId, secret, proof: await sha256Hex(secret) };
 }
 
-function observation(participantId: string, sequence: number, extra: Record<string, unknown> = {}): WorkspaceRecord {
+function observation(participantId: string, sequence: number, extra: Record<string, unknown> = {}): StoredRecord {
   const value = {
     schemaVersion: "1.0.0",
-    type: "observation.workspace.keys",
-    observationId: `workspace-a.${sequence}`,
+    type: "practice.keys",
+    observationId: `practice-a.${sequence}`,
     participantId,
-    source: { id: "workspace-a", sequence },
+    sessionId: "session-a",
+    source: { id: "practice-a", sequence },
     occurredAt: "2026-10-25T10:00:00.000Z",
     elapsedMs: 12.5 * sequence,
-    captureVersion: "workspace-capture-6.0.0",
-    consentVersion: "terms-2026-10-25",
-    issue: "frequency-map",
-    issueRevision: "sha256:" + "a".repeat(64),
-    data: { file: "x.py", keys: [[1, "down", "a", "", false]] },
+    captureVersion: PRACTICE_CAPTURE_VERSION,
+    termsVersion: "2026-10-25",
+    assignments: {},
+    challenge: "PY-002",
+    challengeRevision: "sha256:" + "a".repeat(64),
+    attemptId: "attempt-a",
+    data: { file: "x.py", keys: [[1, "down", "a", "KeyA", "", false]] },
     ...extra,
   };
   return {
@@ -65,10 +71,13 @@ test("a batch becomes one row per record, the payload kept verbatim", async () =
   const me = await device();
   const records = [
     observation(me.participantId, 1),
-    toRecord(codeRevision(me.participantId, "workspace-a", 0, { "x.py": { text: "x = 1\n", mediaType: "text/x-python" } })),
+    toRecord(codeRevision(me.participantId, "practice-a", 0, PRACTICE_CAPTURE_VERSION, { "x.py": { text: "x = 1\n", mediaType: "text/x-python" } })),
     // Refused: another person's record, and a capture version nobody released.
     observation("someone-else", 2),
-    observation(me.participantId, 3, { captureVersion: "workspace-capture-1.0.0" }),
+    observation(me.participantId, 3, { captureVersion: "practice-capture-0.9.0" }),
+    // A site record carries the site stream's version, not the practice one.
+    observation(me.participantId, 4, { type: "site.page", captureVersion: PRACTICE_CAPTURE_VERSION }),
+    observation(me.participantId, 5, { type: "site.page", captureVersion: SITE_CAPTURE_VERSION, challenge: null, challengeRevision: null, attemptId: null, data: { visible: true, focused: true, width: 1, height: 1 } }),
   ];
   const response = await handle(
     post("/ingest/v1/batches", { protocol: INGEST_PROTOCOL, participantId: me.participantId, proof: me.proof, records }),
@@ -76,20 +85,39 @@ test("a batch becomes one row per record, the payload kept verbatim", async () =
   );
   assert.equal(response.status, 200);
   const body = await response.json();
-  assert.equal(body.accepted, 2);
+  assert.equal(body.accepted, 3);
   assert.deepEqual(
     body.rejected.map((r: { reason: string }) => r.reason),
-    ["another participant", "unknown capture version"],
+    ["another participant", "unknown capture version", "unknown capture version"],
   );
   assert.deepEqual(
-    sent.map((r) => [r.kind, r.type, r.sequence, r.elapsed_ms, r.issue]),
+    sent.map((r) => [r.kind, r.type, r.sequence, r.elapsed_ms, r.challenge, r.attempt_id, r.session_id, r.terms_version]),
     [
-      ["observation", "observation.workspace.keys", 1, 12.5, "frequency-map"],
-      ["artifact", "artifact.code-revision", null, null, null],
+      ["observation", "practice.keys", 1, 12.5, "PY-002", "attempt-a", "session-a", "2026-10-25"],
+      ["artifact", "artifact.code-revision", null, null, null, null, null, null],
+      ["observation", "site.page", 5, 62.5, null, null, "session-a", "2026-10-25"],
     ],
   );
   assert.equal(sent[0].payload, records[0].payload);
   assert.ok(Date.parse(sent[0].received_at) > 0);
+  // No country known (a request outside Cloudflare): null, never guessed.
+  assert.equal(sent[0].country, null);
+});
+
+test("rows carry the country Cloudflare places the upload in, and never the IP address", async () => {
+  const { env, sent } = fakes();
+  const me = await device();
+  const request = post(
+    "/ingest/v1/batches",
+    { protocol: INGEST_PROTOCOL, participantId: me.participantId, proof: me.proof, records: [observation(me.participantId, 1)] },
+    { "cf-connecting-ip": "203.0.113.7" },
+  );
+  Object.defineProperty(request, "cf", { value: { country: "FI", city: "Helsinki" } });
+  assert.equal((await handle(request, env)).status, 200);
+  assert.equal(sent[0].country, "FI");
+  assert.ok(!JSON.stringify(sent).includes("203.0.113.7"));
+  assert.ok(!JSON.stringify(sent).includes("Helsinki"));
+  assert.deepEqual(["FI", "XX", "T1", "fi", 7].map(countryOf), ["FI", null, null, null, null]);
 });
 
 test("gzipped bodies are read; a participant ID belongs to the device that first used it", async () => {
@@ -151,7 +179,7 @@ test("without a stream (local development) rows land in the control bucket", asy
   );
   const [key] = [...objects.keys()].filter((k) => k.startsWith("dev-events/"));
   assert.ok(key);
-  assert.equal(JSON.parse(objects.get(key)!.trim()).record_id, "workspace-a.1");
+  assert.equal(JSON.parse(objects.get(key)!.trim()).record_id, "practice-a.1");
 });
 
 test("too many requests from one participant or one address get 429, and the device keeps its records", async () => {
@@ -179,87 +207,4 @@ test("too many requests from one participant or one address get 429, and the dev
   const fifth = await handle(post("/ingest/v1/batches", theirs, { "cf-connecting-ip": "203.0.113.7" }), limited);
   assert.equal(fifth.status, 429);
   assert.equal(fifth.headers.get("retry-after"), "60");
-});
-
-test("aggregates are served from the control bucket, or empty before the first run", async () => {
-  const { env, objects } = fakes();
-  const get = () => handle(new Request("https://musclememory.run/ingest/v1/aggregates"), env);
-  assert.deepEqual(await (await get()).json(), { version: 1, issues: {} });
-  objects.set("aggregates/v1.json", JSON.stringify({ version: 1, issues: { "QUICK-1": { n: 3 } } }));
-  const response = await get();
-  assert.equal(response.headers.get("cache-control"), "public, max-age=3600");
-  assert.equal((await response.json()).issues["QUICK-1"].n, 3);
-});
-
-test("board records from 6.0.0, 6.1.0, 7.0.0 and 7.1.0 are accepted, older ones are not", async () => {
-  const { env, sent } = fakes();
-  const me = await device();
-  const board = (sequence: number, captureVersion: string, extra: Record<string, unknown> = {}) =>
-    observation(me.participantId, sequence, {
-      type: "observation.board.moved",
-      observationId: `board-a.${sequence}`,
-      source: { id: "board-a", sequence },
-      captureVersion,
-      data: { issueKey: "INC-1", from: "todo", to: "in-progress", via: "pointer", trigger: "start-work", onBoardBefore: 0, nudged: false },
-      ...extra,
-    });
-  const records = [
-    // Still in an outbox from before the replay release.
-    board(1, "board-capture-6.0.0", { consentVersion: "terms-2026-10-24" }),
-    board(4, "board-capture-6.1.0", { consentVersion: "terms-2026-10-25.1" }),
-    board(5, "board-capture-7.1.0", {
-      consentVersion: "terms-2026-10-25.1",
-      type: "observation.board.resolved",
-      data: { issueKey: "INC-1", pullRequest: 1, comment: "catch-hides-guests", via: "pointer" },
-    }),
-    board(2, "board-capture-7.0.0", {
-      consentVersion: "terms-2026-10-25.1",
-      type: "observation.board.deployed",
-      data: { issueKey: "INC-1", pullRequest: 1, runId: "run-1", via: "pointer" },
-    }),
-    board(3, "board-capture-5.0.0"),
-  ].map((r) => ({ ...r, recordId: JSON.parse(r.payload).observationId }));
-  const response = await handle(
-    post("/ingest/v1/batches", { protocol: INGEST_PROTOCOL, participantId: me.participantId, proof: me.proof, records }),
-    env,
-  );
-  assert.equal(response.status, 200);
-  const body = await response.json();
-  assert.equal(body.accepted, 4);
-  // Each row keeps the exact consent version its device recorded.
-  assert.deepEqual(
-    sent.map((row) => [row.type, row.capture_version, row.consent_version]),
-    [
-      ["observation.board.moved", "board-capture-6.0.0", "terms-2026-10-24"],
-      ["observation.board.moved", "board-capture-6.1.0", "terms-2026-10-25.1"],
-      ["observation.board.resolved", "board-capture-7.1.0", "terms-2026-10-25.1"],
-      ["observation.board.deployed", "board-capture-7.0.0", "terms-2026-10-25.1"],
-    ],
-  );
-});
-
-test("7.2 checked completion uses the real constructor/validator and preserves old merge records verbatim", async () => {
-  const { boardMove, boardRecord } = await import("../../../packages/domain/board");
-  const { env, sent } = fakes();
-  const me = await device();
-  const make = (sequence: number, trigger: "checks-passed" | "pull-request-merged") => boardRecord(boardMove({
-    participantId: me.participantId, sourceId: "completion-test", sequence, occurredAt: "2026-10-25T10:00:00Z", elapsedMs: sequence,
-    termsVersion: "2026-10-25.1", issue: { id: "frequency-map", revision: "sha256:" + "a".repeat(64) }, data: {
-      issueKey: "FN-1", from: "in-progress", to: "done", via: "keyboard", trigger, onBoardBefore: 1, nudged: false,
-      pullRequest: 1, runId: "run-submitted",
-    },
-  }));
-  const checked = make(1, "checks-passed");
-  const legacyRaw = make(2, "pull-request-merged");
-  const legacy = { ...legacyRaw, payload: JSON.stringify({ ...JSON.parse(legacyRaw.payload), captureVersion: "board-capture-7.1.0" }) };
-  const wrongRaw = make(3, "checks-passed");
-  const wrongVersion = { ...wrongRaw, payload: JSON.stringify({ ...JSON.parse(wrongRaw.payload), captureVersion: "board-capture-7.1.0" }) };
-  const invalidRaw = make(4, "checks-passed");
-  const value = JSON.parse(invalidRaw.payload); delete value.data.runId;
-  const invalid = { ...invalidRaw, payload: JSON.stringify(value) };
-  const response = await handle(post("/ingest/v1/batches", { protocol: INGEST_PROTOCOL, participantId: me.participantId, proof: me.proof, records: [checked, legacy, wrongVersion, invalid] }), env);
-  const body = await response.json();
-  assert.equal(body.accepted, 2);
-  assert.deepEqual(sent.map((row) => row.payload), [checked.payload, legacy.payload]);
-  assert.deepEqual(sent.map((row) => row.capture_version), ["board-capture-7.2.0", "board-capture-7.1.0"]);
 });

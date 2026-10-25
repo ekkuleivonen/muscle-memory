@@ -1,19 +1,18 @@
 /**
- * The account as it exists so far: a profile and handle in this browser's storage, and a
+ * The account as it exists so far: a profile in this browser's storage, and a
  * cookie that stands in for a session. Browser-only; the server sees just the cookie.
  */
 import { openPracticeStore } from "../../../packages/browser/practice-store";
 import { eraseUploaded } from "./ingest";
-import { BOARD_CHANGE, BOARD_KEY } from "./board";
-import { HANDLE_PATTERN, randomHandle } from "./handle";
+import { PROGRESS_CHANGE, PROGRESS_KEY } from "./progress";
 import type { LanguageId } from "./languages";
 import { LEGAL_VERSION, type Acceptance } from "./legal";
+import { STARS_KEY } from "./stars";
 import {
   CONSENT_COOKIE,
   CONSENT_VALUE,
   PROFILE_KEY,
   PROFILE_VERSION,
-  SNOOZE_MS,
   type Profile,
   type StoredProfile,
 } from "./profile";
@@ -21,8 +20,6 @@ import {
 /** Same-tab change notice; other tabs hear the storage event. */
 export const ACCOUNT_CHANGE = "muscle-memory:account";
 const YEAR_SECONDS = 60 * 60 * 24 * 365;
-/** Opt-in consent from before the Terms covered board moves; deleted with the account. */
-const LEGACY_ACTIVITY_KEY = "muscle-memory.activity-log";
 
 export function parseStoredProfile(raw: string | null): StoredProfile | null {
   try {
@@ -49,7 +46,7 @@ export function acceptance(): Acceptance {
 
 /**
  * The whole profile from settings, every question in it answered by the person. Keeps the
- * handle, the acceptance and everything else on file.
+ * acceptance and everything else on file.
  */
 export function saveProfile(profile: Profile): StoredProfile | null {
   const stored = readProfile();
@@ -62,26 +59,9 @@ export function saveProfile(profile: Profile): StoredProfile | null {
   return next;
 }
 
-function validHandle(handle: unknown): string | undefined {
-  return typeof handle === "string" && HANDLE_PATTERN.test(handle)
-    ? handle
-    : undefined;
-}
-
-/** Profiles saved before handles existed get one the first time they are read. */
-export function ensureHandle(): string | null {
-  const stored = readProfile();
-  if (!stored) return null;
-  const handle = validHandle(stored.handle);
-  if (handle) return handle;
-  const next = { ...stored, handle: randomHandle() };
-  write(next);
-  return next.handle;
-}
-
 /**
- * Accept the current Terms (/consent, /play): the only thing any page needs. Keeps whatever
- * this browser already has and signs it back in; a newcomer gets a handle and an empty profile,
+ * Accept the current Terms (/consent, /start): the only thing any page needs. Keeps whatever
+ * this browser already has and signs it back in; a newcomer gets an empty profile,
  * which the app's questions fill in as they go. Opens every page.
  */
 export function acceptConsent(): StoredProfile {
@@ -92,7 +72,6 @@ export function acceptConsent(): StoredProfile {
     : {
         version: PROFILE_VERSION,
         createdAt: new Date().toISOString(),
-        handle: randomHandle(),
         accepted: acceptance(),
         profile: {},
       };
@@ -102,11 +81,11 @@ export function acceptConsent(): StoredProfile {
 }
 
 /**
- * The language picked for the five-minute test, as a first guess at the languages answer: saved
- * when the profile has none yet, so every IDE session's profile snapshot carries it. The
+ * The language picked in quick start, as a first guess at the languages answer: saved
+ * when the profile has none yet, so every practice session's profile snapshot carries it. The
  * languages question still counts as open until the person answers it. Returns the profile.
  */
-export function playLanguage(language: LanguageId): Profile {
+export function guessLanguage(language: LanguageId): Profile {
   const stored = readProfile();
   if (!stored) return { languages: [language] };
   if (stored.profile.languages?.length) return stored.profile;
@@ -115,36 +94,13 @@ export function playLanguage(language: LanguageId): Profile {
   return profile;
 }
 
-/**
- * Answers given where the app asked (a result card, the dashboard, an issue page): merged into
- * the profile and marked as the person's own. Returns the profile as it now stands.
- */
-export function answerQuestions(answers: Partial<Profile>): Profile | null {
-  const stored = readProfile();
-  if (!stored) return null;
-  const at = new Date().toISOString();
-  const asked = { ...stored.asked };
-  for (const id of Object.keys(answers) as (keyof Profile)[]) asked[id] = { answeredAt: at };
-  const profile = { ...stored.profile, ...answers };
-  write({ ...stored, profile, asked });
-  return profile;
-}
-
-/** "Not now": the question is not asked anywhere on this device for a few days. */
-export function snoozeQuestion(id: keyof Profile) {
-  const stored = readProfile();
-  if (!stored) return;
-  const snoozedUntil = new Date(Date.now() + SNOOZE_MS).toISOString();
-  write({ ...stored, asked: { ...stored.asked, [id]: { ...stored.asked?.[id], snoozedUntil } } });
-}
-
 export function setStealth(stealth: boolean) {
   const stored = readProfile();
   if (stored) write({ ...stored, stealth });
 }
 
 /**
- * Ends the session; profile, board and history stay in this browser, and the consent page
+ * Ends the session; profile, progress and history stay in this browser, and the consent page
  * offers to sign back in rather than doing it silently.
  */
 export function logOut() {
@@ -154,13 +110,13 @@ export function logOut() {
 }
 
 /**
- * Board, saved practice and recorded activity on this device. Profile, handle, settings and
+ * Progress, saved practice and recorded activity on this device. Profile, settings and
  * the device identity stay, so anything already uploaded can still be deleted later.
  */
 export async function resetProgress(identity = false) {
-  localStorage.removeItem(BOARD_KEY);
-  localStorage.removeItem("muscle-memory.workspace-view");
-  window.dispatchEvent(new Event(BOARD_CHANGE));
+  localStorage.removeItem(PROGRESS_KEY);
+  localStorage.removeItem("muscle-memory.practice-view"); // app/practice/continuity.ts
+  window.dispatchEvent(new Event(PROGRESS_CHANGE));
   const store = await openPracticeStore();
   try {
     await store.clear(identity);
@@ -183,7 +139,7 @@ export async function deleteAccount() {
   }
   await resetProgress(true);
   localStorage.removeItem(PROFILE_KEY);
-  localStorage.removeItem(LEGACY_ACTIVITY_KEY);
+  localStorage.removeItem(STARS_KEY);
   window.dispatchEvent(new Event(ACCOUNT_CHANGE));
   logOut();
 }

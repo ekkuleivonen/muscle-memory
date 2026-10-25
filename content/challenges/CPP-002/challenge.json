@@ -1,0 +1,16 @@
+{
+  "title": "Cache hit ratio fell to 71% after the index change",
+  "summary": "Since #412, keys stored past a purged slot are reported as misses.",
+  "difficulty": "hard",
+  "tags": [
+    "hash-tables",
+    "caching",
+    "reviewing-changes"
+  ],
+  "file": "src/cache_index.cpp",
+  "entrypoint": "cache_index",
+  "parameters": [
+    "slots",
+    "ops"
+  ]
+}

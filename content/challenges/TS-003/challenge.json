@@ -1,0 +1,15 @@
+{
+  "title": "Search box sends a request on every keystroke",
+  "summary": "Debounce search-as-you-type so the API sees one request per pause.",
+  "difficulty": "medium",
+  "tags": [
+    "timing",
+    "events"
+  ],
+  "file": "src/debounce-times.ts",
+  "entrypoint": "debounceTimes",
+  "parameters": [
+    "keystrokes",
+    "waitMs"
+  ]
+}

@@ -1,0 +1,339 @@
+{
+  "challenge": "JS-005",
+  "task": "Support escalated this from the help desk:\n\n> A customer returned one of two jackets from an order that used **SPRING10** (10% off). The receipt says they paid **$45.00** for that jacket, but the refund came through as **$40.50**.\n\n```text\nOrder #10482    SPRING10 (10% off)\n  Rain jacket    1 × $50.00    −$5.00    $45.00\nRefund #R-2291\n  Rain jacket    1 × $50.00              −$40.50\n```\n\n`refundTotal(refund)` works out what a refund gives back. A refund must give back exactly what the customer paid for the lines returned.\n\n**Input.** All amounts are whole cents, never floats. `refund` is `{ code, lines }`:\n\n- `code` is the order's promo code: `null`, a percentage such as `{ percent: 10 }`, or a fixed amount in cents such as `{ amount: 500 }`.\n- `lines` are the returned order lines, each `{ sku, price, quantity, discount }`. `price` is the unit price. `discount` is the part of the order's discount that checkout took off this line: at checkout the code's discount is spread over all the order's lines in proportion to their value and stored on each line.\n\n**Output.** What the customer paid for the returned lines, as a negative number of cents: refunds stay negative all the way to the ledger. When they paid nothing for them, it is `0`.\n\n**Helpers further down the file.** You shouldn't need to change them:\n\n- `lineTotal(line)`: what a line charged, `price × quantity − discount` (a missing `discount` counts as 0).\n- `sum(amounts)`: the sum of a list of amounts, `0` for an empty list.\n- `discountFor(code, subtotal)`: a code's discount on a subtotal: `0` without a code, `Math.round(subtotal × percent / 100)` for a percentage, `amount` for a fixed amount, and never more than `subtotal`.\n\n**Leave `orderTotal` as it is.** Checkout uses it, and it must keep taking the code's discount (`discountFor(order.code, …)`) off the order's subtotal. Keep the change to refunds.\n",
+  "language": "javascript",
+  "file": "totals.js",
+  "starter": "/** What an order charges at checkout, in cents: its lines less the promo code's discount. */\nexport function orderTotal(order) {\n  const subtotal = sum(order.lines.map((line) => line.price * line.quantity));\n  return subtotal - discountFor(order.code, subtotal);\n}\n\n/**\n * What a refund gives back for the returned lines, in cents, as a negative amount: refunds\n * stay negative all the way to the ledger.\n */\nexport function refundTotal(refund) {\n  const returned = sum(refund.lines.map(lineTotal));\n  return -(returned - discountFor(refund.code, returned));\n}\n\n\n// ---- money: helpers this code uses. You shouldn't need to change them. ----\n\n/** Money is whole cents everywhere: never floats. */\n\n/**\n * What a line charges: its price times quantity, less the share of the order's discount that\n * checkout allocated to it (see allocate below).\n */\nfunction lineTotal(line) {\n  return line.price * line.quantity - (line.discount ?? 0);\n}\n\nfunction sum(amounts) {\n  return amounts.reduce((total, amount) => total + amount, 0);\n}\n\n\n// ---- discounts: helpers this code uses. You shouldn't need to change them. ----\n\n/**\n * A promo code's discount on a subtotal, in cents: a percentage ({ percent: 10 }) or a fixed\n * amount ({ amount: 500 }), never more than the subtotal.\n */\nfunction discountFor(code, subtotal) {\n  if (!code) return 0;\n  const off =\n    \"percent\" in code ? Math.round((subtotal * code.percent) / 100) : code.amount;\n  return Math.min(off, subtotal);\n}\n\n/**\n * At checkout the order's discount is spread over its lines in proportion to their value and\n * stored on each line as `discount`, so a partial refund can give back exactly what was paid\n * for the lines returned.\n */\nfunction allocate(code, lines) {\n  const gross = lines.map((line) => line.price * line.quantity);\n  const subtotal = sum(gross);\n  const total = discountFor(code, subtotal);\n  let left = total;\n  return lines.map((line, index) => {\n    const share =\n      index === lines.length - 1 || subtotal === 0\n        ? left\n        : Math.floor((total * gross[index]) / subtotal);\n    left -= share;\n    return { ...line, discount: share };\n  });\n}\n",
+  "entrypoint": "refundTotal",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": {
+        "code": null,
+        "lines": [
+          {
+            "sku": "tee",
+            "price": 2500,
+            "quantity": 2,
+            "discount": 0
+          }
+        ]
+      },
+      "expected": -5000,
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": {
+        "code": {
+          "percent": 10
+        },
+        "lines": [
+          {
+            "sku": "rain-jacket",
+            "price": 5000,
+            "quantity": 1,
+            "discount": 500
+          }
+        ]
+      },
+      "expected": -4500,
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": {
+        "code": {
+          "amount": 1000
+        },
+        "lines": [
+          {
+            "sku": "boots",
+            "price": 3000,
+            "quantity": 1,
+            "discount": 600
+          },
+          {
+            "sku": "socks",
+            "price": 2000,
+            "quantity": 1,
+            "discount": 400
+          }
+        ]
+      },
+      "expected": -4000,
+      "hidden": false
+    },
+    {
+      "id": "case-4",
+      "input": {
+        "code": {
+          "percent": 20
+        },
+        "lines": [
+          {
+            "sku": "mug",
+            "price": 1000,
+            "quantity": 3,
+            "discount": 600
+          }
+        ]
+      },
+      "expected": -2400,
+      "hidden": true
+    },
+    {
+      "id": "case-5",
+      "input": {
+        "code": {
+          "percent": 10
+        },
+        "lines": []
+      },
+      "expected": 0,
+      "hidden": true
+    },
+    {
+      "id": "case-6",
+      "input": {
+        "code": {
+          "amount": 500
+        },
+        "lines": [
+          {
+            "sku": "gift-wrap",
+            "price": 0,
+            "quantity": 1,
+            "discount": 0
+          }
+        ]
+      },
+      "expected": 0,
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": {
+        "code": {
+          "percent": 10
+        },
+        "lines": [
+          {
+            "sku": "tee",
+            "price": 2500,
+            "quantity": 2,
+            "discount": 500
+          }
+        ]
+      },
+      "expected": -4500,
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": {
+        "code": {
+          "amount": 1000
+        },
+        "lines": [
+          {
+            "sku": "boots",
+            "price": 3000,
+            "quantity": 1,
+            "discount": 600
+          }
+        ]
+      },
+      "expected": -2400,
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": {
+        "code": {
+          "percent": 15
+        },
+        "lines": [
+          {
+            "sku": "pin-a",
+            "price": 333,
+            "quantity": 1,
+            "discount": 50
+          }
+        ]
+      },
+      "expected": -283,
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": {
+        "code": {
+          "amount": 100
+        },
+        "lines": [
+          {
+            "sku": "card-c",
+            "price": 1000,
+            "quantity": 1,
+            "discount": 34
+          }
+        ]
+      },
+      "expected": -966,
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": {
+        "code": {
+          "amount": 5000
+        },
+        "lines": [
+          {
+            "sku": "belt",
+            "price": 3000,
+            "quantity": 1,
+            "discount": 3000
+          }
+        ]
+      },
+      "expected": 0,
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": {
+        "code": {
+          "percent": 5
+        },
+        "lines": [
+          {
+            "sku": "socks",
+            "price": 799,
+            "quantity": 12,
+            "discount": 479
+          }
+        ]
+      },
+      "expected": -9109,
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": {
+        "code": {
+          "percent": 25
+        },
+        "lines": [
+          {
+            "sku": "hoodie",
+            "price": 4000,
+            "quantity": 1,
+            "discount": 1000
+          },
+          {
+            "sku": "beanie",
+            "price": 1200,
+            "quantity": 2,
+            "discount": 600
+          }
+        ]
+      },
+      "expected": -4800,
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": {
+        "code": {
+          "percent": 10
+        },
+        "lines": [
+          {
+            "sku": "rain-jacket",
+            "price": 5000,
+            "quantity": 2,
+            "discount": 1000
+          }
+        ]
+      },
+      "expected": -9000,
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": {
+        "code": null,
+        "lines": [
+          {
+            "sku": "poster",
+            "price": 1999,
+            "quantity": 1,
+            "discount": 0
+          },
+          {
+            "sku": "sticker",
+            "price": 1,
+            "quantity": 3,
+            "discount": 0
+          }
+        ]
+      },
+      "expected": -2002,
+      "hidden": true
+    },
+    {
+      "id": "case-16",
+      "input": {
+        "code": {
+          "percent": 33
+        },
+        "lines": [
+          {
+            "sku": "lamp",
+            "price": 4999,
+            "quantity": 1,
+            "discount": 1649
+          },
+          {
+            "sku": "shade",
+            "price": 1250,
+            "quantity": 1,
+            "discount": 414
+          }
+        ]
+      },
+      "expected": -4186,
+      "hidden": true
+    },
+    {
+      "id": "case-17",
+      "input": {
+        "code": {
+          "percent": 33
+        },
+        "lines": [
+          {
+            "sku": "bulb",
+            "price": 350,
+            "quantity": 4,
+            "discount": 461
+          }
+        ]
+      },
+      "expected": -939,
+      "hidden": true
+    }
+  ],
+  "rules": [
+    {
+      "id": "order-total",
+      "message": "Leave `orderTotal` as it is: checkout uses it, and it must keep taking the code's discount off the order's subtotal. Keep the change to refunds.",
+      "when": {
+        "pattern": "discountFor\\(\\s*order\\.code",
+        "present": false
+      }
+    }
+  ]
+}

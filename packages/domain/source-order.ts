@@ -3,7 +3,6 @@
  * source ID; its positions start at 1 and never reset. A restarted source (new process,
  * device or tab) must use a new source ID rather than reusing positions.
  */
-import { safeIdentifier } from "./capture";
 
 export const MAX_GAP_RANGES = 100;
 
@@ -40,15 +39,6 @@ export interface SourceStream {
   }[];
   /** Observations whose sequence is not a positive safe integer; kept, but not placed in order. */
   readonly unordered: readonly string[];
-}
-
-export function assertSourcePosition(source: {
-  readonly id: string;
-  readonly sequence: number;
-}): void {
-  safeIdentifier(source.id);
-  if (!isPosition(source.sequence))
-    throw new Error("Source sequence must be a positive integer.");
 }
 
 /** Deterministic for the same records; work and output are bounded by record count and `maxRanges`. */

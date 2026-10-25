@@ -11,8 +11,8 @@ export function ConsentPoints() {
         <li>
           <strong>We record what you do here, keystroke by keystroke:</strong>{" "}
           every key you press in the editor and when, your edits and pastes, the
-          pages and files you open, test runs and their output, and when you
-          switch away (never to what). It&apos;s sent to our servers without
+          pages you open, your runs and their results, and when you switch away
+          (never to what). It&apos;s sent to our servers without
           your name. That&apos;s the product.
         </li>
         <li>
@@ -20,8 +20,8 @@ export function ConsentPoints() {
           not? Go stealth any time in settings.
         </li>
         <li>
-          <strong>Nobody sees your results next to your handle,</strong> and we
-          don&apos;t sell your personal data.
+          <strong>Nobody else sees your results,</strong> and we don&apos;t sell
+          your personal data.
         </li>
         <li>
           <strong>Code you write stays yours;</strong> you give us a licence to
@@ -34,7 +34,7 @@ export function ConsentPoints() {
         humans.
       </p>
       <p className="home-fine">
-        Your random handle, code and progress are saved in this browser. There
+        Your code and progress are saved in this browser. There
         is no device sync or recovery from uploads. Logging out keeps your local
         data; clearing browser storage does not.
       </p>

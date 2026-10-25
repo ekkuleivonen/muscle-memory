@@ -1,0 +1,208 @@
+{
+  "challenge": "PY-003",
+  "task": "Monday's import into the herbarium database created 14 \"new\" species that it already had. From the import log:\n\n```text\nnew species: Carabus Nemoralis        (have: Carabus nemoralis)\nnew species: Carabus Sp.              (have: Carabus sp.)\nnew species: Pterostichus Niger       (have: Pterostichus niger)\n```\n\nThe import matches species names exactly, so every name on the end-of-day tally sheet must be written the way the herbarium writes it.\n\n`species_tally(lines)` takes the day's notebook lines (a list of strings) and returns a dict from species name to the total number of individuals of that species.\n\n- A line reads `date | site | species | length | count`, for example `2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2`. `parse_line(line)`, further down the file, returns it as a dict with the keys `date`, `site`, `species` and `length` (strings, stripped of surrounding spaces) and `count` (an int).\n- Lines that are empty or only whitespace are skipped.\n- Each species is keyed by its herbarium name, which `canonical_name(name)`, further down the file, returns: it splits the name on whitespace, capitalises the first word (first letter upper case, the rest lower case), lowercases every other word, and joins the words with single spaces. `\"  leistus   FERRUGINEUS \"` becomes `\"Leistus ferrugineus\"`; a name with no words becomes `\"\"`.\n- Lines whose species have the same herbarium name are one species: their counts add up.\n- Every species on a non-blank line is in the result, even when its total is 0. No lines gives `{}`.\n\nRequirement: the names must come from `canonical_name` itself, not from a naming rule of your own, so the tally sheet and the herbarium can't drift apart again.\n",
+  "language": "python",
+  "file": "tally.py",
+  "starter": "\"\"\"Individuals per species for the end-of-day tally sheet.\"\"\"\n\n\ndef _clean(name):\n    return name.strip().title()\n\n\ndef species_tally(lines):\n    \"\"\"Individuals per species across the notebook lines, keyed by species name.\"\"\"\n    totals = {}\n    for line in lines:\n        if not line.strip():\n            continue\n        row = parse_line(line)\n        name = _clean(row[\"species\"])\n        totals[name] = totals.get(name, 0) + row[\"count\"]\n    return totals\n\n\n# ---- labels: helpers this code uses. You shouldn't need to change them. ----\n\n# Notebook lines, as typed up from the paper field notebook. One line per specimen lot:\n#\n#     2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\n#\n# date | site | species | body length | individuals in the lot. The length is left blank when\n# nothing was measured.\n\nFIELDS = (\"date\", \"site\", \"species\", \"length\", \"count\")\n\n\ndef fields(line):\n    \"\"\"The five fields of a line, stripped, as written.\"\"\"\n    parts = [part.strip() for part in line.split(\"|\")]\n    if len(parts) != len(FIELDS):\n        raise ValueError(f\"expected {len(FIELDS)} fields: {line!r}\")\n    return parts\n\n\ndef parse_line(line):\n    \"\"\"A line as a dict: every field as written, the count as a number.\"\"\"\n    row = dict(zip(FIELDS, fields(line)))\n    row[\"count\"] = int(row[\"count\"])\n    return row\n\n\n# ---- names: helpers this code uses. You shouldn't need to change them. ----\n\n# Species names the way the herbarium database files them.\n\n\ndef canonical_name(name):\n    \"\"\"'  carabus   NEMORALIS ' -> 'Carabus nemoralis': the genus capitalised, everything after\n    it lowercase, one space between words.\"\"\"\n    words = name.split()\n    if not words:\n        return \"\"\n    return \" \".join([words[0].capitalize()] + [word.lower() for word in words[1:]])\n",
+  "entrypoint": "species_tally",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": [
+        "2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2",
+        "2026-06-03 | Ridge B | carabus nemoralis | 14.5 mm | 1"
+      ],
+      "expected": {
+        "Carabus nemoralis": 3
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": [],
+      "expected": {},
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": [
+        "2026-06-03 | Ridge B | Pterostichus  niger | 14.5 mm | 3",
+        "2026-06-03 | Ridge B | Pterostichus niger | 14.5 mm | 2"
+      ],
+      "expected": {
+        "Pterostichus niger": 5
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-4",
+      "input": [
+        "2026-06-03 | Ridge B | Carabus sp. | 14.5 mm | 4"
+      ],
+      "expected": {
+        "Carabus sp.": 4
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-5",
+      "input": [
+        "2026-06-03 | Ridge B | ABAX PARALLELEPIPEDUS | 14.5 mm | 2",
+        "2026-06-03 | Ridge B | Abax parallelepipedus | 14.5 mm | 1"
+      ],
+      "expected": {
+        "Abax parallelepipedus": 3
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-6",
+      "input": [
+        "2026-06-03 | Ridge B | carabus   NEMORALIS | 14.5 mm | 1",
+        "2026-06-03 | Ridge B | Carabus Nemoralis | 14.5 mm | 1"
+      ],
+      "expected": {
+        "Carabus nemoralis": 2
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": [
+        "",
+        "2026-06-03 | Ridge B | Nebria brevicollis | 14.5 mm | 2",
+        "   ",
+        "2026-06-03 | Ridge B | nebria brevicollis | 14.5 mm | 5",
+        ""
+      ],
+      "expected": {
+        "Nebria brevicollis": 7
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": [
+        "2026-06-03 | Ridge B | Carabus problematicus | 14.5 mm | 0"
+      ],
+      "expected": {
+        "Carabus problematicus": 0
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": [
+        "2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2",
+        "2026-06-03 | Ridge B | Pterostichus niger | 14.5 mm | 1",
+        "2026-06-03 | Ridge B | carabus nemoralis | 14.5 mm | 3",
+        "2026-06-03 | Ridge B | Abax parallelepipedus | 14.5 mm | 4",
+        "2026-06-03 | Ridge B | PTEROSTICHUS NIGER | 14.5 mm | 2"
+      ],
+      "expected": {
+        "Carabus nemoralis": 5,
+        "Pterostichus niger": 3,
+        "Abax parallelepipedus": 4
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": [
+        "2026-06-03 | Ridge B | Carabus cf. nemoralis | 14.5 mm | 1",
+        "2026-06-03 | Ridge B | carabus CF. Nemoralis | 14.5 mm | 2"
+      ],
+      "expected": {
+        "Carabus cf. nemoralis": 3
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": [
+        "2026-06-03 | Ridge B | Carabus auro-nitens | 14.5 mm | 1",
+        "2026-06-03 | Ridge B | carabus Auro-Nitens | 14.5 mm | 1"
+      ],
+      "expected": {
+        "Carabus auro-nitens": 2
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": [
+        "2026-06-03 | Ridge B | Carabus | 14.5 mm | 3",
+        "2026-06-03 | Ridge B | CARABUS | 14.5 mm | 1"
+      ],
+      "expected": {
+        "Carabus": 4
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": [
+        "2026-06-03 | Ridge B | CARABUS nemoralis | 14.5 mm | 1",
+        "2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 1"
+      ],
+      "expected": {
+        "Carabus nemoralis": 2
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": [
+        "2026-06-03 | Ridge B | Carabus\tnemoralis | 14.5 mm | 2",
+        "2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 1"
+      ],
+      "expected": {
+        "Carabus nemoralis": 3
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": [
+        "2026-06-03 | Ridge B | Carabus nemoralis NEMORALIS | 14.5 mm | 1",
+        "2026-06-03 | Ridge B | carabus nemoralis nemoralis | 14.5 mm | 1"
+      ],
+      "expected": {
+        "Carabus nemoralis nemoralis": 2
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-16",
+      "input": [
+        "2026-06-03 | Ridge B | ötiorhynchus sulcatus | 14.5 mm | 2",
+        "2026-06-03 | Ridge B | Ötiorhynchus Sulcatus | 14.5 mm | 1"
+      ],
+      "expected": {
+        "Ötiorhynchus sulcatus": 3
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-17",
+      "input": [
+        "2026-06-03 | Ridge B | Leistus o'brieni | 14.5 mm | 1",
+        "2026-06-03 | Ridge B | Leistus O'Brieni | 14.5 mm | 1"
+      ],
+      "expected": {
+        "Leistus o'brieni": 2
+      },
+      "hidden": true
+    }
+  ],
+  "rules": [
+    {
+      "id": "shared-helper",
+      "message": "Species names must come from `canonical_name`, not from a naming rule of your own.",
+      "when": {
+        "pattern": "^(?!\\s*def ).*\\bcanonical_name\\(",
+        "present": false
+      }
+    }
+  ]
+}

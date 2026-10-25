@@ -1,25 +1,35 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import { requireConsent } from "../../lib/gate";
+import { TermFooter } from "../_terminal/footer";
+import { KeyMenu } from "../_terminal/key-menu";
 import "../_terminal/terminal.css";
-import { SettingsTerminal } from "./settings-terminal";
+import { COMMANDS, GROUPS } from "./commands";
 
 export const metadata: Metadata = { title: "Settings · Muscle Memory" };
 
-/** Settings are the terminal; `?run=` opens it on one command (see `start` in the terminal). */
-export default async function SettingsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ run?: string }>;
-}) {
-  const { run } = await searchParams;
-  await requireConsent(run ? `/settings?run=${encodeURIComponent(run)}` : "/settings");
+/** Settings: every command as a row to pick by key or click, each its own page at /settings/<name>. */
+export default async function SettingsPage() {
+  await requireConsent("/settings");
   return (
     <>
-      <nav className="settings-terminal-nav">
-        <Link href="/dashboard">← Back to your desk</Link>
-      </nav>
-      <SettingsTerminal start={run} />
+      <div className="term">
+        <main className="t-prose t-settings">
+          <h1 className="t-doc-title">Settings</h1>
+          <KeyMenu
+            id="settings"
+            label="Settings"
+            items={GROUPS.flatMap((group) =>
+              group.commands.map((name) => ({
+                href: `/settings/${name}`,
+                name,
+                hint: COMMANDS[name],
+                group: group.label,
+              })),
+            )}
+          />
+        </main>
+      </div>
+      <TermFooter trail={[{ label: "settings", href: "/settings" }]} />
     </>
   );
 }

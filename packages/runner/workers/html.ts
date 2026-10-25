@@ -57,7 +57,7 @@ async function execute({ code, inputs, filename }) {
     try {
       tests.push({ index, ...convert(read(document, String(selector), String(how))) });
     } catch (error) {
-      // An invalid selector is the issue's fault, not the person's markup.
+      // An invalid selector is the challenge's fault, not the person's markup.
       throw new Error("Check " + (index + 1) + " could not run: " + (error && error.message));
     }
   }

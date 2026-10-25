@@ -1,0 +1,12 @@
+{
+  "title": "CSV import splits company names on commas",
+  "summary": "Respect quoted fields when parsing partner exports.",
+  "difficulty": "easy",
+  "tags": [
+    "parsing",
+    "strings",
+    "csv"
+  ],
+  "file": "parse_csv_line.py",
+  "entrypoint": "parse_csv_line"
+}

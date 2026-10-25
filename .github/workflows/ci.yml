@@ -19,8 +19,9 @@ jobs:
           path: node_modules/.cache/muscle-memory-runtimes
           key: runtimes-${{ hashFiles('tools/build-runtimes.mjs', 'tools/runtimes/**') }}
       - run: npm test
+      # Every revision the build made must be archived in the commit (tools/build-content.ts).
+      - run: test -z "$(git status --porcelain content/revisions)"
       - run: npm run typecheck
-      - run: npm run check:content
       - run: npm run build:cloudflare
         env:
           NEXT_TELEMETRY_DISABLED: '1'
@@ -35,5 +36,3 @@ jobs:
       - run: pip install -r tools/erasure/requirements-test.txt
       - run: python -m unittest -v test_erase
         working-directory: tools/erasure
-      - run: python -m unittest -v test_aggregate
-        working-directory: tools/aggregates

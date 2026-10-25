@@ -1,11 +1,13 @@
 /**
- * Device-local storage: the pseudonymous identity, every workspace and board record, and an
- * outbox of records not yet uploaded (packages/browser/uploader.ts sends them). This module
- * itself sends nothing over the network.
+ * Device-local storage: the pseudonymous identity, every practice and site record, and an
+ * outbox of records not yet uploaded (packages/browser/uploader.ts sends them). Once uploaded,
+ * what practice no longer needs is forgotten (`compact`). This module itself sends nothing
+ * over the network.
  */
 import { randomId } from "./random-id";
-import type { WorkspaceRecord } from "../domain/workspace";
+import type { StoredRecord } from "../domain/records";
 import type { CaptureSink, WriteOutcome } from "../capture/recorder";
+import { compactable } from "./compaction";
 
 const DATABASE = "muscle-memory-local-practice";
 
@@ -13,7 +15,7 @@ const DATABASE = "muscle-memory-local-practice";
 export interface StoreDump {
   /** The identity, device secret and referral code. */
   readonly settings: Readonly<Record<string, string>>;
-  readonly records: readonly WorkspaceRecord[];
+  readonly records: readonly StoredRecord[];
   /** Record IDs still waiting to be uploaded, oldest first. */
   readonly outbox: readonly string[];
 }
@@ -61,14 +63,14 @@ export class PracticeStore implements CaptureSink {
   }
 
   /**
-   * Writes one batch of workspace observations and artifacts in one transaction. Existing
+   * Writes one batch of observations and artifacts in one transaction. Existing
    * identical records are duplicates; a different payload under the same ID is a conflict
    * and is not written. If the transaction aborts, nothing in the batch is acknowledged.
    */
-  write(records: readonly WorkspaceRecord[]): Promise<WriteOutcome[]> {
+  write(records: readonly StoredRecord[]): Promise<WriteOutcome[]> {
     return new Promise((resolve, reject) => {
-      const transaction = this.database.transaction(["workspace", "outbox"], "readwrite");
-      const store = transaction.objectStore("workspace");
+      const transaction = this.database.transaction(["records", "outbox"], "readwrite");
+      const store = transaction.objectStore("records");
       // Every new record is queued for upload in the same transaction, in write order.
       const outbox = transaction.objectStore("outbox");
       const outcomes: WriteOutcome[] = [];
@@ -93,14 +95,14 @@ export class PracticeStore implements CaptureSink {
         reject(
           failure ??
             transaction.error ??
-            new Error("Workspace activity could not be saved on this device."),
+            new Error("Practice could not be saved on this device."),
         );
       records.forEach((record, index) =>
         guarded(() => {
           const request = store.get(record.recordId);
           request.onsuccess = () =>
             guarded(() => {
-              const existing = request.result as WorkspaceRecord | undefined;
+              const existing = request.result as StoredRecord | undefined;
               if (!existing) {
                 store.add(record);
                 outbox.add(record.recordId);
@@ -117,20 +119,20 @@ export class PracticeStore implements CaptureSink {
   }
 
   /** Atomically validate current records and append derived records/outbox entries. */
-  commitWorkspace(
-    build: (records: readonly WorkspaceRecord[]) => readonly WorkspaceRecord[],
+  commit(
+    build: (records: readonly StoredRecord[]) => readonly StoredRecord[],
   ): Promise<boolean> {
     return new Promise((resolve, reject) => {
-      const transaction = this.database.transaction(["workspace", "outbox"], "readwrite");
-      const workspace = transaction.objectStore("workspace");
+      const transaction = this.database.transaction(["records", "outbox"], "readwrite");
+      const stored = transaction.objectStore("records");
       let changed = false;
       let failure: unknown;
-      const request = workspace.getAll();
+      const request = stored.getAll();
       request.onsuccess = () => {
         try {
           const records = build(request.result);
           for (const record of records) {
-            workspace.add(record);
+            stored.add(record);
             transaction.objectStore("outbox").add(record.recordId);
           }
           changed = records.length > 0;
@@ -144,14 +146,14 @@ export class PracticeStore implements CaptureSink {
     });
   }
 
-  workspaceRecords(): Promise<WorkspaceRecord[]> {
+  records(): Promise<StoredRecord[]> {
     return new Promise((resolve, reject) => {
-      const transaction = this.database.transaction("workspace", "readonly");
-      const request = transaction.objectStore("workspace").getAll();
+      const transaction = this.database.transaction("records", "readonly");
+      const request = transaction.objectStore("records").getAll();
       transaction.oncomplete = () => resolve(request.result);
       transaction.onabort = () =>
         reject(
-          transaction.error ?? new Error("Saved workspace could not be read."),
+          transaction.error ?? new Error("Saved practice could not be read."),
         );
     });
   }
@@ -164,12 +166,12 @@ export class PracticeStore implements CaptureSink {
   pending(
     limit: number,
     maxBytes: number,
-  ): Promise<{ keys: IDBValidKey[]; records: WorkspaceRecord[] }> {
+  ): Promise<{ keys: IDBValidKey[]; records: StoredRecord[] }> {
     return new Promise((resolve, reject) => {
-      const transaction = this.database.transaction(["outbox", "workspace"], "readonly");
-      const store = transaction.objectStore("workspace");
+      const transaction = this.database.transaction(["outbox", "records"], "readonly");
+      const store = transaction.objectStore("records");
       const keys: IDBValidKey[] = [];
-      const records: WorkspaceRecord[] = [];
+      const records: StoredRecord[] = [];
       let bytes = 0;
       const cursor = transaction.objectStore("outbox").openCursor();
       cursor.onsuccess = () => {
@@ -177,7 +179,7 @@ export class PracticeStore implements CaptureSink {
         if (!at || records.length >= limit) return;
         const get = store.get(at.value as string);
         get.onsuccess = () => {
-          const record = get.result as WorkspaceRecord | undefined;
+          const record = get.result as StoredRecord | undefined;
           if (record) {
             if (records.length && bytes + record.payload.length > maxBytes) return;
             bytes += record.payload.length;
@@ -193,7 +195,7 @@ export class PracticeStore implements CaptureSink {
     });
   }
 
-  /** Removes uploaded records from the outbox; the records themselves stay on the device. */
+  /** Removes uploaded records from the outbox; the records stay until `compact`. */
   sent(keys: readonly IDBValidKey[]): Promise<void> {
     return new Promise((resolve, reject) => {
       const transaction = this.database.transaction("outbox", "readwrite");
@@ -202,6 +204,28 @@ export class PracticeStore implements CaptureSink {
       transaction.oncomplete = () => resolve();
       transaction.onabort = () =>
         reject(transaction.error ?? new Error("The upload queue could not be updated."));
+    });
+  }
+
+  /**
+   * Forgets what is uploaded and no longer needed here (./compaction.ts), in one transaction.
+   * Returns how many records went.
+   */
+  compact(): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const transaction = this.database.transaction(["records", "outbox"], "readwrite");
+      const stored = transaction.objectStore("records");
+      let removed = 0;
+      const records = stored.getAll();
+      const queued = transaction.objectStore("outbox").getAll();
+      queued.onsuccess = () => {
+        const ids = compactable(records.result as StoredRecord[], new Set(queued.result as string[]));
+        for (const id of ids) stored.delete(id);
+        removed = ids.length;
+      };
+      transaction.oncomplete = () => resolve(removed);
+      transaction.onabort = () =>
+        reject(transaction.error ?? new Error("Saved practice could not be compacted."));
     });
   }
 
@@ -217,17 +241,17 @@ export class PracticeStore implements CaptureSink {
   }
 
   /**
-   * Clears workspace observations and artifacts and the outbox, and with `identity` the local
+   * Clears observations and artifacts and the outbox, and with `identity` the local
    * identity and device secret too. Keeping them (a reset) keeps uploaded data deletable.
    */
   clear(identity = true): Promise<void> {
     return new Promise((resolve, reject) => {
       const transaction = this.database.transaction(
-        ["settings", "workspace", "outbox"],
+        ["settings", "records", "outbox"],
         "readwrite",
       );
       if (identity) transaction.objectStore("settings").clear();
-      transaction.objectStore("workspace").clear();
+      transaction.objectStore("records").clear();
       transaction.objectStore("outbox").clear();
       transaction.oncomplete = () => resolve();
       transaction.onabort = () =>
@@ -240,7 +264,7 @@ export class PracticeStore implements CaptureSink {
   dump(): Promise<StoreDump> {
     return new Promise((resolve, reject) => {
       const transaction = this.database.transaction(
-        ["settings", "workspace", "outbox"],
+        ["settings", "records", "outbox"],
         "readonly",
       );
       const settings: Record<string, string> = {};
@@ -252,7 +276,7 @@ export class PracticeStore implements CaptureSink {
         settings[String(at.key)] = at.value as string;
         at.continue();
       };
-      const records = transaction.objectStore("workspace").getAll();
+      const records = transaction.objectStore("records").getAll();
       const queued = transaction.objectStore("outbox").openCursor();
       queued.onsuccess = () => {
         const at = queued.result;
@@ -261,7 +285,7 @@ export class PracticeStore implements CaptureSink {
         at.continue();
       };
       transaction.oncomplete = () =>
-        resolve({ settings, records: records.result as WorkspaceRecord[], outbox });
+        resolve({ settings, records: records.result as StoredRecord[], outbox });
       transaction.onabort = () =>
         reject(transaction.error ?? new Error("Saved practice could not be read."));
     });
@@ -274,17 +298,17 @@ export class PracticeStore implements CaptureSink {
   restore(dump: StoreDump): Promise<void> {
     return new Promise((resolve, reject) => {
       const transaction = this.database.transaction(
-        ["settings", "workspace", "outbox"],
+        ["settings", "records", "outbox"],
         "readwrite",
       );
       const settings = transaction.objectStore("settings");
-      const workspace = transaction.objectStore("workspace");
+      const stored = transaction.objectStore("records");
       const outbox = transaction.objectStore("outbox");
       settings.clear();
-      workspace.clear();
+      stored.clear();
       outbox.clear();
       for (const [key, value] of Object.entries(dump.settings)) settings.put(value, key);
-      for (const record of dump.records) workspace.put(record);
+      for (const record of dump.records) stored.put(record);
       for (const id of dump.outbox) outbox.add(id);
       transaction.oncomplete = () => resolve();
       transaction.onabort = () =>
@@ -301,29 +325,13 @@ export function openPracticeStore(
   factory: IDBFactory = indexedDB,
 ): Promise<PracticeStore> {
   return new Promise((resolve, reject) => {
-    // Version 4 adds the upload outbox. Version 3: workspace records name issues and
-    // revisions; older stores are rebuilt rather than migrated, keeping the local identity.
-    const request = factory.open(DATABASE, 4);
-    request.onupgradeneeded = (event) => {
+    const request = factory.open(DATABASE, 5);
+    request.onupgradeneeded = () => {
       const database = request.result;
-      if (event.oldVersion < 1) database.createObjectStore("settings");
-      if (event.oldVersion < 3) {
-        for (const legacy of ["events", "workspace"])
-          if (database.objectStoreNames.contains(legacy))
-            database.deleteObjectStore(legacy);
-        database.createObjectStore("workspace", { keyPath: "recordId" });
-      }
-      if (event.oldVersion < 4) {
-        const outbox = database.createObjectStore("outbox", { autoIncrement: true });
-        // Records made before the outbox existed are queued too, so nothing is skipped.
-        const existing = request.transaction!.objectStore("workspace").openCursor();
-        existing.onsuccess = () => {
-          const at = existing.result;
-          if (!at) return;
-          outbox.add(at.primaryKey);
-          at.continue();
-        };
-      }
+      const stores = database.objectStoreNames;
+      if (!stores.contains("settings")) database.createObjectStore("settings");
+      if (!stores.contains("records")) database.createObjectStore("records", { keyPath: "recordId" });
+      if (!stores.contains("outbox")) database.createObjectStore("outbox", { autoIncrement: true });
     };
     request.onsuccess = () => resolve(new PracticeStore(request.result));
     request.onerror = () =>

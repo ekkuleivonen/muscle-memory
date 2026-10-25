@@ -1,0 +1,10 @@
+[
+  {
+    "id": "sum-distinct",
+    "message": "Every payment counts: two payments of the same amount are two payments, so don't add up only the distinct amounts.",
+    "when": {
+      "pattern": "[Ss][Uu][Mm]\\s*\\(\\s*[Dd][Ii][Ss][Tt][Ii][Nn][Cc][Tt]",
+      "present": true
+    }
+  }
+]

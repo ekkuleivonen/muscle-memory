@@ -1,0 +1,354 @@
+[
+  {
+    "input": [
+      "2026-05-28 | Alder Creek | Carabus nemoralis | 14.5 mm | 2",
+      "2026-05-28 | Alder Creek | Pterostichus niger | 11 mm | 1",
+      "2026-06-03 | Ridge B | Carabus nemoralis | 15 mm | 3"
+    ],
+    "expected": {
+      "Alder Creek": {
+        "lots": 2,
+        "individuals": 3,
+        "species": 2,
+        "first": "2026-05-28",
+        "last": "2026-05-28"
+      },
+      "Ridge B": {
+        "lots": 1,
+        "individuals": 3,
+        "species": 1,
+        "first": "2026-06-03",
+        "last": "2026-06-03"
+      }
+    }
+  },
+  {
+    "input": [
+      "2026-06-03 | Ridge B | Carabus nemoralis | 15 mm | 2",
+      "2026-06-04 | Alder Creek | Pterostichus niger | 11 mm | 1",
+      "2026-06-10 | Ridge B | Abax parallelepipedus |  | 4"
+    ],
+    "expected": {
+      "Ridge B": {
+        "lots": 2,
+        "individuals": 6,
+        "species": 2,
+        "first": "2026-06-03",
+        "last": "2026-06-10"
+      },
+      "Alder Creek": {
+        "lots": 1,
+        "individuals": 1,
+        "species": 1,
+        "first": "2026-06-04",
+        "last": "2026-06-04"
+      }
+    }
+  },
+  {
+    "input": [],
+    "expected": {}
+  },
+  {
+    "input": [
+      "2026-06-03 | Ridge B | Carabus nemoralis | 15 mm | 1",
+      "2026-06-05 | Ridge B | Carabus nemoralis | 14 mm | 2",
+      "2026-06-09 | Ridge B | Pterostichus niger |  | 1"
+    ],
+    "expected": {
+      "Ridge B": {
+        "lots": 3,
+        "individuals": 4,
+        "species": 2,
+        "first": "2026-06-03",
+        "last": "2026-06-09"
+      }
+    }
+  },
+  {
+    "input": [
+      "2026-06-14 | Alder Creek | Carabus nemoralis | 15 mm | 1",
+      "2026-05-28 | Alder Creek | Pterostichus niger | 11 mm | 2",
+      "2026-06-02 | Alder Creek | Carabus nemoralis |  | 1"
+    ],
+    "expected": {
+      "Alder Creek": {
+        "lots": 3,
+        "individuals": 4,
+        "species": 2,
+        "first": "2026-05-28",
+        "last": "2026-06-14"
+      }
+    }
+  },
+  {
+    "input": [
+      "2026-06-01 | Ridge B | Carabus nemoralis |  | 1",
+      "2026-06-01 | Alder Creek | Carabus nemoralis |  | 1",
+      "2026-06-01 | Fen Margin | Pterostichus niger |  | 1",
+      "2026-06-08 | Ridge B | Pterostichus niger |  | 2",
+      "2026-06-08 | Alder Creek | Carabus nemoralis |  | 2",
+      "2026-06-08 | Fen Margin | Pterostichus niger |  | 2"
+    ],
+    "expected": {
+      "Ridge B": {
+        "lots": 2,
+        "individuals": 3,
+        "species": 2,
+        "first": "2026-06-01",
+        "last": "2026-06-08"
+      },
+      "Alder Creek": {
+        "lots": 2,
+        "individuals": 3,
+        "species": 1,
+        "first": "2026-06-01",
+        "last": "2026-06-08"
+      },
+      "Fen Margin": {
+        "lots": 2,
+        "individuals": 3,
+        "species": 1,
+        "first": "2026-06-01",
+        "last": "2026-06-08"
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-20 | Ridge B | Carabus nemoralis |  | 1",
+      "2026-06-02 | Alder Creek | Carabus nemoralis |  | 1",
+      "2026-06-11 | Ridge B | Pterostichus niger |  | 1",
+      "2026-05-30 | Alder Creek | Abax parallelepipedus |  | 1",
+      "2026-06-06 | Ridge B | Carabus nemoralis |  | 1"
+    ],
+    "expected": {
+      "Ridge B": {
+        "lots": 3,
+        "individuals": 3,
+        "species": 2,
+        "first": "2026-06-06",
+        "last": "2026-06-20"
+      },
+      "Alder Creek": {
+        "lots": 2,
+        "individuals": 2,
+        "species": 2,
+        "first": "2026-05-30",
+        "last": "2026-06-02"
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Ridge B | Carabus nemoralis |  | 0",
+      "2026-06-04 | Ridge B | Pterostichus niger |  | 2"
+    ],
+    "expected": {
+      "Ridge B": {
+        "lots": 2,
+        "individuals": 2,
+        "species": 2,
+        "first": "2026-06-03",
+        "last": "2026-06-04"
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Ridge B | Carabus nemoralis |  | 1",
+      "2026-06-03 | Alder Creek | Carabus nemoralis |  | 1",
+      "2026-06-04 | Alder Creek | Pterostichus niger |  | 1"
+    ],
+    "expected": {
+      "Ridge B": {
+        "lots": 1,
+        "individuals": 1,
+        "species": 1,
+        "first": "2026-06-03",
+        "last": "2026-06-03"
+      },
+      "Alder Creek": {
+        "lots": 2,
+        "individuals": 2,
+        "species": 2,
+        "first": "2026-06-03",
+        "last": "2026-06-04"
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-07-01 | Fen Margin | Abax parallelepipedus | 21 mm | 1"
+    ],
+    "expected": {
+      "Fen Margin": {
+        "lots": 1,
+        "individuals": 1,
+        "species": 1,
+        "first": "2026-07-01",
+        "last": "2026-07-01"
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2025-12-30 | Fen Margin | Carabus nemoralis |  | 1",
+      "2026-01-02 | Fen Margin | Carabus nemoralis |  | 1",
+      "2025-12-29 | Ridge B | Pterostichus niger |  | 1"
+    ],
+    "expected": {
+      "Fen Margin": {
+        "lots": 2,
+        "individuals": 2,
+        "species": 1,
+        "first": "2025-12-30",
+        "last": "2026-01-02"
+      },
+      "Ridge B": {
+        "lots": 1,
+        "individuals": 1,
+        "species": 1,
+        "first": "2025-12-29",
+        "last": "2025-12-29"
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-10 | Ridge B | Carabus nemoralis |  | 1",
+      "2026-06-12 | Alder Creek | Carabus nemoralis |  | 1",
+      "2026-06-01 | Ridge B | Carabus nemoralis |  | 1"
+    ],
+    "expected": {
+      "Ridge B": {
+        "lots": 2,
+        "individuals": 2,
+        "species": 1,
+        "first": "2026-06-01",
+        "last": "2026-06-10"
+      },
+      "Alder Creek": {
+        "lots": 1,
+        "individuals": 1,
+        "species": 1,
+        "first": "2026-06-12",
+        "last": "2026-06-12"
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-01 | Ridge B | Carabus nemoralis |  | 1",
+      "2026-06-02 | Ridge B | Pterostichus niger |  | 2",
+      "2026-06-03 | Ridge B | Abax parallelepipedus |  | 3",
+      "2026-06-04 | Ridge B | Carabus nemoralis |  | 4",
+      "2026-06-05 | Ridge B | Pterostichus niger |  | 5",
+      "2026-06-06 | Ridge B | Abax parallelepipedus |  | 6",
+      "2026-06-07 | Ridge B | Carabus nemoralis |  | 7"
+    ],
+    "expected": {
+      "Ridge B": {
+        "lots": 7,
+        "individuals": 28,
+        "species": 3,
+        "first": "2026-06-01",
+        "last": "2026-06-07"
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-01 | Ridge B | Carabus nemoralis |  | 5",
+      "2026-06-02 | Alder Creek | Carabus nemoralis |  | 1",
+      "2026-06-03 | Ridge B | Carabus nemoralis |  | 5",
+      "2026-06-04 | Alder Creek | Pterostichus niger |  | 1",
+      "2026-06-05 | Ridge B | Pterostichus niger |  | 5",
+      "2026-06-06 | Alder Creek | Carabus nemoralis |  | 1"
+    ],
+    "expected": {
+      "Ridge B": {
+        "lots": 3,
+        "individuals": 15,
+        "species": 2,
+        "first": "2026-06-01",
+        "last": "2026-06-05"
+      },
+      "Alder Creek": {
+        "lots": 3,
+        "individuals": 3,
+        "species": 2,
+        "first": "2026-06-02",
+        "last": "2026-06-06"
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-03 | Fen Margin | Carabus nemoralis |  | 1",
+      "2026-06-03 | Fen Margin | Pterostichus niger |  | 1",
+      "2026-06-03 | Fen Margin | Abax parallelepipedus |  | 1"
+    ],
+    "expected": {
+      "Fen Margin": {
+        "lots": 3,
+        "individuals": 3,
+        "species": 3,
+        "first": "2026-06-03",
+        "last": "2026-06-03"
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-09 | Alder Creek | Carabus nemoralis |  | 1",
+      "2026-06-09 | Ridge B | Carabus nemoralis |  | 1",
+      "2026-06-02 | Alder Creek | Pterostichus niger |  | 3",
+      "2026-06-15 | Alder Creek | Abax parallelepipedus |  | 1"
+    ],
+    "expected": {
+      "Alder Creek": {
+        "lots": 3,
+        "individuals": 5,
+        "species": 3,
+        "first": "2026-06-02",
+        "last": "2026-06-15"
+      },
+      "Ridge B": {
+        "lots": 1,
+        "individuals": 1,
+        "species": 1,
+        "first": "2026-06-09",
+        "last": "2026-06-09"
+      }
+    },
+    "hidden": true
+  },
+  {
+    "input": [
+      "2026-06-12 | Ridge B | Carabus nemoralis |  | 2",
+      "2026-06-05 | Ridge B | Carabus nemoralis |  | 1",
+      "2026-06-08 | Ridge B | Carabus nemoralis |  | 1"
+    ],
+    "expected": {
+      "Ridge B": {
+        "lots": 3,
+        "individuals": 4,
+        "species": 1,
+        "first": "2026-06-05",
+        "last": "2026-06-12"
+      }
+    },
+    "hidden": true
+  }
+]

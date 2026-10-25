@@ -6,6 +6,7 @@ import { Uploader } from "./uploader";
 import { handle, type Env } from "../../apps/ingest/src/index";
 import type { EventRow } from "../domain/ingest";
 import { canonical, type Json } from "../domain/json";
+import { SITE_CAPTURE_VERSION } from "../domain/site";
 
 async function setup() {
   const store = await openPracticeStore(new IDBFactory());
@@ -34,14 +35,16 @@ async function setup() {
   });
   const record = (sequence: number) => {
     const value = {
-      type: "observation.board.page",
-      observationId: `board-x.${sequence}`,
+      type: "site.page",
+      observationId: `site-x.${sequence}`,
       participantId,
-      source: { id: "board-x", sequence },
+      sessionId: "session-x",
+      source: { id: "site-x", sequence },
       occurredAt: "2026-10-25T10:00:00.000Z",
       elapsedMs: sequence,
-      captureVersion: "board-capture-7.0.0",
-      issue: null,
+      captureVersion: SITE_CAPTURE_VERSION,
+      termsVersion: "2026-10-25",
+      challenge: null,
       data: { visible: true },
     };
     return { recordId: value.observationId, kind: "observation" as const, participantId, payload: canonical(value as unknown as Json) };
@@ -57,9 +60,12 @@ async function setup() {
   };
 }
 
-test("the outbox drains oldest first; failures keep records and back off; records stay on the device", async () => {
+test("the outbox drains oldest first; failures keep records and back off; uploaded site records are forgotten", async () => {
   const t = await setup();
   await t.store.write([t.record(1), t.record(2)]);
+  assert.equal(await t.store.waiting(), 2);
+  // Writing the same record again is a duplicate and is not queued twice.
+  await t.store.write([t.record(2)]);
   assert.equal(await t.store.waiting(), 2);
   t.setDown(true);
   await t.uploader.flush();
@@ -73,10 +79,8 @@ test("the outbox drains oldest first; failures keep records and back off; record
   await t.uploader.flush();
   assert.equal(await t.store.waiting(), 0);
   assert.deepEqual(t.rows.map((r) => r.sequence), [1, 2, 3]);
-  assert.equal((await t.store.workspaceRecords()).length, 3);
-  // Writing the same record again is a duplicate and is not queued twice.
-  await t.store.write([t.record(3)]);
-  assert.equal(await t.store.waiting(), 0);
+  // Practice never needs site records again once they are uploaded.
+  assert.equal((await t.store.records()).length, 0);
 });
 
 test("large backlogs go in several batches; a deleted participant stops uploading", async () => {

@@ -4,7 +4,7 @@ import { parseInline, parseMarkdown, safeHref } from "./markdown";
 import { live } from "./test-fixtures";
 
 test("SQL challenge schemas render as structured tables without interpreting HTML", () => {
-  const blocks = parseMarkdown(live("collected-by-partner").revision.body);
+  const blocks = parseMarkdown(live("SQL-002").revision.task);
   const table = blocks.find((block) => block.type === "table");
   assert.ok(table && table.type === "table");
   assert.equal(table.header.length, 4);
@@ -113,7 +113,7 @@ test("inline: code protects its contents and snake_case is not italics", () => {
 
 test("links: only web and same-site targets become links", () => {
   assert.equal(safeHref("https://example.com/x"), "https://example.com/x");
-  assert.equal(safeHref("/issues?q=kind:bug"), "/issues?q=kind:bug");
+  assert.equal(safeHref("/challenges?q=kind:bug"), "/challenges?q=kind:bug");
   for (const bad of [
     "javascript:alert(1)",
     "data:text/html,x",

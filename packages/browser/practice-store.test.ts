@@ -2,9 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { IDBFactory } from "fake-indexeddb";
 import { openPracticeStore } from "./practice-store";
-import type { WorkspaceRecord } from "../domain/workspace";
+import type { StoredRecord } from "../domain/records";
 
-const record = (recordId: string, payload: string): WorkspaceRecord => ({
+const record = (recordId: string, payload: string): StoredRecord => ({
   recordId,
   kind: "observation",
   participantId: "p",
@@ -25,7 +25,7 @@ test("records and the pseudonymous identity survive reopen; retries deduplicate"
       ["duplicate", "conflict"],
     );
     assert.deepEqual(
-      (await store.workspaceRecords()).map((r) => r.payload),
+      (await store.records()).map((r) => r.payload),
       ["{}"],
     );
   } finally {
@@ -42,32 +42,17 @@ test("clear removes records and the identity together", async () => {
   store.close();
   store = await openPracticeStore(factory);
   try {
-    assert.deepEqual(await store.workspaceRecords(), []);
+    assert.deepEqual(await store.records(), []);
     assert.notEqual(await store.participantId(), oldId);
   } finally {
     store.close();
   }
 });
 
-test("upgrading to the outbox queues records made before it, so nothing is skipped", async () => {
-  const factory = new IDBFactory();
-  // A version 3 store, as it was before uploads existed.
-  await new Promise<void>((resolve, reject) => {
-    const request = factory.open("muscle-memory-local-practice", 3);
-    request.onupgradeneeded = () => {
-      request.result.createObjectStore("settings");
-      const workspace = request.result.createObjectStore("workspace", { keyPath: "recordId" });
-      workspace.add(record("s.1", "{}"));
-      workspace.add(record("s.2", "{}"));
-    };
-    request.onsuccess = () => {
-      request.result.close();
-      resolve();
-    };
-    request.onerror = () => reject(request.error);
-  });
-  const store = await openPracticeStore(factory);
+test("every record written is queued for upload, oldest first, until sent", async () => {
+  const store = await openPracticeStore(new IDBFactory());
   try {
+    await store.write([record("s.1", "{}"), record("s.2", "{}")]);
     assert.equal(await store.waiting(), 2);
     const { keys, records } = await store.pending(10, 1_000_000);
     assert.deepEqual(records.map((r) => r.recordId), ["s.1", "s.2"]);
@@ -98,7 +83,7 @@ test("a dump restores elsewhere as the same identity, records and upload queue",
     await to.restore(dump);
     assert.equal(await to.participantId(), id);
     assert.equal(await to.deviceSecret(), secret);
-    assert.deepEqual((await to.workspaceRecords()).map((r) => r.recordId), ["s.1", "s.2", "s.3"]);
+    assert.deepEqual((await to.records()).map((r) => r.recordId), ["s.1", "s.2", "s.3"]);
     // What was already uploaded is not sent again; the rest is, oldest first.
     assert.deepEqual((await to.pending(10, 1_000_000)).records.map((r) => r.recordId), ["s.2", "s.3"]);
   } finally {

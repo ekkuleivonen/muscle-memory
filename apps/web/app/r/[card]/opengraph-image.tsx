@@ -1,8 +1,7 @@
 import { ImageResponse } from "next/og";
 import { LANGUAGES } from "../../../lib/languages";
-import { getLibrary } from "../../../lib/load";
+import { getChallenges } from "../../../lib/load";
 import { outcomeLines, outcomeSentence } from "../../../lib/outcome";
-import { receiptLines, sentence } from "../../../lib/result";
 import { inspectCard } from "../../../lib/share";
 
 export const size = { width: 1200, height: 630 };
@@ -20,29 +19,19 @@ export default async function Image({
 }) {
   // Only a card the page would show; anything else gets the plain invitation.
   const link = inspectCard((await params).card);
-  const card =
-    link.kind === "outcome"
-      ? link.outcome
-      : link.kind === "result"
-        ? link.result
-        : null;
+  const card = link.kind === "outcome" ? link.outcome : null;
   const label = card
     ? (LANGUAGES.find((l) => l.id === card.l)?.label ?? card.l)
     : "";
   // As on the page: a card for a retired challenge is not shown.
-  const issue = card ? (await getLibrary()).findIssue(card.k) : undefined;
+  const challenge = card ? (await getChallenges()).findChallenge(card.k) : undefined;
   const shown =
-    issue && link.kind === "outcome"
+    challenge && card
       ? {
-          headline: outcomeSentence(link.outcome, label, issue.title),
-          stats: outcomeLines(link.outcome),
+          headline: outcomeSentence(card, label, challenge.title),
+          stats: outcomeLines(card),
         }
-      : issue && link.kind === "result"
-        ? {
-            headline: sentence(link.result, label, issue.title),
-            stats: receiptLines(link.result),
-          }
-        : null;
+      : null;
   return new ImageResponse(
     (
       <div

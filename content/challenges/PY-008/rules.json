@@ -1,0 +1,22 @@
+[
+  {
+    "id": "pairwise",
+    "message": "Keep it to one pass with a lookup by email: don't compare each record against the customers kept so far.",
+    "when": {
+      "any": [
+        {
+          "pattern": "^\\s+for \\w+ in (customers|kept|seen|result|results|out|output|deduped|unique)\\b",
+          "present": true
+        },
+        {
+          "pattern": "\\bany\\(",
+          "present": true
+        },
+        {
+          "pattern": "in range\\(len\\(",
+          "present": true
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "title": "Length report crashes on the Oregon volunteers' sheets",
+  "summary": "Read lengths in inches and without a space, and leave unmeasured lots out of the numbers.",
+  "difficulty": "medium",
+  "tags": [
+    "debugging",
+    "parsing",
+    "units"
+  ],
+  "file": "report.py",
+  "entrypoint": "length_report"
+}

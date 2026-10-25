@@ -1,0 +1,12 @@
+{
+  "title": "List endpoints accept any page size",
+  "summary": "Parse page and per_page with defaults and a hard cap.",
+  "difficulty": "easy",
+  "tags": [
+    "parsing",
+    "validation",
+    "http"
+  ],
+  "file": "parse_page.go",
+  "entrypoint": "ParsePage"
+}

@@ -1,0 +1,16 @@
+{
+  "title": "Product filter checkboxes have no labels",
+  "summary": "Tie every filter checkbox to a label so it is accessible.",
+  "difficulty": "easy",
+  "tags": [
+    "accessibility",
+    "forms",
+    "semantics"
+  ],
+  "file": "templates/filter-form-labels.html",
+  "entrypoint": "page",
+  "parameters": [
+    "selector",
+    "read"
+  ]
+}

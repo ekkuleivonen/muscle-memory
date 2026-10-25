@@ -1,0 +1,10 @@
+[
+  {
+    "id": "keep-lock",
+    "message": "RoundRobin.Next is called concurrently from every connection's goroutine, so it must lock r.mu while it reads and updates the balancer's state.",
+    "when": {
+      "pattern": "\\.Lock\\(\\)",
+      "present": false
+    }
+  }
+]

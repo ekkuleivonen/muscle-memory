@@ -978,20 +978,19 @@ async function clangCheck(browserType) {
     const host = document.getElementById("host");
     const results = {};
     const catalog = await (await fetch("/catalog.json")).json();
-    // An issue's live revision, flattened to what the engines take.
-    const issue = (id) => {
-      const meta = catalog.issues.find((i) => i.id === id);
-      const { workspace, checks } = catalog.revisions[meta.revision];
+    // A challenge's live revision, with its cases as the engines take them.
+    const challenge = (key) => {
+      const meta = catalog.challenges.find((i) => i.key === key);
+      const revision = catalog.revisions[meta.revision];
       return {
-        ...workspace,
-        inputs: checks.cases.map((c) => c.input),
-        expected: checks.cases.map((c) => c.expected),
-        starter: Object.values(workspace.files).find((f) => f.role === "edit").text,
+        ...revision,
+        inputs: revision.cases.map((c) => c.input),
+        expected: revision.cases.map((c) => c.expected),
       };
     };
-    const ring = issue("ring-buffer");
-    const lru = issue("lru-cache");
-    // One runner for C, kept between runs like the IDE does.
+    const ring = challenge("C-002");
+    const lru = challenge("CPP-001");
+    // One runner for C, kept between runs as practice does.
     const clang = new MMRunner.Runner(MMRunner.ENGINES.clang, host, {
       timeoutMs: 4000,
     });
@@ -1122,18 +1121,17 @@ async function csharpCheck(browserType) {
   await tab.goto(APP + "/");
   const report = await tab.evaluate(async (OUT) => {
     const catalog = await (await fetch("/catalog.json")).json();
-    // An issue's live revision, flattened to what the engines take.
-    const issue = (id) => {
-      const meta = catalog.issues.find((i) => i.id === id);
-      const { workspace, checks } = catalog.revisions[meta.revision];
+    // A challenge's live revision, with its cases as the engines take them.
+    const challenge = (key) => {
+      const meta = catalog.challenges.find((i) => i.key === key);
+      const revision = catalog.revisions[meta.revision];
       return {
-        ...workspace,
-        inputs: checks.cases.map((c) => c.input),
-        expected: checks.cases.map((c) => c.expected),
-        starter: Object.values(workspace.files).find((f) => f.role === "edit").text,
+        ...revision,
+        inputs: revision.cases.map((c) => c.input),
+        expected: revision.cases.map((c) => c.expected),
       };
     };
-    const fee = issue("late-fee-rounding");
+    const fee = challenge("CS-002");
     const host = document.getElementById("host");
     const run = async (code, extra = {}) => {
       const runner = new MMRunner.Runner(MMRunner.ENGINES.csharp, host, {
@@ -1188,7 +1186,7 @@ async function csharpCheck(browserType) {
   const outputs = (outcome) => outcome.cases?.map((c) => c.output?.text);
   const expected = report.expected.map((e) => JSON.stringify(e));
   return {
-    // The ticket's six visible cases hold two midpoints; CI's hidden cases add more.
+    // The challenge's six examples hold two midpoints; its hidden cases add more.
     "csharp: the starter's banker's rounding fails just the midpoint cases":
       report.starter.status === "completed" &&
       outputs(report.starter)
@@ -1224,18 +1222,17 @@ async function javaCheck(browserType) {
   await tab.goto(APP + "/");
   const report = await tab.evaluate(async (OUT) => {
     const catalog = await (await fetch("/catalog.json")).json();
-    // An issue's live revision, flattened to what the engines take.
-    const find = (id) => {
-      const meta = catalog.issues.find((i) => i.id === id);
-      const { workspace, checks } = catalog.revisions[meta.revision];
+    // A challenge's live revision, with its cases as the engines take them.
+    const find = (key) => {
+      const meta = catalog.challenges.find((i) => i.key === key);
+      const revision = catalog.revisions[meta.revision];
       return {
-        ...workspace,
-        inputs: checks.cases.map((c) => c.input),
-        expected: checks.cases.map((c) => c.expected),
-        starter: Object.values(workspace.files).find((f) => f.role === "edit").text,
+        ...revision,
+        inputs: revision.cases.map((c) => c.input),
+        expected: revision.cases.map((c) => c.expected),
       };
     };
-    const issue = find("password-policy");
+    const challenge = find("JAVA-002");
     const host = document.getElementById("host");
     const run = async (code, extra = {}) => {
       const runner = new MMRunner.Runner(MMRunner.ENGINES.java, host, {
@@ -1245,37 +1242,37 @@ async function javaCheck(browserType) {
         return await runner.run({
           runId: "java",
           code,
-          inputs: issue.inputs,
+          inputs: challenge.inputs,
           filename: "src/main/java/com/acme/accounts/PasswordPolicy.java",
           language: "java",
-          entrypoint: issue.entrypoint,
-          adapter: issue.adapter,
+          entrypoint: challenge.entrypoint,
+          adapter: challenge.adapter,
           ...extra,
         });
       } finally {
         runner.dispose();
       }
     };
-    const results = { expected: issue.expected };
-    results.starter = await run(issue.starter);
+    const results = { expected: challenge.expected };
+    results.starter = await run(challenge.starter);
     results.fixed = await run(
-      issue.starter.replace(
+      challenge.starter.replace(
         'if (password.length() < 8) broken.add("too-short");',
         'System.out.println("checking " + password.length());\n        if (password.length() < 12) broken.add("too-short");\n        if (!password.matches(".*\\\\d.*")) broken.add("no-digit");\n        if (!password.matches(".*[A-Za-z].*")) broken.add("no-letter");\n        if (password.matches(".*\\\\s.*")) broken.add("has-whitespace");',
       ),
     );
     results.syntax = await run(
-      issue.starter.replace("return broken;", "return broken"),
+      challenge.starter.replace("return broken;", "return broken"),
     );
     results.thrown = await run(
-      issue.starter.replace(
+      challenge.starter.replace(
         "return broken;",
         'throw new IllegalStateException("nope");',
       ),
     );
     // TeaVM's inline JavaScript (@JSBody) is not Java; solutions that use it are refused.
     results.jsbody = await run(
-      issue.starter.replace(
+      challenge.starter.replace(
         "return broken;",
         `broken.add("net-" + probe());
         return broken;

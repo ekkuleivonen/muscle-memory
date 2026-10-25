@@ -1,0 +1,12 @@
+{
+  "title": "Lockout message tells people to try again in 0 minutes",
+  "summary": "The lockout message rounds the time left down, so people retry too early and lock themselves out again.",
+  "difficulty": "easy",
+  "tags": [
+    "time",
+    "rounding",
+    "copy"
+  ],
+  "file": "src/retryMessage.php",
+  "entrypoint": "retryMessage"
+}

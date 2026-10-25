@@ -15,13 +15,13 @@ type Props = { searchParams: Promise<{ next?: string }> };
  * the page someone was heading for. The setup questions are not asked here.
  */
 export default async function Consent({ searchParams }: Props) {
-  const next = safeNext((await searchParams).next, "/dashboard");
+  const next = safeNext((await searchParams).next, "/challenges");
   const store = await cookies();
   if (hasConsent(store.get(CONSENT_COOKIE)?.value)) redirect(next);
   return (
-    <div className="legal home play">
+    <div className="legal home">
       <header className="legal-head">
-        <Link href="/" className="workspace-name">
+        <Link href="/" className="site-name">
           <img
             className="logo-mark"
             src="/logo.svg"

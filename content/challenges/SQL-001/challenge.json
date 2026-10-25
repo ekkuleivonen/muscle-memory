@@ -1,0 +1,11 @@
+{
+  "title": "Revenue by customer for the monthly report",
+  "summary": "Total each customer's orders, biggest first.",
+  "difficulty": "easy",
+  "tags": [
+    "aggregation",
+    "sorting"
+  ],
+  "file": "queries/top-customers.sql",
+  "entrypoint": "query"
+}

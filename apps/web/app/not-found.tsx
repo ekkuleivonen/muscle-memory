@@ -1,18 +1,17 @@
-import Link from "next/link";
+import type { Metadata } from "next";
+import { TermFooter } from "./_terminal/footer";
+import { NotFoundView } from "./_terminal/not-found-view";
+import "./_terminal/terminal.css";
+
+export const metadata: Metadata = { title: "Not found · Muscle Memory" };
 
 export default function NotFound() {
   return (
-    <main className="content recovery-state">
-      <h1>That page isn't here</h1>
-      <p>
-        The link may be incomplete, or the issue may no longer be available.
-      </p>
-      <Link className="btn start" href="/issues">
-        Browse issues
-      </Link>{" "}
-      <Link className="btn" href="/dashboard">
-        Back to your desk
-      </Link>
-    </main>
+    <>
+      <div className="term">
+        <NotFoundView />
+      </div>
+      <TermFooter trail={[{ label: "404", href: "" }]} />
+    </>
   );
 }

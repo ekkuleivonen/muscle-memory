@@ -1,6 +1,6 @@
 /**
- * What a full check shows, case by case. A case in the repo's test file is public: a failure
- * shows its input, the expected value and what the code gave. A case only the full check runs
+ * What a submission shows, case by case. An example is public: a failure
+ * shows its input, the expected value and what the code gave. A case only Submit runs
  * stays hidden: a failure gives its position and a failure category, never its name (names can
  * state the answer), input, expected value, the code's output or an error message, so the check
  * is not an oracle for its answers.
@@ -8,7 +8,7 @@
  */
 import type { Case } from "../../../packages/content/model";
 import type { Json } from "../../../packages/domain/json";
-import { runFeedback } from "../../../packages/domain/workspace";
+import { runFeedback } from "../../../packages/domain/records";
 
 /** How a case failed, said the same way for public and hidden cases. */
 export type FailureCategory =
@@ -26,7 +26,7 @@ export type FailureCategory =
 export interface CheckRow {
   /** A public case's name in the tests, or "case 3"; a hidden case is "hidden case 3". */
   name: string;
-  /** In the repo's test file. */
+  /** One of the examples. */
   visible: boolean;
   passed: boolean;
   /**
@@ -34,7 +34,7 @@ export interface CheckRow {
    * either from its input, so neither is safe for a hidden case; a public case's `detail` has them.
    */
   failure: { category: FailureCategory } | null;
-  /** Public cases only: the case as the test file has it, and what the code gave when it failed. */
+  /** Examples only: the case, and what the code gave when it failed. */
   detail: {
     input: Json;
     expected: Json;
@@ -142,7 +142,7 @@ function got(
   return { label: "Got", text: "nothing" };
 }
 
-/** A full check's outcome against the cases it ran; null when there is no outcome to read. */
+/** A submission's outcome against the cases it ran; null when there is no outcome to read. */
 export function diagnose(
   raw: unknown,
   cases: readonly Case[] | undefined,
@@ -163,7 +163,7 @@ export function diagnose(
   if (outcome.phase !== "tests" || !outcome.cases) {
     // A run with hidden cases shows no user-written text: module code can read the inputs
     // (Python's harness has them before the code is even loaded) and put them in an error.
-    const shown = cases.every((c) => c.visible) && outcome.error;
+    const shown = cases.every((c) => !c.hidden) && outcome.error;
     return {
       kind: "error",
       stage: outcome.phase === "compile" ? "compile" : "runtime",
@@ -177,11 +177,11 @@ export function diagnose(
   const rows = cases.map((c, i): CheckRow => {
     const result = outcome.cases![i];
     return {
-      name: c.visible ? (c.name ?? `case ${i + 1}`) : hiddenLabel(i),
-      visible: c.visible,
+      name: !c.hidden ? (c.name ?? `case ${i + 1}`) : hiddenLabel(i),
+      visible: !c.hidden,
       passed: passed[i],
       failure: passed[i] ? null : failureOf(result),
-      detail: c.visible
+      detail: !c.hidden
         ? {
             input: c.input,
             expected: c.expected,
