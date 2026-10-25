@@ -399,9 +399,9 @@ test("adding the incident left every other issue's live revision as it was", () 
     assert.equal(catalog.issues.find((i) => i.id === id)?.revision, revision, id);
     assert.ok(catalog.revisions[revision], `${id} revision kept`);
   }
-  // The incident is live on exactly the revision that was reviewed.
+  // The incident is live on its current revision (the first one, 81a951d5, was replaced).
   assert.equal(
     catalog.issues.find((i) => i.id === "checkout-guest-shipping")?.revision,
-    "sha256:81a951d5526042a635ed204fce8f4c3801e0494aa7e9fb7739a190e9b2c4b400",
+    "sha256:ea2bec9e27fb47b645b7cef8c00448c735415c9bda6f93b61a44bedea479b104",
   );
 });

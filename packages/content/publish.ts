@@ -10,6 +10,9 @@ import { evaluate } from "./triggers";
 export interface Private {
   /** The editable files after a correct fix, by path. */
   readonly reference: Readonly<Record<string, string>>;
+  /** Other correct designs and plausible wrong fixes; the browser check runs them. */
+  readonly alternatives?: readonly Readonly<Record<string, string>>[];
+  readonly wrong?: readonly Readonly<Record<string, string>>[];
   /** Per teammate comment: edits that must fire it, and edits that must not. */
   readonly examples?: Readonly<
     Record<
@@ -54,6 +57,14 @@ export function publishProblems(revision: Revision, secret: Private): string[] {
     Object.entries(secret.reference).every(([path, text]) => editable[path]?.text === text)
   )
     problems.push("the reference is the starter unchanged");
+  for (const [kind, list] of [
+    ["alternative", secret.alternatives ?? []],
+    ["wrong fix", secret.wrong ?? []],
+  ] as const)
+    list.forEach((change, i) => {
+      for (const path of Object.keys(change))
+        if (!editable[path]) problems.push(`${kind} ${i + 1} changes ${path}, which is not editable`);
+    });
 
   const examples = secret.examples ?? {};
   for (const [id, { fires: firing, quiet }] of Object.entries(examples)) {

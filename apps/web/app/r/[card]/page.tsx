@@ -135,7 +135,7 @@ function SharedIncident({
           <Receipt
             top={`incident INC-1${result.iv ? ` · version ${result.iv}` : ""} · resolved`}
             headline={`Someone restored checkout in ${incidentTime(result)}.`}
-            detail={`${result.a && result.a > 1 ? "A replay" : "Their first response"}${result.iv ? ` on version ${result.iv}` : ""}. A report is filed only once a fix passes every check, is merged and is deployed. This card is theirs to share, not a verified record.`}
+            detail={`${result.a && result.a > 1 ? "A replay" : "Their first response"}${result.iv ? ` on version ${result.iv}` : ""}. A report is filed only once a fix whose checks all pass is merged. This card is theirs to share, not a verified record.`}
             metrics={result}
           />
         </section>

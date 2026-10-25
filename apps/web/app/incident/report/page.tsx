@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 /**
  * The incident report: filed only for an attempt whose fix was merged with every check passing
- * and then deployed, read from this browser's records of that attempt.
+ * (merging resolves it), read from this browser's records of that attempt.
  */
 export default async function ReportPage() {
   await requireConsent("/incident/report");

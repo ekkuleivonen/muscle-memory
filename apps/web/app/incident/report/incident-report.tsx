@@ -6,7 +6,8 @@ import type { Revision } from "../../../../../packages/content/model";
 import type { Json } from "../../../../../packages/domain/json";
 import { readProfile } from "../../../lib/account";
 import { attemptRecords } from "../../../lib/attempts";
-import { feedbackOf } from "../../../lib/feedback";
+import { attemptAt } from "../../../lib/attempts";
+import { chatOf } from "../../../lib/chat";
 import {
   attemptLabel,
   incidentState,
@@ -24,6 +25,7 @@ import {
 } from "../../../lib/result";
 import { logShare } from "../../(browse)/_components/board-log";
 import { pullHref } from "../../(browse)/_components/pulls";
+import { TeamChat } from "../../(browse)/_components/team-chat";
 import { useRecords } from "../../(browse)/_components/records";
 import { copyText, receiptLines } from "../../(browse)/_components/result-card";
 
@@ -31,7 +33,7 @@ type Channel = "copy" | "x" | "linkedin" | "native";
 
 /**
  * The report for the latest attempt, once it has earned one: its own merged pull request,
- * whose merged push passed every check, then deployed. Everything on it comes from this
+ * whose merged push passed every check (merging resolves it). Everything on it comes from this
  * browser's records of that attempt; the story lines are the fictional company's.
  */
 export function IncidentReport({
@@ -62,37 +64,28 @@ export function IncidentReport({
   }, []);
   const state = useMemo(() => records && incidentState(records), [records]);
   const report = useMemo(() => {
-    if (!records || !state?.merged || !state.deployed) return null;
+    if (!records || !state?.merged) return null;
     const attempt = attemptRecords(records, issue.slug);
     const revisionFor = (id: string) => revisions[id];
-    // What the team said to this attempt, in the order it was said: only what was released.
-    const chat = feedbackOf(attempt, issue.slug).released.flatMap((r) => {
-      if (r.kind !== "comment") return [];
-      const comment = revisions[r.issueRevision]?.team.find(
-        (c) => c.id === r.comment,
-      );
-      return comment
-        ? [
-            {
-              author: comment.author.name,
-              role: comment.author.role,
-              text: comment.text[r.wording] ?? comment.text[0],
-            },
-          ]
-        : [];
-    });
+    // What the team said in the chat during this attempt, in the order it was said.
+    const chat = chatOf(
+      revisions[state.merged.revision]?.chat ?? [],
+      records,
+      issue.slug,
+      revisionFor,
+    );
     const timeline = incidentTimeline(records, revisionFor);
     return {
       // The numbers as at the merge, the same definitions as the merged pull request's.
       metrics: metricsOf(attempt, issue.slug, state.merged.at, revisionFor),
       timeline,
       chat,
-      // Wall clock from the attempt's first recorded moment (the page acknowledged) to the deploy.
+      // Wall clock from the attempt's first recorded moment (the page acknowledged) to the merge.
       elapsed: Math.max(
         0,
         Math.round(
-          (Date.parse(state.deployed.at) -
-            Date.parse(timeline[0]?.at ?? state.deployed.at)) /
+          (Date.parse(state.merged.at) -
+            Date.parse(timeline[0]?.at ?? state.merged.at)) /
             1000,
         ),
       ),
@@ -105,7 +98,7 @@ export function IncidentReport({
         Reading your records…
       </p>
     );
-  if (!report || !state.merged || !state.deployed)
+  if (!report || !state.merged)
     return (
       <section className="home-hero incident-unfiled">
         <p className="home-kicker">Incident report · {issue.key}</p>
@@ -113,25 +106,14 @@ export function IncidentReport({
         <p className="home-lede">
           {!state.started
             ? "There's no response to this incident yet."
-            : !state.merged
-              ? `Your ${attemptLabel(state.attempt.number).toLowerCase()} hasn't merged a fix whose checks all pass.`
-              : "Your fix is merged but not deployed, so checkout is still down."}{" "}
-          A report is filed once a fix is merged with every check passing and
-          deployed, in the same response.
+            : `Your ${attemptLabel(state.attempt.number).toLowerCase()} hasn't merged a fix whose checks all pass.`}{" "}
+          A report is filed once a fix whose checks all pass is merged, in the
+          same response.
         </p>
         <div className="home-actions">
-          {state.merged ? (
-            <Link
-              className="home-cta"
-              href={pullHref(issue.key, state.merged.number)}
-            >
-              Deploy pull request #{state.merged.number} →
-            </Link>
-          ) : (
-            <Link className="home-cta" href="/incident">
-              {state.started ? "Back to the incident →" : "Take the incident →"}
-            </Link>
-          )}
+          <Link className="home-cta" href="/incident">
+            {state.started ? "Back to the incident →" : "Take the incident →"}
+          </Link>
         </div>
       </section>
     );
@@ -175,11 +157,11 @@ export function IncidentReport({
               Pull request #{state.merged.number}
             </Link>
             : {state.merged.passed} of {state.merged.total} checks passed,
-            merged, deployed
+            merged
           </dd>
           <dt>Time to restore</dt>
           <dd>
-            {`${duration(elapsed)} wall clock, from the first step (${timeline[0]?.label ?? "none"}) to the deploy; ${duration(metrics.t)} of it active work`}
+            {`${duration(elapsed)} wall clock, from the first step (${timeline[0]?.label ?? "none"}) to the merge; ${duration(metrics.t)} of it active work`}
           </dd>
           <dt>AI tools</dt>
           <dd>
@@ -200,11 +182,11 @@ export function IncidentReport({
 
         <h2>What happened</h2>
         <p>
-          A members-only free-shipping change (CHK-412) shipped behind a flag
-          and rolled out to everyone at 02:00. It read a loyalty tier from every
-          customer. Guests don&apos;t have one, so their quotes threw and
-          checkout answered with 500s. The regression test for order #88213 now
-          guards it.
+          A members-only free-shipping change (CHK-412) shipped on Thursday. It
+          read a loyalty tier from every customer, and guests don&apos;t have
+          one, so their quotes threw and checkout answered with 500s. Few guests
+          shop by day; the 02:00 newsletter brought enough of them to page. The
+          regression test for order #88213 now guards it.
         </p>
 
         <h2>The numbers</h2>
@@ -218,14 +200,13 @@ export function IncidentReport({
           ))}
         </dl>
         <p className="faint">
-          Raw facts from your work. No score, no rank, not a hiring
-          signal.
+          Raw facts from your work. No score, no rank, not a hiring signal.
         </p>
 
         {chat.length > 0 && (
           <>
             <h2>Overheard in #incident</h2>
-            <p className="faint">What the team said as you worked, in order.</p>
+            <p className="faint">The team chat while you worked, in order.</p>
             <ul className="incident-overheard">
               {chat.map((line, index) => (
                 <li key={index}>
@@ -275,6 +256,10 @@ export function IncidentReport({
         <Link href="/incident">Replay the incident</Link> ·{" "}
         <Link href="/dashboard">Back to your desk</Link>
       </p>
+      <TeamChat
+        messages={chat}
+        scope={`${issue.slug}@${attemptAt(records, issue.slug).start ?? "first"}`}
+      />
     </>
   );
 }

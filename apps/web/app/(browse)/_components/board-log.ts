@@ -13,7 +13,7 @@ import { randomId } from "../../../../../packages/browser/random-id";
 import {
   boardArrival,
   boardClose,
-  boardDeploy,
+  boardResolve,
   boardMove,
   boardResult,
   boardShare,
@@ -25,7 +25,7 @@ import {
   type BoardBase,
   type BoardArrivalData,
   type BoardCloseData,
-  type BoardDeployData,
+  type BoardResolveData,
   type BoardMoveData,
   type BoardResultData,
   type BoardShareData,
@@ -116,12 +116,12 @@ export function logResult(
   return log((base) => boardResult({ ...base, issue, data }), "Result");
 }
 
-/** The simulated deploy of a merged incident fix. Resolves once it is stored. */
-export function logDeploy(
+/** The person resolved one of a pull request's review findings themselves. */
+export function logResolve(
   issue: { id: string; revision: string },
-  data: BoardDeployData,
+  data: BoardResolveData,
 ): Promise<boolean> {
-  return log((base) => boardDeploy({ ...base, issue, data }), "Deploy");
+  return log((base) => boardResolve({ ...base, issue, data }), "Resolve");
 }
 
 export function logShare(

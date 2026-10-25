@@ -191,7 +191,7 @@ test("aggregates are served from the control bucket, or empty before the first r
   assert.equal((await response.json()).issues["QUICK-1"].n, 3);
 });
 
-test("board records from 6.0.0, 6.1.0 and 7.0.0 are accepted, older ones are not", async () => {
+test("board records from 6.0.0, 6.1.0, 7.0.0 and 7.1.0 are accepted, older ones are not", async () => {
   const { env, sent } = fakes();
   const me = await device();
   const board = (sequence: number, captureVersion: string, extra: Record<string, unknown> = {}) =>
@@ -207,6 +207,11 @@ test("board records from 6.0.0, 6.1.0 and 7.0.0 are accepted, older ones are not
     // Still in an outbox from before the replay release.
     board(1, "board-capture-6.0.0", { consentVersion: "terms-2026-10-24" }),
     board(4, "board-capture-6.1.0", { consentVersion: "terms-2026-10-25.1" }),
+    board(5, "board-capture-7.1.0", {
+      consentVersion: "terms-2026-10-25.1",
+      type: "observation.board.resolved",
+      data: { issueKey: "INC-1", pullRequest: 1, comment: "catch-hides-guests", via: "pointer" },
+    }),
     board(2, "board-capture-7.0.0", {
       consentVersion: "terms-2026-10-25.1",
       type: "observation.board.deployed",
@@ -220,13 +225,14 @@ test("board records from 6.0.0, 6.1.0 and 7.0.0 are accepted, older ones are not
   );
   assert.equal(response.status, 200);
   const body = await response.json();
-  assert.equal(body.accepted, 3);
+  assert.equal(body.accepted, 4);
   // Each row keeps the exact consent version its device recorded.
   assert.deepEqual(
     sent.map((row) => [row.type, row.capture_version, row.consent_version]),
     [
       ["observation.board.moved", "board-capture-6.0.0", "terms-2026-10-24"],
       ["observation.board.moved", "board-capture-6.1.0", "terms-2026-10-25.1"],
+      ["observation.board.resolved", "board-capture-7.1.0", "terms-2026-10-25.1"],
       ["observation.board.deployed", "board-capture-7.0.0", "terms-2026-10-25.1"],
     ],
   );

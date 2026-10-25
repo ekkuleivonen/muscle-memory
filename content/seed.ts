@@ -7,7 +7,7 @@
  * An issue's `private` part (reference solution, trigger examples) is for publish checks only:
  * it is never written to the catalog, and nothing the app ships imports this file.
  */
-import type { Trigger } from "../packages/content/model";
+import type { ChatAfter, Trigger } from "../packages/content/model";
 
 /** A note in the ticket's own thread, there when the issue is opened. */
 export type Comment = { author: string; role: string; body: string };
@@ -23,6 +23,8 @@ export interface SeedTeamComment {
   text: string[];
   when: Trigger;
   repeat?: "once" | "while-true";
+  /** Only the person's Resolve clears it (see TeamComment.resolve). */
+  resolve?: "explicit";
 }
 
 /** A hint: an idea, never solution code. A plain string waits for active minutes. */
@@ -46,6 +48,10 @@ export interface SeedIssue {
   comments: Comment[];
   /** Later comments released by triggers: on the ticket, or reviewing a pull request. */
   team?: SeedTeamComment[];
+  /** CI failures as findings only Resolve clears (see Revision.ciFindings). */
+  ciFindings?: "explicit";
+  /** The team chat around the work: atmosphere, never a clue (see ChatLine). */
+  chat?: { id: string; author: string; role: string; text: string; after: ChatAfter }[];
   entrypoint: string;
   starter: string;
   /** Named when each input lists several arguments; otherwise it is the only one. */
@@ -82,6 +88,10 @@ export interface SeedPrivate {
    * must not. Every blocking review comment needs both.
    */
   examples?: Record<string, { fires: Record<string, string>[]; quiet: Record<string, string>[] }>;
+  /** Other correct designs, as changes to the editable files: each must pass every case. */
+  alternatives?: Record<string, string>[];
+  /** Plausible wrong fixes: each must fail at least one case. */
+  wrong?: Record<string, string>[];
 }
 
 export interface SeedProject {
@@ -2990,8 +3000,9 @@ const BASE_PROJECTS: SeedProject[] = [
 
 The team leans on AI tools for most of its day. Tonight those tools are down, and so is checkout.
 
-- \`src/checkout/quote.js\`: the quote. The only file you change.
-- \`src/checkout/shipping.js\`, \`src/checkout/money.js\`: shipping thresholds and money helpers.
+- \`src/checkout/quote.js\`: the quote.
+- \`src/checkout/shipping.js\`: shipping and its thresholds.
+- \`src/checkout/money.js\`: money helpers (read-only).
 - \`logs/checkout-api.log\`: the last few minutes of production logs.
 - \`RUNBOOK.md\`: what to do when paged.`,
     issues: [],

@@ -81,7 +81,7 @@ export default async function IncidentPage({ searchParams }: Props) {
           <li>Read the production log and find the line that breaks.</li>
           <li>Run the failing regression test.</li>
           <li>Fix it in the IDE, open a pull request, get CI green, merge.</li>
-          <li>Deploy, then file the incident report.</li>
+          <li>Merged means fixed: main ships itself. Then file the report.</li>
         </ol>
         <p className="home-fine">
           A fictional company, a real bug, about five to ten minutes, no timer.

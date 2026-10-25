@@ -12,6 +12,11 @@ import { canonical, type Json } from "./json";
 import type { WorkspaceRecord } from "./workspace";
 
 /**
+ * 7.1.0: resolving and no deploys. `resolved` records the person resolving one of a pull
+ * request's review findings themselves (Resolve, without a reply); it never touches CI, and a
+ * finding the code still triggers comes back on a later push. `deployed` is no longer recorded:
+ * merging a passing fix ends the incident, and nothing the person did not do is recorded as
+ * an action. 7.0.0 `deployed` records already made stay valid and keep their meaning.
  * 7.0.0: replays. A done issue can be taken again on purpose: a move from `done` to
  * `in-progress` with `trigger: "replay"` starts a new attempt, and only that move leaves Done.
  * The attempt's records begin there, so a later merge (from In progress to Done, as before)
@@ -49,7 +54,7 @@ import type { WorkspaceRecord } from "./workspace";
  * issue to Done (`trigger: "pull-request-merged"`, by pointer or keyboard). Earlier versions
  * were never released.
  */
-export const BOARD_CAPTURE_VERSION = "board-capture-7.0.0";
+export const BOARD_CAPTURE_VERSION = "board-capture-7.1.0";
 /** What this capture does not record. Absence is a gap, not evidence of no activity. */
 export const BOARD_CAPTURE_GAPS = [
   "visits-before-accepting-the-terms",
@@ -151,13 +156,13 @@ export interface BoardResultData {
 }
 
 /**
- * The simulated deploy of a merged incident fix: the person pressed Deploy. Names the merged
- * pull request and the run whose passing checks it ships; nothing leaves the browser.
+ * The person resolved one of a pull request's review findings themselves (Resolve). Names the
+ * finding by comment id in the revision the observation names.
  */
-export interface BoardDeployData {
+export interface BoardResolveData {
   readonly issueKey: string;
   readonly pullRequest: number;
-  readonly runId: string;
+  readonly comment: string;
   readonly via: BoardMoveVia;
 }
 
@@ -180,7 +185,7 @@ interface BoardData {
   "observation.board.arrived": BoardArrivalData;
   "observation.board.shared": BoardShareData;
   "observation.board.result": BoardResultData;
-  "observation.board.deployed": BoardDeployData;
+  "observation.board.resolved": BoardResolveData;
 }
 
 export interface BoardObservation<
@@ -489,14 +494,14 @@ export function boardResult(
   return envelope("observation.board.result", input, { issueKey, pullRequest, language, metrics, values });
 }
 
-export function boardDeploy(
-  input: BoardBase & { issue: { id: string; revision: string }; data: BoardDeployData },
-): BoardObservation<"observation.board.deployed"> {
-  const { issueKey, pullRequest, runId, via } = input.data;
+export function boardResolve(
+  input: BoardBase & { issue: { id: string; revision: string }; data: BoardResolveData },
+): BoardObservation<"observation.board.resolved"> {
+  const { issueKey, pullRequest, comment, via } = input.data;
   if (!ISSUE_KEY.test(issueKey)) throw new Error("Unknown issue key.");
   if (!Number.isSafeInteger(pullRequest) || pullRequest < 1)
-    throw new Error("A deploy names its pull request.");
-  safeIdentifier(runId);
-  if (!VIAS.includes(via)) throw new Error("Unknown way of deploying.");
-  return envelope("observation.board.deployed", input, { issueKey, pullRequest, runId, via });
+    throw new Error("A resolution names its pull request.");
+  safeIdentifier(comment);
+  if (!VIAS.includes(via)) throw new Error("Unknown way of resolving.");
+  return envelope("observation.board.resolved", input, { issueKey, pullRequest, comment, via });
 }
