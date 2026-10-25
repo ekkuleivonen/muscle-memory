@@ -208,9 +208,26 @@ export function metricsOf(
   };
 }
 
-/** The card as a URL path segment: base64url of its JSON. */
+/**
+ * What of a result is public: exactly these fields and nothing else, so a field added to the
+ * metrics or the card later (or anything a caller spreads in) stays out of links until it is
+ * listed here on purpose. Never demographics, the participant ID, records or code.
+ */
+const PUBLIC: readonly (keyof Result)[] = [
+  "v", "k", "l", "c", "t", "rd", "ks", "ty", "w", "r", "g", "p", "h", "ps", "lt",
+  "fp", "fn", "iv", "a", "e",
+];
+
+/** The card as it may leave the browser: only the allowlisted fields. */
+export function publicResult(result: Result): Result {
+  return Object.fromEntries(
+    PUBLIC.filter((k) => result[k] !== undefined).map((k) => [k, result[k]]),
+  ) as unknown as Result;
+}
+
+/** The card as a URL path segment: base64url of its public fields' JSON. */
 export function encodeResult(result: Result): string {
-  const bytes = new TextEncoder().encode(JSON.stringify(result));
+  const bytes = new TextEncoder().encode(JSON.stringify(publicResult(result)));
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
