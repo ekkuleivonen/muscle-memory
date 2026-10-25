@@ -4,8 +4,8 @@ import { TermFooter } from "../_terminal/footer";
 import "../_terminal/terminal.css";
 
 /**
- * Terms or Privacy as a document read in the terminal: the command that opened it, the
- * title and version, then the Markdown as a terminal reader shows it. The text itself lives
+ * Terms or Privacy as a document read in the terminal: the title and version, then the
+ * Markdown as a terminal reader shows it; the status bar says which. The text itself lives
  * in terms.ts and privacy.ts; changing it means a new LEGAL_VERSION.
  */
 export function LegalPage({
@@ -16,7 +16,7 @@ export function LegalPage({
 }: {
   title: string;
   source: string;
-  /** The name it is `cat` from, e.g. terms.md. */
+  /** The file it is, e.g. terms.md: the status bar names it without the extension. */
   file: string;
   href: string;
 }) {
@@ -26,9 +26,6 @@ export function LegalPage({
       <div className="term">
         <main className="t-prose">
           <article>
-            <p className="t-line">
-              <span className="t-dim">~ $</span> cat {file}
-            </p>
             {LEGAL_DRAFT && (
               <p className="t-line t-note" role="note">
                 <strong>! Draft.</strong> This hasn&apos;t been reviewed by a
