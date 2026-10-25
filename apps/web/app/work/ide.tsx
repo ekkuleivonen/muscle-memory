@@ -72,7 +72,7 @@ import {
 } from "../workspace/editor";
 import { checksTypes, TypeChecker } from "../workspace/type-checker";
 import { PANEL, panelMax, SIDE, Splitter, useIdeLayout } from "./splitter";
-import { caseLabel, transcript, type Executable } from "./transcript";
+import { caseLabel, toolchain, transcript, type Executable } from "./transcript";
 import { recoveryMessage, saveBadge, saveState } from "../workspace/save-state";
 import {
   RUN_TIMEOUT_MS,
@@ -443,11 +443,12 @@ export function Ide({
       setOpening({ state: "open" });
       review();
     } catch (cause) {
+      console.warn("The IDE could not open.", cause);
       if (current())
         setOpening({
           state: "failed",
           message:
-            cause instanceof Error ? cause.message : "The IDE could not open.",
+            "The editor couldn't open your branch. Close other tabs with this issue open, then reload the page.",
         });
     }
   }
@@ -715,7 +716,7 @@ export function Ide({
                       event.detail === 0 ? "keyboard" : "pointer",
                     )
                   }
-                  title="Run the tests on your code (Ctrl/⌘-Enter). Nothing else happens."
+                  title="Run the tests on your code (Ctrl/⌘-Enter)"
                 >
                   ▶ Run tests <Shortcut />
                 </button>
@@ -756,7 +757,7 @@ export function Ide({
           ) : (
             <span
               className="ide-run disabled"
-              title={`CI can't run ${languageLabel(issue.language)} yet`}
+              title="CI isn't set up for this repo yet"
             >
               ⇡ Open pull request
             </span>
@@ -816,7 +817,7 @@ export function Ide({
           <div
             className="ide-progress"
             role="progressbar"
-            aria-label={`Loading ${engine?.label ?? "the runtime"}`}
+            aria-label="Setting up your environment"
             {...progressValue(runtime.progress)}
           />
         )}
@@ -1007,8 +1008,8 @@ export function Ide({
           <span>{languageLabel(issue.language)}</span>
           <span>
             {issue.runnable && engine
-              ? `${engine.label} · ${runtimeLabel(runtime)}`
-              : "No runner yet"}
+              ? `${toolchain(engine.label)} · ${runtimeLabel(runtime)}`
+              : "No test runner"}
           </span>
         </span>
       </footer>
@@ -1045,7 +1046,7 @@ function runtimeLabel(runtime: Runtime): string {
   if (runtime.state === "loading") {
     const p = runtime.progress;
     if (p?.phase === "download" && p.loaded < p.total)
-      return `downloading ${Math.round((p.loaded / p.total) * 100)}%`;
+      return `installing ${Math.round((p.loaded / p.total) * 100)}%`;
     return "starting…";
   }
   if (runtime.state === "ready") return "ready";
@@ -1204,15 +1205,14 @@ function Tests({
   if (!issue.runnable)
     return (
       <p className="faint">
-        Running {languageLabel(issue.language)} in the browser isn&apos;t
-        available yet. Your edits are saved as you go; the {visible} cases are
-        in {testsPath}.
+        This repo has no test runner set up yet. Your edits are saved as you
+        go; the {visible} cases are in {testsPath}.
       </p>
     );
   if (runtime.state === "unavailable")
     return (
       <p className="error" role="alert">
-        {engineFor(issue.language)?.label} could not load: {runtime.message}{" "}
+        Your environment couldn&apos;t be set up.{" "}
         <button type="button" className="ide-link" onClick={onRetry}>
           Retry
         </button>
@@ -1238,8 +1238,8 @@ function Tests({
   if (o.status === "runner-error")
     return (
       <p className="error">
-        {engineFor(issue.language)?.label} failed ({o.phase}), not your code:{" "}
-        {o.message}
+        The test runner crashed; this wasn&apos;t your code. Run the tests
+        again.
       </p>
     );
   if (o.error && o.phase !== "tests")
@@ -1256,8 +1256,7 @@ function Tests({
       <p className="ide-run-label faint">
         {run.pullRequest
           ? `Checks for pull request #${run.pullRequest.number}`
-          : "Local run"}{" "}
-        · revision {run.revision}
+          : "Local run"}
       </p>
       <p className={`ide-summary ${failed ? "fail" : "pass"}`}>
         {failed ? "✘" : "✔"} {feedback.correct} passed
@@ -1265,7 +1264,7 @@ function Tests({
         {stale && (
           <span className="faint">
             {" "}
-            · for revision {run.revision}; you have edited since
+            · you&apos;ve edited since
           </span>
         )}
       </p>
@@ -1452,8 +1451,8 @@ function PullRequests({
             </>
           ) : (
             <>
-              CI can&apos;t run {languageLabel(issue.language)} yet, so pull
-              requests open once a runner exists. Your edits are saved.
+              CI isn&apos;t set up for this repo yet, so pull requests can&apos;t
+              be opened. Your edits are saved.
             </>
           )}
         </p>
@@ -1675,15 +1674,15 @@ function Boot({
           <BootStep state={opened ? "done" : "busy"}>
             {opened ? "Checked out " : "Checking out "}
             <b className="mono">{branch}</b>
-            {!opened && " and restoring your saved work…"}
+            {!opened && "…"}
           </BootStep>
           {engine ? (
             <BootStep state={runtime.state === "loading" ? "busy" : "done"}>
               {downloading
-                ? `Loading ${engine.label} in this tab`
+                ? `Installing ${toolchain(engine.label)}`
                 : runtime.state === "loading"
-                  ? `Starting ${engine.label}…`
-                  : `${engine.label} ready`}
+                  ? `Starting ${toolchain(engine.label)}…`
+                  : `${toolchain(engine.label)} ready`}
               {downloading && progress?.phase === "download" && (
                 <>
                   <span className="faint">
@@ -1704,8 +1703,7 @@ function Boot({
             </BootStep>
           ) : (
             <BootStep state="skipped">
-              No runner for {languageLabel(issue.language)} yet; your edits are
-              still saved
+              No test runner set up for this repo
             </BootStep>
           )}
         </ol>
@@ -1715,7 +1713,7 @@ function Boot({
             className="ide-link ide-boot-skip"
             onClick={onSkip}
           >
-            Start editing now; Run waits for the runtime
+            Start editing now; tests can run once setup finishes
           </button>
         )}
       </div>

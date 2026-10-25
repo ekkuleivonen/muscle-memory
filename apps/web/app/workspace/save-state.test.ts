@@ -14,16 +14,16 @@ const saved: RecoveredCode = {
 };
 
 test("missing activity without a newer code revision does not claim lost edits", () => {
-  assert.match(recoveryMessage(saved), /No newer code revision was found/);
-  assert.doesNotMatch(recoveryMessage(saved), /Later saved changes/);
+  assert.match(recoveryMessage(saved), /no newer code was found/);
+  assert.doesNotMatch(recoveryMessage(saved), /last few changes/);
   assert.match(
     recoveryMessage({ ...saved, latestRevision: 5 }),
-    /Later saved changes \(up to revision 5\) were not recovered/,
+    /your last few changes weren't/,
   );
 });
 
 test("fallback to an older session does not compare unrelated revision counters", () => {
   const message = recoveryMessage({ ...saved, fromEarlierSession: true });
-  assert.match(message, /The latest session could not be recovered/);
-  assert.doesNotMatch(message, /No newer code revision/);
+  assert.match(message, /the most recent one couldn't be recovered/);
+  assert.doesNotMatch(message, /no newer code/);
 });

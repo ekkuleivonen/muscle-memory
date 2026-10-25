@@ -83,7 +83,7 @@ export default async function Home() {
             {start}
             {!signedIn && (
               <span className="home-note">
-                No email needed. Progress stays in this browser. Or{" "}
+                No email needed. Or{" "}
                 <Link href="/dashboard">start your first day</Link>.
               </span>
             )}
