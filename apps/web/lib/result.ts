@@ -400,20 +400,82 @@ export function duration(seconds: number): string {
 /**
  * One sentence that says what happened, for posts and previews, naming the challenge when its
  * title is known. A version 2 card was made when a pull request was merged, which is how a
- * challenge was completed then, so it reads as completed; "solved" only when every check it
- * carries passed. Card evidence that says the work was not merged is described as it is.
+ * challenge was completed then, so it reads as completed, with the checks it carries. Card
+ * evidence that says the work was not merged is described as it is. Nothing here attests how
+ * the person worked: "without AI" is a condition of the editor, never an observed fact.
  */
 export function sentence(
   result: Result,
   language: string,
   title?: string,
+  voice: "first" | "third" = "third",
 ): string {
   const named = title ? `“${title}” (${result.k})` : result.k;
   const checks = result.ev?.checks;
+  const [worked, completed] =
+    voice === "first"
+      ? ["I worked on", "I completed"]
+      : ["Worked on", "Completed"];
   if (result.ev && result.ev.state !== "merged")
-    return `Worked on ${named} in ${language} without AI. Not completed.`;
-  if (!checks) return `Completed ${named} in ${language} without AI.`;
+    return `${worked} ${named} in ${language}. Not completed.`;
+  if (!checks) return `${completed} ${named} in ${language}.`;
   return checks.total > 0 && checks.passed === checks.total
-    ? `Solved ${named} in ${language} without AI. All ${checks.total} checks passed.`
-    : `Completed ${named} in ${language} without AI. ${checks.passed}/${checks.total} checks passed.`;
+    ? `${completed} ${named} in ${language}. All ${checks.total} checks passed.`
+    : `${completed} ${named} in ${language}. ${checks.passed}/${checks.total} checks passed.`;
+}
+
+/**
+ * The receipt's lines, for the shared card: what the person did on the challenge, in the
+ * words of the challenge (checks, examples), never a pull request's. A version 2 card's
+ * "pushes" each ran the full checks, so they read as full checks. Hints and open findings
+ * come from before both were retired; they are shown only when a card has some.
+ */
+export function receiptLines(
+  m: Metrics & { ev?: PublicEvidence },
+): [string, string, boolean?][] {
+  const hints: [string, string][] =
+    (m.ev?.hints ?? m.h) ? [["hints", String(m.ev?.hints ?? m.h)]] : [];
+  if (m.ev)
+    return [
+      [
+        "checks passed",
+        `${m.ev.checks.passed ?? "?"}/${m.ev.checks.total ?? "?"}`,
+        m.ev.checks.total > 0 && m.ev.checks.passed === m.ev.checks.total,
+      ],
+      [
+        "first full check",
+        m.ev.first
+          ? `${m.ev.first.passed ?? "?"}/${m.ev.first.total ?? "?"}`
+          : "not known",
+      ],
+      [
+        "checks beyond the examples",
+        m.ev.hidden
+          ? `${m.ev.hidden.passed}/${m.ev.hidden.total}`
+          : "not known",
+      ],
+      ["full checks run", String(m.ev.pushes)],
+      ["example runs", String(m.ev.runs)],
+      ...(m.ev.findings.open
+        ? [
+            ["rule findings open", String(m.ev.findings.open)] as [
+              string,
+              string,
+            ],
+          ]
+        : []),
+      ...hints,
+    ];
+  return [
+    [
+      "example runs",
+      m.g === 1
+        ? `${m.r} · all passed first try`
+        : m.g
+          ? `${m.r} · all passed on run ${m.g}`
+          : String(m.r),
+      m.g === 1,
+    ],
+    ...hints,
+  ];
 }

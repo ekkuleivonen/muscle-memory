@@ -5,7 +5,7 @@ import { getLibrary } from "../../../lib/load";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "A coding challenge to solve without AI";
+export const alt = "A coding challenge";
 
 /**
  * The picture a shared challenge link shows in posts and chats: which challenge it is, in
@@ -38,11 +38,11 @@ export default async function Image({
         <div style={{ fontSize: 26, color: "#b69cff", letterSpacing: 2 }}>
           {issue
             ? `MUSCLE MEMORY · ${issue.key} · ${languageLabel(issue.language).toUpperCase()}`
-            : "MUSCLE MEMORY · PRACTICE WITHOUT AI"}
+            : "MUSCLE MEMORY"}
         </div>
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ fontSize: 56, lineHeight: 1.15 }}>
-            {issue ? issue.title : "One challenge. No AI."}
+            {issue ? issue.title : "One challenge."}
           </div>
           {line && (
             <div
@@ -58,7 +58,9 @@ export default async function Image({
           )}
         </div>
         <div style={{ fontSize: 30, color: "#cfd2db" }}>
-          {"Solve it yourself, without AI. → musclememory.run"}
+          {
+            "Solve it yourself. The editor has no AI assistance. → musclememory.run"
+          }
         </div>
       </div>
     ),

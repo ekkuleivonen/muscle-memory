@@ -25,7 +25,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   if (!issue)
     return { title: "Challenge not available · Muscle Memory", robots: { index: false } };
   const title = `${issue.key}: ${issue.title}`;
-  const description = `${hookFor(issue) ?? issue.summary} A ${languageLabel(issue.language)} challenge to solve without AI.`;
+  const description = `${hookFor(issue) ?? issue.summary} A ${languageLabel(issue.language)} challenge, in an editor with no AI assistance.`;
   return {
     title: `${title} · Muscle Memory`,
     description,
