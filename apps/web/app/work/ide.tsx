@@ -1769,7 +1769,7 @@ function KeyboardHelp() {
         </p>
         <p>
           Editor keybindings can be changed in{" "}
-          <Link href="/settings#editor">Settings</Link>.
+          <Link href="/settings?run=editor">Settings</Link>.
         </p>
       </dialog>
     </>
