@@ -35,7 +35,7 @@ Revision is the live revision after this audit and the final integration correct
 
 | Key | Revision | Title | Difficulty | Tags | Runtime | Cases | Rules | Private |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| C-001 | `de6f7ecfe06b` | Normalize Host headers, IPv6 literals included | easy | strings, parsing, http | Clang | 5+17 | 1 | 1/5 |
+| C-001 | `d8bdde681277` | Normalize Host headers, IPv6 literals included | easy | strings, parsing, http | Clang | 5+17 | 1 | 1/6 |
 | C-002 | `4899b029c3c8` | Keep the last N request latencies in memory | medium | arrays, modular-arithmetic | Clang | 2+14 | 0 | 1/3 |
 | CPP-001 | `63cd99a0b96a` | Cache evicts entries that were just used | hard | caching, linked-lists, maps | Clang | 2+13 | 0 | 1/3 |
 | CPP-002 | `b60f7273efa7` | Open-addressing index loses keys after a purge | hard | hash-tables, caching, reading-code | Clang | 5+13 | 1 | 1/3 |
