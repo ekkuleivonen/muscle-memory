@@ -622,6 +622,10 @@ kbd {
 .markdown a {
   color: var(--accent);
 }
+.markdown-table { max-width: 100%; overflow-x: auto; }
+.markdown-table table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.markdown-table th, .markdown-table td { border: 1px solid var(--line); padding: 7px 9px; text-align: left; vertical-align: top; }
+.markdown-table th { background: var(--bg-subtle); }
 .checklist {
   list-style: none;
   margin: 0;

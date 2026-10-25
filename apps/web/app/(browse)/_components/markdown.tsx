@@ -47,6 +47,37 @@ export function Markdown({
             );
           case "paragraph":
             return <p key={i}>{inline(block.children)}</p>;
+          case "table":
+            return (
+              <div
+                className="markdown-table"
+                key={i}
+                tabIndex={0}
+                role="region"
+                aria-label="Scrollable table"
+              >
+                <table>
+                  <thead>
+                    <tr>
+                      {block.header.map((cell, j) => (
+                        <th scope="col" key={j}>
+                          {inline(cell)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {block.rows.map((row, j) => (
+                      <tr key={j}>
+                        {row.map((cell, k) => (
+                          <td key={k}>{inline(cell)}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
           case "quote":
             return <blockquote key={i}>{inline(block.children)}</blockquote>;
           case "code":

@@ -11,6 +11,21 @@ const browser = await chromium.launch();
 const context = await browser.newContext({
   viewport: { width: 1280, height: 800 },
 });
+await context.route("**/ingest/**", (route) =>
+  route.fulfill({ status: 410, body: "synthetic-integration-qa" }),
+);
+await context.addInitScript(() => {
+  if (!localStorage.getItem("muscle-memory.profile"))
+    localStorage.setItem(
+      "muscle-memory.profile",
+      JSON.stringify({
+        version: "2",
+        createdAt: new Date().toISOString(),
+        stealth: true,
+        profile: {},
+      }),
+    );
+});
 const page = await context.newPage();
 page.setDefaultTimeout(20_000);
 try {

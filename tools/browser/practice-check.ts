@@ -16,6 +16,21 @@ const browser = await chromium.launch();
 const context = await browser.newContext({
   viewport: { width: 1280, height: 900 },
 });
+await context.route("**/ingest/**", (route) =>
+  route.fulfill({ status: 410, body: "synthetic-integration-qa" }),
+);
+await context.addInitScript(() => {
+  if (!localStorage.getItem("muscle-memory.profile"))
+    localStorage.setItem(
+      "muscle-memory.profile",
+      JSON.stringify({
+        version: "2",
+        createdAt: new Date().toISOString(),
+        stealth: true,
+        profile: {},
+      }),
+    );
+});
 const page = await context.newPage();
 page.setDefaultTimeout(25_000);
 const editor = () => page.locator(".practice-editor:not([hidden]) .cm-content");
@@ -34,7 +49,9 @@ const ready = async () => {
 };
 const submit = async () => {
   await editor().focus();
-  await page.keyboard.press("Control+Enter");
+  await page.keyboard.press(
+    process.platform === "darwin" ? "Meta+Enter" : "Control+Enter",
+  );
 };
 const records = async () =>
   page.evaluate(async () => {

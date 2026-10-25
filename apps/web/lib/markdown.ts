@@ -17,6 +17,7 @@ export type Block =
   | { type: "paragraph"; children: Inline[] }
   | { type: "list"; ordered: boolean; items: Inline[][] }
   | { type: "quote"; children: Inline[] }
+  | { type: "table"; header: Inline[][]; rows: Inline[][][] }
   | { type: "code"; lang?: string; value: string };
 
 const FENCE = /^```\s*([\w+-]*)\s*$/;
@@ -24,6 +25,40 @@ const HEADING = /^(#{1,6})\s+(.*)$/;
 const BULLET = /^\s*[-*+]\s+(.*)$/;
 const NUMBERED = /^\s*\d+[.)]\s+(.*)$/;
 const QUOTE = /^>\s?(.*)$/;
+
+function tableCells(line: string): string[] | null {
+  const text = line.trim().replace(/^\|/, "").replace(/\|$/, "");
+  if (!line.includes("|")) return null;
+  const cells: string[] = [];
+  let value = "";
+  let code = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === "\\" && text[i + 1] === "|") {
+      value += "|";
+      i++;
+    } else if (ch === "`") {
+      code = !code;
+      value += ch;
+    } else if (ch === "|" && !code) {
+      cells.push(value.trim());
+      value = "";
+    } else value += ch;
+  }
+  cells.push(value.trim());
+  return cells;
+}
+
+function tableHeader(lines: string[], index: number): string[] | null {
+  const header = tableCells(lines[index] ?? "");
+  const separator = tableCells(lines[index + 1] ?? "");
+  return header &&
+    separator &&
+    header.length === separator.length &&
+    separator.every((cell) => /^:?-{3,}:?$/.test(cell))
+    ? header
+    : null;
+}
 
 /** Only web and same-site links; javascript:, data: and the like stay as text. */
 export function safeHref(href: string): string | null {
@@ -122,6 +157,19 @@ export function parseMarkdown(source: string): Block[] {
       i += 1;
       continue;
     }
+    const header = tableHeader(lines, i);
+    if (header) {
+      const rows: Inline[][][] = [];
+      i += 2;
+      while (i < lines.length) {
+        const cells = tableCells(lines[i]);
+        if (!cells || cells.length !== header.length) break;
+        rows.push(cells.map(parseInline));
+        i++;
+      }
+      blocks.push({ type: "table", header: header.map(parseInline), rows });
+      continue;
+    }
     if (BULLET.test(line) || NUMBERED.test(line)) {
       const ordered = NUMBERED.test(line) && !BULLET.test(line);
       const marker = ordered ? NUMBERED : BULLET;
@@ -152,7 +200,8 @@ export function parseMarkdown(source: string): Block[] {
       !HEADING.test(lines[i]) &&
       !BULLET.test(lines[i]) &&
       !NUMBERED.test(lines[i]) &&
-      !QUOTE.test(lines[i])
+      !QUOTE.test(lines[i]) &&
+      !tableHeader(lines, i)
     )
       paragraph.push(lines[i++].trim());
     blocks.push({

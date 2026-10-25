@@ -16,7 +16,10 @@ import {
   type IssueKind,
   type Revision,
 } from "../../../../packages/content/model";
-import { runFeedback } from "../../../../packages/domain/workspace";
+import {
+  runFeedback,
+  type WorkspaceRecord,
+} from "../../../../packages/domain/workspace";
 import type { Json } from "../../../../packages/domain/json";
 import {
   engineFor,
@@ -67,7 +70,8 @@ import { completePractice } from "../../lib/complete-practice";
 import { checkFeedbackOf } from "../../lib/check-feedback";
 import { diagnose } from "../../lib/diagnosis";
 import { CheckFeedbackView } from "../(browse)/_components/review";
-import { CopyIssueLink } from "../(browse)/_components/share";
+import { CopyIssueLink, ShareOutcome } from "../(browse)/_components/share";
+import { shareCompletionProof } from "../../lib/share-completion";
 import { incompatibleSavedPaths } from "../../lib/practice-contract";
 import { nextProblem } from "../../lib/next-problem";
 import type { IssueSummary } from "../../lib/library";
@@ -173,6 +177,10 @@ export function Ide({
   const [keymap, setKeymap] = useState<Keymap>("standard");
   const [vimMode, setVimMode] = useState("normal");
   const [verification, setVerification] = useState<CompletionGate | null>(null);
+  const [shareSnapshot, setShareSnapshot] = useState<{
+    records: readonly WorkspaceRecord[];
+    proof: NonNullable<ReturnType<typeof shareCompletionProof>>;
+  } | null>(null);
   const [lastOutcome, setLastOutcome] = useState<unknown>(null);
   const refreshQueue = useRef(Promise.resolve());
   function refreshPractice(complete = false) {
@@ -225,17 +233,34 @@ export function Ide({
               );
             },
           });
-          setVerification(
-            completionEligibility({
-              records: await opened.workspaceRecords(),
-              issue: issue.slug,
-              revision: issue.revision,
-              revisionFor: (id) => revisions[id],
-              currentFiles: current.code(),
-            }),
-          );
         }
+        const snapshot = complete ? await opened.workspaceRecords() : records;
+        if (session.current !== current) return;
+        const state = current.saveStatus();
+        const proof = shareCompletionProof({
+          records: snapshot,
+          issue: issue.slug,
+          revision: issue.revision,
+          revisionFor: (id) => revisions[id],
+          currentFiles: current.code(),
+          ready:
+            !runner.current?.running &&
+            state.recoverable &&
+            !state.buffered &&
+            !state.retrying,
+        });
+        setShareSnapshot(proof ? { records: snapshot, proof } : null);
+        setVerification(
+          completionEligibility({
+            records: snapshot,
+            issue: issue.slug,
+            revision: issue.revision,
+            revisionFor: (id) => revisions[id],
+            currentFiles: current.code(),
+          }),
+        );
       } catch (error) {
+        setShareSnapshot(null);
         console.warn("Practice verification could not be saved.", error);
         setVerification((current) =>
           current ? { ...current, blocker: "code-unconfirmed" } : null,
@@ -811,6 +836,19 @@ export function Ide({
                     </Link>
                   )}
                   <Link href="/profile">View your evidence</Link>
+                  {shareSnapshot &&
+                    shareSnapshot.proof.completion.runId ===
+                      verification.latest?.runId &&
+                    shareSnapshot.proof.completion.at ===
+                      verification.completedAt && (
+                      <ShareOutcome
+                        challenge={issue}
+                        completion={shareSnapshot.proof.completion}
+                        required={shareSnapshot.proof.required}
+                        records={shareSnapshot.records}
+                        revisions={revisions}
+                      />
+                    )}
                 </section>
               )}
               {run && (
