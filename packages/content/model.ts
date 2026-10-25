@@ -124,7 +124,10 @@ export interface Case {
   readonly name?: string;
   readonly input: Json;
   readonly expected: Json;
-  /** In the repo's test file. The others only run in CI, whose results show them like any other case. */
+  /**
+   * In the repo's test file. The others only run in CI, whose results show their name, input and
+   * what the code did, not the expected value (apps/web/lib/diagnosis.ts).
+   */
   readonly visible: boolean;
 }
 
@@ -210,14 +213,18 @@ export const ESTIMATES: Record<Difficulty, number> = {
 };
 
 /** The files the player edits, by path. */
-export function editableFiles(workspace: Workspace): Record<string, WorkspaceFile> {
+export function editableFiles(
+  workspace: Workspace,
+): Record<string, WorkspaceFile> {
   return Object.fromEntries(
     Object.entries(workspace.files).filter(([, f]) => f.role === "edit"),
   );
 }
 
 /** Source files the program is made of: what the player edits plus code it may only read. */
-export function sourceFiles(workspace: Workspace): Record<string, WorkspaceFile> {
+export function sourceFiles(
+  workspace: Workspace,
+): Record<string, WorkspaceFile> {
   return Object.fromEntries(
     Object.entries(workspace.files).filter(
       ([, f]) => f.role === "edit" || f.role === "read",
@@ -233,7 +240,9 @@ export function casesRun<C extends { readonly visible: boolean }>(
   cases: readonly C[],
   purpose: "local" | "pull-request",
 ): C[] {
-  return purpose === "pull-request" ? [...cases] : cases.filter((c) => c.visible);
+  return purpose === "pull-request"
+    ? [...cases]
+    : cases.filter((c) => c.visible);
 }
 
 /** What CI needs to run a revision's code: the engine's inputs, without the repo. */
@@ -249,7 +258,8 @@ export interface Executable {
 }
 
 export function executableOf(revision: Revision): Executable {
-  const { language, entry, entrypoint, parameters, schema, adapter } = revision.workspace;
+  const { language, entry, entrypoint, parameters, schema, adapter } =
+    revision.workspace;
   return {
     language,
     entry,
