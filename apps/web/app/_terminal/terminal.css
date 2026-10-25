@@ -672,3 +672,19 @@
   caret-shape: block;
   caret-animation: manual;
 }
+/* Error pages: a session that went wrong, with the status code drawn like the banner. */
+.t-oops {
+  max-width: 80ch;
+}
+.t-oops-session p {
+  margin: 0;
+}
+.t-oops-code {
+  margin: 1.2em 0;
+  color: var(--t-err);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.1;
+  white-space: pre;
+  overflow-x: auto;
+}
