@@ -103,6 +103,8 @@ export interface SessionOptions {
   /** The page's current runner; it changes when the runtime is reloaded. */
   readonly runner: () => Runner;
   readonly onRun: (run: RunView) => void;
+  /** Practice maps both existing editor check shortcuts to its deliberate full Submit. */
+  readonly onSubmit?: (via: "keyboard" | "pointer") => void;
   /** A prior PR's checks were restored; its first edit also invalidates the shown result. */
   readonly hasPreviousChecks?: boolean;
   /** Called once on the first edit after current or restored checks, to mark them stale. */
@@ -243,8 +245,14 @@ export class WorkspaceSession {
       this.docs.get(path)!.toString(),
       {
         onChange: (transaction) => this.recordEdit(path, transaction),
-        onRun: () => void this.run("local", "keyboard"),
-        onPullRequest: () => void this.pullRequest("keyboard"),
+        onRun: () =>
+          this.options.onSubmit
+            ? this.options.onSubmit("keyboard")
+            : void this.run("local", "keyboard"),
+        onPullRequest: () =>
+          this.options.onSubmit
+            ? this.options.onSubmit("keyboard")
+            : void this.pullRequest("keyboard"),
         onVimMode: this.options.onVimMode,
       },
       {

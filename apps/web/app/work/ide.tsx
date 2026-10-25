@@ -1,17 +1,6 @@
 "use client";
-import { tabKeys } from "../../lib/tab-keys";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type ReactNode,
-} from "react";
-import type { EditorView } from "@codemirror/view";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   openPracticeStore,
   type PracticeStore,
@@ -27,10 +16,7 @@ import {
   type IssueKind,
   type Revision,
 } from "../../../../packages/content/model";
-import {
-  runFeedback,
-  type WorkspaceRecord,
-} from "../../../../packages/domain/workspace";
+import { runFeedback } from "../../../../packages/domain/workspace";
 import type { Json } from "../../../../packages/domain/json";
 import {
   engineFor,
@@ -39,58 +25,23 @@ import {
   type LoadProgress,
 } from "../../../../packages/runner/runner";
 import { readProfile } from "../../lib/account";
-import {
-  pullRequestHistory,
-  timeAgo,
-  type PullRequestRecord,
-} from "../../lib/activity";
+import { pullRequestHistory, type PullRequestRecord } from "../../lib/activity";
 import { attemptAt, attemptRecords } from "../../lib/attempts";
 import { statusOf } from "../../lib/board";
-import {
-  allPullRequests,
-  closedPullRequests,
-  mergedPullRequests,
-} from "../../lib/pulls";
-import { mergeEligibility, type MergeBlocker } from "../../lib/merge";
-import {
-  due,
-  feedbackOf,
-  openRequired,
-  type Feedback,
-  type Release,
-  type Thread,
-} from "../../lib/feedback";
+import { closedPullRequests, mergedPullRequests } from "../../lib/pulls";
 import { languageLabel, type IssueComment } from "../../lib/library";
 import type { LanguageId } from "../../lib/languages";
-import {
-  mediaTypeOf,
-  repoOf,
-  tree,
-  type RepoFile,
-  type TreeNode,
-} from "../../lib/repo";
-import { LanguageDot } from "../(browse)/_components/bits";
-import { StartWork, StatusMenu, useBoard } from "../(browse)/_components/board";
+import { mediaTypeOf, repoOf } from "../../lib/repo";
+import { StartWork, useBoard } from "../(browse)/_components/board";
 import {
   PREVIOUS_PATH_KEY,
   setIssueContext,
 } from "../(browse)/_components/board-log";
 import { Markdown } from "../(browse)/_components/markdown";
-import { pullHref } from "../(browse)/_components/pulls";
-import {
-  createViewer,
-  type ActivityHooks,
-  type Keymap,
-} from "../workspace/editor";
+import { type Keymap } from "../workspace/editor";
 import { checksTypes, TypeChecker } from "../workspace/type-checker";
-import { PANEL, panelMax, SIDE, Splitter, useIdeLayout } from "./splitter";
-import {
-  caseLabel,
-  toolchain,
-  transcript,
-  type Executable,
-} from "./transcript";
-import { recoveryMessage, saveBadge, saveState } from "../workspace/save-state";
+import { caseLabel, transcript, type Executable } from "./transcript";
+import { recoveryMessage, saveBadge } from "../workspace/save-state";
 import {
   RUN_TIMEOUT_MS,
   WorkspaceSession,
@@ -108,7 +59,15 @@ import {
 
 import { ChallengeExamples } from "../(browse)/_components/challenge-examples";
 import { privateCheckFailure } from "./check-feedback";
-import { nextAction } from "./next-action";
+import {
+  completionEligibility,
+  type CompletionGate,
+} from "../../lib/completion";
+import { completePractice } from "../../lib/complete-practice";
+import { checkFeedbackOf } from "../../lib/check-feedback";
+import { diagnose } from "../../lib/diagnosis";
+import { CheckFeedbackView } from "../(browse)/_components/review";
+import { CopyIssueLink } from "../(browse)/_components/share";
 import { nextProblem } from "../../lib/next-problem";
 import type { IssueSummary } from "../../lib/library";
 
@@ -171,7 +130,6 @@ export function Ide({
     () => repoOf(revision.workspace, issue, root),
     [revision, issue, root],
   );
-  const testsFile = repo.files.find((f) => f.role === "tests")!;
   const editable = useMemo(
     () => repo.files.filter((f) => f.role === "edit"),
     [repo],
@@ -180,11 +138,10 @@ export function Ide({
   const home =
     editable.find((f) => f.path === challenge.entry)?.path ?? editable[0].path;
 
-  const [view, setView] = useState<"explorer" | "ticket">("ticket");
+  const view = "ticket" as const; // Existing navigation value: the challenge is visible.
   const [tabs, setTabs] = useState<string[]>([
     home,
     ...editable.map((f) => f.path).filter((path) => path !== home),
-    testsFile.path,
   ]);
   const [active, setActiveState] = useState(home);
   const setActive = (path: string) => {
@@ -225,36 +182,91 @@ export function Ide({
       window.removeEventListener("offline", update);
     };
   }, []);
-  const mobileSide = useRef<HTMLDialogElement>(null);
   const [runtime, setRuntime] = useState<Runtime>(
     issue.runnable ? { state: "loading" } : { state: "none" },
   );
+  const runtimeNow = useRef(runtime);
+  runtimeNow.current = runtime;
   const [run, setRun] = useState<RunView | null>(null);
   const [stale, setStale] = useState(false);
   const [capture, setCapture] = useState<SaveStatus | null>(null);
   const [keymap, setKeymap] = useState<Keymap>("standard");
   const [vimMode, setVimMode] = useState("normal");
-  /** Editable files changed in this session. */
-  const [edited, setEdited] = useState<ReadonlySet<string>>(new Set());
-  /** The boot screen can be dismissed while only the runtime is still loading. */
-  const [booted, setBooted] = useState(false);
-  /** Teammate comments, hints and review threads released so far. */
-  const [feedback, setFeedback] = useState<Feedback>({
-    released: [],
-    threads: [],
-  });
-  /** Something new arrived in the ticket's thread while another view was showing. */
-  const [unread, setUnread] = useState(false);
-  /** Whether this attempt's newest pull request can be merged, as last read from the records. */
-  const [mergeable, setMergeable] = useState<{
-    number: number;
-    blocker: MergeBlocker | null;
-  } | null>(null);
-  /** What teammates just said, shown where the person is working: the latest release only. */
-  const [notes, setNotes] = useState<TeamNote[]>([]);
+  const [verification, setVerification] = useState<CompletionGate | null>(null);
+  const [lastOutcome, setLastOutcome] = useState<unknown>(null);
+  const refreshQueue = useRef(Promise.resolve());
+  function refreshPractice(complete = false) {
+    refreshQueue.current = refreshQueue.current.then(async () => {
+      const current = session.current;
+      const opened = store.current;
+      if (!current || !opened) return;
+      try {
+        await current.recorder.flush();
+        const records = await opened.workspaceRecords();
+        const gate = completionEligibility({
+          records,
+          issue: issue.slug,
+          revision: issue.revision,
+          revisionFor: (id) => revisions[id],
+          currentFiles: current.code(),
+        });
+        const terminal = records
+          .flatMap((r) => {
+            try {
+              const v = JSON.parse(r.payload);
+              return v.type === "observation.workspace.run" &&
+                v.data?.runId === gate.latest?.runId &&
+                v.data.outcome
+                ? [v.data.outcome]
+                : [];
+            } catch {
+              return [];
+            }
+          })
+          .at(-1);
+        if (session.current !== current) return;
+        setVerification(gate);
+        setLastOutcome(terminal ?? null);
+        if (complete && gate.blocker === null && readProfile()?.accepted) {
+          await completePractice(opened, {
+            participantId: participant.current,
+            termsVersion: readProfile()!.accepted!.version,
+            issue: { ...issue, language: issue.language },
+            revisionFor: (id) => revisions[id],
+            currentFiles: () => current.code(),
+            ready: () => {
+              const state = current.saveStatus();
+              return (
+                session.current === current &&
+                !runner.current?.running &&
+                state.recoverable &&
+                !state.buffered &&
+                !state.retrying
+              );
+            },
+          });
+          setVerification(
+            completionEligibility({
+              records: await opened.workspaceRecords(),
+              issue: issue.slug,
+              revision: issue.revision,
+              revisionFor: (id) => revisions[id],
+              currentFiles: current.code(),
+            }),
+          );
+        }
+      } catch (error) {
+        console.warn("Practice verification could not be saved.", error);
+        setMessage("Your result could not be saved. Submit again to retry.");
+      }
+    });
+  }
+  function submit(how: "pointer" | "keyboard") {
+    if (runner.current?.running || runtime.state !== "ready") return;
+    setStale(false);
+    void session.current?.pullRequest(how);
+  }
 
-  const router = useRouter();
-  const layout = useIdeLayout();
   const mainRef = useRef<HTMLElement>(null);
   const board = useBoard();
   const currentProblem = candidates.find((i) => i.key === issue.key);
@@ -274,70 +286,7 @@ export function Ide({
       : null;
   const openPullRef = useRef(openPull);
   openPullRef.current = openPull;
-  /** The ticket's thread: its own comments, then released comments and hints. */
-  const thread = useMemo(
-    () => [
-      ...issue.comments.map((c) => ({
-        ...c,
-        at: undefined as string | undefined,
-      })),
-      ...feedback.released.flatMap((r) => {
-        const from = revisions[r.issueRevision];
-        if (r.kind === "hint") {
-          const hint = from?.hints.find((h) => h.id === r.hint);
-          return hint
-            ? [
-                {
-                  author: hint.author.name,
-                  role: hint.author.role,
-                  body: hint.text,
-                  at: r.at,
-                },
-              ]
-            : [];
-        }
-        const comment = from?.team.find((c) => c.id === r.comment);
-        return comment
-          ? [
-              {
-                author: comment.author.name,
-                role: comment.author.role,
-                body: comment.text[r.wording] ?? comment.text[0],
-                at: r.at,
-              },
-            ]
-          : [];
-      }),
-    ],
-    [issue.comments, feedback, revisions],
-  );
-  /** Open blocking review threads by pull request number. */
-  const blocking = useMemo(() => {
-    const counts = new Map<number, number>();
-    // Blocking findings, and explicit ones of any severity (TeamComment.resolve).
-    const explicit = (t: Feedback["threads"][number]) =>
-      revisions[t.issueRevision]?.team.find((c) => c.id === t.comment)
-        ?.resolve === "explicit";
-    for (const t of feedback.threads)
-      if (!t.resolved && (t.severity === "blocking" || explicit(t)))
-        counts.set(t.number, (counts.get(t.number) ?? 0) + 1);
-    return counts;
-  }, [feedback, revisions]);
-
-  /**
-   * The open pull request once nothing blocks merging it (lib/merge, as its page decides) and
-   * nothing was typed since: the next step is merging.
-   */
-  const reviewable =
-    openPull &&
-    mergeable?.number === openPull.number &&
-    mergeable.blocker === null &&
-    !stale
-      ? openPull
-      : null;
-
   const hosts = useRef(new Map<string, HTMLDivElement>());
-  const viewers = useRef(new Map<string, EditorView>());
   const sandboxHost = useRef<HTMLDivElement>(null);
   const engine = engineFor(issue.language);
   const runner = useRef<Runner | null>(null);
@@ -347,94 +296,6 @@ export function Ide({
   // Each mount (twice in development) bumps this; a superseded open installs nothing.
   const generation = useRef(0);
   const participant = useRef("");
-  /** Feedback checks run one at a time, in the order asked for. */
-  const reviewing = useRef<Promise<void>>(Promise.resolve());
-  const viewRef = useRef(view);
-  viewRef.current = view;
-
-  /**
-   * Releases whatever teammate feedback the revision's triggers say is due, from what is
-   * stored (so pending writes are flushed first), and shows it. `push` names a push whose
-   * checks just finished: only then are review comments checked.
-   */
-  function review(push?: { number: number; push: number }) {
-    reviewing.current = reviewing.current.then(async () => {
-      const current = session.current;
-      const opened = store.current;
-      if (!current || !opened) return;
-      try {
-        await current.recorder.flush();
-        // Feedback belongs to the attempt under way: a replay hears it all again.
-        let records = attemptRecords(
-          await opened.workspaceRecords(),
-          issue.slug,
-        );
-        const releases = due({
-          revision,
-          records,
-          issue: issue.slug,
-          participantId: participant.current,
-          revisionFor: (id) => revisions[id],
-          files: current.code(),
-          push,
-        });
-        if (releases.length) {
-          current.release(releases);
-          await current.recorder.flush();
-          records = attemptRecords(await opened.workspaceRecords(), issue.slug);
-          const said = teamNotes(releases);
-          setNotes(said);
-          // The ticket's words are shown as notes; review comments keep their own place under
-          // the pull request, so the status line announces them and resolutions.
-          setMessage(
-            announcement(
-              releases.filter(
-                (r) =>
-                  r.kind === "resolved" ||
-                  ("pullRequest" in r && r.pullRequest),
-              ),
-            ),
-          );
-          if (
-            releases.some(
-              (r) =>
-                r.kind !== "resolved" && !("pullRequest" in r && r.pullRequest),
-            ) &&
-            viewRef.current !== "ticket"
-          )
-            setUnread(true);
-        }
-        if (session.current === current) {
-          setFeedback(feedbackOf(records, issue.slug, (id) => revisions[id]));
-          setMergeable(mergeableOf(records));
-        }
-      } catch (cause) {
-        console.warn("Teammate feedback could not be checked.", cause);
-      }
-    });
-  }
-
-  /** The merge gate for this attempt's newest pull request, from its records (lib/merge). */
-  function mergeableOf(records: readonly WorkspaceRecord[]) {
-    const pull = allPullRequests(records).find((p) => p.issue === issue.slug);
-    if (!pull) return null;
-    return {
-      number: pull.number,
-      blocker: mergeEligibility({
-        records,
-        issue: issue.slug,
-        number: pull.number,
-        pull,
-        published: (id) => !!revisions[id],
-        openRequired: openRequired(
-          feedbackOf(records, issue.slug, (id) => revisions[id]),
-          pull.number,
-          (id) => revisions[id],
-        ).length,
-      }).blocker,
-    };
-  }
-
   function startRuntime() {
     if (!issue.runnable || !engine) return;
     runner.current?.dispose();
@@ -504,7 +365,7 @@ export function Ide({
                 return false;
               }
             })
-              ? `The ticket changed since your last visit. Your matching files were restored.${dropped.length ? ` Files no longer present: ${dropped.join(", ")}.` : " Review the current requirements before checking again."}`
+              ? `The challenge changed since your last visit. Your matching files were restored.${dropped.length ? ` Files no longer present: ${dropped.join(", ")}.` : " Review the current requirements before checking again."}`
               : "",
           ]
             .filter(Boolean)
@@ -515,8 +376,8 @@ export function Ide({
       const saved = readView(savedScope.current);
       if (saved) {
         const fitted = fitView(saved, {
-          paths: repo.files.map((f) => f.path),
-          tabs: [home, ...editable.map((f) => f.path), testsFile.path],
+          paths: editable.map((f) => f.path),
+          tabs: [home, ...editable.map((f) => f.path)],
           lengths: Object.fromEntries(
             editable.map((f) => [
               f.path,
@@ -525,17 +386,17 @@ export function Ide({
           ),
         });
         setTabs([...fitted.tabs]);
-        setActive(fitted.active);
-        setView(fitted.side);
-        setPanel(fitted.panel);
+        setActive(
+          editable.some((file) => file.path === fitted.active)
+            ? fitted.active
+            : home,
+        );
+        setPanel(fitted.panel === "output" ? "output" : "tests");
         pendingPlaces.current = { ...fitted.files };
-        setBooted(true);
       }
       setPulls(history);
       setMerged(mergedNumbers);
       setClosed(closedNumbers);
-      setFeedback(feedbackOf(records, issue.slug, (id) => revisions[id]));
-      setMergeable(mergeableOf(records));
       session.current = new WorkspaceSession({
         participantId,
         consentVersion: `terms-${account?.accepted?.version ?? "unknown"}`,
@@ -571,13 +432,17 @@ export function Ide({
         },
         // Read at use time, so a runtime reloaded with Retry is the one that runs.
         runner: () => runner.current!,
+        onSubmit: (how) => {
+          if (runtimeNow.current.state === "ready")
+            void session.current?.pullRequest(how);
+        },
         onRun: (next) => {
           setRun(next);
           setStale(next.revision !== session.current?.currentRevision);
           const pr = next.pullRequest;
-          // Once a run or a push's checks finish, teammates may have something to say.
+          // Terminal full-suite runs may complete; example runs cannot.
           if (next.status !== "queued" && next.status !== "running")
-            review(pr ? { number: pr.number, push: pr.push } : undefined);
+            void refreshPractice(next.purpose === "pull-request");
           if (!pr) return;
           // Opening shows the pull request at once; its checks fill in when they finish.
           setPulls((current) => [
@@ -593,8 +458,7 @@ export function Ide({
             },
             ...current.filter((p) => p.number !== pr.number),
           ]);
-          // It stays open: the person reviews and merges it on its page.
-          if (next.status === "queued") setPanel("pulls");
+          // Keep internal submission numbering for backward-compatible capture.
         },
         onEditedAfterRun: () => setStale(true),
         onSaveStatus: setCapture,
@@ -615,14 +479,14 @@ export function Ide({
         height: window.innerHeight,
       });
       setOpening({ state: "open" });
-      review();
+      void refreshPractice();
     } catch (cause) {
       console.warn("The IDE could not open.", cause);
       if (current())
         setOpening({
           state: "failed",
           message:
-            "The editor couldn't open your branch. Close other tabs with this issue open, then reload the page.",
+            "The editor couldn't restore your code. Close other tabs with this challenge open, then reload the page.",
         });
     }
   }
@@ -639,21 +503,14 @@ export function Ide({
       persistView();
       // Counts refresh each second; state changes arrive at once through onSaveStatus.
       setCapture(session.current?.saveStatus() ?? null);
-      const changed = session.current?.editedFiles() ?? [];
-      setEdited((before) =>
-        before.size === changed.length && changed.every((p) => before.has(p))
-          ? before
-          : new Set(changed),
-      );
     }, 1000);
-    // Hints wait for active minutes, which pass without any other event.
-    const feedbackTimer = setInterval(() => review(), 30_000);
+    // Practice shows requirements directly; no hidden hint/comment releases are generated.
     return () => {
       window.removeEventListener("pagehide", saveView);
       generation.current++;
       persistView();
       clearInterval(timer);
-      clearInterval(feedbackTimer);
+
       runner.current?.dispose();
       runner.current = null;
       types.current?.dispose();
@@ -662,8 +519,6 @@ export function Ide({
       const closing = session.current;
       session.current = null;
       void closing?.close();
-      for (const viewer of viewers.current.values()) viewer.destroy();
-      viewers.current.clear();
     };
   }, []);
 
@@ -675,18 +530,6 @@ export function Ide({
     input.current && performance.now() - input.current.at < 1000
       ? input.current.kind
       : "app";
-  /** Activity hooks that reach whichever session is open when the event happens. */
-  function forward(path: string): ActivityHooks {
-    const to = () => session.current?.activity(path);
-    return {
-      onKey: (...a) => to()?.onKey(...a),
-      onSelection: (...a) => to()?.onSelection(...a),
-      onScroll: (...a) => to()?.onScroll(...a),
-      onFocus: (...a) => to()?.onFocus(...a),
-      onClipboard: (...a) => to()?.onClipboard(...a),
-    };
-  }
-
   useEffect(
     () => setIssueContext({ id: issue.slug, revision: issue.revision }),
     [issue.slug, issue.revision],
@@ -756,7 +599,7 @@ export function Ide({
     delete pendingPlaces.current[active];
     session.current?.navigated("file", "show", active, how);
     // Opening a file is investigation, which teammates may respond to.
-    if (how !== "app") review();
+    // File navigation keeps its existing observation; it does not release invisible hints.
   }, [active, isOpen]);
   useEffect(() => {
     if (isOpen) session.current?.navigated("side", "show", view, via());
@@ -772,156 +615,122 @@ export function Ide({
     );
   }, [runtime.state, isOpen]);
 
-  // Read-only files get a viewer the first time they are shown.
-  useEffect(() => {
-    const file = repo.files.find((f) => f.path === active);
-    if (!file || file.role === "edit" || viewers.current.has(file.path)) return;
-    const host = hosts.current.get(file.path);
-    if (host)
-      viewers.current.set(
-        file.path,
-        createViewer(host, file.text, {
-          language: file.language,
-          label: `${file.path} (read-only)`,
-          activity: forward(file.path),
-        }),
-      );
-  }, [active, tabs, repo]);
-
-  function openFile(path: string) {
-    mobileSide.current?.close();
-    setTabs((current) =>
-      current.includes(path) ? current : [...current, path],
-    );
-    setActive(path);
-  }
-
-  function closeTab(path: string) {
-    if (editable.some((f) => f.path === path)) return;
-    const next = tabs.filter((p) => p !== path);
-    const selected = active === path ? (next[next.length - 1] ?? home) : active;
-    setTabs(next);
-    setActive(selected);
-    requestAnimationFrame(() =>
-      document.getElementById(`file-tab-${selected}`)?.focus(),
-    );
-  }
-
   const running = run?.status === "queued" || run?.status === "running";
   const ready = runtime.state === "ready" && opening.state === "open";
-  const localFeedback =
-    run?.purpose === "local" && run.outcome?.status === "completed"
-      ? runFeedback(casesRun(challenge.cases, "local"), run.outcome.cases)
-      : null;
-  const action = nextAction({
-    done,
-    running,
-    unavailable: runtime.state === "unavailable",
-    openPull: !!openPull,
-    blocker:
-      mergeable?.number === openPull?.number ? mergeable?.blocker : undefined,
-    stale,
-    localPassed:
-      !!localFeedback &&
-      localFeedback.total > 0 &&
-      localFeedback.correct === localFeedback.total,
+  const publishedExamples = challenge.cases.filter((c) => c.visible);
+  const check = checkFeedbackOf({
+    blocker: stale
+      ? "code-changed"
+      : verification?.latest
+        ? verification.blocker
+        : undefined,
+    running: !!running,
+    latest: verification?.latest ?? null,
+    diagnosis: diagnose(lastOutcome, challenge.cases),
+    required: verification?.required ?? [],
   });
-  const reviewTarget = action === "review" ? openPull : null;
-  const booting =
-    !booted &&
-    (opening.state === "opening" ||
-      (opening.state === "open" && runtime.state === "loading"));
-
-  const sideContent = (
-    <>
-      {view === "explorer" ? (
-        <Explorer
-          root={repo.root}
-          files={repo.files}
-          active={active}
-          edited={edited}
-          onOpen={openFile}
-        />
-      ) : (
-        <Ticket
-          issue={issue}
-          examples={casesRun(challenge.cases, "local")}
-          testsPath={testsFile.path}
-          thread={thread}
-          onOpenTests={() => openFile(testsFile.path)}
-        />
-      )}
-    </>
-  );
+  const verified = !running && !stale && verification?.blocker === null;
   return (
-    <div
-      className="ide"
-      onClickCapture={persistView}
-      style={
-        {
-          "--side-w": `${layout.side}px`,
-          "--panel-h": `${layout.panel}px`,
-        } as CSSProperties
-      }
-    >
-      <header className="ide-title">
-        <Link
-          href={`/issues/${issue.key}`}
-          className="ide-back"
-          title="Back to the challenge"
-        >
-          ← <span className="mono">{issue.key}</span>
-        </Link>
-        <span className="ide-name">
-          {issue.title}
-          <span className="faint"> — {repo.root}</span>
+    <div className="practice" onClickCapture={persistView}>
+      <header className="practice-header">
+        <Link href="/issues">← Explore</Link>
+        <span>
+          Practice <span className="faint">· {issue.key}</span>
         </span>
-        <div className="ide-mobile-tools">
-          <button
-            onClick={() => {
-              setView("ticket");
-              setUnread(false);
-              mobileSide.current?.showModal();
-            }}
-          >
-            Challenge{unread ? " •" : ""}
-          </button>
-          <button
-            onClick={() => {
-              setView("explorer");
-              mobileSide.current?.showModal();
-            }}
-          >
-            Files
-          </button>
-        </div>
-        <KeyboardHelp />
-        <span className="ide-actions">
-          <StatusMenu
-            issue={{
-              key: issue.key,
-              slug: issue.slug,
-              revision: issue.revision,
-            }}
-          />
-          {issue.runnable ? (
-            action === "retry" ? (
-              <button type="button" className="ide-run" onClick={startRuntime}>
-                Retry environment
-              </button>
-            ) : running ? (
+        <Link href="/profile">Profile</Link>
+      </header>
+      <main className="practice-layout" ref={mainRef}>
+        <section className="practice-challenge" aria-label="Challenge">
+          <p className="eyebrow">Challenge · {languageLabel(issue.language)}</p>
+          <h1>{issue.title}</h1>
+          <h2>Goal and requirements</h2>
+          <Markdown source={issue.task} />
+          {revision.team.some((r) => r.severity === "blocking") && (
+            <section className="practice-requirements">
+              <h2>Required checks</h2>
+              {revision.team
+                .filter((r) => r.severity === "blocking")
+                .map((r) => (
+                  <Markdown key={r.id} source={r.text[0]} />
+                ))}
+            </section>
+          )}
+          {challenge.schema && (
+            <details open>
+              <summary>Data schema</summary>
+              <pre>{challenge.schema}</pre>
+            </details>
+          )}
+          <ChallengeExamples examples={publishedExamples} />
+          <CopyIssueLink issueKey={issue.key} />
+        </section>
+        <section className="practice-work" aria-label="Your code">
+          <div className="practice-code-head">
+            <h2>Your code</h2>
+            {editable.length > 1 && (
+              <label>
+                Source{" "}
+                <select
+                  aria-label="Editable source"
+                  value={active}
+                  onChange={(event) => setActive(event.target.value)}
+                >
+                  {editable.map((f) => (
+                    <option key={f.path} value={f.path}>
+                      {f.path}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <span className="faint">
+              {keymap === "vim" ? `Vim · ${vimMode}` : "Standard keys"}
+            </span>
+          </div>
+          <div className="practice-editors">
+            {editable.map((file) => (
+              <div
+                key={file.path}
+                className="practice-editor"
+                hidden={file.path !== active}
+                ref={(node) => {
+                  if (node) hosts.current.set(file.path, node);
+                }}
+              />
+            ))}
+            {opening.state === "opening" && (
+              <p role="status">Restoring your code…</p>
+            )}
+            {opening.state === "failed" && (
+              <p className="error" role="alert">
+                {opening.message}
+              </p>
+            )}
+          </div>
+          <div className="practice-controls">
+            <span role="status">
+              {capture ? saveBadge(capture).label : "Opening…"}
+              {offline ? " · Offline" : ""}
+            </span>
+            {runtime.state === "loading" && (
+              <span role="status">Preparing checks… You can keep editing.</span>
+            )}
+            {runtime.state === "unavailable" ? (
               <button
                 type="button"
-                className="ide-run cancel"
-                onClick={() => session.current?.cancel()}
+                className="btn primary"
+                onClick={startRuntime}
               >
-                ■ Cancel {run?.purpose === "pull-request" ? "checks" : "run"}
+                Retry checks
+              </button>
+            ) : running ? (
+              <button className="btn" onClick={() => session.current?.cancel()}>
+                Cancel check
               </button>
             ) : (
               <>
                 <button
-                  type="button"
-                  className={`ide-run${action === "test" ? "" : " secondary"}`}
+                  className="btn"
                   disabled={!ready}
                   onClick={(event) =>
                     void session.current?.run(
@@ -929,518 +738,93 @@ export function Ide({
                       event.detail === 0 ? "keyboard" : "pointer",
                     )
                   }
-                  title="Run the tests on your code (Ctrl/⌘-Enter)"
                 >
-                  ▶ Run tests <Shortcut />
+                  Run examples
                 </button>
                 <button
-                  type="button"
-                  className={`ide-run${action === "push" ? "" : " secondary"}`}
+                  className={`btn${verified ? "" : " primary"}`}
                   disabled={!ready}
                   onClick={(event) =>
-                    void session.current?.pullRequest(
-                      event.detail === 0 ? "keyboard" : "pointer",
-                    )
-                  }
-                  title={
-                    openPull
-                      ? `Push this code to pull request #${openPull.number}: CI checks it again (Ctrl/⌘-Shift-Enter)`
-                      : "Open a pull request: CI checks this exact code; then you review it and merge it (Ctrl/⌘-Shift-Enter)"
+                    submit(event.detail === 0 ? "keyboard" : "pointer")
                   }
                 >
-                  ⇡{" "}
-                  {openPull
-                    ? `Push to #${openPull.number}`
-                    : done
-                      ? "Open another PR"
-                      : "Open pull request"}{" "}
-                  <Shortcut shift />
+                  Submit <Shortcut />
                 </button>
-                {action === "continue" &&
-                  (next ? (
-                    <StartWork issue={next} href={`/work/${next.key}`} />
-                  ) : (
-                    <Link className="ide-run" href="/issues">
-                      Browse issues →
-                    </Link>
-                  ))}
-                {reviewTarget && (
-                  <Link
-                    className="ide-run"
-                    href={pullHref(issue.key, reviewTarget.number)}
-                  >
-                    {reviewable ? "Review and merge" : "Resolve findings on"} #
-                    {reviewTarget.number} →
-                  </Link>
-                )}
               </>
-            )
-          ) : (
-            <span
-              className="ide-run disabled"
-              title="CI isn't set up for this repo yet"
-            >
-              ⇡ Open pull request
-            </span>
-          )}
-        </span>
-      </header>
-
-      <dialog
-        className="ide-mobile-dialog"
-        ref={mobileSide}
-        aria-label={view === "ticket" ? "Challenge" : "Files"}
-      >
-        <button
-          className="dialog-close"
-          onClick={() => mobileSide.current?.close()}
-        >
-          Back to practice ×
-        </button>
-        {sideContent}
-      </dialog>
-      <nav className="ide-activity" aria-label="Views">
-        <ActivityButton
-          label={unread ? "Challenge (new context)" : "Challenge"}
-          active={view === "ticket"}
-          dot={unread}
-          onClick={() => {
-            setView("ticket");
-            setUnread(false);
-          }}
-        >
-          <TicketIcon />
-        </ActivityButton>
-        <ActivityButton
-          label="Files"
-          active={view === "explorer"}
-          onClick={() => setView("explorer")}
-        >
-          <FilesIcon />
-        </ActivityButton>
-      </nav>
-
-      <aside className="ide-side">{sideContent}</aside>
-
-      <Splitter
-        axis="x"
-        className="ide-side-splitter"
-        label="Resize the side bar"
-        value={layout.side}
-        min={SIDE.min}
-        max={() => SIDE.max}
-        initial={SIDE.initial}
-        onChange={layout.setSide}
-      />
-
-      <main className="ide-main" ref={mainRef}>
-        {runtime.state === "loading" && !booting && (
-          <div
-            className="ide-progress"
-            role="progressbar"
-            aria-label="Setting up your environment"
-            {...progressValue(runtime.progress)}
-          />
-        )}
-        <div
-          className="ide-tabs"
-          role="tablist"
-          aria-label="Open files"
-          onKeyDown={tabKeys}
-        >
-          {tabs.map((path) => {
-            const file = repo.files.find((f) => f.path === path)!;
-            return (
-              <div key={path} className="ide-tab-wrap">
-                <button
-                  type="button"
-                  role="tab"
-                  id={`file-tab-${file.path}`}
-                  aria-controls={`file-panel-${file.path}`}
-                  aria-selected={path === active}
-                  tabIndex={path === active ? 0 : -1}
-                  className="ide-tab"
-                  onClick={() => setActive(path)}
-                >
-                  <LanguageDot language={file.language} />
-                  {path.split("/").pop()}
-                </button>
-                {file.role === "edit" ? (
-                  edited.has(path) && (
-                    <span className="ide-dot" title="Modified" />
-                  )
-                ) : (
-                  <button
-                    type="button"
-                    className="ide-close"
-                    aria-label={`Close ${path}`}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      closeTab(path);
-                    }}
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        <div className="ide-crumbs faint">
-          {repo.root} › {active.split("/").join(" › ")}
-          {!editable.some((f) => f.path === active) && (
-            <span className="ide-ro">read-only</span>
-          )}
-        </div>
-        <div className="ide-editors">
-          {repo.files.map((file) => (
-            <div
-              key={file.path}
-              className="ide-editor"
-              role="tabpanel"
-              id={`file-panel-${file.path}`}
-              aria-labelledby={`file-tab-${file.path}`}
-              hidden={!tabs.includes(file.path) || file.path !== active}
-              ref={(node) => {
-                if (node) hosts.current.set(file.path, node);
-              }}
-            />
-          ))}
-          {opening.state === "failed" && (
-            <p className="ide-overlay error" role="alert">
-              {opening.message}
+            )}
+          </div>
+          {message && (
+            <p className="practice-notice" role="status">
+              {message}
             </p>
           )}
-        </div>
-
-        <section className="ide-panel">
-          <Splitter
-            axis="y"
-            className="ide-panel-splitter"
-            label="Resize the panel"
-            value={layout.panel}
-            min={PANEL.min}
-            max={() => panelMax(mainRef.current?.clientHeight ?? 600)}
-            initial={PANEL.initial}
-            onChange={layout.setPanel}
-          />
-          <div
-            className="ide-panel-tabs"
-            role="tablist"
-            aria-label="Results"
-            onKeyDown={tabKeys}
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={panel === "tests"}
-              tabIndex={panel === "tests" ? 0 : -1}
-              id="result-tab-tests"
-              aria-controls="result-panel-tests"
-              onClick={() => setPanel("tests")}
-            >
-              Tests
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={panel === "output"}
-              tabIndex={panel === "output" ? 0 : -1}
-              id="result-tab-output"
-              aria-controls="result-panel-output"
-              onClick={() => setPanel("output")}
-            >
-              Output
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={panel === "pulls"}
-              tabIndex={panel === "pulls" ? 0 : -1}
-              id="result-tab-pulls"
-              aria-controls="result-panel-pulls"
-              onClick={() => setPanel("pulls")}
-            >
-              Pull requests{" "}
-              {pulls.length > 0 && (
-                <span className="ide-count">{pulls.length}</span>
-              )}
-            </button>
-          </div>
-          <div
-            className="ide-panel-body"
-            role="tabpanel"
-            id={`result-panel-${panel}`}
-            aria-labelledby={`result-tab-${panel}`}
-            tabIndex={0}
-          >
-            {notes.length > 0 && (
-              <div className="ide-team-notes" role="status">
-                {notes.map((note, index) => (
-                  <p key={index} className="ide-team-note">
-                    <span className="ide-team-text">
-                      <b>{note.author}</b>{" "}
-                      <span className="faint">· {note.role}</span> {note.text}
-                    </span>{" "}
-                    {note.pullRequest ? (
-                      <Link href={pullHref(issue.key, note.pullRequest)}>
-                        View #{note.pullRequest}
-                      </Link>
-                    ) : (
-                      <button
-                        type="button"
-                        className="ide-link"
-                        onClick={() => {
-                          setView("ticket");
-                          setUnread(false);
-                          if (window.matchMedia("(max-width: 860px)").matches)
-                            mobileSide.current?.showModal();
-                        }}
-                      >
-                        Open challenge
-                      </button>
-                    )}
-                  </p>
-                ))}
-              </div>
-            )}
-            {message && (
-              <p className="ide-message" role="status">
-                {message}
-              </p>
-            )}
-            {panel === "pulls" ? (
-              <PullRequests
-                pulls={pulls}
-                merged={merged}
-                closed={closed}
-                blocking={blocking}
-                mergeable={reviewable?.number ?? null}
-                threads={feedback.threads}
-                revisions={revisions}
-                issue={issue}
-                done={done}
-                runnable={issue.runnable}
-              />
-            ) : panel === "tests" ? (
-              <Tests
-                challenge={challenge}
-                run={run}
-                stale={stale}
-                issue={issue}
-                testsPath={testsFile.path}
-                runtime={runtime}
-                onRetry={startRuntime}
-              />
+          <div className="practice-feedback">
+            {run?.purpose === "local" ? (
+              <>
+                <h2>Example feedback</h2>
+                <Tests
+                  challenge={challenge}
+                  run={run}
+                  stale={stale}
+                  issue={issue}
+                  testsPath="the public examples"
+                  runtime={runtime}
+                  onRetry={startRuntime}
+                />
+              </>
             ) : (
-              <Output
-                run={run}
-                challenge={challenge}
-                runtime={engine?.label ?? languageLabel(issue.language)}
-              />
+              <CheckFeedbackView feedback={check} />
+            )}
+            {verified && (
+              <section className="practice-next" aria-label="Next challenge">
+                <h2>
+                  {verification.completedAt
+                    ? "Challenge completed"
+                    : "Current code verified"}
+                </h2>
+                {next ? (
+                  <>
+                    <p>Next: {next.title}</p>
+                    <StartWork
+                      issue={next}
+                      href={`/work/${next.key}`}
+                      label="Next challenge"
+                    />
+                    <p className="faint">
+                      Suggested by language, project and difficulty.
+                    </p>
+                  </>
+                ) : (
+                  <Link className="btn primary" href="/issues">
+                    Explore challenges
+                  </Link>
+                )}
+                <Link href="/profile">View your evidence</Link>
+              </section>
+            )}
+            {run && (
+              <details
+                open={panel === "output"}
+                onToggle={(event) =>
+                  setPanel(event.currentTarget.open ? "output" : "tests")
+                }
+              >
+                <summary>Output</summary>
+                <Output
+                  run={run}
+                  challenge={challenge}
+                  runtime={engine?.label ?? issue.language}
+                />
+              </details>
             )}
           </div>
+          <p className="practice-keys faint">
+            <Shortcut /> submits · Escape, then Tab leaves the editor.{" "}
+            <Link href="/settings?run=editor">Editor keys</Link>
+          </p>
         </section>
       </main>
-
-      <footer className="ide-status">
-        <span
-          title={
-            offline ? "Keep editing; retry checks when reconnected." : "Branch"
-          }
-          role={offline ? "status" : undefined}
-        >
-          {offline ? "Offline · retry checks when online" : `⎇ ${repo.branch}`}
-        </span>
-        {capture && (
-          <span
-            className={`ide-save ${saveBadge(capture).tone}`}
-            title={saveState(capture, true)}
-          >
-            {saveBadge(capture).label}
-          </span>
-        )}
-        <span className="ide-status-right">
-          {keymap === "vim" && (
-            <span className="ide-vim">-- {vimMode.toUpperCase()} --</span>
-          )}
-          <span>{languageLabel(issue.language)}</span>
-          <span>
-            {issue.runnable && engine
-              ? `${toolchain(engine.label)} · ${runtimeLabel(runtime)}`
-              : "No test runner"}
-          </span>
-        </span>
-      </footer>
-      {booting && (
-        <Boot
-          issue={issue}
-          root={repo.root}
-          branch={repo.branch}
-          opening={opening}
-          runtime={runtime}
-          onSkip={() => setBooted(true)}
-        />
-      )}
       <div ref={sandboxHost} hidden />
-    </div>
-  );
-}
-
-/** Download share as aria values and a CSS variable; indeterminate while starting. */
-function progressValue(progress?: LoadProgress) {
-  if (progress?.phase !== "download" || !progress.total) return {};
-  const percent = Math.round((progress.loaded / progress.total) * 100);
-  return {
-    "aria-valuenow": percent,
-    style: { "--progress": `${percent}%` } as CSSProperties,
-  };
-}
-
-function megabytes(bytes: number): string {
-  return (bytes / 1_000_000).toFixed(bytes < 10_000_000 ? 1 : 0);
-}
-
-function runtimeLabel(runtime: Runtime): string {
-  if (runtime.state === "loading") {
-    const p = runtime.progress;
-    if (p?.phase === "download" && p.loaded < p.total)
-      return `installing ${Math.round((p.loaded / p.total) * 100)}%`;
-    return "starting…";
-  }
-  if (runtime.state === "ready") return "ready";
-  if (runtime.state === "unavailable") return "unavailable";
-  return "";
-}
-
-function ActivityButton({
-  label,
-  active,
-  dot,
-  onClick,
-  children,
-}: {
-  label: string;
-  active: boolean;
-  /** Something new to look at. */
-  dot?: boolean;
-  onClick(): void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      className="ide-activity-button"
-      aria-pressed={active}
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-    >
-      {children}
-      {dot && <span className="ide-activity-dot" aria-hidden />}
-    </button>
-  );
-}
-
-function Explorer({
-  root,
-  files,
-  active,
-  edited,
-  onOpen,
-}: {
-  root: string;
-  files: RepoFile[];
-  active: string;
-  edited: ReadonlySet<string>;
-  onOpen(path: string): void;
-}) {
-  const byPath = new Map(files.map((f) => [f.path, f]));
-  const render = (nodes: TreeNode[], depth: number): ReactNode =>
-    nodes.map((node) =>
-      node.children ? (
-        <li key={node.path}>
-          <span className="ide-folder" style={{ paddingLeft: 8 + depth * 12 }}>
-            ▾ {node.name}
-          </span>
-          <ul>{render(node.children, depth + 1)}</ul>
-        </li>
-      ) : (
-        <li key={node.path}>
-          <button
-            type="button"
-            className="ide-file"
-            aria-current={node.path === active ? "true" : undefined}
-            style={{ paddingLeft: 20 + depth * 12 }}
-            onClick={() => onOpen(node.path)}
-          >
-            <LanguageDot language={byPath.get(node.path)!.language} />
-            {node.name}
-            {edited.has(node.path) && (
-              <span className="ide-git" title="Modified">
-                M
-              </span>
-            )}
-          </button>
-        </li>
-      ),
-    );
-  return (
-    <div className="ide-explorer">
-      <h2>Explorer</h2>
-      <div className="ide-root">▾ {root.toUpperCase()}</div>
-      <ul>{render(tree(files.map((f) => f.path)), 0)}</ul>
-    </div>
-  );
-}
-
-function Ticket({
-  issue,
-  examples,
-  testsPath,
-  thread,
-  onOpenTests,
-}: {
-  issue: IdeIssue;
-  examples: readonly { name?: string; input: unknown; expected: unknown }[];
-  testsPath: string;
-  /** The ticket's comments, then teammates' later ones, with when they were posted. */
-  thread: (IssueComment & { at?: string })[];
-  onOpenTests(): void;
-}) {
-  const now = new Date();
-  return (
-    <div className="ide-ticket">
-      <h2>Challenge</h2>
-      <p className="ide-ticket-key mono">{issue.key}</p>
-      <h3>{issue.title}</h3>
-      <h2>Goal and requirements</h2>
-      <Markdown source={issue.task} />
-      <ChallengeExamples examples={examples} />
-      <p className="ide-ticket-tests">
-        {examples.length} example check{examples.length === 1 ? "" : "s"} in{" "}
-        <button type="button" className="ide-link" onClick={onOpenTests}>
-          {testsPath}
-        </button>
-      </p>
-      {thread.length > 0 && (
-        <details className="ide-comments challenge-context" open>
-          <summary>Notes and constraints</summary>
-          {thread.map((comment, i) => (
-            <div className="ide-comment" key={i}>
-              <b>{comment.author}</b>
-              {comment.role && <span className="faint"> · {comment.role}</span>}
-              {comment.at && (
-                <time className="faint" dateTime={comment.at}>
-                  {" "}
-                  · {timeAgo(comment.at, now)}
-                </time>
-              )}
-              <Markdown source={comment.body} />
-            </div>
-          ))}
-        </details>
-      )}
     </div>
   );
 }
@@ -1515,11 +899,7 @@ function Tests({
   const failed = feedback.total - feedback.correct;
   return (
     <div>
-      <p className="ide-run-label faint">
-        {run.pullRequest
-          ? `Checks for pull request #${run.pullRequest.number}`
-          : "Local run"}
-      </p>
+      <p className="ide-run-label faint">Public examples</p>
       <p className={`ide-summary ${failed ? "fail" : "pass"}`}>
         {failed ? "✘" : "✔"} {feedback.correct} passed
         {failed > 0 && `, ${failed} failed`} · {o.durationMs} ms
@@ -1596,258 +976,6 @@ function Case({
   );
 }
 
-/** An open pull request by what its checks said; merged ones are labelled Merged. */
-const PR_RESULTS: Record<
-  string,
-  { mark: string; label: string; tone: string }
-> = {
-  running: { mark: "●", label: "Checks running…", tone: "busy" },
-  "checks-passed": { mark: "✔", label: "Open · checks passed", tone: "pass" },
-  "checks-failed": { mark: "✘", label: "Open · checks failed", tone: "fail" },
-  "checks-errored": { mark: "!", label: "Open · checks errored", tone: "fail" },
-  cancelled: { mark: "–", label: "Open · checks cancelled", tone: "faint" },
-};
-const MERGED = { mark: "⇢", label: "Merged", tone: "merged" };
-const CLOSED = { mark: "×", label: "Closed", tone: "faint" };
-
-/** The pull requests list shows the newest few; the rest stay one click away. */
-const PULLS_NEWEST = 3;
-
-function PullRequests({
-  pulls,
-  merged,
-  closed,
-  blocking,
-  mergeable,
-  threads,
-  revisions,
-  issue,
-  done,
-  runnable,
-}: {
-  pulls: PullRequestRecord[];
-  /** The pull request that can be merged now (lib/merge), if any. */
-  mergeable: number | null;
-  merged: ReadonlySet<number>;
-  closed: ReadonlySet<number>;
-  /** Open blocking review threads by pull request number. */
-  blocking: ReadonlyMap<number, number>;
-  /** Every review thread on this issue's pull requests. */
-  threads: readonly Thread[];
-  revisions: Readonly<Record<string, Revision>>;
-  issue: IdeIssue;
-  done: boolean;
-  runnable: boolean;
-}) {
-  const now = new Date();
-  const isMerged = (pr: PullRequestRecord) =>
-    pr.result === "merged" || merged.has(pr.number);
-  const mergedPull = pulls.find(isMerged);
-  const latest = pulls[0];
-  const [all, setAll] = useState(false);
-  const older = Math.max(0, pulls.length - PULLS_NEWEST);
-  const listed = all ? pulls : pulls.slice(0, PULLS_NEWEST);
-  return (
-    <div>
-      {latest && !done && closed.has(latest.number) && (
-        <p className="ide-review">
-          Pull request #{latest.number} is closed. When your code is ready, open
-          a new one (<Shortcut shift />
-          ).
-        </p>
-      )}
-      {latest &&
-        !done &&
-        !isMerged(latest) &&
-        !closed.has(latest.number) &&
-        latest.result !== "running" &&
-        (latest.result === "checks-passed" && blocking.get(latest.number) ? (
-          <div className="ide-review">
-            <p>
-              <b>Next: answer the review on #{latest.number}.</b> Its checks
-              pass, but {comments(blocking.get(latest.number)!)}{" "}
-              {blocking.get(latest.number) === 1 ? "blocks" : "block"} merging.
-              {revisions[issue.revision]?.team.some(
-                (c) => c.resolve === "explicit",
-              ) ? (
-                <>
-                  Change the code and push (<Shortcut shift />
-                  ), then resolve it on #{latest.number}.
-                </>
-              ) : (
-                <>
-                  Change the code and push (<Shortcut shift />
-                  ), or reply on #{latest.number} if it should stay as it is.
-                </>
-              )}
-            </p>
-            <ReviewComments
-              threads={threads.filter((t) => t.number === latest.number)}
-              revisions={revisions}
-            />
-            <Link
-              className="ide-run secondary"
-              href={pullHref(issue.key, latest.number)}
-            >
-              {revisions[issue.revision]?.team.some(
-                (c) => c.resolve === "explicit",
-              )
-                ? `Resolve on #${latest.number} →`
-                : `Reply on #${latest.number} →`}
-            </Link>
-          </div>
-        ) : latest.result === "checks-passed" && mergeable !== latest.number ? (
-          <p className="ide-review">
-            Pull request #{latest.number} passed its checks, but they don&apos;t
-            cover the code or ticket you have now. Push again (
-            <Shortcut shift />) so CI checks what you have.{" "}
-            <Link href={pullHref(issue.key, latest.number)}>
-              View #{latest.number}
-            </Link>
-          </p>
-        ) : latest.result === "checks-passed" ? (
-          <div className="ide-review">
-            <p>
-              <b>Next: review and merge #{latest.number}.</b> All its checks
-              pass. Read through your changes on the pull request, then merge
-              it; merging moves {issue.key} to Done.
-            </p>
-            <ReviewComments
-              threads={threads.filter((t) => t.number === latest.number)}
-              revisions={revisions}
-            />
-          </div>
-        ) : (
-          <p className="ide-review">
-            Pull request #{latest.number} is open, but its checks don&apos;t
-            pass yet, so it can&apos;t be merged. Keep working and push to it (
-            <Shortcut shift />
-            ); CI runs again on the new code.{" "}
-            <Link href={pullHref(issue.key, latest.number)}>
-              View #{latest.number}
-            </Link>
-          </p>
-        ))}
-      {done && mergedPull && (
-        <p className="ide-done">
-          Pull request #{mergedPull.number} merged. {issue.key} is <b>Done</b>.{" "}
-          <Link href={pullHref(issue.key, mergedPull.number)}>
-            View outcome
-          </Link>{" "}
-        </p>
-      )}
-      {pulls.length === 0 ? (
-        <p className="faint">
-          {runnable ? (
-            <>
-              When your code is ready, open a pull request (<Shortcut shift />
-              ). CI runs every check on that exact code; then you review it and
-              merge it, which moves {issue.key} to Done. Run the tests (
-              <Shortcut />) as often as you like before that.
-            </>
-          ) : (
-            <>
-              CI isn&apos;t set up for this repo yet, so pull requests
-              can&apos;t be opened. Your edits are saved.
-            </>
-          )}
-        </p>
-      ) : (
-        <>
-          <ol className="ide-pulls" id="ide-pull-list">
-            {listed.map((pr) => {
-              const shown = isMerged(pr)
-                ? MERGED
-                : closed.has(pr.number)
-                  ? CLOSED
-                  : (PR_RESULTS[pr.result] ?? PR_RESULTS["checks-errored"]);
-              return (
-                <li key={pr.number} className={shown.tone}>
-                  <span className="ide-pr-mark">{shown.mark}</span>
-                  {pr.result === "running" ? (
-                    <span className="mono">#{pr.number}</span>
-                  ) : (
-                    <Link
-                      className="mono"
-                      href={pullHref(issue.key, pr.number)}
-                    >
-                      #{pr.number}
-                    </Link>
-                  )}
-                  <span className="ide-pr-label">{shown.label}</span>
-                  <span className="faint">
-                    {pr.result === "running"
-                      ? `${pr.total} checks`
-                      : `${pr.passed}/${pr.total} checks`}
-                    {pr.pushes > 1 && ` · ${pr.pushes} pushes`}
-                    {!isMerged(pr) &&
-                      !closed.has(pr.number) &&
-                      blocking.get(pr.number) && (
-                        <span className="ide-pr-blocking">
-                          {" · "}
-                          {comments(blocking.get(pr.number)!)}
-                        </span>
-                      )}
-                  </span>
-                  <time className="faint" dateTime={pr.at}>
-                    {timeAgo(pr.at, now)}
-                  </time>
-                </li>
-              );
-            })}
-          </ol>
-          {older > 0 && (
-            <button
-              type="button"
-              className="pull-more"
-              aria-expanded={all}
-              aria-controls="ide-pull-list"
-              onClick={() => setAll((v) => !v)}
-            >
-              {all ? "Show fewer" : `Show all ${pulls.length} pull requests`}
-            </button>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
-/** Teammates' review comments on a pull request, as they read on the pull request's page. */
-function ReviewComments({
-  threads,
-  revisions,
-}: {
-  threads: readonly Thread[];
-  revisions: Readonly<Record<string, Revision>>;
-}) {
-  const shown = threads.flatMap((t) => {
-    const comment = revisions[t.issueRevision]?.team.find(
-      (c) => c.id === t.comment,
-    );
-    return comment ? [{ thread: t, comment }] : [];
-  });
-  if (!shown.length) return null;
-  return (
-    <div className="ide-comments">
-      {shown.map(({ thread, comment }) => (
-        <div className="ide-comment" key={`${thread.comment}-${thread.push}`}>
-          <b>{comment.author.name}</b>
-          <span className="faint"> · {comment.author.role}</span>
-          {thread.severity === "blocking" && (
-            <span className="faint">
-              {" "}
-              · {thread.resolved ? "resolved" : "requested changes"}
-            </span>
-          )}
-          <Markdown source={comment.text[thread.wording] ?? comment.text[0]} />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/** The app page the IDE was opened from, if it was one of ours. */
 function entryPath(): string | null {
   // Client navigation leaves document.referrer at the first page loaded; the tracker notes
   // the page before this one.
@@ -1865,64 +993,6 @@ function entryPath(): string | null {
   }
 }
 
-function comments(count: number): string {
-  return `${count} blocking finding${count === 1 ? "" : "s"}`;
-}
-
-/** One line in the panel saying what teammates just did. */
-interface TeamNote {
-  author: string;
-  role: string;
-  text: string;
-  /** A review comment's pull request; absent for the ticket's thread. */
-  pullRequest?: number;
-}
-
-/**
- * What teammates just said on the ticket, for showing in place: issue comments and hints.
- * Review comments are shown with their pull request instead.
- */
-function teamNotes(releases: readonly Release[]): TeamNote[] {
-  return releases.flatMap((r): TeamNote[] => {
-    if (r.kind === "resolved") return [];
-    if (r.kind === "comment" && r.pullRequest) return [];
-    const plain = (text: string) => text.replace(/`/g, "");
-    if (r.kind === "hint")
-      return [
-        {
-          author: r.hint.author.name,
-          role: r.hint.author.role,
-          text: plain(r.hint.text),
-        },
-      ];
-    return [
-      {
-        author: r.comment.author.name,
-        role: r.comment.author.role,
-        text: plain(r.comment.text[r.wording] ?? r.comment.text[0]),
-        ...(r.pullRequest ? { pullRequest: r.pullRequest } : {}),
-      },
-    ];
-  });
-}
-
-function announcement(releases: readonly Release[]): string {
-  return releases
-    .map((r) => {
-      if (r.kind === "hint")
-        return `${r.hint.author.name} commented on the ticket.`;
-      if (r.kind === "resolved")
-        return `Review comment on #${r.pullRequest} resolved by your push.`;
-      const who = r.comment.author.name;
-      if (!r.pullRequest) return `${who} commented on the ticket.`;
-      return r.comment.severity === "blocking"
-        ? `${who} requested changes on #${r.pullRequest}.`
-        : `${who} commented on #${r.pullRequest}.`;
-    })
-    .join(" ");
-}
-
-/** The run as a terminal shows it: printed output, errors with traces, cases, summary. */
 function Output({
   run,
   challenge,
@@ -1951,142 +1021,6 @@ function Output({
   );
 }
 
-function TicketIcon() {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      aria-hidden
-    >
-      <rect x="4" y="3" width="16" height="18" rx="2" />
-      <path d="M8 8h8M8 12h8M8 16h5" />
-    </svg>
-  );
-}
-
-function FilesIcon() {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      aria-hidden
-    >
-      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
-      <path d="M14 3v5h5" />
-    </svg>
-  );
-}
-
-/**
- * What the IDE is doing while it opens: checking out the issue's repo, restoring saved work and
- * loading the language's runtime into the tab, with download progress. Editing can start before the
- * runtime is ready; only Run waits for it.
- */
-function Boot({
-  issue,
-  root,
-  branch,
-  opening,
-  runtime,
-  onSkip,
-}: {
-  issue: IdeIssue;
-  root: string;
-  branch: string;
-  opening: Opening;
-  runtime: Runtime;
-  onSkip(): void;
-}) {
-  const engine = engineFor(issue.language);
-  const opened = opening.state === "open";
-  const progress = runtime.state === "loading" ? runtime.progress : undefined;
-  const downloading =
-    progress?.phase === "download" && progress.loaded < progress.total;
-  return (
-    <div className="ide-boot" role="status" aria-live="polite">
-      <div className="ide-boot-card">
-        <img src="/logo.svg" alt="" className="ide-boot-logo" />
-        <p className="ide-boot-title">
-          <span className="mono faint">{issue.key}</span> {issue.title}
-        </p>
-        <ol className="ide-boot-steps">
-          <BootStep state="done">
-            Loaded challenge <b>{issue.key}</b>
-          </BootStep>
-          <BootStep state={opened ? "done" : "busy"}>
-            {opened ? "Code ready" : "Restoring your code"}
-            {!opened && "…"}
-          </BootStep>
-          {engine ? (
-            <BootStep state={runtime.state === "loading" ? "busy" : "done"}>
-              {downloading
-                ? `Installing ${toolchain(engine.label)}`
-                : runtime.state === "loading"
-                  ? `Starting ${toolchain(engine.label)}…`
-                  : `${toolchain(engine.label)} ready`}
-              {downloading && progress?.phase === "download" && (
-                <>
-                  <span className="faint">
-                    {" "}
-                    · {megabytes(progress.loaded)} of{" "}
-                    {megabytes(progress.total)} MB
-                  </span>
-                  <span
-                    className="ide-boot-bar"
-                    style={
-                      {
-                        "--progress": `${Math.round((progress.loaded / progress.total) * 100)}%`,
-                      } as CSSProperties
-                    }
-                  />
-                </>
-              )}
-            </BootStep>
-          ) : (
-            <BootStep state="skipped">
-              No test runner set up for this repo
-            </BootStep>
-          )}
-        </ol>
-        {opened && (
-          <button
-            type="button"
-            className="ide-link ide-boot-skip"
-            onClick={onSkip}
-          >
-            Start practicing; checks will be available when setup finishes
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function BootStep({
-  state,
-  children,
-}: {
-  state: "done" | "busy" | "skipped";
-  children: ReactNode;
-}) {
-  return (
-    <li className={`ide-boot-step ${state}`}>
-      <span className="ide-boot-mark" aria-hidden>
-        {state === "done" ? "✔" : state === "busy" ? "" : "–"}
-      </span>
-      <span>{children}</span>
-    </li>
-  );
-}
-
 function Shortcut({ shift = false }: { shift?: boolean }) {
   const [mac, setMac] = useState(false);
   useEffect(() => setMac(/Mac|iPhone|iPad/.test(navigator.platform)), []);
@@ -2096,47 +1030,5 @@ function Shortcut({ shift = false }: { shift?: boolean }) {
       {shift ? (mac ? "⇧" : "Shift+") : ""}
       {mac ? "↵" : "Enter"}
     </kbd>
-  );
-}
-
-function KeyboardHelp() {
-  const dialog = useRef<HTMLDialogElement>(null);
-  return (
-    <>
-      <button
-        className="ide-help"
-        onClick={() => dialog.current?.showModal()}
-        aria-label="Keyboard shortcuts"
-      >
-        ?
-      </button>
-      <dialog
-        className="keyboard-help"
-        ref={dialog}
-        aria-labelledby="keyboard-help-title"
-      >
-        <button
-          className="dialog-close"
-          onClick={() => dialog.current?.close()}
-        >
-          Close ×
-        </button>
-        <h2 id="keyboard-help-title">Keyboard shortcuts</h2>
-        <p>
-          <Shortcut /> Run tests
-        </p>
-        <p>
-          <Shortcut shift /> Open or push a pull request
-        </p>
-        <p>Press Escape, then Tab to move focus out of the editor.</p>
-        <p>
-          Use arrow keys, Home and End within tab bars. Escape closes dialogs.
-        </p>
-        <p>
-          Editor keybindings can be changed in{" "}
-          <Link href="/settings?run=editor">Settings</Link>.
-        </p>
-      </dialog>
-    </>
   );
 }

@@ -1,3 +1,5 @@
+> The active player surface is Practice: challenge, code, Submit, immediate feedback and Next challenge. The [ENG-328 compatibility contract](eng-328-lean-contract.md) documents the approved board-capture 7.2 automatic completion. Internal full-suite submission records remain temporarily compatible; workplace/PR controls described below are historical implementation details, not required player steps. Workspace capture and local-run scope are unchanged.
+
 # The IDE
 
 `/work/<KEY>` (for example `/work/FN-1`, always on the issue's live revision) opens an issue in a VS Code-style IDE: a title bar with the issue's status and **Run tests**, an activity bar switching between the ticket and the file explorer, editor tabs, a bottom panel with **Tests** and **Output**, and a status bar with the branch, save state, Vim mode and runtime. An issue's **Start work** button links here and moves the issue to In progress.

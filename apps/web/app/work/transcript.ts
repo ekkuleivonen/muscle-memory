@@ -90,7 +90,7 @@ export function transcript(
 ): Line[] {
   if (!run) return [];
   const header: Line = {
-    text: `$ ${run.pullRequest ? `checks for pull request #${run.pullRequest.number}` : "run tests"} · ${toolchain(runtimeLabel)}`,
+    text: `$ ${run.pullRequest ? "submit" : "run tests"} · ${toolchain(runtimeLabel)}`,
     tone: "dim",
   };
   const o = run.outcome;
