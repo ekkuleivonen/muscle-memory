@@ -489,7 +489,6 @@ export function CheckFeedbackView({ feedback }: { feedback: CheckFeedback }) {
         <ul className="check-required">
           {feedback.required.map((rule) => (
             <li key={rule.id}>
-              <b>{rule.author}</b>
               <Markdown source={rule.text} />
             </li>
           ))}

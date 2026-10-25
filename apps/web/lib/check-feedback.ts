@@ -19,11 +19,13 @@ export type CheckState =
   | "passed"
   | "completed";
 
-/** A deterministic rule the checked code still triggers: it blocks until the code changes. */
+/**
+ * A deterministic correctness or safety rule the checked code still triggers: it blocks until the
+ * code changes. Shown as the requirement it enforces, with no teammate and no Resolve.
+ */
 export interface RequiredRule {
   id: string;
-  author: string;
-  /** Markdown, as authored. */
+  /** Markdown: the requirement, as the challenge states it. */
   text: string;
 }
 

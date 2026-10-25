@@ -78,9 +78,7 @@ test("a required rule blocks with no Resolve: only changing the code clears it",
   const f = checkFeedbackOf(
     input({
       blocker: "review",
-      required: [
-        { id: "c1", author: "Priya", text: "Remove the debug print." },
-      ],
+      required: [{ id: "c1", text: "Nothing may be printed to stdout." }],
     }),
   );
   assert.equal(
@@ -117,7 +115,7 @@ test("no pull request vocabulary reaches the person", () => {
       input({
         blocker,
         diagnosis: failing,
-        required: [{ id: "c", author: "A", text: "t" }],
+        required: [{ id: "c", text: "t" }],
       }),
     ),
   );
