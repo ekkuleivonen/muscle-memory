@@ -1,7 +1,13 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import {
   deleteAccount,
   ensureHandle,
@@ -529,6 +535,7 @@ function Delete() {
 function ProfileForm({ only }: { only?: string }) {
   const [answers, setAnswers] = useState<Record<string, Answer> | null>(null);
   const [saved, setSaved] = useState<Profile>({});
+  const options = useRef<HTMLDivElement>(null);
   const [result, setResult] = useState<{ tone: Tone; text: ReactNode } | null>(
     null,
   );
@@ -537,7 +544,37 @@ function ProfileForm({ only }: { only?: string }) {
     setSaved(current);
     setAnswers({ ...current } as Record<string, Answer>);
   }, []);
+  // The keyboard starts on the first option, as a prompt would.
+  const ready = answers !== null;
+  useEffect(() => {
+    if (ready)
+      options.current
+        ?.querySelector<HTMLInputElement>("input")
+        ?.focus({ preventScroll: true });
+  }, [ready]);
   if (!answers) return null;
+  /** ↑↓ or j/k move through every option, across questions; Enter picks like Space. */
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    const inputs = [
+      ...(options.current?.querySelectorAll<HTMLInputElement>("input") ?? []),
+    ];
+    const at = inputs.indexOf(document.activeElement as HTMLInputElement);
+    if (at < 0) return;
+    const step =
+      event.key === "ArrowDown" || event.key === "j"
+        ? 1
+        : event.key === "ArrowUp" || event.key === "k"
+          ? -1
+          : 0;
+    if (step) {
+      event.preventDefault();
+      inputs[Math.min(inputs.length - 1, Math.max(0, at + step))]?.focus();
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      inputs[at].click();
+    }
+  };
   const shown = QUESTIONS.filter((q) => !only || q.id === only);
   const pick = (id: string, value: string, multi: boolean) => {
     setResult(null);
@@ -578,42 +615,52 @@ function ProfileForm({ only }: { only?: string }) {
   return (
     <SettingsFrame title={only ? "Profile question" : "Profile"}>
       <p className="t-dim">Change any answer, then save.</p>
-      {shown.map((question) => {
-        const multi = question.kind === "multiselect";
-        const value = answers[question.id];
-        return (
-          <fieldset key={question.id} className="t-question">
-            <legend>{question.message}</legend>
-            {question.choices.map((choice) => {
-              const on = multi
-                ? ((value as string[] | undefined) ?? []).includes(choice.value)
-                : value === choice.value;
-              return (
-                <label
-                  key={choice.value}
-                  className={`t-option${on ? " t-on-option" : ""}`}
-                >
-                  <input
-                    type={multi ? "checkbox" : "radio"}
-                    name={question.id}
-                    checked={on}
-                    onChange={() => pick(question.id, choice.value, multi)}
-                  />
-                  <span className="t-mark" aria-hidden>
-                    {multi ? (on ? "[x]" : "[ ]") : on ? "(•)" : "( )"}
-                  </span>
-                  <span>
-                    {choice.label}
-                    {"hint" in choice && choice.hint && (
-                      <span className="t-dim"> — {choice.hint}</span>
-                    )}
-                  </span>
-                </label>
-              );
-            })}
-          </fieldset>
-        );
-      })}
+      <div ref={options} onKeyDown={onKeyDown}>
+        {shown.map((question) => {
+          const multi = question.kind === "multiselect";
+          const value = answers[question.id];
+          return (
+            <fieldset key={question.id} className="t-question">
+              <legend>{question.message}</legend>
+              {question.choices.map((choice) => {
+                const on = multi
+                  ? ((value as string[] | undefined) ?? []).includes(
+                      choice.value,
+                    )
+                  : value === choice.value;
+                return (
+                  <label
+                    key={choice.value}
+                    className={`t-option${on ? " t-on-option" : ""}`}
+                  >
+                    <input
+                      type={multi ? "checkbox" : "radio"}
+                      name={question.id}
+                      checked={on}
+                      onChange={() => pick(question.id, choice.value, multi)}
+                    />
+                    <span className="t-cursor" aria-hidden>
+                      ❯
+                    </span>
+                    <span className="t-mark" aria-hidden>
+                      {multi ? (on ? "[x]" : "[ ]") : on ? "(•)" : "( )"}
+                    </span>
+                    <span>
+                      {choice.label}
+                      {"hint" in choice && choice.hint && (
+                        <span className="t-dim"> — {choice.hint}</span>
+                      )}
+                    </span>
+                  </label>
+                );
+              })}
+            </fieldset>
+          );
+        })}
+      </div>
+      <p className="t-line t-dim t-keys">
+        ↑↓ move · space or enter picks · tab to save · or click
+      </p>
       <div className="t-actions">
         <Button kind="primary" onClick={save}>
           save

@@ -368,32 +368,32 @@
 .t-group::before {
   content: "# ";
 }
-.t-rows {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.t-keymenu {
+  outline: none;
 }
 .term .t-row {
-  display: grid;
-  grid-template-columns: 10ch minmax(0, 1fr);
-  gap: 2ch;
-  padding: 6px 1ch;
-  border-left: 2px solid transparent;
+  display: flex;
+  gap: 1ch;
+  padding: 2px 1ch 2px 0;
   color: var(--t-fg);
   text-decoration: none;
 }
-.term .t-row:hover,
-.term .t-row:focus-visible {
+.term .t-row > :first-child {
+  width: 1ch;
+  flex: none;
+}
+.term .t-current-row {
   background: var(--t-current);
-  border-left-color: var(--t-accent);
-  outline: none;
 }
 .t-row-name {
+  white-space: pre;
   font-weight: 700;
 }
-.t-row:hover .t-row-name,
-.t-row:focus-visible .t-row-name {
+.t-current-row .t-row-name {
   color: var(--t-accent);
+}
+.t-keys {
+  margin-top: 1em;
 }
 .t-state {
   padding: 4px 1ch;
@@ -476,8 +476,7 @@
 .t-option {
   display: flex;
   gap: 1ch;
-  padding: 2px 1ch;
-  border-left: 2px solid transparent;
+  padding: 2px 1ch 2px 0;
   cursor: pointer;
 }
 .t-option:hover {
@@ -488,9 +487,15 @@
   opacity: 0;
   pointer-events: none;
 }
-.t-option:has(input:focus-visible) {
+.t-option:has(input:focus) {
   background: var(--t-current);
-  border-left-color: var(--t-accent);
+}
+.t-cursor {
+  visibility: hidden;
+  color: var(--t-accent);
+}
+.t-option:has(input:focus) .t-cursor {
+  visibility: visible;
 }
 .t-mark {
   color: var(--t-dim);
