@@ -9,6 +9,7 @@ import {
   type Diagnosis,
   type FailureCategory,
 } from "../../../lib/diagnosis";
+import type { CheckFeedback } from "../../../lib/check-feedback";
 import { isCiFinding, type Thread } from "../../../lib/feedback";
 import type { PullSummary } from "../../../lib/pulls";
 import { Markdown } from "./markdown";
@@ -482,5 +483,34 @@ export function Checks({
         </p>
       )}
     </div>
+  );
+}
+
+/**
+ * The latest full check, in the practice area (lib/check-feedback.ts): one headline, what to do
+ * next, failing cases (hidden ones by name and how they failed) and any required rule the code
+ * still triggers. It holds no state and records nothing; the parent re-reads it after a check.
+ */
+export function CheckFeedbackView({ feedback }: { feedback: CheckFeedback }) {
+  return (
+    <section
+      className={`check-feedback ${feedback.tone}`}
+      aria-live="polite"
+      aria-label="Check result"
+    >
+      <p className="check-headline">{feedback.headline}</p>
+      {feedback.diagnosis && <FailedChecks diagnosis={feedback.diagnosis} />}
+      {feedback.required.length > 0 && (
+        <ul className="check-required">
+          {feedback.required.map((rule) => (
+            <li key={rule.id}>
+              <b>{rule.author}</b>
+              <Markdown source={rule.text} />
+            </li>
+          ))}
+        </ul>
+      )}
+      {feedback.next && <p className="check-next dim">{feedback.next}</p>}
+    </section>
   );
 }

@@ -49,15 +49,15 @@ function facts(over: Partial<EvidenceFacts> = {}): EvidenceFacts {
 
 const ids = (f: EvidenceFacts) => briefOf(f)!.items.map((i) => i.id);
 
-test("merged on the first push: one sentence, then the tested code and CI-only checks", () => {
+test("completed on the first check: one sentence, then the tested code and hidden cases", () => {
   const brief = briefOf(facts())!;
-  assert.equal(brief.headline, "All 12 checks passed on the first push.");
+  assert.equal(brief.headline, "All 12 cases passed on the first check.");
   assert.equal(brief.firstMissing, false);
   assert.deepEqual(ids(facts()), ["before-push", "hidden"]);
   assert.match(brief.items[0].text, /tested first, and passed/);
 });
 
-test("merged after a failing first submission: the first result is kept apart from the latest", () => {
+test("completed after a failing first check: the first result is kept apart from the latest", () => {
   const f = facts({
     pushes: 3,
     first: {
@@ -72,7 +72,7 @@ test("merged after a failing first submission: the first result is kept apart fr
   });
   assert.equal(
     briefOf(f)!.headline,
-    "All 12 checks passed on push 3. On the first push, 7 of 12 checks passed.",
+    "All 12 cases passed on check 3. On the first check, 7 of 12 cases passed.",
   );
   const errored = facts({
     pushes: 2,
@@ -80,12 +80,12 @@ test("merged after a failing first submission: the first result is kept apart fr
   });
   assert.equal(
     briefOf(errored)!.headline,
-    "All 12 checks passed on push 2. On the first push, CI errored before reaching the tests.",
+    "All 12 cases passed on check 2. On the first check, the code errored before any case ran.",
   );
   // Pushed again after a review, the first push passing too.
   assert.equal(
     briefOf(facts({ pushes: 2 }))!.headline,
-    "All 12 checks passed on push 2. The first push passed too.",
+    "All 12 cases passed on check 2. The first check passed too.",
   );
 });
 
@@ -101,7 +101,7 @@ test("missing evidence is said, never filled in", () => {
   const brief = briefOf(f)!;
   assert.equal(
     brief.headline,
-    "All 12 checks passed on push 2. What CI said on the first push isn't known.",
+    "All 12 cases passed on check 2. What the first check showed isn't known.",
   );
   assert.equal(brief.firstMissing, true);
   assert.deepEqual(
@@ -129,7 +129,7 @@ test("the tested artifact: code changed after its last run, or never run, is wha
     facts({ verification: { runs: 0, green: 0, beforePush: "none" } }),
   )!;
   assert.equal(none.items[0].id, "runs");
-  assert.match(none.items[0].text, /CI was the first check/);
+  assert.match(none.items[0].text, /the full check was the first/);
 });
 
 test("the brief only repeats lines from the full evidence", () => {
@@ -144,7 +144,7 @@ test("historical records: a legacy pass has no breakdown to claim", () => {
   const f = facts({
     checks: { result: "checks-passed", passed: 12, total: 12, legacy: true },
   });
-  assert.equal(briefOf(f)!.headline, "CI passed on the first push.");
+  assert.equal(briefOf(f)!.headline, "Every case passed on the first check.");
 });
 
 test("open, failing, stale and closed pull requests have no brief: the merge box says what is left", () => {

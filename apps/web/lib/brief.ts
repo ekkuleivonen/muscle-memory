@@ -1,8 +1,8 @@
 /**
- * A merged pull request's outcome in a few lines, shown before the full evidence (./evidence):
+ * A completed challenge's outcome in a few lines, shown before the full evidence (./evidence):
  * the latest result against the first submission, then at most three lines taken as they are
- * from the full evidence, so the brief never says anything the evidence doesn't. Open pull
- * requests have no brief: the merge gate's verdict is the one place that says what is left.
+ * from the full evidence, so the brief never says anything the evidence doesn't. Until it is
+ * complete there is no brief: the check feedback says what is left.
  */
 import {
   describe,
@@ -22,14 +22,14 @@ export interface Brief {
 
 type Checks = Pick<Submission, "result" | "passed" | "total" | "legacy">;
 
-/** "all 12 checks passed", "7 of 12 checks passed", or what happened instead. */
+/** "all 12 cases passed", "7 of 12 cases passed", or what happened instead. */
 function result(c: Checks): string {
-  if (c.legacy) return "CI passed";
-  if (c.result === "checks-passed") return `all ${c.total} checks passed`;
+  if (c.legacy) return "every case passed";
+  if (c.result === "checks-passed") return `all ${c.total} cases passed`;
   if (c.result === "checks-errored")
-    return "CI errored before reaching the tests";
-  if (c.result === "cancelled") return "CI was cancelled";
-  return `${c.passed} of ${c.total} checks passed`;
+    return "the code errored before any case ran";
+  if (c.result === "cancelled") return "the check was cancelled";
+  return `${c.passed} of ${c.total} cases passed`;
 }
 
 const sentence = (s: string) => `${s[0].toUpperCase()}${s.slice(1)}`;
@@ -38,16 +38,16 @@ export function briefOf(facts: EvidenceFacts): Brief | null {
   if (facts.state !== "merged") return null;
   const { first, checks, pushes } = facts;
   let headline: string;
-  if (pushes <= 1) headline = `${sentence(result(checks))} on the first push.`;
+  if (pushes <= 1) headline = `${sentence(result(checks))} on the first check.`;
   else {
-    const latest = `${sentence(result(checks))} on push ${pushes}.`;
+    const latest = `${sentence(result(checks))} on check ${pushes}.`;
     headline = !first
-      ? `${latest} What CI said on the first push isn't known.`
+      ? `${latest} What the first check showed isn't known.`
       : first.result === "checks-passed" &&
           !first.legacy &&
           first.total === checks.total
-        ? `${latest} The first push passed too.`
-        : `${latest} On the first push, ${result(first)}.`;
+        ? `${latest} The first check passed too.`
+        : `${latest} On the first check, ${result(first)}.`;
   }
   const sections = describe(facts);
   const item = (section: string, id: string) =>

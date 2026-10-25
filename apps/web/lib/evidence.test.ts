@@ -290,11 +290,11 @@ test("failure and recovery: failed runs, a failing push, an explicitly resolved 
   const recovery = sections.find((s) => s.id === "recovery")!.items;
   assert.match(
     recovery.find((i) => i.id === "pushes")!.text,
-    /failed on 1 push, then passed/,
+    /1 full check failed, then one passed/,
   );
   assert.match(
     recovery.find((i) => i.id === "findings")!.text,
-    /1 resolved by you/,
+    /1 marked resolved by you/,
   );
 });
 
@@ -580,13 +580,13 @@ test("first submission and latest result are kept apart, in recorded push order"
   assert.equal(first.tone, "fail");
   assert.match(
     first.text,
-    /^First submitted \(push 1\): CI: 5 of 15 checks passed\.$/,
+    /^First check: 5 of 15 cases passed\.$/,
   );
   const latest = item(evidence, "correctness", "ci")!;
   assert.equal(latest.tone, "pass");
   assert.match(
     latest.text,
-    /^Latest \(push 2, pushed after failing CI on 1 earlier push and 1 review comment on earlier pushes\): CI: 15 of 15 checks passed\.$/,
+    /^Latest \(check 2, after 1 failing check and 1 teammate finding\): 15 of 15 cases passed\.$/,
   );
   // Order only: nothing says why it changed.
   assert.doesNotMatch(first.text + latest.text, /because|learn|improv|phase/i);
@@ -618,7 +618,7 @@ test("a single submission is both first and latest; a missing first push is not 
   assert.deepEqual(once.facts.beforeLatest, { failedChecks: 0, reviews: 0 });
   assert.match(
     item(once, "correctness", "ci")!.text,
-    /^First submitted \(push 1\), with no later pushes/,
+    /^First check, with no later ones/,
   );
 
   // Push 1's record is gone: its result is not known, never guessed from the latest.
@@ -707,7 +707,7 @@ test("verification: an edit during a pending run means the pushed code was not t
   assert.equal(evidence.facts.verification.beforePush, "changed-after");
   const line = item(evidence, "verification", "before-push")!;
   assert.doesNotMatch(line.text, /tested first/);
-  assert.match(line.text, /only CI checked it/);
+  assert.match(line.text, /only the full check ran it/);
 });
 
 test("verification: a run of exactly the pushed code counts, by artifact or identical complete files", () => {

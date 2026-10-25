@@ -1,6 +1,6 @@
 # ENG-329 proposed schema delta: Check code and automatic completion
 
-**Status: proposal for dot. Nothing here is implemented.** Baseline `1edfb853`. It adds no new event type and no new field, and asks for no new collection. It adds values to two existing enums and relaxes one validator rule, so both capture versions go up. Records already made keep the meaning of their own version, and none is rewritten or reinterpreted.
+**Status: superseded, kept for its path inventory only.** Dot decided on 2026-10-25: an additive `checks-passed` `BoardMoveTrigger` with board capture 7.1.0 → 7.2.0; `via` stays the original Submit gesture, documented as its cause, with no "automatic" value; internal submission records are kept for now, with no new `RunPurpose`. ENG-328 owns the completion writer and the schema and ingest changes. ENG-329 owns only the components and diagnosis. The lists of writers, validators, ingest and readers below (in particular, artifacts checked against exactly one workspace version at `packages/domain/ingest.ts:110`, and the merge recording the live revision rather than the checked one) may still help ENG-328.
 
 ## Why something has to change
 

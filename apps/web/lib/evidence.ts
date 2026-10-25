@@ -680,9 +680,7 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
 
   const changed: EvidenceItem[] = [];
   if (!facts.changed)
-    changed.push(
-      missing("code", "The code for this pull request isn't available."),
-    );
+    changed.push(missing("code", "The code that was checked isn't available."));
   else {
     const touched = facts.changed.filter((f) => f.added || f.removed);
     const added = touched.reduce((n, f) => n + f.added, 0);
@@ -701,15 +699,13 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
   changed.push(
     observed(
       "pushes",
-      facts.pushes === 1
-        ? "Opened once, with no further pushes."
-        : `Opened, then pushed ${times(facts.pushes - 1)} more.`,
+      facts.pushes === 1 ? "Checked once." : `Checked ${times(facts.pushes)}.`,
     ),
   );
 
   const correctness: EvidenceItem[] = [];
   const { first, beforeLatest } = facts;
-  /** "CI: 11 of 15 checks passed", or what happened instead. */
+  /** "11 of 15 cases passed", or what happened instead. */
   const ciText = (c: {
     result: string;
     passed: number;
@@ -717,12 +713,12 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
     legacy: boolean;
   }) =>
     c.legacy
-      ? "CI passed (the per-check breakdown isn't available)"
+      ? "every case passed (the per-case breakdown isn't available)"
       : c.result === "checks-errored"
-        ? "CI errored before reaching the tests"
+        ? "the code errored before any case ran"
         : c.result === "cancelled"
-          ? "CI was cancelled"
-          : `CI: ${c.passed} of ${c.total} checks passed`;
+          ? "the check was cancelled"
+          : `${c.passed} of ${c.total} cases passed`;
   const tone = (result: string): EvidenceItem["tone"] =>
     result === "checks-passed" ? "pass" : "fail";
   if (facts.pushes > 1) {
@@ -730,24 +726,20 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
       first
         ? observed(
             "first",
-            `First submitted (push 1): ${ciText(first)}.`,
+            `First check: ${ciText(first)}.`,
             tone(first.result),
           )
-        : missing(
-            "first",
-            "What CI said on the first submission (push 1) isn't available.",
-          ),
+        : missing("first", "What the first check showed isn't available."),
     );
     const after = [
       beforeLatest.failedChecks &&
-        `failing CI on ${plural(beforeLatest.failedChecks, "earlier push", "earlier pushes")}`,
-      beforeLatest.reviews &&
-        `${plural(beforeLatest.reviews, "review comment")} on earlier pushes`,
+        plural(beforeLatest.failedChecks, "failing check"),
+      beforeLatest.reviews && plural(beforeLatest.reviews, "teammate finding"),
     ].filter(Boolean);
     correctness.push(
       observed(
         "ci",
-        `Latest (push ${facts.pushes}${after.length ? `, pushed after ${after.join(" and ")}` : ""}): ${ciText(checks)}.`,
+        `Latest (check ${facts.pushes}${after.length ? `, after ${after.join(" and ")}` : ""}): ${ciText(checks)}.`,
         tone(checks.result),
       ),
     );
@@ -755,7 +747,7 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
     correctness.push(
       observed(
         "ci",
-        `First submitted (push 1), with no later pushes: ${ciText(checks)}.`,
+        `First check, with no later ones: ${ciText(checks)}.`,
         tone(checks.result),
       ),
     );
@@ -770,7 +762,7 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
   correctness.push(
     missing(
       "production",
-      "How it behaves in production isn't known: these checks ran in the test runner, and nothing was deployed or monitored.",
+      "How it behaves in production isn't known: these cases ran in the test runner, and nothing was deployed or monitored.",
     ),
   );
 
@@ -779,21 +771,21 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
     regression.push(
       missing(
         "hidden",
-        "Which of CI's extra checks passed isn't available for this push.",
+        "Which hidden cases passed isn't available for this check.",
       ),
     );
   else if (!hidden.total)
     regression.push(
       missing(
         "hidden",
-        "This issue has no checks beyond the repo's test file, so nothing tested behaviour you couldn't see.",
+        "This challenge has no hidden cases, so nothing tested behaviour you couldn't see.",
       ),
     );
   else {
     regression.push(
       observed(
         "hidden",
-        `Checks not in the repo's test file: ${hidden.passed} of ${hidden.total} passed.`,
+        `Hidden cases: ${hidden.passed} of ${hidden.total} passed.`,
         hidden.passed === hidden.total ? "pass" : "fail",
       ),
     );
@@ -801,7 +793,7 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
       regression.push(
         inferred(
           "generalises",
-          "Passing checks you didn't see suggests the fix handles more than the cases you were shown. It is not proof that nothing else broke.",
+          "Passing cases you didn't see suggests the solution handles more than the cases you were shown. It is not proof that nothing else broke.",
         ),
       );
   }
@@ -810,8 +802,8 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
     observed(
       "runs",
       verification.runs
-        ? `Ran the tests ${times(verification.runs)} before this pull request's latest push; ${verification.green} passed every visible test.`
-        : "Didn't run the tests before pushing; CI was the first check.",
+        ? `Ran the tests ${times(verification.runs)} before the last check; ${verification.green} passed every visible case.`
+        : "Didn't run the tests before checking; the full check was the first.",
     ),
   ];
   if (verification.runs)
@@ -819,23 +811,23 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
       verification.beforePush === "tested-passing"
         ? observed(
             "before-push",
-            "The code pushed last was tested first, and passed.",
+            "The code checked last was tested first, and passed.",
             "pass",
           )
         : verification.beforePush === "tested-failing"
           ? observed(
               "before-push",
-              "The code pushed last was tested first, with failures.",
+              "The code checked last was tested first, with failures.",
               "fail",
             )
           : verification.beforePush === "changed-after"
             ? observed(
                 "before-push",
-                "The code pushed last differs from every test run before it, so only CI checked it.",
+                "The code checked last differs from every test run before it, so only the full check ran it.",
               )
             : missing(
                 "before-push",
-                "Whether the code pushed last was tested first can't be established: no earlier test run can be matched to it.",
+                "Whether the code checked last was tested first can't be established: no earlier test run can be matched to it.",
               ),
     );
 
@@ -847,7 +839,7 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
         "runs",
         verification.green
           ? `${plural(setbacks, "test run")} failed or errored before the first one that passed.`
-          : `${plural(setbacks, "test run")} failed or errored; none passed every visible test.`,
+          : `${plural(setbacks, "test run")} failed or errored; none passed every visible case.`,
         verification.green ? "pass" : "neutral",
       ),
     );
@@ -856,8 +848,8 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
       observed(
         "pushes",
         passing
-          ? `CI failed on ${plural(recovery.failedPushes, "push", "pushes")}, then passed.`
-          : `CI failed on ${plural(recovery.failedPushes, "push", "pushes")}.`,
+          ? `${plural(recovery.failedPushes, "full check")} failed, then one passed.`
+          : `${plural(recovery.failedPushes, "full check")} failed.`,
         passing ? "pass" : "fail",
       ),
     );
@@ -865,20 +857,20 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
     recover.push(
       observed(
         "closed",
-        `${plural(recovery.closedBefore, "earlier pull request")} closed without merging.`,
+        `${plural(recovery.closedBefore, "earlier submission")} closed without finishing.`,
       ),
     );
   const f = recovery.findings;
   if (f.raised) {
     const how = [
-      f.byCode && `${f.byCode} by a change to the code`,
-      f.byReply && `${f.byReply} by a reply`,
-      f.byResolve && `${f.byResolve} resolved by you`,
+      f.byCode && `${f.byCode} fixed in the code`,
+      f.byReply && `${f.byReply} answered by a reply`,
+      f.byResolve && `${f.byResolve} marked resolved by you`,
     ].filter(Boolean);
     recover.push(
       observed(
         "findings",
-        `${plural(f.raised, "review finding")}${how.length ? `: ${how.join(", ")}` : ""}${
+        `${plural(f.raised, "teammate finding")}${how.length ? `: ${how.join(", ")}` : ""}${
           f.open ? `; ${f.open} still open` : ""
         }.`,
         f.open ? "fail" : "pass",
@@ -911,7 +903,7 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
     assist.push(
       observed(
         "comments",
-        `${plural(assistance.comments, "teammate comment")} on the ticket while you worked.`,
+        `${plural(assistance.comments, "teammate comment")} on the challenge while you worked.`,
       ),
     );
   assist.push(
@@ -936,7 +928,7 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
   const time: EvidenceItem[] = [
     observed(
       "active",
-      `Active for ${minutes(timing.active)}; ${minutes(timing.elapsed)} from first opening the issue.`,
+      `Active for ${minutes(timing.active)}; ${minutes(timing.elapsed)} from first opening the challenge.`,
     ),
     inferred(
       "time-caveat",
@@ -951,7 +943,7 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
   return [
     { id: "changed", title: "What changed", items: [...gaps, ...changed] },
     { id: "correctness", title: "Correctness", items: correctness },
-    { id: "regression", title: "Beyond the visible tests", items: regression },
+    { id: "regression", title: "Hidden cases", items: regression },
     { id: "verification", title: "Verification", items: verify },
     { id: "recovery", title: "Recovery", items: recover },
     { id: "assistance", title: "Help", items: assist },

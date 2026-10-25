@@ -2644,6 +2644,38 @@ button.home-cta:disabled {
   font-size: 11px;
   color: var(--dim);
 }
+/* The latest full check in the practice area (review.tsx CheckFeedbackView). */
+.check-feedback {
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+.check-feedback.fail {
+  border-left-color: var(--red);
+}
+.check-feedback.pass {
+  border-left-color: var(--green);
+}
+.check-feedback.busy {
+  border-left-color: var(--amber);
+}
+.check-headline {
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+.check-required {
+  margin: 4px 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.check-required li + li {
+  margin-top: 6px;
+}
+.check-next {
+  margin: 6px 0 0;
+}
 /* A merged pull request's outcome (pull-outcome.tsx): a brief, then every evidence line. */
 .outcome {
   margin: 20px 0;
