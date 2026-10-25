@@ -322,22 +322,6 @@ export function feedbackOf(
 }
 
 /**
- * Whether a pull request can be merged now, and if not, why: CI and review are independent
- * requirements, as with branch protection. Resolving a finding never satisfies CI, and only
- * the latest push's checks count.
- */
-export function mergeBlocker(
-  pull: { state: string; result: string; otherMerged?: number },
-  openBlockingCount: number,
-): "not-open" | "other-merged" | "checks" | "review" | null {
-  if (pull.state !== "open") return "not-open";
-  if (pull.otherMerged) return "other-merged";
-  if (pull.result !== "checks-passed") return "checks";
-  if (openBlockingCount > 0) return "review";
-  return null;
-}
-
-/**
  * Open threads that must be resolved before merging: blocking ones, plus any whose comment
  * needs an explicit Resolve (TeamComment.resolve), whatever its severity. Without explicit
  * comments this is exactly openBlocking.

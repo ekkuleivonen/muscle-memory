@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { requireConsent } from "../../../lib/gate";
 import { inTicket } from "../../../lib/feedback";
-import { isIncident } from "../../../lib/incident";
 import { projectFilterValue } from "../../../lib/library";
 import { getLibrary } from "../../../lib/load";
 import "../ide.css";
@@ -24,12 +23,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * The IDE for one issue, `/work/FN-1`, on its live revision. The incident (INC-1) can open an
- * earlier published revision, `?revision=sha256:…`: a shared link plays the version the sharer
- * played, and an attempt stays on the revision it started on. An unknown revision is refused,
- * never swapped for the latest. The issue's revisions travel to
- * the browser as a JSON string, because React's serializer would drop a "__proto__" fixture key
- * from an object.
+ * The IDE for one issue, `/work/FN-1`, on its live revision. `?revision=sha256:…` opens one of
+ * the issue's published revisions exactly, so a link can name the version it was made on; a
+ * revision that is not published (another issue's, or one pruned since) opens the live one
+ * at the plain URL instead. The issue's revisions travel to the browser as a JSON string,
+ * because React's serializer would drop a "__proto__" fixture key from an object.
  */
 export default async function WorkPage({ params, searchParams }: Props) {
   const { key } = await params;
@@ -42,7 +40,7 @@ export default async function WorkPage({ params, searchParams }: Props) {
   if (!issue) notFound();
   if (key !== issue.key) redirect(`/work/${issue.key}`);
   const published = revisionsOf(issue.slug);
-  if (wanted && (!isIncident(issue.key) || !published[wanted])) notFound();
+  if (wanted && !published[wanted]) redirect(`/work/${issue.key}`);
   const revision = wanted ?? issue.revision;
   // The ticket as that revision has it.
   const content = published[revision];

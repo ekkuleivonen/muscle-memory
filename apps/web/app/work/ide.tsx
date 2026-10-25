@@ -40,14 +40,18 @@ import {
   timeAgo,
   type PullRequestRecord,
 } from "../../lib/activity";
-import { attemptAt, attemptRecords } from "../../lib/attempts";
-import { chatOf, type ChatMessage } from "../../lib/chat";
+import { attemptRecords } from "../../lib/attempts";
 import { statusOf } from "../../lib/board";
-import { incidentState, isIncident } from "../../lib/incident";
-import { closedPullRequests, mergedPullRequests } from "../../lib/pulls";
+import {
+  allPullRequests,
+  closedPullRequests,
+  mergedPullRequests,
+} from "../../lib/pulls";
+import { mergeEligibility, type MergeBlocker } from "../../lib/merge";
 import {
   due,
   feedbackOf,
+  openRequired,
   type Feedback,
   type Release,
   type Thread,
@@ -62,7 +66,6 @@ import {
   type TreeNode,
 } from "../../lib/repo";
 import { LanguageDot } from "../(browse)/_components/bits";
-import { TeamChat } from "../(browse)/_components/team-chat";
 import { StatusMenu, useBoard } from "../(browse)/_components/board";
 import {
   PREVIOUS_PATH_KEY,
@@ -188,13 +191,13 @@ export function Ide({
   });
   /** Something new arrived in the ticket's thread while another view was showing. */
   const [unread, setUnread] = useState(false);
+  /** Whether this attempt's newest pull request can be merged, as last read from the records. */
+  const [mergeable, setMergeable] = useState<{
+    number: number;
+    blocker: MergeBlocker | null;
+  } | null>(null);
   /** What teammates just said, shown where the person is working: the latest release only. */
   const [notes, setNotes] = useState<TeamNote[]>([]);
-  /** The team chat so far, for the attempt under way, and the attempt it belongs to. */
-  const [chat, setChat] = useState<{ messages: ChatMessage[]; scope: string }>({
-    messages: [],
-    scope: issue.slug,
-  });
 
   const router = useRouter();
   const layout = useIdeLayout();
@@ -263,9 +266,15 @@ export function Ide({
     return counts;
   }, [feedback, revisions]);
 
-  /** The open pull request once its checks pass and nothing blocks it: the next step is merging. */
+  /**
+   * The open pull request once nothing blocks merging it (lib/merge, as its page decides) and
+   * nothing was typed since: the next step is merging.
+   */
   const reviewable =
-    openPull?.result === "checks-passed" && !blocking.get(openPull.number)
+    openPull &&
+    mergeable?.number === openPull.number &&
+    mergeable.blocker === null &&
+    !stale
       ? openPull
       : null;
 
@@ -284,15 +293,6 @@ export function Ide({
   const reviewing = useRef<Promise<void>>(Promise.resolve());
   const viewRef = useRef(view);
   viewRef.current = view;
-
-  /** The chat a revision carries, as far as this attempt's records have come. */
-  function chatFor(records: readonly WorkspaceRecord[]) {
-    const attempt = attemptAt(records, issue.slug);
-    return {
-      messages: chatOf(revision.chat ?? [], records, issue.slug, (id) => revisions[id]),
-      scope: `${issue.slug}@${attempt.start ?? "first"}`,
-    };
-  }
 
   /**
    * Releases whatever teammate feedback the revision's triggers say is due, from what is
@@ -341,12 +341,33 @@ export function Ide({
         }
         if (session.current === current) {
           setFeedback(feedbackOf(records, issue.slug, (id) => revisions[id]));
-          setChat(chatFor(records));
+          setMergeable(mergeableOf(records));
         }
       } catch (cause) {
         console.warn("Teammate feedback could not be checked.", cause);
       }
     });
+  }
+
+  /** The merge gate for this attempt's newest pull request, from its records (lib/merge). */
+  function mergeableOf(records: readonly WorkspaceRecord[]) {
+    const pull = allPullRequests(records).find((p) => p.issue === issue.slug);
+    if (!pull) return null;
+    return {
+      number: pull.number,
+      blocker: mergeEligibility({
+        records,
+        issue: issue.slug,
+        number: pull.number,
+        pull,
+        published: (id) => !!revisions[id],
+        openRequired: openRequired(
+          feedbackOf(records, issue.slug, (id) => revisions[id]),
+          pull.number,
+          (id) => revisions[id],
+        ).length,
+      }).blocker,
+    };
   }
 
   function startRuntime() {
@@ -384,17 +405,6 @@ export function Ide({
       const participantId = await store.current.participantId();
       participant.current = participantId;
       const all = await store.current.workspaceRecords();
-      // An incident attempt stays on the revision it started on, whatever the URL says.
-      if (isIncident(issue.key)) {
-        const pinned = incidentState(all).revision;
-        if (pinned && pinned !== issue.revision && revisions[pinned]) {
-          if (current())
-            router.replace(
-              `/work/${issue.key}?revision=${encodeURIComponent(pinned)}`,
-            );
-          return;
-        }
-      }
       // Only the attempt under way (a replay starts a new one); earlier ones stay recorded.
       const records = attemptRecords(all, issue.slug);
       const recovered: RecoveredCode | null = latestSavedCode(
@@ -415,7 +425,7 @@ export function Ide({
       setMerged(mergedNumbers);
       setClosed(closedNumbers);
       setFeedback(feedbackOf(records, issue.slug, (id) => revisions[id]));
-      setChat(chatFor(all));
+      setMergeable(mergeableOf(records));
       session.current = new WorkspaceSession({
         participantId,
         consentVersion: `terms-${account?.accepted?.version ?? "unknown"}`,
@@ -1052,6 +1062,7 @@ export function Ide({
                 merged={merged}
                 closed={closed}
                 blocking={blocking}
+                mergeable={reviewable?.number ?? null}
                 threads={feedback.threads}
                 revisions={revisions}
                 issue={issue}
@@ -1112,7 +1123,6 @@ export function Ide({
         />
       )}
       <div ref={sandboxHost} hidden />
-      <TeamChat messages={chat.messages} scope={chat.scope} inIde />
     </div>
   );
 }
@@ -1432,11 +1442,15 @@ const PR_RESULTS: Record<
 const MERGED = { mark: "⇢", label: "Merged", tone: "merged" };
 const CLOSED = { mark: "×", label: "Closed", tone: "faint" };
 
+/** The pull requests list shows the newest few; the rest stay one click away. */
+const PULLS_NEWEST = 3;
+
 function PullRequests({
   pulls,
   merged,
   closed,
   blocking,
+  mergeable,
   threads,
   revisions,
   issue,
@@ -1444,6 +1458,8 @@ function PullRequests({
   runnable,
 }: {
   pulls: PullRequestRecord[];
+  /** The pull request that can be merged now (lib/merge), if any. */
+  mergeable: number | null;
   merged: ReadonlySet<number>;
   closed: ReadonlySet<number>;
   /** Open blocking review threads by pull request number. */
@@ -1460,6 +1476,9 @@ function PullRequests({
     pr.result === "merged" || merged.has(pr.number);
   const mergedPull = pulls.find(isMerged);
   const latest = pulls[0];
+  const [all, setAll] = useState(false);
+  const older = Math.max(0, pulls.length - PULLS_NEWEST);
+  const listed = all ? pulls : pulls.slice(0, PULLS_NEWEST);
   return (
     <div>
       {latest && !done && closed.has(latest.number) && (
@@ -1508,6 +1527,16 @@ function PullRequests({
                 : `Reply on #${latest.number} →`}
             </Link>
           </div>
+        ) : latest.result === "checks-passed" && mergeable !== latest.number ? (
+          <p className="ide-review">
+            Pull request #{latest.number} passed its checks, but they
+            don&apos;t cover the code or ticket you have now. Push again (
+            <Shortcut shift />
+            ) so CI checks what you have.{" "}
+            <Link href={pullHref(issue.key, latest.number)}>
+              View #{latest.number}
+            </Link>
+          </p>
         ) : latest.result === "checks-passed" ? (
           <div className="ide-review">
             <p>
@@ -1537,13 +1566,7 @@ function PullRequests({
             </Link>
           </p>
         ))}
-      {done && mergedPull && isIncident(issue.key) && (
-        <p className="ide-done">
-          Pull request #{mergedPull.number} is merged and main ships itself:
-          checkout is back. <Link href="/incident/report">Read the incident report</Link>.
-        </p>
-      )}
-      {done && mergedPull && !isIncident(issue.key) && (
+      {done && mergedPull && (
         <p className="ide-done">
           Pull request #{mergedPull.number} merged. {issue.key} is <b>Done</b>.{" "}
           <Link href="/dashboard">Back to your dashboard</Link> or{" "}
@@ -1567,43 +1590,56 @@ function PullRequests({
           )}
         </p>
       ) : (
-        <ol className="ide-pulls">
-          {pulls.map((pr) => {
-            const shown = isMerged(pr)
-              ? MERGED
-              : closed.has(pr.number)
-                ? CLOSED
-                : (PR_RESULTS[pr.result] ?? PR_RESULTS["checks-errored"]);
-            return (
-              <li key={pr.number} className={shown.tone}>
-                <span className="ide-pr-mark">{shown.mark}</span>
-                {pr.result === "running" ? (
-                  <span className="mono">#{pr.number}</span>
-                ) : (
-                  <Link className="mono" href={pullHref(issue.key, pr.number)}>
-                    #{pr.number}
-                  </Link>
-                )}
-                <span className="ide-pr-label">{shown.label}</span>
-                <span className="faint">
-                  {pr.result === "running"
-                    ? `${pr.total} checks`
-                    : `${pr.passed}/${pr.total} checks`}
-                  {pr.pushes > 1 && ` · ${pr.pushes} pushes`}
-                  {!isMerged(pr) && !closed.has(pr.number) && blocking.get(pr.number) && (
-                    <span className="ide-pr-blocking">
-                      {" · "}
-                      {comments(blocking.get(pr.number)!)}
-                    </span>
+        <>
+          <ol className="ide-pulls" id="ide-pull-list">
+            {listed.map((pr) => {
+              const shown = isMerged(pr)
+                ? MERGED
+                : closed.has(pr.number)
+                  ? CLOSED
+                  : (PR_RESULTS[pr.result] ?? PR_RESULTS["checks-errored"]);
+              return (
+                <li key={pr.number} className={shown.tone}>
+                  <span className="ide-pr-mark">{shown.mark}</span>
+                  {pr.result === "running" ? (
+                    <span className="mono">#{pr.number}</span>
+                  ) : (
+                    <Link className="mono" href={pullHref(issue.key, pr.number)}>
+                      #{pr.number}
+                    </Link>
                   )}
-                </span>
-                <time className="faint" dateTime={pr.at}>
-                  {timeAgo(pr.at, now)}
-                </time>
-              </li>
-            );
-          })}
-        </ol>
+                  <span className="ide-pr-label">{shown.label}</span>
+                  <span className="faint">
+                    {pr.result === "running"
+                      ? `${pr.total} checks`
+                      : `${pr.passed}/${pr.total} checks`}
+                    {pr.pushes > 1 && ` · ${pr.pushes} pushes`}
+                    {!isMerged(pr) && !closed.has(pr.number) && blocking.get(pr.number) && (
+                      <span className="ide-pr-blocking">
+                        {" · "}
+                        {comments(blocking.get(pr.number)!)}
+                      </span>
+                    )}
+                  </span>
+                  <time className="faint" dateTime={pr.at}>
+                    {timeAgo(pr.at, now)}
+                  </time>
+                </li>
+              );
+            })}
+          </ol>
+          {older > 0 && (
+            <button
+              type="button"
+              className="pull-more"
+              aria-expanded={all}
+              aria-controls="ide-pull-list"
+              onClick={() => setAll((v) => !v)}
+            >
+              {all ? "Show fewer" : `Show all ${pulls.length} pull requests`}
+            </button>
+          )}
+        </>
       )}
     </div>
   );

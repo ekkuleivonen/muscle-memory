@@ -1,47 +1,9 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { requireConsent } from "../../../lib/gate";
-import { INCIDENT } from "../../../lib/incident";
-import { getLibrary } from "../../../lib/load";
-import { IncidentReport } from "./incident-report";
-
-export const metadata: Metadata = {
-  title: "Incident report · INC-1 · Muscle Memory",
-};
+import { redirect } from "next/navigation";
 
 /**
- * The incident report: filed only for an attempt whose fix was merged with every check passing
- * (merging resolves it), read from this browser's records of that attempt.
+ * The retired incident report. A merged fix is an ordinary pull request now, so the link leads
+ * to this browser's own pull requests (through the Terms, like every tracker page).
  */
-export default async function ReportPage() {
-  await requireConsent("/incident/report");
-  const { findIssue, revisionsOf } = await getLibrary();
-  const issue = findIssue(INCIDENT.key);
-  if (!issue) notFound();
-  return (
-    <div className="legal home play incident">
-      <header className="legal-head">
-        <Link href="/" className="workspace-name">
-          <img
-            className="logo-mark"
-            src="/logo.svg"
-            alt=""
-            width={22}
-            height={22}
-          />
-          muscle memory
-        </Link>
-        <nav>
-          <Link href="/dashboard">Your desk</Link>
-        </nav>
-      </header>
-      <main className="legal-body home-body">
-        <IncidentReport
-          issue={{ key: issue.key, slug: issue.slug }}
-          revisionsJson={JSON.stringify(revisionsOf(issue.slug))}
-        />
-      </main>
-    </div>
-  );
+export default function LegacyIncidentReport() {
+  redirect("/pulls");
 }
