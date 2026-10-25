@@ -156,7 +156,7 @@
 .t-prose > p {
   margin: 0 0 1.6em;
 }
-/* The status bar: top-level navigation, pinned under the terminal it belongs to. */
+/* The status bar: where the page sits, as a breadcrumb trail, pinned under the terminal. */
 .t-footer {
   position: fixed;
   inset: auto 0 0;
@@ -191,15 +191,23 @@
   background: var(--t-current);
 }
 .t-footer-link[aria-current="page"] {
-  color: var(--t-bg);
-  background: var(--t-accent);
+  color: var(--t-fg);
 }
-.t-footer-link:first-child {
+.t-footer-link[aria-current="page"]:hover {
+  background: none;
+}
+.t-trail li:first-child .t-footer-link {
   color: var(--t-accent);
   font-weight: 700;
 }
-.t-footer-link:first-child[aria-current="page"] {
-  color: var(--t-bg);
+.t-trail {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.t-trail li {
+  display: flex;
 }
 .t-footer-link:focus-visible {
   outline: 1px solid var(--t-accent);

@@ -105,7 +105,7 @@ Not included: editor timelines beyond transactions, keystroke timing, participan
 
 ## Practice layout
 
-`/work/<KEY>` fills the window as terminal panes: the challenge on the left, code over feedback on the right. Each pane is bordered, titled in its top border, and scrolls on its own; the pane holding focus is outlined in the accent colour. Run and submit sit along the code pane's bottom edge. Under the panes are a status line (shortcuts, editor keys) and the site's status bar. Below 760px the panes stack and the page scrolls.
+`/work/<KEY>` fills the window as terminal panes: the challenge on the left, code over feedback on the right. Each pane is bordered, titled in its top border, and scrolls on its own; the pane holding focus is outlined in the accent colour. Run and submit sit along the code pane's bottom edge. Under the panes are a status line (shortcuts, editor keys) and the site's status bar, showing where the challenge sits (explore › project › key › practice). Below 760px the panes stack and the page scrolls.
 
 ## Small screens and keyboard access
 

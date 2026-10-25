@@ -19,7 +19,7 @@ export default async function SettingsPage({
   return (
     <>
       <SettingsTerminal start={run} />
-      <TermFooter current="/settings" signedIn />
+      <TermFooter trail={[{ label: "settings", href: "/settings" }]} />
     </>
   );
 }

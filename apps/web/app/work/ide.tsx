@@ -61,7 +61,7 @@ import {
 } from "../workspace/continuity";
 
 import { ChallengeExamples } from "../(browse)/_components/challenge-examples";
-import { TermFooter } from "../_terminal/footer";
+import { TermFooter, type Crumb } from "../_terminal/footer";
 import { privateCheckFailure } from "./check-feedback";
 import {
   completionEligibility,
@@ -112,6 +112,7 @@ export function Ide({
   revisionsJson,
   candidates,
   issue,
+  trail,
 }: {
   /**
    * Every published revision of the issue by id, as a JSON string: React's serializer would
@@ -119,6 +120,8 @@ export function Ide({
    * earlier ones is read from theirs.
    */
   revisionsJson: string;
+  /** Where the challenge sits, for the status bar's breadcrumb trail. */
+  trail: readonly Crumb[];
   candidates: IssueSummary[];
   issue: IdeIssue;
 }) {
@@ -883,7 +886,7 @@ export function Ide({
           <Link href="/settings?run=editor">editor keys</Link>
         </span>
       </p>
-      <TermFooter current={`/work/${issue.key}`} signedIn />
+      <TermFooter trail={trail} />
       <div ref={sandboxHost} hidden />
     </div>
   );
