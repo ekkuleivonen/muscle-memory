@@ -266,7 +266,7 @@ test("resolving a review finding names the pull request and the finding, nothing
     data: { issueKey: "INC-1", pullRequest: 2, comment: "catch-hides-guests", via: "pointer" },
   });
   assert.equal(resolved.type, "observation.board.resolved");
-  assert.equal(resolved.captureVersion, "board-capture-7.1.0");
+  assert.equal(resolved.captureVersion, BOARD_CAPTURE_VERSION);
   assert.deepEqual(resolved.data, {
     issueKey: "INC-1",
     pullRequest: 2,
@@ -294,4 +294,28 @@ test("board observations keep the exact Terms version accepted, dated or dated w
   assert.equal(boardMove({ ...base, termsVersion: "2026-10-25.12" }).consentVersion, "terms-2026-10-25.12");
   for (const bad of ["latest", "", "2026-10-25.", "2026-10-25.x", "2026-10-25.1.2", " 2026-10-25", "2026-10-25 ", "2026-1-25", "2026-10-25-1", "terms-2026-10-25"])
     assert.throws(() => boardMove({ ...base, termsVersion: bad }), /Terms version/, JSON.stringify(bad));
+});
+
+
+test("automatic completion records the Submit cause and exact internal submission/run", () => {
+  const data = {
+    ...base.data,
+    from: "in-progress" as const,
+    to: "done" as const,
+    trigger: "checks-passed" as const,
+    via: "keyboard" as const,
+    pullRequest: 2,
+    runId: "checked-run",
+    nudged: false,
+  };
+  const completed = boardMove({ ...base, data });
+  assert.equal(completed.captureVersion, "board-capture-7.2.0");
+  assert.deepEqual(completed.data, data);
+  for (const change of [
+    { runId: undefined },
+    { pullRequest: 0 },
+    { to: "todo" },
+    { via: "automatic" },
+  ])
+    assert.throws(() => boardMove({ ...base, data: { ...data, ...change } as typeof data }));
 });

@@ -6,11 +6,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   editableFiles,
-  type Case,
   type Revision,
 } from "../../../../../packages/content/model";
-import type { Json } from "../../../../../packages/domain/json";
-import { runFeedback } from "../../../../../packages/domain/workspace";
 import { timeAgo } from "../../../lib/activity";
 import type { IssueSummary } from "../../../lib/library";
 import { filterPulls, href, type PullQuery } from "../../../lib/queries";
@@ -23,34 +20,19 @@ import {
   type PullSummary,
   type TimelineEntry,
 } from "../../../lib/pulls";
-import type { BoardMoveVia } from "../../../../../packages/domain/board";
 import { LanguageTag } from "./bits";
 import { StartWork, useBoard } from "./board";
-import {
-  logClose,
-  logReply,
-  logResolve,
-  logResult,
-  setIssueContext,
-} from "./board-log";
-import { metricsOf } from "../../../lib/result";
-import { Markdown } from "./markdown";
+import { setIssueContext } from "./board-log";
 import { Ask } from "./ask";
+import { Markdown } from "./markdown";
 import { PullOutcome } from "./pull-outcome";
+import { Checks, Findings } from "./review";
 import { useResult } from "./result-card";
 import { CopyIssueLink, ShareResult } from "./share";
 import { tryHref } from "../../../lib/share";
 import { useNow, useRecords } from "./records";
-import {
-  feedbackOf,
-  isCiFinding,
-  openRequired,
-  type Thread,
-} from "../../../lib/feedback";
+import { feedbackOf, type Thread } from "../../../lib/feedback";
 import { attemptRecords } from "../../../lib/attempts";
-import { mergeEligibility, type MergeEligibility } from "../../../lib/merge";
-import { openPracticeStore } from "../../../../../packages/browser/practice-store";
-import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
 
 export interface PullIssue {
   key: string;
@@ -305,13 +287,9 @@ export function PullView({
         : undefined,
     [issue.slug, issue.revision],
   );
-  /** Bumped after a reply is recorded, so the records are read again. */
-  const [version, setVersion] = useState(0);
-  const records = useRecords(version);
-  const board = useBoard();
+  // Legacy URLs remain read-only evidence; completion is written only by practice.
+  const records = useRecords();
   const [tab, setTab] = useState<"timeline" | "checks" | "files">("timeline");
-  /** Set when merged on this page, before the stored records are read again. */
-  const [mergedNow, setMergedNow] = useState<string | null>(null);
   const revisions = useMemo(
     () => JSON.parse(revisionsJson) as Record<string, Revision>,
     [revisionsJson],
@@ -337,9 +315,7 @@ export function PullView({
         : { released: [], threads: [] },
     [attempt, issue.slug, revisions],
   );
-  const merged =
-    mergedNow ??
-    (detail?.pull.state === "merged" ? detail.pull.mergedAt : null);
+  const merged = detail?.pull.state === "merged" ? detail.pull.mergedAt : null;
   const language = detail
     ? revisions[detail.pull.issueRevision]?.workspace.language
     : undefined;
@@ -372,36 +348,10 @@ export function PullView({
     ],
   );
   const result = useResult(resultInput);
-  /** Whether this pull request can be merged, from a set of records: the button and the merge. */
-  const eligibilityFrom = (
-    all: readonly WorkspaceRecord[],
-  ): MergeEligibility | null => {
-    const found = pullRequestDetail(
-      all,
-      issue.slug,
-      number,
-      (id) => revisions[id],
-    );
-    if (!found) return null;
-    const own = attemptRecords(all, issue.slug, found.openedAt);
-    return mergeEligibility({
-      records: own,
-      issue: issue.slug,
-      number,
-      pull: found.pull,
-      published: (id) => !!revisions[id],
-      openRequired: openRequired(
-        feedbackOf(own, issue.slug, (id) => revisions[id]),
-        number,
-        (id) => revisions[id],
-      ).length,
-    });
-  };
-  const eligibility = records ? eligibilityFrom(records) : null;
   if (!records)
     return (
       <p className="loading-state" role="status">
-        Reading this pull request…
+        Reading saved submission…
       </p>
     );
   if (!detail)
@@ -413,9 +363,7 @@ export function PullView({
         <Link href={tryHref(issue.key)}>try {issue.key} yourself</Link>.
       </p>
     );
-  const pull: PullSummary = mergedNow
-    ? { ...detail.pull, state: "merged", mergedAt: mergedNow }
-    : detail.pull;
+  const pull = detail.pull;
   const revision = revisions[pull.issueRevision];
   // Each editable file against the revision's starting version of it.
   const changes: FileChange[] =
@@ -442,87 +390,6 @@ export function PullView({
   );
   const label = STATE_LABELS[pull.state];
   const threads = feedback.threads.filter((t) => t.number === number);
-  // Everything that must be resolved first: blocking findings, and explicit ones of any severity.
-  const blocking = openRequired(feedback, number, (id) => revisions[id]);
-  const reply = async (thread: Thread, text: string) => {
-    await logReply(
-      { id: issue.slug, revision: thread.issueRevision },
-      {
-        issueKey: issue.key,
-        pullRequest: number,
-        comment: thread.comment,
-        text,
-      },
-    );
-    setVersion((v) => v + 1);
-  };
-  /** The person resolving a review finding themselves: never CI, never a merge by itself. */
-  const resolve = async (thread: Thread, via: BoardMoveVia) => {
-    await logResolve(
-      { id: issue.slug, revision: thread.issueRevision },
-      {
-        issueKey: issue.key,
-        pullRequest: number,
-        comment: thread.comment,
-        via,
-      },
-    );
-    setVersion((v) => v + 1);
-  };
-  /** Closing without merging; `nudged` when the page was suggesting it. */
-  const close = async (via: BoardMoveVia, nudged: boolean) => {
-    await logClose(
-      { id: issue.slug, revision: pull.issueRevision },
-      { issueKey: issue.key, pullRequest: number, via, nudged },
-    );
-    setVersion((v) => v + 1);
-  };
-  const merge = async (via: BoardMoveVia) => {
-    // The same gate the button shows, on the records as stored now: another tab may have
-    // pushed, edited or merged since this page read them.
-    const store = await openPracticeStore();
-    let now: MergeEligibility | null;
-    try {
-      now = eligibilityFrom(await store.workspaceRecords());
-    } finally {
-      store.close();
-    }
-    if (!now || now.blocker !== null || !now.latest) {
-      setVersion((v) => v + 1);
-      return;
-    }
-    const shipped = now.latest;
-    // The result card's numbers as they stand at the merge: what the aggregates are made of.
-    if (revision)
-      void logResult(
-        { id: issue.slug, revision: shipped.issueRevision },
-        {
-          issueKey: issue.key,
-          pullRequest: pull.number,
-          language: revision.workspace.language,
-          metrics: 2,
-          values: metricsOf(
-            attempt ?? records,
-            issue.slug,
-            new Date().toISOString(),
-            (id) => revisions[id],
-          ) as unknown as Json,
-        },
-      );
-    void board
-      .complete(
-        {
-          key: issue.key,
-          slug: issue.slug,
-          revision: issue.revision ?? shipped.issueRevision,
-        },
-        { number: pull.number, runId: shipped.runId },
-        via,
-      )
-      // Read the records again once the merge is stored.
-      .then(() => setVersion((v) => v + 1));
-    setMergedNow(new Date().toISOString());
-  };
   return (
     <div className="pull">
       <article>
@@ -545,17 +412,48 @@ export function PullView({
             </Link>
           </span>
         </p>
-        <PullOutcome
-          records={attempt}
-          issue={issue}
-          number={number}
-          revisions={revisions}
-          mergedAt={merged}
-          blocker={eligibility?.blocker}
-          ideHref={workHref(issue)}
-        />
-        {pull.state === "merged" && (
-          <NextPractice candidates={candidates} current={issue.key} />
+        {pull.state === "merged" ? (
+          <>
+            <PullOutcome
+              records={attempt}
+              issue={issue}
+              number={number}
+              revisions={revisions}
+              mergedAt={merged}
+              blocker={undefined}
+              ideHref={workHref(issue)}
+            />
+            <NextPractice
+              candidates={candidates}
+              current={issue.key}
+              share={
+                result &&
+                resultInput && (
+                  <ShareResult
+                    state={result}
+                    issue={resultInput.issue}
+                    // Offered, never included by default: every file this pull request changed.
+                    // A file kept only in part is passed as such, so sharing is refused, not partial.
+                    code={changes
+                      .filter((c) => c.stats.added + c.stats.removed > 0)
+                      .map((c) => ({
+                        path: c.path,
+                        text: detail.code![c.path]?.text ?? "",
+                        truncated: c.truncated,
+                      }))}
+                  />
+                )
+              }
+            />
+          </>
+        ) : (
+          <p className="practice-notice">
+            This is a saved submission record. Continue in practice to submit
+            current code and get feedback.{" "}
+            <Link className="btn primary" href={workHref(issue)}>
+              Continue practice
+            </Link>
+          </p>
         )}
         <Findings
           pull={pull}
@@ -563,7 +461,6 @@ export function PullView({
           cases={revision?.checks.cases}
           threads={threads}
           revisions={revisions}
-          onResolve={pull.state === "open" ? resolve : undefined}
         />
         <div
           className="pull-tabs"
@@ -595,19 +492,7 @@ export function PullView({
         >
           {tab === "timeline" && (
             <Timeline
-              detail={
-                // Shown at once on merging, until the stored merge is read back.
-                mergedNow &&
-                !detail.timeline.some((entry) => entry.kind === "merged")
-                  ? {
-                      ...detail,
-                      timeline: [
-                        ...detail.timeline,
-                        { kind: "merged", at: mergedNow },
-                      ],
-                    }
-                  : detail
-              }
+              detail={detail}
               issue={issue}
               threads={threads}
               revisions={revisions}
@@ -618,38 +503,6 @@ export function PullView({
           )}
           {tab === "files" && <Files saved={!!detail.code} changes={changes} />}
         </div>
-        <MergeBox
-          pull={pull}
-          issue={issue}
-          blocking={blocking.length}
-          eligibility={eligibility}
-          explicit={blocking.some(
-            (t) =>
-              isCiFinding(t.comment) ||
-              revisions[t.issueRevision]?.team.find((c) => c.id === t.comment)
-                ?.resolve === "explicit",
-          )}
-          onMerge={(via) => void merge(via)}
-          onClose={(via) => void close(via, !!pull.otherMerged)}
-          share={
-            result &&
-            resultInput && (
-              <ShareResult
-                state={result}
-                issue={resultInput.issue}
-                // Offered, never included by default: every file this pull request changed.
-                // A file kept only in part is passed as such, so sharing is refused, not partial.
-                code={changes
-                  .filter((c) => c.stats.added + c.stats.removed > 0)
-                  .map((c) => ({
-                    path: c.path,
-                    text: detail.code![c.path]?.text ?? "",
-                    truncated: c.truncated,
-                  }))}
-              />
-            )
-          }
-        />
         {pull.state === "merged" && (
           <Ask
             className="pull-ask"
@@ -693,16 +546,7 @@ export function PullView({
             </>
           )}
         </dl>
-        {pull.state === "open" && !pull.otherMerged && (
-          <Link
-            className="pull-continue"
-            href={workHref(issue)}
-            title={`Back to the IDE to keep working; push to #${number} from there (⌘⇧⏎)`}
-          >
-            Continue in the IDE →
-          </Link>
-        )}
-        <CopyIssueLink issueKey={issue.key} />
+        {pull.state !== "merged" && <CopyIssueLink issueKey={issue.key} />}
       </aside>
     </div>
   );
@@ -956,118 +800,6 @@ const RUN_STATUS: Record<string, string> = {
   cancelled: "cancelled",
 };
 
-interface Outcome {
-  status: string;
-  phase?: string;
-  error?: { type: string; message: string; traceback?: { text: string } };
-  cases?: {
-    output?: { text: string; truncated: boolean };
-    error?: { type: string; message: string };
-    unserializable?: string;
-  }[];
-  stdout?: { text: string };
-  durationMs?: number;
-  timeoutMs?: number;
-  message?: string;
-}
-
-const show = (value: unknown) => JSON.stringify(value);
-
-function Checks({
-  outcome: raw,
-  cases,
-}: {
-  outcome: Json | null;
-  cases?: readonly Case[];
-}) {
-  const outcome = raw as unknown as Outcome | null;
-  if (!outcome || !cases)
-    return <p className="dim">No CI results for this pull request.</p>;
-  if (outcome.status === "timeout")
-    return (
-      <p className="pull-error">
-        The checks timed out after {Math.round((outcome.timeoutMs ?? 0) / 1000)}{" "}
-        s, before every case finished.
-      </p>
-    );
-  if (outcome.status === "runner-error")
-    return (
-      <p className="pull-error">
-        CI crashed before the checks finished; this wasn&apos;t your code. Push
-        again to rerun them.
-      </p>
-    );
-  if (outcome.status === "cancelled")
-    return <p className="dim">The checks were cancelled.</p>;
-  const verdicts =
-    outcome.phase === "tests" && outcome.cases
-      ? runFeedback(cases, outcome.cases).passed
-      : null;
-  return (
-    <div className="pull-checks">
-      {outcome.error && (
-        <div className="pull-error">
-          <b>
-            {outcome.error.type}: {outcome.error.message}
-          </b>
-          {outcome.error.traceback?.text && (
-            <pre>{outcome.error.traceback.text}</pre>
-          )}
-        </div>
-      )}
-      {verdicts && (
-        <ol>
-          {cases.map(({ input, expected }, index) => {
-            const got = outcome.cases?.[index];
-            const ok = verdicts[index];
-            return (
-              <li key={index} className={ok ? "pass" : "fail"}>
-                <span className="mark" aria-label={ok ? "Passed" : "Failed"}>
-                  {ok ? "✔" : "✘"}
-                </span>
-                <div>
-                  <code>{show(input)}</code> <span className="dim">→</span>{" "}
-                  <code>{show(expected)}</code>
-                  {!ok && (
-                    <div className="got">
-                      {got?.error ? (
-                        <>
-                          raised{" "}
-                          <code>
-                            {got.error.type}: {got.error.message}
-                          </code>
-                        </>
-                      ) : got?.output ? (
-                        <>
-                          returned <code>{got.output.text}</code>
-                          {got.output.truncated && " (truncated)"}
-                        </>
-                      ) : (
-                        <>returned a value that isn&apos;t JSON</>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ol>
-      )}
-      {outcome.stdout?.text && (
-        <details className="pull-output">
-          <summary>Printed output</summary>
-          <pre>{outcome.stdout.text}</pre>
-        </details>
-      )}
-      {typeof outcome.durationMs === "number" && (
-        <p className="dim pull-duration">
-          Ran in {Math.round(outcome.durationMs)} ms.
-        </p>
-      )}
-    </div>
-  );
-}
-
 interface FileChange {
   path: string;
   diff: ReturnType<typeof diffLines>;
@@ -1159,453 +891,19 @@ function HunkRows({ hunk }: { hunk: ReturnType<typeof hunks>[number] }) {
  * comment or nit), each resolvable by a push that fixes it, a reply or Resolve. Resolving never
  * touches CI, and a finding the code still triggers opens again on the next push.
  */
-function Findings({
-  pull,
-  outcome: raw,
-  cases,
-  threads,
-  revisions,
-  onResolve,
-  onReply,
-}: {
-  pull: PullSummary;
-  outcome: Json | null;
-  cases?: readonly Case[];
-  threads: Thread[];
-  revisions: Record<string, Revision>;
-  /** Absent once the pull request is merged or closed. */
-  onResolve?: (thread: Thread, via: BoardMoveVia) => Promise<void>;
-  onReply?: (thread: Thread, text: string) => Promise<void>;
-}) {
-  const outcome = raw as unknown as Outcome | null;
-  // The checks of the latest push that did not pass.
-  const failing: string[] = [];
-  if (pull.result !== "checks-passed" && pull.result !== "running") {
-    const verdicts =
-      outcome?.phase === "tests" && outcome.cases && cases
-        ? runFeedback(cases, outcome.cases).passed
-        : null;
-    if (verdicts && cases)
-      cases.forEach((c, i) => {
-        if (!verdicts[i]) failing.push(c.name ?? `case ${c.id}`);
-      });
-    else failing.push(`CI didn't finish (${checksText(pull)})`);
-  }
-  // Findings: the latest thread of each actionable comment, and every CI finding (with
-  // Revision.ciFindings, a failing push's own resolvable thread).
-  const latest = new Map<string, Thread>();
-  for (const t of threads) if (t.severity !== "info") latest.set(t.comment, t);
-  const review = [...latest.values()];
-  const ciThreads = review.some((t) => isCiFinding(t.comment));
-  // Without CI findings, failing checks are listed as they stand, cleared only by passing.
-  const ci = ciThreads ? [] : failing;
-  const open = ci.length + review.filter((t) => !t.resolved).length;
-  if (!ci.length && !review.length) return null;
-  return (
-    <section className="pull-findings" aria-labelledby="pull-findings-title">
-      <h2 id="pull-findings-title">
-        Findings{" "}
-        <span className={open ? "count open" : "count"}>
-          {open ? `${open} unresolved` : "all resolved"}
-        </span>
-      </h2>
-      {ci.length > 0 && (
-        <div className="finding ci">
-          <p>
-            <b>CI</b> <span className="review-badge blocking">Failing</span>{" "}
-            {ci.length} of {pull.total} checks{" "}
-            {ci.length === 1 ? "fails" : "fail"} on push {pull.pushes}. Only a
-            push whose checks pass clears this.
-          </p>
-          <ul>
-            {ci.map((name) => (
-              <li key={name}>✘ {name}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {review.length > 0 && (
-        <ol className="pull-review">
-          {review.map((thread) =>
-            isCiFinding(thread.comment) ? (
-              <CiFinding
-                key={`${thread.comment}@${thread.at}`}
-                thread={thread}
-                pull={pull}
-                failing={failing}
-                onResolve={onResolve}
-              />
-            ) : (
-              <ReviewThread
-                key={`${thread.comment}@${thread.at}`}
-                thread={thread}
-                revision={revisions[thread.issueRevision]}
-                onResolve={onResolve}
-                onReply={onReply}
-              />
-            ),
-          )}
-        </ol>
-      )}
-    </section>
-  );
-}
-
-/**
- * A CI finding: the failing push that opened it, what fails now, and Resolve. Resolving it is
- * the person's acknowledgement only; merging still needs the latest push's checks to pass.
- */
-function CiFinding({
-  thread,
-  pull,
-  failing,
-  onResolve,
-}: {
-  thread: Thread;
-  pull: PullSummary;
-  /** The latest push's failing checks; empty when it passed. */
-  failing: string[];
-  onResolve?: (thread: Thread, via: BoardMoveVia) => Promise<void>;
-}) {
-  return (
-    <li className={`review-thread ${thread.resolved ? "" : "open"}`}>
-      <span className="dot" aria-hidden />
-      <div className="review-card">
-        <header>
-          <b>CI</b>{" "}
-          {thread.resolved ? (
-            <span className="review-badge resolved">Resolved</span>
-          ) : (
-            <span className="review-badge blocking">
-              Unresolved · blocks merging
-            </span>
-          )}
-          <time dateTime={thread.at}>{clock(thread.at)}</time>
-        </header>
-        <p>
-          Checks failed on push {thread.push}.{" "}
-          {failing.length
-            ? `Push ${pull.pushes} still fails:`
-            : `Push ${pull.pushes} passes; resolve this once you've checked the failure is dealt with.`}
-        </p>
-        {failing.length > 0 && (
-          <ul className="ci-failing">
-            {failing.map((name) => (
-              <li key={name}>✘ {name}</li>
-            ))}
-          </ul>
-        )}
-        {thread.resolved ? (
-          <p className="faint">
-            Resolved by you. CI still has to pass before merging; another
-            failing push opens a new finding.
-          </p>
-        ) : (
-          onResolve && (
-            <button
-              type="button"
-              className="review-resolve"
-              onClick={(event) =>
-                void onResolve(
-                  thread,
-                  event.detail === 0 ? "keyboard" : "pointer",
-                )
-              }
-            >
-              Resolve
-            </button>
-          )
-        )}
-      </div>
-    </li>
-  );
-}
-
-/** A teammate's review finding, its replies and whether it is resolved. */
-function ReviewThread({
-  thread,
-  revision,
-  onResolve,
-  onReply,
-}: {
-  thread: Thread;
-  revision: Revision | undefined;
-  onResolve?: (thread: Thread, via: BoardMoveVia) => Promise<void>;
-  onReply?: (thread: Thread, text: string) => Promise<void>;
-}) {
-  const [text, setText] = useState("");
-  const [sending, setSending] = useState(false);
-  const comment = revision?.team.find((c) => c.id === thread.comment);
-  if (!comment) return null;
-  const blocking = thread.severity === "blocking";
-  const send = async () => {
-    if (!text.trim() || !onReply) return;
-    setSending(true);
-    try {
-      await onReply(thread, text);
-      setText("");
-    } finally {
-      setSending(false);
-    }
-  };
-  return (
-    <li
-      className={`review-thread ${blocking && !thread.resolved ? "open" : ""}`}
-    >
-      <span className="dot" aria-hidden />
-      <div className="review-card">
-        <header>
-          <b>{comment.author.name}</b>{" "}
-          <span className="faint">· {comment.author.role}</span>{" "}
-          {thread.resolved ? (
-            <span className="review-badge resolved">Resolved</span>
-          ) : blocking ? (
-            <span className="review-badge blocking">
-              Unresolved · blocks merging
-            </span>
-          ) : comment.resolve === "explicit" ? (
-            <span className="review-badge blocking">
-              Unresolved nit · blocks merging
-            </span>
-          ) : (
-            <span className="review-badge">Unresolved · nit</span>
-          )}
-          <time dateTime={thread.at}>{clock(thread.at)}</time>
-        </header>
-        <Markdown source={comment.text[thread.wording] ?? comment.text[0]} />
-        <p className="faint review-on">On push {thread.push}</p>
-        {thread.replies.map((r, i) => (
-          <div className="review-reply" key={i}>
-            <b>You</b> <time dateTime={r.at}>{clock(r.at)}</time>
-            <p>{r.text}</p>
-          </div>
-        ))}
-        {thread.resolved && (
-          <p className="faint">
-            {thread.resolved.by === "code"
-              ? `Resolved by push ${thread.resolved.push}: it no longer applies.`
-              : thread.resolved.by === "resolve"
-                ? "Resolved by you. If the next push still does this, it opens again."
-                : "Resolved by your reply."}
-          </p>
-        )}
-        {onResolve && !thread.resolved && (
-          <button
-            type="button"
-            className="review-resolve"
-            onClick={(event) =>
-              void onResolve(
-                thread,
-                event.detail === 0 ? "keyboard" : "pointer",
-              )
-            }
-          >
-            Resolve
-          </button>
-        )}
-        {onReply && comment.resolve !== "explicit" && (
-          <form
-            className="review-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void send();
-            }}
-          >
-            <textarea
-              value={text}
-              rows={2}
-              placeholder={
-                blocking && !thread.resolved
-                  ? "Reply, if the code should stay as it is…"
-                  : "Reply…"
-              }
-              aria-label={`Reply to ${comment.author.name}`}
-              onChange={(event) => setText(event.target.value)}
-            />
-            <button type="submit" disabled={!text.trim() || sending}>
-              Reply
-            </button>
-          </form>
-        )}
-      </div>
-    </li>
-  );
-}
-
 /**
  * Review, then merge: only a pull request whose checks all passed and whose blocking review
  * comments are resolved can be merged, as with branch protection. Merging moves the issue to
  * Done.
  */
-function MergeBox({
-  pull,
-  issue,
-  blocking,
-  eligibility,
-  explicit = false,
-  onMerge,
-  onClose,
-  share,
-}: {
-  pull: PullSummary;
-  issue: PullIssue;
-  /** Open blocking review threads. */
-  blocking: number;
-  /** Whether it can be merged now (lib/merge); null while it cannot be told. */
-  eligibility: MergeEligibility | null;
-  /** Some open finding is cleared by Resolve only (TeamComment.resolve). */
-  explicit?: boolean;
-  onMerge: (via: BoardMoveVia) => void;
-  onClose: (via: BoardMoveVia) => void;
-  /** Shown once merged: sharing the result. */
-  share?: React.ReactNode;
-}) {
-  if (pull.state === "merged")
-    return (
-      <div className="merge-box merged">
-        <PullIcon state="merged" size={18} />
-        <div className="merge-text">
-          <b>Merged.</b> {issue.key} is Done.
-        </div>
-        {share}
-      </div>
-    );
-  // A click from the keyboard (Enter or Space) has no pointer position.
-  const via = (event: React.MouseEvent): BoardMoveVia =>
-    event.detail === 0 ? "keyboard" : "pointer";
-  const closeButton = (
-    <button
-      type="button"
-      className="close-button"
-      onClick={(event) => onClose(via(event))}
-    >
-      Close pull request
-    </button>
-  );
-  if (pull.state === "closed")
-    return (
-      <div className="merge-box closed">
-        <PullIcon state="closed" size={18} />
-        <div className="merge-text">
-          <b>Closed without merging.</b> Your next push from the{" "}
-          <Link href={workHref(issue)}>IDE</Link> opens a new pull request.
-        </div>
-      </div>
-    );
-  if (pull.otherMerged)
-    return (
-      <div className="merge-box blocked">
-        <span className="merge-mark" aria-hidden>
-          –
-        </span>
-        <div className="merge-text">
-          <b>{issue.key} is already Done.</b> Pull request{" "}
-          <Link href={pullHref(issue.key, pull.otherMerged)}>
-            #{pull.otherMerged}
-          </Link>{" "}
-          was merged, so this one has nothing left to do. Close it to tidy up.
-        </div>
-        {closeButton}
-      </div>
-    );
-  const blocker = eligibility ? eligibility.blocker : "checks-pending";
-  const latest = eligibility?.latest ?? pull;
-  const pushNumber = eligibility?.latest?.push ?? pull.pushes;
-  const green = blocker === null;
-  const ide = <Link href={workHref(issue)}>IDE</Link>;
-  const pushAgain = (
-    <>
-      Push again from the {ide} (<kbd>⌘⇧⏎</kbd>) so CI checks what you have.
-    </>
-  );
-  return (
-    <div className={green ? "merge-box ready" : "merge-box blocked"}>
-      <span className="merge-mark" aria-hidden>
-        {green ? "✔" : "✘"}
-      </span>
-      <div className="merge-text">
-        {green ? (
-          <>
-            <b>All {latest.total} checks passed.</b> Read through your changes,
-            then merge when you&apos;re happy with them. Merging moves{" "}
-            {issue.key} to Done.
-          </>
-        ) : blocker === "review" ? (
-          <>
-            <b>
-              All {latest.total} checks passed, but {blocking} blocking finding
-              {blocking === 1 ? " is" : "s are"} open.
-            </b>{" "}
-            {explicit ? (
-              <>
-                Deal with it in the {ide} if the code needs it, then Resolve it
-                under Findings: a push alone doesn&apos;t resolve it.
-              </>
-            ) : (
-              <>
-                Change the code in the {ide} and push to it (<kbd>⌘⇧⏎</kbd>), or
-                resolve the finding under Findings if the code should stay as it
-                is.
-              </>
-            )}
-          </>
-        ) : blocker === "checks-pending" ? (
-          <>
-            <b>
-              Merging is blocked: CI hasn&apos;t reported on the latest push.
-            </b>{" "}
-            Wait for its checks in the {ide}. If it never finished, push again (
-            <kbd>⌘⇧⏎</kbd>).
-          </>
-        ) : blocker === "code-changed" ? (
-          <>
-            <b>Merging is blocked: the code changed after push {pushNumber}.</b>{" "}
-            {pushAgain}
-          </>
-        ) : blocker === "code-unconfirmed" ? (
-          <>
-            <b>
-              Merging is blocked: your saved code can&apos;t be matched to push{" "}
-              {pushNumber}.
-            </b>{" "}
-            {pushAgain}
-          </>
-        ) : blocker === "revision" ? (
-          <>
-            <b>
-              Merging is blocked: these checks ran against an earlier version of
-              the ticket.
-            </b>{" "}
-            {pushAgain}
-          </>
-        ) : (
-          <>
-            <b>Merging is blocked: {checksText(latest)}.</b> Every check has to
-            pass, and resolving findings doesn&apos;t change that. The pull
-            request stays open: keep working in the {ide} and push to it (
-            <kbd>⌘⇧⏎</kbd>), and CI runs again.
-          </>
-        )}
-      </div>
-      {closeButton}
-      <button
-        type="button"
-        className="merge-button"
-        disabled={!green}
-        onClick={(event) => onMerge(via(event))}
-      >
-        Merge pull request
-      </button>
-    </div>
-  );
-}
-
 function NextPractice({
   candidates,
   current,
+  share,
 }: {
   candidates: IssueSummary[];
   current: string;
+  share?: React.ReactNode;
 }) {
   const { items } = useBoard();
   const account = useAccount();
@@ -1614,20 +912,33 @@ function NextPractice({
     ? nextProblem(from, candidates, items, account?.profile.languages ?? [])
     : null;
   return (
-    <section className="practice-next">
-      <h2>Next problem</h2>
-      <p>Your code passed CI and this issue is now Done on your board.</p>
-      {next && (
+    <section className="practice-next" aria-label="Continue practicing">
+      {next ? (
         <>
-          <p>
-            Try next: {next.title} · {next.difficulty}.
-          </p>
-          <StartWork issue={next} href={`/work/${next.key}`} />
+          <h2>Next: {next.title}</h2>
+          <div className="practice-actions">
+            <StartWork issue={next} href={`/work/${next.key}`} />
+            {share}
+            <CopyIssueLink issueKey={current} />
+          </div>
         </>
+      ) : (
+        <div className="practice-actions">
+          <Link className="btn start" href="/issues">
+            Browse issues →
+          </Link>
+          {share}
+          <CopyIssueLink issueKey={current} />
+        </div>
       )}
-      <p>
-        <Link href="/dashboard">Back to your desk →</Link> ·{" "}
-        <Link href="/issues">Browse issues</Link>
+      <p className="dim">
+        <Link href="/dashboard">Back to your desk</Link>
+        {next && (
+          <>
+            {" "}
+            · <Link href="/issues">Browse issues</Link>
+          </>
+        )}
       </p>
     </section>
   );

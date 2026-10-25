@@ -116,6 +116,34 @@ export class PracticeStore implements CaptureSink {
     });
   }
 
+  /** Atomically validate current records and append derived records/outbox entries. */
+  commitWorkspace(
+    build: (records: readonly WorkspaceRecord[]) => readonly WorkspaceRecord[],
+  ): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      const transaction = this.database.transaction(["workspace", "outbox"], "readwrite");
+      const workspace = transaction.objectStore("workspace");
+      let changed = false;
+      let failure: unknown;
+      const request = workspace.getAll();
+      request.onsuccess = () => {
+        try {
+          const records = build(request.result);
+          for (const record of records) {
+            workspace.add(record);
+            transaction.objectStore("outbox").add(record.recordId);
+          }
+          changed = records.length > 0;
+        } catch (error) {
+          failure = error;
+          transaction.abort();
+        }
+      };
+      transaction.oncomplete = () => resolve(changed);
+      transaction.onabort = () => reject(failure ?? transaction.error);
+    });
+  }
+
   workspaceRecords(): Promise<WorkspaceRecord[]> {
     return new Promise((resolve, reject) => {
       const transaction = this.database.transaction("workspace", "readonly");

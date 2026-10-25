@@ -3,7 +3,12 @@
  * printed, every error with its trace, each case's result and the summary. Pure, so the
  * wording is testable without a browser.
  */
-import { casesRun, type Case, type Executable } from "../../../../packages/content/model";
+import {
+  casesRun,
+  type Case,
+  type Executable,
+} from "../../../../packages/content/model";
+import { privateCheckFailure } from "./check-feedback";
 import { runFeedback } from "../../../../packages/domain/workspace";
 import type { CaseResult, CodeError } from "../../../../packages/runner/runner";
 import type { RunView } from "../workspace/session";
@@ -47,7 +52,16 @@ function caseLines(
   passed: boolean,
   result?: CaseResult,
 ): Line[] {
-  const label = check.name ?? caseLabel(challenge, check.input);
+  const label = check.visible
+    ? (check.name ?? caseLabel(challenge, check.input))
+    : "Additional check";
+  if (!check.visible)
+    return [
+      {
+        text: `${passed ? "✔" : "✘"} ${label}${passed ? "" : `: ${privateCheckFailure(result)}`}`,
+        tone: passed ? "pass" : "fail",
+      },
+    ];
   if (passed) return [{ text: `✔ ${label}`, tone: "pass" }];
   const out: Line[] = [{ text: `✘ ${label}`, tone: "fail" }];
   if (result?.error) return [...out, ...errorLines(result.error, "    ")];
@@ -76,7 +90,7 @@ export function transcript(
 ): Line[] {
   if (!run) return [];
   const header: Line = {
-    text: `$ ${run.pullRequest ? `checks for pull request #${run.pullRequest.number}` : "run tests"} · ${toolchain(runtimeLabel)}`,
+    text: `$ ${run.pullRequest ? "submit" : "run tests"} · ${toolchain(runtimeLabel)}`,
     tone: "dim",
   };
   const o = run.outcome;
@@ -100,18 +114,29 @@ export function transcript(
       },
     ];
   const out: Line[] = [header];
-  if (o.stdout.text) out.push(...lines(o.stdout.text, "out"));
-  if (o.stderr.text) out.push(...lines(o.stderr.text, "err"));
-  if (o.stdout.truncated || o.stderr.truncated)
+  const privateCases = casesRun(challenge.cases, run.purpose).some(
+    (check) => !check.visible,
+  );
+  if (privateCases)
+    out.push({
+      text: "Detailed output is hidden for additional checks. Run the public examples for detailed feedback.",
+      tone: "dim",
+    });
+  if (!privateCases && o.stdout.text) out.push(...lines(o.stdout.text, "out"));
+  if (!privateCases && o.stderr.text) out.push(...lines(o.stderr.text, "err"));
+  if (!privateCases && (o.stdout.truncated || o.stderr.truncated))
     out.push({
       text: `(output truncated: showing the first 64 KiB of ${o.stdout.bytes + o.stderr.bytes} bytes)`,
       tone: "dim",
     });
   if (o.error && o.phase !== "tests") {
-    out.push(...errorLines(o.error));
+    if (!privateCases) out.push(...errorLines(o.error));
     out.push({
-      text:
-        o.phase === "compile"
+      text: privateCases
+        ? o.phase === "compile"
+          ? "The code did not compile. Run examples to see the error."
+          : "The checks did not complete. Run examples for detailed errors."
+        : o.phase === "compile"
           ? "The code did not compile; no cases ran."
           : "The code failed before any case ran.",
       tone: "fail",

@@ -115,3 +115,97 @@ test("compile errors, timeouts and runtime failures are all shown", () => {
   );
   assert.deepEqual(transcript(null, challenge, "x"), []);
 });
+
+test("additional checks reveal categories, never hidden names, values, traces or printed inputs", () => {
+  const secret = "PRIVATE_SENTINEL";
+  const hidden: Executable = {
+    ...challenge,
+    cases: [
+      {
+        id: "private",
+        name: secret + " name",
+        input: secret + " input",
+        expected: secret + " expected",
+        visible: false,
+      },
+    ],
+  };
+  const hiddenRun: RunView = {
+    ...run({
+      status: "completed",
+      phase: "tests",
+      cases: [
+        {
+          index: 0,
+          error: { type: secret, message: secret, traceback: bounded(secret) },
+        },
+      ],
+      stdout: bounded(secret + " stdout"),
+      stderr: bounded(secret + " stderr"),
+      durationMs: 1,
+    }),
+    purpose: "pull-request",
+  };
+  const result = transcript(hiddenRun, hidden, "JavaScript")
+    .map((line) => line.text)
+    .join("\n");
+  assert.doesNotMatch(result, /PRIVATE_SENTINEL/);
+  assert.match(result, /Additional check: Raised an error/);
+  const wrong = transcript(
+    {
+      ...hiddenRun,
+      outcome: {
+        status: "completed",
+        phase: "tests",
+        cases: [{ index: 0, output: bounded(secret), repr: bounded(secret) }],
+        stdout: bounded(""),
+        stderr: bounded(""),
+        durationMs: 1,
+      },
+    },
+    hidden,
+    "JavaScript",
+  )
+    .map((line) => line.text)
+    .join("\n");
+  assert.doesNotMatch(wrong, /PRIVATE_SENTINEL/);
+  assert.match(wrong, /Returned a different value/);
+});
+
+test("full Submit never reveals run-level compile/load error text with hidden cases", () => {
+  const hidden: Executable = {
+    ...challenge,
+    cases: [
+      ...challenge.cases,
+      {
+        id: "secret",
+        input: "SECRET_INPUT",
+        expected: "SECRET_EXPECTED",
+        visible: false,
+      },
+    ],
+  };
+  for (const phase of ["compile", "execute"] as const) {
+    const view: RunView = {
+      ...run({
+        status: "user-error",
+        phase,
+        error: {
+          type: "SECRET_TYPE",
+          message: "SECRET_MESSAGE",
+          traceback: bounded("SECRET_INPUT"),
+        },
+        stdout: bounded("SECRET_PRINT"),
+        stderr: bounded("SECRET_STDERR"),
+        cases: [],
+        durationMs: 2,
+      }),
+      purpose: "pull-request",
+    };
+    const rendered = transcript(view, hidden, "JavaScript")
+      .map((l) => l.text)
+      .join("\n");
+    assert.doesNotMatch(rendered, /SECRET_/);
+    assert.match(rendered, /Run examples/);
+  }
+});

@@ -12,6 +12,12 @@ import { canonical, type Json } from "./json";
 import type { WorkspaceRecord } from "./workspace";
 
 /**
+ * 7.2.0: `moved.trigger: "checks-passed"` marks automatic completion after a Submit's
+ * full-suite verification of the exact saved code and pinned revision, with required
+ * correctness/safety rules clear. `via` is the original Submit gesture that caused the
+ * verification, never a fabricated automatic click. Existing pullRequest/runId fields
+ * identify that internal submission. Historical merge/Resolve/replay records keep their
+ * meaning; no migration, new event category or workspace capture change.
  * 7.1.0: resolving and no deploys. `resolved` records the person resolving one of a pull
  * request's review findings themselves (Resolve, without a reply); it never touches CI, and a
  * finding the code still triggers comes back on a later push. `deployed` is no longer recorded:
@@ -54,7 +60,7 @@ import type { WorkspaceRecord } from "./workspace";
  * issue to Done (`trigger: "pull-request-merged"`, by pointer or keyboard). Earlier versions
  * were never released.
  */
-export const BOARD_CAPTURE_VERSION = "board-capture-7.1.0";
+export const BOARD_CAPTURE_VERSION = "board-capture-7.2.0";
 /** What this capture does not record. Absence is a gap, not evidence of no activity. */
 export const BOARD_CAPTURE_GAPS = [
   "visits-before-accepting-the-terms",
@@ -66,7 +72,7 @@ export const BOARD_CAPTURE_GAPS = [
 ] as const;
 
 export type BoardColumn = "backlog" | "todo" | "in-progress" | "done";
-/** How the move was made: pointer, or keyboard (`s`, arrows, Enter; Enter on a link). */
+/** For checks-passed, via is the original Submit gesture, never an automatic click. */
 export type BoardMoveVia = "pointer" | "keyboard";
 /**
  * What made the move: choosing a status, starting work, merging a pull request, or taking a
@@ -76,6 +82,7 @@ export type BoardMoveTrigger =
   | "status-menu"
   | "start-work"
   | "pull-request-merged"
+  | "checks-passed"
   | "replay";
 
 export interface BoardMoveData {
@@ -88,7 +95,7 @@ export interface BoardMoveData {
   readonly onBoardBefore: number;
   /** Whether the soft limit asked "finish one first?" before this move. */
   readonly nudged: boolean;
-  /** For pull-request-merged: the pull request, and the workspace run that checked it. */
+  /** For completion: the internal submission and exact workspace run that checked it. */
   readonly pullRequest?: number;
   readonly runId?: string;
 }
@@ -227,6 +234,7 @@ const TRIGGERS: readonly BoardMoveTrigger[] = [
   "status-menu",
   "start-work",
   "pull-request-merged",
+  "checks-passed",
   "replay",
 ];
 
@@ -241,26 +249,21 @@ export function boardMove(input: {
   issue: { id: string; revision: string };
   data: BoardMoveData;
 }): BoardObservation<"observation.board.moved"> {
-  const { data } = input;
+  return envelope("observation.board.moved", input, validateBoardMoveData(input.data));
+}
+
+/** Shared writer/ingest validation; earlier trigger meanings remain unchanged. */
+export function validateBoardMoveData(data: BoardMoveData): BoardMoveData {
   if (!ISSUE_KEY.test(data.issueKey)) throw new Error("Unknown issue key.");
   // Only a replay leaves Done, and it goes back to In progress.
   const replay = data.trigger === "replay";
   if (replay !== (data.from === "done") || (replay && data.to !== "in-progress"))
     throw new Error("Only a replay takes a done issue back to In progress.");
-  if (
-    !COLUMNS.includes(data.from) ||
-    !COLUMNS.includes(data.to) ||
-    data.from === data.to
-  )
-    throw new Error(
-      "A move goes between Backlog, Todo and In progress, or on to Done.",
-    );
-  if (!VIAS.includes(data.via))
-    throw new Error("Unknown way of moving an issue.");
-  if (!TRIGGERS.includes(data.trigger))
-    throw new Error("Unknown trigger for a move.");
-  // Done comes only from merging a pull request, which the person does by hand.
-  const merged = data.trigger === "pull-request-merged";
+  if (!COLUMNS.includes(data.from) || !COLUMNS.includes(data.to) || data.from === data.to)
+    throw new Error("A move goes between Backlog, Todo and In progress, or on to Done.");
+  if (!VIAS.includes(data.via)) throw new Error("Unknown way of moving an issue.");
+  if (!TRIGGERS.includes(data.trigger)) throw new Error("Unknown trigger for a move.");
+  const merged = data.trigger === "pull-request-merged" || data.trigger === "checks-passed";
   if (
     (data.to === "done") !== merged ||
     (merged &&
@@ -268,22 +271,21 @@ export function boardMove(input: {
         !Number.isSafeInteger(data.pullRequest) ||
         data.pullRequest! < 1))
   )
-    throw new Error("Only a merged pull request moves an issue to Done.");
+    throw new Error("Only verified completion moves an issue to Done.");
   if (merged) safeIdentifier(data.runId!);
   if (!Number.isSafeInteger(data.onBoardBefore) || data.onBoardBefore < 0)
     throw new Error("Board count must be a whole number.");
-  if (typeof data.nudged !== "boolean")
-    throw new Error("nudged is true or false.");
-  return envelope("observation.board.moved", input, {
-      issueKey: data.issueKey,
-      from: data.from,
-      to: data.to,
-      via: data.via,
-      trigger: data.trigger,
-      onBoardBefore: data.onBoardBefore,
-      nudged: data.nudged,
-      ...(merged ? { pullRequest: data.pullRequest, runId: data.runId } : {}),
-  });
+  if (typeof data.nudged !== "boolean") throw new Error("nudged is true or false.");
+  return {
+    issueKey: data.issueKey,
+    from: data.from,
+    to: data.to,
+    via: data.via,
+    trigger: data.trigger,
+    onBoardBefore: data.onBoardBefore,
+    nudged: data.nudged,
+    ...(merged ? { pullRequest: data.pullRequest, runId: data.runId } : {}),
+  };
 }
 
 /** The longest reply kept; a longer one is cut at a character boundary and marked. */
