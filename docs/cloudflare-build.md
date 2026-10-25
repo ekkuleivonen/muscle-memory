@@ -16,7 +16,7 @@ The app's `prebuild` step builds the pinned in-browser runtimes (Pyodide, Sucras
 
 The adapter build invokes Next with the standalone output it needs. A regular Next build alone is not sufficient input for `--skipNextBuild`; use the complete adapter command above.
 
-No deploy/upload script is provided. The app has no database, R2 bucket or credential bindings: practice state lives in the browser's IndexedDB. Recorded practice is uploaded to a separate ingest Worker (`apps/ingest`, see [telemetry](telemetry.md)), which has an R2 bucket and a Pipelines stream of its own.
+The app has no database, R2 bucket or credential bindings: practice state lives in the browser's IndexedDB. Recorded practice is uploaded to a separate ingest Worker (`apps/ingest`, see [telemetry](telemetry.md)), which has an R2 bucket and a Pipelines stream of its own.
 
 Wrangler is pinned to a compatible patch that fixes a transitive sharp advisory. The root override raises the build-only `@node-minify/core` glob dependency to 10.5.0, which fixes its command-injection advisory. A clean install reported zero npm vulnerabilities. Revisit the override when upstream removes the older glob pin.
 
@@ -26,6 +26,10 @@ The Worker serves the custom domain `musclememory.run`, with `workers.dev` and v
 
 Cloudflare Access is kept for what must stay private: the future admin routes, when they exist, get their own Access application with an owner-only email rule. Do not put Access back in front of the whole hostname; shared links and uploads would stop working for everyone else.
 
-For Cloudflare Workers Builds, use the repository root, build command `npm run build:cloudflare` (it builds the catalog and runtimes first), and deploy command `npx wrangler deploy --config apps/web/wrangler.jsonc`. Select `main` only and disable nonproduction branch deployments. Use existing authorized integrations; never commit API tokens. After a merge, check that a build ran (`npx wrangler deployments list --name muscle-memory` shows a new version); a manual deploy is the same build and deploy commands run locally with Node 22.
+## Deploying
 
-The ingest Worker deploys separately: `npx wrangler deploy --config apps/ingest/wrangler.jsonc --env=""`, needed whenever a capture version or the ingest code changes.
+GitHub Actions deploys every push to `main` (`.github/workflows/ci.yml`), after the tests, the typecheck and the Cloudflare build pass: first the ingest Worker (`apps/ingest`), so it accepts what the new app records, then the app. Deploys from `main` run one at a time. Cloudflare's Workers Builds is switched off: it has no Docker, which the Go, C# and Java runners are built in.
+
+CI authenticates with the repository secret `CLOUDFLARE_API_TOKEN`, an account API token named "muscle-memory deploy (GitHub Actions)" limited to this account and the `musclememory.run` zone: Workers Scripts edit, Workers Routes edit, DNS edit (the app's custom domain), Account Settings read, and R2 and Pipelines read (the ingest Worker's bindings). Never commit a token.
+
+After a merge, check the run, and `npx wrangler deployments list --name muscle-memory` for the new version. A manual deploy is the same commands run locally with Node 22 and Docker: `npm run build:cloudflare`, then `npx wrangler deploy --config apps/ingest/wrangler.jsonc --env=""` and `npx wrangler deploy --config apps/web/wrangler.jsonc`.

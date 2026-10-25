@@ -114,7 +114,7 @@ Created on the Cloudflare account that hosts the app (`166fd3dff06a9c3f1aef172a2
 - An R2 API token (Admin Read & Write, which Data Catalog needs) for the sink and the erasure job, stored as the repository secrets `R2_CATALOG_TOKEN`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`, with `R2_CATALOG_URI`, `R2_WAREHOUSE` and `R2_ENDPOINT`.
 - The app is built with `NEXT_PUBLIC_INGEST_URL=/ingest` (`apps/web/.env.production`).
 
-To deploy the Worker after a change: `npx wrangler deploy --config apps/ingest/wrangler.jsonc --env=""`. Wrangler needs Node.js 22.
+CI deploys the Worker with every push to `main`, before the app ([Cloudflare build](cloudflare-build.md)). By hand: `npx wrangler deploy --config apps/ingest/wrangler.jsonc --env=""`. Wrangler needs Node.js 22.
 
 ## Local development
 
