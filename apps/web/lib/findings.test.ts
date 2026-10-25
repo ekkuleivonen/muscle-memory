@@ -10,11 +10,11 @@ import { attemptAt, attemptRecords } from "./attempts";
 import {
   due,
   feedbackOf,
-  mergeBlocker,
   openBlocking,
   openRequired,
   type Release,
 } from "./feedback";
+import { mergeEligibility } from "./merge";
 import { allPullRequests } from "./pulls";
 import {
   decodeResult,
@@ -38,25 +38,30 @@ const FIX = fixture.starter.replace(
 /** A recorded attempt at INC-1, one step at a time, a minute apart. */
 function incident() {
   const records: WorkspaceRecord[] = [];
+  // The IDE and the tracker record in streams of their own, each numbered without gaps.
+  const sequences = { s: 0, b: 0 };
   let sequence = 0;
   let minute = 0;
   let pushes = 0;
+  let codeRevision = 0;
   const now = () => new Date(Date.UTC(2026, 9, 24, 2, minute)).toISOString();
   const observe = (
     type: string,
     data: Record<string, unknown>,
     revision: string = fixture.id,
   ) => {
-    sequence += 1;
+    const stream = type.startsWith("observation.board.") ? "b" : "s";
+    sequence = ++sequences[stream];
     minute += 1;
     records.push({
-      recordId: `s.${sequence}`,
+      recordId: `${stream}.${sequence}`,
       kind: "observation",
       participantId: "p",
       payload: JSON.stringify({
+        observationId: `${stream}.${sequence}`,
         type,
         occurredAt: now(),
-        source: { id: "s", sequence },
+        source: { id: stream, sequence },
         issue: ISSUE,
         issueRevision: revision,
         data,
@@ -110,8 +115,9 @@ function incident() {
     view(path: string) {
       observe("observation.board.viewed", { path, query: "", previous: null });
     },
-    open() {
-      observe("observation.workspace.opened", {});
+    /** The IDE opened on a revision: what the person is working on from then. */
+    open(revision: string = fixture.id) {
+      observe("observation.workspace.opened", {}, revision);
     },
     openFile(path: string, via = "pointer") {
       observe("observation.workspace.navigated", {
@@ -130,30 +136,90 @@ function incident() {
         outcome: outcome(visible, (i) => i !== 1 || regression),
       });
     },
-    push(number: number, push: number, passing: boolean, text = FIX) {
-      const runId = `ci-${++pushes}`;
-      const artifact = `s.code.${pushes}`;
+    /** The editor's code saved as it stands (an exact snapshot), as after any edit. */
+    save(text: string, revision: string = fixture.id) {
+      codeRevision += 1;
+      const artifact = `s.code.${codeRevision}`;
       records.push({
         recordId: artifact,
         kind: "artifact",
         participantId: "p",
-        payload: JSON.stringify({ files: { [fixture.path]: { text } } }),
+        payload: JSON.stringify({
+          type: "artifact.code-revision",
+          artifactId: artifact,
+          owner: "participant",
+          participantId: "p",
+          revision: codeRevision,
+          files: {
+            [fixture.path]: {
+              mediaType: "text/javascript",
+              text,
+              capture: { truncated: false },
+            },
+          },
+          truncated: false,
+        }),
       });
+      observe(
+        "observation.workspace.snapshot",
+        { revision: codeRevision, codeArtifactId: artifact, reason: "periodic" },
+        revision,
+      );
+      return { artifact, codeRevision };
+    },
+    /** A push whose checks are still running: started, never reported. */
+    queued() {
+      const runId = `ci-${++pushes}`;
       observe("observation.workspace.run", {
         runId,
         purpose: "pull-request",
-        status: "result",
-        outcome: outcome(cases, (i) => passing || i !== 1),
+        status: "queued",
       });
-      observe("observation.workspace.pull-request", {
-        number,
-        push,
-        runId,
-        codeArtifactId: artifact,
-        result: passing ? "checks-passed" : "checks-failed",
-        passed: passing ? cases.length : cases.length - 1,
-        total: cases.length,
-      });
+      return runId;
+    },
+    /** A push's result recorded on its own, possibly after a newer push's. */
+    report(
+      number: number,
+      push: number,
+      runId: string,
+      artifact: string,
+      passing: boolean,
+      revision: string = fixture.id,
+    ) {
+      observe(
+        "observation.workspace.pull-request",
+        {
+          number,
+          push,
+          runId,
+          codeArtifactId: artifact,
+          result: passing ? "checks-passed" : "checks-failed",
+          passed: passing ? cases.length : cases.length - 1,
+          total: cases.length,
+        },
+        revision,
+      );
+    },
+    push(
+      number: number,
+      push: number,
+      passing: boolean,
+      text = FIX,
+      revision: string = fixture.id,
+    ) {
+      const { artifact } = this.save(text, revision);
+      const runId = `ci-${++pushes}`;
+      observe(
+        "observation.workspace.run",
+        {
+          runId,
+          purpose: "pull-request",
+          status: "result",
+          outcome: outcome(cases, (i) => passing || i !== 1),
+        },
+        revision,
+      );
+      this.report(number, push, runId, artifact, passing, revision);
       return runId;
     },
     merge(number: number, runId: string) {
@@ -255,6 +321,24 @@ function reviewed(
   });
 }
 
+/** What stands between pull request `number` and merging, as the merge button and the merge read it. */
+function blockerOf(
+  records: readonly WorkspaceRecord[],
+  number: number,
+  published: (id: string) => boolean = (id) => !!catalog.revisions[id],
+) {
+  const own = attemptRecords(records, ISSUE);
+  const pull = allPullRequests(records).find((p) => p.issue === ISSUE && p.number === number)!;
+  return mergeEligibility({
+    records: own,
+    issue: ISSUE,
+    number,
+    pull,
+    published,
+    openRequired: openRequired(feedbackOf(own, ISSUE, revisionFor), number, revisionFor).length,
+  }).blocker;
+}
+
 test("both files of the change are the player's, and the runner gets them", () => {
   const files = fixture.revision.workspace.files;
   assert.equal(files["src/checkout/quote.js"].role, "edit");
@@ -331,7 +415,7 @@ test("an explicit finding stays open through a fixing push until Resolve; CI sta
   const fb = () => feedbackOf(attemptRecords(play.records, ISSUE), ISSUE, revisionFor);
   const open = () => openRequired(fb(), 1, revisionFor).map((t) => t.comment).sort();
   const pullOne = () => allPullRequests(play.records).find((p) => p.number === 1)!;
-  const blocker = () => mergeBlocker(pullOne(), openRequired(fb(), 1, revisionFor).length);
+  const blocker = () => blockerOf(play.records, 1);
   const ids = (releases: Release[]) =>
     releases.map((r) => (r.kind === "comment" ? r.comment.id : `${r.kind}:${"comment" in r ? r.comment : ""}`));
 
@@ -375,8 +459,7 @@ test("a CI failure is a finding only Resolve clears; Resolve never makes failing
   play.start();
   const fb = () => feedbackOf(attemptRecords(play.records, ISSUE), ISSUE, revisionFor);
   const open = () => openRequired(fb(), 1, revisionFor).map((t) => t.comment);
-  const blocker = () =>
-    mergeBlocker(allPullRequests(play.records).find((p) => p.number === 1)!, open().length);
+  const blocker = () => blockerOf(play.records, 1);
 
   play.push(1, 1, false);
   assert.deepEqual(open(), ["ci-push-1"], "a failing push opens a CI finding");
@@ -421,11 +504,11 @@ test("INC-1's nit stays open on green CI and needs Resolve; other exercises keep
   const pull = () => allPullRequests(play.records).find((p) => p.number === 1)!;
   assert.equal(fb().threads[0].resolved, undefined, "still listed as unresolved");
   assert.deepEqual(openRequired(fb(), 1, revisionFor).map((t) => t.comment), ["thresholds-in-one-place"]);
-  assert.equal(mergeBlocker(pull(), openRequired(fb(), 1, revisionFor).length), "review");
+  assert.equal(blockerOf(play.records, 1), "review");
   // Severity alone would have let it through: the explicit Resolve is what the gate adds.
   assert.equal(openBlocking(fb(), 1).length, 0);
   play.resolve(1, "thresholds-in-one-place");
-  assert.equal(mergeBlocker(pull(), openRequired(fb(), 1, revisionFor).length), null);
+  assert.equal(blockerOf(play.records, 1), null);
   // Every other exercise keeps its own rules: no explicit comments, so the gate is unchanged.
   assert.ok(
     catalog.issues
@@ -523,4 +606,80 @@ test("a shared INC-1 card still carries its version and attempt; bad ones are dr
     "Production was down. AI was down. In a no-AI incident sim I restored checkout in 4 min 17 s (6 min 52 s active), on a replay.",
   );
   assert.equal(incidentTime({ ...card, e: undefined }), "6 min 52 s active");
+});
+
+/** Resolve every open finding on pull request `number`. */
+function resolveAll(play: ReturnType<typeof incident>, number: number) {
+  const own = attemptRecords(play.records, ISSUE);
+  for (const t of openRequired(feedbackOf(own, ISSUE, revisionFor), number, revisionFor))
+    play.resolve(number, t.comment);
+}
+
+test("green CI, then the code changes: no merge until it is pushed again", () => {
+  const play = incident();
+  play.start();
+  play.open();
+  play.push(1, 1, true);
+  assert.equal(blockerOf(play.records, 1), null);
+  play.save(FIX + "\n// one more thought\n");
+  assert.equal(blockerOf(play.records, 1), "code-changed");
+  resolveAll(play, 1);
+  assert.equal(blockerOf(play.records, 1), "code-changed", "Resolve never stands in for CI");
+  // Back to exactly what was pushed: the checks describe it again.
+  play.save(FIX);
+  assert.equal(blockerOf(play.records, 1), null);
+  play.save(FIX + "\n// one more thought\n");
+  play.push(1, 2, true, FIX + "\n// one more thought\n");
+  assert.equal(blockerOf(play.records, 1), null, "pushing the change makes it mergeable");
+});
+
+test("checks against a revision the attempt has left, or one not published, never merge", () => {
+  const newer = "sha256:" + "1".repeat(64);
+  const both = (id: string) => id === newer || !!catalog.revisions[id];
+  const play = incident();
+  play.start();
+  play.open();
+  play.push(1, 1, true);
+  assert.equal(blockerOf(play.records, 1, both), null);
+  // The ticket was updated and the IDE reopened on it: these checks ran against the old one.
+  play.open(newer);
+  assert.equal(blockerOf(play.records, 1, both), "revision");
+  resolveAll(play, 1);
+  assert.equal(blockerOf(play.records, 1, both), "revision");
+  play.push(1, 2, true, FIX, newer);
+  assert.equal(blockerOf(play.records, 1, both), null);
+  // A revision no longer published can't be vouched for.
+  assert.equal(blockerOf(play.records, 1), "revision");
+});
+
+test("a pinned earlier revision stays honest: its own checks count, the live one isn't swapped in", () => {
+  const pinned = "sha256:" + "2".repeat(64);
+  const both = (id: string) => id === pinned || !!catalog.revisions[id];
+  const play = incident();
+  play.start(pinned);
+  play.open(pinned);
+  play.push(1, 1, true, FIX, pinned);
+  // The live revision differs, but this attempt is on the pinned one and CI checked that.
+  assert.notEqual(pinned, fixture.id);
+  assert.equal(blockerOf(play.records, 1, both), null);
+});
+
+test("a late result from an older push never decides; a push still running blocks", () => {
+  const play = incident();
+  play.start();
+  play.open();
+  play.push(1, 1, false);
+  // Push 2 fails; push 1's green result then arrives late. The latest push is still red.
+  const { artifact } = play.save(FIX);
+  play.report(1, 2, "ci-late-2", artifact, false);
+  play.report(1, 1, "ci-late-1", artifact, true);
+  assert.equal(blockerOf(play.records, 1), "checks");
+  resolveAll(play, 1);
+  assert.equal(blockerOf(play.records, 1), "checks", "resolving the CI finding changes nothing");
+  // Push 3 passes, then push 4 starts and hasn't reported: what would merge is unknown.
+  play.push(1, 3, true);
+  resolveAll(play, 1);
+  assert.equal(blockerOf(play.records, 1), null);
+  play.queued();
+  assert.equal(blockerOf(play.records, 1), "checks-pending");
 });

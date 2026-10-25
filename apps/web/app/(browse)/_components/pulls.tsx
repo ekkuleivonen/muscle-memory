@@ -41,11 +41,13 @@ import { useNow, useRecords } from "./records";
 import {
   feedbackOf,
   isCiFinding,
-  mergeBlocker,
   openRequired,
   type Thread,
 } from "../../../lib/feedback";
 import { attemptRecords } from "../../../lib/attempts";
+import { mergeEligibility, type MergeEligibility } from "../../../lib/merge";
+import { openPracticeStore } from "../../../../../packages/browser/practice-store";
+import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
 
 export interface PullIssue {
   key: string;
@@ -360,6 +362,25 @@ export function PullView({
     ],
   );
   const result = useResult(resultInput);
+  /** Whether this pull request can be merged, from a set of records: the button and the merge. */
+  const eligibilityFrom = (all: readonly WorkspaceRecord[]): MergeEligibility | null => {
+    const found = pullRequestDetail(all, issue.slug, number, (id) => revisions[id]);
+    if (!found) return null;
+    const own = attemptRecords(all, issue.slug, found.openedAt);
+    return mergeEligibility({
+      records: own,
+      issue: issue.slug,
+      number,
+      pull: found.pull,
+      published: (id) => !!revisions[id],
+      openRequired: openRequired(
+        feedbackOf(own, issue.slug, (id) => revisions[id]),
+        number,
+        (id) => revisions[id],
+      ).length,
+    });
+  };
+  const eligibility = records ? eligibilityFrom(records) : null;
   if (!records)
     return (
       <p className="loading-state" role="status">
@@ -431,13 +452,25 @@ export function PullView({
     );
     setVersion((v) => v + 1);
   };
-  const merge = (via: BoardMoveVia) => {
-    // The same gate the button shows: never a merge on failing CI or an open finding.
-    if (mergeBlocker(pull, blocking.length) !== null) return;
+  const merge = async (via: BoardMoveVia) => {
+    // The same gate the button shows, on the records as stored now: another tab may have
+    // pushed, edited or merged since this page read them.
+    const store = await openPracticeStore();
+    let now: MergeEligibility | null;
+    try {
+      now = eligibilityFrom(await store.workspaceRecords());
+    } finally {
+      store.close();
+    }
+    if (!now || now.blocker !== null || !now.latest) {
+      setVersion((v) => v + 1);
+      return;
+    }
+    const shipped = now.latest;
     // The result card's numbers as they stand at the merge: what the aggregates are made of.
     if (revision)
       void logResult(
-        { id: issue.slug, revision: pull.issueRevision },
+        { id: issue.slug, revision: shipped.issueRevision },
         {
           issueKey: issue.key,
           pullRequest: pull.number,
@@ -456,9 +489,9 @@ export function PullView({
         {
           key: issue.key,
           slug: issue.slug,
-          revision: issue.revision ?? pull.issueRevision,
+          revision: issue.revision ?? shipped.issueRevision,
         },
-        { number: pull.number, runId: pull.runId },
+        { number: pull.number, runId: shipped.runId },
         via,
       )
       // Read the records again once the merge is stored.
@@ -557,13 +590,14 @@ export function PullView({
           pull={pull}
           issue={issue}
           blocking={blocking.length}
+          eligibility={eligibility}
           explicit={blocking.some(
             (t) =>
               isCiFinding(t.comment) ||
               revisions[t.issueRevision]?.team.find((c) => c.id === t.comment)
                 ?.resolve === "explicit",
           )}
-          onMerge={merge}
+          onMerge={(via) => void merge(via)}
           onClose={(via) => void close(via, !!pull.otherMerged)}
           share={
             result &&
@@ -1354,6 +1388,7 @@ function MergeBox({
   pull,
   issue,
   blocking,
+  eligibility,
   explicit = false,
   onMerge,
   onClose,
@@ -1363,6 +1398,8 @@ function MergeBox({
   issue: PullIssue;
   /** Open blocking review threads. */
   blocking: number;
+  /** Whether it can be merged now (lib/merge); null while it cannot be told. */
+  eligibility: MergeEligibility | null;
   /** Some open finding is cleared by Resolve only (TeamComment.resolve). */
   explicit?: boolean;
   onMerge: (via: BoardMoveVia) => void;
@@ -1418,45 +1455,79 @@ function MergeBox({
         {closeButton}
       </div>
     );
-  const checks = passed(pull.result);
-  const green = mergeBlocker(pull, blocking) === null;
+  const blocker = eligibility ? eligibility.blocker : "checks-pending";
+  const latest = eligibility?.latest ?? pull;
+  const pushNumber = eligibility?.latest?.push ?? pull.pushes;
+  const green = blocker === null;
+  const ide = <Link href={workHref(issue)}>IDE</Link>;
+  const pushAgain = (
+    <>
+      Push again from the {ide} (<kbd>⌘⇧⏎</kbd>) so CI checks what you have.
+    </>
+  );
   return (
     <div className={green ? "merge-box ready" : "merge-box blocked"}>
       <span className="merge-mark" aria-hidden>
         {green ? "✔" : "✘"}
       </span>
       <div className="merge-text">
-        {checks && !green ? (
+        {green ? (
+          <>
+            <b>All {latest.total} checks passed.</b> Read through your changes,
+            then merge when you&apos;re happy with them. Merging moves{" "}
+            {issue.key} to Done.
+          </>
+        ) : blocker === "review" ? (
           <>
             <b>
-              All {pull.total} checks passed, but {blocking} blocking finding
+              All {latest.total} checks passed, but {blocking} blocking finding
               {blocking === 1 ? " is" : "s are"} open.
             </b>{" "}
             {explicit ? (
               <>
-                Deal with it in the <Link href={workHref(issue)}>IDE</Link> if the
-                code needs it, then Resolve it under Findings: a push alone
-                doesn&apos;t resolve it.
+                Deal with it in the {ide} if the code needs it, then Resolve it
+                under Findings: a push alone doesn&apos;t resolve it.
               </>
             ) : (
               <>
-                Change the code in the <Link href={workHref(issue)}>IDE</Link>{" "}
-                and push to it (<kbd>⌘⇧⏎</kbd>), or resolve the finding under
-                Findings if the code should stay as it is.
+                Change the code in the {ide} and push to it (<kbd>⌘⇧⏎</kbd>), or
+                resolve the finding under Findings if the code should stay as it
+                is.
               </>
             )}
           </>
-        ) : green ? (
+        ) : blocker === "checks-pending" ? (
           <>
-            <b>All {pull.total} checks passed.</b> Read through your changes,
-            then merge when you&apos;re happy with them. Merging moves{" "}
-            {issue.key} to Done.
+            <b>Merging is blocked: CI hasn&apos;t reported on the latest push.</b>{" "}
+            Wait for its checks in the {ide}. If it never finished, push again (
+            <kbd>⌘⇧⏎</kbd>).
+          </>
+        ) : blocker === "code-changed" ? (
+          <>
+            <b>Merging is blocked: the code changed after push {pushNumber}.</b>{" "}
+            {pushAgain}
+          </>
+        ) : blocker === "code-unconfirmed" ? (
+          <>
+            <b>
+              Merging is blocked: your saved code can&apos;t be matched to push{" "}
+              {pushNumber}.
+            </b>{" "}
+            {pushAgain}
+          </>
+        ) : blocker === "revision" ? (
+          <>
+            <b>
+              Merging is blocked: these checks ran against an earlier version of
+              the ticket.
+            </b>{" "}
+            {pushAgain}
           </>
         ) : (
           <>
-            <b>Merging is blocked: {checksText(pull)}.</b> Every check has to
-            pass. The pull request stays open: keep working in the{" "}
-            <Link href={workHref(issue)}>IDE</Link> and push to it (
+            <b>Merging is blocked: {checksText(latest)}.</b> Every check has to
+            pass, and resolving findings doesn&apos;t change that. The pull
+            request stays open: keep working in the {ide} and push to it (
             <kbd>⌘⇧⏎</kbd>), and CI runs again.
           </>
         )}

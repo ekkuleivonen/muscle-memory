@@ -26,7 +26,7 @@ import {
   type IssueKind,
   type Revision,
 } from "../../../../packages/content/model";
-import { runFeedback } from "../../../../packages/domain/workspace";
+import { runFeedback, type WorkspaceRecord } from "../../../../packages/domain/workspace";
 import type { Json } from "../../../../packages/domain/json";
 import {
   engineFor,
@@ -42,10 +42,16 @@ import {
 } from "../../lib/activity";
 import { attemptRecords } from "../../lib/attempts";
 import { statusOf } from "../../lib/board";
-import { closedPullRequests, mergedPullRequests } from "../../lib/pulls";
+import {
+  allPullRequests,
+  closedPullRequests,
+  mergedPullRequests,
+} from "../../lib/pulls";
+import { mergeEligibility, type MergeBlocker } from "../../lib/merge";
 import {
   due,
   feedbackOf,
+  openRequired,
   type Feedback,
   type Release,
   type Thread,
@@ -185,6 +191,11 @@ export function Ide({
   });
   /** Something new arrived in the ticket's thread while another view was showing. */
   const [unread, setUnread] = useState(false);
+  /** Whether this attempt's newest pull request can be merged, as last read from the records. */
+  const [mergeable, setMergeable] = useState<{
+    number: number;
+    blocker: MergeBlocker | null;
+  } | null>(null);
   /** What teammates just said, shown where the person is working: the latest release only. */
   const [notes, setNotes] = useState<TeamNote[]>([]);
 
@@ -255,9 +266,15 @@ export function Ide({
     return counts;
   }, [feedback, revisions]);
 
-  /** The open pull request once its checks pass and nothing blocks it: the next step is merging. */
+  /**
+   * The open pull request once nothing blocks merging it (lib/merge, as its page decides) and
+   * nothing was typed since: the next step is merging.
+   */
   const reviewable =
-    openPull?.result === "checks-passed" && !blocking.get(openPull.number)
+    openPull &&
+    mergeable?.number === openPull.number &&
+    mergeable.blocker === null &&
+    !stale
       ? openPull
       : null;
 
@@ -324,11 +341,33 @@ export function Ide({
         }
         if (session.current === current) {
           setFeedback(feedbackOf(records, issue.slug, (id) => revisions[id]));
+          setMergeable(mergeableOf(records));
         }
       } catch (cause) {
         console.warn("Teammate feedback could not be checked.", cause);
       }
     });
+  }
+
+  /** The merge gate for this attempt's newest pull request, from its records (lib/merge). */
+  function mergeableOf(records: readonly WorkspaceRecord[]) {
+    const pull = allPullRequests(records).find((p) => p.issue === issue.slug);
+    if (!pull) return null;
+    return {
+      number: pull.number,
+      blocker: mergeEligibility({
+        records,
+        issue: issue.slug,
+        number: pull.number,
+        pull,
+        published: (id) => !!revisions[id],
+        openRequired: openRequired(
+          feedbackOf(records, issue.slug, (id) => revisions[id]),
+          pull.number,
+          (id) => revisions[id],
+        ).length,
+      }).blocker,
+    };
   }
 
   function startRuntime() {
@@ -386,6 +425,7 @@ export function Ide({
       setMerged(mergedNumbers);
       setClosed(closedNumbers);
       setFeedback(feedbackOf(records, issue.slug, (id) => revisions[id]));
+      setMergeable(mergeableOf(records));
       session.current = new WorkspaceSession({
         participantId,
         consentVersion: `terms-${account?.accepted?.version ?? "unknown"}`,
@@ -1022,6 +1062,7 @@ export function Ide({
                 merged={merged}
                 closed={closed}
                 blocking={blocking}
+                mergeable={reviewable?.number ?? null}
                 threads={feedback.threads}
                 revisions={revisions}
                 issue={issue}
@@ -1409,6 +1450,7 @@ function PullRequests({
   merged,
   closed,
   blocking,
+  mergeable,
   threads,
   revisions,
   issue,
@@ -1416,6 +1458,8 @@ function PullRequests({
   runnable,
 }: {
   pulls: PullRequestRecord[];
+  /** The pull request that can be merged now (lib/merge), if any. */
+  mergeable: number | null;
   merged: ReadonlySet<number>;
   closed: ReadonlySet<number>;
   /** Open blocking review threads by pull request number. */
@@ -1483,6 +1527,16 @@ function PullRequests({
                 : `Reply on #${latest.number} →`}
             </Link>
           </div>
+        ) : latest.result === "checks-passed" && mergeable !== latest.number ? (
+          <p className="ide-review">
+            Pull request #{latest.number} passed its checks, but they
+            don&apos;t cover the code or ticket you have now. Push again (
+            <Shortcut shift />
+            ) so CI checks what you have.{" "}
+            <Link href={pullHref(issue.key, latest.number)}>
+              View #{latest.number}
+            </Link>
+          </p>
         ) : latest.result === "checks-passed" ? (
           <div className="ide-review">
             <p>
