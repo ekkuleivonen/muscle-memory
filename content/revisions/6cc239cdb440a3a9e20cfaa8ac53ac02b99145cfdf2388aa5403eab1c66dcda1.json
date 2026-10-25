@@ -1,0 +1,263 @@
+{
+  "challenge": "PHP-004",
+  "task": "Return all even integers followed by all odd integers, preserving their original order within each group.\n\nImplement `evensFirst(array $values): array`. Zero and negative even integers are even. Return a JSON list with consecutive indices, including for empty input. At most 200 integers in -10000..10000. Do not sort either group.\n\n## Examples\n\nInput: `[3, 2, 1, 4]` → output: `[2, 4, 3, 1]`.\nInput: `[]` → output: `[]`.\n",
+  "language": "php",
+  "file": "evensFirst.php",
+  "starter": "<?php\ndeclare(strict_types=1);\n// TODO: implement the task.\n\nfunction evensFirst(array $values): array { return []; }\n",
+  "entrypoint": "evensFirst",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": [
+        3,
+        2,
+        1,
+        4
+      ],
+      "expected": [
+        2,
+        4,
+        3,
+        1
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": [],
+      "expected": [],
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": [
+        -3,
+        0,
+        -2,
+        5
+      ],
+      "expected": [
+        0,
+        -2,
+        -3,
+        5
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-4",
+      "input": [
+        2,
+        4,
+        2
+      ],
+      "expected": [
+        2,
+        4,
+        2
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-5",
+      "input": [
+        5,
+        1,
+        3
+      ],
+      "expected": [
+        5,
+        1,
+        3
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-6",
+      "input": [
+        1,
+        2
+      ],
+      "expected": [
+        2,
+        1
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": [
+        -1,
+        -2,
+        -5,
+        -4
+      ],
+      "expected": [
+        -2,
+        -4,
+        -1,
+        -5
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": [
+        0
+      ],
+      "expected": [
+        0
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": [
+        -1
+      ],
+      "expected": [
+        -1
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": [
+        1,
+        1,
+        2,
+        2,
+        2,
+        0
+      ],
+      "expected": [
+        2,
+        2,
+        2,
+        0,
+        1,
+        1
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": [
+        3,
+        2,
+        1
+      ],
+      "expected": [
+        2,
+        3,
+        1
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "expected": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": [
+        -5,
+        -4,
+        -3,
+        -2,
+        -1,
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "expected": [
+        -4,
+        -2,
+        0,
+        2,
+        4,
+        -5,
+        -3,
+        -1,
+        1,
+        3,
+        5
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": [
+        9,
+        9,
+        8,
+        8,
+        8,
+        9,
+        9,
+        9,
+        9
+      ],
+      "expected": [
+        8,
+        8,
+        8,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9
+      ],
+      "hidden": true
+    }
+  ],
+  "rules": []
+}

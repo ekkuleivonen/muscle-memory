@@ -1,0 +1,8 @@
+{
+  "title": "Greatest common divisor of a list",
+  "summary": "Return the greatest common divisor of all input integers as a nonnegative integer.",
+  "difficulty": "medium",
+  "tags": ["number-theory", "iteration"],
+  "file": "common_divisor.c",
+  "entrypoint": "common_divisor"
+}

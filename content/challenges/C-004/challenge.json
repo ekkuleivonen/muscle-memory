@@ -1,0 +1,9 @@
+{
+  "title": "Remove a chosen value",
+  "summary": "Copy every value other than the chosen target into the output, preserving order.",
+  "difficulty": "easy",
+  "tags": ["arrays", "filtering"],
+  "file": "remove_value.c",
+  "entrypoint": "remove_value",
+  "parameters": ["values", "target"]
+}

@@ -1,0 +1,90 @@
+[
+  {
+    "input": [
+      "figure img",
+      "alt"
+    ],
+    "expected": [
+      "Crescent Moon above a dark horizon"
+    ]
+  },
+  {
+    "input": [
+      "figure figcaption",
+      "text"
+    ],
+    "expected": [
+      "Moonrise at dusk"
+    ]
+  },
+  {
+    "input": [
+      "figure",
+      "count"
+    ],
+    "expected": 1,
+    "hidden": true
+  },
+  {
+    "input": [
+      "img",
+      "count"
+    ],
+    "expected": 1,
+    "hidden": true
+  },
+  {
+    "input": [
+      "figure > img",
+      "src"
+    ],
+    "expected": [
+      "moon.jpg"
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      "figure > img",
+      "width"
+    ],
+    "expected": [
+      "640"
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      "figure > img",
+      "height"
+    ],
+    "expected": [
+      "480"
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      "figure > img + figcaption",
+      "count"
+    ],
+    "expected": 1,
+    "hidden": true
+  },
+  {
+    "input": [
+      "figcaption",
+      "count"
+    ],
+    "expected": 1,
+    "hidden": true
+  },
+  {
+    "input": [
+      "figure > *",
+      "count"
+    ],
+    "expected": 2,
+    "hidden": true
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "title": "Merge overlapping intervals",
+  "summary": "Merge closed intervals that overlap or share an endpoint, then return them sorted by start.",
+  "difficulty": "medium",
+  "tags": ["sorting", "intervals"],
+  "file": "merge.cpp",
+  "entrypoint": "merge_intervals"
+}

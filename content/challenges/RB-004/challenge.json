@@ -1,0 +1,9 @@
+{
+  "title": "Multiply two polynomials",
+  "summary": "Multiply two polynomials represented by coefficient lists, lowest power first.",
+  "difficulty": "medium",
+  "tags": ["arrays", "polynomials"],
+  "file": "multiply.rb",
+  "entrypoint": "multiply",
+  "parameters": ["a", "b"]
+}

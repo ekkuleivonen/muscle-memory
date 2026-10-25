@@ -1,0 +1,9 @@
+{
+  "title": "Mark up a reading list",
+  "summary": "Create an ordered reading list with a custom start number and two links.",
+  "difficulty": "easy",
+  "tags": ["lists", "links", "semantics"],
+  "file": "page.html",
+  "entrypoint": "page",
+  "parameters": ["selector", "read"]
+}

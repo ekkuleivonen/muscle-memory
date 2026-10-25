@@ -1,0 +1,8 @@
+{
+  "title": "Validate an ISBN-10 checksum",
+  "summary": "Return whether a string is a valid ISBN-10.",
+  "difficulty": "medium",
+  "tags": ["strings", "checksums"],
+  "file": "validIsbn.php",
+  "entrypoint": "validIsbn"
+}

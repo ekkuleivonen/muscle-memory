@@ -1,0 +1,187 @@
+{
+  "challenge": "JAVA-005",
+  "task": "Shift each ASCII letter around its alphabet by offset positions, preserving case.\n\nImplement `Solution.shift(String text, int offset)`. Wrap z to a and Z to A. Negative offsets shift backward. Leave spaces, digits and punctuation unchanged. Input has at most 200 ASCII characters; offset is -10000..10000. Empty input returns an empty string.\n\n## Examples\n\nInput: `[\"Az-9!\", 1]` → output: `\"Ba-9!\"`.\nInput: `[\"abc\", -1]` → output: `\"zab\"`.\n",
+  "language": "java",
+  "file": "Solution.java",
+  "starter": "// TODO: implement the task.\npublic class Solution {\n    public static String shift(String text, int offset) { return text; }\n}\n",
+  "entrypoint": "shift",
+  "parameters": [
+    "text",
+    "offset"
+  ],
+  "adapter": "final class Adapter {\n    static Object call(Json args) {\n        return Solution.shift(args.at(0).asString(), args.at(1).asInt());\n    }\n}\n",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": [
+        "Az-9!",
+        1
+      ],
+      "expected": "Ba-9!",
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": [
+        "abc",
+        -1
+      ],
+      "expected": "zab",
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": [
+        "",
+        10
+      ],
+      "expected": "",
+      "hidden": true
+    },
+    {
+      "id": "case-4",
+      "input": [
+        "ZzAa",
+        26
+      ],
+      "expected": "ZzAa",
+      "hidden": true
+    },
+    {
+      "id": "case-5",
+      "input": [
+        "Abc",
+        -27
+      ],
+      "expected": "Zab",
+      "hidden": true
+    },
+    {
+      "id": "case-6",
+      "input": [
+        "Hello, World!",
+        52
+      ],
+      "expected": "Hello, World!",
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": [
+        "aZ",
+        10000
+      ],
+      "expected": "qP",
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": [
+        "aAzZ",
+        -10000
+      ],
+      "expected": "kKjJ",
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": [
+        "aAzZ",
+        -26
+      ],
+      "expected": "aAzZ",
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": [
+        "aAzZ",
+        0
+      ],
+      "expected": "aAzZ",
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": [
+        "aAzZ",
+        27
+      ],
+      "expected": "bBaA",
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": [
+        "Hello 123!?",
+        -10000
+      ],
+      "expected": "Rovvy 123!?",
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": [
+        "Hello 123!?",
+        -26
+      ],
+      "expected": "Hello 123!?",
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": [
+        "Hello 123!?",
+        0
+      ],
+      "expected": "Hello 123!?",
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": [
+        "Hello 123!?",
+        27
+      ],
+      "expected": "Ifmmp 123!?",
+      "hidden": true
+    },
+    {
+      "id": "case-16",
+      "input": [
+        "",
+        -10000
+      ],
+      "expected": "",
+      "hidden": true
+    },
+    {
+      "id": "case-17",
+      "input": [
+        "",
+        -26
+      ],
+      "expected": "",
+      "hidden": true
+    },
+    {
+      "id": "case-18",
+      "input": [
+        "",
+        0
+      ],
+      "expected": "",
+      "hidden": true
+    },
+    {
+      "id": "case-19",
+      "input": [
+        "",
+        27
+      ],
+      "expected": "",
+      "hidden": true
+    }
+  ],
+  "rules": []
+}

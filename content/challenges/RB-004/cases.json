@@ -1,0 +1,42 @@
+[
+  {
+    "input": [
+      [1, 2],
+      [3, 4]
+    ],
+    "expected": [3, 10, 8]
+  },
+  {
+    "input": [[0], [2, 3]],
+    "expected": [0, 0]
+  },
+  {
+    "input": [
+      [-1, 1],
+      [1, 1]
+    ],
+    "expected": [-1, 0, 1],
+    "hidden": true
+  },
+  {
+    "input": [[2], [3]],
+    "expected": [6],
+    "hidden": true
+  },
+  {
+    "input": [
+      [1, 0, 0],
+      [1, 0]
+    ],
+    "expected": [1, 0, 0, 0],
+    "hidden": true
+  },
+  {
+    "input": [
+      [2, -3, 4],
+      [0, 2]
+    ],
+    "expected": [0, 4, -6, 8],
+    "hidden": true
+  }
+]

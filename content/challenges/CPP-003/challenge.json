@@ -1,0 +1,8 @@
+{
+  "title": "Check nested brackets",
+  "summary": "Return whether every opening bracket has a matching closing bracket in the correct nesting order.",
+  "difficulty": "medium",
+  "tags": ["stacks", "strings"],
+  "file": "brackets.cpp",
+  "entrypoint": "balanced"
+}

@@ -1,0 +1,8 @@
+{
+  "title": "Longest run of equal values",
+  "summary": "Return the length of the longest contiguous run of equal integers.",
+  "difficulty": "easy",
+  "tags": ["arrays", "state"],
+  "file": "longest_run.c",
+  "entrypoint": "longest_run"
+}

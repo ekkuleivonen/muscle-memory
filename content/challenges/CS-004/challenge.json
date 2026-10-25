@@ -1,0 +1,8 @@
+{
+  "title": "Transpose a rectangular matrix",
+  "summary": "Return the transpose of a rectangular matrix: output row c contains the input values at column c.",
+  "difficulty": "medium",
+  "tags": ["matrices", "indexing"],
+  "file": "Solution.cs",
+  "entrypoint": "Transpose"
+}

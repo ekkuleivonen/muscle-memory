@@ -1,0 +1,8 @@
+{
+  "title": "Evaluate reverse Polish notation",
+  "summary": "Evaluate an integer expression written in reverse Polish notation.",
+  "difficulty": "medium",
+  "tags": ["stacks", "parsing"],
+  "file": "evaluate.rb",
+  "entrypoint": "evaluate"
+}
