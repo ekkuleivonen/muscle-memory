@@ -25,8 +25,8 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const { link, issue, label } = await read(props);
   if (link.kind !== "result" || !issue)
     return { title: "Result not available · Muscle Memory", robots: { index: false } };
-  const title = sentence(link.result, label!);
-  const description = `${issue.key}: ${issue.title}. One bug, no AI. Try the same one at your own pace.`;
+  const title = sentence(link.result, label!, issue.title);
+  const description = `${issue.summary || issue.title} The same ${label} challenge, from its starting code, without AI.`;
   return {
     title,
     description,
@@ -36,9 +36,10 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 }
 
 /**
- * A shared result: what someone did on an issue, and the same issue to try. Public, like
- * /play. The card is whatever the link says; it is a brag, not a record. A link that does not
- * decode, or names an issue that is gone, gets a page saying so, never something in its place.
+ * A shared outcome: what someone did on one challenge, named by its title, and the same
+ * challenge to try. Public, like /play. The card is whatever the link says; it is a brag, not
+ * a record. A link that does not decode, or names a challenge that is gone, gets a page saying
+ * so, never something in its place.
  */
 export default async function SharedResult(props: Props) {
   const { link, issue, label } = await read(props);
@@ -61,7 +62,7 @@ export default async function SharedResult(props: Props) {
   if (!issue)
     return (
       <Unavailable
-        title="That issue isn't available any more"
+        title="That challenge isn't available any more"
         body={`This result is for ${result.k}, which has been retired, so it isn't shown.`}
       />
     );
@@ -73,21 +74,21 @@ export default async function SharedResult(props: Props) {
         <section className="result-card shared">
           <Receipt
             top={`muscle memory · ${issue.key} · shared result`}
-            headline="Someone fixed a real bug without AI."
-            detail={`“${issue.title}”, in ${label}, from memory, with no autocomplete. Their numbers, as they shared them; not a verified record.`}
+            headline={sentence(result, label!, issue.title)}
+            detail="No completion, chat or generated code. Their numbers, as they shared them; not a verified record."
             metrics={result}
             comparison={comparisonLine(result, label!)}
           />
         </section>
         <section className="home-hero">
           <h1>
-            Same issue.
+            Same challenge.
             <br />
             <span className="home-punch">Your turn.</span>
           </h1>
           <p className="home-lede">
             {issue.summary || issue.title} You start from the same code they
-            did, in your own editor. No completion, no chat, no generated code.
+            did, in your own attempt: nothing of theirs comes with it.
           </p>
           <div className="home-actions">
             <Link className="home-cta" href={tryHref(issue.key)}>

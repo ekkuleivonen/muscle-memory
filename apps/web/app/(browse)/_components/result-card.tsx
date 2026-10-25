@@ -21,45 +21,59 @@ import {
   type Result,
 } from "../../../lib/result";
 
-/** The receipt's lines, shared by the card here and the shared page. */
+/**
+ * The receipt's lines, for the shared card: what the person did on the challenge, in the
+ * words of the challenge (checks, examples), never a pull request's. A version 2 card's
+ * "pushes" each ran the full checks, so they read as full checks. Hints and open findings
+ * come from before both were retired; they are shown only when a card has some.
+ */
 export function receiptLines(
   m: Metrics & { ev?: PublicEvidence },
 ): [string, string, boolean?][] {
+  const hints: [string, string][] =
+    (m.ev?.hints ?? m.h) ? [["hints", String(m.ev?.hints ?? m.h)]] : [];
   if (m.ev)
     return [
       [
-        "latest checks",
+        "checks passed",
         `${m.ev.checks.passed ?? "?"}/${m.ev.checks.total ?? "?"}`,
+        m.ev.checks.total > 0 && m.ev.checks.passed === m.ev.checks.total,
       ],
       [
-        "first submission",
+        "first full check",
         m.ev.first
           ? `${m.ev.first.passed ?? "?"}/${m.ev.first.total ?? "?"}`
           : "not known",
       ],
       [
-        "CI-only checks",
+        "checks beyond the examples",
         m.ev.hidden
           ? `${m.ev.hidden.passed}/${m.ev.hidden.total}`
           : "not known",
       ],
-      ["pushes", String(m.ev.pushes)],
-      ["local test runs", String(m.ev.runs)],
-      ["findings still open", String(m.ev.findings.open)],
-      ["hints", String(m.ev.hints)],
-      ["production outcome", "not measured"],
+      ["full checks run", String(m.ev.pushes)],
+      ["example runs", String(m.ev.runs)],
+      ...(m.ev.findings.open
+        ? [
+            ["rule findings open", String(m.ev.findings.open)] as [
+              string,
+              string,
+            ],
+          ]
+        : []),
+      ...hints,
     ];
   return [
     [
-      "test runs",
+      "example runs",
       m.g === 1
-        ? `${m.r} · green first try`
+        ? `${m.r} · all passed first try`
         : m.g
-          ? `${m.r} · green on run ${m.g}`
+          ? `${m.r} · all passed on run ${m.g}`
           : String(m.r),
       m.g === 1,
     ],
-    ["hints", m.h ? String(m.h) : "none"],
+    ...hints,
   ];
 }
 
@@ -73,9 +87,9 @@ export function Receipt({
 }: {
   headline: string;
   detail: string;
-  metrics: Metrics;
+  metrics: Metrics & { ev?: PublicEvidence };
   top: string;
-  /** "Faster than 72% of people who fixed it in Python." */
+  /** "Faster than 72% of people who completed it in Python." */
   comparison?: string | null;
   children?: React.ReactNode;
 }) {
@@ -83,7 +97,11 @@ export function Receipt({
     <div className="receipt">
       <div className="receipt-top">
         <span>{top}</span>
-        <span className="receipt-merged">✔ merged</span>
+        <span className="receipt-merged">
+          {metrics.ev && metrics.ev.state !== "merged"
+            ? "not completed"
+            : "✔ completed"}
+        </span>
       </div>
       <p className="receipt-head">{headline}</p>
       <p className="receipt-sub">{detail}</p>
@@ -115,7 +133,7 @@ export interface ResultState {
   metrics: Metrics;
   /** The card a shared link carries; null until this device's referral code is read. */
   result: Result | null;
-  /** "Faster than 72% of people who fixed it in Python.", or null. */
+  /** "Faster than 72% of people who completed it in Python.", or null. */
   comparison: string | null;
   label: string;
 }

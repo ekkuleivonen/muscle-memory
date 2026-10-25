@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { LANGUAGES } from "../../../lib/languages";
+import { getLibrary } from "../../../lib/load";
 import { sentence } from "../../../lib/result";
 import { inspectCard } from "../../../lib/share";
 
@@ -7,7 +8,10 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = "A self-reported practice outcome";
 
-/** The picture a shared link shows in posts and chats: the result as a headline and numbers. */
+/**
+ * The picture a shared link shows in posts and chats: the outcome as a headline naming the
+ * challenge, and its numbers.
+ */
 export default async function Image({
   params,
 }: {
@@ -19,6 +23,9 @@ export default async function Image({
   const label = result
     ? (LANGUAGES.find((l) => l.id === result.l)?.label ?? result.l)
     : "";
+  // As on the page: a card for a retired challenge is not shown.
+  const issue = result ? (await getLibrary()).findIssue(result.k) : undefined;
+  const shown = issue ? result : null;
   const stat = (value: string, text: string) => (
     <div style={{ display: "flex", flexDirection: "column", marginRight: 72 }}>
       <div style={{ fontSize: 76, color: "#ffffff" }}>{value}</div>
@@ -41,40 +48,38 @@ export default async function Image({
         }}
       >
         <div style={{ fontSize: 26, color: "#b69cff", letterSpacing: 2 }}>
-          {result
-            ? `MUSCLE MEMORY · ${result.k} · PRACTICE WITHOUT AI`
+          {shown
+            ? `MUSCLE MEMORY · ${shown.k} · PRACTICE WITHOUT AI`
             : "MUSCLE MEMORY · PRACTICE WITHOUT AI"}
         </div>
-        <div style={{ fontSize: 52, lineHeight: 1.2 }}>
-          {result
-            ? sentence({ ...result, fp: undefined }, label)
-            : "One bug. No AI. Try a small fix at your own pace."}
+        <div style={{ fontSize: 48, lineHeight: 1.2 }}>
+          {shown && issue
+            ? sentence({ ...shown, fp: undefined }, label, issue.title)
+            : "One challenge. No AI. Solve it at your own pace."}
         </div>
-        {result && (
+        {shown && (
           <div style={{ display: "flex" }}>
-            {result.ev ? (
+            {shown.ev ? (
               <>
                 {stat(
-                  `${result.ev.checks.passed}/${result.ev.checks.total}`,
-                  "latest checks",
+                  `${shown.ev.checks.passed}/${shown.ev.checks.total}`,
+                  "checks passed",
                 )}
                 {stat(
-                  result.ev.first
-                    ? `${result.ev.first.passed}/${result.ev.first.total}`
+                  shown.ev.first
+                    ? `${shown.ev.first.passed}/${shown.ev.first.total}`
                     : "?",
-                  "first submission",
+                  "first full check",
                 )}
-                {stat(String(result.ev.pushes), "pushes")}
+                {stat(String(shown.ev.pushes), "full checks run")}
               </>
             ) : (
-              stat(String(result.r), "recorded test runs")
+              stat(String(shown.r), "example runs")
             )}
           </div>
         )}
         <div style={{ fontSize: 30, color: "#cfd2db" }}>
-          {
-            "One practice attempt. Production outcome not measured. → musclememory.run"
-          }
+          {"One practice attempt, as the person shared it. → musclememory.run"}
         </div>
       </div>
     ),

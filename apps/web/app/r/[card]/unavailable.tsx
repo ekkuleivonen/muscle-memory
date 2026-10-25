@@ -20,7 +20,7 @@ export function SharedHeader() {
 
 /**
  * A shared link that cannot be shown: says so plainly, shows nothing in its place (never this
- * browser's own work, never a made-up result), and offers the issue it named when it still
+ * browser's own work, never a made-up result), and offers the challenge it named when it still
  * exists, else the five-minute test.
  */
 export function Unavailable({
