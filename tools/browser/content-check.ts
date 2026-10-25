@@ -4,7 +4,8 @@
  * a second run, the starter fails at least one case, every alternative passes and every wrong
  * solution fails something. The checks that need no code to run happen in the content build.
  *
- *   node --import tsx tools/browser/content-check.ts
+ *   node --import tsx tools/browser/content-check.ts           every challenge
+ *   node --import tsx tools/browser/content-check.ts PY-002 GO-005   only these
  */
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
@@ -16,7 +17,12 @@ import { readChallenges } from "../../packages/content/source";
 import { runFeedback } from "../../packages/domain/records";
 
 const root = resolve(import.meta.dirname, "../..");
-const challenges = readChallenges(join(root, "content/challenges"));
+const only = process.argv.slice(2);
+const challenges = readChallenges(join(root, "content/challenges")).filter(
+  (c) => !only.length || only.includes(c.metadata.key),
+);
+if (only.length && challenges.length !== only.length)
+  throw new Error(`unknown challenge key among ${only.join(", ")}`);
 const bundle = (
   await build({
     entryPoints: [join(root, "packages/runner/runner.ts")],
