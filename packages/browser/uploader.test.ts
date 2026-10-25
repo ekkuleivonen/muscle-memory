@@ -60,9 +60,12 @@ async function setup() {
   };
 }
 
-test("the outbox drains oldest first; failures keep records and back off; records stay on the device", async () => {
+test("the outbox drains oldest first; failures keep records and back off; uploaded site records are forgotten", async () => {
   const t = await setup();
   await t.store.write([t.record(1), t.record(2)]);
+  assert.equal(await t.store.waiting(), 2);
+  // Writing the same record again is a duplicate and is not queued twice.
+  await t.store.write([t.record(2)]);
   assert.equal(await t.store.waiting(), 2);
   t.setDown(true);
   await t.uploader.flush();
@@ -76,10 +79,8 @@ test("the outbox drains oldest first; failures keep records and back off; record
   await t.uploader.flush();
   assert.equal(await t.store.waiting(), 0);
   assert.deepEqual(t.rows.map((r) => r.sequence), [1, 2, 3]);
-  assert.equal((await t.store.records()).length, 3);
-  // Writing the same record again is a duplicate and is not queued twice.
-  await t.store.write([t.record(3)]);
-  assert.equal(await t.store.waiting(), 0);
+  // Practice never needs site records again once they are uploaded.
+  assert.equal((await t.store.records()).length, 0);
 });
 
 test("large backlogs go in several batches; a deleted participant stops uploading", async () => {

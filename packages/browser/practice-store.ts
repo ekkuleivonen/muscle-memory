@@ -1,11 +1,13 @@
 /**
  * Device-local storage: the pseudonymous identity, every practice and site record, and an
- * outbox of records not yet uploaded (packages/browser/uploader.ts sends them). This module
- * itself sends nothing over the network.
+ * outbox of records not yet uploaded (packages/browser/uploader.ts sends them). Once uploaded,
+ * what practice no longer needs is forgotten (`compact`). This module itself sends nothing
+ * over the network.
  */
 import { randomId } from "./random-id";
 import type { StoredRecord } from "../domain/records";
 import type { CaptureSink, WriteOutcome } from "../capture/recorder";
+import { compactable } from "./compaction";
 
 const DATABASE = "muscle-memory-local-practice";
 
@@ -193,7 +195,7 @@ export class PracticeStore implements CaptureSink {
     });
   }
 
-  /** Removes uploaded records from the outbox; the records themselves stay on the device. */
+  /** Removes uploaded records from the outbox; the records stay until `compact`. */
   sent(keys: readonly IDBValidKey[]): Promise<void> {
     return new Promise((resolve, reject) => {
       const transaction = this.database.transaction("outbox", "readwrite");
@@ -202,6 +204,28 @@ export class PracticeStore implements CaptureSink {
       transaction.oncomplete = () => resolve();
       transaction.onabort = () =>
         reject(transaction.error ?? new Error("The upload queue could not be updated."));
+    });
+  }
+
+  /**
+   * Forgets what is uploaded and no longer needed here (./compaction.ts), in one transaction.
+   * Returns how many records went.
+   */
+  compact(): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const transaction = this.database.transaction(["records", "outbox"], "readwrite");
+      const stored = transaction.objectStore("records");
+      let removed = 0;
+      const records = stored.getAll();
+      const queued = transaction.objectStore("outbox").getAll();
+      queued.onsuccess = () => {
+        const ids = compactable(records.result as StoredRecord[], new Set(queued.result as string[]));
+        for (const id of ids) stored.delete(id);
+        removed = ids.length;
+      };
+      transaction.oncomplete = () => resolve(removed);
+      transaction.onabort = () =>
+        reject(transaction.error ?? new Error("Saved practice could not be compacted."));
     });
   }
 

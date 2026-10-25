@@ -1,7 +1,7 @@
 /**
  * Sends recorded practice to the ingest Worker (apps/ingest): the outbox in device storage,
- * oldest first, in gzipped batches. Records stay on the device after upload; only their
- * outbox entries go. A failed upload keeps them and retries with backoff, so nothing is lost
+ * oldest first, in gzipped batches. Once the outbox is empty, the store forgets what practice
+ * no longer needs (PracticeStore.compact). A failed upload keeps them and retries with backoff, so nothing is lost
  * while the device keeps its storage. Runs only while `allowed()` (the current Terms accepted).
  */
 import {
@@ -67,12 +67,16 @@ export class Uploader {
     const store = await this.options.store();
     const participantId = await store.participantId();
     const proof = await sha256Hex(await store.deviceSecret());
+    let uploaded = false;
     for (let round = 0; round < (keepalive ? 1 : BATCHES_PER_ROUND); round++) {
       const { keys, records } = await store.pending(
         BATCH_MAX_RECORDS,
         keepalive ? KEEPALIVE_MAX_BYTES * 4 : BATCH_MAX_BYTES,
       );
-      if (!keys.length) return;
+      if (!keys.length) {
+        if (uploaded && !keepalive) await store.compact();
+        return;
+      }
       if (!records.length) {
         await store.sent(keys);
         continue;
@@ -100,8 +104,10 @@ export class Uploader {
       else if (response.status === 401) this.stopped = "claimed";
       // Only success empties the queue. A record the server refuses is reported in a
       // successful reply; a refused batch is a bug on our side, so it stays for a later fix.
-      if (response.ok) await store.sent(keys);
-      else return this.backoff();
+      if (response.ok) {
+        await store.sent(keys);
+        uploaded = true;
+      } else return this.backoff();
       this.failures = 0;
       if (this.stopped) return;
     }
