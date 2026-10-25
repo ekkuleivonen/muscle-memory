@@ -30,7 +30,7 @@ export default async function Home() {
   const store = await cookies();
   // Anyone who accepted the Terms has challenges to come back to.
   const signedIn = hasConsent(store.get(CONSENT_COOKIE)?.value);
-  const startHref = signedIn ? "/dashboard" : "/play";
+  const startHref = signedIn ? "/challenges" : "/play";
   const startLabel = signedIn
     ? "continue where you left off"
     : "try a challenge";

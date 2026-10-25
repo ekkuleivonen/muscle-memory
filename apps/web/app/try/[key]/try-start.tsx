@@ -66,11 +66,6 @@ export function TryStart({
               ? `Continue your attempt at ${issue.key} →`
               : `Start ${issue.key} yourself →`}
         </button>
-        {consented && (
-          <Link className="home-note" href={`/issues/${issue.key}`}>
-            Challenge details
-          </Link>
-        )}
       </div>
       <p className="faint try-note">
         You start from the same code as everyone else. A link never brings

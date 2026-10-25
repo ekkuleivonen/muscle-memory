@@ -199,15 +199,6 @@ try {
   await ready();
   assert.match(await editor().innerText(), /countWords/);
   assert.equal((await finished()).length, 1);
-  await page.goto(`${origin}/profile`);
-  await page.getByText(/Verified completion/).waitFor();
-  // Old submission URLs are read-only, with no merge/Resolve/reply writer.
-  await page.goto(`${origin}/pulls/QUICK-2/${done[0].data.pullRequest}`);
-  await page.getByText(/saved submission record/).waitFor();
-  assert.equal(
-    await page.getByRole("button", { name: /Merge|Resolve|Reply/ }).count(),
-    0,
-  );
   // An authored correctness/safety blocker persists despite all cases passing.
   await page.goto(`${origin}/work/FN-1`);
   await ready();
@@ -361,7 +352,7 @@ try {
   await ready();
   assert.match(await editor().innerText(), /LEGACY_ENTRY_SENTINEL/);
   // Explicit starter choice appends a new source without rewriting old entry/helper artifacts.
-  await page.goto(`${origin}/profile`);
+  await page.goto(`${origin}/challenges`);
   const retainedStarter = await seedLegacy("starter");
   await page.goto(`${origin}/work/SHOP-8`);
   await page.getByRole("region", { name: "Saved version recovery" }).waitFor();

@@ -930,7 +930,7 @@ export function Ide({
                           label="Next challenge"
                         />
                         <p className="faint">
-                          Suggested by language, project and difficulty.
+                          Suggested by language and difficulty.
                         </p>
                       </>
                     ) : (
@@ -938,7 +938,6 @@ export function Ide({
                         Explore challenges
                       </Link>
                     )}
-                    <Link href="/profile">View your evidence</Link>
                     {shareSnapshot &&
                       shareSnapshot.proof.completion.runId ===
                         verification.latest?.runId &&

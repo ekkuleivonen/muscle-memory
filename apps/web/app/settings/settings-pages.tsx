@@ -348,7 +348,7 @@ function Import() {
     }
     setResult({ tone: "ok", text: "Restored." });
     // A full load, so every part of the app (and the uploader) starts from the restored state.
-    window.location.assign("/dashboard");
+    window.location.assign("/challenges");
   };
   return (
     <SettingsFrame title="Import">
