@@ -1,15 +1,21 @@
 # ENG-336 validation receipts
 
 Source base: `961dd9b2f26d20e4382eb803411d0d3216cfbb8a`.
-Source/test commit: `95a24cdd4d7502cc2fbd69ccd79bca3065d07f82`.
+Current source/test commit: `5712c5abeee14e4824a68de9f551447d714ff1de`.
 The final PR head (including these receipts) is supplied in its description and handoff. `revisions.json`
 is the authoritative mapping of new keys to final immutable content hashes.
 No existing challenge, revision, runtime, validator or manifest was changed.
-Two catalog-size assumptions in app tests were corrected with ENG-335 ownership
-coordination: compare indexed keys/count to the catalog, and request enough
-candidates when checking that all eligible suggestions remain. No application
-behavior changed. The initial 140/142 result is retained in `unit-tests-before.txt`;
-`unit-tests.txt` is the rerun after these test-only corrections.
+The shared `apps/web/lib/challenges.test.ts` is unchanged from the base, per
+coordinator instruction. Its hardcoded count of 46 intentionally fails against
+69 challenges until integration updates that count to 69. The final branch's
+`unit-tests-current.txt` records 141/142 passing and this one expected failure;
+it is not a product defect or a claim that the full suite passes.
+
+The next-problem test still requests enough candidates to check all eligible
+suggestions; no application behavior changed. Historical receipts are retained:
+`unit-tests-before.txt` is the initial 140/142 result; `unit-tests.txt` is the
+142/142 result at `95a24cdd4d7502cc2fbd69ccd79bca3065d07f82`, before restoring
+the shared catalog-count assertion for integration ownership.
 
 ## Reproduce the bounded browser run
 
@@ -52,7 +58,8 @@ flock /tmp/muscle-memory-heavy-check.lock npm run typecheck
 node --import tsx tools/build-content.ts --dry-run
 ```
 
-`unit-tests.txt`, `typecheck.txt` and `content-build.txt` record those results.
+`unit-tests-current.txt`, `typecheck.txt` and `content-build.txt` record the
+current validation status. The sole expected unit failure is described above.
 Builds append immutable archives; retained earlier draft archives do not add
 extra live challenges. `keys.txt` and `revisions.json` list only the 23 live
 additions. `content/catalog.json` is generated and excluded from the commit.

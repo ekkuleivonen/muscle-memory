@@ -102,17 +102,21 @@ wrong variant fails at least one case; static publish/rule checks pass.
   rejecting invalid C-004 return lengths, tightening HTML structural cases,
   clarifying examples and formatting PHP. These supersede their lines in the
   first receipt.
-- [Repository tests](eng-336-evidence/unit-tests.txt):
+- [Current repository tests](eng-336-evidence/unit-tests-current.txt):
   `flock /tmp/muscle-memory-heavy-check.lock npm test`.
 - [Type checks](eng-336-evidence/typecheck.txt):
   `flock /tmp/muscle-memory-heavy-check.lock npm run typecheck`.
 - [Exact revision manifest](eng-336-evidence/revisions.json): per-key hashes and
   case counts, tied to the final content build.
 
-Repository tests initially exposed two baseline size assumptions (46 total and a
-50-suggestion request expected to return every eligible challenge). With ENG-335
-ownership coordination, the assertions now follow the catalog size and key set.
-These are test-only changes; application behavior is unchanged.
+Repository tests currently pass 141/142. The single expected failure is the
+shared `apps/web/lib/challenges.test.ts:30` assertion that the catalog contains
+46 challenges. This file is deliberately unchanged from the base: the coordinator
+will update the combined count to 69 during integration, preserving every other
+assertion and ENG-335's title change. No product defect is implied. The separate
+next-problem test requests enough candidates to check all eligible suggestions;
+application behavior is unchanged. Historical test receipts remain labeled in
+the evidence README; the current receipt supersedes their overall pass claims.
 
 The new-only receipt uses a temporary copy of the existing content-check harness
 filtered to `keys.txt`, with additional phase/error checks for starters and wrong
