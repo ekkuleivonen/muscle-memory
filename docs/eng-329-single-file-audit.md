@@ -6,7 +6,7 @@ Read-only audit of the 46 published challenges (live revisions in `content/catal
 
 - **Dropped (existed only to force the second-file edit):** FN-3 `mateo-units-in-report` and DATA-8 `priya-reader-sign`. DATA-8's description no longer claims anything about the reader's rows: only `settlement_summary`'s result is checked, so only it is the contract (review fix).
 - **Kept, trigger changed:** SHOP-8 `mateo-line-taxes` requires an actual call to `lineTaxes`, with any spacing before the bracket, and never counts its definition (`(?<!function\s+)\blineTaxes\s*\(`). An alternative with spaced calls passes; an unused helper, even spaced, is blocked (review fix).
-- **Stated but not tested by any case:** EDGE-1 "no malloc on the hot path" and EDGE-2 "fast with two million samples" came from ticket comments; they are requirements in the description, not enforced.
+- **Unverified claims removed (review fix):** EDGE-1 no longer says "don't allocate memory", and EDGE-2 no longer says it must be fast with two million samples. No case or rule checked either, and neither is what the challenge tests. EDGE-2 was framed as a timeout, but its starter's bug is the missing percentile, so its opening line, title ("Compute nearest-rank percentiles for the latency panel") and kind (`feature`) now say what it tests.
 - **Hidden case names:** INC-1's seven hidden case names (which stated the answers) are now blank.
 
 Languages: Python 10, Go 7, JavaScript 6, TypeScript 6, PHP 3, SQL 3 (DATA-3, DATA-4, DATA-6), Java 2, C# 2, Ruby 2, C 2, C++ 2, HTML 1.
@@ -94,8 +94,8 @@ Every live revision changed; every earlier revision stays published (`apps/web/l
 | DATA-6  | `collected-by-partner`       | `7a455c4e6461` | `de8621e616e7` | 1 → 1          | 2             | 2                | `priya-sum-distinct`                 |
 | DATA-7  | `dedupe-phone-customers`     | `c524922bdcd7` | `70941e23d1f9` | 1 → 1          | 2             | 3                | `priya-pairwise`                     |
 | DATA-8  | `bracketed-refunds`          | `2f67de6d62cb` | `6663cb7589ec` | 3 → 1          | 2             | 4                | —                                    |
-| EDGE-1  | `ring-buffer`                | `ca784ee406e2` | `ceedbc834572` | 1 → 1          | 0             | 1                | —                                    |
-| EDGE-2  | `p99-latency`                | `467834317f13` | `8851fe342864` | 1 → 1          | 0             | 1                | —                                    |
+| EDGE-1  | `ring-buffer`                | `ca784ee406e2` | `f84db7782372` | 1 → 1          | 0             | 1                | —                                    |
+| EDGE-2  | `p99-latency`                | `467834317f13` | `2b73c7876016` | 1 → 1          | 0             | 1                | —                                    |
 | EDGE-3  | `lru-cache`                  | `fd4017b09f9f` | `3fe599731b07` | 1 → 1          | 1             | 1                | —                                    |
 | EDGE-4  | `parse-duration`             | `2a664f5258fd` | `29ee4f465695` | 1 → 1          | 0             | 1                | —                                    |
 | EDGE-5  | `ipv6-host-header`           | `175839700669` | `e2cafd032130` | 1 → 1          | 2             | 3                | `sam-no-malloc`                      |

@@ -2691,8 +2691,7 @@ mm_value *mm_call(const mm_value *args) {
 \`ring_buffer(capacity, values, count, out)\` pushes the \`count\` integers in \`values\`, in order, into an empty buffer that holds \`capacity\` entries. A push into a full buffer overwrites the oldest entry. Then it writes what the buffer holds into \`out\`, oldest first, and returns how many entries it wrote.
 
 - \`out\` has room for at least \`count\` integers.
-- A capacity of 0 holds nothing.
-- This runs on the hot path: don't allocate memory (no \`malloc\`).`,
+- A capacity of 0 holds nothing.`,
     inputs: [
       [3, [1, 2, 3, 4]],
       [2, []],
@@ -2775,19 +2774,18 @@ size_t ring_buffer(size_t capacity, const int *values, size_t count, int *out)
   }),
   challenge("p99-latency", {
     parameters: ["samples", "p"],
-    title: "p99 latency panel times out in busy hours",
+    title: "Compute nearest-rank percentiles for the latency panel",
     summary: "Compute nearest-rank percentiles for the metrics endpoint.",
-    kind: "performance",
+    kind: "feature",
     difficulty: "medium",
     language: "go",
     skills: ["sorting", "statistics"],
-    task: `The p99 latency panel times out in busy hours, when there are two million samples.
+    task: `The latency panel shows percentiles of request latencies, such as the p99.
 
 \`Percentile(samples, p)\` returns the nearest-rank percentile of the latency samples. \`samples\` are in any order and can repeat; \`p\` is greater than 0 and at most 100.
 
 - The value is the one at rank \`ceil(p / 100 × n)\` among the \`n\` samples in ascending order, counting from 1, and \`ok\` is true.
-- With no samples, \`ok\` is false (the checks show this as \`null\`).
-- It must stay fast with two million samples.`,
+- With no samples, \`ok\` is false (the checks show this as \`null\`).`,
     inputs: [
       [[15, 20, 35, 40, 50], 30],
       [[15, 20, 35, 40, 50], 100],

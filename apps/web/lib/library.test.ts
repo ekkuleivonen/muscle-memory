@@ -233,7 +233,8 @@ test("groups keep their declared order and drop empty ones", () => {
     ]),
     [
       ["bug", 23],
-      ["performance", 2],
+      // EDGE-2 is a percentile task, not a performance one, since ENG-329.
+      ["performance", 1],
     ],
   );
   assert.deepEqual(
@@ -242,7 +243,7 @@ test("groups keep their declared order and drop empty ones", () => {
   );
   assert.equal(
     groupIssues(issues, "none", merged.projects)[0].issues.length,
-    25,
+    24,
   );
 });
 
