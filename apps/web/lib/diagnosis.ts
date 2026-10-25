@@ -1,8 +1,9 @@
 /**
  * What a full check shows, case by case. A case in the repo's test file is public: a failure
  * shows its input, the expected value and what the code gave. A case only the full check runs
- * stays hidden: a failure gives its name (the public requirement) and a failure category, never
- * its input, expected value or the code's output, so the check is not an oracle for its answers.
+ * stays hidden: a failure gives its position and a failure category, never its name (names can
+ * state the answer), input, expected value, the code's output or an error message, so the check
+ * is not an oracle for its answers.
  * It never suggests code.
  */
 import type { Case } from "../../../packages/content/model";
@@ -23,13 +24,16 @@ export type FailureCategory =
   | "no-result";
 
 export interface CheckRow {
-  /** The case's name in the tests (the requirement it checks), or "case 3". */
+  /** A public case's name in the tests, or "case 3"; a hidden case is "hidden case 3". */
   name: string;
   /** In the repo's test file. */
   visible: boolean;
   passed: boolean;
-  /** Failing cases only. `errorType` names a raised error's type, never its message. */
-  failure: { category: FailureCategory; errorType: string | null } | null;
+  /**
+   * Failing cases only: the category alone. Never an error's type or message. User code can set
+   * either from its input, so neither is safe for a hidden case; a public case's `detail` has them.
+   */
+  failure: { category: FailureCategory } | null;
   /** Public cases only: the case as the test file has it, and what the code gave when it failed. */
   detail: {
     input: Json;
@@ -76,21 +80,18 @@ export function failureOf(
     | {
         output?: { truncated: boolean };
         repr?: unknown;
-        error?: { type: string };
+        error?: unknown;
         conversionError?: unknown;
         unserializable?: string;
       }
     | undefined,
 ): NonNullable<CheckRow["failure"]> {
-  if (result?.error)
-    return { category: "raised", errorType: result.error.type };
+  if (result?.error) return { category: "raised" };
   if (result?.conversionError || result?.unserializable)
-    return { category: "not-json", errorType: null };
-  if (result?.output?.truncated)
-    return { category: "cut-short", errorType: null };
-  if (result?.output || result?.repr)
-    return { category: "wrong-value", errorType: null };
-  return { category: "no-result", errorType: null };
+    return { category: "not-json" };
+  if (result?.output?.truncated) return { category: "cut-short" };
+  if (result?.output || result?.repr) return { category: "wrong-value" };
+  return { category: "no-result" };
 }
 
 const FAILURE: Record<FailureCategory, string> = {
@@ -103,17 +104,16 @@ const FAILURE: Record<FailureCategory, string> = {
 
 /** How a case failed, in words: all a hidden case shows. */
 export function failureText(failure: NonNullable<CheckRow["failure"]>): string {
-  return failure.category === "raised" && failure.errorType
-    ? `Raised ${failure.errorType}.`
-    : FAILURE[failure.category];
+  return FAILURE[failure.category];
 }
 
 /**
- * A case's label where its input must not show: its name, or "hidden case 3". Never the call
- * with its arguments, which would reveal a hidden input.
+ * A hidden case's label: "hidden case 3", by position only. Not the call with its arguments,
+ * which shows the input, and not its name either: some names state the input and the answer
+ * ("guest at exactly $50: free shipping").
  */
-export function hiddenLabel(c: { name?: string }, index: number): string {
-  return c.name ?? `hidden case ${index + 1}`;
+export function hiddenLabel(index: number): string {
+  return `hidden case ${index + 1}`;
 }
 
 function got(
@@ -168,7 +168,7 @@ export function diagnose(
   const rows = cases.map((c, i): CheckRow => {
     const result = outcome.cases![i];
     return {
-      name: c.visible ? (c.name ?? `case ${i + 1}`) : hiddenLabel(c, i),
+      name: c.visible ? (c.name ?? `case ${i + 1}`) : hiddenLabel(i),
       visible: c.visible,
       passed: passed[i],
       failure: passed[i] ? null : failureOf(result),

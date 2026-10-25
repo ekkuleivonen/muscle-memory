@@ -63,7 +63,7 @@ Then delete pulls.tsx's local `Outcome`, `show`, `Checks`, `Findings`, `CiFindin
 
 ### Practice area hunks (ENG-328 applies): hidden cases are no oracle
 
-Import from `lib/diagnosis.ts`: `failureOf`, `failureText`, `hiddenLabel`. For a case with `visible: false`, show its name (or "hidden case N") and how it failed. Never show its input, the call with its arguments, the expected value, what it returned, a traceback or an error message.
+Import from `lib/diagnosis.ts`: `failureOf`, `failureText`, `hiddenLabel`. For a case with `visible: false`, show "hidden case N" and how it failed (`failureText`: a fixed category). Never show its name (some names state the answer), its input, the call with its arguments, the expected value, what it returned, a traceback, or an error's type or message (code can set both from its input).
 
 `app/work/ide.tsx`, in `Tests`:
 
@@ -73,7 +73,7 @@ Import from `lib/diagnosis.ts`: `failureOf`, `failureText`, `hiddenLabel`. For a
              index={index}
 -            label={check.name ?? caseLabel(challenge, check.input)}
 -            expected={check.expected}
-+            label={check.visible ? (check.name ?? caseLabel(challenge, check.input)) : hiddenLabel(check, index)}
++            label={check.visible ? (check.name ?? caseLabel(challenge, check.input)) : hiddenLabel(index)}
 +            expected={check.visible ? check.expected : undefined}
 +            hidden={!check.visible}
              passed={feedback.passed[index]}
@@ -97,7 +97,7 @@ In `Case`, before the expected/trace/got block:
  function caseLines(challenge, check, passed, result, index) {
 -  const label = check.name ?? caseLabel(challenge, check.input);
 +  if (!check.visible) {
-+    const label = hiddenLabel(check, index);
++    const label = hiddenLabel(index);
 +    return passed
 +      ? [{ text: `✔ ${label}`, tone: "pass" }]
 +      : [{ text: `✘ ${label}`, tone: "fail" }, { text: `    ${failureText(failureOf(result))}`, tone: "dim" }];

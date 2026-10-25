@@ -40,7 +40,7 @@ test("a failing public case shows its input, the expected value and what the cod
       name: "counts words",
       visible: true,
       passed: false,
-      failure: { category: "wrong-value", errorType: null },
+      failure: { category: "wrong-value" },
       detail: {
         input: ["a a"],
         expected: { a: 2 },
@@ -66,14 +66,14 @@ test("a hidden case is no oracle: its name and failure category, never its value
   if (d?.kind !== "tests") return assert.fail("expected per-case results");
   const [unnamed, hidden] = d.failed;
   assert.equal(unnamed.name, "case 2");
-  assert.deepEqual(unnamed.failure, { category: "no-result", errorType: null });
+  assert.deepEqual(unnamed.failure, { category: "no-result" });
   assert.deepEqual(unnamed.detail?.got, { label: "Got", text: "nothing" });
   assert.deepEqual(hidden, {
-    name: "ignores case",
+    name: "hidden case 3",
     visible: false,
     passed: false,
-    // The error's type, not its message: a message can echo the input.
-    failure: { category: "raised", errorType: "KeyError" },
+    // Neither the error's type nor its message: user code can set both from the input.
+    failure: { category: "raised" },
     detail: null,
   });
   // Passing hidden cases carry no values either.
@@ -159,20 +159,19 @@ test("a passing run has no failures", () => {
 
 test("the practice area's live results get the same categories, with no values or messages", () => {
   const raised = failureOf({ error: { type: "KeyError" } });
-  assert.deepEqual(raised, { category: "raised", errorType: "KeyError" });
-  assert.equal(failureText(raised), "Raised KeyError.");
+  assert.deepEqual(raised, { category: "raised" });
+  assert.equal(failureText(raised), "Raised an error.");
   assert.equal(failureOf({ repr: { text: "3" } }).category, "wrong-value");
   assert.equal(failureOf({ conversionError: {} }).category, "not-json");
   assert.equal(failureOf(undefined).category, "no-result");
   assert.equal(
-    failureText({ category: "wrong-value", errorType: null }),
+    failureText({ category: "wrong-value" }),
     "Returned a different value from the one expected.",
   );
 });
 
-test("an unnamed hidden case is labelled by position, never by its call", () => {
-  assert.equal(hiddenLabel({}, 6), "hidden case 7");
-  assert.equal(hiddenLabel({ name: "ignores case" }, 2), "ignores case");
+test("a hidden case is labelled by position, never by its call or its name", () => {
+  assert.equal(hiddenLabel(6), "hidden case 7");
   const d = diagnose({ status: "completed", phase: "tests", cases: [{}, {}] }, [
     { id: "x", input: [1], expected: 1, visible: true },
     { id: "y", input: ["secret"], expected: 2, visible: false },

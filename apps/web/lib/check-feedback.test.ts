@@ -20,7 +20,7 @@ const failing: Diagnosis = {
       name: "ignores case",
       visible: false,
       passed: false,
-      failure: { category: "wrong-value", errorType: null },
+      failure: { category: "wrong-value" },
       detail: null,
     },
   ],
