@@ -61,7 +61,7 @@ export default async function IssuePage(props: Props) {
             <ProjectSquare project={project} /> {project.title}
           </Link>
         ) : (
-          <Link href="/issues">Challenges</Link>
+          <Link href="/issues">Explore</Link>
         )}
         <Sep />
         <span className="mono">{issue.key}</span>
@@ -75,7 +75,7 @@ export default async function IssuePage(props: Props) {
             <StartWork
               issue={issue}
               href={`/work/${issue.key}`}
-              label="Open challenge"
+              label="Practice"
               warmOnMount
             />
           </div>
@@ -156,7 +156,7 @@ function Properties({ issue }: { issue: Issue }) {
       <StartWork
         issue={{ key: issue.key, slug: issue.slug, revision: issue.revision }}
         href={`/work/${issue.key}`}
-        label="Open challenge"
+        label="Practice"
       />
       <CopyIssueLink issueKey={issue.key} />
       <Ask

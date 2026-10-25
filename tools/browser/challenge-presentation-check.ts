@@ -19,7 +19,7 @@ try {
     .getByRole("button", { name: "I'm 16 or older and accept", exact: true })
     .click();
   await page.getByRole("searchbox", { name: "Search", exact: true }).waitFor();
-  assert.match(await page.title(), /^Challenges/);
+  assert.match(await page.title(), /^Explore/);
   await page
     .locator("details.menu")
     .filter({ has: page.locator("summary", { hasText: "Display" }) })
@@ -67,7 +67,7 @@ try {
     "",
   );
   const start = page
-    .getByRole("link", { name: "Open challenge", exact: true })
+    .getByRole("link", { name: "Practice", exact: true })
     .last();
   await start.focus();
   await page.keyboard.press("Enter");

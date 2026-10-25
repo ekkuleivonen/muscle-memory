@@ -23,7 +23,7 @@ import { IssueResults } from "../_components/issue-results";
 import { Toolbar } from "../_components/toolbar";
 import { Topbar } from "../_components/topbar";
 
-export const metadata: Metadata = { title: "Challenges · Muscle Memory" };
+export const metadata: Metadata = { title: "Explore · Muscle Memory" };
 
 export default async function IssuesPage({
   searchParams,
@@ -39,7 +39,7 @@ export default async function IssuesPage({
   return (
     <>
       <Topbar>
-        <span>Challenges</span>
+        <span>Explore</span>
         <span className="faint">
           {results.length === issues.length
             ? issues.length

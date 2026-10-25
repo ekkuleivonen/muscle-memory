@@ -83,7 +83,7 @@ export function Sidebar({
           href="/issues"
           aria-current={current("/issues")}
         >
-          <IssuesIcon /> Challenges <span className="count">{issueCount}</span>
+          <IssuesIcon /> Explore <span className="count">{issueCount}</span>
         </Link>
         <Link
           className="side-link"

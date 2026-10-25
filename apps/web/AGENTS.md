@@ -26,7 +26,7 @@ The product centers on solving coding challenges independently: challenge, code,
 - Anything read from localStorage or IndexedDB is read after mount, never during render, or hydration breaks.
 - Revision JSON goes to client components as a string and is parsed there: the RSC serializer drops a `"__proto__"` key, and fixtures use one on purpose.
 - The editor owns its document; typing must never re-render React.
-- UI copy is plain and specific. Goals, examples and constraints should be immediately understandable. Meaningful requirement clarity is not a solution leak. Errors say what happened and whether it is the person's code ("this wasn't your code" for runner crashes).
+- UI copy is plain and specific. Goals, examples and constraints should be immediately understandable. Public requirements and visible examples must be clear. Hidden expected outputs and solutions stay hidden; give fixed failure categories rather than a hidden-test oracle. Use challenge for the task, practice for the working area, explore for the catalog, and profile for evidence where appropriate. Errors say what happened and whether it is the person's code ("this wasn't your code" for runner crashes).
 - Use real-world framing only when it naturally clarifies the task. Do not invent company context or require all challenges to resemble professional work. Keep implementation machinery out of the player journey unless it helps explain an actionable problem. Existing PR, board and merge records retain their historical meanings until an explicit compatibility contract changes how new challenge verification is represented. No telemetry, consent or legal change is implied by presentation work.
 
 ## Checking a change
