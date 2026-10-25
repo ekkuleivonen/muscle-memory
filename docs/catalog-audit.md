@@ -38,7 +38,7 @@ Revision is the live revision after this audit (first 12 hex digits of its hash)
 | C-001 | `c51663423d40` | Normalize Host headers, IPv6 literals included | easy | strings, parsing, http | Clang | 5+12 | 1 | 1/4 |
 | C-002 | `4899b029c3c8` | Keep the last N request latencies in memory | medium | arrays, modular-arithmetic | Clang | 2+14 | 0 | 1/3 |
 | CPP-001 | `63cd99a0b96a` | Cache evicts entries that were just used | hard | caching, linked-lists, maps | Clang | 2+13 | 0 | 1/3 |
-| CPP-002 | `d3222414e5ee` | Open-addressing index loses keys after a purge | hard | hash-tables, caching, reading-code | Clang | 5+13 | 1 | 1/3 |
+| CPP-002 | `b60f7273efa7` | Open-addressing index loses keys after a purge | hard | hash-tables, caching, reading-code | Clang | 5+13 | 1 | 1/3 |
 | CS-001 | `1eb2bc05c432` | The composer says 1 word when the post is empty | easy | strings, edge-cases | Roslyn/.NET | 5+16 | 0 | 1/3 |
 | CS-002 | `790005e37bae` | Late fees are a cent off on some invoices | easy | rounding, decimals, finance | Roslyn/.NET | 6+17 | 0 | 1/3 |
 | GO-001 | `d73f7e05a154` | The composer says 1 word when the post is empty | easy | strings, edge-cases | Yaegi | 5+16 | 0 | 1/3 |
@@ -91,7 +91,7 @@ Revision is the live revision after this audit (first 12 hex digits of its hash)
 | C-001 | Rewrite + cases | C strings, fixed buffers | Opening was an on-call timeline; now the goal and the two wrong outputs. A last-`:` port cut passed; `example.com:80:443` added. |
 | C-002 | Keep | arrays, modular arithmetic | Short and exact. |
 | CPP-001 | Keep | hash map + linked list, LRU | Classic, clearly specified. |
-| CPP-002 | Rewrite + cases | open addressing, deletion | Deploy figures and ticket replaced by a four-line log that shows the bug. Negative (unsigned) key case added. |
+| CPP-002 | Rewrite + cases | open addressing, deletion | Deploy figures and ticket replaced by a four-line log that shows the bug. The task now says keys can be negative and are converted to unsigned for the home slot; a negative-key case added. |
 | CS-001 | Cases | strings | Word-count warm-up; lone `\r` and the word `0` added. |
 | CS-002 | Cases | decimal vs double, rounding | A `double` solution passed; three half-cent cases added. |
 | GO-001 | Cases | strings | Word-count warm-up; lone `\r` and the word `0` added. |
@@ -161,7 +161,7 @@ Each now opens with what the code does and a concrete example of the bug. The ta
 - SQL-003: reading "no payment" as "payments add up to 0".
 - C-001: cutting a hostname's port at the last `:` instead of the first.
 - GO-005: rejecting only ASCII whitespace.
-- CPP-002: no case had a negative key, though keys are used as unsigned.
+- CPP-002: no case had a negative key; the task now states that keys can be negative and how their home slot is computed.
 
 **Wording.** JS-001 told the solver that the helpers were imported and could not be changed, though they sit in the same file under "you shouldn't need to change them". Its single-file wording is fixed. TS-004's starter comment now says "allowed attempts", matching the task.
 
