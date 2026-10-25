@@ -20,7 +20,7 @@ export interface KeyMenuItem {
 
 /**
  * A list of pages to open, driven like a terminal prompt and clicked like a page: ↑↓ or j/k
- * move the ❯, Enter or a digit opens, hovering moves it too. Every row is a real link. Takes
+ * move the ❯, Enter or a digit opens. Hover only highlights. Every row is a real link. Takes
  * the keyboard on load, so the keys work at once.
  */
 export function KeyMenu({
@@ -44,6 +44,10 @@ export function KeyMenu({
   };
 
   useEffect(() => list.current?.focus({ preventScroll: true }), []);
+  useEffect(() => {
+    if (document.activeElement === list.current)
+      document.getElementById(`${id}-${state.cursor}`)?.scrollIntoView({ block: "nearest" });
+  }, [id, state.cursor]);
 
   function onKeyDown(event: KeyboardEvent) {
     if (event.metaKey || event.ctrlKey || event.altKey) return;
@@ -83,7 +87,7 @@ export function KeyMenu({
                 href={item.href}
                 tabIndex={-1}
                 className={`t-row${current ? " t-current-row" : ""}`}
-                onMouseEnter={() => setState({ ...state, cursor: index })}
+                onFocus={() => setState({ ...state, cursor: index })}
               >
                 <span className="t-accent">{current ? "❯" : " "}</span>
                 <span className="t-dim">{index + 1}.</span>

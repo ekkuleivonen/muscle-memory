@@ -3,8 +3,11 @@
  * with the session; there is no autocompletion, bracket auto-closing, linting or AI
  * assistance. The editor owns its document, so typing never re-renders React.
  */
-import { EditorState, type Extension, Transaction } from "@codemirror/state";
+import { EditorState, type Extension, Prec, Transaction } from "@codemirror/state";
 import {
+  activateHover,
+  closeHoverTooltips,
+  hasHoverTooltips,
   drawSelection,
   EditorView,
   highlightActiveLine,
@@ -13,7 +16,13 @@ import {
   keymap,
   lineNumbers,
 } from "@codemirror/view";
-import { linter } from "@codemirror/lint";
+import {
+  forEachDiagnostic,
+  linter,
+  nextDiagnostic,
+  previousDiagnostic,
+  openLintPanel,
+} from "@codemirror/lint";
 import {
   defaultKeymap,
   history,
@@ -325,6 +334,15 @@ export function createEditor(
     state: EditorState.create({
       doc,
       extensions: [
+        // Preserve the escape route even when Vim or a tooltip handles Escape.
+        Prec.highest(
+          EditorView.domEventHandlers({
+            keydown(event, view) {
+              if (event.key === "Escape") view.setTabFocusMode(2000);
+              return false;
+            },
+          }),
+        ),
         // Vim goes first so its keys win over the defaults.
         options.keymap === "vim" ? vim() : [],
         ...shared(options.language),
@@ -369,17 +387,111 @@ export function createEditor(
 /** Errors as squiggles (after a pause in typing) and the type under the pointer. */
 function typeHints(types: TypeChecker, activity?: ActivityHooks): Extension {
   let shown = "";
+  let keyboardRequest = false;
+  const tooltip = hoverTooltip(async (view, position) => {
+    const keyboard = keyboardRequest;
+    keyboardRequest = false;
+    const doc = view.state.doc;
+    const hint = await types.hover(doc.toString(), position).catch(() => null);
+    if (!view.dom.isConnected || view.state.doc !== doc) return null;
+    if (keyboard) {
+      if (view.state.selection.main.head !== position) return null;
+      if (!hint)
+        view.dispatch({
+          effects: EditorView.announce.of("No type information at the cursor."),
+        });
+    }
+    if (!hint) return null;
+    activity?.onAssist?.("hover", {
+      from: hint.from,
+      to: hint.to,
+      type: hint.type,
+    });
+    return {
+      pos: hint.from,
+      end: hint.to,
+      above: true,
+      create() {
+        const dom = document.createElement("div");
+        dom.className = "cm-type-hint";
+        const type = dom.appendChild(document.createElement("code"));
+        type.textContent = hint.type;
+        if (hint.documentation) {
+          const documentation = dom.appendChild(document.createElement("p"));
+          documentation.textContent = hint.documentation;
+        }
+        // Announce after the tooltip mounts: dispatching in its async source would
+        // cancel CodeMirror's pending tooltip request.
+        if (keyboard)
+          queueMicrotask(() => {
+            if (
+              dom.isConnected &&
+              view.state.doc === doc &&
+              view.state.selection.main.head === position
+            )
+              view.dispatch({
+                effects: EditorView.announce.of(
+                  `${hint.type}${hint.documentation ? `. ${hint.documentation}` : ""}`,
+                ),
+              });
+          });
+        return { dom };
+      },
+    };
+  });
+  const diagnostic = (view: EditorView, backwards: boolean) => {
+    (backwards ? previousDiagnostic : nextDiagnostic)(view);
+    const selection = view.state.selection.main;
+    let message = "No other diagnostics.";
+    forEachDiagnostic(view.state, (item, from, to) => {
+      if (from === selection.from && to === selection.to)
+        message = item.message;
+    });
+    view.dispatch({ effects: EditorView.announce.of(message) });
+    return true;
+  };
   return [
+    // These commands also work in Vim mode and never change the document.
+    Prec.highest(
+      keymap.of([
+        {
+          key: "F1",
+          run: (view) => {
+            keyboardRequest = true;
+            activateHover(view, view.state.selection.main.head, 1, {
+              tooltip,
+              until: (transaction) =>
+                transaction.docChanged || !!transaction.selection,
+            });
+            keyboardRequest = false;
+            return true;
+          },
+        },
+        { key: "F8", run: (view) => diagnostic(view, false) },
+        { key: "Shift-F8", run: (view) => diagnostic(view, true) },
+        { key: "Mod-Shift-m", run: openLintPanel },
+        {
+          key: "Escape",
+          run: (view) => {
+            if (!hasHoverTooltips(view.state)) return false;
+            view.dispatch({ effects: closeHoverTooltips });
+            return true;
+          },
+        },
+      ]),
+    ),
     linter(
       async (view) => {
         const length = view.state.doc.length;
         try {
-          const found = (await types.check(view.state.doc.toString())).map((d) => ({
-            from: Math.min(d.from, length),
-            to: Math.min(Math.max(d.to, d.from), length),
-            severity: d.severity,
-            message: d.message,
-          }));
+          const found = (await types.check(view.state.doc.toString())).map(
+            (d) => ({
+              from: Math.min(d.from, length),
+              to: Math.min(Math.max(d.to, d.from), length),
+              severity: d.severity,
+              message: d.message,
+            }),
+          );
           // Recorded when what the editor shows changes, not on every check.
           const key = JSON.stringify(found);
           if (key !== shown) {
@@ -393,28 +505,6 @@ function typeHints(types: TypeChecker, activity?: ActivityHooks): Extension {
       },
       { delay: 500 },
     ),
-    hoverTooltip(async (view, position) => {
-      const hint = await types
-        .hover(view.state.doc.toString(), position)
-        .catch(() => null);
-      if (!hint) return null;
-      activity?.onAssist?.("hover", { from: hint.from, to: hint.to, type: hint.type });
-      return {
-        pos: hint.from,
-        end: hint.to,
-        above: true,
-        create() {
-          const dom = document.createElement("div");
-          dom.className = "cm-type-hint";
-          const type = dom.appendChild(document.createElement("code"));
-          type.textContent = hint.type;
-          if (hint.documentation) {
-            const doc = dom.appendChild(document.createElement("p"));
-            doc.textContent = hint.documentation;
-          }
-          return { dom };
-        },
-      };
-    }),
+    tooltip,
   ];
 }

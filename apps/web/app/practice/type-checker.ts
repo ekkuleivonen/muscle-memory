@@ -21,7 +21,12 @@ export interface TypeHover {
 }
 
 /** Recorded with the session when the checker is on. */
-export const TYPE_CHECK_FEATURES = ["type-diagnostics", "hover-types"] as const;
+export const TYPE_CHECK_FEATURES = [
+  "type-diagnostics",
+  "hover-types",
+  "keyboard-type-info",
+  "keyboard-diagnostics",
+] as const;
 
 const WORKER = String.raw`
 // typescript.js declares a global var ts; this worker keeps its own name for it.
