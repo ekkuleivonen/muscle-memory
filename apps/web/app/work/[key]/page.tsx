@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { requireConsent } from "../../../lib/gate";
-import { inTicket } from "../../../lib/feedback";
-import { projectFilterValue, summarize } from "../../../lib/library";
+import Link from "next/link";
+import { supportsOneFilePractice } from "../../../lib/practice-contract";
+import { summarize } from "../../../lib/library";
 import { getLibrary } from "../../../lib/load";
 import "../ide.css";
 import { Ide } from "../ide";
@@ -17,8 +18,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const issue = findIssue(decodeURIComponent((await params).key));
   return {
     title: issue
-      ? `${issue.key} · IDE · Muscle Memory`
-      : "Issue not found · Muscle Memory",
+      ? `${issue.key} · Practice · Muscle Memory`
+      : "Challenge not found · Muscle Memory",
   };
 }
 
@@ -44,10 +45,33 @@ export default async function WorkPage({ params, searchParams }: Props) {
   const revision = wanted ?? issue.revision;
   // The ticket as that revision has it.
   const content = published[revision];
+  if (!supportsOneFilePractice(content))
+    return (
+      <main className="practice-version">
+        <Link href="/issues">← Explore</Link>
+        <h1>This older version is not supported in one-file practice</h1>
+        <p>
+          Its published files, requirements and recorded work are preserved. It
+          cannot run in one-file practice without changing the challenge.
+        </p>
+        <p>
+          The current version has one editable file and self-contained
+          requirements. You can choose how to restore saved code before anything
+          is replaced.
+        </p>
+        <Link className="btn primary" href={`/work/${issue.key}`}>
+          Open current version
+        </Link>
+      </main>
+    );
   return (
     <Ide
+      key={`${issue.slug}:${revision}`}
       revisionsJson={JSON.stringify(published)}
-      candidates={issues.map(summarize)}
+      candidates={[
+        summarize(issue),
+        ...issues.filter((i) => i.key !== issue.key).map(summarize),
+      ]}
       issue={{
         key: issue.key,
         slug: issue.slug,
@@ -58,16 +82,9 @@ export default async function WorkPage({ params, searchParams }: Props) {
         difficulty: issue.difficulty,
         estimate: issue.estimate,
         labels: [...issue.labels],
-        comments: content.team.filter(inTicket).map((c) => ({
-          author: c.author.name,
-          role: c.author.role,
-          body: c.text[0],
-        })),
         language: issue.language!,
         runnable: issue.runnable,
       }}
-      // The repo's folder is the project's key, as in project:shop and /projects/SHOP.
-      root={projectFilterValue(issue.project)}
     />
   );
 }

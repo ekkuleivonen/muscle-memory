@@ -3,48 +3,37 @@ import { cookies } from "next/headers";
 import { CONSENT_COOKIE, hasConsent } from "../lib/profile";
 
 /**
- * The public front door: what the practice is (realistic development problems, solved without
- * AI), the one loop every issue follows, and what is recorded. Outside the consent gate;
- * returning players get a way back to their desk.
+ * The public front door: why someone who builds with AI might write one challenge themselves,
+ * the loop every challenge follows (challenge, code, feedback, next), and what is recorded.
+ * Outside the consent gate; returning players get a way back to practice.
  */
 
-/** The loop every issue follows, as it actually goes in the workspace. */
+/** The loop every challenge follows. */
 const LOOP = [
   [
     "01",
-    "Issue",
-    "A bug report or feature request, with the repo it lives in.",
+    "Challenge",
+    "A bug to fix, something to build or an algorithm to write, with a plain goal.",
   ],
-  [
-    "02",
-    "Code",
-    "Change the files the fix needs, in an editor you already know.",
-  ],
+  ["02", "Code", "Write the solution yourself."],
   [
     "03",
-    "Tests",
-    "Run them as often as you like before anyone else sees the code.",
-  ],
-  ["04", "Pull request", "CI runs every check on exactly the code you pushed."],
-  ["05", "Feedback", "Review may ask for changes before it can merge."],
-  [
-    "06",
-    "Merge",
-    "Checks green and review addressed: merge, and the issue is Done.",
+    "Feedback",
+    "Run checks, understand what needs attention, and try again. When it passes, choose your next challenge.",
   ],
 ];
 
 export default async function Home() {
   const store = await cookies();
-  // Anyone who accepted the Terms has a desk.
+  // Anyone who accepted the Terms has challenges to come back to.
   const signedIn = hasConsent(store.get(CONSENT_COOKIE)?.value);
   const start = signedIn ? (
     <Link className="home-cta" href="/dashboard">
-      Back to your desk →
+      Continue where you left off →
     </Link>
   ) : (
     <Link className="home-cta" href="/play">
-      Fix your first bug →
+      Try a challenge →
     </Link>
   );
 
@@ -64,8 +53,7 @@ export default async function Home() {
         <nav>
           <Link href="/terms">Terms</Link>
           <Link href="/privacy">Privacy</Link>
-          <Link href="/issues">Issues</Link>
-          <Link href="/dashboard">{signedIn ? "Your desk" : "Clock in"}</Link>
+          <Link href="/issues">Explore</Link>
         </nav>
       </header>
 
@@ -73,45 +61,38 @@ export default async function Home() {
         <section className="home-hero">
           <p className="home-kicker">Practice without AI</p>
           <h1>
-            Realistic development problems.
+            Use AI at work.
             <br />
-            <span className="home-punch">Solved by you.</span>
+            <span className="home-punch">Write this one yourself.</span>
           </h1>
           <p className="home-lede">
-            Read the issue, change the code, run the tests and open a pull
-            request. CI checks it, review may ask for changes, and you merge.
-            Completion, chat and generated code are off.
+            AI can help you build more than you could alone. You may also have
+            noticed moments where the code works and you&apos;re not quite sure
+            why. Here you pick a challenge, write the code yourself and get
+            direct feedback. Then the next one.
           </p>
           <div className="home-actions">
             {start}
             <span className="home-note">
               No email needed. Progress stays in this browser.{" "}
               {signedIn ? (
-                <Link href="/issues">Browse issues</Link>
+                <Link href="/issues">Explore challenges</Link>
               ) : (
                 <>
-                  Or <Link href="/issues">browse every issue</Link>.
+                  Or <Link href="/issues">explore every challenge</Link>.
                 </>
               )}
             </span>
           </div>
         </section>
 
-        <figure className="home-workspace-preview">
-          <img
-            src="/workspace-preview.png"
-            width={1120}
-            height={650}
-            alt="Muscle Memory workspace: a bug ticket beside its starter Python file, with Tests, Output and Pull requests tabs below."
-          />
-          <figcaption>
-            The actual workspace, before any edits: issue, code and tests
-            together. Your solution is yours to write.
-          </figcaption>
-        </figure>
-
         <section className="home-section">
-          <h2>One loop, every issue</h2>
+          <h2>Challenge, code, feedback</h2>
+          <p>
+            A check fails. You form a hunch, try it and look again. There is a
+            particular satisfaction in seeing why it failed, changing the code
+            and watching it pass.
+          </p>
           <ol className="home-schedule">
             {LOOP.map(([step, title, detail]) => (
               <li key={step}>
@@ -122,6 +103,10 @@ export default async function Home() {
               </li>
             ))}
           </ol>
+          <p>
+            Afterwards you have a record of these attempts, not a verdict on
+            your ability or a hiring assessment.
+          </p>
           <p className="home-fine">
             Python, JavaScript, TypeScript, SQL, HTML, PHP, Ruby, Go, C, C++, C#
             and Java, running in your browser. Syntax highlighting, type errors
@@ -130,28 +115,14 @@ export default async function Home() {
         </section>
 
         <section className="home-section">
-          <h2>What you get</h2>
-          <ul className="home-promises">
-            <li>
-              <strong>Problems that read like work.</strong> Issues written the
-              way a teammate would file them, and tests that check behaviour
-              rather than one expected answer.
-            </li>
-            <li>
-              <strong>Your own record.</strong> Every run, push and merged fix
-              stays reviewable. No scores, ranks or badges, and nothing here is
-              a hiring signal.
-            </li>
-          </ul>
-        </section>
-
-        <section className="home-section">
           <h2>Why it records your practice</h2>
           <p>
-            What AI tools do for developers&apos; skills, good or bad, is still
-            an open question. Unaided practice is what we record, to help study
-            it; it is not a verdict on you or on AI, so use whatever tools you
-            like at your day job.
+            This isn&apos;t a case for going back to coding without AI. It is
+            part of how software gets built now, and nothing here asks you to
+            give it up. What it changes about how developers work and understand
+            their code, good or bad, is still an open question. Unaided practice
+            is what we record, to help study it in the open; it is not a verdict
+            on you or on AI.
           </p>
           <ul className="home-promises">
             <li>
@@ -176,17 +147,12 @@ export default async function Home() {
         </section>
 
         <section className="home-section home-invite">
-          <h2>Pick an issue.</h2>
+          <h2>This one&apos;s yours.</h2>
           <p>
-            It&apos;s an early preview, and the issues are still growing toward
-            the messy, multi-file work of a real job.
+            Pick a challenge and write it yourself. It&apos;s an early preview,
+            with more challenges to come.
           </p>
-          <div className="home-actions">
-            {start}
-            <Link className="home-note" href="/issues">
-              Browse every issue instead
-            </Link>
-          </div>
+          <div className="home-actions">{start}</div>
         </section>
       </main>
     </div>

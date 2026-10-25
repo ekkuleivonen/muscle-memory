@@ -1,5 +1,4 @@
 import type { SeedIssue } from "../seed";
-import { priya, rui } from "../team";
 
 /** A pipeline package's __init__.py: only its docstring. */
 const PIPELINE_INIT = (what: string) => `"""${what}"""
@@ -99,7 +98,8 @@ def to_cents(text):
     return int(value * 100)
 `;
 
-const READERS_STARTER = `import csv
+/** The settlement reader, inlined into the report so the whole fix is in one file. */
+const READER_STARTER = `import csv
 import io
 
 from pipeline.money import to_cents
@@ -136,12 +136,9 @@ def read_settlements(text):
     return rows, rejected
 `;
 
-const READERS_REFERENCE = `import csv
-import io
-
-from pipeline.money import to_cents
-
-KINDS = {"sale", "refund", "adjustment"}
+const READER_REFERENCE = READER_STARTER.replace(
+  'KINDS = {"sale", "refund", "adjustment"}\n',
+  `KINDS = {"sale", "refund", "adjustment"}
 
 
 def parse_amount(text):
@@ -150,41 +147,10 @@ def parse_amount(text):
     if text.startswith("(") and text.endswith(")"):
         return -to_cents(text[1:-1])
     return to_cents(text)
+`,
+).replace('amount = to_cents(raw["amount"])', 'amount = parse_amount(raw["amount"])');
 
-
-def read_settlements(text):
-    """The rows of a partner settlement export, and how many rows were rejected.
-
-    Each row has partner, order, kind, currency and amount: signed cents, as the partner
-    wrote them. These rows are also loaded into raw_settlements as they are. A row that can't
-    be read is rejected (counted and left out) rather than guessed at.
-    """
-    rows = []
-    rejected = 0
-    for raw in csv.DictReader(io.StringIO(text)):
-        kind = raw["type"].strip().lower()
-        if kind not in KINDS:
-            rejected += 1
-            continue
-        try:
-            amount = parse_amount(raw["amount"])
-        except ValueError:
-            rejected += 1
-            continue
-        rows.append({
-            "partner": raw["partner"].strip(),
-            "order": raw["order_id"].strip(),
-            "kind": kind,
-            "currency": raw["currency"].strip().upper(),
-            "amount": amount,
-        })
-    return rows, rejected
-`;
-
-const REPORT_STARTER = `from pipeline.readers import read_settlements
-
-
-def settlement_summary(text):
+const SUMMARY_STARTER = `def settlement_summary(text):
     """What finance reconciles each partner's statement against.
 
     Per partner and currency, sorted by both: how many sales and refunds, and net in cents.
@@ -209,34 +175,13 @@ def settlement_summary(text):
     return {"partners": [totals[key] for key in sorted(totals)], "rejected": rejected}
 `;
 
-const REPORT_REFERENCE = `from pipeline.readers import read_settlements
+const SUMMARY_REFERENCE = SUMMARY_STARTER.replace(
+  '            total["net"] -= row["amount"]',
+  '            # Partners write refunds either way round; a refund always gives money back.\n            total["net"] -= abs(row["amount"])',
+);
 
-
-def settlement_summary(text):
-    """What finance reconciles each partner's statement against.
-
-    Per partner and currency, sorted by both: how many sales and refunds, and net in cents.
-    Net is sales less refunds, plus adjustments (fees, corrections) with their own sign.
-    Also how many rows the reader rejected, so nobody signs off on a partial file.
-    """
-    rows, rejected = read_settlements(text)
-    totals = {}
-    for row in rows:
-        key = (row["partner"], row["currency"])
-        if key not in totals:
-            totals[key] = {"partner": key[0], "currency": key[1], "sales": 0, "refunds": 0, "net": 0}
-        total = totals[key]
-        if row["kind"] == "sale":
-            total["sales"] += 1
-            total["net"] += row["amount"]
-        elif row["kind"] == "refund":
-            total["refunds"] += 1
-            # Partners write refunds either way round; a refund always gives money back.
-            total["net"] -= abs(row["amount"])
-        else:
-            total["net"] += row["amount"]
-    return {"partners": [totals[key] for key in sorted(totals)], "rejected": rejected}
-`;
+const REPORT_STARTER = READER_STARTER + "\n\n" + SUMMARY_STARTER;
+const REPORT_REFERENCE = READER_REFERENCE + "\n\n" + SUMMARY_REFERENCE;
 
 const COLLECTED_STARTER = `-- Finance's collected-by-partner report: what each partner's customers have paid us.
 -- orders(id, partner, total), payments(id, order_id, amount)
@@ -274,7 +219,27 @@ export const issues: SeedIssue[] = [
 
 Northwind moved its bigger customers onto two-part invoices in August, so some orders now have more than one payment, and some are only partly paid so far.
 
-The report is \`queries/collected-by-partner.sql\`. It should give one row per partner that has orders: the partner and what has been collected on its orders, which is the sum of the payments received, or 0 when nothing has been paid. Biggest first; partners with the same amount in alphabetical order, so the PDF doesn't reshuffle every month.`,
+Fix the collected-by-partner query. It reads two tables:
+
+| Table | Column | Type | Meaning |
+| --- | --- | --- | --- |
+| \`orders\` | \`id\` | \`integer\`, primary key | the order |
+| \`orders\` | \`partner\` | \`text\`, not null | the partner the order came through |
+| \`orders\` | \`total\` | \`numeric(12, 2)\`, not null | what the order was invoiced for |
+| \`payments\` | \`id\` | \`integer\`, primary key | the payment |
+| \`payments\` | \`order_id\` | \`integer\`, not null, references \`orders (id)\` | the order it pays for |
+| \`payments\` | \`amount\` | \`numeric(12, 2)\`, not null | the amount received |
+
+An order can have no payments, one, or several, and its payments need not add up to its total.
+
+The query returns one row per partner that has at least one order, with two columns:
+
+1. \`partner\`;
+2. \`collected\`: the sum of every payment received on that partner's orders, or \`0\` when none of them has been paid.
+
+Rows are ordered by \`collected\`, biggest first; partners with the same amount are in alphabetical order, so the PDF doesn't reshuffle every month. With no orders the result has no rows.
+
+Requirement: every payment counts. Two payments of the same amount are two payments, so don't add up only the distinct amounts.`,
     entrypoint: "query",
     starter: COLLECTED_STARTER,
     inputs: [
@@ -312,18 +277,8 @@ The report is \`queries/collected-by-partner.sql\`. It should give one row per p
       [["Bluefin", 120], ["Northwind", 120]],
     ],
     hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
-    comments: [
-      rui(
-        "The September pack goes to the board on Thursday. I'd rather not explain a $342 gap to them.",
-      ),
-    ],
-    hints: [
-      "Pick an order with two payments and write out the rows the join gives you for it. What does each row carry, and what gets added up?",
-      {
-        text: "Corvid has orders but no payments. Which kind of join still gives you a row for an order nothing matched?",
-        when: { behaviour: "failing-pushes", atLeast: 2 },
-      },
-    ],
+    comments: [],
+    hints: [],
     team: [
       {
         id: "priya-sum-distinct",
@@ -331,24 +286,12 @@ The report is \`queries/collected-by-partner.sql\`. It should give one row per p
         role: "Data",
         where: "review",
         severity: "blocking",
-        text: [
-          "`DISTINCT` inside the sum drops a payment whenever two are the same amount, and Northwind's two-part invoices are usually two equal halves. Can we add up every payment instead?",
-          "Two installments of $250.00 are two payments, but `SUM(DISTINCT ...)` counts one of them. Could this sum every payment row?",
-        ],
+        text: ["Every payment counts: two payments of the same amount are two payments, so don't add up only the distinct amounts."],
         when: {
           pattern: "[Ss][Uu][Mm]\\s*\\(\\s*[Dd][Ii][Ss][Tt][Ii][Nn][Cc][Tt]",
           present: true,
         },
         repeat: "while-true",
-      },
-      {
-        id: "rui-northwind",
-        author: "Rui F",
-        role: "Finance",
-        where: "review",
-        severity: "info",
-        text: ["That's Northwind's two-part invoices counted once. Matches their remittances."],
-        when: { check: "case-2", is: "passing" },
       },
     ],
     private: {
@@ -393,9 +336,18 @@ C-20977  Marsh & Daughters          0113 496 0088
 C-21012  T. Okafor                  0113 496 0140
 \`\`\`
 
-Priya sped up the dedupe step on Tuesday: it used to compare every pair of records, which took 40 minutes on Northwind's 180k-row file, and now it makes one pass with a dict. This is the first Monday report since.
+The dedupe step was sped up on Tuesday: it used to compare every pair of records, which took 40 minutes on Northwind's 180k-row file, and now it makes one pass with a dict. This is the first Monday report since.
 
-\`dedupe_customers(rows)\` in \`pipeline/dedupe.py\` turns the night's customer records into one record per customer, in the order customers were first seen. Records whose emails match once normalised (\`pipeline/normalize.py\`) are the same customer: the first record is kept, and later duplicates only fill in fields it left blank. A record without an email can't be matched to anything, so it is always kept as it is. The input rows must not be changed. Keep it to one pass.`,
+\`dedupe_customers(rows)\` takes the night's customer records (a list of dicts, each with fields such as \`id\`, \`name\`, \`email\` and \`phone\`; a field's value may be \`None\`) and returns one record per customer, in the order customers were first seen.
+
+- Records whose emails match once normalised are the same customer. \`normalize_email(email)\` from \`pipeline.normalize\` (already imported) does the normalising: it returns the email trimmed of surrounding whitespace and lowercased, or \`None\` when there is no usable email (\`None\`, empty, or only whitespace). Phone and in-store customers often have none.
+- For each customer, the first record is kept. A later duplicate only fills in fields the kept record left blank (\`None\` or \`""\`, or missing): each such field takes the duplicate's value, so the earliest later duplicate with a value wins. Nothing else changes; in particular the kept record's email stays as written.
+- A record without a usable email can't be matched to anything, so it is always kept, as it is, in its place.
+- The input rows (and their dicts) must not be changed. No rows gives \`[]\`.
+
+The starter's \`_fill_blanks(customer, duplicate)\` already fills a kept record's blank fields from a duplicate, in place.
+
+Requirement: keep it to one pass with a lookup by email. Don't compare each record against the customers kept so far: the nightly window is two hours.`,
     entry: "pipeline/dedupe.py",
     entrypoint: "dedupe_customers",
     starter: DEDUPE_STARTER,
@@ -445,22 +397,8 @@ Priya sped up the dedupe step on Tuesday: it used to compare every pair of recor
       [{"id": "C-9601", "name": "Quin Hart", "email": "quin@example.com", "phone": "0113 496 0960"}],
     ],
     hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    comments: [
-      priya(
-        "That'll be my change, sorry. Please don't put the pairwise loop back, though: the nightly window is two hours and Northwind's file alone took 40 minutes with it.",
-      ),
-      rui("The report goes to the regional managers at 11. Leeds will notice first."),
-    ],
-    hints: [
-      {
-        text: "Take one of Rui's three customers through the loop by hand. What key does it get, and which other records end up with the same key?",
-        when: { behaviour: "active-minutes-without-progress", atLeast: 12 },
-      },
-      {
-        text: "Read what normalising says about records with no usable email. Should two of those ever count as the same customer?",
-        when: { behaviour: "failing-pushes", atLeast: 2 },
-      },
-    ],
+    comments: [],
+    hints: [],
     team: [
       {
         id: "priya-pairwise",
@@ -468,10 +406,7 @@ Priya sped up the dedupe step on Tuesday: it used to compare every pair of recor
         role: "Data",
         where: "review",
         severity: "blocking",
-        text: [
-          "This looks like it compares each record against every customer kept so far, which is the 40-minute version again. Could the lookup stay a dict, one pass over the rows?",
-          "Scanning the kept customers for every row puts us back to quadratic, and Northwind's file won't finish in the nightly window. Can we keep the one-pass lookup?",
-        ],
+        text: ["Keep it to one pass with a lookup by email: don't compare each record against the customers kept so far."],
         when: {
           any: [
             {
@@ -485,17 +420,6 @@ Priya sped up the dedupe step on Tuesday: it used to compare every pair of recor
           ],
         },
         repeat: "while-true",
-        resolve: "explicit",
-      },
-      {
-        id: "priya-long-dedupe",
-        author: "Priya K",
-        role: "Data",
-        where: "review",
-        severity: "nit",
-        text: ["Nit: `dedupe_customers` has grown a fair bit. Is there a smaller change that does it?"],
-        when: { metric: "function-lines", above: 30, file: "pipeline/dedupe.py" },
-        resolve: "explicit",
       },
     ],
     private: {
@@ -589,7 +513,21 @@ Bluefin,BF-77101,refund,(12.50),EUR
 Bluefin,BF-FEE-10,adjustment,(3.00),EUR
 \`\`\`
 
-\`settlement_summary(text)\` in \`pipeline/report.py\` is what finance reconciles against: per partner and currency, the number of sales and refunds and the net in cents, plus how many rows were rejected. Net is sales less refunds, plus adjustments with their own sign. A refund always reduces net by its amount, whichever way a partner writes it: Northwind writes refunds as positive amounts. \`read_settlements\` in \`pipeline/readers.py\` also loads \`raw_settlements\` in the warehouse, so its rows keep amounts signed as the partner wrote them. A row that still can't be read is rejected and counted, not guessed at.`,
+\`settlement_summary(text)\` is what finance reconciles each partner's statement against. It takes a settlement export as CSV text, with the header \`partner,order_id,type,amount,currency\`, and returns \`{"partners": [...], "rejected": n}\`.
+
+**Reading rows.** Each row of the export is read as follows. (In the starter, \`read_settlements(text)\` does the reading; only \`settlement_summary\`'s result is checked.)
+
+- \`partner\` and \`order\` are trimmed; \`currency\` is trimmed and upper-cased.
+- The type is trimmed and lower-cased, and must be \`sale\`, \`refund\` or \`adjustment\`; any other type rejects the row.
+- An amount is read in whole cents. A plain amount is read by \`to_cents(text)\` from \`pipeline.money\` (already imported): a decimal number with an optional sign and at most two decimal places, with surrounding whitespace allowed (\`"12.50"\`, \`"-3"\`, \`" 7.05 "\`), becomes cents (\`1250\`, \`-300\`, \`705\`); anything else, including an empty string, \`NaN\` or more than two decimal places, raises \`ValueError\`. An amount in brackets, with surrounding whitespace allowed, is an accounting negative: \`(12.50)\` is \`-1250\`. What's inside the brackets must itself be a plain amount.
+- A row whose amount can't be read is rejected: counted and left out, never guessed at. Only a bad type or a bad amount rejects a row; anything else wrong with the file (a missing column, say) is an error, not a rejected row.
+
+**Summary.** One entry per partner and currency, as \`{"partner", "currency", "sales", "refunds", "net"}\`, sorted by partner and then currency:
+
+- \`sales\` and \`refunds\` count the rows of each kind (adjustments aren't counted).
+- \`net\` in cents is sales less refunds, plus adjustments (fees, corrections) with their own sign. A refund always reduces net by its size, whichever way the partner writes it: Northwind writes refunds as positive amounts, Bluefin in brackets.
+
+\`rejected\` is the number of rejected rows, so nobody signs off on a partial file. A file with only the header gives \`{"partners": [], "rejected": 0}\`.`,
     entry: "pipeline/report.py",
     entrypoint: "settlement_summary",
     starter: REPORT_STARTER,
@@ -600,9 +538,7 @@ Bluefin,BF-FEE-10,adjustment,(3.00),EUR
         language: "python",
         text: PIPELINE_INIT("Nightly settlement pipeline: read partner exports, load the warehouse, report to finance."),
       },
-      // Editable: teaching to_cents brackets is a reasonable fix too.
-      { path: "pipeline/money.py", role: "edit", language: "python", text: MONEY },
-      { path: "pipeline/readers.py", role: "edit", language: "python", text: READERS_STARTER },
+      { path: "pipeline/money.py", role: "read", language: "python", text: MONEY },
     ],
     inputs: [
       "partner,order_id,type,amount,currency\nNorthwind,NW-1001,sale,120.00,USD\nNorthwind,NW-1002,sale,80.50,USD\nNorthwind,NW-1001,refund,20.00,USD\nNorthwind,NW-ADJ-9,adjustment,-3.00,USD\n",
@@ -641,65 +577,18 @@ Bluefin,BF-FEE-10,adjustment,(3.00),EUR
       {"partners": [{"partner": "Bluefin", "currency": "EUR", "sales": 5, "refunds": 3, "net": 820}], "rejected": 0},
     ],
     hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    comments: [
-      priya(
-        "Heads up that `raw_settlements` is what we send back to partners when they dispute a night, so whatever the reader gives it has to read like their file.",
-      ),
-      rui("I've held Bluefin's October payout until the report and their statements agree."),
-    ],
-    hints: [
-      {
-        text: "Rui's rejected rows started on 1 October. Find where a row gets turned away, and try one of Bluefin's amounts there.",
-        when: { behaviour: "active-minutes-without-progress", atLeast: 12 },
-      },
-      {
-        text: "Once Bluefin's refunds get through, follow one into the report next to one of Northwind's. Does net move the same way for both?",
-        when: { behaviour: "failing-pushes", atLeast: 2 },
-      },
-    ],
-    team: [
-      {
-        id: "priya-reader-sign",
-        author: "Priya K",
-        role: "Data",
-        where: "review",
-        severity: "blocking",
-        text: [
-          "`abs()` in the reader changes what lands in `raw_settlements`: Bluefin's fees would show up there as credits. Can the reader keep the sign as written and leave what a refund means to the report?",
-          "The reader's rows are what we send back when a partner disputes a night, so they need the partner's own signs. Could the `abs()` move out of the reader?",
-        ],
-        // An amount set from abs() loses the partner's sign; -abs() on a bracket keeps it.
-        when: { pattern: "(=|return)\\s*abs\\(", present: true, file: "pipeline/readers.py" },
-        repeat: "while-true",
-        resolve: "explicit",
-      },
-      {
-        id: "mateo-catch-all",
-        author: "Mateo O",
-        role: "Backend",
-        where: "review",
-        severity: "nit",
-        text: [
-          "Nit: catching everything here would also count a file with a missing column as rejected rows. Could it stay with the error you expect?",
-        ],
-        when: {
-          pattern: "except(\\s+(Exception|BaseException))?\\s*(as \\w+)?:",
-          present: true,
-          file: "pipeline/readers.py",
-        },
-        resolve: "explicit",
-      },
-    ],
+    comments: [],
+    hints: [],
     private: {
-      reference: { "pipeline/readers.py": READERS_REFERENCE, "pipeline/report.py": REPORT_REFERENCE },
+      reference: { "pipeline/report.py": REPORT_REFERENCE },
       alternatives: [
-        // Brackets read in money.py, and the report subtracts a refund's size whichever its sign.
+        // Brackets read inline in the reader, and the report subtracts a refund's size whichever
+        // its sign.
         {
-          "pipeline/money.py": MONEY.replace(
-            "    try:\n        value = Decimal(text.strip())",
-            '    text = text.strip()\n    sign = 1\n    if len(text) > 2 and text[0] == "(" and text[-1] == ")":\n        sign, text = -1, text[1:-1]\n    try:\n        value = Decimal(text.strip())',
-          ).replace("    return int(value * 100)", "    return sign * int(value * 100)"),
           "pipeline/report.py": REPORT_STARTER.replace(
+            '        try:\n            amount = to_cents(raw["amount"])',
+            '        written = raw["amount"].strip()\n        sign = 1\n        if len(written) > 2 and written[0] == "(" and written[-1] == ")":\n            sign, written = -1, written[1:-1]\n        try:\n            amount = sign * to_cents(written)',
+          ).replace(
             '            total["net"] -= row["amount"]',
             '            total["net"] -= row["amount"] if row["amount"] > 0 else -row["amount"]',
           ),
@@ -707,85 +596,22 @@ Bluefin,BF-FEE-10,adjustment,(3.00),EUR
       ],
       wrong: [
         // Brackets read, but a bracketed refund now adds to net instead of reducing it.
-        { "pipeline/readers.py": READERS_REFERENCE },
+        { "pipeline/report.py": READER_REFERENCE + "\n\n" + SUMMARY_STARTER },
         // abs() in the reader: Bluefin's fees turn into credits.
         {
-          "pipeline/readers.py": READERS_REFERENCE.replace(
+          "pipeline/report.py": REPORT_REFERENCE.replace(
             '            amount = parse_amount(raw["amount"])',
             '            amount = abs(parse_amount(raw["amount"]))',
           ),
-          "pipeline/report.py": REPORT_REFERENCE,
         },
         // Strips the brackets and keeps the number positive.
         {
-          "pipeline/readers.py": READERS_STARTER.replace(
+          "pipeline/report.py": READER_STARTER.replace(
             '            amount = to_cents(raw["amount"])',
             '            amount = to_cents(raw["amount"].strip().strip("()"))',
-          ),
-          "pipeline/report.py": REPORT_REFERENCE,
+          ) + "\n\n" + SUMMARY_REFERENCE,
         },
       ],
-      examples: {
-        "priya-reader-sign": {
-          fires: [
-            {
-              "pipeline/readers.py": READERS_REFERENCE.replace(
-                '            amount = parse_amount(raw["amount"])',
-                '            amount = abs(parse_amount(raw["amount"]))',
-              ),
-            },
-          ],
-          // A bracket read as -abs(...) still keeps the partner's sign.
-          quiet: [
-            { "pipeline/readers.py": READERS_REFERENCE },
-            { "pipeline/report.py": REPORT_REFERENCE },
-            { "pipeline/readers.py": `import csv
-import io
-
-from pipeline.money import to_cents
-
-KINDS = {"sale", "refund", "adjustment"}
-
-
-def parse_amount(text):
-    """A plain amount, or an accounting negative in brackets: (12.50) is -12.50."""
-    text = text.strip()
-    if text.startswith("(") and text.endswith(")"):
-        return -abs(to_cents(text[1:-1]))
-    return to_cents(text)
-
-
-def read_settlements(text):
-    """The rows of a partner settlement export, and how many rows were rejected.
-
-    Each row has partner, order, kind, currency and amount: signed cents, as the partner
-    wrote them. These rows are also loaded into raw_settlements as they are. A row that can't
-    be read is rejected (counted and left out) rather than guessed at.
-    """
-    rows = []
-    rejected = 0
-    for raw in csv.DictReader(io.StringIO(text)):
-        kind = raw["type"].strip().lower()
-        if kind not in KINDS:
-            rejected += 1
-            continue
-        try:
-            amount = parse_amount(raw["amount"])
-        except ValueError:
-            rejected += 1
-            continue
-        rows.append({
-            "partner": raw["partner"].strip(),
-            "order": raw["order_id"].strip(),
-            "kind": kind,
-            "currency": raw["currency"].strip().upper(),
-            "amount": amount,
-        })
-    return rows, rejected
-` },
-          ],
-        },
-      },
     },
   },
 ];

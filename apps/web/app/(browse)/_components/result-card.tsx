@@ -13,83 +13,42 @@ import { LANGUAGES } from "../../../lib/languages";
 import { INGEST_URL } from "../../../lib/ingest";
 import {
   compare,
-  comparisonLine,
-  duration,
   metricsOf,
+  receiptLines,
   type Aggregate,
   type Metrics,
   type Result,
 } from "../../../lib/result";
 
-/** The receipt's lines, shared by the card here and the shared page. */
-export function receiptLines(
-  m: Metrics & { ev?: PublicEvidence },
-): [string, string, boolean?][] {
-  if (m.ev)
-    return [
-      [
-        "latest checks",
-        `${m.ev.checks.passed ?? "?"}/${m.ev.checks.total ?? "?"}`,
-      ],
-      [
-        "first submission",
-        m.ev.first
-          ? `${m.ev.first.passed ?? "?"}/${m.ev.first.total ?? "?"}`
-          : "not known",
-      ],
-      [
-        "CI-only checks",
-        m.ev.hidden
-          ? `${m.ev.hidden.passed}/${m.ev.hidden.total}`
-          : "not known",
-      ],
-      ["pushes", String(m.ev.pushes)],
-      ["local test runs", String(m.ev.runs)],
-      ["findings still open", String(m.ev.findings.open)],
-      ["hints", String(m.ev.hints)],
-      ["production outcome", "not measured"],
-    ];
-  return [
-    [
-      "test runs",
-      m.g === 1
-        ? `${m.r} · green first try`
-        : m.g
-          ? `${m.r} · green on run ${m.g}`
-          : String(m.r),
-      m.g === 1,
-    ],
-    ["hints", m.h ? String(m.h) : "none"],
-  ];
-}
-
 export function Receipt({
   headline,
   detail,
-  metrics,
+  lines,
+  completed,
   top,
-  comparison,
   children,
 }: {
   headline: string;
   detail: string;
-  metrics: Metrics;
+  /** The card's rows: `receiptLines` for a v2 card, `outcomeLines` for v3. */
+  lines: [string, string, boolean?][];
+  completed: boolean;
   top: string;
-  /** "Faster than 72% of people who fixed it in Python." */
-  comparison?: string | null;
   children?: React.ReactNode;
 }) {
   return (
     <div className="receipt">
       <div className="receipt-top">
         <span>{top}</span>
-        <span className="receipt-merged">✔ merged</span>
+        <span className="receipt-merged">
+          {completed ? "✔ completed" : "not completed"}
+        </span>
       </div>
       <p className="receipt-head">{headline}</p>
       <p className="receipt-sub">{detail}</p>
 
       <dl className="receipt-rows">
-        {receiptLines(metrics).map(([label, value, good]) => (
+        {lines.map(([label, value, good]) => (
           <div key={label} className="receipt-row">
             <dt>{label}</dt>
             <span aria-hidden className="receipt-dots" />
@@ -102,44 +61,9 @@ export function Receipt({
   );
 }
 
-export interface ResultInput {
-  number: number;
-  issue: { key: string; slug: string; title: string; revision: string };
-  language: string;
-  records: readonly WorkspaceRecord[];
-  mergedAt: string;
-  revisions: Record<string, Revision>;
-}
-
-export interface ResultState {
-  metrics: Metrics;
-  /** The card a shared link carries; null until this device's referral code is read. */
-  result: Result | null;
-  /** "Faster than 72% of people who fixed it in Python.", or null. */
-  comparison: string | null;
-  label: string;
-}
-
-/**
- * What a merged pull request adds up to, from the person's own recorded keystrokes and runs,
- * plus the comparison with everyone else (none for stealth players) and the card to share.
- */
-export function useResult(input: ResultInput | null): ResultState | null {
-  const key = input?.issue.key;
+/** This device's referral code, read after mount; null until then (or if storage fails). */
+export function useReferral(): string | null {
   const [code, setCode] = useState<string | null>(null);
-  const [aggregate, setAggregate] = useState<Aggregate | undefined>();
-  useEffect(() => {
-    // Stealth players are left out of the aggregates and see no comparisons.
-    if (!key || !INGEST_URL || readProfile()?.stealth) return;
-    let live = true;
-    fetch(`${INGEST_URL}/v1/aggregates`, { credentials: "same-origin" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((body) => live && key && setAggregate(body?.issues?.[key]))
-      .catch(() => undefined);
-    return () => {
-      live = false;
-    };
-  }, [key]);
   useEffect(() => {
     let live = true;
     openPracticeStore()
@@ -156,6 +80,47 @@ export function useResult(input: ResultInput | null): ResultState | null {
       live = false;
     };
   }, []);
+  return code;
+}
+
+export interface ResultInput {
+  number: number;
+  issue: { key: string; slug: string; title: string; revision: string };
+  language: string;
+  records: readonly WorkspaceRecord[];
+  mergedAt: string;
+  revisions: Record<string, Revision>;
+}
+
+export interface ResultState {
+  metrics: Metrics;
+  /** The card a shared link carries; null until this device's referral code is read. */
+  result: Result | null;
+  /** "Faster than 72% of people who completed it in Python.", or null. */
+  comparison: string | null;
+  label: string;
+}
+
+/**
+ * What a merged pull request adds up to, from the person's own recorded keystrokes and runs,
+ * plus the comparison with everyone else (none for stealth players) and the card to share.
+ */
+export function useResult(input: ResultInput | null): ResultState | null {
+  const key = input?.issue.key;
+  const [aggregate, setAggregate] = useState<Aggregate | undefined>();
+  useEffect(() => {
+    // Stealth players are left out of the aggregates and see no comparisons.
+    if (!key || !INGEST_URL || readProfile()?.stealth) return;
+    let live = true;
+    fetch(`${INGEST_URL}/v1/aggregates`, { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => live && key && setAggregate(body?.issues?.[key]))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [key]);
+  const code = useReferral();
   const metrics = useMemo(
     () =>
       input &&

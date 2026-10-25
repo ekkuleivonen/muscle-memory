@@ -1,7 +1,7 @@
 /**
  * Guest checkout (INC-1): a fictional shop's checkout fails guest orders after a routine change.
- * Both files of the change are the player's to edit. It began as the playable incident; its id
- * and key stay, because recorded work names them.
+ * quote.js is the one editable file; shipping.js and money.js are support code it imports. It
+ * began as the playable incident; its id and key stay, because recorded work names them.
  */
 import type { SeedIssue } from "../seed";
 
@@ -40,27 +40,16 @@ const quoteWith = (line: string) =>
     line,
   );
 
-/** The two-file design: shipping.js decides who is a member, quote.js passes the customer. */
-const TWO_FILE_SHIPPING = (
+/** Membership decided by a helper in quote.js that takes the customer: another correct design. */
+const HELPER_QUOTE = (
   isMember: string,
-) => `/** Standard shipping, in cents. */
-export const SHIPPING = 495;
-/** Free shipping from these subtotals, in cents: for everyone, and for loyalty members (CHK-412). */
-export const FREE_FROM = 5000;
-export const MEMBER_FREE_FROM = 3000;
+) => `import { lineTotal, sum } from "./money.js";
+import { shippingFor } from "./shipping.js";
 
 /** A loyalty member: a customer with a loyalty record whose tier is not "none". Guests have none. */
-export function isMember(customer) {
+function isMember(customer) {
   ${isMember}
 }
-
-/** Shipping for an order's subtotal: free from $50, or from $30 for a loyalty member. */
-export function shippingFor(subtotal, customer) {
-  return subtotal >= (isMember(customer) ? MEMBER_FREE_FROM : FREE_FROM) ? 0 : SHIPPING;
-}
-`;
-const TWO_FILE_QUOTE = `import { lineTotal, sum } from "./money.js";
-import { shippingFor } from "./shipping.js";
 
 /**
  * The quote checkout shows and charges for an order, in cents. order.customer is
@@ -68,7 +57,7 @@ import { shippingFor } from "./shipping.js";
  */
 export function quoteOrder(order) {
   const subtotal = sum(order.items.map(lineTotal));
-  const shipping = shippingFor(subtotal, order.customer);
+  const shipping = shippingFor(subtotal, isMember(order.customer));
   return { subtotal, shipping, total: subtotal + shipping };
 }
 `;
@@ -96,24 +85,42 @@ export const issues: SeedIssue[] = [
     difficulty: "easy",
     language: "javascript",
     skills: ["debugging", "reading-logs"],
-    task: `Kettlebrook's checkout has been failing for some customers since Thursday's release. From Bea in Support:
+    task: `Kettlebrook's checkout has been failing since Thursday's release, which shipped CHK-412 (free shipping from $30 for loyalty members). Every customer checking out as a guest gets "Something went wrong" on the payment page instead of a quote: \`POST /quote\` returns 500 with \`TypeError: Cannot read properties of undefined (reading 'tier')\` thrown in \`quoteOrder\`. Members' orders still get quotes. For example, guest order #88213 (two stoneware mugs at $18.00 each) failed.
 
-> Every complaint is from someone checking out without an account: the payment page says "Something went wrong" before they can pay. Members aren't writing in.
+Fix \`quoteOrder\` so that every order gets a correct quote.
 
-\`POST /quote\` is returning 500s for those orders; the last hour of \`checkout-api\` logs is in \`logs/checkout-api.log\`, and one of the failing orders, #88213, is already a test in \`src/checkout/quote.test.js\`.
+## Input and output
 
-\`quoteOrder(order)\` returns \`{ subtotal, shipping, total }\` in cents, and the payment page charges exactly that. Every order must get a correct quote:
+\`quoteOrder(order)\` takes an order and returns \`{ subtotal, shipping, total }\`, all whole cents (never floats); the payment page charges exactly that.
 
-- Shipping is $4.95, and free from $50 for everyone.
-- Loyalty members get free shipping from $30 (CHK-412, shipped Thursday).
-- A guest is \`{ guest: true }\` and has no loyalty record. A member whose tier is \`"none"\` has lapsed and gets the standard threshold.`,
+- \`order.items\` is a list of \`{ sku, price, quantity }\`, with \`price\` in cents. \`subtotal\` is the sum of \`price × quantity\` over the items.
+- \`order.customer\` is either a guest, \`{ guest: true }\`, which has no loyalty record at all, or a member, \`{ id, loyalty: { tier } }\`, where \`tier\` is a string such as \`"silver"\`, \`"gold"\` or \`"none"\`.
+- \`total\` is \`subtotal + shipping\`.
+
+## Shipping rules
+
+- Standard shipping is $4.95 (495 cents).
+- Shipping is free for everyone when the subtotal is $50.00 (5000 cents) or more.
+- A loyalty member gets free shipping when the subtotal is $30.00 (3000 cents) or more. A loyalty member is a customer with a loyalty record whose tier is not \`"none"\`.
+- A guest is not a loyalty member. A member whose tier is \`"none"\` has lapsed and is not a loyalty member either: both get the standard $50 threshold.
+
+## Code you can use
+
+The starter imports these; their code is fixed and you cannot change it:
+
+- \`lineTotal(item)\` returns \`item.price * item.quantity\`; \`sum(amounts)\` adds a list of numbers (0 for an empty list).
+- \`shippingFor(subtotal, member)\` returns the shipping in cents under the rules above: 0 when \`subtotal\` is at least 3000 if \`member\` is \`true\`, or at least 5000 if it is \`false\`; 495 otherwise. The module also exports the constants \`SHIPPING\` (495), \`FREE_FROM\` (5000) and \`MEMBER_FREE_FROM\` (3000).
+
+## Constraints
+
+- Handle guests and lapsed members explicitly. Do not use \`catch\` (no \`try\`/\`catch\` and no \`.catch(\`): catching the error would turn the crash into a silently wrong quote.`,
     entry: "src/checkout/quote.js",
     entrypoint: "quoteOrder",
     starter: QUOTE,
     files: [
       {
         path: "src/checkout/shipping.js",
-        role: "edit",
+        role: "read",
         language: "javascript",
         text: SHIPPING,
       },
@@ -131,35 +138,6 @@ export function lineTotal(item) {
 export function sum(amounts) {
   return amounts.reduce((total, amount) => total + amount, 0);
 }
-`,
-      },
-      {
-        path: "logs/checkout-api.log",
-        role: "docs",
-        language: "text",
-        text: `2026-10-24T01:58:02.114Z ERROR checkout-api  POST /quote 500 3ms order=88199 customer=guest items=1
-    TypeError: Cannot read properties of undefined (reading 'tier')
-        at quoteOrder (src/checkout/quote.js:11:41)
-        at handleQuote (src/http/quote-route.js:27:18)
-2026-10-24T01:59:40.870Z INFO  checkout-api  POST /quote 200 9ms order=88201 customer=member:30418 items=3
-2026-10-24T02:00:00.002Z INFO  newsletter    "Midnight mugs" sent to 41,203 subscribers
-2026-10-24T02:00:07.551Z INFO  checkout-api  POST /quote 200 12ms order=88202 customer=member:41022 items=2
-2026-10-24T02:00:31.019Z ERROR checkout-api  POST /quote 500 3ms order=88203 customer=guest items=2
-    TypeError: Cannot read properties of undefined (reading 'tier')
-        at quoteOrder (src/checkout/quote.js:11:41)
-        at handleQuote (src/http/quote-route.js:27:18)
-2026-10-24T02:01:12.433Z INFO  checkout-api  POST /quote 200 10ms order=88204 customer=member:11873 items=1
-2026-10-24T02:02:48.902Z ERROR checkout-api  POST /quote 500 2ms order=88206 customer=guest items=1
-    TypeError: Cannot read properties of undefined (reading 'tier')
-        at quoteOrder (src/checkout/quote.js:11:41)
-        at handleQuote (src/http/quote-route.js:27:18)
-2026-10-24T02:05:00.000Z WARN  checkout-api  5xx rate 31% over 5m (threshold 2%)
-2026-10-24T02:09:17.640Z ERROR checkout-api  POST /quote 500 3ms order=88213 customer=guest items=[stoneware-mug 1800x2]
-    TypeError: Cannot read properties of undefined (reading 'tier')
-        at quoteOrder (src/checkout/quote.js:11:41)
-        at handleQuote (src/http/quote-route.js:27:18)
-2026-10-24T02:10:02.118Z INFO  checkout-api  POST /quote 200 13ms order=88214 customer=member:52990 items=4
-2026-10-24T02:13:58.771Z WARN  checkout-api  5xx rate 58% over 9m (threshold 2%)
 `,
       },
     ],
@@ -200,51 +178,17 @@ export function sum(amounts) {
       "member, $35 order: free shipping from $30 (CHK-412)",
       "regression: guest order #88213 from the logs",
       "guest, $62 order: free shipping from $50",
-      "lapsed member, $40 order: standard threshold",
-      "guest, $12 order: standard shipping",
-      "member, $25 order: under the member threshold",
-      "member at exactly $30: free shipping",
-      "guest at exactly $50: free shipping",
-      "guest at $49.99: standard shipping",
-      "lapsed member, $35 order: no member threshold",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
     ],
     hidden: [3, 4, 5, 6, 7, 8, 9],
-    // The ticket's thread from the start: what the team knows, as clues.
-    comments: [
-      {
-        author: "Kai M",
-        role: "Platform",
-        body: 'The errors got loud at 02:00, when the "Midnight mugs" newsletter went out. Most of those visitors check out as guests.',
-      },
-      {
-        author: "Bea L",
-        role: "Support",
-        body: "Two of the customers who wrote in got through after joining the loyalty scheme, so that's the workaround I'm giving out for now. It doesn't seem to matter what's in the basket.",
-      },
-      {
-        author: "Tomasz W",
-        role: "Checkout",
-        body: "CHK-412 is mine, shipped Thursday: members get free shipping from $30. The member check is in `quote.js`, the thresholds in `shipping.js`. I tested it with my own account, which is a member account.",
-      },
-    ],
-    hints: [
-      {
-        text: "Put the expected quote for order #88213 next to what came back. Who should get free shipping from $30, and is a guest one of them?",
-        when: { behaviour: "runs-without-progress", atLeast: 2 },
-      },
-      {
-        text: 'A guest has no loyalty record at all, and a lapsed member\'s tier is "none". Read your membership check out loud for both: does it call either of them a member?',
-        when: {
-          any: [
-            { behaviour: "runs-without-progress", atLeast: 4 },
-            { behaviour: "failing-pushes", atLeast: 2 },
-          ],
-        },
-      },
-    ],
-    // A failing push opens a CI finding only Resolve clears; CI itself still decides merging.
-    ciFindings: "explicit",
-    // Pull request review: actionable findings only.
+    comments: [],
+    hints: [],
     team: [
       {
         id: "catch-hides-guests",
@@ -253,27 +197,10 @@ export function sum(amounts) {
         where: "review",
         severity: "blocking",
         text: [
-          "A catch here turns the crash into a silently wrong quote. Handle the guest case explicitly instead of catching the error.",
+          "Do not use catch: handle guests and lapsed members explicitly, so a missing loyalty record can never turn into a silently wrong quote.",
         ],
         when: { pattern: "catch\\s*[({]", present: true },
         repeat: "while-true",
-        resolve: "explicit",
-      },
-      {
-        id: "thresholds-in-one-place",
-        author: "Tomasz W",
-        role: "Checkout",
-        where: "review",
-        severity: "nit",
-        text: [
-          "Nit: these amounts are defined in `shipping.js`. Import the constants so the thresholds live in one place.",
-        ],
-        when: {
-          pattern: "\\b(3000|5000|495)\\b",
-          present: true,
-          file: "src/checkout/quote.js",
-        },
-        resolve: "explicit",
       },
     ],
     private: {
@@ -285,12 +212,11 @@ export function sum(amounts) {
         ),
       },
       alternatives: [
-        // Membership decided next to the thresholds, in shipping.js.
+        // Membership decided in a helper that takes the customer.
         {
-          "src/checkout/shipping.js": TWO_FILE_SHIPPING(
+          "src/checkout/quote.js": HELPER_QUOTE(
             `return (customer.loyalty?.tier ?? "none") !== "none";`,
           ),
-          "src/checkout/quote.js": TWO_FILE_QUOTE,
         },
         {
           "src/checkout/quote.js": quoteWith(
@@ -318,31 +244,26 @@ export function sum(amounts) {
             `  if (order.customer.guest) return { subtotal, shipping: 0, total: subtotal };\n  // CHK-412: loyalty members get free shipping from $30.`,
           ),
         },
-        // The thresholds moved instead: everyone gets the member threshold.
+        // Everyone gets the member threshold.
         {
-          "src/checkout/quote.js": quoteWith(
-            `  const member = (order.customer.loyalty?.tier ?? "none") !== "none";`,
-          ),
-          "src/checkout/shipping.js": SHIPPING.replace(
-            "FREE_FROM = 5000",
-            "FREE_FROM = 3000",
+          "src/checkout/quote.js": QUOTE.replace(
+            "shippingFor(subtotal, member)",
+            "shippingFor(subtotal, true)",
           ),
         },
-        // Two files, but any loyalty record makes a member.
+        // A helper, but any loyalty record makes a member.
         {
-          "src/checkout/shipping.js": TWO_FILE_SHIPPING(
+          "src/checkout/quote.js": HELPER_QUOTE(
             `return Boolean(customer.loyalty);`,
           ),
-          "src/checkout/quote.js": TWO_FILE_QUOTE,
         },
         // Off by one at both thresholds.
         {
           "src/checkout/quote.js": quoteWith(
             `  const member = (order.customer.loyalty?.tier ?? "none") !== "none";`,
-          ),
-          "src/checkout/shipping.js": SHIPPING.replace(
-            ">= (member",
-            "> (member",
+          ).replace(
+            "shippingFor(subtotal, member)",
+            "subtotal > (member ? 3000 : 5000) ? 0 : 495",
           ),
         },
       ],
@@ -356,23 +277,6 @@ export function sum(amounts) {
   } catch (error) {
     member = false;
   }`),
-            },
-          ],
-          quiet: [
-            {
-              "src/checkout/quote.js": quoteWith(
-                `  const member = (order.customer.loyalty?.tier ?? "none") !== "none";`,
-              ),
-            },
-          ],
-        },
-        "thresholds-in-one-place": {
-          fires: [
-            {
-              "src/checkout/quote.js": QUOTE.replace(
-                "shippingFor(subtotal, member)",
-                "subtotal >= (member ? 3000 : 5000) ? 0 : 495",
-              ),
             },
           ],
           quiet: [

@@ -2,9 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { WorkspaceRecord } from "../../../packages/domain/workspace";
 import { behaviourOf, due, feedbackOf, openBlocking, type Release } from "./feedback";
-import { live } from "./test-fixtures";
+import { historical } from "./test-fixtures";
 
-const published = live("frequency-map");
+// Hints and teammate comments live on in the revisions before ENG-329; they are tested there.
+const published = historical("frequency-map");
 // The default rules, where a fixing push or a reply resolves a thread. FN-1's own findings need an
 // explicit Resolve (see the incident tests), so these tests read its comments without it.
 const fixture = {

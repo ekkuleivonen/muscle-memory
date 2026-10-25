@@ -21,10 +21,12 @@ import {
   encodeResult,
   type Result,
 } from "./result";
-import { catalog, live } from "./test-fixtures";
+import { catalog, historical } from "./test-fixtures";
 
 const ISSUE = "checkout-guest-shipping";
-const fixture = live(ISSUE);
+// INC-1 as it was before the single-file normalization: a log, hints, Resolve. Those revisions
+// stay published, so their behaviour is still tested on them.
+const fixture = historical(ISSUE);
 const cases = fixture.revision.checks.cases;
 const revisionFor = (id: string) => catalog.revisions[id];
 const LOG = "logs/checkout-api.log";

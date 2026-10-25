@@ -11,6 +11,8 @@ import {
   MAX_FILES,
   MAX_JSON_BYTES,
   REFUSALS,
+  solutionOf,
+  startCopy,
   tryHref,
   type SharedFile,
 } from "./share";
@@ -62,9 +64,9 @@ test("a result link is a result, an older version, or malformed; never a guess",
     kind: "older",
     key: "QUICK-4",
   });
+  // Version 3 is current: one that doesn't decode is malformed, not "older".
   assert.deepEqual(inspectCard(segment({ v: 3, k: "<b>" })), {
-    kind: "older",
-    key: null,
+    kind: "malformed",
   });
   assert.deepEqual(
     inspectCard(segment({ ...card, k: "INC-1", iv: "0a1b2c3d", a: 1 })),
@@ -273,4 +275,96 @@ test("public evidence survives the result link and strips nested private fields"
     assert.equal(read.result.ev?.checks.passed, 15);
     assert.equal(read.result.ev?.findings.open, 0);
   }
+});
+
+test("one solution file is the usual link, and a link from a multi-file challenge still reads back whole", async () => {
+  // A link made before challenges had one file: the bytes `encodeCode` wrote then (format v1,
+  // unchanged), with three files. Every one comes back, in order and in full.
+  const legacy = [
+    {
+      path: "src/composer.ts",
+      text: "export const words = (s: string) =>\r\n  s.trim() ? s.trim().split(/\\s+/).length : 0;\n",
+    },
+    {
+      path: "src/plural.ts",
+      text: 'export const plural = (n: number) => (n === 1 ? "word" : "words");\n',
+    },
+    {
+      path: "README.md",
+      text: "# Composer\n\nCounts words — “smart quotes” and 界 included.\n",
+    },
+  ];
+  const packed = await packedOf(legacy);
+  assert.deepEqual(await decodeCode(packed), legacy);
+  const solution = [
+    {
+      path: "solution.sql",
+      text: "SELECT customer_id, SUM(total)\nFROM orders\nGROUP BY customer_id;\n",
+    },
+  ];
+  assert.deepEqual(await decodeCode(await packedOf(solution)), solution);
+});
+
+test("the solution offered is the checked artifact's editable file, exactly, or nothing", () => {
+  const run = (runId: string, codeArtifactId: string) => ({
+    kind: "observation",
+    recordId: `o-${runId}`,
+    payload: JSON.stringify({
+      type: "observation.workspace.run",
+      data: { runId, codeArtifactId, status: "result" },
+    }),
+  });
+  const artifact = (id: string, text: string, truncated = false) => ({
+    kind: "artifact",
+    recordId: id,
+    payload: JSON.stringify({
+      truncated,
+      files: {
+        "queries/collected.sql": { text, capture: { truncated } },
+        "README.md": {
+          text: "# not editable\n",
+          capture: { truncated: false },
+        },
+      },
+    }),
+  });
+  const sql =
+    "SELECT o.partner,\r\n  COALESCE(SUM(p.amount), 0) AS collected -- 界\n";
+  const records = [
+    run("r-1", "s.code.1"),
+    artifact("s.code.1", "SELECT 1;\n"),
+    run("r-2", "s.code.2"),
+    artifact("s.code.2", sql),
+  ];
+  // The completing run's code, not an earlier one, and only the editable file.
+  assert.deepEqual(solutionOf(records, "r-2", ["queries/collected.sql"]), [
+    { path: "queries/collected.sql", text: sql, truncated: false },
+  ]);
+  // A copy kept only in part is passed as such, so sharing it is refused, never cut.
+  const cut = [run("r-3", "s.code.3"), artifact("s.code.3", "SELECT", true)];
+  assert.equal(
+    solutionOf(cut, "r-3", ["queries/collected.sql"])?.[0].truncated,
+    true,
+  );
+  // No run, no artifact, or a missing editable file: nothing to offer.
+  assert.equal(solutionOf(records, "r-9", ["queries/collected.sql"]), null);
+  assert.equal(
+    solutionOf([run("r-4", "gone")], "r-4", ["queries/collected.sql"]),
+    null,
+  );
+  assert.equal(solutionOf(records, "r-2", ["other.sql"]), null);
+});
+
+test("only a card on the live revision claims the sender's starting code", () => {
+  const same = startCopy("DATA-6", true);
+  assert.match(same.lede, /same starting code they did/);
+  assert.equal(same.cta, "Try DATA-6 yourself →");
+  // An earlier revision, or a v2 card with no revision identity: the current challenge.
+  const current = startCopy("DATA-6", false);
+  assert.equal(
+    current.lede,
+    "Start from the current challenge’s code in your own attempt: nothing of theirs comes with it.",
+  );
+  assert.equal(current.cta, "Try the current version of DATA-6 →");
+  assert.doesNotMatch(current.lede, /same|they did/);
 });

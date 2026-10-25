@@ -1,19 +1,25 @@
 /**
- * Shared links: an issue (`/try/RG-4`), a merged pull request's result (`/r/<card>`), and the
- * code someone chose to include with a result (`#code=…`, after the card).
+ * Shared links: a challenge (`/try/RG-4`), a completed challenge's result (`/r/<card>`), and
+ * the solution someone chose to include with a result (`#code=…`, after the card).
  *
- * A link carries only what is in it. An issue link is the issue's permanent key, so it opens
- * the same problem for anyone and never the sender's editor, attempt or records. A result link
- * is the allowlisted card (`publicResult`). Code travels only when the sharer ticks the box,
- * and then in the URL fragment, which browsers never send to the server: nothing stores it.
+ * A link carries only what is in it. A challenge link is its permanent key, so it opens the
+ * same problem for anyone and never the sender's editor, attempt or records. A result link is
+ * the allowlisted card (`publicResult`). Code travels only when the sharer ticks the box, and
+ * then in the URL fragment, which browsers never send to the server: nothing stores it. A
+ * challenge has one file to edit, so a link normally carries one; the format takes up to
+ * `MAX_FILES`, so links made when challenges had several still read back whole.
  */
+import { decodeOutcome, type Outcome } from "./outcome";
 import { decodeResult, type Result } from "./result";
 
-/** The public page of an issue: what it is, and a fresh start on it. */
+/** The public page of a challenge: what it is, and a fresh start on it. */
 export const tryHref = (key: string) => `/try/${key}`;
 
 /** What a result link turned out to be, so a bad or old one gets an honest page. */
 export type CardLink =
+  /** A completed challenge (card version 3). */
+  | { readonly kind: "outcome"; readonly outcome: Outcome }
+  /** A legacy card (version 2), made when a pull request was merged. */
   | { readonly kind: "result"; readonly result: Result }
   /** It decodes, but from a card version we no longer show; the issue it names, if any. */
   | { readonly kind: "older"; readonly key: string | null }
@@ -28,6 +34,10 @@ export function inspectCard(segment: string): CardLink {
     const value = JSON.parse(
       new TextDecoder().decode(Uint8Array.from(binary, (c) => c.charCodeAt(0))),
     );
+    if (value && typeof value === "object" && value.v === 3) {
+      const outcome = decodeOutcome(segment);
+      return outcome ? { kind: "outcome", outcome } : { kind: "malformed" };
+    }
     if (
       value &&
       typeof value === "object" &&
@@ -106,16 +116,18 @@ export type CodeRefusal =
   | "too-many-files"
   | "invalid-path"
   | "incomplete"
+  | "missing"
   | "too-large";
 
 /** What the person is told when their code can't be included. */
 export const REFUSALS: Record<CodeRefusal, string> = {
-  empty: "There are no changed files to include.",
-  "too-many-files": `This pull request changed more than ${MAX_FILES} files, too many to fit in a link.`,
-  "invalid-path": "A changed file has a name that can't go in a link.",
-  incomplete:
-    "A changed file wasn't saved in full, so your code can't be shared exactly.",
+  empty: "There is no code to include.",
+  "too-many-files": `You changed more than ${MAX_FILES} files, too many to fit in a link.`,
+  "invalid-path": "Your file has a name that can't go in a link.",
+  incomplete: "Your code wasn't saved in full, so it can't be shared exactly.",
   "too-large": "Your code is too long to fit in a link.",
+  missing:
+    "The code that was checked wasn't kept, so it can't be shared exactly. Your current code is never shared in its place.",
 };
 
 /** Files a link may carry, or why not: the same rules for sharing and for reading. */
@@ -199,4 +211,72 @@ export const codeFragment = (packed?: string | null) =>
 export function codeFromHash(hash: string): string | null {
   const match = /^#code=([A-Za-z0-9_-]+)$/.exec(hash);
   return match ? match[1] : null;
+}
+
+/**
+ * The solution a completion checked, as a link may carry it: every editable file of the code
+ * artifact the completing run used (for a single-file challenge, the one file). A file kept
+ * only in part is marked truncated, so sharing it is refused rather than cut. Null when the
+ * run or its artifact isn't in the records: then there is nothing exact to offer.
+ */
+export function solutionOf(
+  records: readonly { kind: string; recordId: string; payload: string }[],
+  runId: string,
+  editable: readonly string[],
+): SharedFile[] | null {
+  let artifactId: string | null = null;
+  for (const record of records) {
+    if (record.kind !== "observation") continue;
+    try {
+      const o = JSON.parse(record.payload);
+      if (
+        o.type === "observation.workspace.run" &&
+        o.data?.runId === runId &&
+        typeof o.data.codeArtifactId === "string"
+      )
+        artifactId = o.data.codeArtifactId;
+    } catch {
+      // Unreadable records say nothing.
+    }
+  }
+  const record = artifactId
+    ? records.find((r) => r.kind === "artifact" && r.recordId === artifactId)
+    : undefined;
+  if (!record) return null;
+  try {
+    const artifact = JSON.parse(record.payload);
+    const files = artifact?.files ?? {};
+    if (!editable.length || editable.some((p) => !files[p])) return null;
+    return [...editable].sort().map((path) => ({
+      path,
+      text: typeof files[path].text === "string" ? files[path].text : "",
+      truncated:
+        artifact.truncated === true ||
+        files[path].capture?.truncated === true ||
+        typeof files[path].text !== "string",
+    }));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * How a shared outcome invites the visitor in. `/try/<KEY>` always serves the challenge's live
+ * revision, so "the same starting code they did" is said only when the card names that exact
+ * revision (a v3 card checked on it). An older v3 card, and every v2 card (no revision
+ * identity), get the current challenge, said as such.
+ */
+export function startCopy(
+  key: string,
+  sameVersion: boolean,
+): { lede: string; cta: string } {
+  return sameVersion
+    ? {
+        lede: "You start from the same starting code they did, in your own attempt: nothing of theirs comes with it.",
+        cta: `Try ${key} yourself →`,
+      }
+    : {
+        lede: "Start from the current challenge’s code in your own attempt: nothing of theirs comes with it.",
+        cta: `Try the current version of ${key} →`,
+      };
 }

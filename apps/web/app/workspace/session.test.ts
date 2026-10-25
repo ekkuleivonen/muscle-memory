@@ -4,11 +4,11 @@ import { EditorState, type Transaction } from "@codemirror/state";
 import { MemorySink } from "../../../../packages/capture/recorder";
 import type { Runner } from "../../../../packages/runner/runner";
 import { live } from "../../lib/test-fixtures";
-import { WorkspaceSession } from "./session";
+import { WorkspaceSession, type SessionOptions } from "./session";
 
 const fixture = live("frequency-map");
 
-function session(sink: MemorySink) {
+function session(sink: MemorySink, options: Partial<SessionOptions> = {}) {
   return new WorkspaceSession({
     participantId: "synthetic-participant",
     consentVersion: "workspace-session-v1",
@@ -26,6 +26,7 @@ function session(sink: MemorySink) {
     runner: () => ({ running: false, cancel: () => undefined }) as unknown as Runner,
     onRun: () => undefined,
     onEditedAfterRun: () => undefined,
+    ...options,
   });
 }
 
@@ -174,4 +175,19 @@ test("closing writes what is still buffered; discarding does not", async () => {
   two.activity(fixture.path).onKey("down", "b", "", false);
   await two.close(true);
   assert.ok(!observations(dropped).some((o) => o.type === "observation.workspace.keys"));
+});
+
+// A resumed PR has no local RunView yet, but editing must withdraw Review immediately.
+test("restored checks are invalidated on the first edit only, without per-keystroke UI updates", async () => {
+  let changes = 0;
+  const workspace = session(new MemorySink(), {
+    hasPreviousChecks: true,
+    onEditedAfterRun: () => {
+      changes++;
+    },
+  });
+  for (const transaction of transactions(["a", "b", "c"]))
+    workspace.recordEdit(fixture.path, transaction);
+  assert.equal(changes, 1);
+  await workspace.close();
 });

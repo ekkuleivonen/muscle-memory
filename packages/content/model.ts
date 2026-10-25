@@ -124,7 +124,10 @@ export interface Case {
   readonly name?: string;
   readonly input: Json;
   readonly expected: Json;
-  /** In the repo's test file. The others only run in CI, whose results show them like any other case. */
+  /**
+   * In the repo's test file. The others only run in the full check, whose results give them by
+   * name and failure category, never their values (apps/web/lib/diagnosis.ts).
+   */
   readonly visible: boolean;
 }
 

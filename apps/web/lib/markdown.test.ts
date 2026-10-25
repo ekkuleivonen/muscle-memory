@@ -1,6 +1,40 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { parseInline, parseMarkdown, safeHref } from "./markdown";
+import { live } from "./test-fixtures";
+
+test("SQL challenge schemas render as structured tables without interpreting HTML", () => {
+  const blocks = parseMarkdown(live("collected-by-partner").revision.body);
+  const table = blocks.find((block) => block.type === "table");
+  assert.ok(table && table.type === "table");
+  assert.equal(table.header.length, 4);
+  assert.equal(table.rows.length, 6);
+  assert.deepEqual(table.header[0], [{ type: "text", value: "Table" }]);
+  const escaped = parseMarkdown(
+    "Before\n| Name | Meaning |\n| --- | --- |\n| `a|b` | x\\|y |\n\nAfter",
+  );
+  assert.deepEqual(
+    escaped.map((block) => block.type),
+    ["paragraph", "table", "paragraph"],
+  );
+  assert.deepEqual(escaped[1], {
+    type: "table",
+    header: [
+      [{ type: "text", value: "Name" }],
+      [{ type: "text", value: "Meaning" }],
+    ],
+    rows: [
+      [[{ type: "code", value: "a|b" }], [{ type: "text", value: "x|y" }]],
+    ],
+  });
+  const literal = parseMarkdown(
+    "| Text |\n| --- |\n| <script>bad()</script> |",
+  );
+  assert.equal(literal[0].type, "table");
+  assert.deepEqual(literal[0].type === "table" && literal[0].rows[0][0], [
+    { type: "text", value: "<script>bad()</script>" },
+  ]);
+});
 
 test("blocks: paragraphs, headings, lists, quotes and fenced code", () => {
   const blocks = parseMarkdown(

@@ -357,10 +357,13 @@ export function StartWork({
   issue,
   href,
   warmOnMount = false,
+  label,
 }: {
   issue: IssueRef & { language?: string | null };
   href: string;
   warmOnMount?: boolean;
+  /** Presentation only; starting keeps its existing recording semantics. */
+  label?: string;
 }) {
   const warm = () => {
     const engine = issue.language && engineFor(issue.language);
@@ -389,7 +392,8 @@ export function StartWork({
         )
       }
     >
-      <PlayIcon /> {status === "in-progress" ? "Continue work" : "Start work"}
+      <PlayIcon />{" "}
+      {label ?? (status === "in-progress" ? "Continue work" : "Start work")}
     </Link>
   );
 }

@@ -4,13 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { projectHref, type ProjectRef } from "../../../lib/library";
 import { ProjectSquare } from "./bits";
-import { BoardCount } from "./board";
 import {
-  BoardIcon,
   DashboardIcon,
   IssuesIcon,
   ProjectsIcon,
-  PullsIcon,
 } from "./icons";
 import { SettingsLink } from "./profile-menu";
 
@@ -32,7 +29,7 @@ export function Sidebar({
   return (
     <aside
       className="sidebar"
-      aria-label="Workspace"
+      aria-label="Navigation"
       onKeyDown={(event) => {
         if (event.key === "Escape" && expanded) {
           setExpanded(false);
@@ -40,7 +37,7 @@ export function Sidebar({
         }
       }}
     >
-      <Link href="/dashboard" className="workspace-name">
+      <Link href="/issues" className="workspace-name">
         <img
           className="logo-mark"
           src="/logo.svg"
@@ -48,7 +45,7 @@ export function Sidebar({
           width={22}
           height={22}
         />
-        <span className="company-name">Muscle Memory Inc.</span>
+        <span className="company-name">Muscle Memory</span>
       </Link>
       <button
         ref={toggle}
@@ -66,31 +63,17 @@ export function Sidebar({
       >
         <Link
           className="side-link"
-          href="/dashboard"
-          aria-current={current("/dashboard")}
-        >
-          <DashboardIcon /> Dashboard
-        </Link>
-        <Link
-          className="side-link"
-          href="/board"
-          aria-current={current("/board")}
-        >
-          <BoardIcon /> Board <BoardCount />
-        </Link>
-        <Link
-          className="side-link"
           href="/issues"
           aria-current={current("/issues")}
         >
-          <IssuesIcon /> Issues <span className="count">{issueCount}</span>
+          <IssuesIcon /> Explore <span className="count">{issueCount}</span>
         </Link>
         <Link
           className="side-link"
-          href="/pulls"
-          aria-current={current("/pulls")}
+          href="/profile"
+          aria-current={current("/profile")}
         >
-          <PullsIcon /> Pull requests
+          <DashboardIcon /> Profile
         </Link>
         <Link
           className="side-link"

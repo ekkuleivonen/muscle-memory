@@ -1,9 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { hookFor } from "../../../lib/hooks";
 import { LANGUAGES } from "../../../lib/languages";
 import { getLibrary } from "../../../lib/load";
-import { comparisonLine, sentence } from "../../../lib/result";
-import { inspectCard, tryHref } from "../../../lib/share";
+import { outcomeLines, outcomeSentence } from "../../../lib/outcome";
+import { receiptLines, sentence } from "../../../lib/result";
+import {
+  inspectCard,
+  startCopy,
+  tryHref,
+  type CardLink,
+} from "../../../lib/share";
 import { Arrived } from "./arrived";
 import { SharedCode } from "./shared-code";
 import { SharedHeader, Unavailable } from "./unavailable";
@@ -11,22 +18,66 @@ import { Receipt } from "../../(browse)/_components/result-card";
 
 type Props = { params: Promise<{ card: string }> };
 
+/** What either card version shows, in one shape. */
+function view(
+  link: Extract<CardLink, { kind: "result" | "outcome" }>,
+  label: string,
+  title: string,
+  live: string,
+) {
+  if (link.kind === "outcome") {
+    const card = link.outcome;
+    return {
+      key: card.k,
+      referral: card.c,
+      headline: outcomeSentence(card, label, title),
+      lines: outcomeLines(card),
+      completed: true,
+      // The card names the full revision it was checked on; say so when the challenge has
+      // moved on, and never present today's starter as the version they completed.
+      earlier: `sha256:${card.rv}` !== live,
+      sameVersion: `sha256:${card.rv}` === live,
+    };
+  }
+  const card = link.result;
+  return {
+    key: card.k,
+    referral: card.c,
+    headline: sentence(card, label, title),
+    lines: receiptLines(card),
+    completed: !card.ev || card.ev.state === "merged",
+    earlier: false,
+    // A v2 card carries no revision, so it can't be called the same version.
+    sameVersion: false,
+  };
+}
+
 async function read(props: Props) {
   const link = inspectCard((await props.params).card);
   const { findIssue } = await getLibrary();
-  if (link.kind !== "result")
-    return { link, issue: link.kind === "older" && link.key ? findIssue(link.key) : undefined };
-  const issue = findIssue(link.result.k);
-  const label = LANGUAGES.find((l) => l.id === link.result.l)?.label ?? link.result.l;
-  return { link, issue, label };
+  if (link.kind !== "result" && link.kind !== "outcome")
+    return {
+      link,
+      issue:
+        link.kind === "older" && link.key ? findIssue(link.key) : undefined,
+    };
+  const card = link.kind === "outcome" ? link.outcome : link.result;
+  const issue = findIssue(card.k);
+  const label = LANGUAGES.find((l) => l.id === card.l)?.label ?? card.l;
+  return {
+    link,
+    issue,
+    label,
+    shown: issue ? view(link, label, issue.title, issue.revision) : undefined,
+  };
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
-  const { link, issue, label } = await read(props);
-  if (link.kind !== "result" || !issue)
+  const { issue, label, shown } = await read(props);
+  if (!issue || !shown)
     return { title: "Result not available · Muscle Memory", robots: { index: false } };
-  const title = sentence(link.result, label!);
-  const description = `${issue.key}: ${issue.title}. One bug, no AI. Try the same one at your own pace.`;
+  const title = shown.headline;
+  const description = `${issue.summary || issue.title} The same ${label} challenge, from its starting code.`;
   return {
     title,
     description,
@@ -36,12 +87,13 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 }
 
 /**
- * A shared result: what someone did on an issue, and the same issue to try. Public, like
- * /play. The card is whatever the link says; it is a brag, not a record. A link that does not
- * decode, or names an issue that is gone, gets a page saying so, never something in its place.
+ * A shared outcome: what someone did on one challenge, named by its title, and the same
+ * challenge to try. Public, like /play. The card is whatever the link says; it is a brag, not
+ * a record. A link that does not decode, or names a challenge that is gone, gets a page saying
+ * so, never something in its place.
  */
 export default async function SharedResult(props: Props) {
-  const { link, issue, label } = await read(props);
+  const { link, issue, shown } = await read(props);
   if (link.kind === "malformed")
     return (
       <Unavailable
@@ -57,41 +109,41 @@ export default async function SharedResult(props: Props) {
         issue={issue}
       />
     );
-  const { result } = link;
-  if (!issue)
+  if (!issue || !shown)
     return (
       <Unavailable
-        title="That issue isn't available any more"
-        body={`This result is for ${result.k}, which has been retired, so it isn't shown.`}
+        title="That challenge isn't available any more"
+        body={`This result is for ${(link.kind === "outcome" ? link.outcome : link.result).k}, which has been retired, so it isn't shown.`}
       />
     );
   return (
     <div className="legal home play">
       <SharedHeader />
-      <Arrived referral={result.c} />
+      <Arrived referral={shown.referral} />
       <main className="legal-body home-body">
         <section className="result-card shared">
           <Receipt
             top={`muscle memory · ${issue.key} · shared result`}
-            headline="Someone fixed a real bug without AI."
-            detail={`“${issue.title}”, in ${label}, from memory, with no autocomplete. Their numbers, as they shared them; not a verified record.`}
-            metrics={result}
-            comparison={comparisonLine(result, label!)}
+            headline={shown.headline}
+            detail={`${shown.earlier ? "Completed on an earlier version of this challenge; you start from the current one. " : ""}The editor offers no AI completion, chat or generated code: a practice condition, not proof about other tools. As they shared it; not a verified record.`}
+            lines={shown.lines}
+            completed={shown.completed}
           />
         </section>
         <section className="home-hero">
           <h1>
-            Same issue.
+            Same challenge.
             <br />
             <span className="home-punch">Your turn.</span>
           </h1>
           <p className="home-lede">
-            {issue.summary || issue.title} You start from the same code they
-            did, in your own editor. No completion, no chat, no generated code.
+            {hookFor(issue) ?? (issue.summary || issue.title)}{" "}
+            {startCopy(issue.key, shown.sameVersion).lede}
           </p>
           <div className="home-actions">
             <Link className="home-cta" href={tryHref(issue.key)}>
-              Try {issue.key} yourself →
+              {/* Same version only when the card names the live revision; a v2 card names none. */}
+              {startCopy(issue.key, shown.sameVersion).cta}
             </Link>
             <span className="home-note">No email needed.</span>
           </div>
