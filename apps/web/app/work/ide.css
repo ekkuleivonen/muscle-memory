@@ -1227,12 +1227,15 @@ dialog::backdrop {
   opacity: 0.45;
   cursor: default;
 }
+/* The shortcut reads as part of the label, in the button's own colour (dim grey vanished on the accent). */
 .practice .btn kbd {
+  margin-left: 1ch;
   border: 0;
   background: none;
   padding: 0;
   font: inherit;
-  opacity: 0.8;
+  color: inherit;
+  opacity: 0.7;
 }
 .practice-results {
   font-size: 13px;
