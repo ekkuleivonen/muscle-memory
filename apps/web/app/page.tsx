@@ -10,16 +10,16 @@ import { CONSENT_COOKIE, hasConsent } from "../lib/profile";
 
 /** The loop every challenge follows. */
 const LOOP = [
-  ["01", "Challenge", "A clear goal, with the requirements spelled out."],
   [
-    "02",
-    "Code",
-    "Write the solution yourself, and run the checks as often as you like.",
+    "01",
+    "Challenge",
+    "A bug to fix, something to build or an algorithm to write, with a plain goal.",
   ],
+  ["02", "Code", "Write the solution yourself."],
   [
     "03",
     "Feedback",
-    "See right away whether it passes. When it doesn't, the feedback says how it failed, without giving the answer away. Then the next challenge.",
+    "Run checks, understand what needs attention, and try again. When it passes, choose your next challenge.",
   ],
 ];
 
@@ -33,7 +33,7 @@ export default async function Home() {
     </Link>
   ) : (
     <Link className="home-cta" href="/play">
-      Start your first challenge →
+      Try a challenge →
     </Link>
   );
 
@@ -68,8 +68,8 @@ export default async function Home() {
           <p className="home-lede">
             AI can help you build more than you could alone. You may also have
             noticed moments where the code works and you&apos;re not quite sure
-            why. Here a challenge comes, you write the code, and you see right
-            away whether it holds up. Then the next one.
+            why. Here you pick a challenge, write the code yourself and get
+            direct feedback. Then the next one.
           </p>
           <div className="home-actions">
             {start}
@@ -89,9 +89,9 @@ export default async function Home() {
         <section className="home-section">
           <h2>Challenge, code, feedback</h2>
           <p>
-            A check fails. You read what came back, form a hunch and try it.
-            Wrong. Then it clicks: you see why, make the change, and it goes
-            green. The fix is yours, and so is the understanding.
+            A check fails. You form a hunch, try it and look again. There is a
+            particular satisfaction in seeing why it failed, changing the code
+            and watching it pass.
           </p>
           <ol className="home-schedule">
             {LOOP.map(([step, title, detail]) => (
@@ -104,9 +104,8 @@ export default async function Home() {
             ))}
           </ol>
           <p>
-            What you finish builds a record you can look back on: what you
-            solved and how you got there. No scores, ranks or badges, and
-            nothing here is a hiring signal.
+            Afterwards you have a record of these attempts, not a verdict on
+            your ability or a hiring assessment.
           </p>
           <p className="home-fine">
             Python, JavaScript, TypeScript, SQL, HTML, PHP, Ruby, Go, C, C++, C#
