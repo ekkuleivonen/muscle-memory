@@ -209,31 +209,24 @@
 .t-footer-fill {
   flex: 1;
 }
-/* An island: a page's few actions, beside the prose and staying in view while it scrolls. */
-.t-with-island {
-  display: grid;
-  grid-template-columns: minmax(0, 80ch) minmax(240px, 300px);
-  gap: clamp(24px, 5vw, 72px);
-  align-items: start;
+/* The home page: everything in one screen, the start action on its own line. */
+.home-fold > p {
+  margin: 0 0 1.2em;
 }
-.t-island {
-  position: sticky;
-  top: 0;
-  margin-top: 1.6em;
-  display: grid;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--t-bar);
-  background: color-mix(in srgb, var(--t-bar) 50%, transparent);
+.home-dare {
+  margin-top: 2em !important;
+  font-weight: 700;
 }
-@media (max-width: 900px) {
-  .t-with-island {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .t-island {
-    position: static;
-    order: -1;
-  }
+.home-start {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1ch 3ch;
+  margin-bottom: 2.4em;
+}
+.term .home-start .t-btn {
+  display: inline-block;
+  padding: 8px 2ch;
 }
 .term .t-btn {
   display: block;

@@ -16,16 +16,10 @@ const WORDMARK_NARROW = [
 ].join("\n");
 
 /**
- * The terminal header: the wordmark, what this terminal is for, and who is signed in.
+ * The terminal header: the wordmark and a line on what this is.
  * Screen readers get the words, not the drawing.
  */
-export function Banner({
-  description,
-  status,
-}: {
-  description: string;
-  status: ReactNode;
-}) {
+export function Banner({ description }: { description: ReactNode }) {
   return (
     <div className="t-banner">
       <h1 className="t-sr">muscle memory</h1>
@@ -35,10 +29,7 @@ export function Banner({
       <div className="t-art t-art-narrow" aria-hidden>
         {WORDMARK_NARROW}
       </div>
-      <div className="t-banner-text">
-        <div>{description}</div>
-        <div className="t-dim">{status}</div>
-      </div>
+      <div className="t-banner-text">{description}</div>
     </div>
   );
 }
