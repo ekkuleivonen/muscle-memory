@@ -397,47 +397,15 @@ test("the ticket's clues are there from the start; nothing is released into the 
   );
 });
 
-test("the chat answers actions, never the clock, and starts again on a replay", () => {
+test("INC-1 has no team chat any more: no action releases a line", () => {
   const play = incident();
-  assert.deepEqual(chat(play.records), [], "nothing before the attempt begins");
   play.start();
-  assert.deepEqual(chat(play.records), [
-    "noor-comms",
-    "bea-queue",
-    "mia-newsletter",
-  ]);
-  play.openFile(LOG, "app");
-  play.wait(45);
-  assert.deepEqual(
-    chat(play.records).length,
-    3,
-    "the IDE's own tabs and time say nothing",
-  );
   play.openFile(LOG);
   play.run(false);
   play.run(true);
   const run = play.push(1, 1, true);
-  assert.deepEqual(chat(play.records).slice(3), [
-    "kai-logs",
-    "tomasz-red",
-    "noor-green",
-    "bea-pr",
-    "ines-ci",
-  ]);
   play.merge(1, run);
-  assert.deepEqual(chat(play.records).slice(-3), [
-    "noor-resolved",
-    "bea-told",
-    "mia-next",
-  ]);
-  // Every line came from a recorded action, and the same records give the same chat.
-  assert.deepEqual(chat(play.records), chat([...play.records]));
-  play.replay();
-  assert.deepEqual(chat(play.records), [
-    "noor-comms",
-    "bea-queue",
-    "mia-newsletter",
-  ]);
+  assert.deepEqual(chat(play.records), []);
 });
 
 test("hints come from runs and pushes without progress, not time", () => {
@@ -533,7 +501,7 @@ test("a CI failure is a finding only Resolve clears; Resolve never makes failing
   );
 });
 
-test("the incident's nit stays open on green CI and needs Resolve; other exercises keep severity rules", () => {
+test("the incident's nit stays open on green CI and needs Resolve; explicit Resolve is only for findings", () => {
   const play = incident();
   play.start();
   const HARD_CODED = FIX.replace("shippingFor(subtotal, member)", "subtotal >= (member ? 3000 : 5000) ? 0 : 495");
@@ -552,12 +520,11 @@ test("the incident's nit stays open on green CI and needs Resolve; other exercis
   assert.equal(openBlocking(fb(), 1).length, 0);
   play.resolve(1, "thresholds-in-one-place");
   assert.equal(mergeBlocker(pull(), openRequired(fb(), 1, revisionFor).length), null);
-  // Every other exercise keeps its own rules: no explicit comments, so the gate is unchanged.
-  assert.ok(
-    catalog.issues
-      .filter((i) => i.id !== ISSUE)
-      .every((i) => catalog.revisions[i.revision].team.every((c) => c.resolve === undefined)),
-  );
+  // Explicit Resolve is for actionable review findings only, never for an informational note.
+  for (const i of catalog.issues)
+    for (const c of catalog.revisions[i.revision].team)
+      if (c.resolve === "explicit")
+        assert.ok(c.where === "review" && c.severity !== "info", `${i.id} ${c.id}`);
 });
 
 test("the timeline lists what this attempt did, in order, ending at the merge", () => {

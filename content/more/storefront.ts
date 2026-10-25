@@ -304,6 +304,23 @@ export function replay(actions) {
 }
 `;
 
+/** The memo keyed by a version number that every change bumps. */
+const CART_VERSIONED = CART_STARTER.replace("    this.cache = null;\n  }", "    this.cache = null;\n    this.version = 0;\n  }")
+  .replace(
+    "    else this.lines.push({ sku, price, quantity });\n",
+    "    else this.lines.push({ sku, price, quantity });\n    this.version++;\n",
+  )
+  .replace("    else line.quantity = quantity;\n", "    else line.quantity = quantity;\n    this.version++;\n")
+  .replace(
+    "    this.lines = this.lines.filter((l) => l.sku !== sku);\n",
+    "    this.lines = this.lines.filter((l) => l.sku !== sku);\n    this.version++;\n",
+  )
+  .replace("    this.code = code;\n", "    this.code = code;\n    this.version++;\n")
+  .replace(
+    '    const key = this.lines.map((l) => l.sku).join(",") + "|" + (this.code?.name ?? "");\n',
+    "    const key = this.version;\n",
+  );
+
 // SHOP-8: receipt tax that adds up -----------------------------------------------------------
 
 const TYPES_TS = `/** A line at checkout, in cents. \`discount\` is its share of the promo code (see allocate). */
@@ -541,13 +558,13 @@ Write \`shippingBanner(order)\` in \`src/cart/shipping.js\`: the banner's text, 
         author: "Ada N",
         role: "Frontend",
         where: "review",
-        severity: "blocking",
+        severity: "nit",
         text: [
-          "We format money in one place, `formatPrice` in format.js, so the banner matches the rest of the drawer. Can we use it here instead of `toFixed`?",
-          "`toFixed` here means the banner formats money its own way. Can it go through `formatPrice` like the rest of the drawer?",
+          "Nit: we format money in one place, `formatPrice` in format.js, so the banner matches the rest of the drawer. Could it go through that instead of `toFixed`?",
+          "Nit: `toFixed` here means the banner formats money its own way. Could it go through `formatPrice` like the rest of the drawer?",
         ],
         when: { pattern: "\\.toFixed\\(", present: true, file: "src/cart/shipping.js" },
-        repeat: "while-true",
+        resolve: "explicit",
       },
       {
         id: "ada-threshold",
@@ -563,10 +580,51 @@ Write \`shippingBanner(order)\` in \`src/cart/shipping.js\`: the banner's text, 
           present: true,
           file: "src/cart/shipping.js",
         },
+        resolve: "explicit",
       },
     ],
     private: {
       reference: { "src/cart/shipping.js": SHIPPING_REFERENCE },
+      alternatives: [
+        // Asks shippingFor whether shipping is free, and formats by hand: same text either way.
+        {
+          "src/cart/shipping.js": swap(
+            SHIPPING_REFERENCE,
+            `  const total = orderTotal(order);
+  if (total >= FREE_SHIPPING_FROM) return "Your order ships free";
+  return "Spend " + formatPrice(FREE_SHIPPING_FROM - total) + " more for free shipping";`,
+            `  if (shippingFor(order) === 0) return "Your order ships free";
+  const left = FREE_SHIPPING_FROM - orderTotal(order);
+  return "Spend $" + (left / 100).toFixed(2) + " more for free shipping";`,
+          ),
+        },
+      ],
+      wrong: [
+        // Measures the cart before its promo code: promises free shipping checkout then charges.
+        {
+          "src/cart/shipping.js": swap(
+            SHIPPING_REFERENCE,
+            "const total = orderTotal(order);",
+            "const total = order.lines.reduce((sum, line) => sum + line.price * line.quantity, 0);",
+          ),
+        },
+        // Exactly $50.00 still asks for more.
+        {
+          "src/cart/shipping.js": swap(
+            SHIPPING_REFERENCE,
+            "if (total >= FREE_SHIPPING_FROM)",
+            "if (total > FREE_SHIPPING_FROM)",
+          ),
+        },
+        // Shows a banner on an empty cart.
+        {
+          "src/cart/shipping.js": swap(
+            SHIPPING_REFERENCE,
+            "  if (order.lines.length === 0) return null;\n",
+            "",
+          ),
+        },
+      ],
       examples: {
         "ada-format-price": {
           fires: [
@@ -805,12 +863,15 @@ Checkout prices the order on the server, so nobody was overcharged, but the draw
           "This takes the memo out, so the drawer goes back to repricing the cart on every frame. Can we keep it and have it notice changes instead?",
           "Without the memo we're back to 38 ms a frame on big carts. Can the fix keep `summary()` cached?",
         ],
+        // Any field that remembers a summary or that the cart changed counts as keeping the memo.
         when: {
-          pattern: "this\\.\\w*([Cc]ache|[Mm]emo)",
+          pattern:
+            "this\\.#?\\w*([Cc]ache|[Mm]emo|[Dd]irty|[Ss]tale|[Vv]ersion|[Cc]hanged|[Pp]riced|[Ll]ast|[Ss]aved)",
           present: false,
           file: "src/cart/cart.js",
         },
         repeat: "while-true",
+        resolve: "explicit",
       },
       {
         id: "ada-stringify",
@@ -822,21 +883,49 @@ Checkout prices the order on the server, so nobody was overcharged, but the draw
           "Nit: stringifying every line on each call is most of what pricing the cart cost in the first place. Could the cart note when it changes instead?",
         ],
         when: { pattern: "JSON\\.stringify\\(", present: true, file: "src/cart/cart.js" },
-      },
-      {
-        id: "jo-jeans",
-        author: "Jo T",
-        role: "Support",
-        where: "issue",
-        severity: "info",
-        text: [
-          "The jeans one passes on the pull request, nice. I'll reply to those tickets once it ships.",
-        ],
-        when: { check: "case-1", is: "passing" },
+        resolve: "explicit",
       },
     ],
     private: {
       reference: { "src/cart/cart.js": CART_REFERENCE },
+      alternatives: [
+        // A version number every change bumps; the memo remembers which version it priced.
+        { "src/cart/cart.js": CART_VERSIONED },
+        // Or keep the key, and make it describe everything the summary depends on.
+        {
+          "src/cart/cart.js": swap(
+            CART_STARTER,
+            'this.lines.map((l) => l.sku).join(",")',
+            'this.lines.map((l) => \`\${l.sku}:\${l.price}x\${l.quantity}\`).join(",")',
+          ).replace(
+            '(this.code?.name ?? "")',
+            '(this.code ? \`\${this.code.name}:\${this.code.percent ?? ""}:\${this.code.amount ?? ""}\` : "")',
+          ),
+        },
+      ],
+      wrong: [
+        // Invalidates on add and remove, but not on a quantity change or a new code.
+        {
+          "src/cart/cart.js": swap(
+            swap(
+              CART_REFERENCE,
+              "    else line.quantity = quantity;\n    this.changed();\n",
+              "    else line.quantity = quantity;\n",
+            ),
+            "    this.code = code;\n    this.changed();\n",
+            "    this.code = code;\n",
+          ),
+        },
+        // Adds quantities to the key but drops the code from it: a new promo code shows the old
+        // total.
+        {
+          "src/cart/cart.js": swap(
+            CART_STARTER,
+            'this.lines.map((l) => l.sku).join(",")',
+            'this.lines.map((l) => l.sku + "x" + l.quantity).join(",")',
+          ).replace('(this.code?.name ?? "")', '""'),
+        },
+      ],
       examples: {
         "ada-keep-memo": {
           fires: [

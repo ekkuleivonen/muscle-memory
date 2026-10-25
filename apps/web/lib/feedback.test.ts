@@ -4,7 +4,16 @@ import type { WorkspaceRecord } from "../../../packages/domain/workspace";
 import { behaviourOf, due, feedbackOf, openBlocking, type Release } from "./feedback";
 import { live } from "./test-fixtures";
 
-const fixture = live("frequency-map");
+const published = live("frequency-map");
+// The default rules, where a fixing push or a reply resolves a thread. FN-1's own findings need an
+// explicit Resolve (see the incident tests), so these tests read its comments without it.
+const fixture = {
+  ...published,
+  revision: {
+    ...published.revision,
+    team: published.revision.team.map(({ resolve: _, ...comment }) => comment),
+  },
+};
 const cases = fixture.revision.checks.cases;
 const revisionFor = (id: string) => (id === fixture.id ? fixture.revision : undefined);
 const CLEAN = "def frequency_map(items):\n    counts = {}\n    for item in items:\n        counts[item] = counts.get(item, 0) + 1\n    return counts\n";
@@ -138,13 +147,12 @@ test("a blocking review comment holds the merge until a push no longer triggers 
   h.wait(3);
   const second = h.push(1, 2, CLEAN, cases.length);
   const next = h.due(CLEAN, second);
-  assert.deepEqual(ids(next), ["resolved:priya-debug-print", "priya-proto-passes"]);
+  assert.deepEqual(ids(next), ["resolved:priya-debug-print"]);
   h.release(next);
   const feedback = feedbackOf(h.records, "frequency-map");
   assert.equal(openBlocking(feedback, 1).length, 0);
   assert.deepEqual(feedback.threads.map((t) => [t.comment, t.push, t.resolved?.by]), [
     ["priya-debug-print", 1, "code"],
-    ["priya-proto-passes", 2, undefined],
   ]);
 
   // repeat: while-true: the print coming back opens the thread again.
@@ -164,7 +172,7 @@ test("a reply resolves a blocking thread; review comments are per pull request",
   assert.equal(feedback.threads[0].replies[0].text, "It's the scanner's own logger, not stdout.");
   // A second pull request is reviewed afresh.
   const other = h.push(2, 1, DEBUG, cases.length);
-  assert.deepEqual(ids(h.due(DEBUG, other)), ["priya-debug-print", "priya-proto-passes"]);
+  assert.deepEqual(ids(h.due(DEBUG, other)), ["priya-debug-print"]);
 });
 
 test("hints come one at a time, in order, on behaviour without progress", () => {
