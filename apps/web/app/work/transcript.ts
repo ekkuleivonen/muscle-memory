@@ -130,10 +130,13 @@ export function transcript(
       tone: "dim",
     });
   if (o.error && o.phase !== "tests") {
-    out.push(...errorLines(o.error));
+    if (!privateCases) out.push(...errorLines(o.error));
     out.push({
-      text:
-        o.phase === "compile"
+      text: privateCases
+        ? o.phase === "compile"
+          ? "The code did not compile. Run examples to see the error."
+          : "The checks did not complete. Run examples for detailed errors."
+        : o.phase === "compile"
           ? "The code did not compile; no cases ran."
           : "The code failed before any case ran.",
       tone: "fail",
