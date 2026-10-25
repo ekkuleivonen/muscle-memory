@@ -8,6 +8,16 @@ import type { WorkspaceRecord } from "../domain/workspace";
 import type { CaptureSink, WriteOutcome } from "../capture/recorder";
 
 const DATABASE = "muscle-memory-local-practice";
+
+/** Everything the store holds, for a backup: settings, every record, and what is still queued. */
+export interface StoreDump {
+  /** The identity, device secret and referral code. */
+  readonly settings: Readonly<Record<string, string>>;
+  readonly records: readonly WorkspaceRecord[];
+  /** Record IDs still waiting to be uploaded, oldest first. */
+  readonly outbox: readonly string[];
+}
+
 export class PracticeStore implements CaptureSink {
   constructor(private readonly database: IDBDatabase) {}
 
@@ -199,6 +209,61 @@ export class PracticeStore implements CaptureSink {
         );
     });
   }
+  dump(): Promise<StoreDump> {
+    return new Promise((resolve, reject) => {
+      const transaction = this.database.transaction(
+        ["settings", "workspace", "outbox"],
+        "readonly",
+      );
+      const settings: Record<string, string> = {};
+      const outbox: string[] = [];
+      const cursor = transaction.objectStore("settings").openCursor();
+      cursor.onsuccess = () => {
+        const at = cursor.result;
+        if (!at) return;
+        settings[String(at.key)] = at.value as string;
+        at.continue();
+      };
+      const records = transaction.objectStore("workspace").getAll();
+      const queued = transaction.objectStore("outbox").openCursor();
+      queued.onsuccess = () => {
+        const at = queued.result;
+        if (!at) return;
+        outbox.push(at.value as string);
+        at.continue();
+      };
+      transaction.oncomplete = () =>
+        resolve({ settings, records: records.result as WorkspaceRecord[], outbox });
+      transaction.onabort = () =>
+        reject(transaction.error ?? new Error("Saved practice could not be read."));
+    });
+  }
+
+  /**
+   * Replaces everything with a dump, in one transaction: the identity and secret it carries,
+   * its records, and its upload queue in the same order. Nothing is kept from before.
+   */
+  restore(dump: StoreDump): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const transaction = this.database.transaction(
+        ["settings", "workspace", "outbox"],
+        "readwrite",
+      );
+      const settings = transaction.objectStore("settings");
+      const workspace = transaction.objectStore("workspace");
+      const outbox = transaction.objectStore("outbox");
+      settings.clear();
+      workspace.clear();
+      outbox.clear();
+      for (const [key, value] of Object.entries(dump.settings)) settings.put(value, key);
+      for (const record of dump.records) workspace.put(record);
+      for (const id of dump.outbox) outbox.add(id);
+      transaction.oncomplete = () => resolve();
+      transaction.onabort = () =>
+        reject(transaction.error ?? new Error("The backup could not be restored."));
+    });
+  }
+
   close(): void {
     this.database.close();
   }

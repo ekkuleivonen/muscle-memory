@@ -96,7 +96,7 @@ export default async function SharedResult(props: Props) {
               Your turn →
             </Link>
             <span className="home-note">
-              No email needed. Progress stays in this browser.
+              No email needed.
             </span>
           </div>
         </section>

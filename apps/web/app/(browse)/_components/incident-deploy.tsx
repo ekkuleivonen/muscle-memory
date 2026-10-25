@@ -102,7 +102,7 @@ export function IncidentDeploy({
     if (!stored) {
       setBusy(false);
       setError(
-        "The deploy could not be recorded in this browser, so it didn't happen. Allow browser storage and try again.",
+        "The deploy didn't go through, so nothing shipped. Try again.",
       );
       return;
     }
@@ -118,7 +118,7 @@ export function IncidentDeploy({
         <>
           <p>
             The fix is on main, but customers still get the old code until it
-            ships. This deploy is simulated: nothing leaves your browser.
+            ships. (Kettlebrook and its production are fictional: nothing real is deployed.)
           </p>
           {error && <p role="alert">{error}</p>}
           <button

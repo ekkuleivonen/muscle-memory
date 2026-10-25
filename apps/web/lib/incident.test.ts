@@ -169,6 +169,14 @@ function incident() {
         via: "pointer",
       });
     },
+    close(number: number) {
+      return observe("observation.board.closed", {
+        issueKey: "INC-1",
+        pullRequest: number,
+        via: "pointer",
+        nudged: false,
+      });
+    },
     comment(id: string) {
       observe("observation.workspace.comment", {
         where: "issue",
@@ -457,4 +465,42 @@ test("progress saved before replays existed reads exactly as it did", () => {
     1,
     "Done still stays done",
   );
+});
+
+test("closed pull requests and replays: only the attempt's own merged, passing push ships", () => {
+  const play = incident();
+  play.start();
+  // First response: a failing pull request closed unmerged, then a new one merged and deployed.
+  play.push(1, 1, false);
+  play.close(1);
+  const first = play.push(2, 1, true);
+  play.merge(2, first);
+  play.deploy(2, first);
+  assert.equal(incidentState(play.records).deployed?.number, 2);
+  // A pull request closed unmerged is not a merged fix.
+  const closed = incident();
+  closed.start();
+  const run = closed.push(1, 1, true);
+  closed.close(1);
+  assert.equal(incidentState(closed.records).merged, null);
+  assert.equal(allPullRequests(closed.records).find((p) => p.number === 1)?.state, "closed");
+
+  // Replay: a pull request closed in the replay, then its own merged fix.
+  play.replay();
+  assert.equal(incidentState(play.records).deployed, null, "the first deploy does not count");
+  play.push(3, 1, false);
+  play.close(3);
+  const replayRun = play.push(4, 1, true);
+  const pulls = allPullRequests(play.records).filter((p) => p.issue === ISSUE);
+  assert.equal(pulls.find((p) => p.number === 1)?.state, "closed");
+  assert.equal(pulls.find((p) => p.number === 2)?.state, "merged");
+  assert.equal(pulls.find((p) => p.number === 3)?.state, "closed");
+  assert.equal(pulls.find((p) => p.number === 4)?.otherMerged, undefined, "#2 was another attempt");
+  play.merge(4, replayRun);
+  assert.equal(incidentState(play.records).deployed, null, "merged is not deployed");
+  play.deploy(4, replayRun);
+  const state = incidentState(play.records);
+  assert.equal(state.attempt.number, 2);
+  assert.equal(state.deployed?.number, 4);
+  void run;
 });

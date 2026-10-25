@@ -8,6 +8,14 @@ import {
   saveProfile,
   setStealth,
 } from "../../lib/account";
+import {
+  backupName,
+  current,
+  makeBackup,
+  parseBackup,
+  restoreBackup,
+  summarize,
+} from "../../lib/backup";
 import { LEGAL_UPDATED } from "../../lib/legal";
 import { readTheme, setTheme, type Theme } from "../../lib/theme";
 import type { Profile } from "../../lib/profile";
@@ -22,9 +30,21 @@ import {
   type TerminalApi,
 } from "../_terminal/terminal";
 
-/** Settings as terminal commands: pick one, it runs, and the menu comes back. */
-export function SettingsTerminal() {
-  return <Terminal run={settings} />;
+/**
+ * Settings as terminal commands: pick one, it runs, and the menu comes back. `start` runs one
+ * first, for links from elsewhere in the app: a command name, or a profile question's id
+ * (`languages`, `editor`) to ask just that question.
+ */
+export function SettingsTerminal({ start }: { start?: string }) {
+  return <Terminal run={(t) => settings(t, start)} />;
+}
+
+/** What `?run=` may open: a command, or one profile question. */
+function startCommand(start: string | undefined): ((t: TerminalApi) => Promise<Outcome>) | null {
+  if (!start) return null;
+  if (Object.hasOwn(COMMANDS, start) && start !== "exit") return COMMANDS[start].run;
+  if (QUESTIONS.some((q) => q.id === start)) return (t) => profile(t, [start]);
+  return null;
 }
 
 /** What a command leaves behind: the menu again, or nothing because it navigated away. */
@@ -43,6 +63,8 @@ const COMMANDS: Record<
     hint: "go stealth, Terms and Privacy Notice",
     run: privacy,
   },
+  export: { hint: "download everything here as a file, to keep or move", run: exportData },
+  import: { hint: "restore a downloaded file into this browser", run: importData },
   logout: { hint: "sign out on this device", run: logout },
   reset: { hint: "start over: empty board, no saved practice", run: reset },
   delete: { hint: "delete your account and everything here", run: remove },
@@ -63,7 +85,7 @@ const MENU: Prompt = {
   escape: "closes settings",
 };
 
-async function settings(t: TerminalApi) {
+async function settings(t: TerminalApi, start?: string) {
   const handle = ensureHandle();
   if (!handle) {
     t.print("", "No account on this device yet.");
@@ -81,6 +103,11 @@ async function settings(t: TerminalApi) {
     />,
     "",
   );
+  const first = startCommand(start);
+  if (first) {
+    if ((await first(t)) === "left") return;
+    t.print("");
+  }
   for (;;) {
     const command = await t.ask(MENU, {
       skipped: "closed",
@@ -98,8 +125,8 @@ async function settings(t: TerminalApi) {
   }
 }
 
-/** The setup questions again, starting from the current answers. */
-async function profile(t: TerminalApi): Promise<Outcome> {
+/** The profile questions again (or just `only`), starting from the current answers. */
+async function profile(t: TerminalApi, only?: string[]): Promise<Outcome> {
   const current = readProfile()?.profile ?? {};
   t.print(
     <span className="t-dim">Your answers now:</span>,
@@ -110,7 +137,7 @@ async function profile(t: TerminalApi): Promise<Outcome> {
     "",
   );
   const answers: Record<string, Answer> = { ...current };
-  for (const question of QUESTIONS) {
+  for (const question of QUESTIONS.filter((q) => !only || only.includes(q.id))) {
     const value = current[question.id as keyof Profile];
     const index = (v: unknown) =>
       question.choices.findIndex((choice) => choice.value === v);
@@ -217,6 +244,106 @@ async function privacy(t: TerminalApi): Promise<Outcome> {
     </span>,
   );
   return "menu";
+}
+
+async function exportData(t: TerminalApi): Promise<Outcome> {
+  t.print(
+    "Your practice lives in this browser only: no account, no copy on our side you could sign back into. A backup is all of it in one file (handle, answers, board, every recorded keystroke and run), to keep safe or to import in another browser.",
+    <span className="t-dim">
+      It also holds this browser&apos;s secret key, the one that can delete what was uploaded.
+      Keep the file private.
+    </span>,
+  );
+  const backup = await makeBackup();
+  const name = backupName(ensureHandle(), new Date());
+  const url = URL.createObjectURL(
+    new Blob([JSON.stringify(backup)], { type: "application/json" }),
+  );
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  t.print(
+    <span className="t-ok">
+      Downloaded {name} ({backup.store.records.length} records).
+    </span>,
+  );
+  return "menu";
+}
+
+/** The browser's file picker; null if closed without a file. */
+function pickFile(accept: string): Promise<File | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = accept;
+    input.addEventListener("change", () => resolve(input.files?.[0] ?? null));
+    input.addEventListener("cancel", () => resolve(null));
+    input.click();
+  });
+}
+
+async function importData(t: TerminalApi): Promise<Outcome> {
+  t.print(
+    "Importing a backup replaces everything in this browser with what the file holds: you carry on as that handle, where it left off.",
+  );
+  const go = await t.ask(
+    { kind: "confirm", id: "choose", message: "Choose a backup file?", initial: true },
+    { skipped: "cancelled" },
+  );
+  if (!go) return "menu";
+  const file = await pickFile("application/json,.json");
+  if (!file) {
+    t.print(<span className="t-dim">No file chosen. Nothing changed.</span>);
+    return "menu";
+  }
+  const backup = parseBackup(await file.text());
+  if (backup instanceof Error) {
+    t.print(<span className="t-err">{backup.message}</span>);
+    return "menu";
+  }
+  const found = summarize(backup);
+  const here = await current();
+  t.print(
+    <span>
+      {file.name}: <span className="t-brand">{found.handle ?? "no handle"}</span>,{" "}
+      {found.records} records, saved {new Date(found.exportedAt).toLocaleString()}.
+    </span>,
+  );
+  if (here.participantId && here.participantId !== found.participantId && here.records > 0)
+    t.print(
+      <span>
+        <span className="t-err">This browser has its own practice</span> ({here.records} records
+        as {ensureHandle()}). Importing loses it, and with it the key that deletes what it
+        uploaded. Run <span className="t-accent">export</span> first if you want to keep it, or{" "}
+        <span className="t-accent">delete</span> it.
+      </span>,
+    );
+  const yes = await t.ask({
+    kind: "confirm",
+    id: "replace",
+    message: "Replace everything in this browser with this backup?",
+    initial: false,
+  });
+  if (!yes) {
+    t.print(<span className="t-dim">Nothing changed.</span>);
+    return "menu";
+  }
+  try {
+    await restoreBackup(backup);
+  } catch (cause) {
+    t.print(
+      <span className="t-err">
+        {cause instanceof Error ? cause.message : "The backup could not be restored."}
+      </span>,
+    );
+    return "menu";
+  }
+  t.print(<span className="t-ok">Restored. Welcome back, {found.handle ?? "you"}.</span>);
+  // A full load, so every part of the app (and the uploader) starts from the restored state.
+  window.location.assign("/dashboard");
+  return "left";
 }
 
 async function logout(t: TerminalApi): Promise<Outcome> {

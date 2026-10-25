@@ -482,9 +482,28 @@
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   margin-bottom: 10px;
 }
+.ide-review p {
+  margin: 0;
+}
+.ide-review .ide-comments {
+  margin: 10px 0 0;
+}
 .ide-review a {
   color: var(--accent);
   font-weight: 600;
+}
+.ide-review .ide-run {
+  margin-top: 10px;
+  text-decoration: none;
+}
+.ide-review .ide-run:not(.secondary) {
+  color: var(--accent-fg);
+}
+.ide-review .ide-run.secondary {
+  color: var(--fg);
+}
+a.ide-run {
+  text-decoration: none;
 }
 .ide-cases {
   list-style: none;

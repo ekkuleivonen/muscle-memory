@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SettingsForm } from "./settings-form";
 import type { Metadata } from "next";
 import { requireConsent } from "../../lib/gate";
 import "../_terminal/terminal.css";
@@ -7,22 +6,20 @@ import { SettingsTerminal } from "./settings-terminal";
 
 export const metadata: Metadata = { title: "Settings · Muscle Memory" };
 
+/** Settings are the terminal; `?run=` opens it on one command (see `start` in the terminal). */
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ run?: string }>;
 }) {
-  await requireConsent("/settings");
-  const { view } = await searchParams;
-  return view === "terminal" ? (
+  const { run } = await searchParams;
+  await requireConsent(run ? `/settings?run=${encodeURIComponent(run)}` : "/settings");
+  return (
     <>
       <nav className="settings-terminal-nav">
         <Link href="/dashboard">← Back to your desk</Link>
-        <Link href="/settings">Settings controls</Link>
       </nav>
-      <SettingsTerminal />
+      <SettingsTerminal start={run} />
     </>
-  ) : (
-    <SettingsForm />
   );
 }

@@ -12,6 +12,7 @@ import {
 import { randomId } from "../../../../../packages/browser/random-id";
 import {
   boardArrival,
+  boardClose,
   boardDeploy,
   boardMove,
   boardResult,
@@ -23,6 +24,7 @@ import {
   boardView,
   type BoardBase,
   type BoardArrivalData,
+  type BoardCloseData,
   type BoardDeployData,
   type BoardMoveData,
   type BoardResultData,
@@ -58,6 +60,14 @@ export function logReply(
   data: { issueKey: string; pullRequest: number; comment: string; text: string },
 ): Promise<boolean> {
   return log((base) => boardReply({ ...base, issue, data }), "Reply");
+}
+
+/** Closing one of the person's open pull requests without merging it. */
+export function logClose(
+  issue: { id: string; revision: string },
+  data: BoardCloseData,
+): Promise<boolean> {
+  return log((base) => boardClose({ ...base, issue, data }), "Close");
 }
 
 /** Where an arrival is remembered until the Terms are accepted and it can be recorded. */

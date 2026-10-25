@@ -112,7 +112,7 @@ export function IncidentReport({
         <h1>Nothing to file yet.</h1>
         <p className="home-lede">
           {!state.started
-            ? "There's no response to this incident in this browser."
+            ? "There's no response to this incident yet."
             : !state.merged
               ? `Your ${attemptLabel(state.attempt.number).toLowerCase()} hasn't merged a fix whose checks all pass.`
               : "Your fix is merged but not deployed, so checkout is still down."}{" "}
@@ -179,7 +179,7 @@ export function IncidentReport({
           </dd>
           <dt>Time to restore</dt>
           <dd>
-            {`${duration(elapsed)} wall clock, from the first recorded step (${timeline[0]?.label ?? "none"}) to the deploy; ${duration(metrics.t)} of it active work`}
+            {`${duration(elapsed)} wall clock, from the first step (${timeline[0]?.label ?? "none"}) to the deploy; ${duration(metrics.t)} of it active work`}
           </dd>
           <dt>AI tools</dt>
           <dd>
@@ -189,7 +189,7 @@ export function IncidentReport({
         </dl>
 
         <h2>Timeline</h2>
-        <p className="faint">From your records of this response.</p>
+        <p className="faint">What you did in this response, in order.</p>
         <ol className="incident-timeline">
           {timeline.map((m) => (
             <li key={m.label}>
@@ -218,7 +218,7 @@ export function IncidentReport({
           ))}
         </dl>
         <p className="faint">
-          Raw facts this browser recorded. No score, no rank, not a hiring
+          Raw facts from your work. No score, no rank, not a hiring
           signal.
         </p>
 

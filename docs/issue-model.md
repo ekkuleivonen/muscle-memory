@@ -2,7 +2,7 @@
 
 What an issue is, how it is managed and where it is stored.
 
-**Built so far:** the model itself. Issue metadata, revisions and the catalog are in `packages/content` (types, validation, revision hashing). The seed (`content/seed.ts`) is built into `content/catalog.json` by `tools/build-content.ts`, and the app reads every page and the IDE from it. Recorded data names the issue and revision. The IDE takes several editable and read-only files, recorded per file (JavaScript and TypeScript run them; other runners still load one source file). Teammate comments, review threads and hints are released by their triggers (`packages/content/triggers.ts`, read from records by `apps/web/lib/feedback.ts`), recorded, and blocking threads hold the merge. Cases can be hidden: Run tests runs the repo's test file, CI on a pull request runs every case. A seed issue's private part (reference solution, trigger examples) feeds the publish checks: the content build checks the examples, the reference against blocking comments and the hints (`packages/content/publish.ts`), and `npm run check:publish` runs the reference and the starter in the browser sandbox (`tools/browser/content-check.ts`). SHOP-5 is the first multi-file issue with all of it. **Not built yet:** static rules and scaling checks in CI, author notes, the database, R2 and the admin UI. Until then, the seed and its build stand in for authoring.
+**Built so far:** the model itself. Issue metadata, revisions and the catalog are in `packages/content` (types, validation, revision hashing). The seed (`content/seed.ts`) is built into `content/catalog.json` by `tools/build-content.ts`, and the app reads every page and the IDE from it. Recorded data names the issue and revision. The IDE takes several editable and read-only files, recorded per file (JavaScript, TypeScript and Python run them; other runners still load one source file). Teammate comments, review threads and hints are released by their triggers (`packages/content/triggers.ts`, read from records by `apps/web/lib/feedback.ts`), recorded, and blocking threads hold the merge. Cases can be CI-only (`hidden` in the seed): Run tests runs the repo's test file, CI on a pull request runs every case and shows every result, CI-only ones included, as a CI log would. A seed issue's private part (reference solution, trigger examples) feeds the publish checks: the content build checks the examples, the reference against blocking comments and the hints (`packages/content/publish.ts`), and `npm run check:publish` runs the reference and the starter in the browser sandbox (`tools/browser/content-check.ts`). SHOP-5 is the first multi-file issue with all of it. **Not built yet:** static rules and scaling checks in CI, author notes, the database, R2 and the admin UI. Until then, the seed and its build stand in for authoring.
 
 ## Principles
 
@@ -180,7 +180,7 @@ From these, every attempt can say when it stopped being unaided, which feedback 
   - `src/cart/money.js` and `src/cart/discounts.js` (read): `lineTotal` already takes off each line's share of the discount, which checkout allocates;
   - `src/cart/totals.test.js` (tests, visible cases only);
   - `README.md`.
-- **Checks:** six cases, three of them hidden: a refund without a code, with a percentage and with a fixed amount, a larger percentage, an empty refund and a free item.
+- **Checks:** seventeen cases, three visible and fourteen hidden: a refund without a code, with a percentage and with a fixed amount, then the edge cases only CI runs (larger percentages, empty and free lines, partial refunds, the line that got the leftover cent of an allocation).
 - **Team:**
   - *Jo T (Support), the ticket's thread:* "40 tickets about this since Monday. Every one of them used a promo code."
   - *Ada N (Frontend), review, blocking, pattern* `Math\.abs\(` *in* `totals.js`: "Taking the absolute value hides the sign we need for refunds. Can we keep refunds negative all the way through?"
@@ -247,6 +247,6 @@ The content in the repo today (`content/` and the generated demo catalog) become
 
 ## Known limits
 
-- Checks run in the player's browser, so hidden cases, comment text and hint text are present in the bundle and readable by anyone who looks. That is acceptable while cheating only costs the cheater; a server-side runner would close it.
+- Checks run in the player's browser, so CI-only cases, comment text and hint text are present in the bundle and readable by anyone who looks. That is acceptable while cheating only costs the cheater; a server-side runner would close it.
 - Text pattern rules can be fooled by renaming or formatting. Blocking comments therefore always accept a reply.
 - AI-drafted issues may resemble problems models have seen. `authored.by` lets comparisons with models control for that.

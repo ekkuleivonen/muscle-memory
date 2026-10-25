@@ -14,6 +14,8 @@ Setting an issue's status by hand (Backlog, Todo or In progress, from its Status
 
 `observation.board.replied`, in the same envelope, records a reply to a review comment on a pull request's page: `issueKey`, `pullRequest`, the `comment` id (in the revision the observation names), the reply's `text` bounded to 8 KiB at a character boundary, `textBytes` and `truncated`. A reply resolves a blocking thread.
 
+`observation.board.closed` (capture 6.1.0) records closing one of the person's open pull requests without merging it: `issueKey`, `pullRequest`, `via` (pointer or keyboard) and `nudged` (true when the page was suggesting it because another of the issue's pull requests was merged). A closed pull request takes no more pushes and cannot be merged or reopened; the next push from the IDE opens a new one.
+
 Every page of the app is recorded as it is shown (`TrackerActivity` in the root layout):
 
 - `observation.board.viewed`: the `path`, its `query` (searches and filters are GET forms and links, so they arrive here), and the `previous` page in this tab. A page about one issue (the issue page, a pull request, the IDE) names the issue and its live revision; other pages have `issue: null`.

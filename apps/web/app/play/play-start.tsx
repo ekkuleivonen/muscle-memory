@@ -80,7 +80,7 @@ export function PlayStart({
       {error && <p role="alert">{error}</p>}
       <p className="play-consent">
         You can exclude your activity from future publications with{" "}
-        <Link href="/settings#privacy">stealth in Settings</Link>. Recording
+        <Link href="/settings?run=privacy">stealth in Settings</Link>. Recording
         continues in stealth.
       </p>
       <div className="play-langs">

@@ -14,7 +14,7 @@ import { WorkspaceSession, type SaveStatus } from "./session";
 const fixture = live("frequency-map");
 const ISSUE = "frequency-map";
 const P = "synthetic-participant";
-const SAVED = /^All edits so far are saved on this device/;
+const SAVED = /^All changes saved/;
 
 function workspace(sink: CaptureSink, initialCode = "") {
   let state = EditorState.create({ doc: initialCode });
@@ -97,10 +97,8 @@ test("a truncated large paste is never labelled saved until a complete copy is s
   // The queue has drained, but the code cannot be rebuilt: no change set, truncated copy.
   assert.equal(editor.session.saveStatus().buffered, 0);
   assert.equal(editor.session.saveStatus().recoverable, false);
-  assert.match(
-    editor.label(),
-    /cannot be fully restored after a refresh: .*64 KiB/,
-  );
+  assert.match(editor.label(), /isn't fully saved/);
+  assert.match(editor.session.saveStatus().unrecoverableReason ?? "", /64 KiB/);
   assert.equal(
     latestSavedCode([...sink.records.values()], P, ISSUE)!.complete,
     false,
@@ -108,7 +106,7 @@ test("a truncated large paste is never labelled saved until a complete copy is s
   // Removing the paste is a normal edit, but replay still has no exact starting point.
   editor.replaceAll("def frequency_map(items):\n    return {}\n");
   await settle(editor);
-  assert.match(editor.label(), /cannot be fully restored/);
+  assert.match(editor.label(), /isn't fully saved/);
   // Run stores a complete copy: safe again, and recovery is exact.
   await editor.session.run();
   await settle(editor);
@@ -146,7 +144,7 @@ test("an artifact conflict is not labelled saved until a later complete copy is 
   await editor.session.run();
   await settle(editor);
   assert.equal(editor.session.saveStatus().artifactConflicts, 1);
-  assert.match(editor.label(), /cannot be fully restored/);
+  assert.match(editor.label(), /isn't fully saved/);
   editor.type("b");
   await editor.session.run();
   await settle(editor);
@@ -168,10 +166,8 @@ test("failing writes are reported, and saved returns only after they succeed", a
   });
   editor.type("a");
   await editor.session.recorder.flush();
-  assert.match(
-    editor.label(),
-    /failing and will retry: Simulated storage failure/,
-  );
+  assert.match(editor.label(), /failing and will retry/);
+  assert.match(editor.session.saveStatus().lastError ?? "", /Simulated storage failure/);
   await settle(editor);
   assert.match(editor.label(), SAVED);
 });
@@ -197,9 +193,10 @@ test("a later snapshot that only references a conflicted artifact never clears t
     await editor.session.run();
     await settle(editor);
     assert.equal(editor.session.saveStatus().recoverable, false);
+    assert.match(editor.label(), /isn't fully saved/);
     assert.match(
-      editor.label(),
-      /cannot be fully restored: |conflicts with an existing record/,
+      editor.session.saveStatus().unrecoverableReason ?? "",
+      /conflicts with an existing record/,
     );
     assert.doesNotMatch(editor.label(), SAVED);
   }

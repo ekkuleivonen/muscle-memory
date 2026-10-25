@@ -41,11 +41,11 @@ function revisionOf(seed: SeedIssue, key: string, project: (typeof SEED_PROJECTS
     ...(seed.names?.[index] ? { name: seed.names[index] } : {}),
     input: input as Json,
     expected: seed.expected[index] as Json,
-    // Hidden cases only run in CI; the repo's test file shows the rest.
+    // Cases listed in `hidden` are left out of the repo's test file and only run in CI.
     visible: !seed.hidden?.includes(index),
   }));
-  if (seed.entry && !["javascript", "typescript"].includes(seed.language))
-    throw new Error(`${seed.id}: only JavaScript and TypeScript issues can place their entry file.`);
+  if (seed.entry && !["javascript", "typescript", "python"].includes(seed.language))
+    throw new Error(`${seed.id}: only JavaScript, TypeScript and Python issues can place their entry file.`);
   const repo = repoFor({
     key,
     slug: seed.id,

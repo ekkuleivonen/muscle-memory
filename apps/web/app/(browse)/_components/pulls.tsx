@@ -26,7 +26,7 @@ import {
 import type { BoardMoveVia } from "../../../../../packages/domain/board";
 import { LanguageTag } from "./bits";
 import { StartWork, useBoard } from "./board";
-import { logReply, logResult, setIssueContext } from "./board-log";
+import { logClose, logReply, logResult, setIssueContext } from "./board-log";
 import { metricsOf } from "../../../lib/result";
 import { Markdown } from "./markdown";
 import { Ask } from "./ask";
@@ -48,12 +48,12 @@ export interface PullIssue {
 /** The IDE on the issue's live revision; pushes still go to the open pull request. */
 const workHref = (issue: PullIssue) => `/work/${issue.key}`;
 
-const shortRevision = (id: string) => id.replace(/^sha256:/, "").slice(0, 8);
 
 type State = PullSummary["state"];
 const STATE_LABELS: Record<State, string> = {
   open: "Open",
   merged: "Merged",
+  closed: "Closed",
 };
 /** Passing checks; before capture 1.4.0 they were recorded as `merged`. */
 const passed = (result: string) =>
@@ -85,7 +85,14 @@ export function PullIcon({
     >
       <circle cx="4.5" cy="3.5" r="1.7" />
       <circle cx="4.5" cy="12.5" r="1.7" />
-      {state === "merged" ? (
+      {state === "closed" ? (
+        <>
+          <path d="M4.5 5.2v5.6" />
+          <path d="M10 3.5l3 3M13 3.5l-3 3" />
+          <circle cx="11.5" cy="12.5" r="1.7" />
+          <path d="M11.5 10.8V9" />
+        </>
+      ) : state === "merged" ? (
         <>
           <circle cx="11.5" cy="8" r="1.7" />
           <path d="M4.5 5.2v5.6M4.5 5.5c0 2.5 2.5 2.5 5.3 2.5" />
@@ -215,6 +222,33 @@ export function PullList({
   );
 }
 
+/** The issue's pull requests, newest first, in its properties like a linked branch. */
+export function IssuePulls({ issue }: { issue: { key: string; slug: string } }) {
+  const records = useRecords();
+  const pulls = useMemo(
+    () => (records ? allPullRequests(records).filter((p) => p.issue === issue.slug) : []),
+    [records, issue.slug],
+  );
+  return (
+    <>
+      <dt>Pull requests</dt>
+      <dd className="issue-pulls">
+        {pulls.length === 0
+          ? "None yet"
+          : pulls.map((pull) => (
+              <Link key={pull.number} href={pullHref(issue.key, pull.number)}>
+                <PullIcon state={pull.state} size={14} />
+                <span className="mono">#{pull.number}</span>{" "}
+                <span className="dim">
+                  {STATE_LABELS[pull.state]} · {checksText(pull)}
+                </span>
+              </Link>
+            ))}
+      </dd>
+    </>
+  );
+}
+
 const clock = (at: string) =>
   new Date(at).toLocaleTimeString(undefined, {
     hour: "2-digit",
@@ -323,8 +357,7 @@ export function PullView({
   if (!detail)
     return (
       <p className="empty">
-        Pull request #{number} for {issue.key} isn&apos;t recorded in this
-        browser. Pull requests stay on the device they were opened on.
+        There&apos;s no pull request #{number} for {issue.key}.
       </p>
     );
   const pull: PullSummary = mergedNow
@@ -366,6 +399,14 @@ export function PullView({
         comment: thread.comment,
         text,
       },
+    );
+    setVersion((v) => v + 1);
+  };
+  /** Closing without merging; `nudged` when the page was suggesting it. */
+  const close = async (via: BoardMoveVia, nudged: boolean) => {
+    await logClose(
+      { id: issue.slug, revision: pull.issueRevision },
+      { issueKey: issue.key, pullRequest: number, via, nudged },
     );
     setVersion((v) => v + 1);
   };
@@ -479,7 +520,7 @@ export function PullView({
               issue={issue}
               threads={threads}
               revisions={revisions}
-              onReply={pull.state === "merged" ? undefined : reply}
+              onReply={pull.state === "open" ? reply : undefined}
             />
           )}
           {tab === "checks" && (
@@ -492,6 +533,7 @@ export function PullView({
           issue={issue}
           blocking={blocking.length}
           onMerge={merge}
+          onClose={(via) => void close(via, !!pull.otherMerged)}
           share={
             // The incident is shared from its report, after the deploy.
             !isIncident(issue.key) &&
@@ -530,7 +572,7 @@ export function PullView({
           <dt>Checks</dt>
           <dd>{checksText(pull)}</dd>
           <dt>Elapsed</dt>
-          <dd title="Wall-clock time from the first recorded activity to the pull request; breaks included.">
+          <dd title="From first opening the issue to this pull request, breaks included">
             {duration(detail.stats.startedAt, detail.openedAt)}
           </dd>
           {result ? (
@@ -543,17 +585,14 @@ export function PullView({
           )}
           <dt>Edits</dt>
           <dd>{detail.stats.edits}</dd>
-          <dt>Revision</dt>
-          <dd>
-            <span className="mono" title={pull.issueRevision}>
-              {shortRevision(pull.issueRevision)}
-            </span>
-            {issue.revision && issue.revision !== pull.issueRevision && (
-              <span className="dim">(issue updated since)</span>
-            )}
-          </dd>
+          {issue.revision && issue.revision !== pull.issueRevision && (
+            <>
+              <dt>Ticket</dt>
+              <dd className="dim">Updated since</dd>
+            </>
+          )}
         </dl>
-        {pull.state !== "merged" && !pull.otherMerged && (
+        {pull.state === "open" && !pull.otherMerged && (
           <Link
             className="pull-continue"
             href={workHref(issue)}
@@ -562,10 +601,6 @@ export function PullView({
             Continue in the IDE →
           </Link>
         )}
-        <p className="note">
-          Recorded in this browser as you worked. These are raw facts; nothing
-          here is a grade.
-        </p>
       </aside>
     </div>
   );
@@ -612,7 +647,7 @@ function Timeline({
   return (
     <div className="pull-timeline">
       <p className="pull-summary dim">
-        {duration(stats.startedAt, detail.openedAt)} (wall clock) from{" "}
+        {duration(stats.startedAt, detail.openedAt)} from{" "}
         {previous
           ? `pull request #${previous.number}`
           : "first opening the issue"}{" "}
@@ -650,7 +685,7 @@ function TimelineRow({
   children,
 }: {
   at: string;
-  tone: "dim" | "pass" | "fail" | "accent" | "merged";
+  tone: "dim" | "pass" | "fail" | "accent" | "merged" | "closed";
   children: React.ReactNode;
 }) {
   return (
@@ -775,13 +810,19 @@ function Entry({
           Merged. {issue.key} moved to Done.
         </TimelineRow>
       );
+    case "closed":
+      return (
+        <TimelineRow at={entry.at} tone="closed">
+          Closed without merging.
+        </TimelineRow>
+      );
   }
 }
 
 const RUN_STATUS: Record<string, string> = {
   "user-error": "the code raised an error",
   timeout: "timed out",
-  "runner-error": "the runner failed",
+  "runner-error": "the test runner crashed",
   cancelled: "cancelled",
 };
 
@@ -813,7 +854,7 @@ function Checks({
   if (!outcome || !cases)
     return (
       <p className="dim">
-        This pull request&apos;s check run wasn&apos;t recorded.
+        No CI results for this pull request.
       </p>
     );
   if (outcome.status === "timeout")
@@ -824,7 +865,12 @@ function Checks({
       </p>
     );
   if (outcome.status === "runner-error")
-    return <p className="pull-error">The runner failed: {outcome.message}</p>;
+    return (
+      <p className="pull-error">
+        CI crashed before the checks finished; this wasn&apos;t your code.
+        Push again to rerun them.
+      </p>
+    );
   if (outcome.status === "cancelled")
     return <p className="dim">The checks were cancelled.</p>;
   const verdicts =
@@ -845,7 +891,7 @@ function Checks({
       )}
       {verdicts && (
         <ol>
-          {cases.map(({ input, expected, visible, id }, index) => {
+          {cases.map(({ input, expected }, index) => {
             const got = outcome.cases?.[index];
             const ok = verdicts[index];
             return (
@@ -854,16 +900,9 @@ function Checks({
                   {ok ? "✔" : "✘"}
                 </span>
                 <div>
-                  {visible ? (
-                    <>
-                      <code>{show(input)}</code> <span className="dim">→</span>{" "}
-                      <code>{show(expected)}</code>
-                    </>
-                  ) : (
-                    // CI's hidden cases keep their input and output to themselves.
-                    <span className="dim">Hidden case {id}</span>
-                  )}
-                  {!ok && visible && (
+                  <code>{show(input)}</code> <span className="dim">→</span>{" "}
+                  <code>{show(expected)}</code>
+                  {!ok && (
                     <div className="got">
                       {got?.error ? (
                         <>
@@ -915,7 +954,7 @@ function Files({ saved, changes }: { saved: boolean; changes: FileChange[] }) {
   if (!saved || !changes.length)
     return (
       <p className="dim">
-        The submitted code wasn&apos;t saved in this browser.
+        The code for this pull request isn&apos;t available.
       </p>
     );
   const changed = changes.filter((c) => c.stats.added || c.stats.removed);
@@ -940,8 +979,7 @@ function Files({ saved, changes }: { saved: boolean; changes: FileChange[] }) {
           </table>
           {truncated && (
             <p className="dim diff-empty">
-              This file was longer than the capture limit; only its start was
-              saved.
+              This file is too long to show in full.
             </p>
           )}
         </div>
@@ -1088,6 +1126,7 @@ function MergeBox({
   issue,
   blocking,
   onMerge,
+  onClose,
   share,
 }: {
   pull: PullSummary;
@@ -1095,6 +1134,7 @@ function MergeBox({
   /** Open blocking review threads. */
   blocking: number;
   onMerge: (via: BoardMoveVia) => void;
+  onClose: (via: BoardMoveVia) => void;
   /** Shown once merged: sharing the result. */
   share?: React.ReactNode;
 }) {
@@ -1108,6 +1148,28 @@ function MergeBox({
         {share}
       </div>
     );
+  // A click from the keyboard (Enter or Space) has no pointer position.
+  const via = (event: React.MouseEvent): BoardMoveVia =>
+    event.detail === 0 ? "keyboard" : "pointer";
+  const closeButton = (
+    <button
+      type="button"
+      className="close-button"
+      onClick={(event) => onClose(via(event))}
+    >
+      Close pull request
+    </button>
+  );
+  if (pull.state === "closed")
+    return (
+      <div className="merge-box closed">
+        <PullIcon state="closed" size={18} />
+        <div className="merge-text">
+          <b>Closed without merging.</b> Your next push from the{" "}
+          <Link href={workHref(issue)}>IDE</Link> opens a new pull request.
+        </div>
+      </div>
+    );
   if (pull.otherMerged)
     return (
       <div className="merge-box blocked">
@@ -1119,8 +1181,9 @@ function MergeBox({
           <Link href={pullHref(issue.key, pull.otherMerged)}>
             #{pull.otherMerged}
           </Link>{" "}
-          was merged, so there is nothing left to merge this into.
+          was merged, so this one has nothing left to do. Close it to tidy up.
         </div>
+        {closeButton}
       </div>
     );
   const checks = passed(pull.result);
@@ -1156,14 +1219,12 @@ function MergeBox({
           </>
         )}
       </div>
+      {closeButton}
       <button
         type="button"
         className="merge-button"
         disabled={!green}
-        // A click from the keyboard (Enter or Space) has no pointer position.
-        onClick={(event) =>
-          onMerge(event.detail === 0 ? "keyboard" : "pointer")
-        }
+        onClick={(event) => onMerge(via(event))}
       >
         Merge pull request
       </button>
@@ -1192,9 +1253,7 @@ function NextPractice({
       {next && (
         <>
           <p>
-            Try next: {next.title} · {next.difficulty}. An unstarted issue
-            selected from your language preferences, prioritising runnable
-            issues and easier difficulty.
+            Try next: {next.title} · {next.difficulty}.
           </p>
           <StartWork issue={next} href={`/work/${next.key}`} />
         </>

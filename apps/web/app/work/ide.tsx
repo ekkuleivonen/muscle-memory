@@ -43,12 +43,13 @@ import {
 import { attemptRecords } from "../../lib/attempts";
 import { statusOf } from "../../lib/board";
 import { incidentState, isIncident } from "../../lib/incident";
-import { mergedPullRequests } from "../../lib/pulls";
+import { closedPullRequests, mergedPullRequests } from "../../lib/pulls";
 import {
   due,
   feedbackOf,
   type Feedback,
   type Release,
+  type Thread,
 } from "../../lib/feedback";
 import { languageLabel, type IssueComment } from "../../lib/library";
 import type { LanguageId } from "../../lib/languages";
@@ -74,7 +75,7 @@ import {
 } from "../workspace/editor";
 import { checksTypes, TypeChecker } from "../workspace/type-checker";
 import { PANEL, panelMax, SIDE, Splitter, useIdeLayout } from "./splitter";
-import { caseLabel, transcript, type Executable } from "./transcript";
+import { caseLabel, toolchain, transcript, type Executable } from "./transcript";
 import { recoveryMessage, saveBadge, saveState } from "../workspace/save-state";
 import {
   RUN_TIMEOUT_MS,
@@ -161,6 +162,8 @@ export function Ide({
   const [pulls, setPulls] = useState<PullRequestRecord[]>([]);
   /** Which of them the person has merged (on the pull request's page). */
   const [merged, setMerged] = useState<ReadonlySet<number>>(new Set());
+  /** Which of them the person closed without merging. */
+  const [closed, setClosed] = useState<ReadonlySet<number>>(new Set());
   const [opening, setOpening] = useState<Opening>({ state: "opening" });
   const [message, setMessage] = useState("");
   const mobileSide = useRef<HTMLDialogElement>(null);
@@ -192,12 +195,13 @@ export function Ide({
   const board = useBoard();
   // The session's callbacks outlive renders; they read the latest board through this.
   const done = statusOf(board.items, issue.key) === "done";
-  /** The pull request new work is pushed to: the latest one, unless it was merged. */
+  /** The pull request new work is pushed to: the latest one, unless it was merged or closed. */
   const openPull =
     pulls[0] &&
     !done &&
     pulls[0].result !== "merged" &&
-    !merged.has(pulls[0].number)
+    !merged.has(pulls[0].number) &&
+    !closed.has(pulls[0].number)
       ? pulls[0]
       : null;
   const openPullRef = useRef(openPull);
@@ -248,6 +252,12 @@ export function Ide({
     return counts;
   }, [feedback]);
 
+  /** The open pull request once its checks pass and nothing blocks it: the next step is merging. */
+  const reviewable =
+    openPull?.result === "checks-passed" && !blocking.get(openPull.number)
+      ? openPull
+      : null;
+
   const hosts = useRef(new Map<string, HTMLDivElement>());
   const viewers = useRef(new Map<string, EditorView>());
   const sandboxHost = useRef<HTMLDivElement>(null);
@@ -293,8 +303,13 @@ export function Ide({
           records = attemptRecords(await opened.workspaceRecords(), issue.slug);
           const said = teamNotes(releases);
           setNotes(said);
-          // The words themselves are shown as notes; the status line keeps the rest.
-          setMessage(announcement(releases.filter((r) => r.kind === "resolved")));
+          // The ticket's words are shown as notes; review comments keep their own place under
+          // the pull request, so the status line announces them and resolutions.
+          setMessage(
+            announcement(
+              releases.filter((r) => r.kind === "resolved" || ("pullRequest" in r && r.pullRequest)),
+            ),
+          );
           if (
             releases.some(
               (r) =>
@@ -369,12 +384,14 @@ export function Ide({
       // Numbers continue across attempts, so they come from every pull request.
       const numbered = pullRequestHistory(all, participantId, issue.slug);
       const mergedNumbers = mergedPullRequests(all, issue.slug);
+      const closedNumbers = closedPullRequests(all, issue.slug);
       const homeHost = hosts.current.get(home);
       // A superseded open must not create a session or record anything.
       if (!homeHost || !current()) return;
       if (recovered) setMessage(recoveryMessage(recovered));
       setPulls(history);
       setMerged(mergedNumbers);
+      setClosed(closedNumbers);
       setFeedback(feedbackOf(records, issue.slug));
       session.current = new WorkspaceSession({
         participantId,
@@ -456,11 +473,12 @@ export function Ide({
       setOpening({ state: "open" });
       review();
     } catch (cause) {
+      console.warn("The IDE could not open.", cause);
       if (current())
         setOpening({
           state: "failed",
           message:
-            cause instanceof Error ? cause.message : "The IDE could not open.",
+            "The editor couldn't open your branch. Close other tabs with this issue open, then reload the page.",
         });
     }
   }
@@ -732,13 +750,13 @@ export function Ide({
                       event.detail === 0 ? "keyboard" : "pointer",
                     )
                   }
-                  title="Run the tests on your code (Ctrl/⌘-Enter). Nothing else happens."
+                  title="Run the tests on your code (Ctrl/⌘-Enter)"
                 >
                   ▶ Run tests <Shortcut />
                 </button>
                 <button
                   type="button"
-                  className="ide-run"
+                  className={`ide-run${reviewable ? " secondary" : ""}`}
                   disabled={!ready}
                   onClick={(event) =>
                     void session.current?.pullRequest(
@@ -759,12 +777,21 @@ export function Ide({
                       : "Open pull request"}{" "}
                   <Shortcut shift />
                 </button>
+                {reviewable && (
+                  <Link
+                    className="ide-run"
+                    href={pullHref(issue.key, reviewable.number)}
+                    title="Read your changes and the review, then merge: merging moves the issue to Done"
+                  >
+                    Review and merge #{reviewable.number} →
+                  </Link>
+                )}
               </>
             )
           ) : (
             <span
               className="ide-run disabled"
-              title={`CI can't run ${languageLabel(issue.language)} yet`}
+              title="CI isn't set up for this repo yet"
             >
               ⇡ Open pull request
             </span>
@@ -824,7 +851,7 @@ export function Ide({
           <div
             className="ide-progress"
             role="progressbar"
-            aria-label={`Loading ${engine?.label ?? "the runtime"}`}
+            aria-label="Setting up your environment"
             {...progressValue(runtime.progress)}
           />
         )}
@@ -1000,7 +1027,10 @@ export function Ide({
               <PullRequests
                 pulls={pulls}
                 merged={merged}
+                closed={closed}
                 blocking={blocking}
+                threads={feedback.threads}
+                revisions={revisions}
                 issue={issue}
                 done={done}
                 runnable={issue.runnable}
@@ -1043,8 +1073,8 @@ export function Ide({
           <span>{languageLabel(issue.language)}</span>
           <span>
             {issue.runnable && engine
-              ? `${engine.label} · ${runtimeLabel(runtime)}`
-              : "No runner yet"}
+              ? `${toolchain(engine.label)} · ${runtimeLabel(runtime)}`
+              : "No test runner"}
           </span>
         </span>
       </footer>
@@ -1081,7 +1111,7 @@ function runtimeLabel(runtime: Runtime): string {
   if (runtime.state === "loading") {
     const p = runtime.progress;
     if (p?.phase === "download" && p.loaded < p.total)
-      return `downloading ${Math.round((p.loaded / p.total) * 100)}%`;
+      return `installing ${Math.round((p.loaded / p.total) * 100)}%`;
     return "starting…";
   }
   if (runtime.state === "ready") return "ready";
@@ -1240,15 +1270,14 @@ function Tests({
   if (!issue.runnable)
     return (
       <p className="faint">
-        Running {languageLabel(issue.language)} in the browser isn&apos;t
-        available yet. Your edits are saved as you go; the {visible} cases are
-        in {testsPath}.
+        This repo has no test runner set up yet. Your edits are saved as you
+        go; the {visible} cases are in {testsPath}.
       </p>
     );
   if (runtime.state === "unavailable")
     return (
       <p className="error" role="alert">
-        {engineFor(issue.language)?.label} could not load: {runtime.message}{" "}
+        Your environment couldn&apos;t be set up.{" "}
         <button type="button" className="ide-link" onClick={onRetry}>
           Retry
         </button>
@@ -1274,8 +1303,8 @@ function Tests({
   if (o.status === "runner-error")
     return (
       <p className="error">
-        {engineFor(issue.language)?.label} failed ({o.phase}), not your code:{" "}
-        {o.message}
+        The test runner crashed; this wasn&apos;t your code. Run the tests
+        again.
       </p>
     );
   if (o.error && o.phase !== "tests")
@@ -1292,8 +1321,7 @@ function Tests({
       <p className="ide-run-label faint">
         {run.pullRequest
           ? `Checks for pull request #${run.pullRequest.number}`
-          : "Local run"}{" "}
-        · revision {run.revision}
+          : "Local run"}
       </p>
       <p className={`ide-summary ${failed ? "fail" : "pass"}`}>
         {failed ? "✘" : "✔"} {feedback.correct} passed
@@ -1301,7 +1329,7 @@ function Tests({
         {stale && (
           <span className="faint">
             {" "}
-            · for revision {run.revision}; you have edited since
+            · you&apos;ve edited since
           </span>
         )}
       </p>
@@ -1310,14 +1338,8 @@ function Tests({
           <Case
             key={index}
             index={index}
-            // CI's hidden cases keep their input and output to themselves.
-            label={
-              check.visible
-                ? (check.name ?? caseLabel(challenge, check.input))
-                : `hidden case ${check.id}`
-            }
+            label={check.name ?? caseLabel(challenge, check.input)}
             expected={check.expected}
-            hidden={!check.visible}
             passed={feedback.passed[index]}
             result={o.cases[index]}
           />
@@ -1331,14 +1353,12 @@ function Case({
   index,
   label,
   expected,
-  hidden,
   passed,
   result,
 }: {
   index: number;
   label: string;
   expected: unknown;
-  hidden?: boolean;
   passed: boolean;
   result?: CaseResult;
 }) {
@@ -1347,7 +1367,7 @@ function Case({
       <span className="ide-case-mark">{passed ? "✔" : "✘"}</span>
       <span className="ide-case-body">
         <code>{label}</code>
-        {!passed && !hidden && (
+        {!passed && (
           <span className="ide-case-detail">
             <span>
               expected <code>{JSON.stringify(expected)}</code>
@@ -1386,19 +1406,27 @@ const PR_RESULTS: Record<
   cancelled: { mark: "–", label: "Open · checks cancelled", tone: "faint" },
 };
 const MERGED = { mark: "⇢", label: "Merged", tone: "merged" };
+const CLOSED = { mark: "×", label: "Closed", tone: "faint" };
 
 function PullRequests({
   pulls,
   merged,
+  closed,
   blocking,
+  threads,
+  revisions,
   issue,
   done,
   runnable,
 }: {
   pulls: PullRequestRecord[];
   merged: ReadonlySet<number>;
+  closed: ReadonlySet<number>;
   /** Open blocking review threads by pull request number. */
   blocking: ReadonlyMap<number, number>;
+  /** Every review thread on this issue's pull requests. */
+  threads: readonly Thread[];
+  revisions: Readonly<Record<string, Revision>>;
   issue: IdeIssue;
   done: boolean;
   runnable: boolean;
@@ -1410,30 +1438,55 @@ function PullRequests({
   const latest = pulls[0];
   return (
     <div>
+      {latest && !done && closed.has(latest.number) && (
+        <p className="ide-review">
+          Pull request #{latest.number} is closed. When your code is ready, open
+          a new one (<Shortcut shift />).
+        </p>
+      )}
       {latest &&
         !done &&
         !isMerged(latest) &&
+        !closed.has(latest.number) &&
         latest.result !== "running" &&
         (latest.result === "checks-passed" && blocking.get(latest.number) ? (
-          <p className="ide-review">
-            Pull request #{latest.number}&apos;s checks pass, but{" "}
-            {comments(blocking.get(latest.number)!)} in its review{" "}
-            {blocking.get(latest.number) === 1 ? "blocks" : "block"} merging.
-            Change the code and push (<Shortcut shift />
-            ), or{" "}
-            <Link href={pullHref(issue.key, latest.number)}>
-              reply on #{latest.number}
+          <div className="ide-review">
+            <p>
+              <b>Next: answer the review on #{latest.number}.</b> Its checks
+              pass, but {comments(blocking.get(latest.number)!)}{" "}
+              {blocking.get(latest.number) === 1 ? "blocks" : "block"} merging.
+              Change the code and push (<Shortcut shift />
+              ), or reply on #{latest.number} if it should stay as it is.
+            </p>
+            <ReviewComments
+              threads={threads.filter((t) => t.number === latest.number)}
+              revisions={revisions}
+            />
+            <Link
+              className="ide-run secondary"
+              href={pullHref(issue.key, latest.number)}
+            >
+              Reply on #{latest.number} →
             </Link>
-            .
-          </p>
+          </div>
         ) : latest.result === "checks-passed" ? (
-          <p className="ide-review">
-            Pull request #{latest.number} is open and its checks pass.{" "}
-            <Link href={pullHref(issue.key, latest.number)}>
-              Review it and merge it
-            </Link>{" "}
-            when you&apos;re happy with it; merging moves {issue.key} to Done.
-          </p>
+          <div className="ide-review">
+            <p>
+              <b>Next: review and merge #{latest.number}.</b> All its checks
+              pass. Read through your changes on the pull request, then merge
+              it; merging moves {issue.key} to Done.
+            </p>
+            <ReviewComments
+              threads={threads.filter((t) => t.number === latest.number)}
+              revisions={revisions}
+            />
+            <Link
+              className="ide-run"
+              href={pullHref(issue.key, latest.number)}
+            >
+              Review and merge #{latest.number} →
+            </Link>
+          </div>
         ) : (
           <p className="ide-review">
             Pull request #{latest.number} is open, but its checks don&apos;t
@@ -1473,8 +1526,8 @@ function PullRequests({
             </>
           ) : (
             <>
-              CI can&apos;t run {languageLabel(issue.language)} yet, so pull
-              requests open once a runner exists. Your edits are saved.
+              CI isn&apos;t set up for this repo yet, so pull requests can&apos;t
+              be opened. Your edits are saved.
             </>
           )}
         </p>
@@ -1483,7 +1536,9 @@ function PullRequests({
           {pulls.map((pr) => {
             const shown = isMerged(pr)
               ? MERGED
-              : (PR_RESULTS[pr.result] ?? PR_RESULTS["checks-errored"]);
+              : closed.has(pr.number)
+                ? CLOSED
+                : (PR_RESULTS[pr.result] ?? PR_RESULTS["checks-errored"]);
             return (
               <li key={pr.number} className={shown.tone}>
                 <span className="ide-pr-mark">{shown.mark}</span>
@@ -1500,7 +1555,7 @@ function PullRequests({
                     ? `${pr.total} checks`
                     : `${pr.passed}/${pr.total} checks`}
                   {pr.pushes > 1 && ` · ${pr.pushes} pushes`}
-                  {!isMerged(pr) && blocking.get(pr.number) && (
+                  {!isMerged(pr) && !closed.has(pr.number) && blocking.get(pr.number) && (
                     <span className="ide-pr-blocking">
                       {" · "}
                       {comments(blocking.get(pr.number)!)}
@@ -1515,6 +1570,40 @@ function PullRequests({
           })}
         </ol>
       )}
+    </div>
+  );
+}
+
+/** Teammates' review comments on a pull request, as they read on the pull request's page. */
+function ReviewComments({
+  threads,
+  revisions,
+}: {
+  threads: readonly Thread[];
+  revisions: Readonly<Record<string, Revision>>;
+}) {
+  const shown = threads.flatMap((t) => {
+    const comment = revisions[t.issueRevision]?.team.find(
+      (c) => c.id === t.comment,
+    );
+    return comment ? [{ thread: t, comment }] : [];
+  });
+  if (!shown.length) return null;
+  return (
+    <div className="ide-comments">
+      {shown.map(({ thread, comment }) => (
+        <div className="ide-comment" key={`${thread.comment}-${thread.push}`}>
+          <b>{comment.author.name}</b>
+          <span className="faint"> · {comment.author.role}</span>
+          {thread.severity === "blocking" && (
+            <span className="faint">
+              {" "}
+              · {thread.resolved ? "resolved" : "requested changes"}
+            </span>
+          )}
+          <Markdown source={comment.text[thread.wording] ?? comment.text[0]} />
+        </div>
+      ))}
     </div>
   );
 }
@@ -1550,10 +1639,14 @@ interface TeamNote {
   pullRequest?: number;
 }
 
-/** The words teammates just released, for showing in place: comments and hints. */
+/**
+ * What teammates just said on the ticket, for showing in place: issue comments and hints.
+ * Review comments are shown with their pull request instead.
+ */
 function teamNotes(releases: readonly Release[]): TeamNote[] {
   return releases.flatMap((r): TeamNote[] => {
     if (r.kind === "resolved") return [];
+    if (r.kind === "comment" && r.pullRequest) return [];
     const plain = (text: string) => text.replace(/`/g, "");
     if (r.kind === "hint")
       return [{ author: r.hint.author.name, role: r.hint.author.role, text: plain(r.hint.text) }];
@@ -1686,15 +1779,15 @@ function Boot({
           <BootStep state={opened ? "done" : "busy"}>
             {opened ? "Checked out " : "Checking out "}
             <b className="mono">{branch}</b>
-            {!opened && " and restoring your saved work…"}
+            {!opened && "…"}
           </BootStep>
           {engine ? (
             <BootStep state={runtime.state === "loading" ? "busy" : "done"}>
               {downloading
-                ? `Loading ${engine.label} in this tab`
+                ? `Installing ${toolchain(engine.label)}`
                 : runtime.state === "loading"
-                  ? `Starting ${engine.label}…`
-                  : `${engine.label} ready`}
+                  ? `Starting ${toolchain(engine.label)}…`
+                  : `${toolchain(engine.label)} ready`}
               {downloading && progress?.phase === "download" && (
                 <>
                   <span className="faint">
@@ -1715,8 +1808,7 @@ function Boot({
             </BootStep>
           ) : (
             <BootStep state="skipped">
-              No runner for {languageLabel(issue.language)} yet; your edits are
-              still saved
+              No test runner set up for this repo
             </BootStep>
           )}
         </ol>
@@ -1726,7 +1818,7 @@ function Boot({
             className="ide-link ide-boot-skip"
             onClick={onSkip}
           >
-            Start editing now; Run waits for the runtime
+            Start editing now; tests can run once setup finishes
           </button>
         )}
       </div>
@@ -1798,7 +1890,7 @@ function KeyboardHelp() {
         </p>
         <p>
           Editor keybindings can be changed in{" "}
-          <Link href="/settings#editor">Settings</Link>.
+          <Link href="/settings?run=editor">Settings</Link>.
         </p>
       </dialog>
     </>

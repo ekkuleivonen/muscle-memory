@@ -16,10 +16,13 @@ import type { WorkspaceRecord } from "./workspace";
  * `in-progress` with `trigger: "replay"` starts a new attempt, and only that move leaves Done.
  * The attempt's records begin there, so a later merge (from In progress to Done, as before)
  * and its `result` count that attempt alone (apps/web/lib/attempts). A first attempt is
- * recorded exactly as in 6.0.0. A shared incident card (`shared.card`) may also carry the
+ * recorded exactly as in 6.1.0. A shared incident card (`shared.card`) may also carry the
  * incident's revision (`iv`) and which attempt it was (`a`). New: `deployed`, the person
  * pressing Deploy on a merged incident fix (the simulated deploy; nothing is deployed), naming
- * the pull request and the run that checked it. 6.0.0 records remain valid and are accepted.
+ * the pull request and the run that checked it. 6.1.0 and 6.0.0 records remain valid and are accepted.
+ * 6.1.0: closing. `observation.board.closed` records the person closing one of their open
+ * pull requests without merging it. A closed pull request takes no more pushes and cannot be
+ * merged; the next push opens a new one. Nothing else changed.
  * 6.0.0: no onboarding. Profile questions are asked one at a time where the app needs them, so
  * `profile` comes `from` the place that asked: "result" (a merged pull request's card),
  * "dashboard", "issue" (an issue page, before opening the IDE), "settings" or "play" (the
@@ -96,6 +99,15 @@ export interface BoardReplyData {
   readonly truncated: boolean;
 }
 
+/** The person closed one of their open pull requests without merging it. */
+export interface BoardCloseData {
+  readonly issueKey: string;
+  readonly pullRequest: number;
+  readonly via: BoardMoveVia;
+  /** Whether the page was nudging to close it (another of the issue's pull requests was merged). */
+  readonly nudged: boolean;
+}
+
 /** A page of the app was shown: its path, its query string, and the app page before it. */
 export interface BoardViewData {
   readonly path: string;
@@ -161,6 +173,7 @@ export interface BoardShareData {
 interface BoardData {
   "observation.board.moved": BoardMoveData;
   "observation.board.replied": BoardReplyData;
+  "observation.board.closed": BoardCloseData;
   "observation.board.viewed": BoardViewData;
   "observation.board.page": BoardPageData;
   "observation.board.profile": BoardProfileData;
@@ -298,6 +311,30 @@ export function boardReply(input: {
   });
 }
 
+export function boardClose(input: {
+  participantId: string;
+  sourceId: string;
+  sequence: number;
+  occurredAt: string;
+  elapsedMs: number;
+  termsVersion: string;
+  issue: { id: string; revision: string };
+  data: BoardCloseData;
+}): BoardObservation<"observation.board.closed"> {
+  const { data } = input;
+  if (!ISSUE_KEY.test(data.issueKey)) throw new Error("Unknown issue key.");
+  if (!Number.isSafeInteger(data.pullRequest) || data.pullRequest < 1)
+    throw new Error("Closing names its pull request.");
+  if (!VIAS.includes(data.via)) throw new Error("Unknown way of closing.");
+  if (typeof data.nudged !== "boolean") throw new Error("nudged is true or false.");
+  return envelope("observation.board.closed", input, {
+    issueKey: data.issueKey,
+    pullRequest: data.pullRequest,
+    via: data.via,
+    nudged: data.nudged,
+  });
+}
+
 function envelope<T extends keyof BoardData>(
   type: T,
   input: {
@@ -324,7 +361,7 @@ function envelope<T extends keyof BoardData>(
     throw new Error("Board observations name the issue's exact revision.");
   if (Number.isNaN(Date.parse(occurredAt)))
     throw new Error("Board observations need a time.");
-  // A date, with a revision of that day's Terms if there was more than one ("2026-10-25.1").
+  // A date, with a counter when the Terms change more than once a day (2026-10-25.1).
   if (!/^\d{4}-\d{2}-\d{2}(\.\d+)?$/.test(termsVersion))
     throw new Error("Board observations name the accepted Terms version.");
   const observationId = `${sourceId}.${sequence}`;

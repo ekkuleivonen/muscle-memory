@@ -111,7 +111,8 @@ export default async function Home() {
             {start}
             {!signedIn && (
               <span className="home-note">
-                Or <Link href="/dashboard">start your first day</Link>.
+                No email needed. Or{" "}
+                <Link href="/dashboard">start your first day</Link>.
               </span>
             )}
           </div>

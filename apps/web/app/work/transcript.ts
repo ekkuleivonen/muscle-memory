@@ -47,13 +47,6 @@ function caseLines(
   passed: boolean,
   result?: CaseResult,
 ): Line[] {
-  // CI runs hidden cases on a pull request; their input and output stay hidden.
-  if (!check.visible)
-    return [
-      passed
-        ? { text: `✔ hidden case ${check.id}`, tone: "pass" }
-        : { text: `✘ hidden case ${check.id}`, tone: "fail" },
-    ];
   const label = check.name ?? caseLabel(challenge, check.input);
   if (passed) return [{ text: `✔ ${label}`, tone: "pass" }];
   const out: Line[] = [{ text: `✘ ${label}`, tone: "fail" }];
@@ -71,6 +64,11 @@ function caseLines(
   return out;
 }
 
+/** The toolchain as a developer would name it, without how it runs here ("Go 1.22", not "(Yaegi)"). */
+export function toolchain(label: string): string {
+  return label.replace(/\s*\(.*\)$/, "");
+}
+
 export function transcript(
   run: RunView | null,
   challenge: Executable,
@@ -78,7 +76,7 @@ export function transcript(
 ): Line[] {
   if (!run) return [];
   const header: Line = {
-    text: `$ ${run.pullRequest ? `checks for pull request #${run.pullRequest.number}` : "run tests"} · revision ${run.revision} · ${runtimeLabel}`,
+    text: `$ ${run.pullRequest ? `checks for pull request #${run.pullRequest.number}` : "run tests"} · ${toolchain(runtimeLabel)}`,
     tone: "dim",
   };
   const o = run.outcome;
@@ -97,7 +95,7 @@ export function transcript(
     return [
       header,
       {
-        text: `${runtimeLabel} failed (${o.phase}), not your code: ${o.message}`,
+        text: "The test runner crashed; this wasn't your code. Run the tests again.",
         tone: "err",
       },
     ];

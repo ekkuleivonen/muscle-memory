@@ -17,7 +17,7 @@ The product is a 9-to-5 job before AI: issues on a board, a VS Code-style IDE, t
 - `app/page.tsx`: the public home page. `app/(browse)`: dashboard, issues, projects, board and pull requests. Pages read the catalog (`content/catalog.json`) through `lib/library.ts` and `lib/queries.ts` (pure, tested).
 - `app/work/[key]`: the IDE (`ide.tsx`) on the issue's live revision. Its repo is the revision's files (`lib/repo.ts` generates them at authoring time and maps them back with `repoOf`): the file to edit, a read-only test file in the language's usual style, a schema or README.
 - `app/workspace`: the editor (`editor.ts`, CodeMirror 6), the session that records edits and runs (`session.ts`), save state, and the TypeScript type checker (`type-checker.ts`, its own worker).
-- `app/_terminal`, `app/settings`: direct settings controls and an optional terminal. Profile questions are asked in place by `app/(browse)/_components/ask.tsx` ([docs/profile.md](../../docs/profile.md)).
+- `app/_terminal`, `app/settings`: settings, as a terminal (`?run=` opens one command). Profile questions are asked in place by `app/(browse)/_components/ask.tsx` ([docs/profile.md](../../docs/profile.md)).
 - Runners live outside the app, in `packages/runner` (see the root `AGENTS.md`).
 
 ## Conventions
@@ -26,7 +26,8 @@ The product is a 9-to-5 job before AI: issues on a board, a VS Code-style IDE, t
 - Anything read from localStorage or IndexedDB is read after mount, never during render, or hydration breaks.
 - Revision JSON goes to client components as a string and is parsed there: the RSC serializer drops a `"__proto__"` key, and fixtures use one on purpose.
 - The editor owns its document; typing must never re-render React.
-- UI copy is plain and specific, in the voice of a workplace tool. Errors say what happened and whether it is the person's code ("not your code" for runtime failures).
+- UI copy is plain and specific, in the voice of a workplace tool. Errors say what happened and whether it is the person's code ("this wasn't your code" for runner crashes).
+- Stay in the fiction. Inside the app (dashboard, board, issues, pull requests, the IDE) nothing mentions browsers, devices, storage, uploads, recording, revisions, sandboxes or runtimes: it is a company's tracker and editor. A runner is "the test runner", a missing one "no test runner set up for this repo", loading a runtime "installing Python 3.14". Technical detail goes to the console and the records. The consent page, the legal pages and the settings terminal are outside the fiction and say plainly what is recorded and where it is kept.
 
 ## Checking a change
 
