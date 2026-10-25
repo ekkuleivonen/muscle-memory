@@ -3,10 +3,12 @@ import { LANGUAGES } from "../../../lib/languages";
 import { getChallenges } from "../../../lib/load";
 import { outcomeLines, outcomeSentence } from "../../../lib/outcome";
 import { inspectCard } from "../../../lib/share";
+import { OgCard } from "../../_components/og-card";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "A shared practice outcome";
+export const alt =
+  "A Muscle Memory result card: the challenge someone completed, its checks and their submissions";
 
 /**
  * The picture a shared link shows in posts and chats: the outcome as a headline naming the
@@ -34,27 +36,17 @@ export default async function Image({
       : null;
   return new ImageResponse(
     (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          padding: "64px 72px",
-          background: "#0f1117",
-          color: "#ffffff",
-          fontFamily: "sans-serif",
-        }}
-      >
-        <div style={{ fontSize: 26, color: "#b69cff", letterSpacing: 2 }}>
-          {shown && card
+      <OgCard
+        eyebrow={
+          shown && card
             ? `MUSCLE MEMORY · ${card.k} · ${label.toUpperCase()}`
-            : "MUSCLE MEMORY"}
-        </div>
-        <div style={{ fontSize: 48, lineHeight: 1.2 }}>
-          {shown ? shown.headline : "One challenge. Solve it at your own pace."}
-        </div>
+            : "MUSCLE MEMORY"
+        }
+        headline={
+          shown ? shown.headline : "One challenge. Solve it at your own pace."
+        }
+        footer="One practice attempt, as the person shared it. → musclememory.run"
+      >
         {shown && (
           <div style={{ display: "flex" }}>
             {shown.stats.slice(0, 3).map(([text, value]) => (
@@ -72,10 +64,7 @@ export default async function Image({
             ))}
           </div>
         )}
-        <div style={{ fontSize: 30, color: "#cfd2db" }}>
-          {"One practice attempt, as the person shared it. → musclememory.run"}
-        </div>
-      </div>
+      </OgCard>
     ),
     size,
   );

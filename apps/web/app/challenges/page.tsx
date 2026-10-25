@@ -5,7 +5,11 @@ import { TermFooter } from "../_terminal/footer";
 import "../_terminal/terminal.css";
 import { Picker } from "./picker";
 
-export const metadata: Metadata = { title: "Challenges · Muscle Memory" };
+export const metadata: Metadata = {
+  title: "Challenges",
+  description:
+    "Every Muscle Memory challenge: search and filter by language, difficulty and topic, then solve one without AI.",
+};
 
 /**
  * Every listed challenge in one picker, like fzf: a search line, filters to toggle, the list,

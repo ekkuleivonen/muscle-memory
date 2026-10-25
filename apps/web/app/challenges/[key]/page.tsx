@@ -13,10 +13,10 @@ type Props = { params: Promise<{ key: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { findChallenge } = await getChallenges();
   const challenge = findChallenge(decodeURIComponent((await params).key));
+  if (!challenge) return { title: "Challenge not found" };
   return {
-    title: challenge
-      ? `${challenge.key} · Practice · Muscle Memory`
-      : "Challenge not found · Muscle Memory",
+    title: `${challenge.title} (${challenge.key})`,
+    description: challenge.summary || undefined,
   };
 }
 

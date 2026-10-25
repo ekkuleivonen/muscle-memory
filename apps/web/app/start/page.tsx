@@ -3,16 +3,18 @@ import { cookies } from "next/headers";
 import { languageLabel } from "../../lib/challenges";
 import { getChallenges } from "../../lib/load";
 import { hasConsent, CONSENT_COOKIE } from "../../lib/profile";
+import { pageMetadata } from "../../lib/site";
 import { Banner } from "../_terminal/banner";
 import { TermFooter } from "../_terminal/footer";
 import "../_terminal/terminal.css";
 import { QuickStart, type QuickChallenge } from "./quick-start";
 
-export const metadata: Metadata = {
-  title: "Quick start · Muscle Memory",
+export const metadata: Metadata = pageMetadata({
+  title: "Quick start",
   description:
     "An easy coding challenge in your language, in your browser. No AI, no autocomplete.",
-};
+  path: "/start",
+});
 
 type Props = { searchParams: Promise<{ ref?: string; lang?: string }> };
 

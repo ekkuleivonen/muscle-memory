@@ -211,8 +211,13 @@
   flex: 1;
 }
 /* The home page: everything in one screen, the start action on its own line. */
-.home-fold > p {
+.home-fold > p,
+.home-fold > h1 {
   margin: 0 0 1.2em;
+}
+.home-headline {
+  font-size: inherit;
+  font-weight: inherit;
 }
 .home-start {
   display: flex;
