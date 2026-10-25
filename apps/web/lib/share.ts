@@ -47,12 +47,16 @@ export function inspectCard(segment: string): CardLink {
 export interface SharedFile {
   readonly path: string;
   readonly text: string;
+  /** Set by the sender when only part of the file was kept: such code is never shared. */
+  readonly truncated?: boolean;
 }
 
 /** A fragment longer than this is refused when sharing: too long for many chats and posts. */
 export const MAX_CODE_FRAGMENT = 24_000;
-const MAX_FILES = 8;
+export const MAX_FILES = 8;
 const MAX_TEXT = 64_000;
+/** The inflated JSON, in UTF-8 bytes: the one size budget both sharing and reading enforce. */
+export const MAX_JSON_BYTES = MAX_TEXT * 2 + 1024;
 const PATH = /^(?!.*\.\.)[A-Za-z0-9_][A-Za-z0-9_./-]{0,119}$/;
 
 const base64url = (bytes: Uint8Array) => {
@@ -85,15 +89,51 @@ async function through(bytes: Uint8Array, stream: GenericTransformStream, limit 
   return out;
 }
 
-/** The files, compressed, as a fragment value; null when they would not fit in a link. */
-export async function encodeCode(files: readonly SharedFile[]): Promise<string | null> {
-  const clean = files.filter((f) => PATH.test(f.path)).slice(0, MAX_FILES);
-  if (!clean.length || clean.reduce((n, f) => n + f.text.length, 0) > MAX_TEXT) return null;
-  const json = JSON.stringify({ v: 1, f: clean.map((f) => [f.path, f.text]) });
-  const packed = base64url(
-    await through(new TextEncoder().encode(json), new CompressionStream("deflate-raw")),
+/** Why code could not go into a link. Never a partial snapshot: all of it, or none. */
+export type CodeRefusal = "empty" | "too-many-files" | "invalid-path" | "incomplete" | "too-large";
+
+/** What the person is told when their code can't be included. */
+export const REFUSALS: Record<CodeRefusal, string> = {
+  empty: "There are no changed files to include.",
+  "too-many-files": `This pull request changed more than ${MAX_FILES} files, too many to fit in a link.`,
+  "invalid-path": "A changed file has a name that can't go in a link.",
+  incomplete: "A changed file wasn't saved in full, so your code can't be shared exactly.",
+  "too-large": "Your code is too long to fit in a link.",
+};
+
+/** Files a link may carry, or why not: the same rules for sharing and for reading. */
+function check(files: readonly SharedFile[]): CodeRefusal | null {
+  if (!files.length) return "empty";
+  if (files.length > MAX_FILES) return "too-many-files";
+  if (files.some((f) => typeof f.path !== "string" || !PATH.test(f.path) || typeof f.text !== "string"))
+    return "invalid-path";
+  if (files.some((f) => f.truncated)) return "incomplete";
+  if (files.reduce((n, f) => n + f.text.length, 0) > MAX_TEXT) return "too-large";
+  return null;
+}
+
+/**
+ * The files, compressed, as a fragment value; or why they can't be shared. Every file is
+ * included or none is, and only a value that reads back as exactly these files is returned.
+ */
+export async function encodeCode(
+  files: readonly SharedFile[],
+): Promise<{ ok: true; packed: string } | { ok: false; reason: CodeRefusal }> {
+  const refused = check(files);
+  if (refused) return { ok: false, reason: refused };
+  const json = new TextEncoder().encode(
+    JSON.stringify({ v: 1, f: files.map((f) => [f.path, f.text]) }),
   );
-  return packed.length > MAX_CODE_FRAGMENT ? null : packed;
+  if (json.length > MAX_JSON_BYTES) return { ok: false, reason: "too-large" };
+  const packed = base64url(await through(json, new CompressionStream("deflate-raw")));
+  if (packed.length > MAX_CODE_FRAGMENT) return { ok: false, reason: "too-large" };
+  // What the recipient will read, checked here: if the two sides ever disagree on a rule,
+  // no link is made rather than one that does not open.
+  const back = await decodeCode(packed);
+  const same =
+    back?.length === files.length &&
+    back.every((f, i) => f.path === files[i].path && f.text === files[i].text);
+  return same ? { ok: true, packed } : { ok: false, reason: "too-large" };
 }
 
 /** Files from a fragment value, or null when it is not something `encodeCode` made. */
@@ -102,28 +142,19 @@ export async function decodeCode(value: string): Promise<SharedFile[] | null> {
     if (!/^[A-Za-z0-9_-]+$/.test(value) || value.length > MAX_CODE_FRAGMENT) return null;
     const binary = atob(value.replace(/-/g, "+").replace(/_/g, "/"));
     const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
-    // JSON escapes can at most double the text; anything larger was not made here.
-    const json = await through(bytes, new DecompressionStream("deflate-raw"), MAX_TEXT * 2 + 1024);
-    const parsed = JSON.parse(new TextDecoder().decode(json));
-    if (parsed?.v !== 1 || !Array.isArray(parsed.f) || !parsed.f.length || parsed.f.length > MAX_FILES)
-      return null;
-    const files: SharedFile[] = [];
-    let total = 0;
-    for (const entry of parsed.f) {
-      if (!Array.isArray(entry) || entry.length !== 2) return null;
-      const [path, text] = entry;
-      if (typeof path !== "string" || !PATH.test(path) || typeof text !== "string") return null;
-      total += text.length;
-      files.push({ path, text });
-    }
-    return total > MAX_TEXT ? null : files;
+    const json = await through(bytes, new DecompressionStream("deflate-raw"), MAX_JSON_BYTES);
+    const parsed = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(json));
+    if (parsed?.v !== 1 || !Array.isArray(parsed.f)) return null;
+    if (!parsed.f.every((e: unknown) => Array.isArray(e) && e.length === 2)) return null;
+    const files: SharedFile[] = parsed.f.map(([path, text]: [string, string]) => ({ path, text }));
+    return check(files) ? null : files;
   } catch {
     return null;
   }
 }
 
 /** The `#code=` part of a result link, or "" without code. */
-export const codeFragment = (packed: string | null) => (packed ? `#code=${packed}` : "");
+export const codeFragment = (packed?: string | null) => (packed ? `#code=${packed}` : "");
 
 /** The fragment value from `location.hash`, if it has one. */
 export function codeFromHash(hash: string): string | null {

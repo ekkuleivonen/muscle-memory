@@ -584,10 +584,15 @@ export function PullView({
               <ShareResult
                 state={result}
                 issue={resultInput.issue}
-                // Offered, never included by default: the files this pull request changed.
+                // Offered, never included by default: every file this pull request changed.
+                // A file kept only in part is passed as such, so sharing is refused, not partial.
                 code={changes
-                  .filter((c) => !c.truncated && c.stats.added + c.stats.removed > 0)
-                  .map((c) => ({ path: c.path, text: detail.code![c.path].text }))}
+                  .filter((c) => c.stats.added + c.stats.removed > 0)
+                  .map((c) => ({
+                    path: c.path,
+                    text: detail.code![c.path]?.text ?? "",
+                    truncated: c.truncated,
+                  }))}
               />
             )
           }

@@ -5,6 +5,8 @@ import { encodeResult, publicResult, sentence } from "../../../lib/result";
 import {
   codeFragment,
   encodeCode,
+  REFUSALS,
+  type CodeRefusal,
   tryHref,
   type SharedFile,
 } from "../../../lib/share";
@@ -78,17 +80,23 @@ export function ShareResult({
   const dialog = useRef<HTMLDialogElement>(null);
   const [copied, setCopied] = useState(false);
   const [withCode, setWithCode] = useState(false);
-  /** The packed code once ticked: undefined while packing, null when it does not fit. */
-  const [packed, setPacked] = useState<string | null | undefined>(undefined);
+  /** Once ticked: undefined while packing, then the fragment or why the code can't go in. */
+  const [packed, setPacked] = useState<string | undefined>(undefined);
+  const [refusal, setRefusal] = useState<CodeRefusal | null>(null);
   // By content: the caller may build a new array on every render.
   const files = useMemo(() => (code?.length ? code : null), [JSON.stringify(code ?? [])]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!withCode || !files) return;
     let live = true;
     setPacked(undefined);
+    setRefusal(null);
     encodeCode(files)
-      .then((value) => live && setPacked(value))
-      .catch(() => live && setPacked(null));
+      .then((value) => {
+        if (!live) return;
+        if (value.ok) setPacked(value.packed);
+        else setRefusal(value.reason);
+      })
+      .catch(() => live && setRefusal("too-large"));
     return () => {
       live = false;
     };
@@ -101,7 +109,7 @@ export function ShareResult({
   const url = `${location.origin}/r/${segment}${including ? codeFragment(packed) : ""}`;
   const text = `${sentence(card, state.label)} Keep your coding skills in practice.`;
   const share = async (channel: Channel) => {
-    // Ticked but not packed yet (or too long): wait, rather than share without saying so.
+    // Ticked but not packed yet, or refused: never share without saying so, or share part of it.
     if (withCode && !packed) return;
     void logShare(
       { id: issue.slug, revision: issue.revision },
@@ -145,6 +153,7 @@ export function ShareResult({
           // Every share starts without code again.
           setWithCode(false);
           setPacked(undefined);
+          setRefusal(null);
         }}
       >
         <div className="share-body">
@@ -192,11 +201,11 @@ export function ShareResult({
                   including your fix. We don&apos;t keep a copy; untick to share
                   without it.
                 </span>
-                {withCode && packed === null && (
+                {withCode && refusal && (
                   <span className="share-code-error" role="alert">
                     {" "}
-                    Your code is too long to fit in a link, so it can&apos;t be
-                    included. Untick to share without it.
+                    {REFUSALS[refusal]} Nothing of it is shared; untick to share
+                    without it.
                   </span>
                 )}
               </span>
