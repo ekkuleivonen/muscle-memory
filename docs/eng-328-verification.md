@@ -1,5 +1,7 @@
 # ENG-328 verification and handoff
 
+Historical PR-loop verification below is preserved, not acceptance of the revised challenge flow. The later [lean contract and clarity presentation](eng-328-lean-contract.md) supersede it. Expected values are now shown for every failing check, following the user’s clarity instruction and ENG-329 `91f1521`.
+
 The [keep/change/remove inventory](eng-328-loop-audit.md) was committed before implementation. The starting release is `1edfb853356f7ee8cb53d5fef8efe4a5e070bfc8`. Remote main still matched at integration. The branch explicitly stacks on ENG-329 PR #38, including its focusable Findings heading (`12567c9`); no other remote work is included. No merge or deployment was performed.
 
 ## Before and after
