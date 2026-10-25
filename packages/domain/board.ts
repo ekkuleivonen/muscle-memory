@@ -18,6 +18,9 @@ import type { WorkspaceRecord } from "./workspace";
  * verification, never a fabricated automatic click. Existing pullRequest/runId fields
  * identify that internal submission. Historical merge/Resolve/replay records keep their
  * meaning; no migration, new event category or workspace capture change.
+ * `shared.card` may carry a version 3 challenge outcome (v, k, l, rv, o, optional f,
+ * n and referral c). The opaque card carries its own version; version 2 cards keep
+ * their meaning. Sharing does not bump the board version or change completion records.
  * 7.1.0: resolving and no deploys. `resolved` records the person resolving one of a pull
  * request's review findings themselves (Resolve, without a reply); it never touches CI, and a
  * finding the code still triggers comes back on a later push. `deployed` is no longer recorded:
