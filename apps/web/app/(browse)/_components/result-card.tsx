@@ -120,6 +120,28 @@ export function Receipt({
   );
 }
 
+/** This device's referral code, read after mount; null until then (or if storage fails). */
+export function useReferral(): string | null {
+  const [code, setCode] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    openPracticeStore()
+      .then(async (store) => {
+        try {
+          const referral = await store.referralCode();
+          if (live) setCode(referral);
+        } finally {
+          store.close();
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
+  return code;
+}
+
 export interface ResultInput {
   number: number;
   issue: { key: string; slug: string; title: string; revision: string };
@@ -144,7 +166,6 @@ export interface ResultState {
  */
 export function useResult(input: ResultInput | null): ResultState | null {
   const key = input?.issue.key;
-  const [code, setCode] = useState<string | null>(null);
   const [aggregate, setAggregate] = useState<Aggregate | undefined>();
   useEffect(() => {
     // Stealth players are left out of the aggregates and see no comparisons.
@@ -158,22 +179,7 @@ export function useResult(input: ResultInput | null): ResultState | null {
       live = false;
     };
   }, [key]);
-  useEffect(() => {
-    let live = true;
-    openPracticeStore()
-      .then(async (store) => {
-        try {
-          const referral = await store.referralCode();
-          if (live) setCode(referral);
-        } finally {
-          store.close();
-        }
-      })
-      .catch(() => undefined);
-    return () => {
-      live = false;
-    };
-  }, []);
+  const code = useReferral();
   const metrics = useMemo(
     () =>
       input &&

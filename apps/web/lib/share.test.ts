@@ -11,6 +11,7 @@ import {
   MAX_FILES,
   MAX_JSON_BYTES,
   REFUSALS,
+  solutionOf,
   tryHref,
   type SharedFile,
 } from "./share";
@@ -301,4 +302,54 @@ test("one solution file is the usual link, and a link from a multi-file challeng
     },
   ];
   assert.deepEqual(await decodeCode(await packedOf(solution)), solution);
+});
+
+test("the solution offered is the checked artifact's editable file, exactly, or nothing", () => {
+  const run = (runId: string, codeArtifactId: string) => ({
+    kind: "observation",
+    recordId: `o-${runId}`,
+    payload: JSON.stringify({
+      type: "observation.workspace.run",
+      data: { runId, codeArtifactId, status: "result" },
+    }),
+  });
+  const artifact = (id: string, text: string, truncated = false) => ({
+    kind: "artifact",
+    recordId: id,
+    payload: JSON.stringify({
+      truncated,
+      files: {
+        "queries/collected.sql": { text, capture: { truncated } },
+        "README.md": {
+          text: "# not editable\n",
+          capture: { truncated: false },
+        },
+      },
+    }),
+  });
+  const sql =
+    "SELECT o.partner,\r\n  COALESCE(SUM(p.amount), 0) AS collected -- 界\n";
+  const records = [
+    run("r-1", "s.code.1"),
+    artifact("s.code.1", "SELECT 1;\n"),
+    run("r-2", "s.code.2"),
+    artifact("s.code.2", sql),
+  ];
+  // The completing run's code, not an earlier one, and only the editable file.
+  assert.deepEqual(solutionOf(records, "r-2", ["queries/collected.sql"]), [
+    { path: "queries/collected.sql", text: sql, truncated: false },
+  ]);
+  // A copy kept only in part is passed as such, so sharing it is refused, never cut.
+  const cut = [run("r-3", "s.code.3"), artifact("s.code.3", "SELECT", true)];
+  assert.equal(
+    solutionOf(cut, "r-3", ["queries/collected.sql"])?.[0].truncated,
+    true,
+  );
+  // No run, no artifact, or a missing editable file: nothing to offer.
+  assert.equal(solutionOf(records, "r-9", ["queries/collected.sql"]), null);
+  assert.equal(
+    solutionOf([run("r-4", "gone")], "r-4", ["queries/collected.sql"]),
+    null,
+  );
+  assert.equal(solutionOf(records, "r-2", ["other.sql"]), null);
 });

@@ -201,3 +201,50 @@ export function codeFromHash(hash: string): string | null {
   const match = /^#code=([A-Za-z0-9_-]+)$/.exec(hash);
   return match ? match[1] : null;
 }
+
+/**
+ * The solution a completion checked, as a link may carry it: every editable file of the code
+ * artifact the completing run used (for a single-file challenge, the one file). A file kept
+ * only in part is marked truncated, so sharing it is refused rather than cut. Null when the
+ * run or its artifact isn't in the records: then there is nothing exact to offer.
+ */
+export function solutionOf(
+  records: readonly { kind: string; recordId: string; payload: string }[],
+  runId: string,
+  editable: readonly string[],
+): SharedFile[] | null {
+  let artifactId: string | null = null;
+  for (const record of records) {
+    if (record.kind !== "observation") continue;
+    try {
+      const o = JSON.parse(record.payload);
+      if (
+        o.type === "observation.workspace.run" &&
+        o.data?.runId === runId &&
+        typeof o.data.codeArtifactId === "string"
+      )
+        artifactId = o.data.codeArtifactId;
+    } catch {
+      // Unreadable records say nothing.
+    }
+  }
+  const record = artifactId
+    ? records.find((r) => r.kind === "artifact" && r.recordId === artifactId)
+    : undefined;
+  if (!record) return null;
+  try {
+    const artifact = JSON.parse(record.payload);
+    const files = artifact?.files ?? {};
+    if (!editable.length || editable.some((p) => !files[p])) return null;
+    return [...editable].sort().map((path) => ({
+      path,
+      text: typeof files[path].text === "string" ? files[path].text : "",
+      truncated:
+        artifact.truncated === true ||
+        files[path].capture?.truncated === true ||
+        typeof files[path].text !== "string",
+    }));
+  } catch {
+    return null;
+  }
+}

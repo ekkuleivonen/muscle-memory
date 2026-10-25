@@ -1,17 +1,35 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Json } from "../../../../../packages/domain/json";
-import { encodeResult, publicResult, sentence } from "../../../lib/result";
+import {
+  editableFiles,
+  type Revision,
+} from "../../../../../packages/content/model";
+import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
+import { LANGUAGES } from "../../../lib/languages";
+import {
+  encodeResult,
+  metricsOf,
+  publicResult,
+  sentence,
+  type Result,
+} from "../../../lib/result";
 import {
   codeFragment,
   encodeCode,
   REFUSALS,
   type CodeRefusal,
+  solutionOf,
   tryHref,
   type SharedFile,
 } from "../../../lib/share";
 import { logShare } from "./board-log";
-import { copyText, type ResultInput, type ResultState } from "./result-card";
+import {
+  copyText,
+  useReferral,
+  type ResultInput,
+  type ResultState,
+} from "./result-card";
 import "../../share.css";
 
 type Channel = "copy" | "x" | "linkedin" | "native";
@@ -270,5 +288,85 @@ export function ShareResult({
         </div>
       </dialog>
     </>
+  );
+}
+
+/** A recorded completion, as ENG-328's `completions()` reads one. */
+export interface ShareableCompletion {
+  readonly issue: string;
+  readonly revision: string;
+  readonly key: string;
+  readonly at: string;
+  readonly runId: string;
+}
+
+/**
+ * Optional sharing for the practice area, after a recorded completion of the challenge open
+ * there; nothing before one, and nothing for a completion on another revision. The card is
+ * the existing version 2 shape with the person's numbers up to the completion and no pull
+ * request evidence, so it reads "Completed <challenge> in <language> without AI." (pending
+ * dot's decision on card version 3, docs/eng-332-share-contract.md). Their solution is
+ * offered unticked: the editable file exactly as the completing run checked it, or refused
+ * when that copy was kept only in part.
+ */
+export function ShareOutcome({
+  challenge,
+  completion,
+  records,
+  revisions,
+}: {
+  challenge: {
+    key: string;
+    slug: string;
+    title: string;
+    revision: string;
+    language: string;
+  };
+  /** The latest recorded completion for this challenge, or null. */
+  completion: ShareableCompletion | null;
+  records: readonly WorkspaceRecord[];
+  revisions: Readonly<Record<string, Revision>>;
+}) {
+  const referral = useReferral();
+  const done =
+    completion &&
+    completion.issue === challenge.slug &&
+    completion.revision === challenge.revision
+      ? completion
+      : null;
+  const metrics = useMemo(
+    () =>
+      done &&
+      metricsOf(records, challenge.slug, done.at, (id) => revisions[id]),
+    [records, challenge.slug, done, revisions],
+  );
+  const solution = useMemo(() => {
+    const revision = done && revisions[done.revision];
+    return revision
+      ? solutionOf(
+          records,
+          done.runId,
+          Object.keys(editableFiles(revision.workspace)),
+        )
+      : null;
+  }, [records, done, revisions]);
+  if (!done || !metrics) return null;
+  const label =
+    LANGUAGES.find((l) => l.id === challenge.language)?.label ??
+    challenge.language;
+  const result: Result | null = referral
+    ? { v: 2, k: challenge.key, l: challenge.language, c: referral, ...metrics }
+    : null;
+  return (
+    <ShareResult
+      state={{ metrics, result, comparison: null, label }}
+      issue={{
+        key: challenge.key,
+        slug: challenge.slug,
+        title: challenge.title,
+        revision: challenge.revision,
+      }}
+      code={solution ?? undefined}
+    />
   );
 }
