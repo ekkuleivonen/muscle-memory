@@ -33,6 +33,9 @@ import { Ask } from "./ask";
 import { ResultFacts, ShareResult, useResult } from "./result-card";
 import { useNow, useRecords } from "./records";
 import { feedbackOf, openBlocking, type Thread } from "../../../lib/feedback";
+import { attemptRecords } from "../../../lib/attempts";
+import { isIncident } from "../../../lib/incident";
+import { IncidentDeploy } from "./incident-deploy";
 
 export interface PullIssue {
   key: string;
@@ -298,10 +301,18 @@ export function PullView({
       pullRequestDetail(records, issue.slug, number, (id) => revisions[id]),
     [records, issue.slug, number, revisions],
   );
+  /** This pull request's attempt: a replay is read apart from the attempts before it. */
+  const attempt = useMemo(
+    () =>
+      records && detail
+        ? attemptRecords(records, issue.slug, detail.openedAt)
+        : null,
+    [records, detail, issue.slug],
+  );
   const feedback = useMemo(
     () =>
-      records ? feedbackOf(records, issue.slug) : { released: [], threads: [] },
-    [records, issue.slug],
+      attempt ? feedbackOf(attempt, issue.slug) : { released: [], threads: [] },
+    [attempt, issue.slug],
   );
   const merged =
     mergedNow ??
@@ -311,7 +322,7 @@ export function PullView({
     : undefined;
   const resultInput = useMemo(
     () =>
-      records && detail && merged && language
+      attempt && detail && merged && language
         ? {
             issue: {
               key: issue.key,
@@ -320,13 +331,13 @@ export function PullView({
               revision: detail.pull.issueRevision,
             },
             language,
-            records,
+            records: attempt,
             mergedAt: merged,
             revisions,
           }
         : null,
     [
-      records,
+      attempt,
       detail,
       merged,
       language,
@@ -410,22 +421,25 @@ export function PullView({
           language: revision.workspace.language,
           metrics: 2,
           values: metricsOf(
-            records,
+            attempt ?? records,
             issue.slug,
             new Date().toISOString(),
             (id) => revisions[id],
           ) as unknown as Json,
         },
       );
-    board.complete(
-      {
-        key: issue.key,
-        slug: issue.slug,
-        revision: issue.revision ?? pull.issueRevision,
-      },
-      { number: pull.number, runId: pull.runId },
-      via,
-    );
+    void board
+      .complete(
+        {
+          key: issue.key,
+          slug: issue.slug,
+          revision: issue.revision ?? pull.issueRevision,
+        },
+        { number: pull.number, runId: pull.runId },
+        via,
+      )
+      // Read the records again once the merge is stored: the incident's deploy needs it.
+      .then(() => setVersion((v) => v + 1));
     setMergedNow(new Date().toISOString());
   };
   return (
@@ -450,9 +464,18 @@ export function PullView({
             </Link>
           </span>
         </p>
-        {pull.state === "merged" && (
-          <NextPractice candidates={candidates} current={issue.key} />
-        )}
+        {pull.state === "merged" &&
+          (isIncident(issue.key) ? (
+            <IncidentDeploy
+              issue={issue}
+              number={number}
+              openedAt={detail.openedAt}
+              records={records}
+              onDeployed={() => setVersion((v) => v + 1)}
+            />
+          ) : (
+            <NextPractice candidates={candidates} current={issue.key} />
+          ))}
         <div
           className="pull-tabs"
           role="tablist"
@@ -512,6 +535,8 @@ export function PullView({
           onMerge={merge}
           onClose={(via) => void close(via, !!pull.otherMerged)}
           share={
+            // The incident is shared from its report, after the deploy.
+            !isIncident(issue.key) &&
             result &&
             resultInput && (
               <ShareResult state={result} issue={resultInput.issue} />

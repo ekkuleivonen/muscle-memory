@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   difficultyRange,
   issueHref,
@@ -385,4 +386,22 @@ test("pull requests search like issues, plus their own state and checks", () => 
   assert.deepEqual(numbers("lang:go sort:oldest"), [1, 2]);
   assert.deepEqual(numbers("project:shop label:money #2"), [2]);
   assert.deepEqual(numbers("project:api"), []);
+});
+
+test("adding the incident left every other issue's live revision as it was", () => {
+  // Every live revision id on main just before the incident was merged (3c40dd4), checked in
+  // so the comparison never depends on git history being available.
+  const before = JSON.parse(
+    readFileSync(new URL("./pre-incident-revisions.json", import.meta.url), "utf8"),
+  ) as Record<string, string>;
+  assert.equal(Object.keys(before).length, 45);
+  for (const [id, revision] of Object.entries(before)) {
+    assert.equal(catalog.issues.find((i) => i.id === id)?.revision, revision, id);
+    assert.ok(catalog.revisions[revision], `${id} revision kept`);
+  }
+  // The incident is live on exactly the revision that was reviewed.
+  assert.equal(
+    catalog.issues.find((i) => i.id === "checkout-guest-shipping")?.revision,
+    "sha256:81a951d5526042a635ed204fce8f4c3801e0494aa7e9fb7739a190e9b2c4b400",
+  );
 });

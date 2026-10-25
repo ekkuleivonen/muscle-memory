@@ -176,3 +176,17 @@ test("the explorer shows folders first, then files", () => {
   assert.equal(mediaTypeOf("python"), "text/x-python; charset=utf-8");
   assert.equal(mediaTypeOf("html"), "text/html; charset=utf-8");
 });
+
+test("named cases become named tests; unnamed ones keep the numbered form byte for byte", () => {
+  const src = sources().find((s) => s.slug === "word-count-javascript")!;
+  const unnamed = repoFor(src).files.find((f) => f.role === "tests")!.text;
+  assert.match(unnamed, /it\.each\(cases\)\("case %#", \(input, expected\)/);
+  assert.doesNotMatch(unnamed, /%s/);
+  const named = repoFor({
+    ...src,
+    criteria: src.criteria.map((c, i) => (i === 0 ? { ...c, name: "empty post" } : c)),
+  }).files.find((f) => f.role === "tests")!.text;
+  assert.match(named, /\["empty post", "", 0\],/);
+  assert.match(named, /\["", "hello world", 2\],/);
+  assert.match(named, /it\.each\(cases\)\("%s", \(_name, input, expected\)/);
+});

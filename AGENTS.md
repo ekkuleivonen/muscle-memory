@@ -1,6 +1,6 @@
 # Agents
 
-Muscle Memory is practice that feels like a developer job before AI, and it records granular, raw practice data. Start with the README, then `docs/` (`issue-model.md` for issues and content, `workspace.md` for the IDE and runners, `telemetry.md` for uploads, `play.md` for the five-minute test and sharing, `profile.md` for the questions asked in place and settings, `model-runs.md` for the planned model runs). App-specific notes: `apps/web/AGENTS.md`.
+Muscle Memory is practice that feels like a developer job before AI, and it records granular, raw practice data. Start with the README, then `docs/` (`issue-model.md` for issues and content, `workspace.md` for the IDE and runners, `telemetry.md` for uploads, `play.md` for the five-minute test and sharing, `incident.md` for the playable incident, its versions and replays, `profile.md` for the questions asked in place and settings, `model-runs.md` for the planned model runs). App-specific notes: `apps/web/AGENTS.md`.
 
 ## Rules that are easy to break
 

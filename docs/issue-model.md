@@ -150,8 +150,12 @@ Every trigger is a pure function of recorded facts, so it can be re-evaluated la
 | `pattern` | text is present or absent in a file (regular expression) | uses `toFixed` and no `Intl.NumberFormat` |
 | `check` | a named case fails or passes on a push | refund case fails: "refunds broke again" |
 | `behaviour` | active minutes without progress, failing pushes, runs without progress | `{ behaviour: "failing-pushes", atLeast: 3 }` |
+| `ran` | a named case fails or passes in the latest local run (Run tests) | the regression fails: "that's my change" |
+| `opened` | the person opened a file of the repo themselves (not the IDE opening its tabs) | the log is read: a teammate notices |
 
 Triggers combine with `all`, `any` and `not`. **Active minutes** are distinct clock minutes with an edit or a run, so a lunch break never releases a hint. **Progress** is a run or push that passes more cases than any before it; active minutes and runs are counted since the last one. **Failing pushes** count every push whose checks did not all pass. **Metrics** read code as text: `lines` counts non-blank lines; `function-lines` is the longest function from its signature to its end (by braces, or by indentation in Python and Ruby); `nesting` is the deepest block. A `metric` or `pattern` looks at every editable file unless it names one.
+
+A case may carry a `name`; the JavaScript test file then names its tests after the cases (unnamed issues keep their numbered tests, so their revisions are unchanged). Issue comments are also checked when the person opens a file.
 
 Pattern rules are text-based for now, so they work the same in all twelve languages. Syntax-aware rules can come later per language without changing the manifest shape.
 

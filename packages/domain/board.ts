@@ -12,6 +12,14 @@ import { canonical, type Json } from "./json";
 import type { WorkspaceRecord } from "./workspace";
 
 /**
+ * 7.0.0: replays. A done issue can be taken again on purpose: a move from `done` to
+ * `in-progress` with `trigger: "replay"` starts a new attempt, and only that move leaves Done.
+ * The attempt's records begin there, so a later merge (from In progress to Done, as before)
+ * and its `result` count that attempt alone (apps/web/lib/attempts). A first attempt is
+ * recorded exactly as in 6.1.0. A shared incident card (`shared.card`) may also carry the
+ * incident's revision (`iv`) and which attempt it was (`a`). New: `deployed`, the person
+ * pressing Deploy on a merged incident fix (the simulated deploy; nothing is deployed), naming
+ * the pull request and the run that checked it. 6.1.0 and 6.0.0 records remain valid and are accepted.
  * 6.1.0: closing. `observation.board.closed` records the person closing one of their open
  * pull requests without merging it. A closed pull request takes no more pushes and cannot be
  * merged; the next push opens a new one. Nothing else changed.
@@ -41,7 +49,7 @@ import type { WorkspaceRecord } from "./workspace";
  * issue to Done (`trigger: "pull-request-merged"`, by pointer or keyboard). Earlier versions
  * were never released.
  */
-export const BOARD_CAPTURE_VERSION = "board-capture-6.1.0";
+export const BOARD_CAPTURE_VERSION = "board-capture-7.0.0";
 /** What this capture does not record. Absence is a gap, not evidence of no activity. */
 export const BOARD_CAPTURE_GAPS = [
   "visits-before-accepting-the-terms",
@@ -55,11 +63,15 @@ export const BOARD_CAPTURE_GAPS = [
 export type BoardColumn = "backlog" | "todo" | "in-progress" | "done";
 /** How the move was made: pointer, or keyboard (`s`, arrows, Enter; Enter on a link). */
 export type BoardMoveVia = "pointer" | "keyboard";
-/** What made the move: choosing a status, starting work, or merging a pull request. */
+/**
+ * What made the move: choosing a status, starting work, merging a pull request, or taking a
+ * done issue again (a replay, from Done to In progress).
+ */
 export type BoardMoveTrigger =
   | "status-menu"
   | "start-work"
-  | "pull-request-merged";
+  | "pull-request-merged"
+  | "replay";
 
 export interface BoardMoveData {
   readonly issueKey: string;
@@ -138,6 +150,17 @@ export interface BoardResultData {
   readonly values: Json;
 }
 
+/**
+ * The simulated deploy of a merged incident fix: the person pressed Deploy. Names the merged
+ * pull request and the run whose passing checks it ships; nothing leaves the browser.
+ */
+export interface BoardDeployData {
+  readonly issueKey: string;
+  readonly pullRequest: number;
+  readonly runId: string;
+  readonly via: BoardMoveVia;
+}
+
 /** A result card shared: where to, and what it said. */
 export interface BoardShareData {
   readonly issueKey: string;
@@ -157,6 +180,7 @@ interface BoardData {
   "observation.board.arrived": BoardArrivalData;
   "observation.board.shared": BoardShareData;
   "observation.board.result": BoardResultData;
+  "observation.board.deployed": BoardDeployData;
 }
 
 export interface BoardObservation<
@@ -198,6 +222,7 @@ const TRIGGERS: readonly BoardMoveTrigger[] = [
   "status-menu",
   "start-work",
   "pull-request-merged",
+  "replay",
 ];
 
 export function boardMove(input: {
@@ -213,11 +238,14 @@ export function boardMove(input: {
 }): BoardObservation<"observation.board.moved"> {
   const { data } = input;
   if (!ISSUE_KEY.test(data.issueKey)) throw new Error("Unknown issue key.");
+  // Only a replay leaves Done, and it goes back to In progress.
+  const replay = data.trigger === "replay";
+  if (replay !== (data.from === "done") || (replay && data.to !== "in-progress"))
+    throw new Error("Only a replay takes a done issue back to In progress.");
   if (
     !COLUMNS.includes(data.from) ||
     !COLUMNS.includes(data.to) ||
-    data.from === data.to ||
-    data.from === "done"
+    data.from === data.to
   )
     throw new Error(
       "A move goes between Backlog, Todo and In progress, or on to Done.",
@@ -459,4 +487,16 @@ export function boardResult(
   if (metrics !== 2) throw new Error("Unknown metrics version.");
   if (!/^[a-z+#]{1,16}$/.test(language)) throw new Error("Unknown language.");
   return envelope("observation.board.result", input, { issueKey, pullRequest, language, metrics, values });
+}
+
+export function boardDeploy(
+  input: BoardBase & { issue: { id: string; revision: string }; data: BoardDeployData },
+): BoardObservation<"observation.board.deployed"> {
+  const { issueKey, pullRequest, runId, via } = input.data;
+  if (!ISSUE_KEY.test(issueKey)) throw new Error("Unknown issue key.");
+  if (!Number.isSafeInteger(pullRequest) || pullRequest < 1)
+    throw new Error("A deploy names its pull request.");
+  safeIdentifier(runId);
+  if (!VIAS.includes(via)) throw new Error("Unknown way of deploying.");
+  return envelope("observation.board.deployed", input, { issueKey, pullRequest, runId, via });
 }

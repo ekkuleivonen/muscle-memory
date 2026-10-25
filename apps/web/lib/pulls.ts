@@ -9,6 +9,7 @@
  */
 import { casesRun, type Revision } from "../../../packages/content/model";
 import type { Json } from "../../../packages/domain/json";
+import { attemptIndex } from "./attempts";
 import {
   pullRequestResult,
   type WorkspaceRecord,
@@ -38,7 +39,10 @@ export interface PullSummary {
   mergedAt?: string;
   /** When the person closed it without merging. */
   closedAt?: string;
-  /** Another of this issue's pull requests that was merged, which put the issue in Done. */
+  /**
+   * Another of this issue's pull requests merged in the same attempt, which put the issue in
+   * Done. A replay starts a new attempt (./attempts), whose pull requests can be merged again.
+   */
   otherMerged?: number;
 }
 
@@ -81,6 +85,15 @@ function observations(records: readonly WorkspaceRecord[]): Observation[] {
     );
 }
 
+/** Replay times by issue, oldest first: each starts a new attempt. */
+function replays(all: readonly Observation[]): Map<string, string[]> {
+  const times = new Map<string, string[]>();
+  for (const o of all)
+    if (o.type === "observation.board.moved" && o.data.trigger === "replay" && o.issue)
+      times.set(o.issue, [...(times.get(o.issue) ?? []), o.occurredAt]);
+  return times;
+}
+
 /** Merge times by issue and pull request number: "frequency-map#2" → time. */
 function merges(all: readonly Observation[]): Map<string, string> {
   const merged = new Map<string, string>();
@@ -111,11 +124,14 @@ function closes(all: readonly Observation[]): Map<string, string> {
 interface Ends {
   merged: Map<string, string>;
   closed: Map<string, string>;
+  /** Replay times by issue: each starts a new attempt. */
+  replayed: Map<string, string[]>;
 }
 
 const ends = (all: readonly Observation[]): Ends => ({
   merged: merges(all),
   closed: closes(all),
+  replayed: replays(all),
 });
 
 /** Numbers of this issue's pull requests closed without merging. */
@@ -147,7 +163,7 @@ export function mergedPullRequests(
 /** A pull request as of its latest push; `pushes` are its observations, oldest first. */
 function summary(
   pushes: readonly Observation[],
-  { merged, closed }: Ends,
+  { merged, closed, replayed }: Ends,
 ): PullSummary {
   const o = pushes[pushes.length - 1];
   const mergedAt = merged.get(`${o.issue}#${Number(o.data.number)}`);
@@ -155,10 +171,15 @@ function summary(
   const closedAt = mergedAt
     ? undefined
     : closed.get(`${o.issue}#${Number(o.data.number)}`);
-  const other = [...merged.keys()]
-    .map((key) => key.split("#"))
+  const times = replayed.get(o.issue!) ?? [];
+  const attempt = attemptIndex(times, pushes[0].occurredAt);
+  const other = [...merged.entries()]
+    .map(([key, at]) => [...key.split("#"), at])
     .find(
-      ([id, n]) => id === o.issue && Number(n) !== Number(o.data.number),
+      ([id, n, at]) =>
+        id === o.issue &&
+        Number(n) !== Number(o.data.number) &&
+        attemptIndex(times, at) === attempt,
     )?.[1];
   return {
     issue: o.issue!,

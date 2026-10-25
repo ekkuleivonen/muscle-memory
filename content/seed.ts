@@ -39,6 +39,8 @@ export interface SeedIssue {
   task: string;
   inputs: unknown[];
   expected: unknown[];
+  /** What each case is about, by index: the repo's tests use them as test names. */
+  names?: string[];
   /** Released one at a time, in order, by the lead of the ticket's thread. */
   hints: SeedHint[];
   comments: Comment[];
@@ -2978,6 +2980,22 @@ func ParseDuration(text string) (int, error) {
 ];
 
 const BASE_PROJECTS: SeedProject[] = [
+  {
+    id: "incident-response",
+    key: "INC",
+    listed: false,
+    title: "Incident: checkout is down",
+    summary: "One production incident at Kettlebrook, a homeware shop, played from /incident.",
+    story: `Kettlebrook sells mugs, linen and candles to people who really want their mugs. \`checkout-api\` prices every basket: \`POST /quote\` turns a basket into a subtotal, shipping and a total, and the payment page charges exactly that.
+
+The team leans on AI tools for most of its day. Tonight those tools are down, and so is checkout.
+
+- \`src/checkout/quote.js\`: the quote. The only file you change.
+- \`src/checkout/shipping.js\`, \`src/checkout/money.js\`: shipping thresholds and money helpers.
+- \`logs/checkout-api.log\`: the last few minutes of production logs.
+- \`RUNBOOK.md\`: what to do when paged.`,
+    issues: [],
+  },
   {
     id: "quick-fixes",
     key: "QUICK",

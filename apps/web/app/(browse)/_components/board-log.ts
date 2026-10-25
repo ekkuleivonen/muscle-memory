@@ -13,6 +13,7 @@ import { randomId } from "../../../../../packages/browser/random-id";
 import {
   boardArrival,
   boardClose,
+  boardDeploy,
   boardMove,
   boardResult,
   boardShare,
@@ -24,6 +25,7 @@ import {
   type BoardBase,
   type BoardArrivalData,
   type BoardCloseData,
+  type BoardDeployData,
   type BoardMoveData,
   type BoardResultData,
   type BoardShareData,
@@ -48,7 +50,7 @@ export const PREVIOUS_PATH_KEY = "muscle-memory.previous-path";
 export function logBoardMove(
   issue: { id: string; revision: string },
   data: BoardMoveData,
-): Promise<void> {
+): Promise<boolean> {
   return log((base) => boardMove({ ...base, issue, data }), "Board move");
 }
 
@@ -56,7 +58,7 @@ export function logBoardMove(
 export function logReply(
   issue: { id: string; revision: string },
   data: { issueKey: string; pullRequest: number; comment: string; text: string },
-): Promise<void> {
+): Promise<boolean> {
   return log((base) => boardReply({ ...base, issue, data }), "Reply");
 }
 
@@ -64,7 +66,7 @@ export function logReply(
 export function logClose(
   issue: { id: string; revision: string },
   data: BoardCloseData,
-): Promise<void> {
+): Promise<boolean> {
   return log((base) => boardClose({ ...base, issue, data }), "Close");
 }
 
@@ -110,25 +112,33 @@ export async function logArrival(): Promise<void> {
 export function logResult(
   issue: { id: string; revision: string },
   data: BoardResultData,
-): Promise<void> {
+): Promise<boolean> {
   return log((base) => boardResult({ ...base, issue, data }), "Result");
+}
+
+/** The simulated deploy of a merged incident fix. Resolves once it is stored. */
+export function logDeploy(
+  issue: { id: string; revision: string },
+  data: BoardDeployData,
+): Promise<boolean> {
+  return log((base) => boardDeploy({ ...base, issue, data }), "Deploy");
 }
 
 export function logShare(
   issue: { id: string; revision: string },
   data: BoardShareData,
-): Promise<void> {
+): Promise<boolean> {
   return log((base) => boardShare({ ...base, issue, data }), "Share");
 }
 
 export function logView(
   issue: { id: string; revision: string } | null,
   data: BoardViewData,
-): Promise<void> {
+): Promise<boolean> {
   return log((base) => boardView({ ...base, issue, data }), "Page view");
 }
 
-export function logPage(data: BoardPageData): Promise<void> {
+export function logPage(data: BoardPageData): Promise<boolean> {
   return log((base) => boardPage({ ...base, data }), "Page state");
 }
 
@@ -136,9 +146,9 @@ export function logPage(data: BoardPageData): Promise<void> {
  * The profile as now saved, after an answer given `from` somewhere: every answer, which ones
  * the person gave themselves, and stealth.
  */
-export function logProfile(from: BoardProfileData["from"]): Promise<void> {
+export function logProfile(from: BoardProfileData["from"]): Promise<boolean> {
   const stored = readProfile();
-  if (!stored) return Promise.resolve();
+  if (!stored) return Promise.resolve(false);
   const answered = Object.entries(stored.asked ?? {})
     .filter(([, asked]) => asked?.answeredAt)
     .map(([id]) => id);
@@ -168,10 +178,10 @@ export function issueContext(path: string): { id: string; revision: string } | n
 async function log(
   build: (base: BoardBase) => BoardObservation,
   what: string,
-): Promise<void> {
+): Promise<boolean> {
   const accepted = readProfile()?.accepted;
   // The gate keeps people without current acceptance out; this is the belt to its braces.
-  if (!accepted || !acceptsCurrent(accepted)) return;
+  if (!accepted || !acceptsCurrent(accepted)) return false;
   // Claim the position and time now, so order matches what the person did.
   const position = ++sequence;
   const occurredAt = new Date().toISOString();
@@ -199,9 +209,11 @@ async function log(
       pending.unshift(...batch);
       throw cause;
     }
+    return true;
   } catch (cause) {
     store = null;
     // A missed position stays visible as a gap in the source stream.
     console.warn(`${what} was not recorded.`, cause);
+    return false;
   }
 }

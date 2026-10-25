@@ -4,11 +4,11 @@ Setting an issue's status by hand (Backlog, Todo or In progress, from its Status
 
 ## What is recorded
 
-`observation.board.moved` (`packages/domain/board.ts`), capture version `board-capture-6.0.0`, in the same envelope as [workspace observations](workspace.md): stable ID `<source>.<sequence>`, one source stream per page load (`board-<uuid>`), client `occurredAt`, an explicit absent server receipt, `consentVersion` set to the accepted Terms version (`terms-2026-10-24`), `researchConsent: false`, and the issue with the revision live at the time (`issue`, `issueRevision`). Data:
+`observation.board.moved` (`packages/domain/board.ts`), capture version `board-capture-7.0.0`, in the same envelope as [workspace observations](workspace.md): stable ID `<source>.<sequence>`, one source stream per page load (`board-<uuid>`), client `occurredAt`, an explicit absent server receipt, `consentVersion` set to the exact accepted Terms version (`terms-2026-10-25.1`; a date, with a revision of that day's Terms when there was more than one), `researchConsent: false`, and the issue with the revision live at the time (`issue`, `issueRevision`). Data:
 
 - `issueKey` (`API-2`), `from` and `to` (`backlog`, `todo`, `in-progress`)
 - `via`: `pointer` or `keyboard` (the Status menu opened with `s` and driven by arrows, Enter on Start work, or the Merge button)
-- `trigger`: `status-menu`; `start-work` when Start work on an issue moved it to In progress on the way to the IDE; or `pull-request-merged` for the move to Done when you merge a pull request (only possible once its checks all pass), which also carries the `pullRequest` number and the `runId` of the run that checked it, so the move links to its evidence
+- `trigger`: `status-menu`; `start-work` when Start work on an issue moved it to In progress on the way to the IDE; `replay`, the only move out of Done, back to In progress, when the person chose to take [the incident](incident.md) again, starting a new attempt; or `pull-request-merged` for the move to Done when you merge a pull request (only possible once its checks all pass), which also carries the `pullRequest` number and the `runId` of the run that checked it, so the move links to its evidence
 - `onBoardBefore`: how many issues were on the board (Todo and In progress) just before
 - `nudged`: whether the soft limit asked "finish one first?" first
 
@@ -23,7 +23,8 @@ Every page of the app is recorded as it is shown (`TrackerActivity` in the root 
 - `observation.board.profile`: the whole profile (experience, how often they code with AI, languages, goal, editor, stealth, and which answers the person gave themselves) each time an answer is saved, with the place that asked (`from`: `result`, `dashboard`, `issue`, `settings`, or `play` for the five-minute test's language, a guess). See [profile](profile.md).
 - `observation.board.arrived`: once per browser, after the Terms are accepted: the first landing page and when, and the referral code of the shared result that brought them ([the five-minute test](play.md)).
 - `observation.board.shared`: a result card shared, with the channel, the card and this device's referral code.
-- `observation.board.result`: a merged pull request's result card numbers (metrics version 2, see [the five-minute test](play.md)), the source of the aggregate percentiles.
+- `observation.board.deployed`: the simulated deploy of a merged [incident](incident.md) fix: `issueKey`, `pullRequest`, `runId` and `via`. Nothing is deployed anywhere.
+- `observation.board.result`: a merged pull request's result card numbers (counted within the attempt, see [the incident](incident.md)) (metrics version 2, see [the five-minute test](play.md)), the source of the aggregate percentiles.
 
 Every board observation has `elapsedMs`, a monotonic clock from the page load. Declared gaps: visits before the Terms are accepted, keystrokes in text fields (a search is recorded as its query, a reply as the text sent), pointer movement and hovering, menus opened without a choice, activity in other tabs and apps, and writes cut short when the page closes. A missing source position was not recorded; it is not evidence that nothing happened.
 

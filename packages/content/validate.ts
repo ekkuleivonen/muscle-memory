@@ -39,12 +39,17 @@ function unique(values: readonly string[], where: string) {
   }
 }
 
-function checkTrigger(trigger: Trigger, where: string, cases: Set<string>): void {
+function checkTrigger(
+  trigger: Trigger,
+  where: string,
+  cases: Set<string>,
+  files: Set<string>,
+): void {
   if ("all" in trigger || "any" in trigger) {
     const list = "all" in trigger ? trigger.all : trigger.any;
     if (!Array.isArray(list) || !list.length) fail(where, "an empty trigger list");
-    list.forEach((t) => checkTrigger(t, where, cases));
-  } else if ("not" in trigger) checkTrigger(trigger.not, where, cases);
+    list.forEach((t) => checkTrigger(t, where, cases, files));
+  } else if ("not" in trigger) checkTrigger(trigger.not, where, cases, files);
   else if ("pattern" in trigger) {
     try {
       new RegExp(trigger.pattern);
@@ -63,6 +68,10 @@ function checkTrigger(trigger: Trigger, where: string, cases: Set<string>): void
       fail(where, "a behaviour needs a whole-number threshold");
   } else if ("check" in trigger) {
     if (!cases.has(trigger.check)) fail(where, `unknown case ${trigger.check}`);
+  } else if ("ran" in trigger) {
+    if (!cases.has(trigger.ran)) fail(where, `unknown case ${trigger.ran}`);
+  } else if ("opened" in trigger) {
+    if (!files.has(trigger.opened)) fail(where, `unknown file ${trigger.opened}`);
   } else fail(where, "an unknown trigger");
 }
 
@@ -97,7 +106,10 @@ export function validateRevision(revision: Revision, where: string): void {
     for (const c of cases)
       if (!Array.isArray(c.input) || c.input.length !== workspace.parameters.length)
         fail(where, `case ${c.id} must list one argument per parameter`);
+  for (const c of cases)
+    if (c.name !== undefined) text(c.name, `${where} case ${c.id} name`);
   const caseIds = new Set(cases.map((c) => c.id));
+  const paths = new Set(Object.keys(workspace.files));
   unique(revision.team.map((c) => c.id), `${where} team comments`);
   for (const comment of revision.team) {
     if (!ID.test(comment.id)) fail(where, `comment id ${comment.id} is not a slug`);
@@ -109,13 +121,13 @@ export function validateRevision(revision: Revision, where: string): void {
     // Only a review thread can be resolved, by a push or a reply, before merging.
     if (comment.severity === "blocking" && comment.where !== "review")
       fail(where, `comment ${comment.id} blocks merging, so it must be a review comment`);
-    checkTrigger(comment.when, `${where} comment ${comment.id}`, caseIds);
+    checkTrigger(comment.when, `${where} comment ${comment.id}`, caseIds, paths);
   }
   unique(revision.hints.map((h) => h.id), `${where} hints`);
   revision.hints.forEach((hint, index) => {
     if (hint.level !== index + 1) fail(where, "hint levels must run 1, 2, 3, … in order");
     text(hint.text, `${where} hint ${hint.id}`);
-    checkTrigger(hint.when, `${where} hint ${hint.id}`, caseIds);
+    checkTrigger(hint.when, `${where} hint ${hint.id}`, caseIds, paths);
   });
 }
 

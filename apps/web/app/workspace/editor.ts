@@ -52,7 +52,7 @@ import { TYPE_CHECK_FEATURES, type TypeChecker } from "./type-checker";
 export type Keymap = "standard" | "vim";
 
 /** Language data only (highlighting, indentation), never the completion sources. */
-function languageSupport(language: FileLanguage): LanguageSupport {
+function languageSupport(language: Exclude<FileLanguage, "text">): LanguageSupport {
   switch (language) {
     case "python":
       return new LanguageSupport(pythonLanguage);
@@ -171,7 +171,7 @@ const shared = (language: FileLanguage): Extension[] => [
   drawSelection(),
   indentUnit.of(indent(language)),
   EditorState.tabSize.of(4),
-  languageSupport(language),
+  ...(language === "text" ? [] : [languageSupport(language)]),
   syntaxHighlighting(highlight),
   EditorView.contentAttributes.of({
     spellcheck: "false",

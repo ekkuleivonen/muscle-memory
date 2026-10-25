@@ -17,6 +17,7 @@ import {
   BOARD_KEY,
   boardFull,
   complete as complete_,
+  replay as replay_,
   parseBoard,
   serializeBoard,
   setStatus,
@@ -100,6 +101,32 @@ export function useBoard() {
     );
   };
   /**
+   * The person chose to take a done issue again: back to In progress, recorded as a replay,
+   * which starts a new attempt (lib/attempts). `issue.revision` is the revision replayed.
+   * Resolves once the move is stored, so the IDE opens on the new attempt.
+   */
+  const replay = async (issue: IssueRef, via: BoardMoveVia): Promise<boolean> => {
+    const current = parseBoard(localStorage.getItem(BOARD_KEY));
+    if (statusOf(current, issue.key) !== "done") return false;
+    const stored = await logBoardMove(
+      { id: issue.slug, revision: issue.revision },
+      {
+        issueKey: issue.key,
+        from: "done",
+        to: "in-progress",
+        via,
+        trigger: "replay",
+        onBoardBefore: activeCount(current),
+        nudged: false,
+      },
+    );
+    // Without the record there is no new attempt, so the board stays as it was.
+    if (!stored) return false;
+    localStorage.setItem(BOARD_KEY, serializeBoard(replay_(current, issue.key)));
+    window.dispatchEvent(new Event(CHANGE));
+    return true;
+  };
+  /**
    * The person merged a pull request (only one whose checks all passed): the issue moves to
    * Done, recorded with the pull request and the run that checked it. Reads the stored board,
    * not this render's, in case another tab moved the issue.
@@ -111,13 +138,14 @@ export function useBoard() {
   ) => {
     const current = parseBoard(localStorage.getItem(BOARD_KEY));
     const from = statusOf(current, issue.key);
-    if (from === "done") return;
+    if (from === "done") return Promise.resolve(false);
     localStorage.setItem(
       BOARD_KEY,
       serializeBoard(complete_(current, issue.key, new Date().toISOString())),
     );
     window.dispatchEvent(new Event(CHANGE));
-    void logBoardMove(
+    // Resolves once the merge is stored, for pages that read it back.
+    return logBoardMove(
       { id: issue.slug, revision: issue.revision },
       {
         issueKey: issue.key,
@@ -132,7 +160,7 @@ export function useBoard() {
       },
     );
   };
-  return { items, move, complete, hydrated };
+  return { items, move, complete, replay, hydrated };
 }
 
 export function IssueStatus({ issueKey }: { issueKey: string }) {

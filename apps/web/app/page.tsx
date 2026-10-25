@@ -3,9 +3,9 @@ import { cookies } from "next/headers";
 import { CONSENT_COOKIE, hasConsent } from "../lib/profile";
 
 /**
- * The public front door: the question that brings people here, what they get, and why it
- * matters, in that order. Outside the consent gate; returning players get a way back to
- * their desk instead of the first-day invite.
+ * The public front door: tonight's incident first (the hook), then what the practice is, what
+ * people get, and why it matters. Outside the consent gate; returning players also get a way
+ * back to their desk.
  */
 
 /** The first day, as it actually goes: Terms, the desk, the first ticket. */
@@ -41,6 +41,11 @@ export default async function Home() {
       Take the five-minute test →
     </Link>
   );
+  const incident = (
+    <Link className="home-cta" href="/incident">
+      Take the incident →
+    </Link>
+  );
 
   return (
     <div className="legal home">
@@ -65,19 +70,42 @@ export default async function Home() {
       </header>
 
       <main className="legal-body home-body">
-        <section className="home-hero">
-          <p className="home-kicker">Muscle Memory Inc. · Est. before AI</p>
+        <section className="home-hero home-incident">
+          <p className="home-kicker">
+            <span className="incident-sev">SEV-1</span> Paged 02:14 ·
+            checkout-api · a fictional shop
+          </p>
           <h1>
-            You use AI every day.
+            Production is down. AI is down.
             <br />
-            <span className="home-punch">
-              Keep your coding skills in practice.
-            </span>
+            <span className="home-punch">You&apos;re on call.</span>
           </h1>
           <p className="home-lede">
-            A developer job from before AI: tickets, tests, a pull request, and
-            nobody writing it for you. Start with a small bug in about five
-            minutes, or work at your own pace. There is no timer.
+            Kettlebrook runs on AI tools. Tonight checkout breaks while every
+            one of them is unavailable. You get the logs, the code, a failing
+            test and a team chat. Can you restore service? Five to ten minutes,
+            no timer.
+          </p>
+          <div className="home-actions">
+            {incident}
+            <span className="home-note">
+              No email needed. Progress stays in this browser.{" "}
+              {signedIn ? (
+                <Link href="/dashboard">Back to your desk</Link>
+              ) : (
+                <>
+                  Or <Link href="/play">take the five-minute test</Link>.
+                </>
+              )}
+            </span>
+          </div>
+        </section>
+        <section className="home-section">
+          <h2>A developer job from before AI</h2>
+          <p>
+            The incident is one shift. The rest is a job: tickets, tests, a
+            pull request, and nobody writing it for you. Start with a small bug
+            in about five minutes, or work at your own pace.
           </p>
           <div className="home-actions">
             {start}

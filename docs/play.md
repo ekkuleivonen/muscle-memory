@@ -21,7 +21,7 @@ Accepting the current Terms is the only thing any page requires (`requireConsent
 A merged pull request's Details list what happened, next to the facts already there, computed in the browser from the person's own records (`metricsOf` in `apps/web/lib/result.ts`, metrics version 2):
 
 - **active time**: gaps between activity (keys, edits, cursor, scrolling, runs, navigation), each counted up to a minute;
-- **read before typing**: from first opening the issue to the first edit;
+- **opened to first edit**: from first opening the issue to the first edit;
 - **keystrokes**: keys pressed in the editors, modifier keys alone not counted;
 - **typos fixed**, an estimate: runs of Backspace or Delete starting within two seconds of typing a character;
 - **peak speed**: the most characters typed in any ten seconds, as words (5 characters) per minute, once at least 15 were typed;

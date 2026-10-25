@@ -8,6 +8,7 @@ import { issues as accountsApi } from "./accounts-api";
 import { issues as dataPlatform } from "./data-platform";
 import { issues as edgeProxy } from "./edge-proxy";
 import { issues as fieldNotes } from "./field-notes";
+import { issues as incidentResponse } from "./incident-response";
 import { issues as storefront } from "./storefront";
 
 export const MORE: Record<string, SeedIssue[]> = {
@@ -16,4 +17,5 @@ export const MORE: Record<string, SeedIssue[]> = {
   "accounts-api": accountsApi,
   "data-platform": dataPlatform,
   "edge-proxy": edgeProxy,
+  "incident-response": incidentResponse,
 };
