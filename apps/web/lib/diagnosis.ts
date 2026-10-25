@@ -1,8 +1,7 @@
 /**
- * What a pull request's CI run shows, case by case, for the Checks tab and Findings: what the
- * code did and which requirement it was checked against. It names the failure and never the fix:
- * the expected value is shown only for cases in the repo's test file, which the person already
- * has; a check only CI runs shows its name, input and what the code did, not the answer it wanted.
+ * What a CI run shows, case by case, for the Checks tab and Findings: each failing case as its
+ * input, the value it should give and what the code gave instead, so the requirement is plain and
+ * the work is in fixing the code, not in decoding the failure. It never suggests code.
  */
 import type { Case } from "../../../packages/content/model";
 import type { Json } from "../../../packages/domain/json";
@@ -15,11 +14,10 @@ export interface CheckRow {
   input: Json;
   /** In the repo's test file. */
   visible: boolean;
-  /** The expected value, for cases in the repo's test file only. */
-  expected: { value: Json } | null;
+  expected: Json;
   passed: boolean;
-  /** What the code did, when it failed: "returned 3", "raised KeyError: 'x'". */
-  observed: string | null;
+  /** What the code gave instead, when it failed: `3`, or a raised `KeyError: 'x'`. */
+  got: { label: "Got" | "Raised"; text: string } | null;
 }
 
 export type Diagnosis =
@@ -49,15 +47,25 @@ interface RawOutcome {
   timeoutMs?: number;
 }
 
-function observed(
-  got: NonNullable<RawOutcome["cases"]>[number] | undefined,
-): string {
-  if (got?.error) return `raised ${got.error.type}: ${got.error.message}`;
-  if (got?.output)
-    return `returned ${got.output.text}${got.output.truncated ? " (cut short)" : ""}`;
-  if (got?.unserializable)
-    return `returned a value that isn't JSON (${got.unserializable})`;
-  return "returned nothing";
+function got(
+  result: NonNullable<RawOutcome["cases"]>[number] | undefined,
+): NonNullable<CheckRow["got"]> {
+  if (result?.error)
+    return {
+      label: "Raised",
+      text: `${result.error.type}: ${result.error.message}`,
+    };
+  if (result?.output)
+    return {
+      label: "Got",
+      text: `${result.output.text}${result.output.truncated ? " (cut short)" : ""}`,
+    };
+  if (result?.unserializable)
+    return {
+      label: "Got",
+      text: `a value that isn't JSON (${result.unserializable})`,
+    };
+  return { label: "Got", text: "nothing" };
 }
 
 /** A CI run's outcome against the cases it ran; null when there is no outcome to read. */
@@ -93,9 +101,9 @@ export function diagnose(
       name: c.name ?? `case ${i + 1}`,
       input: c.input,
       visible: c.visible,
-      expected: c.visible ? { value: c.expected } : null,
+      expected: c.expected,
       passed: passed[i],
-      observed: passed[i] ? null : observed(outcome.cases![i]),
+      got: passed[i] ? null : got(outcome.cases![i]),
     }),
   );
   return { kind: "tests", rows, failed: rows.filter((r) => !r.passed) };

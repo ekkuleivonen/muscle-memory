@@ -3,16 +3,20 @@ import { useState } from "react";
 import type { Case, Revision } from "../../../../../packages/content/model";
 import type { BoardMoveVia } from "../../../../../packages/domain/board";
 import type { Json } from "../../../../../packages/domain/json";
-import { diagnose, type Diagnosis } from "../../../lib/diagnosis";
+import {
+  diagnose,
+  type CheckRow,
+  type Diagnosis,
+} from "../../../lib/diagnosis";
 import { isCiFinding, type Thread } from "../../../lib/feedback";
 import type { PullSummary } from "../../../lib/pulls";
 import { Markdown } from "./markdown";
 
 /**
  * A pull request's review, as its page shows it: Findings (what is left to fix, and what was
- * fixed before, folded away) and the Checks tab (every case as CI ran it). Failures say what the
- * code did and which case caught it, never what to write: expected values show only for cases in
- * the repo's test file (lib/diagnosis.ts). Whether it can merge is said once, by the merge box.
+ * fixed before, folded away) and the Checks tab (every case as CI ran it). A failing case reads as
+ * its input, the expected value and what the code gave (lib/diagnosis.ts): the requirement is
+ * plain, and nothing suggests code. Whether it can merge is said once, by the merge box.
  */
 
 const clock = (at: string) =>
@@ -145,8 +149,38 @@ function failingSummary(
   return `${pull.passed} of ${pull.total} checks passed on push ${pull.pushes}.`;
 }
 
-/** The failing checks: which case, its input, what the code did, and what it should return when
- * the repo's own tests already say so. */
+/** Marks a case that isn't in the repo's test file: only the full check runs it. */
+const ExtraCase = () => (
+  <span className="ci-only" title="Not in the repo's test file">
+    not in the test file
+  </span>
+);
+
+/** A case's input, the value it should give and, when it failed, what the code gave instead. */
+export function CaseDiff({ row }: { row: CheckRow }) {
+  return (
+    <dl className="case-diff">
+      <dt>Input</dt>
+      <dd>
+        <code>{show(row.input)}</code>
+      </dd>
+      <dt>Expected</dt>
+      <dd>
+        <code>{show(row.expected)}</code>
+      </dd>
+      {row.got && (
+        <>
+          <dt>{row.got.label}</dt>
+          <dd className="case-got">
+            <code>{row.got.text}</code>
+          </dd>
+        </>
+      )}
+    </dl>
+  );
+}
+
+/** The failing checks, each as its name, input, expected value and what the code gave. */
 export function FailedChecks({ diagnosis }: { diagnosis: Diagnosis | null }) {
   if (diagnosis?.kind === "error")
     return (
@@ -166,15 +200,8 @@ export function FailedChecks({ diagnosis }: { diagnosis: Diagnosis | null }) {
           </span>
           <div>
             <b>{row.name}</b>
-            {!row.visible && <span className="ci-only">CI only</span>}
-            <div className="got">
-              <code>{show(row.input)}</code> {row.observed}
-              {row.expected && (
-                <>
-                  ; expected <code>{show(row.expected.value)}</code>
-                </>
-              )}
-            </div>
+            {!row.visible && <ExtraCase />}
+            <CaseDiff row={row} />
           </div>
         </li>
       ))}
@@ -338,7 +365,7 @@ function ReviewThread({
 
 /**
  * Every case as CI ran it on the latest push, passing ones included: the detail behind Findings.
- * A case only CI runs shows its input and what the code did, not its expected value.
+ * Passing cases are one line; failing ones show what the code gave next to the expected value.
  */
 export function Checks({
   outcome: raw,
@@ -391,16 +418,16 @@ export function Checks({
               </span>
               <div>
                 <b>{row.name}</b>
-                {!row.visible && <span className="ci-only">CI only</span>}{" "}
-                <code>{show(row.input)}</code>
-                {row.expected && (
+                {!row.visible && <ExtraCase />}{" "}
+                {row.passed ? (
                   <>
-                    {" "}
+                    <code>{show(row.input)}</code>{" "}
                     <span className="dim">→</span>{" "}
-                    <code>{show(row.expected.value)}</code>
+                    <code>{show(row.expected)}</code>
                   </>
+                ) : (
+                  <CaseDiff row={row} />
                 )}
-                {row.observed && <div className="got">{row.observed}</div>}
               </div>
             </li>
           ))}

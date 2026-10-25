@@ -2602,11 +2602,27 @@ button.home-cta:disabled {
   color: var(--red);
   font-weight: 700;
 }
-.ci-failing .got,
 .ci-error {
   color: var(--dim);
 }
-.ci-failing code,
+/* A failing case: input, expected and what the code gave, aligned. */
+.case-diff {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 1px 10px;
+  margin: 4px 0 0;
+  font-size: 12.5px;
+}
+.case-diff dt {
+  color: var(--dim);
+}
+.case-diff dd {
+  margin: 0;
+}
+.case-diff .case-got code {
+  color: var(--red);
+}
+.case-diff code,
 .ci-error code {
   font: 12.5px var(--mono);
   overflow-wrap: anywhere;

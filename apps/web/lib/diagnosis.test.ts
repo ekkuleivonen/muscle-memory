@@ -24,7 +24,7 @@ const out = (value: unknown) => ({
   output: { text: JSON.stringify(value), truncated: false },
 });
 
-test("a failing visible case shows its input, what the code returned and the expected value", () => {
+test("a failing case shows its input, the expected value and what the code returned", () => {
   const d = diagnose(
     {
       status: "completed",
@@ -41,14 +41,14 @@ test("a failing visible case shows its input, what the code returned and the exp
       name: "counts words",
       input: ["a a"],
       visible: true,
-      expected: { value: { a: 2 } },
+      expected: { a: 2 },
       passed: false,
-      observed: 'returned {"a":1}',
+      got: { label: "Got", text: '{"a":1}' },
     },
   ]);
 });
 
-test("a failing CI-only case says what the code did, never the answer it wanted", () => {
+test("a case not in the test file is as clear as one that is", () => {
   const d = diagnose(
     {
       status: "completed",
@@ -64,13 +64,12 @@ test("a failing CI-only case says what the code did, never the answer it wanted"
   if (d?.kind !== "tests") return assert.fail("expected per-case results");
   const [unnamed, hidden] = d.failed;
   assert.equal(unnamed.name, "case 2");
-  assert.equal(unnamed.observed, "returned nothing");
-  assert.deepEqual(unnamed.expected, { value: {} });
+  assert.deepEqual(unnamed.got, { label: "Got", text: "nothing" });
+  assert.deepEqual(unnamed.expected, {});
   assert.equal(hidden.name, "ignores case");
-  assert.equal(hidden.expected, null);
-  assert.equal(hidden.observed, "raised KeyError: 'A'");
-  // Passing CI-only cases don't show their expected value either.
-  assert.ok(d.rows.filter((r) => !r.visible).every((r) => r.expected === null));
+  assert.equal(hidden.visible, false);
+  assert.deepEqual(hidden.expected, { a: 2 });
+  assert.deepEqual(hidden.got, { label: "Raised", text: "KeyError: 'A'" });
 });
 
 test("values that can't be read are described as such", () => {
@@ -88,11 +87,8 @@ test("values that can't be read are described as such", () => {
   );
   if (d?.kind !== "tests") return assert.fail("expected per-case results");
   assert.deepEqual(
-    d.failed.map((r) => r.observed),
-    [
-      'returned {"a": (cut short)',
-      "returned a value that isn't JSON (a function)",
-    ],
+    d.failed.map((r) => r.got?.text),
+    ['{"a": (cut short)', "a value that isn't JSON (a function)"],
   );
 });
 
