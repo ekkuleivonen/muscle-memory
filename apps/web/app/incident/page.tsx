@@ -1,12 +1,10 @@
 import { redirect } from "next/navigation";
 
-type Props = { searchParams: Promise<{ ref?: string }> };
-
 /**
- * The retired incident's front door. Old links (the home page, shared incident cards) lead to
- * the five-minute test, keeping only the referral code; nobody's result travels with them.
+ * The retired incident's front door. Old links (the home page, shared incident cards, with any
+ * ?v= or ?ref=) lead to INC-1 as the ordinary issue it now is; nobody's result travels with
+ * them. A shared card already noted its referral when it was opened (/r/<card>).
  */
-export default async function LegacyIncident({ searchParams }: Props) {
-  const { ref } = await searchParams;
-  redirect(ref ? `/play?${new URLSearchParams({ ref })}` : "/play");
+export default function LegacyIncident() {
+  redirect("/issues/INC-1");
 }

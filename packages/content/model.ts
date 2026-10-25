@@ -165,10 +165,7 @@ export interface Revision {
   readonly checks: { readonly cases: readonly Case[] };
   readonly team: readonly TeamComment[];
   readonly hints: readonly Hint[];
-  /**
-   * Team chat lines from the retired incident (INC-1 only). Kept because they are part of that
-   * revision's hashed content; the app no longer shows a chat.
-   */
+  /** The team chat around the work, when the issue has one (the incident). */
   readonly chat?: readonly ChatLine[];
   /**
    * explicit: a push whose checks fail opens a CI finding on its pull request, which only the

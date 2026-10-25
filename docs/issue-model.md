@@ -98,7 +98,7 @@ interface Checks {
 
 The **private** part holds what a player must never receive: the **reference solution**, optional **alternatives** (other correct designs, which must pass every case) and **wrong fixes** (plausible mistakes, which must fail at least one), **trigger examples** (code that must and must not fire each comment), and **author notes**.
 
-A revision may also carry a **chat**: lines of team atmosphere, never clues, each released by a recorded action (the attempt starting, a file opened, a local run's case, a pull request, a CI case, the merge). What has been said is a pure function of the attempt's records, so it is shown, not recorded. Only INC-1 has one, from the retired incident. The app no longer shows a chat anywhere, so the lines are kept only as part of that revision's content. It lives in the database next to each revision. Publication checks use it; it is never written to a bundle.
+A revision may also carry a **chat**: lines of team atmosphere, never clues, each released by a recorded action (the attempt starting, a file opened, a local run's case, a pull request, a CI case, the merge). What has been said is a pure function of the attempt's records, so it is shown, not recorded. Only INC-1's earlier revisions, from the retired incident, have one. The app no longer shows a chat anywhere, so the lines are kept only as part of those revisions' content. It lives in the database next to each revision. Publication checks use it; it is never written to a bundle.
 
 ### Bundles: a whole mini repo in one object
 

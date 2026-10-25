@@ -65,8 +65,8 @@ Every way in leads to the same loop: issue, code, tests, pull request, feedback,
 
 The incident (INC-1, "Production is down. AI is down.") was retired as a wrapper. Its links still work:
 
-- `/incident` (with or without `?v=`) goes to `/play`, keeping only `?ref=`.
+- `/incident` (with any `?v=` or `?ref=`) goes to `/issues/INC-1`, the ordinary issue. A shared card already noted its referral when it was opened.
 - `/incident/report` goes to `/pulls`, this browser's own pull requests (through the Terms). A merged INC-1 fix is listed there like any other.
 - A shared incident card (`/r/<card>` for INC-1) shows as an ordinary shared result and leads to `/play`.
 
-INC-1 stays an ordinary unlisted issue, so attempts already made keep their pull requests, findings and records. Its revision still carries the retired chat lines; nothing shows them.
+INC-1 stays an ordinary issue under the same key and id, so attempts already made keep their pull requests, findings and records. Revisions that carry the retired chat lines are still in the catalog; nothing shows them.
