@@ -7,6 +7,7 @@ import {
   useState,
   type KeyboardEvent,
   type ReactNode,
+  type Ref,
 } from "react";
 import {
   deleteAccount,
@@ -34,10 +35,12 @@ import { QUESTIONS, toProfile } from "../../lib/questions";
 import type { Answer } from "../_terminal/prompts";
 import { logProfile } from "../(browse)/_components/board-log";
 import type { CommandName } from "./commands";
+import { KeyActions, type KeyAction } from "../_terminal/key-actions";
 
 /**
- * Settings commands as pages read and clicked, in the terminal's look: what the command does,
- * where things stand, buttons, and one line saying what happened. Profile has its own form.
+ * Settings commands as pages in the terminal's look: what the command does, where things
+ * stand, one line saying what happened, then the actions as a prompt's choices, run by key or
+ * click (KeyActions), ending with the way back. Profile has its own form.
  */
 export function SettingsCommand({
   command,
@@ -70,7 +73,7 @@ const PAGES: Record<Exclude<CommandName, "profile">, () => ReactNode> = {
   delete: Delete,
 };
 
-/** The page's frame: title, then the command; a way back at the end. */
+/** The page's frame: the title, then the command. */
 export function SettingsFrame({
   title,
   children,
@@ -82,11 +85,6 @@ export function SettingsFrame({
     <main className="t-prose t-settings">
       <h1 className="t-doc-title">{title}</h1>
       {children}
-      <p className="t-back">
-        <Link href="/settings" className="t-cmd">
-          ← settings
-        </Link>
-      </p>
     </main>
   );
 }
@@ -128,26 +126,31 @@ function Result({
   );
 }
 
-function Button({
-  children,
-  onClick,
-  kind = "plain",
-  disabled = false,
+/** The page's actions, then the way back to settings, which Esc also takes. */
+function Actions({
+  id,
+  message,
+  actions,
+  autoFocus = true,
+  handle,
 }: {
-  children: ReactNode;
-  onClick(): void;
-  kind?: "primary" | "plain" | "danger";
-  disabled?: boolean;
+  id: string;
+  message?: string;
+  actions: readonly KeyAction[];
+  autoFocus?: boolean;
+  handle?: Ref<{ focus(): void }>;
 }) {
+  const router = useRouter();
+  const back = () => router.push("/settings");
   return (
-    <button
-      type="button"
-      className={`t-btn${kind === "plain" ? "" : ` t-btn-${kind}`}`}
-      disabled={disabled}
-      onClick={onClick}
-    >
-      {children}
-    </button>
+    <KeyActions
+      ref={handle}
+      id={id}
+      message={message}
+      autoFocus={autoFocus}
+      actions={[...actions, { label: "back to settings", run: back }]}
+      onEscape={back}
+    />
   );
 }
 
@@ -199,16 +202,23 @@ function Privacy() {
         Right now you&apos;re{" "}
         <strong>{stealth ? "in stealth" : "eligible for inclusion"}</strong>.
       </p>
-      <div className="t-actions">
-        {stealth ? (
-          <Button kind="primary" onClick={() => choose(true)}>
-            share my anonymised data
-          </Button>
-        ) : (
-          <Button onClick={() => choose(false)}>go stealth</Button>
-        )}
-      </div>
       <Result result={result} />
+      <Actions
+        id="privacy"
+        actions={[
+          stealth
+            ? {
+                label: "share my anonymised data",
+                kind: "primary",
+                run: () => choose(true),
+              }
+            : {
+                label: "go stealth",
+                kind: "primary",
+                run: () => choose(false),
+              },
+        ]}
+      />
     </SettingsFrame>
   );
 }
@@ -259,12 +269,18 @@ function Export() {
         It also holds this browser&apos;s secret key, the one that can delete
         what was uploaded. Keep the file private.
       </p>
-      <div className="t-actions">
-        <Button kind="primary" disabled={busy} onClick={() => void download()}>
-          {busy ? "preparing…" : "download backup"}
-        </Button>
-      </div>
       <Result result={result} />
+      <Actions
+        id="export"
+        actions={[
+          {
+            label: "download backup",
+            kind: "primary",
+            disabled: busy && "preparing…",
+            run: () => void download(),
+          },
+        ]}
+      />
     </SettingsFrame>
   );
 }
@@ -341,11 +357,19 @@ function Import() {
         file holds: you carry on where it left off.
       </p>
       {!picked ? (
-        <div className="t-actions">
-          <Button kind="primary" onClick={() => void choose()}>
-            choose backup file
-          </Button>
-        </div>
+        <>
+          <Result result={result} />
+          <Actions
+            id="import"
+            actions={[
+              {
+                label: "choose backup file",
+                kind: "primary",
+                run: () => void choose(),
+              },
+            ]}
+          />
+        </>
       ) : (
         <>
           <p className="t-state">
@@ -363,27 +387,31 @@ function Import() {
               it first if you want to keep it.
             </p>
           )}
-          <div className="t-actions">
-            <Button
-              kind="danger"
-              disabled={busy}
-              onClick={() => void replace()}
-            >
-              replace everything in this browser
-            </Button>
-            <Button
-              disabled={busy}
-              onClick={() => {
-                setPicked(null);
-                setResult({ tone: "dim", text: "Nothing changed." });
-              }}
-            >
-              cancel
-            </Button>
-          </div>
+          <Result result={result} />
+          <Actions
+            id="import-confirm"
+            message="Replace everything in this browser with this backup?"
+            actions={[
+              {
+                label: "yes, replace everything",
+                kind: "danger",
+                key: "y",
+                disabled: busy && "restoring…",
+                run: () => void replace(),
+              },
+              {
+                label: "cancel",
+                key: "n",
+                disabled: busy && "restoring…",
+                run: () => {
+                  setPicked(null);
+                  setResult({ tone: "dim", text: "Nothing changed." });
+                },
+              },
+            ]}
+          />
         </>
       )}
-      <Result result={result} />
     </SettingsFrame>
   );
 }
@@ -396,17 +424,19 @@ function Logout() {
         Signs you out on this device. Everything stays in this browser for when
         you&apos;re back.
       </p>
-      <div className="t-actions">
-        <Button
-          kind="primary"
-          onClick={() => {
-            logOut();
-            router.push("/");
-          }}
-        >
-          log out
-        </Button>
-      </div>
+      <Actions
+        id="logout"
+        actions={[
+          {
+            label: "log out",
+            kind: "primary",
+            run: () => {
+              logOut();
+              router.push("/");
+            },
+          },
+        ]}
+      />
     </SettingsFrame>
   );
 }
@@ -431,36 +461,45 @@ function Reset() {
         from this browser. Your settings stay. Anything already uploaded stays
         with us until you delete your account.
       </p>
-      <div className="t-actions">
-        {!asking ? (
-          <Button
-            kind="danger"
-            onClick={() => {
-              setResult(null);
-              setAsking(true);
-            }}
-          >
-            reset all progress
-          </Button>
-        ) : (
-          <>
-            <span className="t-ask">Sure? This can&apos;t be undone.</span>
-            <Button kind="danger" disabled={busy} onClick={() => void reset()}>
-              yes, reset
-            </Button>
-            <Button
-              disabled={busy}
-              onClick={() => {
+      <Result result={result} />
+      {!asking ? (
+        <Actions
+          id="reset"
+          actions={[
+            {
+              label: "reset all progress",
+              kind: "danger",
+              run: () => {
+                setResult(null);
+                setAsking(true);
+              },
+            },
+          ]}
+        />
+      ) : (
+        <Actions
+          id="reset-confirm"
+          message="Sure? This can't be undone."
+          actions={[
+            {
+              label: "yes, reset",
+              kind: "danger",
+              key: "y",
+              disabled: busy && "resetting…",
+              run: () => void reset(),
+            },
+            {
+              label: "cancel",
+              key: "n",
+              disabled: busy && "resetting…",
+              run: () => {
                 setAsking(false);
                 setResult({ tone: "dim", text: "Nothing changed." });
-              }}
-            >
-              cancel
-            </Button>
-          </>
-        )}
-      </div>
-      <Result result={result} />
+              },
+            },
+          ]}
+        />
+      )}
     </SettingsFrame>
   );
 }
@@ -469,6 +508,7 @@ const DELETE_WORD = "delete";
 
 function Delete() {
   const router = useRouter();
+  const actions = useRef<{ focus(): void }>(null);
   const [typed, setTyped] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ tone: Tone; text: ReactNode } | null>(
@@ -502,27 +542,41 @@ function Delete() {
       </p>
       <label className="t-field">
         <span>
-          Type <strong>{DELETE_WORD}</strong> to confirm
+          <span className="t-accent">?</span> Type{" "}
+          <strong>{DELETE_WORD}</strong> to confirm, then Enter
         </span>
         <input
+          autoFocus
           value={typed}
           onChange={(event) => setTyped(event.target.value)}
+          onKeyDown={(event) => {
+            // Enter moves on to the actions, never deletes from the field.
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            actions.current?.focus();
+          }}
           autoComplete="off"
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
         />
       </label>
-      <div className="t-actions">
-        <Button
-          kind="danger"
-          disabled={busy || typed.trim() !== DELETE_WORD}
-          onClick={() => void remove()}
-        >
-          delete everything
-        </Button>
-      </div>
       <Result result={result} />
+      <Actions
+        id="delete"
+        autoFocus={false}
+        handle={actions}
+        actions={[
+          {
+            label: "delete everything",
+            kind: "danger",
+            disabled: busy
+              ? "deleting…"
+              : typed.trim() !== DELETE_WORD && `type ${DELETE_WORD} first`,
+            run: () => void remove(),
+          },
+        ]}
+      />
     </SettingsFrame>
   );
 }
@@ -536,6 +590,8 @@ function ProfileForm({ only }: { only?: string }) {
   const [answers, setAnswers] = useState<Record<string, Answer> | null>(null);
   const [saved, setSaved] = useState<Profile>({});
   const options = useRef<HTMLDivElement>(null);
+  const actions = useRef<{ focus(): void }>(null);
+  const router = useRouter();
   const [result, setResult] = useState<{ tone: Tone; text: ReactNode } | null>(
     null,
   );
@@ -569,7 +625,9 @@ function ProfileForm({ only }: { only?: string }) {
           : 0;
     if (step) {
       event.preventDefault();
-      inputs[Math.min(inputs.length - 1, Math.max(0, at + step))]?.focus();
+      // Past the last option, on to the actions.
+      if (at + step >= inputs.length) return actions.current?.focus();
+      inputs[Math.max(0, at + step)]?.focus();
     } else if (event.key === "Enter") {
       event.preventDefault();
       inputs[at].click();
@@ -659,19 +717,25 @@ function ProfileForm({ only }: { only?: string }) {
         })}
       </div>
       <p className="t-line t-dim t-keys">
-        ↑↓ move · space or enter picks · tab to save · or click
+        ↑↓ move · space or enter picks · ↓ past the last goes to save
       </p>
-      <div className="t-actions">
-        <Button kind="primary" onClick={save}>
-          save
-        </Button>
-        {only && (
-          <Link href="/settings/profile" className="t-cmd">
-            all questions
-          </Link>
-        )}
-      </div>
       <Result result={result} />
+      <Actions
+        id="profile"
+        autoFocus={false}
+        handle={actions}
+        actions={[
+          { label: "save", kind: "primary", run: save },
+          ...(only
+            ? [
+                {
+                  label: "all questions",
+                  run: () => router.push("/settings/profile"),
+                },
+              ]
+            : []),
+        ]}
+      />
     </SettingsFrame>
   );
 }

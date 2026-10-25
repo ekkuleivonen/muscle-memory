@@ -399,45 +399,6 @@
   padding: 4px 1ch;
   border-left: 2px solid var(--t-accent);
 }
-.t-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1ch 1.5ch;
-  margin-top: 1.6em;
-}
-.term .t-actions .t-btn {
-  display: inline-block;
-}
-.term button.t-btn {
-  font: inherit;
-  background: transparent;
-  cursor: pointer;
-}
-.term button.t-btn-primary {
-  background: var(--t-accent);
-}
-.term .t-btn-danger {
-  color: var(--t-err);
-  border-color: var(--t-err);
-}
-.term .t-btn-danger:hover {
-  background: color-mix(in srgb, var(--t-err) 14%, transparent);
-  border-color: var(--t-err);
-}
-.term .t-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-.term .t-btn:disabled:hover {
-  background: transparent;
-}
-.term .t-btn-primary:disabled:hover {
-  background: var(--t-accent);
-}
-.t-ask {
-  color: var(--t-err);
-}
 .t-result {
   margin-top: 1.2em;
 }
@@ -448,19 +409,17 @@
   max-width: 40ch;
 }
 .t-field input {
-  padding: 6px 1ch;
-  border: 1px solid var(--t-dim);
-  background: transparent;
+  padding: 2px 1ch;
+  border: 0;
+  border-left: 2px solid var(--t-dim);
+  background: var(--t-current);
   color: var(--t-fg);
   font: inherit;
   caret-color: var(--t-accent);
 }
 .t-field input:focus {
-  border-color: var(--t-accent);
+  border-left-color: var(--t-accent);
   outline: none;
-}
-.t-back {
-  margin-top: 3em !important;
 }
 /* The profile form: each question a fieldset, options as (•) and [x] rows to click. */
 .t-question {
@@ -503,4 +462,30 @@
 }
 .t-on-option .t-mark {
   color: var(--t-accent);
+}
+/* Actions as a prompt's choices: rows like the menu's, buttons underneath. */
+.t-key-actions {
+  margin-top: 1.6em;
+}
+.term button.t-action {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.term button.t-action.t-current-row {
+  background: var(--t-current);
+}
+.t-action.t-danger .t-row-name,
+.t-action.t-danger.t-current-row .t-row-name {
+  color: var(--t-err);
+}
+.t-action.t-disabled {
+  cursor: default;
+}
+.t-action.t-disabled .t-row-name,
+.t-action.t-disabled.t-current-row .t-row-name {
+  color: var(--t-dim);
 }
