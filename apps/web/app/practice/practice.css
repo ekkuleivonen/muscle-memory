@@ -399,12 +399,6 @@
   color: var(--dim);
   padding: 8px 0;
 }
-.practice-next .btn.start {
-  background: var(--accent);
-  color: var(--accent-fg);
-  border-color: transparent;
-  margin: 4px 16px 8px 0;
-}
 .practice-notice {
   font-size: 12.5px;
   line-height: 1.6;
@@ -449,31 +443,12 @@
   }
 }
 
-.practice-recovery {
-  padding: 20px;
-  font-size: 13px;
-  line-height: 1.6;
-}
-.practice-recovery .btn {
-  margin: 8px 12px 0 0;
-}
-.practice-version {
-  max-width: 680px;
-  margin: 64px auto;
-  padding: 24px;
-  line-height: 1.6;
-}
-
 .practice-editors {
   position: relative;
 }
 .practice-editors > p {
   position: absolute;
   inset: 20px;
-}
-.practice-recovery {
-  max-height: 100%;
-  overflow: auto;
 }
 
 /* Optional questions after completing: a line each, answers as inline choices. */

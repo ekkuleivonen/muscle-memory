@@ -1,6 +1,7 @@
 /*
- * Neutral, developer-tool palette (in the spirit of GitHub and Linear): greys plus one
- * indigo accent. Dark only. Project colours are hues 0-7 (--hue-n).
+ * Base styles: the palette (greys plus one indigo accent, dark only), type, buttons, markdown,
+ * the pages a shared link lands on, sharing, and practice's feedback. The terminal look lives
+ * in _terminal/terminal.css; practice's panes in practice/practice.css.
  */
 :root {
   color-scheme: dark;
@@ -80,12 +81,7 @@ kbd {
   font-family: var(--mono);
 }
 
-/* App shell: sidebar + main, as in Linear and GitHub Projects */
-.app {
-  display: grid;
-  grid-template-columns: 232px minmax(0, 1fr);
-  min-height: 100vh;
-}
+/* The wordmark in a page header. */
 .site-name {
   display: flex;
   align-items: center;
@@ -93,18 +89,10 @@ kbd {
   padding: 6px 8px 12px;
   font-weight: 600;
 }
-/* The company you work for, then a rule before the navigation. */
 .logo-mark {
   width: 22px;
   height: 22px;
   flex: none;
-}
-.main {
-  min-width: 0;
-}
-.content {
-  padding: 16px 20px 64px;
-  max-width: 1180px;
 }
 
 /* Buttons */
@@ -138,164 +126,7 @@ kbd {
   border-color: var(--accent);
 }
 
-/* Toolbar: search with qualifiers, filter and display menus */
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 10px;
-}
-.search {
-  flex: 1 1 320px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 30px;
-  padding: 0 8px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
-  background: var(--panel);
-}
-.search:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-.search input {
-  flex: 1;
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--fg);
-  font: 13px var(--mono);
-}
-.menu {
-  position: relative;
-}
-.menu > summary {
-  list-style: none;
-}
-.menu > summary::-webkit-details-marker {
-  display: none;
-}
-.hint {
-  font-size: 12px;
-  color: var(--faint);
-  margin: -2px 0 12px;
-}
-
-/* Issue list: dense rows grouped like Linear */
-.group {
-  margin-bottom: 14px;
-}
-.rows {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-top: 0;
-  border-radius: 0 0 var(--radius) var(--radius);
-}
-.rows > li + li {
-  border-top: 1px solid var(--line);
-}
-.row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 40px;
-  padding: 6px 12px;
-}
-.row:hover,
-.row:focus-visible {
-  background: var(--hover);
-  outline: none;
-}
-.row .key {
-  width: 52px;
-  flex: none;
-  font: 12.5px var(--mono);
-  color: var(--faint);
-}
-.row .title {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.row .meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: none;
-}
-.empty {
-  padding: 40px 20px;
-  text-align: center;
-  color: var(--dim);
-  border: 1px dashed var(--line-strong);
-  border-radius: var(--radius);
-}
-
-/* Small badges and icons */
-.icon {
-  flex: none;
-  vertical-align: -2px;
-}
-.tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 20px;
-  padding: 0 7px;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  font-size: 12px;
-  color: var(--dim);
-  white-space: nowrap;
-}
-
-/* Issue detail: content plus a properties panel */
-.challenge {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 260px;
-  gap: 32px;
-  align-items: start;
-}
-.challenge h1 {
-  font-size: 24px;
-  line-height: 1.3;
-  letter-spacing: -0.2px;
-  margin: 8px 0 12px;
-}
-.challenge .lede {
-  color: var(--dim);
-  font-size: 15px;
-  margin: 0 0 20px;
-}
-.section {
-  margin: 24px 0;
-}
-.section h2 {
-  font-size: 13px;
-  font-weight: 600;
-  margin: 0 0 8px;
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-.section h2 .count {
-  color: var(--faint);
-  font-weight: 400;
-}
-.section p {
-  margin: 0;
-  line-height: 1.65;
-}
-
-/* Authored markdown: descriptions and comments */
+/* Markdown: tasks and rule messages. */
 .markdown > * {
   margin: 0;
 }
@@ -367,183 +198,16 @@ kbd {
 .markdown-table th {
   background: var(--bg-subtle);
 }
-.comment {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-.event {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  color: var(--dim);
-  font-size: 13px;
-  margin: 4px 0 16px 6px;
-}
-.props {
-  border-left: 1px solid var(--line);
-  padding-left: 20px;
-  position: sticky;
-  top: 62px;
-}
-.props dl {
-  margin: 16px 0 0;
-  display: grid;
-  grid-template-columns: 92px 1fr;
-  gap: 10px 8px;
-  font-size: 13px;
-  align-items: center;
-}
-.props dt {
-  color: var(--dim);
-}
-.props dd {
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
-}
-.props .note {
-  font-size: 12.5px;
-  color: var(--dim);
-  margin: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--bg-subtle);
-}
-.banner {
-  font-size: 13px;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--bg-subtle);
-  margin-bottom: 12px;
-}
-.banner a {
-  color: var(--accent);
-}
-
-/* Projects table, like Linear projects */
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  overflow: hidden;
-  font-size: 13.5px;
-}
-.table th {
-  text-align: left;
-  font-weight: 500;
-  font-size: 12px;
-  color: var(--faint);
-  padding: 8px 12px;
-  background: var(--bg-subtle);
-  border-bottom: 1px solid var(--line);
-}
-.table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--line);
-  vertical-align: middle;
-}
-.table tr:last-child td {
-  border-bottom: 0;
-}
-.table tbody tr:hover {
-  background: var(--hover);
-}
-.table .name {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.table .name a::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-}
-.table tbody tr {
-  position: relative;
-}
-.facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 24px;
-  margin: 16px 0;
-  font-size: 13px;
-}
-.facts div {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.facts dt {
-  color: var(--dim);
-}
-.facts dd {
-  margin: 0;
-}
 
 @media (max-width: 860px) {
-  .app {
-    grid-template-columns: 1fr;
-  }
   .site-name {
     padding: 4px 8px;
     margin: 0;
     border: 0;
   }
-  .challenge {
-    grid-template-columns: 1fr;
-  }
-  .props {
-    border-left: 0;
-    padding-left: 0;
-    position: static;
-  }
-  .row .meta .tag {
-    display: none;
-  }
 }
 
-/* Status dropdown, Linear-style: a quiet property that opens a menu */
-.props .start {
-  width: 100%;
-  justify-content: center;
-  height: 32px;
-  margin-top: 20px;
-}
-.props .note {
-  margin-top: 20px;
-}
-
-/* Board: columns fill themselves; nothing to drag */
-.column {
-  background: var(--bg-subtle);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 8px;
-  min-height: 200px;
-}
-.column h2 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 4px 4px 10px;
-  font-size: 13px;
-  font-weight: 600;
-}
-.column h2 .count {
-  color: var(--faint);
-  font-weight: 400;
-}
-.column .hint {
-  margin: 8px 4px;
-}
-
-/* Pages outside the app shell: consent, the shared result, a shared challenge. */
+/* Pages a shared link lands on, outside the terminal: consent and the shared result. */
 .legal {
   min-height: 100vh;
 }
@@ -672,73 +336,7 @@ kbd {
     font-size: 17px;
   }
 }
-/* A review comment: a card hanging on the timeline, with its replies. */
-.diff {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.diff table {
-  width: 100%;
-  border-collapse: collapse;
-  font: 12.5px/1.6 var(--mono);
-}
-.diff td {
-  padding: 0 8px;
-  vertical-align: top;
-}
-.diff .code {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.diff .sign {
-  display: inline-block;
-  width: 1.2em;
-  user-select: none;
-}
-.diff tr.add {
-  background: color-mix(in srgb, var(--green) 14%, transparent);
-}
-.diff tr.del {
-  background: color-mix(in srgb, var(--red) 12%, transparent);
-}
-
-/* Dashboard */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 8px;
-}
-.stack {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  font-size: 13px;
-}
-.stack a {
-  color: var(--fg);
-}
-.stack li {
-  display: flex;
-  justify-content: space-between;
-  padding: 5px 0;
-}
-.stack li + li {
-  border-top: 1px solid var(--line);
-}
-@media (max-width: 1100px) {
-  .stats {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-@media (max-width: 600px) {
-  .stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-/* The receipt on a shared result's page (/r): CI-style, dark in either theme. */
+/* The receipt on a shared result's page (/r). */
 .receipt {
   background: #0f1117;
   color: #e7e9ee;
@@ -815,21 +413,12 @@ button.home-cta:disabled {
   cursor: default;
 }
 
-/* A profile question asked in place: one at a time, one tap, always skippable. */
-.ask {
-  display: grid;
-  gap: 10px;
-  padding: 14px 16px;
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--accent) 4%, var(--bg));
-  font-size: 14px;
-}
+/* The result card on its page. */
 .result-card.shared {
   margin: 8px 0 48px;
 }
 
-/* Sharing a merged pull request's result: the button, then a preview of the post. */
+/* Sharing a result: the button, then a preview of the post. */
 .share-open {
   flex: none;
   font: inherit;
@@ -916,7 +505,7 @@ button.home-cta:disabled {
   color: var(--accent-fg);
 }
 
-/* Practice entry, navigation and direct settings controls. */
+/* After completing: the next challenge, practising again, the questions and sharing. */
 .practice-next {
   padding: 20px;
   margin: 20px 0;
@@ -927,49 +516,16 @@ button.home-cta:disabled {
 .practice-next h2 {
   margin-top: 0;
 }
-.practice-next .btn.start {
-  display: inline-flex;
-  margin-right: 16px;
-}
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
-}
-@media (max-width: 860px) {
-  .app {
-    grid-template-rows: auto 1fr;
-  }
-  .row {
-    flex-wrap: wrap;
-    gap: 8px;
-    padding-top: 12px;
-    padding-bottom: 12px;
-  }
-  .row .title {
-    flex: 1 0 100%;
-    white-space: normal;
-    overflow: visible;
-    order: 1;
-  }
-  .row .meta {
-    flex: 1 0 100%;
-    order: 2;
-    justify-content: flex-start;
-  }
-  .row .meta .tag {
-    display: inline-flex;
-  }
-}
-.row:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
 }
 
 .recovery-state .btn + .btn {
   margin-left: 8px;
 }
 
-/* A failing check (review.tsx): the case, its input and what the code did. */
+/* A failing submission (review.tsx): each failing case, and errors. */
 .ci-failing {
   margin: 4px 0 10px;
   padding: 0;
@@ -1060,25 +616,11 @@ button.home-cta:disabled {
 .check-next {
   margin: 6px 0 0;
 }
-/* A merged pull request's outcome (pull-outcome.tsx): a brief, then every evidence line. */
-.outcome {
-  margin: 20px 0;
-  padding: 16px 18px;
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  background: var(--bg-subtle);
-}
-.outcome h2 {
-  margin: 0 0 6px;
-  font-size: 15px;
-}
-/* The PR's current next step precedes its inspectable history. */
-
 .practice-next h2 {
   font-size: 17px;
 }
 
-/* Published examples explain the contract without exposing implementation code. */
+/* The examples, with the task: input and expected value, nothing hidden. */
 .challenge-examples {
   margin: 20px 0;
 }
