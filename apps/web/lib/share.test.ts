@@ -63,9 +63,9 @@ test("a result link is a result, an older version, or malformed; never a guess",
     kind: "older",
     key: "QUICK-4",
   });
+  // Version 3 is current: one that doesn't decode is malformed, not "older".
   assert.deepEqual(inspectCard(segment({ v: 3, k: "<b>" })), {
-    kind: "older",
-    key: null,
+    kind: "malformed",
   });
   assert.deepEqual(
     inspectCard(segment({ ...card, k: "INC-1", iv: "0a1b2c3d", a: 1 })),

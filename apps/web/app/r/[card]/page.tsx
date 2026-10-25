@@ -3,8 +3,9 @@ import Link from "next/link";
 import { hookFor } from "../../../lib/hooks";
 import { LANGUAGES } from "../../../lib/languages";
 import { getLibrary } from "../../../lib/load";
-import { comparisonLine, sentence } from "../../../lib/result";
-import { inspectCard, tryHref } from "../../../lib/share";
+import { outcomeLines, outcomeSentence } from "../../../lib/outcome";
+import { receiptLines, sentence } from "../../../lib/result";
+import { inspectCard, tryHref, type CardLink } from "../../../lib/share";
 import { Arrived } from "./arrived";
 import { SharedCode } from "./shared-code";
 import { SharedHeader, Unavailable } from "./unavailable";
@@ -12,22 +13,62 @@ import { Receipt } from "../../(browse)/_components/result-card";
 
 type Props = { params: Promise<{ card: string }> };
 
+/** What either card version shows, in one shape. */
+function view(
+  link: Extract<CardLink, { kind: "result" | "outcome" }>,
+  label: string,
+  title: string,
+  live: string,
+) {
+  if (link.kind === "outcome") {
+    const card = link.outcome;
+    return {
+      key: card.k,
+      referral: card.c,
+      headline: outcomeSentence(card, label, title),
+      lines: outcomeLines(card),
+      completed: true,
+      // The card names the revision it was checked on; say so when the challenge has moved on.
+      earlier: `sha256:${card.rv}` !== live,
+    };
+  }
+  const card = link.result;
+  return {
+    key: card.k,
+    referral: card.c,
+    headline: sentence(card, label, title),
+    lines: receiptLines(card),
+    completed: !card.ev || card.ev.state === "merged",
+    earlier: false,
+  };
+}
+
 async function read(props: Props) {
   const link = inspectCard((await props.params).card);
   const { findIssue } = await getLibrary();
-  if (link.kind !== "result")
-    return { link, issue: link.kind === "older" && link.key ? findIssue(link.key) : undefined };
-  const issue = findIssue(link.result.k);
-  const label = LANGUAGES.find((l) => l.id === link.result.l)?.label ?? link.result.l;
-  return { link, issue, label };
+  if (link.kind !== "result" && link.kind !== "outcome")
+    return {
+      link,
+      issue:
+        link.kind === "older" && link.key ? findIssue(link.key) : undefined,
+    };
+  const card = link.kind === "outcome" ? link.outcome : link.result;
+  const issue = findIssue(card.k);
+  const label = LANGUAGES.find((l) => l.id === card.l)?.label ?? card.l;
+  return {
+    link,
+    issue,
+    label,
+    shown: issue ? view(link, label, issue.title, issue.revision) : undefined,
+  };
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
-  const { link, issue, label } = await read(props);
-  if (link.kind !== "result" || !issue)
+  const { issue, label, shown } = await read(props);
+  if (!issue || !shown)
     return { title: "Result not available · Muscle Memory", robots: { index: false } };
-  const title = sentence(link.result, label!, issue.title);
-  const description = `${issue.summary || issue.title} The same ${label} challenge, from its starting code, without AI.`;
+  const title = shown.headline;
+  const description = `${issue.summary || issue.title} The same ${label} challenge, from its starting code.`;
   return {
     title,
     description,
@@ -43,7 +84,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
  * so, never something in its place.
  */
 export default async function SharedResult(props: Props) {
-  const { link, issue, label } = await read(props);
+  const { link, issue, shown } = await read(props);
   if (link.kind === "malformed")
     return (
       <Unavailable
@@ -59,26 +100,25 @@ export default async function SharedResult(props: Props) {
         issue={issue}
       />
     );
-  const { result } = link;
-  if (!issue)
+  if (!issue || !shown)
     return (
       <Unavailable
         title="That challenge isn't available any more"
-        body={`This result is for ${result.k}, which has been retired, so it isn't shown.`}
+        body={`This result is for ${(link.kind === "outcome" ? link.outcome : link.result).k}, which has been retired, so it isn't shown.`}
       />
     );
   return (
     <div className="legal home play">
       <SharedHeader />
-      <Arrived referral={result.c} />
+      <Arrived referral={shown.referral} />
       <main className="legal-body home-body">
         <section className="result-card shared">
           <Receipt
             top={`muscle memory · ${issue.key} · shared result`}
-            headline={sentence(result, label!, issue.title)}
-            detail="No completion, chat or generated code. Their numbers, as they shared them; not a verified record."
-            metrics={result}
-            comparison={comparisonLine(result, label!)}
+            headline={shown.headline}
+            detail={`${shown.earlier ? "Completed on an earlier version of this challenge; you start from the current one. " : ""}The editor offers no AI completion, chat or generated code: a practice condition, not proof about other tools. As they shared it; not a verified record.`}
+            lines={shown.lines}
+            completed={shown.completed}
           />
         </section>
         <section className="home-hero">

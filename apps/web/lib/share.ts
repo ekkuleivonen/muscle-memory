@@ -9,6 +9,7 @@
  * challenge has one file to edit, so a link normally carries one; the format takes up to
  * `MAX_FILES`, so links made when challenges had several still read back whole.
  */
+import { decodeOutcome, type Outcome } from "./outcome";
 import { decodeResult, type Result } from "./result";
 
 /** The public page of a challenge: what it is, and a fresh start on it. */
@@ -16,6 +17,9 @@ export const tryHref = (key: string) => `/try/${key}`;
 
 /** What a result link turned out to be, so a bad or old one gets an honest page. */
 export type CardLink =
+  /** A completed challenge (card version 3). */
+  | { readonly kind: "outcome"; readonly outcome: Outcome }
+  /** A legacy card (version 2), made when a pull request was merged. */
   | { readonly kind: "result"; readonly result: Result }
   /** It decodes, but from a card version we no longer show; the issue it names, if any. */
   | { readonly kind: "older"; readonly key: string | null }
@@ -30,6 +34,10 @@ export function inspectCard(segment: string): CardLink {
     const value = JSON.parse(
       new TextDecoder().decode(Uint8Array.from(binary, (c) => c.charCodeAt(0))),
     );
+    if (value && typeof value === "object" && value.v === 3) {
+      const outcome = decodeOutcome(segment);
+      return outcome ? { kind: "outcome", outcome } : { kind: "malformed" };
+    }
     if (
       value &&
       typeof value === "object" &&
@@ -108,6 +116,7 @@ export type CodeRefusal =
   | "too-many-files"
   | "invalid-path"
   | "incomplete"
+  | "missing"
   | "too-large";
 
 /** What the person is told when their code can't be included. */
@@ -117,6 +126,8 @@ export const REFUSALS: Record<CodeRefusal, string> = {
   "invalid-path": "Your file has a name that can't go in a link.",
   incomplete: "Your code wasn't saved in full, so it can't be shared exactly.",
   "too-large": "Your code is too long to fit in a link.",
+  missing:
+    "The code that was checked wasn't kept, so it can't be shared exactly. Your current code is never shared in its place.",
 };
 
 /** Files a link may carry, or why not: the same rules for sharing and for reading. */

@@ -8,8 +8,15 @@ import {
 import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
 import { LANGUAGES } from "../../../lib/languages";
 import {
+  encodeOutcome,
+  outcomeOf,
+  outcomeSentence,
+  publicOutcome,
+  type Outcome,
+  type RecordedCompletion,
+} from "../../../lib/outcome";
+import {
   encodeResult,
-  metricsOf,
   publicResult,
   sentence,
   type Result,
@@ -24,12 +31,7 @@ import {
   type SharedFile,
 } from "../../../lib/share";
 import { logShare } from "./board-log";
-import {
-  copyText,
-  useReferral,
-  type ResultInput,
-  type ResultState,
-} from "./result-card";
+import { copyText, useReferral, type ResultInput } from "./result-card";
 import "../../share.css";
 
 type Channel = "copy" | "x" | "linkedin" | "native";
@@ -93,10 +95,14 @@ export function ShareResult({
   issue,
   code,
 }: {
-  state: ResultState;
+  /** The card to share: a v3 outcome, or a legacy v2 result (a merged pull request). */
+  state: { result: Result | Outcome | null; label: string };
   issue: ResultInput["issue"];
-  /** The solution as checked: the file edited (or every file changed); only shared when ticked. */
-  code?: readonly SharedFile[];
+  /**
+   * The solution as checked: the file edited (or every file changed); only shared when ticked.
+   * "missing" when the checked copy wasn't kept: the box is offered and then refuses.
+   */
+  code?: readonly SharedFile[] | "missing";
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [copied, setCopied] = useState(false);
@@ -105,11 +111,17 @@ export function ShareResult({
   const [packed, setPacked] = useState<string | undefined>(undefined);
   const [refusal, setRefusal] = useState<CodeRefusal | null>(null);
   // By content: the caller may build a new array on every render.
+  const missing = code === "missing";
   const files = useMemo(
-    () => (code?.length ? code : null),
+    () => (Array.isArray(code) && code.length ? code : null),
     [JSON.stringify(code ?? [])],
   ); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
+    if (withCode && missing) {
+      setPacked(undefined);
+      setRefusal("missing");
+      return;
+    }
     if (!withCode || !files) return;
     let live = true;
     setPacked(undefined);
@@ -124,14 +136,19 @@ export function ShareResult({
     return () => {
       live = false;
     };
-  }, [withCode, files]);
+  }, [withCode, files, missing]);
   const { result } = state;
   if (!result) return null;
-  const card = publicResult(result);
-  const segment = encodeResult(card);
+  // Only allowlisted fields leave the browser, whichever version the card is.
+  const card = result.v === 3 ? publicOutcome(result) : publicResult(result);
+  const segment = card.v === 3 ? encodeOutcome(card) : encodeResult(card);
   const including = withCode && !!packed;
   const url = `${location.origin}/r/${segment}${including ? codeFragment(packed) : ""}`;
-  const text = `${sentence(card, state.label, issue.title)} Keep your coding skills in practice.`;
+  const said =
+    card.v === 3
+      ? outcomeSentence(card, state.label, issue.title, "first")
+      : sentence(card, state.label, issue.title, "first");
+  const text = `${said} Keep your coding skills in practice.`;
   const share = async (channel: Channel) => {
     // Ticked but not packed yet, or refused: never share without saying so, or share part of it.
     if (withCode && !packed) return;
@@ -214,10 +231,10 @@ export function ShareResult({
           <p className="share-text">{text}</p>
           <p className="faint share-note">
             {including
-              ? `Your numbers, a link to try ${issue.key}, and your solution.`
-              : `Your numbers and a link to try ${issue.key} from the start. Not your code.`}
+              ? `Your result, a link to try ${issue.key}, and your solution.`
+              : `Your result and a link to try ${issue.key} from the start. Not your code.`}
           </p>
-          {count > 0 && (
+          {(count > 0 || missing) && (
             <label className="share-code">
               <input
                 type="checkbox"
@@ -231,7 +248,9 @@ export function ShareResult({
                 <b>Include my code</b>
                 <span className="faint">
                   {" "}
-                  {count === 1 ? (
+                  {missing ? (
+                    "Adds your solution, exactly as it was checked, to the link itself."
+                  ) : count === 1 ? (
                     <>
                       Adds your solution, <code>{files![0].path}</code>, to the
                       link itself, in full.
@@ -291,23 +310,13 @@ export function ShareResult({
   );
 }
 
-/** A recorded completion, as ENG-328's `completions()` reads one. */
-export interface ShareableCompletion {
-  readonly issue: string;
-  readonly revision: string;
-  readonly key: string;
-  readonly at: string;
-  readonly runId: string;
-}
-
 /**
- * Optional sharing for the practice area, after a recorded completion of the challenge open
- * there; nothing before one, and nothing for a completion on another revision. The card is
- * the existing version 2 shape with the person's numbers up to the completion and no pull
- * request evidence, so it reads "Completed <challenge> in <language> without AI." (pending
- * dot's decision on card version 3, docs/eng-332-share-contract.md). Their solution is
- * offered unticked: the editable file exactly as the completing run checked it, or refused
- * when that copy was kept only in part.
+ * Optional sharing for the practice area, after a recorded `checks-passed` completion of the
+ * challenge open there; nothing before one, nothing for a legacy merge, and nothing for a
+ * completion on another revision. The card is version 3 (`lib/outcome.ts`): the challenge, the
+ * checked revision and its recorded full checks, nothing else. Their solution is offered
+ * unticked: the editable file exactly as the completing run checked it, refused when that copy
+ * is missing or was kept only in part, and never the editor's current code.
  */
 export function ShareOutcome({
   challenge,
@@ -322,23 +331,31 @@ export function ShareOutcome({
     revision: string;
     language: string;
   };
-  /** The latest recorded completion for this challenge, or null. */
-  completion: ShareableCompletion | null;
+  /** The latest recorded completion for this challenge (`completions(...).at(-1)`), or null. */
+  completion: RecordedCompletion | null;
   records: readonly WorkspaceRecord[];
   revisions: Readonly<Record<string, Revision>>;
 }) {
   const referral = useReferral();
   const done =
     completion &&
+    completion.automatic &&
     completion.issue === challenge.slug &&
+    completion.key === challenge.key &&
     completion.revision === challenge.revision
       ? completion
       : null;
-  const metrics = useMemo(
+  const card = useMemo(
     () =>
-      done &&
-      metricsOf(records, challenge.slug, done.at, (id) => revisions[id]),
-    [records, challenge.slug, done, revisions],
+      done && referral
+        ? outcomeOf({
+            records,
+            completion: done,
+            language: challenge.language,
+            referral,
+          })
+        : null,
+    [records, done, referral, challenge.language],
   );
   const solution = useMemo(() => {
     const revision = done && revisions[done.revision];
@@ -350,23 +367,20 @@ export function ShareOutcome({
         )
       : null;
   }, [records, done, revisions]);
-  if (!done || !metrics) return null;
+  if (!card) return null;
   const label =
     LANGUAGES.find((l) => l.id === challenge.language)?.label ??
     challenge.language;
-  const result: Result | null = referral
-    ? { v: 2, k: challenge.key, l: challenge.language, c: referral, ...metrics }
-    : null;
   return (
     <ShareResult
-      state={{ metrics, result, comparison: null, label }}
+      state={{ result: card, label }}
       issue={{
         key: challenge.key,
         slug: challenge.slug,
         title: challenge.title,
         revision: challenge.revision,
       }}
-      code={solution ?? undefined}
+      code={solution ?? "missing"}
     />
   );
 }

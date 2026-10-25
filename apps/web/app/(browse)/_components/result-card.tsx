@@ -13,84 +13,27 @@ import { LANGUAGES } from "../../../lib/languages";
 import { INGEST_URL } from "../../../lib/ingest";
 import {
   compare,
-  comparisonLine,
-  duration,
   metricsOf,
+  receiptLines,
   type Aggregate,
   type Metrics,
   type Result,
 } from "../../../lib/result";
 
-/**
- * The receipt's lines, for the shared card: what the person did on the challenge, in the
- * words of the challenge (checks, examples), never a pull request's. A version 2 card's
- * "pushes" each ran the full checks, so they read as full checks. Hints and open findings
- * come from before both were retired; they are shown only when a card has some.
- */
-export function receiptLines(
-  m: Metrics & { ev?: PublicEvidence },
-): [string, string, boolean?][] {
-  const hints: [string, string][] =
-    (m.ev?.hints ?? m.h) ? [["hints", String(m.ev?.hints ?? m.h)]] : [];
-  if (m.ev)
-    return [
-      [
-        "checks passed",
-        `${m.ev.checks.passed ?? "?"}/${m.ev.checks.total ?? "?"}`,
-        m.ev.checks.total > 0 && m.ev.checks.passed === m.ev.checks.total,
-      ],
-      [
-        "first full check",
-        m.ev.first
-          ? `${m.ev.first.passed ?? "?"}/${m.ev.first.total ?? "?"}`
-          : "not known",
-      ],
-      [
-        "checks beyond the examples",
-        m.ev.hidden
-          ? `${m.ev.hidden.passed}/${m.ev.hidden.total}`
-          : "not known",
-      ],
-      ["full checks run", String(m.ev.pushes)],
-      ["example runs", String(m.ev.runs)],
-      ...(m.ev.findings.open
-        ? [
-            ["rule findings open", String(m.ev.findings.open)] as [
-              string,
-              string,
-            ],
-          ]
-        : []),
-      ...hints,
-    ];
-  return [
-    [
-      "example runs",
-      m.g === 1
-        ? `${m.r} · all passed first try`
-        : m.g
-          ? `${m.r} · all passed on run ${m.g}`
-          : String(m.r),
-      m.g === 1,
-    ],
-    ...hints,
-  ];
-}
-
 export function Receipt({
   headline,
   detail,
-  metrics,
+  lines,
+  completed,
   top,
-  comparison,
   children,
 }: {
   headline: string;
   detail: string;
-  metrics: Metrics & { ev?: PublicEvidence };
+  /** The card's rows: `receiptLines` for a v2 card, `outcomeLines` for v3. */
+  lines: [string, string, boolean?][];
+  completed: boolean;
   top: string;
-  /** "Faster than 72% of people who completed it in Python." */
-  comparison?: string | null;
   children?: React.ReactNode;
 }) {
   return (
@@ -98,16 +41,14 @@ export function Receipt({
       <div className="receipt-top">
         <span>{top}</span>
         <span className="receipt-merged">
-          {metrics.ev && metrics.ev.state !== "merged"
-            ? "not completed"
-            : "✔ completed"}
+          {completed ? "✔ completed" : "not completed"}
         </span>
       </div>
       <p className="receipt-head">{headline}</p>
       <p className="receipt-sub">{detail}</p>
 
       <dl className="receipt-rows">
-        {receiptLines(metrics).map(([label, value, good]) => (
+        {lines.map(([label, value, good]) => (
           <div key={label} className="receipt-row">
             <dt>{label}</dt>
             <span aria-hidden className="receipt-dots" />

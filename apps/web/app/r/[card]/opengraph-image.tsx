@@ -1,16 +1,17 @@
 import { ImageResponse } from "next/og";
 import { LANGUAGES } from "../../../lib/languages";
 import { getLibrary } from "../../../lib/load";
-import { sentence } from "../../../lib/result";
+import { outcomeLines, outcomeSentence } from "../../../lib/outcome";
+import { receiptLines, sentence } from "../../../lib/result";
 import { inspectCard } from "../../../lib/share";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "A self-reported practice outcome";
+export const alt = "A shared practice outcome";
 
 /**
  * The picture a shared link shows in posts and chats: the outcome as a headline naming the
- * challenge, and its numbers.
+ * challenge, and the checks the card carries. Nothing the card doesn't say.
  */
 export default async function Image({
   params,
@@ -19,19 +20,29 @@ export default async function Image({
 }) {
   // Only a card the page would show; anything else gets the plain invitation.
   const link = inspectCard((await params).card);
-  const result = link.kind === "result" ? link.result : null;
-  const label = result
-    ? (LANGUAGES.find((l) => l.id === result.l)?.label ?? result.l)
+  const card =
+    link.kind === "outcome"
+      ? link.outcome
+      : link.kind === "result"
+        ? link.result
+        : null;
+  const label = card
+    ? (LANGUAGES.find((l) => l.id === card.l)?.label ?? card.l)
     : "";
   // As on the page: a card for a retired challenge is not shown.
-  const issue = result ? (await getLibrary()).findIssue(result.k) : undefined;
-  const shown = issue ? result : null;
-  const stat = (value: string, text: string) => (
-    <div style={{ display: "flex", flexDirection: "column", marginRight: 72 }}>
-      <div style={{ fontSize: 76, color: "#ffffff" }}>{value}</div>
-      <div style={{ fontSize: 26, color: "#9aa0b1" }}>{text}</div>
-    </div>
-  );
+  const issue = card ? (await getLibrary()).findIssue(card.k) : undefined;
+  const shown =
+    issue && link.kind === "outcome"
+      ? {
+          headline: outcomeSentence(link.outcome, label, issue.title),
+          stats: outcomeLines(link.outcome),
+        }
+      : issue && link.kind === "result"
+        ? {
+            headline: sentence(link.result, label, issue.title),
+            stats: receiptLines(link.result),
+          }
+        : null;
   return new ImageResponse(
     (
       <div
@@ -48,34 +59,28 @@ export default async function Image({
         }}
       >
         <div style={{ fontSize: 26, color: "#b69cff", letterSpacing: 2 }}>
-          {shown
-            ? `MUSCLE MEMORY · ${shown.k} · PRACTICE WITHOUT AI`
-            : "MUSCLE MEMORY · PRACTICE WITHOUT AI"}
+          {shown && card
+            ? `MUSCLE MEMORY · ${card.k} · ${label.toUpperCase()}`
+            : "MUSCLE MEMORY"}
         </div>
         <div style={{ fontSize: 48, lineHeight: 1.2 }}>
-          {shown && issue
-            ? sentence({ ...shown, fp: undefined }, label, issue.title)
-            : "One challenge. No AI. Solve it at your own pace."}
+          {shown ? shown.headline : "One challenge. Solve it at your own pace."}
         </div>
         {shown && (
           <div style={{ display: "flex" }}>
-            {shown.ev ? (
-              <>
-                {stat(
-                  `${shown.ev.checks.passed}/${shown.ev.checks.total}`,
-                  "checks passed",
-                )}
-                {stat(
-                  shown.ev.first
-                    ? `${shown.ev.first.passed}/${shown.ev.first.total}`
-                    : "?",
-                  "first full check",
-                )}
-                {stat(String(shown.ev.pushes), "full checks run")}
-              </>
-            ) : (
-              stat(String(shown.r), "example runs")
-            )}
+            {shown.stats.slice(0, 3).map(([text, value]) => (
+              <div
+                key={text}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  marginRight: 72,
+                }}
+              >
+                <div style={{ fontSize: 76, color: "#ffffff" }}>{value}</div>
+                <div style={{ fontSize: 26, color: "#9aa0b1" }}>{text}</div>
+              </div>
+            ))}
           </div>
         )}
         <div style={{ fontSize: 30, color: "#cfd2db" }}>
