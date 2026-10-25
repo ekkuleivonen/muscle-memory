@@ -8,6 +8,8 @@ The pre-implementation [loop inventory](eng-328-loop-audit.md) and earlier versi
 
 Practice shows the published goal, visible Input/Expected output examples and exactly one editable entry. No file explorer, tabs, file selector, test source, support-code display, hints or comment thread is shown. SQL remains supported with its public schema. Authored requirements are in the normalized description; a failed deterministic requirement is explained by read-only diagnostic feedback, without a persona, reply or Resolve. External documentation and Stack Overflow are allowed; no tutor or hint replacement is added.
 
+Removing hint controls preserves historical hint use as a fact. Profile reuses the existing `metricsOf(...).h` count for each completion's original attempt, bounded by its recorded completion time. Positive counts are shown beside that completion; hint text is never projected, and a zero count makes no claim about independent work or external help. This read-only projection changes neither stored records nor evidence computation and adds no collection.
+
 Submit runs the full suite; Run examples remains a secondary, public-only check. Neither changes `RunPurpose` or workspace capture semantics. Ctrl/Cmd+Enter submits; Escape then Tab leaves the editor. Feedback preserves focus. Next challenge is the sole primary action after current verification, without automatic navigation. The route keys the client editor by challenge/revision so Next opens a fresh correctly recorded session. Existing deterministic recommendation factors are language, project/category and difficulty; this is not adaptive learning.
 
 ### Historical compatibility

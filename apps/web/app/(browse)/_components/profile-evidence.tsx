@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { completions } from "../../../lib/completion";
+import { profileCompletions } from "../../../lib/profile-completions";
 import { useRecords } from "./records";
 
 export function ProfileEvidence({
@@ -10,7 +10,7 @@ export function ProfileEvidence({
 }) {
   const records = useRecords();
   if (!records) return <p role="status">Reading your practice…</p>;
-  const completed = completions(records).reverse();
+  const completed = profileCompletions(records);
   if (!completed.length)
     return (
       <p>
@@ -32,6 +32,8 @@ export function ProfileEvidence({
             <span className="meta dim">
               {item.automatic ? "Verified completion" : "Historical completion"}{" "}
               · {new Date(item.at).toLocaleDateString()}
+              {item.hints > 0 &&
+                ` · ${item.hints} built-in ${item.hints === 1 ? "hint" : "hints"} used`}
             </span>
           </Link>
         </li>
