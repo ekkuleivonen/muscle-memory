@@ -6,9 +6,17 @@ export interface Crumb {
   href: string;
 }
 
+/** Always reachable, on the right: the way home, every challenge, and the legal pages. */
+const LINKS = [
+  { href: "/", label: "home" },
+  { href: "/issues", label: "challenges" },
+  { href: "/terms", label: "terms" },
+  { href: "/privacy", label: "privacy" },
+] as const;
+
 /**
  * The terminal's status bar: where this page sits, as a trail of clickable steps from home,
- * pinned to the bottom of every terminal page. Terms and privacy stay reachable on the right.
+ * pinned to the bottom of every terminal page, with a few fixed links on the right.
  */
 export function TermFooter({ trail = [] }: { trail?: readonly Crumb[] }) {
   const steps: Crumb[] = [{ label: "muscle memory", href: "/" }, ...trail];
@@ -34,12 +42,11 @@ export function TermFooter({ trail = [] }: { trail?: readonly Crumb[] }) {
           })}
         </ol>
         <span className="t-footer-fill" />
-        <Link href="/terms" className="t-footer-link">
-          terms
-        </Link>
-        <Link href="/privacy" className="t-footer-link">
-          privacy
-        </Link>
+        {LINKS.map((link) => (
+          <Link key={link.href} href={link.href} className="t-footer-link">
+            {link.label}
+          </Link>
+        ))}
       </nav>
     </footer>
   );
