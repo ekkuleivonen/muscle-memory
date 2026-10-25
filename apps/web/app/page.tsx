@@ -55,10 +55,10 @@ export default function Home() {
             </Link>
           </div>
           <p className="t-line t-dim home-teaser">
-            I use AI for almost everything. Then I tried writing some code on
-            my own, and it caught me completely off guard. I built Muscle
-            Memory to find out whether others feel the same, and to put some
-            data behind the debate.{" "}
+            I use AI for almost everything, and I enjoy what it lets me build.
+            Writing some code on my own caught me off guard. I want to keep
+            being able to do both. That&apos;s why I built Muscle Memory, and
+            why I&apos;m curious how it feels for you.{" "}
             <Link className="t-cmd" href="/manifesto">
               Why I built this →
             </Link>
