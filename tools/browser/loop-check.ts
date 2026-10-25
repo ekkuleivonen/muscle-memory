@@ -189,9 +189,11 @@ try {
       .count(),
     0,
   );
-  await keyActivate(
-    page.getByRole("button", { name: "Resolve", exact: true }).first(),
-  );
+  await keyActivate(page.locator(".pull-next-action"));
+  assert.equal(await page.evaluate(() => document.activeElement?.id), "pull-findings-title");
+  await page.keyboard.press("Tab");
+  assert.equal(await page.evaluate(() => document.activeElement?.textContent?.trim()), "Resolve");
+  await page.keyboard.press("Enter");
   await page
     .getByRole("button", { name: "Merge pull request", exact: true })
     .waitFor();
