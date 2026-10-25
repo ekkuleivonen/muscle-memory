@@ -24,8 +24,8 @@ const KEY = /^[A-Z][A-Z0-9]{1,4}-[1-9]\d{0,3}$/;
 /** Reads a result link's path segment. Never invents a result for one that does not decode. */
 export function inspectCard(segment: string): CardLink {
   const result = decodeResult(segment);
-  // Cards from the retired incident carry its version; there is no such page to show any more.
-  if (result?.iv !== undefined) return { kind: "older", key: null };
+  // Cards from the retired incident carry its version; that page is gone, but its issue may not be.
+  if (result?.iv !== undefined) return { kind: "older", key: result.k };
   if (result) return { kind: "result", result };
   try {
     const binary = atob(segment.replace(/-/g, "+").replace(/_/g, "/"));

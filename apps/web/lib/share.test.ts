@@ -40,7 +40,7 @@ test("a result link is a result, an older version, or malformed; never a guess",
   assert.deepEqual(inspectCard(encodeResult(card)), { kind: "result", result: card });
   assert.deepEqual(inspectCard(segment({ v: 1, k: "QUICK-4", t: 1 })), { kind: "older", key: "QUICK-4" });
   assert.deepEqual(inspectCard(segment({ v: 3, k: "<b>" })), { kind: "older", key: null });
-  assert.deepEqual(inspectCard(encodeResult({ ...card, k: "INC-1", iv: "0a1b2c3d", a: 1 })), { kind: "older", key: null });
+  assert.deepEqual(inspectCard(encodeResult({ ...card, k: "INC-1", iv: "0a1b2c3d", a: 1 })), { kind: "older", key: "INC-1" });
   // A current card with a field out of range is not "older": it is not one we made.
   assert.deepEqual(inspectCard(encodeResult({ ...card, t: -1 })), { kind: "malformed" });
   for (const bad of ["", "%%%", "bm90IGpzb24", segment("just a string"), segment(null)])
