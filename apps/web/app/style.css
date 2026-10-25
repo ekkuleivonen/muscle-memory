@@ -2962,3 +2962,71 @@ button.home-cta:disabled {
   font-size: 12.5px;
   color: var(--red);
 }
+/* A pull request's outcome (pull-outcome.tsx): evidence lines, each marked by kind. */
+.outcome,
+.outcome-actions {
+  margin: 20px 0;
+  padding: 16px 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--bg-subtle);
+}
+.outcome h2,
+.outcome-actions h2 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+.outcome-note {
+  margin: 0 0 12px;
+  font-size: 13px;
+}
+.outcome-section h3 {
+  margin: 12px 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.outcome-section ul,
+.outcome-actions ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.outcome-section li {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 13.5px;
+}
+.outcome-status {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--faint);
+  padding-top: 2px;
+}
+.outcome-section li.observed.pass .outcome-status {
+  color: var(--green);
+}
+.outcome-section li.observed.fail .outcome-status {
+  color: var(--red);
+}
+.outcome-section li.missing,
+.outcome-section li.inferred {
+  color: var(--dim);
+}
+.outcome-section li.inferred span:last-child {
+  font-style: italic;
+}
+.outcome-section.secondary li {
+  font-size: 12.5px;
+  color: var(--dim);
+}
+.outcome-actions {
+  border-color: var(--amber);
+}
+.outcome-actions li {
+  padding: 3px 0;
+  font-size: 13.5px;
+}

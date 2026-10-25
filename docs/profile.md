@@ -8,7 +8,7 @@ The questions live in `apps/web/lib/questions.ts` (experience, how often you cod
 
 | Where | Asks | `from` |
 | --- | --- | --- |
-| A merged pull request's result card | experience, AI use | `result` |
+| A merged pull request, after its outcome | experience, AI use | `result` |
 | The dashboard, beside suggestions | languages | `dashboard` |
 | An issue page, under Start work | editor keys (the IDE opens with them) | `issue` |
 | Settings (individual controls or terminal `profile`) | all of them, to change answers | `settings` |

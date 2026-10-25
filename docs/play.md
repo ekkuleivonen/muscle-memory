@@ -16,6 +16,16 @@ Accepting the current Terms is the only thing any page requires (`requireConsent
 - Someone who has not (a deep link, or the Terms changed since) is sent to `/consent`: the Terms in four points, one button, then on to the page they were heading for. `/play` does the same inline.
 - "Start your first day" on the landing page goes to the dashboard (through `/consent`). There is no onboarding: the profile questions are asked in place, one at a time, and can always wait ([profile](profile.md)).
 
+## The outcome
+
+A merged pull request shows its **Outcome** at the top of its page, with no extra step: evidence read from the same records as the pull request (`apps/web/lib/evidence.ts`, rendered by `pull-outcome.tsx`), never written back and never a score, rank or badge. In order: what changed (files and lines against the starter code, pushes), correctness (CI on the latest push, the repo's own tests), what CI checked beyond the visible tests, verification (local runs, and whether the code pushed last was tested first), recovery (failed or errored runs before the first green one, failing pushes, earlier pull requests closed, review findings and how each was resolved), help (hints, teammate comments, the editor features on, pastes) and, last, time.
+
+Each line is marked **observed** (a fact in the records), **not known** (the code wasn't kept, a capture gap, a check that never reached the tests, an older record without the breakdown) or a limited **reading** of observed facts. Production is always "not known": the checks ran in the test runner and nothing was deployed. Time is reported with the caveat that it includes reading and waiting on the runner; pastes, page switches and time say what happened, not how good anyone is, and nothing infers anything about AI use.
+
+While a pull request is open, the same evidence lists what to do **before merging**: failing or errored checks, code changed since the last push, a ticket updated since the checks ran (both are stale checks: push again) and findings still to resolve. Merging is still decided only by `mergeBlocker` in `lib/feedback.ts`.
+
+`publicEvidence` is the outcome as it may leave the browser, for sharing: counts and statuses only (no code, file paths, comment text, timing or assistance beyond the hint count), and `parsePublicEvidence` reads one back from untrusted input.
+
 ## The result
 
 A merged pull request's Details list what happened, next to the facts already there, computed in the browser from the person's own records (`metricsOf` in `apps/web/lib/result.ts`, metrics version 2):
@@ -28,7 +38,7 @@ A merged pull request's Details list what happened, next to the facts already th
 - **test runs**, and which one first passed every case ("green first try");
 - **hints**, **pastes** and **left the tab** (times the page was hidden).
 
-The fix itself is never shown, so a friend still gets a fair go. The same numbers are recorded at the merge as a `result` event, so aggregates use exactly the definitions people see. Under the merge, the experience and AI-use questions are asked while open, one tap each, recorded as `profile` with `from: "result"`.
+The fix itself is never shown, so a friend still gets a fair go. The same numbers are recorded at the merge as a `result` event, so aggregates use exactly the definitions people see. After the outcome, at the foot of the page, the experience and AI-use questions are asked while open, one tap each and skippable with Not now, recorded as `profile` with `from: "result"`.
 
 **Share result** in the merge box opens a preview of exactly what a post or chat will show (the shared link's image and text), then copy link, X, LinkedIn or the system share sheet. The link is `/r/<card>`: the numbers, base64url-encoded in the path, plus this device's **referral code**, a random code separate from the participant ID. The link is a brag, not a record: anyone could edit it, so nothing trusts it.
 
