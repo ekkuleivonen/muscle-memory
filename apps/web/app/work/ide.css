@@ -947,7 +947,7 @@ dialog::backdrop {
     padding: 4px 8px;
     gap: 4px 12px;
   }
-  .ide-status > span:first-child {
+  .ide-status > span:first-child:not([role="status"]) {
     display: none;
   }
   .ide-status-right {

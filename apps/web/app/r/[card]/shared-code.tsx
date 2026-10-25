@@ -7,18 +7,28 @@ import { codeFromHash, decodeCode, type SharedFile } from "../../../lib/share";
  * never sees it). Closed until asked for, since it shows their fix. Shown as plain text.
  */
 export function SharedCode() {
-  const [files, setFiles] = useState<SharedFile[] | null | undefined>(undefined);
+  const [files, setFiles] = useState<SharedFile[] | null | undefined>(
+    undefined,
+  );
   useEffect(() => {
-    const packed = codeFromHash(location.hash);
-    if (!packed) {
-      // A fragment that is not ours says so; no fragment says nothing.
-      setFiles(location.hash.startsWith("#code=") ? null : undefined);
-      return;
-    }
-    let live = true;
-    decodeCode(packed).then((value) => live && setFiles(value));
+    let request = 0;
+    const read = () => {
+      const current = ++request;
+      const packed = codeFromHash(location.hash);
+      if (!packed) {
+        setFiles(location.hash.startsWith("#code=") ? null : undefined);
+        return;
+      }
+      setFiles(undefined);
+      decodeCode(packed).then(
+        (value) => current === request && setFiles(value),
+      );
+    };
+    read();
+    window.addEventListener("hashchange", read);
     return () => {
-      live = false;
+      request++;
+      window.removeEventListener("hashchange", read);
     };
   }, []);
   if (files === undefined) return null;
