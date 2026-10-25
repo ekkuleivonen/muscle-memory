@@ -120,7 +120,7 @@ test("a check that never reached the cases gives its error, not per-case guesses
     diagnose(
       {
         status: "user-error",
-        phase: "load",
+        phase: "compile",
         error: {
           type: "SyntaxError",
           message: "invalid syntax",

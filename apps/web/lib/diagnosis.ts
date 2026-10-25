@@ -155,15 +155,23 @@ export function diagnose(
       timeoutMs:
         typeof outcome.timeoutMs === "number" ? outcome.timeoutMs : null,
     };
-  if (outcome.phase !== "tests" || !outcome.cases)
+  if (outcome.phase !== "tests" || !outcome.cases) {
+    // Compile and load errors come before any input is passed, so they can't carry a hidden
+    // case's data. An error from the cases' stage (or an unknown one) might: user code chooses an
+    // exception's type and message. With hidden cases in the run, it is withheld.
+    const safe =
+      outcome.phase === "compile" ||
+      outcome.phase === "execute" ||
+      cases.every((c) => c.visible);
     return {
       kind: "error",
-      error: {
-        type: outcome.error?.type ?? "Error",
-        message: outcome.error?.message ?? "the checks did not complete",
-      },
-      traceback: outcome.error?.traceback?.text || null,
+      error:
+        safe && outcome.error
+          ? { type: outcome.error.type, message: outcome.error.message }
+          : { type: "Error", message: "the checks did not complete" },
+      traceback: safe ? outcome.error?.traceback?.text || null : null,
     };
+  }
   const { passed } = runFeedback(cases, outcome.cases);
   const rows = cases.map((c, i): CheckRow => {
     const result = outcome.cases![i];

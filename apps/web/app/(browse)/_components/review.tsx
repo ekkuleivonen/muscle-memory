@@ -449,9 +449,8 @@ export function Checks({
         </ol>
       )}
       {outcome?.stdout?.text &&
-        (diagnosis.kind === "tests" &&
-        diagnosis.rows.some((r) => !r.visible) ? (
-          // Printing an argument would reveal a hidden case's input.
+        (cases?.some((c) => !c.visible) ? (
+          // The full check includes hidden cases: printing an argument would reveal one.
           <p className="dim pull-output">
             Printed output isn&apos;t shown for the full check, which includes
             hidden cases. Run the tests to see what your code prints.

@@ -11,7 +11,7 @@ import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { Case } from "../../../packages/content/model";
 import { checkFeedbackOf } from "./check-feedback";
-import { diagnose } from "./diagnosis";
+import { diagnose, failureOf, failureText } from "./diagnosis";
 import type { PullSummary } from "./pulls";
 
 // The root test runner compiles JSX the classic way (React.createElement), so the components
@@ -158,4 +158,83 @@ test("a passing check shows a hidden case's position only", () => {
     JSON.stringify(diagnose(passing, cases)),
     "diagnose (passing)",
   );
+});
+
+test("an error reported from the cases' stage, with no per-case results, is withheld", () => {
+  // A hidden case threw something the runner reported for the run as a whole.
+  const crashed = {
+    status: "user-error",
+    phase: "tests",
+    error: {
+      type: "SECRET_TYPE",
+      message: "SECRET_MESSAGE",
+      traceback: { text: "SECRET_INPUT" },
+    },
+    stdout: { text: "SECRET_INPUT" },
+  };
+  const diagnosis = diagnose(crashed, cases);
+  assertNoSecrets(JSON.stringify(diagnosis), "diagnose (run-level error)");
+  for (const [surface, html] of [
+    [
+      "Checks",
+      renderToStaticMarkup(createElement(Checks, { outcome: crashed, cases })),
+    ],
+    [
+      "Findings",
+      renderToStaticMarkup(
+        createElement(Findings, {
+          pull,
+          outcome: crashed,
+          cases,
+          threads: [],
+          revisions: {},
+        }),
+      ),
+    ],
+    [
+      "CheckFeedbackView",
+      renderToStaticMarkup(
+        createElement(CheckFeedbackView, {
+          feedback: checkFeedbackOf({
+            blocker: "checks",
+            running: false,
+            completed: false,
+            latest: { passed: 0, total: 3 },
+            diagnosis,
+            required: [],
+          }),
+        }),
+      ),
+    ],
+  ] as const)
+    assertNoSecrets(html, surface);
+  // A compile error comes before any input, so it stays useful.
+  const compile = diagnose(
+    {
+      status: "user-error",
+      phase: "compile",
+      error: { type: "SyntaxError", message: "line 3" },
+    },
+    cases,
+  );
+  assert.deepEqual(compile?.kind === "error" && compile.error, {
+    type: "SyntaxError",
+    message: "line 3",
+  });
+});
+
+test("failure categories hold no user-controlled text", () => {
+  for (const result of [
+    { error: { type: "SECRET_TYPE", message: "SECRET_MESSAGE" } },
+    { conversionError: { type: "SECRET_TYPE", message: "SECRET_MESSAGE" } },
+    { unserializable: "SECRET_GOT" },
+    { output: { text: "SECRET_GOT", truncated: true } },
+    { repr: { text: "SECRET_GOT" } },
+  ]) {
+    const failure = failureOf(result);
+    assertNoSecrets(
+      JSON.stringify(failure) + failureText(failure),
+      "failureOf",
+    );
+  }
 });
