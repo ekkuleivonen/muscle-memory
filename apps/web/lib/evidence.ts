@@ -23,7 +23,7 @@ import {
 } from "../../../packages/domain/workspace";
 import { diffLines, diffStats } from "./diff";
 import { feedbackOf, openRequired } from "./feedback";
-import { pullRequestDetail, type PullDetail } from "./pulls";
+import { pullRequestDetail } from "./pulls";
 import { metricsOf } from "./result";
 
 export type EvidenceStatus = "observed" | "missing" | "inferred";
@@ -34,8 +34,13 @@ export type BeforePush =
   | "tested-passing"
   /** A local run on exactly the pushed code, with failures or errors. */
   | "tested-failing"
-  /** Tests were run, but the code changed after the last run. */
+  /** Every earlier local run was on code that differs from what was pushed. */
   | "changed-after"
+  /**
+   * Local runs happened, but none can be matched to the pushed code: an artifact is missing
+   * or cut short, or the same code was only tested against another version of the ticket.
+   */
+  | "unknown"
   /** No local run before pushing. */
   | "none";
 
@@ -298,25 +303,127 @@ function split(
   };
 }
 
-/** How the latest push's code was tested before it was pushed, read from the timeline. */
-function beforePush(detail: PullDetail): BeforePush {
-  const timeline = detail.timeline;
-  const last = timeline.findLastIndex(
-    (e) => e.kind === "pull-request" || e.kind === "push",
+/** A code artifact's files as text, or null when it can't stand for the code (cut short). */
+function artifactFiles(
+  records: readonly WorkspaceRecord[],
+  id: string,
+): Record<string, string> | null {
+  const record = records.find(
+    (r) => r.kind === "artifact" && r.recordId === id,
   );
-  let edited = false;
-  for (let i = last - 1; i >= 0; i--) {
-    const entry = timeline[i];
-    if (entry.kind === "edits") edited = true;
-    if (entry.kind === "run")
-      return edited
-        ? "changed-after"
-        : entry.tested && entry.passed === entry.total
-          ? "tested-passing"
-          : "tested-failing";
+  if (!record) return null;
+  try {
+    const value = JSON.parse(record.payload);
+    const files = (value?.files ?? null) as Record<
+      string,
+      { text?: unknown; capture?: { truncated?: boolean } }
+    > | null;
+    if (!files || value.truncated === true) return null;
+    const out: Record<string, string> = {};
+    for (const [path, file] of Object.entries(files)) {
+      if (typeof file?.text !== "string" || file.capture?.truncated)
+        return null;
+      out[path] = file.text;
+    }
+    return out;
+  } catch {
+    return null;
   }
-  return "none";
 }
+
+const sameFiles = (a: Record<string, string>, b: Record<string, string>) => {
+  const keys = Object.keys(a);
+  return (
+    keys.length === Object.keys(b).length &&
+    keys.every((k) => Object.hasOwn(b, k) && a[k] === b[k])
+  );
+};
+
+/**
+ * Whether the latest push's exact code was tested locally first. A local run counts only when
+ * it finished before that push started, ran the same code (the same artifact, or artifacts with
+ * identical, complete files) and the same version of the ticket. Order alone proves nothing: a
+ * run's result can arrive after the code was edited, and it still belongs to the code it started
+ * with. When the records can't settle it, it is "unknown", never assumed.
+ */
+function beforePush(
+  records: readonly WorkspaceRecord[],
+  observations: readonly Raw[],
+  latest: Raw | undefined,
+  revisionFor: (id: string) => Revision | undefined,
+): BeforePush {
+  if (!latest) return "unknown";
+  const runId = String(latest.data.runId);
+  // The push started when its checks run was first recorded (queued).
+  const started = observations
+    .filter(
+      (o) =>
+        o.type === "observation.workspace.run" &&
+        String(o.data.runId) === runId,
+    )
+    .reduce(
+      (min, o) => (o.occurredAt < min ? o.occurredAt : min),
+      latest.occurredAt,
+    );
+  const local = observations.filter(
+    (o) =>
+      o.type === "observation.workspace.run" &&
+      o.data.purpose !== "pull-request" &&
+      TERMINAL.has(String(o.data.status)) &&
+      o.occurredAt <= started,
+  );
+  if (!local.length) return "none";
+  const pushedId = String(latest.data.codeArtifactId ?? "");
+  const pushed = artifactFiles(records, pushedId);
+  let unknown = false;
+  for (const run of [...local].reverse()) {
+    const id = String(run.data.codeArtifactId ?? "");
+    const files = id ? artifactFiles(records, id) : null;
+    const same =
+      (id !== "" && id === pushedId) ||
+      (files !== null && pushed !== null && sameFiles(files, pushed));
+    if (!same) {
+      // Different code only when both sides are known in full.
+      if (files === null || pushed === null) unknown = true;
+      continue;
+    }
+    if (run.issueRevision !== latest.issueRevision) {
+      unknown = true;
+      continue;
+    }
+    const revision = revisionFor(run.issueRevision ?? "");
+    const outcome = run.data.outcome as
+      | {
+          phase?: string;
+          cases?: { output?: { text: string; truncated: boolean } }[];
+        }
+      | undefined;
+    if (!revision) {
+      unknown = true;
+      continue;
+    }
+    const green =
+      outcome?.phase === "tests" &&
+      !!outcome.cases &&
+      (() => {
+        const { correct, total } = runFeedback(
+          casesRun(revision.checks.cases, "local"),
+          outcome.cases!,
+        );
+        return total > 0 && correct === total;
+      })();
+    return green ? "tested-passing" : "tested-failing";
+  }
+  return unknown ? "unknown" : "changed-after";
+}
+
+const TERMINAL = new Set([
+  "result",
+  "user-error",
+  "runner-error",
+  "timeout",
+  "cancelled",
+]);
 
 /** The facts behind one pull request's outcome, or null when there is no such pull request. */
 export function evidenceFacts(input: EvidenceInput): EvidenceFacts | null {
@@ -459,7 +566,7 @@ export function evidenceFacts(input: EvidenceInput): EvidenceFacts | null {
     verification: {
       runs: runs.length,
       green: runs.filter((r) => r.tested && r.passed === r.total).length,
-      beforePush: beforePush(detail),
+      beforePush: beforePush(records, observations, last, revisionFor),
     },
     recovery: {
       failedRuns: beforeGreen.filter((r) => r.tested).length,
@@ -721,10 +828,15 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
               "The code pushed last was tested first, with failures.",
               "fail",
             )
-          : observed(
-              "before-push",
-              "The code changed after the last test run, so what was pushed was checked only by CI.",
-            ),
+          : verification.beforePush === "changed-after"
+            ? observed(
+                "before-push",
+                "The code pushed last differs from every test run before it, so only CI checked it.",
+              )
+            : missing(
+                "before-push",
+                "Whether the code pushed last was tested first can't be established: no earlier test run can be matched to it.",
+              ),
     );
 
   const recover: EvidenceItem[] = [];
@@ -964,6 +1076,7 @@ const BEFORE: readonly BeforePush[] = [
   "tested-passing",
   "tested-failing",
   "changed-after",
+  "unknown",
   "none",
 ];
 

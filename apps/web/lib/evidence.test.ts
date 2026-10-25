@@ -27,6 +27,7 @@ function attempt() {
     type: string,
     minute: number,
     data: Record<string, unknown> = {},
+    issueRevision = fixture.id,
   ) => {
     sequence += 1;
     records.push({
@@ -38,7 +39,7 @@ function attempt() {
         occurredAt: at(minute),
         source: { id: "s", sequence },
         issue: "frequency-map",
-        issueRevision: fixture.id,
+        issueRevision,
         data,
       }),
     });
@@ -56,15 +57,23 @@ function attempt() {
       },
     })),
   });
-  const code = (revision: number, text: string) =>
+  /** The code at an editor revision, as session.ts stores it (once per artifact id). */
+  const code = (
+    revision: number,
+    text = `${fixture.starter}\n# fix ${revision}\n`,
+    id = `code-${revision}`,
+  ) => {
+    if (records.some((r) => r.recordId === id)) return id;
     records.push({
-      recordId: `code-${revision}`,
+      recordId: id,
       kind: "artifact",
       participantId: "p",
       payload: JSON.stringify({
         files: { [fixture.path]: { text, capture: { truncated: false } } },
       }),
     });
+    return id;
+  };
   return {
     records,
     at,
@@ -78,33 +87,67 @@ function attempt() {
       }),
     edit: (minute: number, revision: number, userEvent = "input.type") =>
       add("observation.workspace.edit", minute, { revision, userEvent }),
-    run: (minute: number, revision: number, passing: number | "error") =>
-      add("observation.workspace.run", minute, {
+    code,
+    /**
+     * A local run of the code at `revision`, finishing at `minute`; `queued` records its start
+     * earlier, `artifact` and `issueRevision` override what it ran.
+     */
+    run: (
+      minute: number,
+      revision: number,
+      passing: number | "error",
+      options: {
+        queued?: number;
+        artifact?: string;
+        issueRevision?: string;
+      } = {},
+    ) => {
+      const codeArtifactId = options.artifact ?? code(revision);
+      const base = {
         runId: `local-${minute}`,
         purpose: "local",
         revision,
-        status: passing === "error" ? "user-error" : "result",
-        outcome:
-          passing === "error"
-            ? {
-                status: "user-error",
-                phase: "load",
-                error: { type: "SyntaxError", message: "x" },
-              }
-            : outcome(visible, passing),
-      }),
+        codeArtifactId,
+      };
+      if (options.queued !== undefined)
+        add(
+          "observation.workspace.run",
+          options.queued,
+          { ...base, status: "queued" },
+          options.issueRevision,
+        );
+      add(
+        "observation.workspace.run",
+        minute,
+        {
+          ...base,
+          status: passing === "error" ? "user-error" : "result",
+          outcome:
+            passing === "error"
+              ? {
+                  status: "user-error",
+                  phase: "load",
+                  error: { type: "SyntaxError", message: "x" },
+                }
+              : outcome(visible, passing),
+        },
+        options.issueRevision,
+      );
+    },
     push: (
       minute: number,
       number: number,
       push: number,
       revision: number,
       passing: number,
+      artifact?: string,
     ) => {
-      code(revision, `${fixture.starter}\n# fix ${revision}\n`);
+      const codeArtifactId = artifact ?? code(revision);
       add("observation.workspace.run", minute, {
         runId: `pr-${minute}`,
         purpose: "pull-request",
         revision,
+        codeArtifactId,
         status: "result",
         outcome: outcome(cases, passing),
       });
@@ -113,7 +156,7 @@ function attempt() {
         push,
         runId: `pr-${minute}`,
         revision,
-        codeArtifactId: `code-${revision}`,
+        codeArtifactId,
         result: passing === cases.length ? "checks-passed" : "checks-failed",
         passed: passing,
         total: cases.length,
@@ -642,4 +685,109 @@ test("activity after the merge never changes the merged outcome", () => {
   const after = read();
   assert.deepEqual(after.facts, before.facts);
   assert.deepEqual(after.sections, before.sections);
+});
+
+test("verification: an edit during a pending run means the pushed code was not the code tested", () => {
+  const a = attempt();
+  a.opened(0);
+  a.edit(1, 1);
+  // Run of code A (revision 1) starts; code B (revision 2) is typed while it runs; A's result
+  // arrives after the edit; B is pushed untested.
+  a.run(4, 1, visible.length, { queued: 2 });
+  a.edit(3, 2);
+  a.push(5, 1, 1, 2, cases.length);
+  a.merged(6, 1);
+  const evidence = evidenceOf({
+    records: a.records,
+    issue: "frequency-map",
+    number: 1,
+    revisionFor,
+    until: a.at(6),
+  })!;
+  assert.equal(evidence.facts.verification.beforePush, "changed-after");
+  const line = item(evidence, "verification", "before-push")!;
+  assert.doesNotMatch(line.text, /tested first/);
+  assert.match(line.text, /only CI checked it/);
+});
+
+test("verification: a run of exactly the pushed code counts, by artifact or identical complete files", () => {
+  const a = attempt();
+  a.opened(0);
+  a.edit(1, 1);
+  a.run(2, 1, visible.length);
+  a.push(3, 1, 1, 1, cases.length);
+  a.merged(4, 1);
+  const read = (records = a.records) =>
+    evidenceOf({
+      records,
+      issue: "frequency-map",
+      number: 1,
+      revisionFor,
+      until: a.at(4),
+    })!;
+  assert.equal(read().facts.verification.beforePush, "tested-passing");
+  assert.equal(item(read(), "verification", "before-push")?.tone, "pass");
+
+  // Same code in another session (a reload): different artifact ids, identical files.
+  const b = attempt();
+  b.opened(0);
+  const text = `${fixture.starter}\n# same\n`;
+  b.run(2, 4, 1, { artifact: b.code(4, text, "s1.code.4") });
+  b.push(3, 1, 1, 1, cases.length, b.code(1, text, "s2.code.1"));
+  b.merged(4, 1);
+  assert.equal(read(b.records).facts.verification.beforePush, "tested-failing");
+
+  // A run that finished after the push started never counts as testing it first.
+  const c = attempt();
+  c.opened(0);
+  c.push(3, 1, 1, 1, cases.length);
+  c.run(4, 1, visible.length);
+  c.merged(5, 1);
+  assert.equal(read(c.records).facts.verification.beforePush, "none");
+});
+
+test("verification: a code revision mismatch is changed-after; what can't be matched is unknown", () => {
+  // Tested revision 1, pushed revision 2: different, complete code.
+  const a = attempt();
+  a.opened(0);
+  a.run(1, 1, visible.length);
+  a.push(2, 1, 1, 2, cases.length);
+  const read = (records: readonly WorkspaceRecord[], revisions = revisionFor) =>
+    evidenceOf({
+      records,
+      issue: "frequency-map",
+      number: 1,
+      revisionFor: revisions,
+      until: a.at(9),
+    })!;
+  assert.equal(read(a.records).facts.verification.beforePush, "changed-after");
+
+  // The pushed code isn't available, so nothing can be compared.
+  const b = attempt();
+  b.opened(0);
+  b.run(1, 1, visible.length);
+  b.push(2, 1, 1, 2, cases.length);
+  b.records.splice(
+    b.records.findIndex((r) => r.recordId === "code-2"),
+    1,
+  );
+  const lost = read(b.records);
+  assert.equal(lost.facts.verification.beforePush, "unknown");
+  assert.equal(item(lost, "verification", "before-push")?.status, "missing");
+
+  // The same code, but tested against an earlier version of the ticket.
+  const c = attempt();
+  c.opened(0);
+  c.run(1, 1, visible.length, { issueRevision: "sha256:earlier" });
+  c.push(2, 1, 1, 1, cases.length);
+  assert.equal(
+    read(c.records, () => fixture.revision).facts.verification.beforePush,
+    "unknown",
+  );
+  assert.equal(publicEvidence(lost.facts).testedBeforePush, "unknown");
+  assert.equal(
+    parsePublicEvidence(JSON.parse(JSON.stringify(publicEvidence(lost.facts))))
+      ?.testedBeforePush,
+    "unknown",
+  );
 });
