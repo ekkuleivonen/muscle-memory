@@ -237,3 +237,29 @@ test("board records from 6.0.0, 6.1.0, 7.0.0 and 7.1.0 are accepted, older ones 
     ],
   );
 });
+
+test("7.2 checked completion uses the real constructor/validator and preserves old merge records verbatim", async () => {
+  const { boardMove, boardRecord } = await import("../../../packages/domain/board");
+  const { env, sent } = fakes();
+  const me = await device();
+  const make = (sequence: number, trigger: "checks-passed" | "pull-request-merged") => boardRecord(boardMove({
+    participantId: me.participantId, sourceId: "completion-test", sequence, occurredAt: "2026-10-25T10:00:00Z", elapsedMs: sequence,
+    termsVersion: "2026-10-25.1", issue: { id: "frequency-map", revision: "sha256:" + "a".repeat(64) }, data: {
+      issueKey: "FN-1", from: "in-progress", to: "done", via: "keyboard", trigger, onBoardBefore: 1, nudged: false,
+      pullRequest: 1, runId: "run-submitted",
+    },
+  }));
+  const checked = make(1, "checks-passed");
+  const legacyRaw = make(2, "pull-request-merged");
+  const legacy = { ...legacyRaw, payload: JSON.stringify({ ...JSON.parse(legacyRaw.payload), captureVersion: "board-capture-7.1.0" }) };
+  const wrongRaw = make(3, "checks-passed");
+  const wrongVersion = { ...wrongRaw, payload: JSON.stringify({ ...JSON.parse(wrongRaw.payload), captureVersion: "board-capture-7.1.0" }) };
+  const invalidRaw = make(4, "checks-passed");
+  const value = JSON.parse(invalidRaw.payload); delete value.data.runId;
+  const invalid = { ...invalidRaw, payload: JSON.stringify(value) };
+  const response = await handle(post("/ingest/v1/batches", { protocol: INGEST_PROTOCOL, participantId: me.participantId, proof: me.proof, records: [checked, legacy, wrongVersion, invalid] }), env);
+  const body = await response.json();
+  assert.equal(body.accepted, 2);
+  assert.deepEqual(sent.map((row) => row.payload), [checked.payload, legacy.payload]);
+  assert.deepEqual(sent.map((row) => row.capture_version), ["board-capture-7.2.0", "board-capture-7.1.0"]);
+});

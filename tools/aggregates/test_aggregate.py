@@ -36,6 +36,20 @@ class AggregateTest(unittest.TestCase):
         self.assertEqual(quick["w"][0], 40)
         self.assertEqual(quick["language"], "python")
 
+    def test_checked_completion_keeps_result_metrics_and_old_first_finish_semantics(self):
+        old = result("old", "2026-10-25T10:00:00Z", 100)
+        new = result("new", "2026-10-25T10:01:00Z", 200)
+        payload = json.loads(new["payload"])
+        payload["captureVersion"] = "board-capture-7.2.0"
+        payload["data"]["pullRequest"] = 1
+        new["payload"] = json.dumps(payload)
+        checked = row("new", "observation.board.moved", "2026-10-25T10:01:00Z", {
+            "issueKey": "QUICK-1", "trigger": "checks-passed", "to": "done",
+            "via": "keyboard", "pullRequest": 1, "runId": "checked-run"})
+        values = aggregate.summarize([old, checked, new, result("new", "2026-10-25T11:00:00Z", 1)], set())
+        self.assertEqual(values["QUICK-1"]["n"], 2)
+        self.assertEqual(values["QUICK-1"]["t"][50], 150)
+
 
 if __name__ == "__main__":
     unittest.main()
