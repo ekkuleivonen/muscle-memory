@@ -156,21 +156,6 @@ export interface Library {
   revisionsOf(issue: string): Record<string, Revision>;
 }
 
-/** How the project qualifier names a project: its key, as typed, e.g. project:shop. */
-export function projectFilterValue(project: Pick<ProjectRef, "key">): string {
-  return project.key.toLowerCase();
-}
-
-/** Canonical project URL: its key, unique across projects. */
-export function projectHref(project: Pick<ProjectRef, "key">): string {
-  return `/projects/${project.key}`;
-}
-
-/** Canonical issue URL: its permanent key. */
-export function issueHref(issue: Pick<IssueSummary, "key">): string {
-  return `/issues/${issue.key}`;
-}
-
 export function library(catalog: Catalog): Library {
   const refs = new Map(
     catalog.projects.map((p, i): [string, ProjectRef] => [
@@ -218,20 +203,4 @@ export function library(catalog: Catalog): Library {
         Object.entries(catalog.revisions).filter(([, r]) => r.issue === issue),
       ),
   };
-}
-
-export function languagesOf(issues: readonly Issue[]): LanguageId[] {
-  return LANGUAGES.map((l) => l.id).filter((id) =>
-    issues.some((issue) => issue.language === id),
-  );
-}
-
-export function difficultyRange(issues: readonly Issue[]): string {
-  const levels = issues
-    .map((i) => i.difficulty)
-    .filter((d): d is Difficulty => !!d)
-    .sort((a, b) => DIFFICULTIES.indexOf(a) - DIFFICULTIES.indexOf(b));
-  if (!levels.length) return "";
-  const [low, high] = [levels[0], levels.at(-1)!];
-  return low === high ? low : `${low}–${high}`;
 }

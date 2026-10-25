@@ -1,25 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import {
-  difficultyRange,
-  issueHref,
-  languagesOf,
-  library,
-  projectHref,
-  summarize,
-} from "./library";
+import { library, summarize } from "./library";
 import {
   filterByStatus,
-  filterPulls,
-  filterProjects,
   filterIssues,
   formatQuery,
-  groupIssues,
-  href,
-  parseProjectQuery,
   parseIssueQuery,
-  parsePullQuery,
   toggle,
 } from "./queries";
 import { continuityProblems } from "../../../packages/content/publish";
@@ -95,13 +82,10 @@ test("retired issues leave lists, but every published revision still resolves", 
   assert.deepEqual(Object.keys(retired.revisionsOf("lru-cache")).sort(), own.sort());
 });
 
-test("issues run when their language has an engine; project summaries span their issues", () => {
+test("issues run when their language has an engine", () => {
   // Every seed issue's language has an engine, with what that engine needs.
   assert.equal(merged.issues.length, 38);
   assert.ok(merged.issues.every((i) => i.runnable));
-  const edge = merged.projects.find((c) => c.slug === "edge-proxy")!;
-  assert.equal(difficultyRange(edge.issues), "easy–hard");
-  assert.deepEqual(languagesOf(edge.issues), ["go", "c", "cpp"]);
 });
 
 test("issue keys come from the project key and the issue's number", () => {
@@ -118,24 +102,21 @@ test("issue keys come from the project key and the issue's number", () => {
 
 test("qualifiers parse into filters; unknown ones stay as text", () => {
   const query = parseIssueQuery(
-    'kind:bug,BUG lang:python,klingon is:runnable sort:title label:maps cat:edge-proxy "log parser" colour:red',
+    'kind:bug,BUG lang:python,klingon is:runnable sort:title label:maps "log parser" colour:red',
   );
   assert.deepEqual(query.kind, ["bug"]);
   assert.deepEqual(query.language, ["python"]);
   assert.deepEqual(query.label, ["maps"]);
-  assert.deepEqual(query.project, ["edge-proxy"]);
   assert.equal(query.sort, "title");
   assert.deepEqual(query.text, ["log parser", "colour:red"]);
   assert.equal(
     formatQuery(query),
     // is:runnable from older links is dropped: every issue runs.
-    'kind:bug lang:python project:edge-proxy label:maps sort:title "log parser" colour:red',
+    'kind:bug lang:python label:maps sort:title "log parser" colour:red',
   );
   assert.equal(parseIssueQuery("x".repeat(500)).text[0].length, 200);
-  for (const alias of ["project", "proj", "category", "cat"])
-    assert.deepEqual(parseIssueQuery(`${alias}:edge-proxy`).project, [
-      "edge-proxy",
-    ]);
+  // Projects are not a search term any more: project: reads as plain text.
+  assert.deepEqual(parseIssueQuery("project:shop").text, ["project:shop"]);
 });
 
 test("filters combine across qualifiers and match any value within one", () => {
@@ -188,84 +169,28 @@ test("filters combine across qualifiers and match any value within one", () => {
     "SHOP-1",
     "SHOP-2",
   ]);
-  assert.deepEqual(keys("project:field-notes"), ["FN-1", "FN-2", "FN-3", "FN-4", "FN-5"]);
-  // Projects go by their key, as in their URL; the older id form still works.
-  assert.deepEqual(keys("project:shop"), [
-    "SHOP-1",
-    "SHOP-2",
-    "SHOP-3",
-    "SHOP-4",
-    "SHOP-5",
-    "SHOP-6",
-    "SHOP-7",
-    "SHOP-8",
-  ]);
-  assert.deepEqual(
-    keys("project:SHOP,fn"),
-    keys("project:storefront,field-notes"),
-  );
   assert.deepEqual(keys("API-4"), ["API-4"]);
   assert.deepEqual(keys("parser"), ["API-4"]);
   assert.deepEqual(keys("rust hard"), []);
   // Natural key order by default; difficulty and title on request.
-  assert.deepEqual(keys("project:edge-proxy"), [
-    "EDGE-1",
+  assert.deepEqual(keys("lang:go"), [
+    "API-1",
+    "API-4",
+    "API-8",
     "EDGE-2",
-    "EDGE-3",
     "EDGE-4",
-    "EDGE-5",
     "EDGE-6",
-    "EDGE-7",
   ]);
   assert.equal(keys("sort:difficulty")[0], "FN-1");
   assert.equal(keys("sort:difficulty").at(-1), "SHOP-8");
 });
 
-test("groups keep their declared order and drop empty ones", () => {
-  const issues = filterIssues(
-    merged.issues,
-    parseIssueQuery("kind:bug,performance"),
-  );
-  assert.deepEqual(
-    groupIssues(issues, "kind", merged.projects).map((g) => [
-      g.id,
-      g.issues.length,
-    ]),
-    [
-      ["bug", 23],
-      // EDGE-2 is a percentile task, not a performance one, since ENG-329.
-      ["performance", 1],
-    ],
-  );
-  assert.deepEqual(
-    groupIssues(issues, "project", merged.projects).map((g) => g.id),
-    ["incident-response", "field-notes", "storefront", "accounts-api", "data-platform", "edge-proxy"],
-  );
-  assert.equal(
-    groupIssues(issues, "none", merged.projects)[0].issues.length,
-    24,
-  );
-});
-
-test("project queries search their issues too", () => {
-  const slugs = (q: string) =>
-    filterProjects(merged.projects, parseProjectQuery(q)).map((c) => c.slug);
-  assert.deepEqual(slugs("lang:cpp"), ["edge-proxy"]);
-  assert.deepEqual(slugs("csv"), ["data-platform"]);
-  assert.equal(slugs("").length, 6);
-});
-
-test("links toggle one value and round-trip through the URL", () => {
+test("toggles switch one value and round-trip through the search line", () => {
   const query = parseIssueQuery("kind:bug log");
   const on = toggle(query, "language", "go");
-  assert.equal(href("/issues", on), "/issues?q=kind%3Abug+lang%3Ago+log");
-  assert.equal(
-    href("/issues", toggle(on, "language", "go"), "kind"),
-    "/issues?q=kind%3Abug+log&group=kind",
-  );
-  assert.equal(href("/issues", parseIssueQuery("")), "/issues");
-  const back = new URL(href("/issues", on), "http://x").searchParams.get("q")!;
-  assert.deepEqual(parseIssueQuery(back), on);
+  assert.equal(formatQuery(on), "kind:bug lang:go log");
+  assert.equal(formatQuery(toggle(on, "language", "go")), "kind:bug log");
+  assert.deepEqual(parseIssueQuery(formatQuery(on)), on);
 });
 
 test("issues are found by permanent key, in any case, or by their id", () => {
@@ -274,7 +199,6 @@ test("issues are found by permanent key, in any case, or by their id", () => {
   assert.equal(merged.findIssue("edge-3"), lru);
   assert.equal(merged.findIssue("lru-cache"), lru);
   assert.equal(merged.findIssue("EDGE-99"), undefined);
-  assert.equal(issueHref(lru), "/issues/EDGE-3");
 });
 
 test("projects are found by unique key, in any case, or by their id", () => {
@@ -283,7 +207,6 @@ test("projects are found by unique key, in any case, or by their id", () => {
   assert.equal(merged.findProject("edge"), edge);
   assert.equal(merged.findProject("edge-proxy"), edge);
   assert.equal(merged.findProject("NOPE"), undefined);
-  assert.equal(projectHref(edge), "/projects/EDGE");
   const keys = merged.projects.map((p) => p.key);
   assert.equal(new Set(keys).size, keys.length);
 });
@@ -326,70 +249,6 @@ test("board statuses parse as is: qualifiers and filter wherever the board is kn
   assert.equal(keys("is:backlog").length, merged.issues.length - 2);
   assert.equal(keys("is:todo,backlog").length, merged.issues.length);
   assert.deepEqual(keys("is:done"), []);
-  assert.deepEqual(
-    groupIssues(merged.issues, "status", merged.projects, statusOf).map((g) => [
-      g.id,
-      g.issues.length,
-    ]),
-    [
-      ["backlog", merged.issues.length - 2],
-      ["todo", 2],
-    ],
-  );
-});
-
-test("pull requests search like issues, plus their own state and checks", () => {
-  const query = parsePullQuery(
-    'is:merged,open checks:FAILED,bogus lang:go project:shop "price list" sort:oldest is:todo',
-  );
-  assert.deepEqual(query.state, ["open", "merged"]);
-  assert.deepEqual(query.checks, ["failed"]);
-  assert.deepEqual(query.language, ["go"]);
-  assert.deepEqual(query.project, ["shop"]);
-  assert.equal(query.sort, "oldest");
-  // is:todo is an issue status, not a pull request state: dropped, not searched as text.
-  assert.deepEqual(query.text, ["price list"]);
-  assert.equal(
-    formatQuery(query),
-    'is:open,merged checks:failed lang:go project:shop sort:oldest "price list"',
-  );
-
-  const shop = { slug: "storefront", title: "Shop", key: "SHOP", hue: 0 };
-  const pull = (
-    number: number,
-    state: "open" | "merged",
-    result: string,
-    language: "go" | "python",
-    at: string,
-  ) => ({
-    number,
-    state,
-    result,
-    at,
-    issue: {
-      key: `SHOP-${number}`,
-      title: `Issue ${number}`,
-      kind: "bug" as const,
-      difficulty: "easy" as const,
-      language,
-      labels: ["money"],
-      project: shop,
-    },
-  });
-  const pulls = [
-    pull(1, "open", "checks-failed", "go", "2026-10-24T10:00:00Z"),
-    pull(2, "merged", "checks-passed", "go", "2026-10-24T11:00:00Z"),
-    pull(3, "merged", "merged", "python", "2026-10-24T12:00:00Z"),
-  ];
-  const numbers = (q: string) =>
-    filterPulls(pulls, parsePullQuery(q)).map((p) => p.number);
-  assert.deepEqual(numbers(""), [3, 2, 1]);
-  assert.deepEqual(numbers("is:open"), [1]);
-  // Before capture 1.4.0 a pull request's result said merged: its checks passed.
-  assert.deepEqual(numbers("checks:passed"), [3, 2]);
-  assert.deepEqual(numbers("lang:go sort:oldest"), [1, 2]);
-  assert.deepEqual(numbers("project:shop label:money #2"), [2]);
-  assert.deepEqual(numbers("project:api"), []);
 });
 
 test("content revisions stay published and never strand work in progress", () => {
