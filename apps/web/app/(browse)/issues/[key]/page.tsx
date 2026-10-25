@@ -1,3 +1,4 @@
+import { IssuePulls } from "../../_components/pulls";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -172,6 +173,7 @@ function Properties({ issue }: { issue: Issue }) {
             "—"
           )}
         </dd>
+        <IssuePulls issue={{ key: issue.key, slug: issue.slug }} />
       </dl>
       <StartWork
         issue={{ key: issue.key, slug: issue.slug, revision: issue.revision }}
