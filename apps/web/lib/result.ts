@@ -9,10 +9,15 @@
 import type { Revision } from "../../../packages/content/model";
 import { casesRun } from "../../../packages/content/model";
 import { runFeedback, type WorkspaceRecord } from "../../../packages/domain/workspace";
+import { activeTime } from "./active-time";
 
 /** Version 2 of the card's numbers; the meaning of each is in `metricsOf`. */
 export interface Metrics {
-  /** Active time in seconds: gaps between activity, each counted up to a minute. */
+  /**
+   * Active time in seconds: gaps between the person's activity in the IDE, each counted up to a
+   * minute, within one page load and less any time the page was hidden or only the test runner
+   * was busy (see active-time.ts).
+   */
   readonly t: number;
   /** Seconds from first opening the issue to the first edit. */
   readonly rd: number;
@@ -56,15 +61,6 @@ export interface Result extends Metrics {
   readonly e?: number;
 }
 
-const ACTIVE = new Set([
-  "observation.workspace.edit",
-  "observation.workspace.keys",
-  "observation.workspace.selection",
-  "observation.workspace.scroll",
-  "observation.workspace.clipboard",
-  "observation.workspace.run",
-  "observation.workspace.navigated",
-]);
 const TERMINAL = new Set(["result", "user-error", "runner-error", "timeout", "cancelled"]);
 const MODIFIERS = new Set(["Shift", "Control", "Alt", "Meta", "CapsLock", "AltGraph", "Fn"]);
 const DELETES = new Set(["Backspace", "Delete"]);
@@ -104,15 +100,8 @@ export function metricsOf(
       (a.source?.sequence ?? 0) - (b.source?.sequence ?? 0),
   );
 
-  // Active time: each gap between activity counts up to a minute, so breaks do not.
-  let active = 0;
-  let previous: number | null = null;
-  for (const o of observations) {
-    if (!ACTIVE.has(o.type)) continue;
-    const at = Date.parse(o.occurredAt);
-    if (previous !== null) active += Math.min(at - previous, 60_000);
-    previous = at;
-  }
+  // Breaks, other tabs, other pages and the test runner's own time do not count.
+  const active = activeTime(observations);
 
   const opened = observations.find((o) => o.type === "observation.workspace.opened");
   const edited = observations.find((o) => o.type === "observation.workspace.edit");

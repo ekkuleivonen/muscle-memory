@@ -85,7 +85,12 @@ export interface RunRequest {
 }
 
 const TEXT_LIMIT = 65536;
+/**
+ * How long a sandbox may take to start, not counting the download: a slow connection is not a
+ * failed runtime. The download instead fails when no bytes arrive for STALL_MS.
+ */
 const BOOT_TIMEOUT_MS = 60_000;
+const STALL_MS = 30_000;
 
 interface Sandbox {
   readonly frame: HTMLIFrameElement;
@@ -101,6 +106,8 @@ export class Runner {
   private loadedOnce = false;
   private spare?: Sandbox;
   private active?: { sandbox: Sandbox; finish: (outcome: RunOutcome) => void };
+  /** Stops downloads still under way when the runner is disposed, so none outlives it. */
+  private readonly downloads = new AbortController();
 
   private readonly assetBase: URL;
 
@@ -210,6 +217,7 @@ export class Runner {
     this.cancel();
     this.spare?.destroy();
     this.spare = undefined;
+    this.downloads.abort();
   }
 
   /**
@@ -222,6 +230,7 @@ export class Runner {
       this.engine,
       this.assetBase,
       this.loadedOnce ? undefined : this.options.onProgress,
+      { signal: this.downloads.signal },
     );
     this.loadedOnce = true;
     return assets;
@@ -244,18 +253,27 @@ export class Runner {
     };
     let isReady = false;
     const ready = new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(
-        () => reject(new Error(`${this.engine.label} did not start in time.`)),
-        BOOT_TIMEOUT_MS,
-      );
+      // Armed for the frame to load, paused while the files download, armed again to start.
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const arm = () => {
+        clearTimeout(timer);
+        timer = setTimeout(
+          () =>
+            reject(new Error(`${this.engine.label} did not start in time.`)),
+          BOOT_TIMEOUT_MS,
+        );
+      };
+      arm();
       listener = (event: MessageEvent) => {
         // Only this frame's opaque origin, never other windows.
         if (event.source !== frame.contentWindow || event.origin !== "null")
           return;
         const data = event.data as { type?: unknown; message?: unknown };
         if (data?.type === "frame-ready") {
+          clearTimeout(timer);
           this.loadAssets().then(
             (assets) => {
+              arm();
               this.options.onProgress?.({ phase: "start" });
               frame.contentWindow?.postMessage(
                 {
@@ -268,7 +286,10 @@ export class Runner {
                 Object.values(assets),
               );
             },
-            (error: Error) => reject(error),
+            (error: Error) => {
+              clearTimeout(timer);
+              reject(error);
+            },
           );
         } else if (data?.type === "ready") {
           clearTimeout(timer);
@@ -300,7 +321,8 @@ export class Runner {
  * origin, so the site's existing sign-in (such as a Cloudflare Access cookie) applies; a
  * sandbox receives bytes, never credentials. Each file must match its pinned hash, and any
  * redirect (for example to a sign-in page) fails instead of being followed. Download
- * progress is reported against the pinned sizes.
+ * progress is reported against the pinned sizes. A download that receives nothing for
+ * `stallMs` fails rather than showing progress that will never move; `signal` stops it.
  */
 export async function loadPinned(
   pinned: {
@@ -309,41 +331,111 @@ export async function loadPinned(
   },
   base: URL,
   onProgress?: (progress: LoadProgress) => void,
+  { signal, stallMs = STALL_MS }: { signal?: AbortSignal; stallMs?: number } = {},
 ): Promise<Record<string, ArrayBuffer>> {
   const total = Object.values(pinned.sizes).reduce((a, b) => a + b, 0);
   let loaded = 0;
+  const stop = new AbortController();
+  const abort = () => stop.abort();
+  signal?.addEventListener("abort", abort);
+  if (signal?.aborted) stop.abort();
+  let stalled = false;
+  let watchdog: ReturnType<typeof setTimeout> | undefined;
+  const alive = () => {
+    clearTimeout(watchdog);
+    watchdog = setTimeout(() => {
+      stalled = true;
+      stop.abort();
+    }, stallMs);
+  };
   const count = (bytes: number) => {
+    alive();
     loaded += bytes;
     onProgress?.({ phase: "download", loaded: Math.min(loaded, total), total });
   };
-  const entries = await Promise.all(
-    Object.entries(pinned.files).map(async ([name, integrity]) => {
-      let response: Response;
-      try {
-        response = await fetch(new URL(name, base), {
-          integrity,
-          credentials: "same-origin",
-          mode: "same-origin",
-          redirect: "error",
-        });
-      } catch {
-        throw new Error(
-          `Runtime file ${name} could not be loaded from this site, or did not match its pinned hash. If your sign-in has expired, reload the page.`,
-        );
-      }
-      if (!response.ok)
-        throw new Error(
-          `Runtime file ${name} is unavailable (${response.status}).`,
-        );
-      const bytes = await read(response, count);
-      // Large files ship gzipped (static hosts cap file sizes); the hash covers the
-      // compressed bytes, and callers get them unpacked under their plain name.
-      if (name.endsWith(".gz"))
-        return [name.slice(0, -3), await gunzip(bytes)] as const;
-      return [name, bytes] as const;
-    }),
-  );
-  return Object.fromEntries(entries);
+  const failure = (name: string, fallback: string) =>
+    new Error(
+      stalled
+        ? `Runtime file ${name} stopped downloading: nothing arrived for ${stallMs / 1000} s.`
+        : signal?.aborted
+          ? `Loading runtime file ${name} was stopped.`
+          : fallback,
+    );
+  alive();
+  try {
+    const entries = await Promise.all(
+      Object.entries(pinned.files).map(async ([name, integrity]) => {
+        let response: Response;
+        try {
+          response = await fetch(new URL(name, base), {
+            integrity,
+            credentials: "same-origin",
+            mode: "same-origin",
+            redirect: "error",
+            signal: stop.signal,
+          });
+        } catch {
+          throw failure(
+            name,
+            `Runtime file ${name} could not be loaded from this site, or did not match its pinned hash. If your sign-in has expired, reload the page.`,
+          );
+        }
+        if (!response.ok)
+          throw new Error(
+            `Runtime file ${name} is unavailable (${response.status}).`,
+          );
+        let bytes: ArrayBuffer;
+        try {
+          bytes = await read(response, count);
+        } catch {
+          throw failure(name, `Runtime file ${name} could not be read.`);
+        }
+        // Large files ship gzipped (static hosts cap file sizes); the hash covers the
+        // compressed bytes, and callers get them unpacked under their plain name.
+        if (name.endsWith(".gz"))
+          return [name.slice(0, -3), await gunzip(bytes)] as const;
+        return [name, bytes] as const;
+      }),
+    );
+    return Object.fromEntries(entries);
+  } catch (error) {
+    // One failed file stops the others: nothing keeps downloading for a runtime that failed.
+    stop.abort();
+    throw error;
+  } finally {
+    clearTimeout(watchdog);
+    signal?.removeEventListener("abort", abort);
+  }
+}
+
+/** Engines whose files this page has already asked the HTTP cache for. */
+const warmed = new Set<string>();
+
+/**
+ * Fetches an engine's pinned files into the browser's HTTP cache ahead of opening the IDE, at
+ * low priority, so the IDE's own load (which checks every hash again) reads them from the cache.
+ * Same origin and integrity rules as loadPinned; nothing is kept in memory and nothing runs.
+ * Once per engine per page, skipped when the browser asks to save data, and failures are left
+ * for the IDE's own load to report.
+ */
+export function warmRuntime(engine: Engine, assetBase?: string): void {
+  if (warmed.has(engine.basePath)) return;
+  const connection = (navigator as { connection?: { saveData?: boolean } })
+    .connection;
+  if (connection?.saveData) return;
+  const base = new URL(assetBase ?? engine.basePath, location.href);
+  if (base.origin !== location.origin) return;
+  warmed.add(engine.basePath);
+  for (const [name, integrity] of Object.entries(engine.files))
+    void fetch(new URL(name, base), {
+      integrity,
+      credentials: "same-origin",
+      mode: "same-origin",
+      redirect: "error",
+      priority: "low",
+    } as RequestInit)
+      .then((response) => response.arrayBuffer())
+      .catch(() => warmed.delete(engine.basePath));
 }
 
 /** Reads a body while counting bytes; integrity is still checked by fetch at the end. */
