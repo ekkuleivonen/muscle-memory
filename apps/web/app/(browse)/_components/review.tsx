@@ -95,7 +95,8 @@ export function Findings({
     );
   return (
     <section className="pull-findings" aria-labelledby="pull-findings-title">
-      <h2 id="pull-findings-title">
+      {/* Focusable, so a link to #pull-findings-title lands on it and Tab goes on to Resolve. */}
+      <h2 id="pull-findings-title" tabIndex={-1}>
         Findings{" "}
         <span className={count ? "count open" : "count"}>
           {count ? `${count} unresolved` : "all resolved"}
