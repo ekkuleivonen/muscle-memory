@@ -137,7 +137,7 @@ test("additional checks reveal categories, never hidden names, values, traces or
       cases: [
         {
           index: 0,
-          error: { type: "Error", message: secret, traceback: bounded(secret) },
+          error: { type: secret, message: secret, traceback: bounded(secret) },
         },
       ],
       stdout: bounded(secret + " stdout"),

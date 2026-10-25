@@ -89,6 +89,20 @@ try {
   await hasPrimary("Run tests");
   await push();
   await page.getByText(/Open · checks failed/).waitFor();
+  await keyActivate(page.getByRole("tab", { name: "Tests", exact: true }));
+  const privateChecks = page
+    .locator(".ide-cases > li")
+    .filter({ hasText: "Additional check" });
+  assert.ok((await privateChecks.count()) > 0);
+  assert.doesNotMatch(
+    await privateChecks.allTextContents().then((lines) => lines.join("\n")),
+    /expected|got /i,
+  );
+  await keyActivate(page.getByRole("tab", { name: "Output", exact: true }));
+  assert.match(
+    await page.locator(".ide-output").innerText(),
+    /Detailed output is hidden/,
+  );
   await page.goto(`${origin}/pulls/QUICK-2/1`);
   await page.locator(".pull-next-action").waitFor();
   assert.equal(
@@ -190,9 +204,15 @@ try {
     0,
   );
   await keyActivate(page.locator(".pull-next-action"));
-  assert.equal(await page.evaluate(() => document.activeElement?.id), "pull-findings-title");
+  assert.equal(
+    await page.evaluate(() => document.activeElement?.id),
+    "pull-findings-title",
+  );
   await page.keyboard.press("Tab");
-  assert.equal(await page.evaluate(() => document.activeElement?.textContent?.trim()), "Resolve");
+  assert.equal(
+    await page.evaluate(() => document.activeElement?.textContent?.trim()),
+    "Resolve",
+  );
   await page.keyboard.press("Enter");
   await page
     .getByRole("button", { name: "Merge pull request", exact: true })
