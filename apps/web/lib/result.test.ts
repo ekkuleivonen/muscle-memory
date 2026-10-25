@@ -2,37 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { live } from "./test-fixtures";
 import {
-  decodeResult,
-  duration,
-  encodeResult,
   metricsOf,
-  sentence,
-  type Result,
 } from "./result";
-
-const card: Result = {
-  v: 2, k: "GO-001", l: "go", c: "ab12cd34ef56",
-  t: 252, rd: 48, ks: 214, ty: 9, w: 71, r: 1, g: 1, p: 1, h: 0, ps: 0, lt: 0,
-};
-
-test("a card survives its link, and anything we would not have made is refused", () => {
-  const segment = encodeResult(card);
-  assert.match(segment, /^[A-Za-z0-9_-]+$/);
-  assert.deepEqual(decodeResult(segment), card);
-  for (const bad of [
-    { ...card, k: "<script>" },
-    { ...card, t: -1 },
-    { ...card, w: 1.5 },
-    { ...card, c: "Participant-ID" },
-    { ...card, v: 1 },
-    { ...card, ks: undefined },
-  ])
-    assert.equal(decodeResult(encodeResult(bad as unknown as Result)), null);
-  assert.equal(decodeResult("not base64 json"), null);
-  assert.equal(sentence(card, "Go"), "Completed GO-001 in Go.");
-  assert.equal(duration(252), "4 min 12 s");
-  assert.equal(duration(48), "48 s");
-});
 
 test("the numbers come from keystrokes, edits, runs and the page, up to the merge", () => {
   const fixture = live("word-count-python");
@@ -89,39 +60,4 @@ test("the numbers come from keystrokes, edits, runs and the page, up to the merg
     ps: 1,
     lt: 1,
   });
-});
-
-test("the share sentence names the challenge and claims only what the card's checks say", () => {
-  const ev = {
-    v: 1 as const,
-    state: "merged" as const,
-    checks: { passed: 15, total: 15, result: "checks-passed" as const },
-    first: { passed: 5, total: 15, result: "checks-failed" as const },
-    hidden: { passed: 10, total: 10 },
-    changed: null,
-    pushes: 2,
-    runs: 3,
-    testedBeforePush: "tested-passing" as const,
-    failedPushes: 1,
-    findings: { raised: 0, open: 0 },
-    hints: 0,
-    gaps: false,
-  };
-  const title = "The composer says 1 word when the post is empty";
-  assert.equal(
-    sentence({ ...card, ev }, "Go", title),
-    `Completed “${title}” (GO-001) in Go. All 15 checks passed.`,
-  );
-  const partial = { ...ev, checks: { passed: 12, total: 15, result: "checks-failed" as const } };
-  assert.equal(
-    sentence({ ...card, ev: partial }, "Go"),
-    "Completed GO-001 in Go. 12/15 checks passed.",
-  );
-  // A card says it was merged, or it is not described as completed at all.
-  assert.equal(
-    sentence({ ...card, ev: { ...ev, state: "open" } }, "Go"),
-    "Worked on GO-001 in Go. Not completed.",
-  );
-  for (const text of [sentence(card, "Go"), sentence({ ...card, ev }, "Go", title)])
-    assert.doesNotMatch(text, /merge|pull request|fix for|bug|without AI|faster|%/i);
 });

@@ -4,14 +4,13 @@
  *
  * A link carries only what is in it. A challenge link is its permanent key, so it opens the
  * same problem for anyone and never the sender's editor, attempt or records. A result link is
- * the allowlisted card (`publicResult`). Code travels only when the sharer ticks the box, and
+ * the allowlisted card (`publicOutcome`). Code travels only when the sharer ticks the box, and
  * then in the URL fragment, which browsers never send to the server: nothing stores it. A
  * challenge has one file to edit, so a link normally carries one; the format takes up to
  * `MAX_FILES`, so links made when challenges had several still read back whole.
  */
 import { ISSUE_KEY } from "../../../packages/domain/board";
 import { decodeOutcome, type Outcome } from "./outcome";
-import { decodeResult, type Result } from "./result";
 
 /** The public page of a challenge: what it is, and a fresh start on it. */
 export const tryHref = (key: string) => `/try/${key}`;
@@ -20,8 +19,6 @@ export const tryHref = (key: string) => `/try/${key}`;
 export type CardLink =
   /** A completed challenge (card version 3). */
   | { readonly kind: "outcome"; readonly outcome: Outcome }
-  /** A legacy card (version 2), made when a pull request was merged. */
-  | { readonly kind: "result"; readonly result: Result }
   /** It decodes, but from a card version we no longer show; the issue it names, if any. */
   | { readonly kind: "older"; readonly key: string | null }
   | { readonly kind: "malformed" };
@@ -37,11 +34,8 @@ export function inspectCard(segment: string): CardLink {
       const outcome = decodeOutcome(segment);
       return outcome ? { kind: "outcome", outcome } : { kind: "malformed" };
     }
-    if (
-      value &&
-      typeof value === "object" &&
-      (value.iv !== undefined || (typeof value.v === "number" && value.v !== 2))
-    )
+    // Any other version, including the merged pull request cards (v2) of before.
+    if (value && typeof value === "object" && typeof value.v === "number")
       return {
         kind: "older",
         key:
@@ -52,8 +46,7 @@ export function inspectCard(segment: string): CardLink {
   } catch {
     // Not base64url JSON at all.
   }
-  const result = decodeResult(segment);
-  return result ? { kind: "result", result } : { kind: "malformed" };
+  return { kind: "malformed" };
 }
 
 /** One file as shared: its path in the repo and the text pushed. */

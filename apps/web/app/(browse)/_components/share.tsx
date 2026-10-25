@@ -16,12 +16,6 @@ import {
   type RecordedCompletion,
 } from "../../../lib/outcome";
 import {
-  encodeResult,
-  publicResult,
-  sentence,
-  type Result,
-} from "../../../lib/result";
-import {
   codeFragment,
   encodeCode,
   REFUSALS,
@@ -96,7 +90,7 @@ export function ShareResult({
   code,
 }: {
   /** The card to share: a v3 outcome, or a legacy v2 result (a merged pull request). */
-  state: { result: Result | Outcome | null; label: string };
+  state: { result: Outcome | null; label: string };
   issue: ResultInput["issue"];
   /**
    * The solution as checked: the file edited (or every file changed); only shared when ticked.
@@ -139,15 +133,12 @@ export function ShareResult({
   }, [withCode, files, missing]);
   const { result } = state;
   if (!result) return null;
-  // Only allowlisted fields leave the browser, whichever version the card is.
-  const card = result.v === 3 ? publicOutcome(result) : publicResult(result);
-  const segment = card.v === 3 ? encodeOutcome(card) : encodeResult(card);
+  // Only allowlisted fields leave the browser.
+  const card = publicOutcome(result);
+  const segment = encodeOutcome(card);
   const including = withCode && !!packed;
   const url = `${location.origin}/r/${segment}${including ? codeFragment(packed) : ""}`;
-  const said =
-    card.v === 3
-      ? outcomeSentence(card, state.label, issue.title, "first")
-      : sentence(card, state.label, issue.title, "first");
+  const said = outcomeSentence(card, state.label, issue.title, "first");
   const text = `${said} Keep your coding skills in practice.`;
   const share = async (channel: Channel) => {
     // Ticked but not packed yet, or refused: never share without saying so, or share part of it.

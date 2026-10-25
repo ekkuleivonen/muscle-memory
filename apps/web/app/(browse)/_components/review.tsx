@@ -1,37 +1,19 @@
 "use client";
-import type { BoardMoveVia } from "../../../../../packages/domain/board";
 import {
   failureText,
   type CheckRow,
   type Diagnosis,
 } from "../../../lib/diagnosis";
 import type { CheckFeedback } from "../../../lib/check-feedback";
-import { type Thread } from "../../../lib/feedback";
 import { Markdown } from "./markdown";
 
 /**
- * A pull request's review, as its page shows it: Findings (what is left to fix, and what was
- * fixed before, folded away) and the Checks tab (every case as CI ran it). A failing public case
- * reads as its input, the expected value and what the code gave; a hidden case gives its name and
- * how it failed, never its values (lib/diagnosis.ts). Nothing suggests code. Whether it can merge is said once, by the merge box.
+ * Check feedback in practice: a failing public case reads as its input, the expected value and
+ * what the code gave; a hidden case gives its position and how it failed, never its values
+ * (lib/diagnosis.ts). Nothing suggests code.
  */
 
-const clock = (at: string) =>
-  new Date(at).toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
 const show = (value: unknown) => JSON.stringify(value);
-
-type Resolve = (thread: Thread, via: BoardMoveVia) => Promise<void>;
-type Reply = (thread: Thread, text: string) => Promise<void>;
-
-/** A click from the keyboard (Enter or Space) has no pointer position. */
-const via = (event: React.MouseEvent): BoardMoveVia =>
-  event.detail === 0 ? "keyboard" : "pointer";
-
-/** "2 of 5 checks fail on push 3.", or how CI stopped. */
 
 /** Marks a hidden case: only the full check runs it, and its values stay hidden. */
 const HiddenCase = () => (
@@ -117,13 +99,6 @@ export function FailedChecks({ diagnosis }: { diagnosis: Diagnosis | null }) {
     </ul>
   );
 }
-
-/**
- * A CI finding: the failing push that opened it, what fails now, and Resolve. Resolving it is
- * the person's acknowledgement only; merging still needs the latest push's checks to pass.
- */
-
-/** A teammate's review finding, its replies and whether it is resolved. */
 
 /**
  * The latest full check, in the practice area (lib/check-feedback.ts): one headline, what to do

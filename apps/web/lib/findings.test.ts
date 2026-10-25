@@ -8,9 +8,6 @@ import assert from "node:assert/strict";
 import type { WorkspaceRecord } from "../../../packages/domain/workspace";
 import { attemptAt, attemptRecords } from "./attempts";
 import {
-  feedbackOf,
-  openRequired,
-  type Release,
 } from "./feedback";
 import { mergeEligibility } from "./merge";
 import { allPullRequests } from "./pulls";
@@ -290,7 +287,8 @@ function blockerOf(
     number,
     pull,
     published,
-    openRequired: openRequired(feedbackOf(own, ISSUE, revisionFor), number, revisionFor).length,
+    // As completion does: required rules are checked on the code, not as open threads.
+    openRequired: 0,
   }).blocker;
 }
 
@@ -325,42 +323,6 @@ test("a replay starts fresh: an earlier merge never satisfies it, and nothing ea
   assert.equal(pulls().find((p) => p.number === 3)?.otherMerged, undefined);
   play.merge(3, replayRun);
   assert.equal(pulls().find((p) => p.number === 3)?.state, "merged");
-});
-
-test("a CI failure is a finding only Resolve clears; Resolve never makes failing CI mergeable", () => {
-  const play = incident();
-  play.start();
-  const fb = () => feedbackOf(attemptRecords(play.records, ISSUE), ISSUE, revisionFor);
-  const open = () => openRequired(fb(), 1, revisionFor).map((t) => t.comment);
-  const blocker = () => blockerOf(play.records, 1);
-
-  play.push(1, 1, false);
-  assert.deepEqual(open(), ["ci-push-1"], "a failing push opens a CI finding");
-  // Acknowledged while CI is still red: resolved, and still not mergeable.
-  play.resolve(1, "ci-push-1");
-  assert.deepEqual(open(), []);
-  assert.equal(blocker(), "checks");
-  // Another failing push: the finding recurs as a new one, not twice for one failure.
-  play.push(1, 2, false);
-  play.push(1, 3, false);
-  assert.deepEqual(open(), ["ci-push-2"]);
-  // A valid later push: CI passes, and the open finding still needs Resolve.
-  play.push(1, 4, true);
-  assert.deepEqual(open(), ["ci-push-2"]);
-  assert.equal(blocker(), "review");
-  play.resolve(1, "ci-push-2");
-  assert.equal(blocker(), null);
-  // An ordinary green pull request has nothing to acknowledge.
-  const green = incident();
-  green.start();
-  green.push(1, 1, true);
-  assert.deepEqual(feedbackOf(attemptRecords(green.records, ISSUE), ISSUE, revisionFor).threads, []);
-  // Only the incident turns CI failures into findings.
-  assert.ok(
-    catalog.issues
-      .filter((i) => i.id !== ISSUE)
-      .every((i) => catalog.revisions[i.revision].ciFindings === undefined),
-  );
 });
 
 test("progress saved before replays existed reads exactly as it did", () => {
@@ -420,49 +382,6 @@ test("closed pull requests and replays: only the attempt's own merge puts it in 
   assert.equal(pulls().find((p) => p.number === 4)?.state, "merged");
 });
 
-function resolveAll(play: ReturnType<typeof incident>, number: number) {
-  const own = attemptRecords(play.records, ISSUE);
-  for (const t of openRequired(feedbackOf(own, ISSUE, revisionFor), number, revisionFor))
-    play.resolve(number, t.comment);
-}
-
-test("green CI, then the code changes: no merge until it is pushed again", () => {
-  const play = incident();
-  play.start();
-  play.open();
-  play.push(1, 1, true);
-  assert.equal(blockerOf(play.records, 1), null);
-  play.save(FIX + "\n// one more thought\n");
-  assert.equal(blockerOf(play.records, 1), "code-changed");
-  resolveAll(play, 1);
-  assert.equal(blockerOf(play.records, 1), "code-changed", "Resolve never stands in for CI");
-  // Back to exactly what was pushed: the checks describe it again.
-  play.save(FIX);
-  assert.equal(blockerOf(play.records, 1), null);
-  play.save(FIX + "\n// one more thought\n");
-  play.push(1, 2, true, FIX + "\n// one more thought\n");
-  assert.equal(blockerOf(play.records, 1), null, "pushing the change makes it mergeable");
-});
-
-test("checks against a revision the attempt has left, or one not published, never merge", () => {
-  const newer = "sha256:" + "1".repeat(64);
-  const both = (id: string) => id === newer || !!catalog.revisions[id];
-  const play = incident();
-  play.start();
-  play.open();
-  play.push(1, 1, true);
-  assert.equal(blockerOf(play.records, 1, both), null);
-  // The ticket was updated and the IDE reopened on it: these checks ran against the old one.
-  play.open(newer);
-  assert.equal(blockerOf(play.records, 1, both), "revision");
-  resolveAll(play, 1);
-  assert.equal(blockerOf(play.records, 1, both), "revision");
-  play.push(1, 2, true, FIX, newer);
-  assert.equal(blockerOf(play.records, 1, both), null);
-  // A revision no longer published can't be vouched for.
-  assert.equal(blockerOf(play.records, 1), "revision");
-});
-
 test("a pinned earlier revision stays honest: its own checks count, the live one isn't swapped in", () => {
   const pinned = "sha256:" + "2".repeat(64);
   const both = (id: string) => id === pinned || !!catalog.revisions[id];
@@ -475,6 +394,43 @@ test("a pinned earlier revision stays honest: its own checks count, the live one
   assert.equal(blockerOf(play.records, 1, both), null);
 });
 
+test("green CI, then the code changes: no merge until it is pushed again", () => {
+  const play = incident();
+  play.start();
+  play.open();
+  play.push(1, 1, true);
+  assert.equal(blockerOf(play.records, 1), null);
+  play.save(FIX + "\n// one more thought\n");
+  assert.equal(blockerOf(play.records, 1), "code-changed");
+  assert.equal(blockerOf(play.records, 1), "code-changed", "Resolve never stands in for CI");
+  // Back to exactly what was pushed: the checks describe it again.
+  play.save(FIX);
+  assert.equal(blockerOf(play.records, 1), null);
+  play.save(FIX + "\n// one more thought\n");
+  play.push(1, 2, true, FIX + "\n// one more thought\n");
+  assert.equal(blockerOf(play.records, 1), null, "pushing the change makes it mergeable");
+});
+
+
+test("checks against a revision the attempt has left, or one not published, never merge", () => {
+  const newer = "sha256:" + "1".repeat(64);
+  const both = (id: string) => id === newer || !!catalog.revisions[id];
+  const play = incident();
+  play.start();
+  play.open();
+  play.push(1, 1, true);
+  assert.equal(blockerOf(play.records, 1, both), null);
+  // The ticket was updated and the IDE reopened on it: these checks ran against the old one.
+  play.open(newer);
+  assert.equal(blockerOf(play.records, 1, both), "revision");
+  assert.equal(blockerOf(play.records, 1, both), "revision");
+  play.push(1, 2, true, FIX, newer);
+  assert.equal(blockerOf(play.records, 1, both), null);
+  // A revision no longer published can't be vouched for.
+  assert.equal(blockerOf(play.records, 1), "revision");
+});
+
+
 test("a late result from an older push never decides; a push still running blocks", () => {
   const play = incident();
   play.start();
@@ -485,12 +441,11 @@ test("a late result from an older push never decides; a push still running block
   play.report(1, 2, "ci-late-2", artifact, false);
   play.report(1, 1, "ci-late-1", artifact, true);
   assert.equal(blockerOf(play.records, 1), "checks");
-  resolveAll(play, 1);
   assert.equal(blockerOf(play.records, 1), "checks", "resolving the CI finding changes nothing");
   // Push 3 passes, then push 4 starts and hasn't reported: what would merge is unknown.
   play.push(1, 3, true);
-  resolveAll(play, 1);
   assert.equal(blockerOf(play.records, 1), null);
   play.queued();
   assert.equal(blockerOf(play.records, 1), "checks-pending");
 });
+

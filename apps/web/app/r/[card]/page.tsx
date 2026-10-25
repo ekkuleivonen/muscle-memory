@@ -3,14 +3,12 @@ import Link from "next/link";
 import { hookFor } from "../../../lib/hooks";
 import { LANGUAGES } from "../../../lib/languages";
 import { getLibrary } from "../../../lib/load";
-import { outcomeLines, outcomeSentence } from "../../../lib/outcome";
-import { receiptLines, sentence } from "../../../lib/result";
 import {
-  inspectCard,
-  startCopy,
-  tryHref,
-  type CardLink,
-} from "../../../lib/share";
+  outcomeLines,
+  outcomeSentence,
+  type Outcome,
+} from "../../../lib/outcome";
+import { inspectCard, startCopy, tryHref } from "../../../lib/share";
 import { Arrived } from "./arrived";
 import { SharedCode } from "./shared-code";
 import { SharedHeader, Unavailable } from "./unavailable";
@@ -18,57 +16,38 @@ import { Receipt } from "../../(browse)/_components/result-card";
 
 type Props = { params: Promise<{ card: string }> };
 
-/** What either card version shows, in one shape. */
-function view(
-  link: Extract<CardLink, { kind: "result" | "outcome" }>,
-  label: string,
-  title: string,
-  live: string,
-) {
-  if (link.kind === "outcome") {
-    const card = link.outcome;
-    return {
-      key: card.k,
-      referral: card.c,
-      headline: outcomeSentence(card, label, title),
-      lines: outcomeLines(card),
-      completed: true,
-      // The card names the full revision it was checked on; say so when the challenge has
-      // moved on, and never present today's starter as the version they completed.
-      earlier: `sha256:${card.rv}` !== live,
-      sameVersion: `sha256:${card.rv}` === live,
-    };
-  }
-  const card = link.result;
+/** What a card shows. */
+function view(card: Outcome, label: string, title: string, live: string) {
   return {
     key: card.k,
     referral: card.c,
-    headline: sentence(card, label, title),
-    lines: receiptLines(card),
-    completed: !card.ev || card.ev.state === "merged",
-    earlier: false,
-    // A v2 card carries no revision, so it can't be called the same version.
-    sameVersion: false,
+    headline: outcomeSentence(card, label, title),
+    lines: outcomeLines(card),
+    completed: true,
+    // The card names the full revision it was checked on; say so when the challenge has
+    // moved on, and never present today's starter as the version they completed.
+    earlier: `sha256:${card.rv}` !== live,
+    sameVersion: `sha256:${card.rv}` === live,
   };
 }
 
 async function read(props: Props) {
   const link = inspectCard((await props.params).card);
   const { findIssue } = await getLibrary();
-  if (link.kind !== "result" && link.kind !== "outcome")
+  if (link.kind !== "outcome")
     return {
       link,
       issue:
         link.kind === "older" && link.key ? findIssue(link.key) : undefined,
     };
-  const card = link.kind === "outcome" ? link.outcome : link.result;
+  const card = link.outcome;
   const issue = findIssue(card.k);
   const label = LANGUAGES.find((l) => l.id === card.l)?.label ?? card.l;
   return {
     link,
     issue,
     label,
-    shown: issue ? view(link, label, issue.title, issue.revision) : undefined,
+    shown: issue ? view(card, label, issue.title, issue.revision) : undefined,
   };
 }
 
@@ -113,7 +92,7 @@ export default async function SharedResult(props: Props) {
     return (
       <Unavailable
         title="That challenge isn't available any more"
-        body={`This result is for ${(link.kind === "outcome" ? link.outcome : link.result).k}, which has been retired, so it isn't shown.`}
+        body={`This result is for ${link.outcome.k}, which has been retired, so it isn't shown.`}
       />
     );
   return (

@@ -1,12 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { encodeResult, publicResult, type Result } from "./result";
 import {
   codeFragment,
   codeFromHash,
   decodeCode,
   encodeCode,
-  inspectCard,
   MAX_CODE_FRAGMENT,
   MAX_FILES,
   MAX_JSON_BYTES,
@@ -17,73 +15,11 @@ import {
   type SharedFile,
 } from "./share";
 
-const card: Result = {
-  v: 2,
-  k: "GO-001",
-  l: "go",
-  c: "ab12cd34ef56",
-  t: 252,
-  rd: 48,
-  ks: 214,
-  ty: 9,
-  w: 71,
-  r: 1,
-  g: 1,
-  p: 1,
-  h: 0,
-  ps: 0,
-  lt: 0,
-};
 const segment = (value: unknown) =>
   Buffer.from(JSON.stringify(value)).toString("base64url");
 
 test("an issue link is its permanent key and nothing of the sender", () => {
   assert.equal(tryHref("RG-4"), "/try/RG-4");
-});
-
-test("only allowlisted fields leave the browser, whatever the card was built from", () => {
-  const leaky = {
-    ...card,
-    participantId: "3f2a-participant",
-    profile: { country: "FI", age: "25-34", experience: "10+" },
-    records: [{ kind: "observation", payload: "{}" }],
-    code: "def count_words(s): ...",
-  } as unknown as Result;
-  assert.deepEqual(publicResult(leaky), card);
-  const json = Buffer.from(encodeResult(leaky), "base64url").toString();
-  for (const secret of ["participant", "country", "records", "count_words"])
-    assert.ok(!json.includes(secret), secret);
-});
-
-test("a result link is a result, an older version, or malformed; never a guess", () => {
-  assert.deepEqual(inspectCard(encodeResult(card)), {
-    kind: "result",
-    result: card,
-  });
-  assert.deepEqual(inspectCard(segment({ v: 1, k: "GO-001", t: 1 })), {
-    kind: "older",
-    key: "GO-001",
-  });
-  // Version 3 is current: one that doesn't decode is malformed, not "older".
-  assert.deepEqual(inspectCard(segment({ v: 3, k: "<b>" })), {
-    kind: "malformed",
-  });
-  assert.deepEqual(
-    inspectCard(segment({ ...card, k: "JS-001", iv: "0a1b2c3d", a: 1 })),
-    { kind: "older", key: "JS-001" },
-  );
-  // A current card with a field out of range is not "older": it is not one we made.
-  assert.deepEqual(inspectCard(encodeResult({ ...card, t: -1 })), {
-    kind: "malformed",
-  });
-  for (const bad of [
-    "",
-    "%%%",
-    "bm90IGpzb24",
-    segment("just a string"),
-    segment(null),
-  ])
-    assert.deepEqual(inspectCard(bad), { kind: "malformed" }, bad);
 });
 
 test("shared code survives its fragment, and anything we would not have made is refused", async () => {
@@ -244,37 +180,6 @@ test("code too big for a link is refused rather than cut", async () => {
     { path: "ok.py", text: "x = 1\n".repeat(2000) },
   ]);
   assert.ok(fits.length <= MAX_CODE_FRAGMENT);
-});
-
-test("public evidence survives the result link and strips nested private fields", () => {
-  const ev = {
-    v: 1,
-    state: "merged",
-    checks: { passed: 15, total: 15, result: "checks-passed" },
-    first: { passed: 5, total: 15, result: "checks-failed" },
-    hidden: { passed: 10, total: 10 },
-    changed: { files: 2, added: 4, removed: 2 },
-    pushes: 2,
-    runs: 3,
-    testedBeforePush: "tested-passing",
-    failedPushes: 1,
-    findings: { raised: 1, open: 0 },
-    hints: 0,
-    gaps: false,
-    profile: { secret: "private-profile" },
-    code: "private-source",
-  };
-  const encoded = encodeResult({ ...card, ev } as unknown as Result);
-  const json = Buffer.from(encoded, "base64url").toString();
-  assert.ok(!json.includes("private-profile"));
-  assert.ok(!json.includes("private-source"));
-  const read = inspectCard(encoded);
-  assert.equal(read.kind, "result");
-  if (read.kind === "result") {
-    assert.equal(read.result.ev?.first?.passed, 5);
-    assert.equal(read.result.ev?.checks.passed, 15);
-    assert.equal(read.result.ev?.findings.open, 0);
-  }
 });
 
 test("one solution file is the usual link, and a link from a multi-file challenge still reads back whole", async () => {

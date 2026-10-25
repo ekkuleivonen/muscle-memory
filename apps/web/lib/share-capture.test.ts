@@ -20,7 +20,6 @@ import {
 import { ACCEPTED_CAPTURE, checkRecord } from "../../../packages/domain/ingest";
 import type { WorkspaceRecord } from "../../../packages/domain/workspace";
 import { encodeOutcome, publicOutcome, type Outcome } from "./outcome";
-import { publicResult, type Result } from "./result";
 
 const PARTICIPANT = "3f2a9c1e-5b7d-4e8f-9a0b-1c2d3e4f5a6b";
 const REV = `sha256:${"d".repeat(64)}`;
@@ -43,6 +42,7 @@ const v3: Outcome = {
   n: 3,
   c: "ab12cd34ef56",
 };
+/** A card of the kind shared before v3 (opaque to ingest, as every card is). */
 const v2 = {
   v: 2,
   k: "SQL-002",
@@ -59,7 +59,7 @@ const v2 = {
   h: 0,
   ps: 0,
   lt: 1,
-} as Result;
+};
 const share = (card: unknown) =>
   boardShare({
     ...common(),
@@ -89,7 +89,7 @@ test("a v3 card is recorded under the current board capture, unchanged, and inge
   const shared = share(publicOutcome(v3));
   // The card never chooses or bumps the capture version; it carries its own `v`.
   assert.equal(shared.captureVersion, BOARD_CAPTURE_VERSION);
-  assert.equal(share(publicResult(v2)).captureVersion, BOARD_CAPTURE_VERSION);
+  assert.equal(share(v2).captureVersion, BOARD_CAPTURE_VERSION);
   assert.deepEqual(shared.data.card, v3);
   assert.equal(accepted(boardRecord(shared)).ok, true);
   // Exactly the card its link carries.
@@ -106,7 +106,7 @@ test("shares queued under every older accepted board version are still accepted"
   assert.ok(older.length > 0);
   for (const version of older) {
     assert.equal(
-      accepted(queuedUnder(boardRecord(share(publicResult(v2))), version)).ok,
+      accepted(queuedUnder(boardRecord(share(v2)), version)).ok,
       true,
       version,
     );

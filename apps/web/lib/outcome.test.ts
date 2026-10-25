@@ -5,12 +5,10 @@ import {
   encodeOutcome,
   outcomeLines,
   outcomeOf,
-  outcomeSentence,
   publicOutcome,
   type Outcome,
   type RecordedCompletion,
 } from "./outcome";
-import { encodeResult, type Result } from "./result";
 import { inspectCard } from "./share";
 
 const HEX = "de8621e616e78cb42b58d2d189a0b9738171c3345ef3193d1af425130e4ba130";
@@ -441,45 +439,14 @@ test("a v3 link we would not have made is refused, never shown in part", () => {
   }
 });
 
-test("legacy v2 cards still decode as results, and no card attests how anyone worked", () => {
-  const v2: Result = {
-    v: 2,
-    k: "GO-001",
-    l: "go",
-    c: "ab12cd34ef56",
-    t: 252,
-    rd: 48,
-    ks: 214,
-    ty: 9,
-    w: 71,
-    r: 1,
-    g: 1,
-    p: 1,
-    h: 0,
-    ps: 0,
-    lt: 0,
-    fp: 90,
-    fn: 200,
-  };
-  const read = inspectCard(encodeResult(v2));
-  assert.equal(read.kind, "result");
-  const title = "Collected-by-partner report overstates split payments";
-  assert.equal(
-    outcomeSentence(card, "SQL", title),
-    `Completed “${title}” (SQL-002) in SQL. All 15 checks passed.`,
-  );
-  assert.equal(
-    outcomeSentence(card, "SQL", undefined, "first"),
-    "I completed SQL-002 in SQL. All 15 checks passed.",
-  );
-  assert.deepEqual(outcomeLines(card), [
-    ["checks passed", "15/15", true],
-    ["first full check", "11/15"],
-    ["full checks run", "3"],
-  ]);
-  for (const text of [
-    outcomeSentence(card, "SQL", title),
-    ...outcomeLines(card).flat(),
-  ])
-    assert.doesNotMatch(String(text), /without AI|faster|%|minute|speed|rank/i);
+test("a card of an earlier version is older, naming its challenge; it is never shown as a result", () => {
+  const raw = (value: object) =>
+    Buffer.from(JSON.stringify(value)).toString("base64url");
+  // The merged pull request cards shared before v3.
+  assert.deepEqual(inspectCard(raw({ v: 2, k: "SQL-002", l: "sql", c: "ab12cd34ef56" })), {
+    kind: "older",
+    key: "SQL-002",
+  });
+  assert.deepEqual(inspectCard(raw({ v: 1, k: "<script>" })), { kind: "older", key: null });
+  assert.deepEqual(inspectCard("not-a-card"), { kind: "malformed" });
 });

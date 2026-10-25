@@ -3,9 +3,6 @@ import { useEffect, useState } from "react";
 import { openPracticeStore } from "../../../../../packages/browser/practice-store";
 import type { Revision } from "../../../../../packages/content/model";
 import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
-import {
-  receiptLines,
-} from "../../../lib/result";
 
 export function Receipt({
   headline,
@@ -17,7 +14,7 @@ export function Receipt({
 }: {
   headline: string;
   detail: string;
-  /** The card's rows: `receiptLines` for a v2 card, `outcomeLines` for v3. */
+  /** The card's rows, from `outcomeLines`. */
   lines: [string, string, boolean?][];
   completed: boolean;
   top: string;
