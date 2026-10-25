@@ -15,19 +15,21 @@ The sender (`ShareResult`) is still mounted only by the merged pull request in `
 
 `apps/web/lib/outcome.ts` holds the serializer (`encodeOutcome`), parser (`decodeOutcome`), allowlist (`publicOutcome`), builder (`outcomeOf`) and wording (`outcomeSentence`, `outcomeLines`). Tests are in `lib/outcome.test.ts`.
 
-| Field    | Meaning                                                                                                      |                            |
-| -------- | ------------------------------------------------------------------------------------------------------------ | -------------------------- |
-| `v`      | `3`                                                                                                          | required                   |
-| `k`, `l` | Challenge key, language                                                                                      | required                   |
-| `rv`     | The checked revision's sha256 (hex)                                                                          | required                   |
-| `o`      | The final full check, `{ passed, total }`: every check passed                                                | required                   |
-| `f`      | The first full check of the attempt, `{ passed, total }`, or `null`                                          | optional                   |
-| `n`      | Full checks run in the attempt, the final one included                                                       | optional                   |
-| `c`      | Referral code: the existing referral mechanism (`/r` notes the arrival; `shared.ref` joins it), nothing more | required by that mechanism |
+| Field    | Meaning                                                                                                                                                                              |                            |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------- |
+| `v`      | `3`                                                                                                                                                                                  | required                   |
+| `k`, `l` | Challenge key, language                                                                                                                                                              | required                   |
+| `rv`     | The checked revision's full sha256 (64 hex, no prefix form)                                                                                                                          | required                   |
+| `o`      | The final full check, `{ passed, total }`: every check passed                                                                                                                        | required                   |
+| `f`      | The first full check of the attempt, `{ passed, total }`; `null` when that check is missing or incomplete (errored, timed out, cancelled, never reported, or a different suite size) | optional                   |
+| `n`      | Full checks that ran (not cancelled) in the attempt through the completing run; nothing after it                                                                                     | optional                   |
+| `c`      | Referral code: the existing referral mechanism (`/r` notes the arrival; `shared.ref` joins it), nothing more                                                                         | required by that mechanism |
 
-- **Source.** Built only from a recorded `checks-passed` completion (`automatic: true`, ENG-328's `completions()`, board capture 7.2.0) and the `observation.workspace.pull-request` full-check records before it, in the same attempt, on the same revision. `o` must be the completing run's record and must pass every check. Otherwise there is no card. A legacy merge never becomes v3, and no v2 merge is invented for a new completion. Nothing is recomputed and nothing new is collected.
+- **Source.** Built only from a recorded `checks-passed` completion (`automatic: true`, ENG-328's `completions()`, board capture 7.2.0) and the `observation.workspace.pull-request` full-check records before it, in the same attempt, on the same revision. `o` must be the completing run's recorded result, `checks-passed` with `total > 0` and `passed = total`. The gate's required deterministic rules for that run's code must have been evaluated, with none outstanding (the `required` input). Otherwise there is no card. A legacy merge never becomes v3, and no v2 merge is invented for a new completion. Nothing is recomputed and nothing new is collected.
 - **Never in v3:** `e`, `g`, `t`, `fp`, `fn`, ranks, comparisons, timing, speed, keystrokes, hints, findings, file paths or code. The parser refuses any other field, a final check that didn't pass everything, a first check with a different total, a malformed revision, key or referral code.
 - **Wording:** "Completed “<title>” (<KEY>) in <language>. All <n> checks passed." The sharer's own text says "I completed …". There is no "without AI" anywhere generated: the page describes the editor's lack of AI features as a practice condition, not proof about other tools. If the card's revision isn't the live one, the page says it was completed on an earlier version and that the visitor starts from the current one.
+- **Version honesty:** "Try <KEY> yourself" and "the same starting code they did" appear only when the card's full revision is the live one. A v3 card on an earlier revision, and every v2 card (no revision identity), says "Try the current version of <KEY>" and "the challenge's current starting code". Unavailable older links say the same.
+- **Bounds:** v3 has its own strict parser. The segment is at most 1024 base64url characters. Only the listed fields are allowed. Key, language, revision and referral code must match exact patterns. Counts are integers within limits (checks ≤ 10,000, `n` 1–100,000), and `f.total` must equal `o.total`. It never reuses or coerces the v2 decoder.
 - **v2:** still decodes and renders in challenge terms. Its sentences no longer say "without AI", and `fp`/`fn` still decode but are never displayed.
 - **Code:** unchanged v1 fragment, explicit unticked opt-in, the same UTF-8 limits and exact read-back. `ShareOutcome` offers exactly the completing run's checked artifact (one file for normalized challenges). If that artifact is missing or truncated, ticking refuses it. The editor's current code is never used in its place. Old multi-file links still read back whole.
 
@@ -39,12 +41,13 @@ The sender (`ShareResult`) is still mounted only by the merged pull request in `
    <ShareOutcome
      challenge={{ key, slug, title, revision, language }}
      completion={completions(records, slug).at(-1) ?? null}
+     required={/* the gate's outstanding required rules evaluated for that completion's run: [] when satisfied, null if not evaluated */}
      records={records}
      revisions={revisions}
    />
    ```
 
-   It renders nothing unless that completion is `automatic`, names this challenge and is on the open revision.
+   It renders nothing unless that completion is `automatic`, names this challenge, is on the open revision, and `required` is `[]`. Please supply `required` from the gate evaluated for the completing run's artifact. Today's `completionEligibility` returns `required: []` on early failures too, so pass `null` unless the gate reached rule evaluation for that `runId`.
 
 2. **Shared event card JSON.** `observation.board.shared.card` now holds a v3 card when shared from practice. v2 cards from merged pull requests keep their meaning. No reader of `shared.card` exists in `tools/`, `apps/ingest` or the aggregates. Since ENG-328 owns the 7.2.0 bump, please add this line to its version comment in `packages/domain/board.ts` rather than making a separate bump: "`shared.card` may be a version 3 outcome card (`apps/web/lib/outcome.ts`: v, k, l, rv, o, optional f and n, c), shared after a `checks-passed` completion; version 2 cards keep their meaning."
 
