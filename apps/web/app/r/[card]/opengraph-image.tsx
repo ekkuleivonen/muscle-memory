@@ -1,7 +1,6 @@
 import { ImageResponse } from "next/og";
 import { LANGUAGES } from "../../../lib/languages";
-import { isIncident } from "../../../lib/incident";
-import { decodeResult, incidentSentence, sentence } from "../../../lib/result";
+import { decodeResult, sentence } from "../../../lib/result";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -14,7 +13,6 @@ export default async function Image({
   params: Promise<{ card: string }>;
 }) {
   const result = decodeResult((await params).card);
-  const incident = result && isIncident(result.k);
   const label = result
     ? (LANGUAGES.find((l) => l.id === result.l)?.label ?? result.l)
     : "";
@@ -40,16 +38,12 @@ export default async function Image({
         }}
       >
         <div style={{ fontSize: 26, color: "#b69cff", letterSpacing: 2 }}>
-          {incident
-            ? `MUSCLE MEMORY · INCIDENT INC-1${result.iv ? ` · VERSION ${result.iv}` : ""}`
-            : "MUSCLE MEMORY · SHIPPED WITHOUT AI"}
+          MUSCLE MEMORY · SHIPPED WITHOUT AI
         </div>
         <div style={{ fontSize: 52, lineHeight: 1.2 }}>
-          {incident
-            ? incidentSentence(result)
-            : result
-              ? sentence({ ...result, fp: undefined }, label)
-              : "One bug. No AI. Try a small fix at your own pace."}
+          {result
+            ? sentence({ ...result, fp: undefined }, label)
+            : "One bug. No AI. Try a small fix at your own pace."}
         </div>
         {result?.fp !== undefined && (
           <div style={{ fontSize: 38, color: "#4ade80" }}>
@@ -65,9 +59,7 @@ export default async function Image({
           </div>
         )}
         <div style={{ fontSize: 30, color: "#cfd2db" }}>
-          {incident
-            ? "Production is down. AI is down. You're on call. → musclememory.run"
-            : "You use AI every day. Keep your coding skills in practice. → musclememory.run"}
+          You use AI every day. Keep your coding skills in practice. → musclememory.run
         </div>
       </div>
     ),

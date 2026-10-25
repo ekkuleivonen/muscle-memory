@@ -2,7 +2,7 @@ import Link from "next/link";
 
 /**
  * What accepting the Terms means, in four points and the storage note: the same words wherever
- * someone accepts them (/consent and the incident's entry page).
+ * someone accepts them (/consent).
  */
 export function ConsentPoints() {
   return (

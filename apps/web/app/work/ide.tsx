@@ -26,7 +26,7 @@ import {
   type IssueKind,
   type Revision,
 } from "../../../../packages/content/model";
-import { runFeedback, type WorkspaceRecord } from "../../../../packages/domain/workspace";
+import { runFeedback } from "../../../../packages/domain/workspace";
 import type { Json } from "../../../../packages/domain/json";
 import {
   engineFor,
@@ -40,10 +40,8 @@ import {
   timeAgo,
   type PullRequestRecord,
 } from "../../lib/activity";
-import { attemptAt, attemptRecords } from "../../lib/attempts";
-import { chatOf, type ChatMessage } from "../../lib/chat";
+import { attemptRecords } from "../../lib/attempts";
 import { statusOf } from "../../lib/board";
-import { incidentState, isIncident } from "../../lib/incident";
 import { closedPullRequests, mergedPullRequests } from "../../lib/pulls";
 import {
   due,
@@ -62,7 +60,6 @@ import {
   type TreeNode,
 } from "../../lib/repo";
 import { LanguageDot } from "../(browse)/_components/bits";
-import { TeamChat } from "../(browse)/_components/team-chat";
 import { StatusMenu, useBoard } from "../(browse)/_components/board";
 import {
   PREVIOUS_PATH_KEY,
@@ -190,11 +187,6 @@ export function Ide({
   const [unread, setUnread] = useState(false);
   /** What teammates just said, shown where the person is working: the latest release only. */
   const [notes, setNotes] = useState<TeamNote[]>([]);
-  /** The team chat so far, for the attempt under way, and the attempt it belongs to. */
-  const [chat, setChat] = useState<{ messages: ChatMessage[]; scope: string }>({
-    messages: [],
-    scope: issue.slug,
-  });
 
   const router = useRouter();
   const layout = useIdeLayout();
@@ -285,15 +277,6 @@ export function Ide({
   const viewRef = useRef(view);
   viewRef.current = view;
 
-  /** The chat a revision carries, as far as this attempt's records have come. */
-  function chatFor(records: readonly WorkspaceRecord[]) {
-    const attempt = attemptAt(records, issue.slug);
-    return {
-      messages: chatOf(revision.chat ?? [], records, issue.slug, (id) => revisions[id]),
-      scope: `${issue.slug}@${attempt.start ?? "first"}`,
-    };
-  }
-
   /**
    * Releases whatever teammate feedback the revision's triggers say is due, from what is
    * stored (so pending writes are flushed first), and shows it. `push` names a push whose
@@ -341,7 +324,6 @@ export function Ide({
         }
         if (session.current === current) {
           setFeedback(feedbackOf(records, issue.slug, (id) => revisions[id]));
-          setChat(chatFor(records));
         }
       } catch (cause) {
         console.warn("Teammate feedback could not be checked.", cause);
@@ -384,17 +366,6 @@ export function Ide({
       const participantId = await store.current.participantId();
       participant.current = participantId;
       const all = await store.current.workspaceRecords();
-      // An incident attempt stays on the revision it started on, whatever the URL says.
-      if (isIncident(issue.key)) {
-        const pinned = incidentState(all).revision;
-        if (pinned && pinned !== issue.revision && revisions[pinned]) {
-          if (current())
-            router.replace(
-              `/work/${issue.key}?revision=${encodeURIComponent(pinned)}`,
-            );
-          return;
-        }
-      }
       // Only the attempt under way (a replay starts a new one); earlier ones stay recorded.
       const records = attemptRecords(all, issue.slug);
       const recovered: RecoveredCode | null = latestSavedCode(
@@ -415,7 +386,6 @@ export function Ide({
       setMerged(mergedNumbers);
       setClosed(closedNumbers);
       setFeedback(feedbackOf(records, issue.slug, (id) => revisions[id]));
-      setChat(chatFor(all));
       session.current = new WorkspaceSession({
         participantId,
         consentVersion: `terms-${account?.accepted?.version ?? "unknown"}`,
@@ -1112,7 +1082,6 @@ export function Ide({
         />
       )}
       <div ref={sandboxHost} hidden />
-      <TeamChat messages={chat.messages} scope={chat.scope} inIde />
     </div>
   );
 }
@@ -1432,6 +1401,9 @@ const PR_RESULTS: Record<
 const MERGED = { mark: "⇢", label: "Merged", tone: "merged" };
 const CLOSED = { mark: "×", label: "Closed", tone: "faint" };
 
+/** The pull requests list shows the newest few; the rest stay one click away. */
+const PULLS_NEWEST = 3;
+
 function PullRequests({
   pulls,
   merged,
@@ -1460,6 +1432,9 @@ function PullRequests({
     pr.result === "merged" || merged.has(pr.number);
   const mergedPull = pulls.find(isMerged);
   const latest = pulls[0];
+  const [all, setAll] = useState(false);
+  const older = Math.max(0, pulls.length - PULLS_NEWEST);
+  const listed = all ? pulls : pulls.slice(0, PULLS_NEWEST);
   return (
     <div>
       {latest && !done && closed.has(latest.number) && (
@@ -1537,13 +1512,7 @@ function PullRequests({
             </Link>
           </p>
         ))}
-      {done && mergedPull && isIncident(issue.key) && (
-        <p className="ide-done">
-          Pull request #{mergedPull.number} is merged and main ships itself:
-          checkout is back. <Link href="/incident/report">Read the incident report</Link>.
-        </p>
-      )}
-      {done && mergedPull && !isIncident(issue.key) && (
+      {done && mergedPull && (
         <p className="ide-done">
           Pull request #{mergedPull.number} merged. {issue.key} is <b>Done</b>.{" "}
           <Link href="/dashboard">Back to your dashboard</Link> or{" "}
@@ -1567,43 +1536,56 @@ function PullRequests({
           )}
         </p>
       ) : (
-        <ol className="ide-pulls">
-          {pulls.map((pr) => {
-            const shown = isMerged(pr)
-              ? MERGED
-              : closed.has(pr.number)
-                ? CLOSED
-                : (PR_RESULTS[pr.result] ?? PR_RESULTS["checks-errored"]);
-            return (
-              <li key={pr.number} className={shown.tone}>
-                <span className="ide-pr-mark">{shown.mark}</span>
-                {pr.result === "running" ? (
-                  <span className="mono">#{pr.number}</span>
-                ) : (
-                  <Link className="mono" href={pullHref(issue.key, pr.number)}>
-                    #{pr.number}
-                  </Link>
-                )}
-                <span className="ide-pr-label">{shown.label}</span>
-                <span className="faint">
-                  {pr.result === "running"
-                    ? `${pr.total} checks`
-                    : `${pr.passed}/${pr.total} checks`}
-                  {pr.pushes > 1 && ` · ${pr.pushes} pushes`}
-                  {!isMerged(pr) && !closed.has(pr.number) && blocking.get(pr.number) && (
-                    <span className="ide-pr-blocking">
-                      {" · "}
-                      {comments(blocking.get(pr.number)!)}
-                    </span>
+        <>
+          <ol className="ide-pulls" id="ide-pull-list">
+            {listed.map((pr) => {
+              const shown = isMerged(pr)
+                ? MERGED
+                : closed.has(pr.number)
+                  ? CLOSED
+                  : (PR_RESULTS[pr.result] ?? PR_RESULTS["checks-errored"]);
+              return (
+                <li key={pr.number} className={shown.tone}>
+                  <span className="ide-pr-mark">{shown.mark}</span>
+                  {pr.result === "running" ? (
+                    <span className="mono">#{pr.number}</span>
+                  ) : (
+                    <Link className="mono" href={pullHref(issue.key, pr.number)}>
+                      #{pr.number}
+                    </Link>
                   )}
-                </span>
-                <time className="faint" dateTime={pr.at}>
-                  {timeAgo(pr.at, now)}
-                </time>
-              </li>
-            );
-          })}
-        </ol>
+                  <span className="ide-pr-label">{shown.label}</span>
+                  <span className="faint">
+                    {pr.result === "running"
+                      ? `${pr.total} checks`
+                      : `${pr.passed}/${pr.total} checks`}
+                    {pr.pushes > 1 && ` · ${pr.pushes} pushes`}
+                    {!isMerged(pr) && !closed.has(pr.number) && blocking.get(pr.number) && (
+                      <span className="ide-pr-blocking">
+                        {" · "}
+                        {comments(blocking.get(pr.number)!)}
+                      </span>
+                    )}
+                  </span>
+                  <time className="faint" dateTime={pr.at}>
+                    {timeAgo(pr.at, now)}
+                  </time>
+                </li>
+              );
+            })}
+          </ol>
+          {older > 0 && (
+            <button
+              type="button"
+              className="pull-more"
+              aria-expanded={all}
+              aria-controls="ide-pull-list"
+              onClick={() => setAll((v) => !v)}
+            >
+              {all ? "Show fewer" : `Show all ${pulls.length} pull requests`}
+            </button>
+          )}
+        </>
       )}
     </div>
   );

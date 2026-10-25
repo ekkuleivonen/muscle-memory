@@ -46,8 +46,6 @@ import {
   type Thread,
 } from "../../../lib/feedback";
 import { attemptRecords } from "../../../lib/attempts";
-import { isIncident } from "../../../lib/incident";
-import { IncidentResolved } from "./incident-resolved";
 
 export interface PullIssue {
   key: string;
@@ -463,7 +461,7 @@ export function PullView({
         { number: pull.number, runId: pull.runId },
         via,
       )
-      // Read the records again once the merge is stored: the incident's outcome needs it.
+      // Read the records again once the merge is stored.
       .then(() => setVersion((v) => v + 1));
     setMergedNow(new Date().toISOString());
   };
@@ -489,16 +487,9 @@ export function PullView({
             </Link>
           </span>
         </p>
-        {pull.state === "merged" &&
-          (isIncident(issue.key) ? (
-            <IncidentResolved
-              number={number}
-              openedAt={detail.openedAt}
-              records={records}
-            />
-          ) : (
-            <NextPractice candidates={candidates} current={issue.key} />
-          ))}
+        {pull.state === "merged" && (
+          <NextPractice candidates={candidates} current={issue.key} />
+        )}
         <Findings
           pull={pull}
           outcome={detail.outcome}
@@ -572,8 +563,6 @@ export function PullView({
           onMerge={merge}
           onClose={(via) => void close(via, !!pull.otherMerged)}
           share={
-            // The incident is shared from its report.
-            !isIncident(issue.key) &&
             result &&
             resultInput && (
               <ShareResult state={result} issue={resultInput.issue} />
@@ -707,12 +696,13 @@ function Timeline({
           type="button"
           className="pull-more"
           aria-expanded={all}
+          aria-controls="pull-timeline-list"
           onClick={() => setAll((v) => !v)}
         >
           {all ? "See less" : `See more (${hidden} earlier)`}
         </button>
       )}
-      <ol>
+      <ol id="pull-timeline-list">
         {(all || !hidden) && previous && (
           <TimelineRow at={previous.at} tone="dim">
             Follows{" "}

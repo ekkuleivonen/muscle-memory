@@ -48,12 +48,6 @@ export interface Result extends Metrics {
   readonly l: string;
   /** The sharer's referral code. */
   readonly c: string;
-  /** The incident only: the version played (8 hex digits of its revision), so a friend gets the same one. */
-  readonly iv?: string;
-  /** The incident only: which attempt, 1 for the first response, then replays. */
-  readonly a?: number;
-  /** The incident only: wall-clock seconds from acknowledging the page to merging the fix. */
-  readonly e?: number;
 }
 
 const ACTIVE = new Set([
@@ -254,18 +248,7 @@ export function decodeResult(segment: string): Result | null {
     ) as unknown as Metrics;
     const comparison =
       count(value.fp, 100) && count(value.fn, 10_000_000) ? { fp: value.fp, fn: value.fn } : {};
-    const incident =
-      typeof value.iv === "string" &&
-      /^[0-9a-f]{8}$/.test(value.iv) &&
-      count(value.a, 10_000) &&
-      value.a >= 1
-        ? {
-            iv: value.iv,
-            a: value.a,
-            ...(count(value.e, 10_000_000) ? { e: value.e } : {}),
-          }
-        : {};
-    return { v: 2, k: value.k, l: value.l, c: value.c, ...metrics, ...comparison, ...incident };
+    return { v: 2, k: value.k, l: value.l, c: value.c, ...metrics, ...comparison };
   } catch {
     return null;
   }
@@ -319,22 +302,4 @@ export function sentence(result: Result, language: string): string {
     result.g === 1 ? " Green on the first run." : result.g ? ` Green on run ${result.g}.` : "";
   const comparison = result.fp !== undefined ? ` Faster than ${result.fp}% of people who fixed it.` : "";
   return `Fixed a real bug in ${language} without AI in ${time}.${green}${comparison}`;
-}
-
-/**
- * How long the incident took, as the card says: wall-clock from the page to the merge when the
- * card has it, and active work, labelled as such.
- */
-export function incidentTime(result: Result): string {
-  const active = `${duration(result.t)} active`;
-  return result.e !== undefined ? `${duration(result.e)} (${active})` : active;
-}
-
-/**
- * The incident's sentence, for posts and previews: the story's premise, then the card's own
- * numbers. "No AI" is the simulation's rule, not a claim about the player.
- */
-export function incidentSentence(result: Result): string {
-  const replay = result.a && result.a > 1 ? ", on a replay" : "";
-  return `Production was down. AI was down. In a no-AI incident sim I restored checkout in ${incidentTime(result)}${replay}.`;
 }

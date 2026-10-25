@@ -14,7 +14,7 @@ How people arrive from a shared link, and how a result gets shared. The goal is 
 Accepting the current Terms is the only thing any page requires (`requireConsent`):
 
 - Someone who has not (a deep link, or the Terms changed since) is sent to `/consent`: the Terms in four points, one button, then on to the page they were heading for. `/play` does the same inline.
-- "Start your first day" on the landing page goes to the dashboard (through `/consent`). There is no onboarding: the profile questions are asked in place, one at a time, and can always wait ([profile](profile.md)).
+- "Clock in" and "browse every issue" on the landing page go to the dashboard and `/issues` (through `/consent`). There is no onboarding: the profile questions are asked in place, one at a time, and can always wait ([profile](profile.md)).
 
 ## The result
 
@@ -54,3 +54,19 @@ Joining `shared.ref` to `arrived.ref` gives shares, the arrivals each brought, a
 ## Returning to practice
 
 Entry pages explain browser-local identity and saved work: uploads do not provide recovery or device sync. Five minutes is a guide, not a timer. A merged result leads to a deterministic unstarted issue (runnable, preferred language, then easier difficulty) and back to the desk, before optional sharing and questions. The dashboard prioritises unfinished work, then a quick start; optional language preferences sit beside suggestions.
+
+## Entry points and legacy links
+
+Every way in leads to the same loop: issue, code, tests, pull request, feedback, merge. There is no incident wrapper, team chat or completion ceremony around it.
+
+- `/` says what the practice is and offers the five-minute test (or the desk, once the Terms are accepted) and the issue list.
+- `/issues/<KEY>` is an issue's exact entry; **Start work** opens `/work/<KEY>` on its live revision. `/work/<KEY>?revision=sha256:…` opens one of that issue's published revisions exactly; a revision that is not published opens the live one at the plain URL.
+- `/pulls/<KEY>/<n>` is this browser's own pull request: nobody else's records are ever read.
+
+The incident (INC-1, "Production is down. AI is down.") was retired as a wrapper. Its links still work:
+
+- `/incident` (with or without `?v=`) goes to `/play`, keeping only `?ref=`.
+- `/incident/report` goes to `/pulls`, this browser's own pull requests (through the Terms). A merged INC-1 fix is listed there like any other.
+- A shared incident card (`/r/<card>` for INC-1) shows as an ordinary shared result and leads to `/play`.
+
+INC-1 stays an ordinary unlisted issue, so attempts already made keep their pull requests, findings and records. Its revision still carries the retired chat lines; nothing shows them.
