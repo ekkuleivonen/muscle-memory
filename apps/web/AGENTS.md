@@ -14,10 +14,10 @@ The product centers on solving coding challenges independently: challenge, code,
 
 ## Map
 
-- `app/page.tsx`: the public home page. `app/(browse)`: dashboard, issues, projects, board and pull requests. Pages read the catalog (`content/catalog.json`) through `lib/library.ts` and `lib/queries.ts` (pure, tested).
+- `app/page.tsx`: the public home page. `app/challenges`: the challenge picker (search, filters, preview; Enter starts practice). Pages read the catalog (`content/catalog.json`) through `lib/library.ts` and `lib/queries.ts` (pure, tested). `app/(browse)/_components` holds the pieces practice and the share pages still use (board moves, markdown, examples, feedback, sharing, uploads).
 - `app/work/[key]`: the IDE (`ide.tsx`) on the issue's live revision. Practice shows only its one editable entry; support/test files remain internal. SQL's schema is public. `lib/practice-contract.ts` guards unsupported historical bundles and lossy restoration. No explorer, file tabs, hint/comment surface or visible test source.
 - `app/workspace`: the editor (`editor.ts`, CodeMirror 6), the session that records edits and runs (`session.ts`), save state, and the TypeScript type checker (`type-checker.ts`, its own worker).
-- `app/_terminal` (the terminal look: banner, status bar, styles), `app/settings`: settings, pages to click: `/settings` lists the commands, each its own page (`/settings/<command>`, `/settings/profile/<question>`). Profile questions are asked in place by `app/(browse)/_components/ask.tsx` ([docs/profile.md](../../docs/profile.md)).
+- `app/_terminal` (the terminal look: banner, status bar, styles), `app/settings`: settings, pages to click: `/settings` lists the commands, each its own page (`/settings/<command>`, `/settings/profile/<question>`). Profile questions are answered there ([docs/profile.md](../../docs/profile.md)).
 - Runners live outside the app, in `packages/runner` (see the root `AGENTS.md`).
 
 ## Conventions
@@ -26,7 +26,7 @@ The product centers on solving coding challenges independently: challenge, code,
 - Anything read from localStorage or IndexedDB is read after mount, never during render, or hydration breaks.
 - Revision JSON goes to client components as a string and is parsed there: the RSC serializer drops a `"__proto__"` key, and fixtures use one on purpose.
 - The editor owns its document; typing must never re-render React.
-- UI copy is plain and specific. Goals, examples and constraints should be immediately understandable. Public requirements and visible examples must be clear. Hidden expected outputs and solutions stay hidden; give fixed failure categories rather than a hidden-test oracle. Use challenge for the task, practice for the working area, explore for the catalog, and profile for evidence where appropriate. Errors say what happened and whether it is the person's code ("this wasn't your code" for runner crashes).
+- UI copy is plain and specific. Goals, examples and constraints should be immediately understandable. Public requirements and visible examples must be clear. Hidden expected outputs and solutions stay hidden; give fixed failure categories rather than a hidden-test oracle. Use challenge for the task, practice for the working area and challenges for the catalog. Errors say what happened and whether it is the person's code ("this wasn't your code" for runner crashes).
 - Use real-world framing only when it naturally clarifies the task. Do not invent company context or require all challenges to resemble professional work. Keep implementation machinery out of the player journey unless it helps explain an actionable problem. Existing PR, board and merge records retain their historical meanings until an explicit compatibility contract changes how new challenge verification is represented. No telemetry, consent or legal change is implied by presentation work.
 
 ## Checking a change

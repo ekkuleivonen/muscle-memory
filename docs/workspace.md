@@ -123,4 +123,4 @@ The IDE gives one action visual priority: **Run tests** on arrival, after a fail
 
 The PR page puts its current merge/recovery control before Findings and history. Only eligible code offers Merge; a blocked PR instead leads to the IDE or Findings. Resolve remains explicit where required and never replaces passing CI. A merged outcome is followed by one next-issue action, then optional sharing and alternate destinations. Run, push, history, diff, detailed evidence and editing remain available.
 
-The route/keyboard regression is `LOOP_ORIGIN=http://localhost:3000 node --import tsx tools/browser/loop-check.ts` against a running app with built runtime assets. It creates isolated synthetic records and exercises failure, cancellation, environment retry, stale-code recovery, explicit Resolve, merge, sharing and resume.
+The practice regression is `LOOP_ORIGIN=http://localhost:3000 node --import tsx tools/browser/practice-check.ts` against a running app with built runtime assets.

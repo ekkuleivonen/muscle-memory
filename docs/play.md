@@ -14,7 +14,7 @@ How people arrive from a shared link, and how a result gets shared. The goal is 
 Accepting the current Terms is the only thing any page requires (`requireConsent`):
 
 - Someone who has not (a deep link, or the Terms changed since) is sent to `/consent`: the Terms in four points, one button, then on to the page they were heading for. `/play` does the same inline.
-- "Clock in" and "browse every issue" on the landing page go to the dashboard and `/issues` (through `/consent`). There is no onboarding: the profile questions are asked in place, one at a time, and can always wait ([profile](profile.md)).
+- The landing page leads to the five-minute test, or to `/challenges` once the Terms are accepted. There is no onboarding: the profile questions are in settings, and nothing insists on them ([profile](profile.md)).
 
 ## The outcome
 
@@ -54,7 +54,7 @@ The card compares in the browser: "Faster than 72% of people who fixed it in Pyt
 
 Every challenge has a public page at `/try/<KEY>` (the permanent key; a lowercase key or the challenge's id redirect to it): its goal and requirements, its published examples (labelled Input and Expected output; the checks beyond them stay hidden, as in practice) and **Start <KEY> yourself**, with the same Terms line as `/play` for someone new. Starting opens the visitor's own attempt: from the starting code, or where they left it if they had started it in that browser. The link names only the challenge, so it never carries anyone's code, attempt, board or records. Its preview image (`try/[key]/opengraph-image.tsx`) names the challenge, its language and its one-line goal. **Copy challenge link** copies it. A key that is not in the catalog gets a page saying so.
 
-A pull request lives in the browser that opened it, so `/pulls/<KEY>/<n>` opened anywhere else says there is no such pull request there and offers the issue; it never shows that browser's own work in its place. The result link is how a pull request is shared.
+The result link is how a finished attempt is shared.
 
 ## The shared page (`/r/<card>`)
 
@@ -75,18 +75,11 @@ Entry pages explain browser-local identity and saved work: uploads do not provid
 
 ## Entry points and legacy links
 
-Every way in leads to the same loop: issue, code, tests, pull request, feedback, merge. There is no incident wrapper, team chat or completion ceremony around it.
+Every way in leads to the same loop: challenge, code, feedback, next challenge. There is no incident wrapper, team chat or completion ceremony around it.
 
-- `/` says what the practice is and offers the five-minute test (or the desk, once the Terms are accepted) and the issue list.
-- `/issues/<KEY>` is an issue's exact entry; **Start work** opens `/work/<KEY>` on its live revision. `/work/<KEY>?revision=sha256:…` opens one of that issue's published revisions exactly; a revision that is not published opens the live one at the plain URL.
-- `/pulls/<KEY>/<n>` is this browser's own pull request: nobody else's records are ever read.
+- `/` says what the practice is and offers the five-minute test (or `/challenges`, once the Terms are accepted).
+- `/challenges` lists every listed challenge; Enter (or **start practice** in the preview) opens `/work/<KEY>` on its live revision. `/work/<KEY>?revision=sha256:…` opens one of that issue's published revisions exactly; a revision that is not published opens the live one at the plain URL.
 
-The incident (INC-1, "Production is down. AI is down.") was retired as a wrapper. Its links still work:
-
-- `/incident` (with any `?v=` or `?ref=`) goes to `/issues/INC-1`, the ordinary issue. A shared card already noted its referral when it was opened.
-- `/incident/report` goes to `/pulls`, this browser's own pull requests (through the Terms). A merged INC-1 fix is listed there like any other.
-- A shared incident card (`/r/<card>` for INC-1) still shows its incident wording, and its link leads through `/incident` to INC-1. The card route is being reworked separately.
-
-INC-1 stays an ordinary issue under the same key and id, so attempts already made keep their pull requests, findings and records. Revisions that carry the retired chat lines are still in the catalog; nothing shows them.
+The incident (INC-1, "Production is down. AI is down.") was retired as a wrapper, and its `/incident` links are gone. INC-1 stays an ordinary issue under the same key and id, so attempts already made keep their pull requests, findings and records. Revisions that carry the retired chat lines are still in the catalog; nothing shows them.
 
 The integrated ordinary PR outcome and public result use the same factual evidence projection: first submission and latest checks, CI-only checks, runs, pushes, findings and hints, with missing evidence labelled. Public cards omit code unless explicitly selected, retain no demographic/private fields, and make no typing-speed ranking or production-success claim.
