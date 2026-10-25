@@ -2803,3 +2803,55 @@ button.home-cta:disabled {
   margin-top: 0;
   flex-basis: 100%;
 }
+
+/* Published examples explain the contract without exposing implementation code. */
+.challenge-examples {
+  margin: 20px 0;
+}
+.challenge-examples h2 {
+  font-size: 15px;
+  margin: 0 0 10px;
+}
+.challenge-examples ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+.challenge-examples li {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  min-width: 0;
+}
+.challenge-examples h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+.challenge-examples dl {
+  margin: 0;
+}
+.challenge-examples dt {
+  font-size: 12px;
+  color: var(--dim);
+  margin: 8px 0 3px;
+}
+.challenge-examples dd {
+  margin: 0;
+}
+.challenge-examples pre {
+  margin: 0;
+  font: 12px/1.5 var(--mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.challenge-context > summary {
+  cursor: pointer;
+  color: var(--dim);
+  font-size: 13px;
+}
+.catalog-intro {
+  color: var(--dim);
+  margin: 0 0 16px;
+}

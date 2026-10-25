@@ -106,6 +106,7 @@ import {
   type FileView,
 } from "../workspace/continuity";
 
+import { ChallengeExamples } from "../(browse)/_components/challenge-examples";
 import { nextAction } from "./next-action";
 import { nextProblem } from "../../lib/next-problem";
 import type { IssueSummary } from "../../lib/library";
@@ -843,7 +844,7 @@ export function Ide({
       ) : (
         <Ticket
           issue={issue}
-          cases={casesRun(challenge.cases, "local").length}
+          examples={casesRun(challenge.cases, "local")}
           testsPath={testsFile.path}
           thread={thread}
           onOpenTests={() => openFile(testsFile.path)}
@@ -882,7 +883,7 @@ export function Ide({
               mobileSide.current?.showModal();
             }}
           >
-            Ticket{unread ? " •" : ""}
+            Challenge{unread ? " •" : ""}
           </button>
           <button
             onClick={() => {
@@ -987,7 +988,7 @@ export function Ide({
       <dialog
         className="ide-mobile-dialog"
         ref={mobileSide}
-        aria-label={view === "ticket" ? "Ticket" : "Files"}
+        aria-label={view === "ticket" ? "Challenge" : "Files"}
       >
         <button
           className="dialog-close"
@@ -999,7 +1000,7 @@ export function Ide({
       </dialog>
       <nav className="ide-activity" aria-label="Views">
         <ActivityButton
-          label={unread ? "Ticket (new comments)" : "Ticket"}
+          label={unread ? "Challenge (new context)" : "Challenge"}
           active={view === "ticket"}
           dot={unread}
           onClick={() => {
@@ -1010,7 +1011,7 @@ export function Ide({
           <TicketIcon />
         </ActivityButton>
         <ActivityButton
-          label="Explorer"
+          label="Files"
           active={view === "explorer"}
           onClick={() => setView("explorer")}
         >
@@ -1195,7 +1196,7 @@ export function Ide({
                             mobileSide.current?.showModal();
                         }}
                       >
-                        Open ticket
+                        Open challenge
                       </button>
                     )}
                   </p>
@@ -1394,13 +1395,13 @@ function Explorer({
 
 function Ticket({
   issue,
-  cases,
+  examples,
   testsPath,
   thread,
   onOpenTests,
 }: {
   issue: IdeIssue;
-  cases: number;
+  examples: readonly { name?: string; input: unknown; expected: unknown }[];
   testsPath: string;
   /** The ticket's comments, then teammates' later ones, with when they were posted. */
   thread: (IssueComment & { at?: string })[];
@@ -1409,18 +1410,21 @@ function Ticket({
   const now = new Date();
   return (
     <div className="ide-ticket">
-      <h2>Ticket</h2>
+      <h2>Challenge</h2>
       <p className="ide-ticket-key mono">{issue.key}</p>
       <h3>{issue.title}</h3>
+      <h2>Goal and requirements</h2>
       <Markdown source={issue.task} />
+      <ChallengeExamples examples={examples} />
       <p className="ide-ticket-tests">
-        {cases} acceptance check{cases === 1 ? "" : "s"} in{" "}
+        {examples.length} example check{examples.length === 1 ? "" : "s"} in{" "}
         <button type="button" className="ide-link" onClick={onOpenTests}>
           {testsPath}
         </button>
       </p>
       {thread.length > 0 && (
-        <div className="ide-comments">
+        <details className="ide-comments challenge-context" open>
+          <summary>Notes and constraints</summary>
           {thread.map((comment, i) => (
             <div className="ide-comment" key={i}>
               <b>{comment.author}</b>
@@ -1434,7 +1438,7 @@ function Ticket({
               <Markdown source={comment.body} />
             </div>
           ))}
-        </div>
+        </details>
       )}
     </div>
   );
@@ -1478,8 +1482,8 @@ function Tests({
   if (!run)
     return (
       <p className="faint">
-        Start in {challenge.entry}: change the code to match the ticket, then
-        run tests (<Shortcut />
+        Start in {challenge.entry}: change the code to meet the requirements,
+        then run tests (<Shortcut />
         ). {visible} acceptance checks are in {testsPath}.
       </p>
     );
@@ -1526,7 +1530,7 @@ function Tests({
             key={index}
             index={index}
             label={check.name ?? caseLabel(challenge, check.input)}
-            expected={check.visible ? check.expected : undefined}
+            expected={check.expected}
             passed={feedback.passed[index]}
             result={o.cases[index]}
           />
@@ -1556,13 +1560,9 @@ function Case({
         <code>{label}</code>
         {!passed && (
           <span className="ide-case-detail">
-            {expected !== undefined ? (
-              <span>
-                expected <code>{JSON.stringify(expected)}</code>
-              </span>
-            ) : (
-              <span className="faint">CI only</span>
-            )}
+            <span>
+              expected <code>{JSON.stringify(expected)}</code>
+            </span>
             {result?.error ? (
               <pre className="ide-trace">{result.error.traceback.text}</pre>
             ) : result?.conversionError ? (

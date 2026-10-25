@@ -5,11 +5,19 @@ import { Estimate, LabelPill, LanguageTag } from "./bits";
 import { IssueStatus } from "./board";
 import { KindIcon } from "./icons";
 
-function IssueRow({ issue, href }: { issue: Issue; href: string }) {
+function IssueRow({
+  issue,
+  href,
+  showStatus,
+}: {
+  issue: Issue;
+  href: string;
+  showStatus: boolean;
+}) {
   return (
     <li>
       <Link className="row" href={href} data-row>
-        <IssueStatus issueKey={issue.key} />
+        {showStatus && <IssueStatus issueKey={issue.key} />}
         <KindIcon kind={issue.kind} />
         <span className="key">{issue.key}</span>
         <span className="title">{issue.title}</span>
@@ -29,14 +37,21 @@ function IssueRow({ issue, href }: { issue: Issue; href: string }) {
 export function IssueRows({
   issues,
   standalone = false,
+  showStatus = true,
 }: {
   issues: readonly Issue[];
   standalone?: boolean;
+  showStatus?: boolean;
 }) {
   return (
     <ul className={standalone ? "rows standalone" : "rows"}>
       {issues.map((issue) => (
-        <IssueRow key={issue.slug} issue={issue} href={issueHref(issue)} />
+        <IssueRow
+          key={issue.slug}
+          issue={issue}
+          href={issueHref(issue)}
+          showStatus={showStatus}
+        />
       ))}
     </ul>
   );
@@ -44,14 +59,17 @@ export function IssueRows({
 
 export function IssueGroups({
   groups,
+  showStatus = true,
 }: {
   groups: readonly IssueGroup<Issue>[];
+  showStatus?: boolean;
 }) {
   if (!groups.length)
     return (
       <p className="empty">
-        No issues match this search.{" "}
-        <Link href="/issues">Clear search and filters</Link> to see all issues.
+        No challenges match this search.{" "}
+        <Link href="/issues">Clear search and filters</Link> to see all
+        challenges.
       </p>
     );
   return groups.map((group) => (
@@ -59,7 +77,7 @@ export function IssueGroups({
       <div className="group-head">
         {group.label} <span className="count">{group.issues.length}</span>
       </div>
-      <IssueRows issues={group.issues} />
+      <IssueRows issues={group.issues} showStatus={showStatus} />
     </section>
   ));
 }

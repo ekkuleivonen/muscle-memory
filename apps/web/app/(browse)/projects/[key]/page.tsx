@@ -54,7 +54,7 @@ export default async function ProjectPage(props: Props) {
               project: [projectFilterValue(project)],
             })}
           >
-            <FilterIcon /> View in issues
+            <FilterIcon /> View challenges
           </Link>
         }
       >
@@ -74,7 +74,7 @@ export default async function ProjectPage(props: Props) {
             <dd className="mono">{project.key}</dd>
           </div>
           <div>
-            <dt>Issues</dt>
+            <dt>Challenges</dt>
             <dd>{project.issues.length}</dd>
           </div>
           <div>
@@ -98,9 +98,9 @@ export default async function ProjectPage(props: Props) {
         </section>
         <section className="section">
           <h2>
-            Issues <span className="count">{project.issues.length}</span>
+            Challenges <span className="count">{project.issues.length}</span>
           </h2>
-          <IssueRows issues={project.issues} standalone />
+          <IssueRows issues={project.issues} standalone showStatus={false} />
         </section>
       </main>
     </>

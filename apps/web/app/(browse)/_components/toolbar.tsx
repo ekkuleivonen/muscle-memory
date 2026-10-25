@@ -39,12 +39,16 @@ export function Toolbar<Q extends IssueQuery | ProjectQuery | PullQuery>({
   group,
   filters,
   placeholder,
+  groups = GROUPS,
+  keyLabel = "Issue key",
 }: {
   path: string;
   query: Q;
   group?: Group;
   filters: FilterSpec[];
   placeholder: string;
+  groups?: readonly Group[];
+  keyLabel?: string;
 }) {
   const selected = (key: ListKey) =>
     ((query as unknown as Record<string, string[]>)[key] ?? []) as string[];
@@ -102,7 +106,7 @@ export function Toolbar<Q extends IssueQuery | ProjectQuery | PullQuery>({
             </summary>
             <div className="menu-pop" role="menu">
               <h6>Group by</h6>
-              {GROUPS.map((g) => (
+              {groups.map((g) => (
                 <Link
                   key={g}
                   role="menuitemradio"
@@ -129,7 +133,7 @@ export function Toolbar<Q extends IssueQuery | ProjectQuery | PullQuery>({
                 >
                   <Check on={(query as IssueQuery).sort === sort} />
                   {sort === "key"
-                    ? "Issue key"
+                    ? keyLabel
                     : sort[0].toUpperCase() + sort.slice(1)}
                 </Link>
               ))}

@@ -1,4 +1,4 @@
-import { IssuePulls } from "../../_components/pulls";
+import { ChallengeExamples } from "../../_components/challenge-examples";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -18,7 +18,7 @@ import { IssueThread } from "../../_components/issue-thread";
 import { IssueContext } from "../../_components/tracker-activity";
 import { Sep, Topbar } from "../../_components/topbar";
 import { Ask } from "../../_components/ask";
-import { StartWork, StatusMenu } from "../../_components/board";
+import { StartWork } from "../../_components/board";
 import { Markdown } from "../../_components/markdown";
 import { CopyIssueLink } from "../../_components/share";
 
@@ -38,10 +38,9 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
         title: `${issue.key} ${issue.title} · Muscle Memory`,
         description: issue.summary,
       }
-    : { title: "Issue not found · Muscle Memory" };
+    : { title: "Challenge not found · Muscle Memory" };
 }
 
-const show = (value: unknown) => JSON.stringify(value);
 const labelHref = (label: string) =>
   `/issues?${new URLSearchParams({ q: formatQuery({ ...emptyIssueQuery(), label: [label] }) })}`;
 
@@ -62,7 +61,7 @@ export default async function IssuePage(props: Props) {
             <ProjectSquare project={project} /> {project.title}
           </Link>
         ) : (
-          <Link href="/issues">Issues</Link>
+          <Link href="/issues">Challenges</Link>
         )}
         <Sep />
         <span className="mono">{issue.key}</span>
@@ -73,31 +72,20 @@ export default async function IssuePage(props: Props) {
           <h1>{issue.title}</h1>
           {issue.summary && <p className="lede">{issue.summary}</p>}
           <div className="mobile-start">
-            <StartWork issue={issue} href={`/work/${issue.key}`} warmOnMount />
+            <StartWork
+              issue={issue}
+              href={`/work/${issue.key}`}
+              label="Open challenge"
+              warmOnMount
+            />
           </div>
           <section className="section">
-            <h2>Description</h2>
+            <h2>Goal and requirements</h2>
             <Markdown source={issue.task} />
           </section>
-          <section className="section">
-            <h2>
-              Acceptance criteria{" "}
-              <span className="count">{issue.criteria.length}</span>
-            </h2>
-            <ul className="checklist">
-              {issue.criteria.map(({ input, expected }, i) => (
-                <li key={i}>
-                  <span className="box" aria-hidden />
-                  <span>
-                    {show(input)} <span className="arrow">→</span>{" "}
-                    {show(expected)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-          <section className="section">
-            <h2>Activity</h2>
+          <ChallengeExamples examples={issue.criteria} />
+          <details className="section challenge-context" open>
+            <summary>Notes and constraints</summary>
             <div className="timeline">
               {issue.comments.map((comment, i) => (
                 <div className="comment" key={i}>
@@ -121,7 +109,7 @@ export default async function IssuePage(props: Props) {
                 <p className="dim">No comments yet.</p>
               )}
             </div>
-          </section>
+          </details>
         </article>
         <Properties issue={issue} />
       </main>
@@ -133,16 +121,6 @@ function Properties({ issue }: { issue: Issue }) {
   return (
     <aside className="props" aria-label="Properties">
       <dl>
-        <dt>Status</dt>
-        <dd>
-          <StatusMenu
-            issue={{
-              key: issue.key,
-              slug: issue.slug,
-              revision: issue.revision,
-            }}
-          />
-        </dd>
         <dt>Kind</dt>
         <dd>
           <KindIcon kind={issue.kind} size={14} />
@@ -174,11 +152,11 @@ function Properties({ issue }: { issue: Issue }) {
             "—"
           )}
         </dd>
-        <IssuePulls issue={{ key: issue.key, slug: issue.slug }} />
       </dl>
       <StartWork
         issue={{ key: issue.key, slug: issue.slug, revision: issue.revision }}
         href={`/work/${issue.key}`}
+        label="Open challenge"
       />
       <CopyIssueLink issueKey={issue.key} />
       <Ask
@@ -192,8 +170,8 @@ function Properties({ issue }: { issue: Issue }) {
       />
       {!issue.runnable && (
         <p className="note">
-          This repo has no test runner or CI set up yet; you can still open
-          it in the IDE.
+          Automated checks are not available for this challenge. You can still
+          open the code.
         </p>
       )}
     </aside>

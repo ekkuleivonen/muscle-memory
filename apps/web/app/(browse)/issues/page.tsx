@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { requireConsent } from "../../../lib/gate";
 import { LANGUAGES } from "../../../lib/languages";
-import { STATUS_LABELS } from "../../../lib/board";
 import {
   projectFilterValue,
   DIFFICULTIES,
@@ -13,19 +12,18 @@ import { getLibrary } from "../../../lib/load";
 import { pathWithQuery } from "../../../lib/profile";
 import {
   filterIssues,
-  STATUSES,
   parseGroup,
   parseIssueQuery,
   queryParam,
   type SearchParams,
 } from "../../../lib/queries";
 import { ProjectSquare, LanguageDot } from "../_components/bits";
-import { KIND_LABELS, KindIcon, StatusIcon } from "../_components/icons";
+import { KIND_LABELS, KindIcon } from "../_components/icons";
 import { IssueResults } from "../_components/issue-results";
 import { Toolbar } from "../_components/toolbar";
 import { Topbar } from "../_components/topbar";
 
-export const metadata: Metadata = { title: "Issues · Muscle Memory" };
+export const metadata: Metadata = { title: "Challenges · Muscle Memory" };
 
 export default async function IssuesPage({
   searchParams,
@@ -41,7 +39,7 @@ export default async function IssuesPage({
   return (
     <>
       <Topbar>
-        <span>Issues</span>
+        <span>Challenges</span>
         <span className="faint">
           {results.length === issues.length
             ? issues.length
@@ -49,21 +47,18 @@ export default async function IssuesPage({
         </span>
       </Topbar>
       <main className="content">
+        <p className="catalog-intro">
+          Choose a challenge by topic, language or difficulty. Open one to see
+          its goal, examples and requirements.
+        </p>
         <Toolbar
           path="/issues"
           query={query}
           group={group}
-          placeholder="kind:bug lang:python,go difficulty:easy label:maps …"
+          placeholder="Search challenges, or use lang:python difficulty:easy …"
+          groups={["project", "kind", "difficulty", "language", "none"]}
+          keyLabel="Challenge key"
           filters={[
-            {
-              key: "status",
-              label: "Status",
-              options: STATUSES.map((s) => ({
-                value: s,
-                label: STATUS_LABELS[s],
-                icon: <StatusIcon status={s} />,
-              })),
-            },
             {
               key: "kind",
               label: "Kind",
