@@ -175,7 +175,7 @@
   display: flex;
   align-items: stretch;
   height: 100%;
-  padding: 0 clamp(8px, 4vw, 40px);
+  padding: 0 clamp(8px, 4vw, 40px) 0 0;
   overflow-x: auto;
   white-space: nowrap;
 }
@@ -190,17 +190,13 @@
   color: var(--t-fg);
   background: var(--t-current);
 }
-.t-footer-link[aria-current="page"] {
-  color: var(--t-fg);
-}
-.t-footer-link[aria-current="page"]:hover {
-  background: none;
-}
-.t-trail li:first-child .t-footer-link {
-  color: var(--t-accent);
-  font-weight: 700;
-}
+/*
+ * The trail as powerline segments: filled blocks with an arrow point on the right and a notch
+ * on the left, overlapping so each point sits in the next notch with a sliver of bar between.
+ * Home in the accent, steps in alternating greys, the page itself in amber.
+ */
 .t-trail {
+  --arrow: 9px;
   display: flex;
   margin: 0;
   padding: 0;
@@ -209,14 +205,57 @@
 .t-trail li {
   display: flex;
 }
+.t-trail li + li {
+  margin-left: calc(2px - var(--arrow));
+}
+.t-trail .t-footer-link {
+  --seg: #2a2c33;
+  padding: 0 calc(1ch + var(--arrow)) 0 calc(1ch + var(--arrow));
+  background: var(--seg);
+  color: var(--t-fg);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--arrow)) 0,
+    100% 50%,
+    calc(100% - var(--arrow)) 100%,
+    0 100%,
+    var(--arrow) 50%
+  );
+}
+.t-trail li:nth-child(odd) .t-footer-link {
+  --seg: #34363e;
+}
+.t-trail li:first-child .t-footer-link {
+  --seg: var(--t-accent);
+  padding-left: 1.5ch;
+  color: var(--t-bg);
+  font-weight: 700;
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--arrow)) 0,
+    100% 50%,
+    calc(100% - var(--arrow)) 100%,
+    0 100%
+  );
+}
+.t-trail li .t-footer-link[aria-current="page"] {
+  --seg: #f0b03c;
+  color: var(--t-bg);
+  font-weight: 700;
+}
+.t-trail li:first-child .t-footer-link[aria-current="page"] {
+  --seg: var(--t-accent);
+}
+.t-trail .t-footer-link:hover {
+  background: var(--seg);
+  filter: brightness(1.15);
+}
+.t-trail .t-footer-link[aria-current="page"]:hover {
+  filter: none;
+}
 .t-footer-link:focus-visible {
   outline: 1px solid var(--t-accent);
   outline-offset: -1px;
-}
-.t-footer-sep {
-  display: flex;
-  align-items: center;
-  padding: 0 0.5ch;
 }
 .t-footer-fill {
   flex: 1;

@@ -20,11 +20,6 @@ export function TermFooter({ trail = [] }: { trail?: readonly Crumb[] }) {
             const last = index === steps.length - 1;
             return (
               <li key={step.href}>
-                {index > 0 && (
-                  <span className="t-footer-sep" aria-hidden>
-                    ›
-                  </span>
-                )}
                 {last ? (
                   <span className="t-footer-link" aria-current="page">
                     {step.label}
