@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://musclememory.run"),
   title: "Muscle Memory — keep your craft",
   description:
-    "A developer job from before AI: tickets, tests and pull requests, and nobody writing the code for you.",
+    "Use AI at work. Write this one yourself: coding challenges with direct feedback, and nobody writing the code for you.",
 };
 export default function RootLayout({
   children,
