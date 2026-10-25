@@ -297,6 +297,41 @@ export function Ide({
   const challengePane = useRef<HTMLElement>(null);
   const resultsPane = useRef<HTMLElement>(null);
   const { layout, update: resize } = usePracticeLayout();
+  const challengeBody = useRef<HTMLDivElement>(null);
+  const resultsBody = useRef<HTMLDivElement>(null);
+  // 1, 2 and 3 move between the panes, lazygit-style, whenever focus is not somewhere that
+  // types: Escape then Tab leaves the editor first. Never a chord inside the editor, where
+  // AltGr and Ctrl with digits already type characters or switch browser tabs.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.altKey
+      )
+        return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.closest(
+          "input, textarea, select, [contenteditable='true'], .cm-editor",
+        )
+      )
+        return;
+      const pane = {
+        "1": () => challengeBody.current,
+        "2": () =>
+          hosts.current.get(home)?.querySelector<HTMLElement>(".cm-content"),
+        "3": () => resultsBody.current,
+      }[event.key];
+      const node = pane?.();
+      if (!node) return;
+      event.preventDefault();
+      node.focus();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [home]);
   const board = useBoard();
   const currentProblem = candidates.find((i) => i.key === issue.key);
   const next = currentProblem
@@ -690,9 +725,10 @@ export function Ide({
           ref={challengePane}
         >
           <h2 className="pane-title">
-            challenge <span className="faint">· {issue.key}</span>
+            <kbd>[1]</kbd> challenge{" "}
+            <span className="faint">· {issue.key}</span>
           </h2>
-          <div className="pane-body">
+          <div className="pane-body" tabIndex={0} ref={challengeBody}>
             <h1>{issue.title}</h1>
             <h2>Goal and requirements</h2>
             <Markdown source={issue.task} />
@@ -717,7 +753,7 @@ export function Ide({
         />
         <section className="pane practice-work" aria-label="Your code">
           <h2 className="pane-title">
-            code{" "}
+            <kbd>[2]</kbd> code{" "}
             <span className="faint">
               · {languageLabel(issue.language)} ·{" "}
               {keymap === "vim" ? `vim ${vimMode}` : "standard keys"}
@@ -848,8 +884,10 @@ export function Ide({
           aria-label="Feedback"
           ref={resultsPane}
         >
-          <h2 className="pane-title">feedback</h2>
-          <div className="pane-body">
+          <h2 className="pane-title">
+            <kbd>[3]</kbd> feedback
+          </h2>
+          <div className="pane-body" tabIndex={0} ref={resultsBody}>
             {message && (
               <p className="practice-notice" role="status">
                 {message}
@@ -938,8 +976,8 @@ export function Ide({
       </main>
       <p className="tui-status">
         <span>
-          <Shortcut /> submits · Esc, then Tab leaves the editor ·{" "}
-          <Link href="/settings?run=editor">editor keys</Link>
+          <Shortcut /> submits · Esc, then Tab leaves the editor · 1 2 3 switch
+          panes · <Link href="/settings?run=editor">editor keys</Link>
         </span>
       </p>
       <TermFooter trail={trail} />
