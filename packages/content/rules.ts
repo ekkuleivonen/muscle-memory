@@ -1,5 +1,5 @@
 /**
- * Rules read code as text (docs/issue-model.md): patterns and size metrics, the same in every
+ * Rules read code as text (docs/challenges.md): patterns and size metrics, the same in every
  * language, so the same code always gives the same answer and can be re-checked later.
  */
 import type { Rule, RuleTrigger } from "./model";

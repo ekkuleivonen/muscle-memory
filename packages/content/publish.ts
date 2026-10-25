@@ -1,5 +1,5 @@
 /**
- * Publish checks on a revision and its private part (docs/issue-model.md). The private part
+ * Publish checks on a revision and its private part (docs/challenges.md). The private part
  * (reference solution, rule examples) is never published; these checks are why it exists.
  * Everything here reads code as text and runs nothing: whether the reference passes and the
  * starter fails is checked in the browser sandbox (tools/browser/content-check.ts).

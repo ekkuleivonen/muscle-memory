@@ -14,10 +14,12 @@ The product centers on solving coding challenges independently: challenge, code,
 
 ## Map
 
-- `app/page.tsx`: the public home page. `app/challenges`: the challenge picker (search, filters, preview; Enter starts practice). Pages read the catalog (`content/catalog.json`) through `lib/library.ts` and `lib/queries.ts` (pure, tested). `app/(browse)/_components` holds the pieces practice and the share pages still use (board moves, markdown, examples, feedback, sharing, uploads).
-- `app/challenges/[key]` (the page) and `app/practice`: the IDE (`ide.tsx`) on the issue's live revision. Practice shows only its one editable entry; support/test files remain internal. SQL's schema is public. `lib/practice-contract.ts` guards unsupported historical bundles and lossy restoration. No explorer, file tabs, hint/comment surface or visible test source.
-- `app/workspace`: the editor (`editor.ts`, CodeMirror 6), the session that records edits and runs (`session.ts`), save state, and the TypeScript type checker (`type-checker.ts`, its own worker).
-- `app/_terminal` (the terminal look: banner, status bar, styles), `app/settings`: settings, pages to click: `/settings` lists the commands, each its own page (`/settings/<command>`, `/settings/profile/<question>`). Profile questions are answered there ([docs/profile.md](../../docs/profile.md)).
+- `app/page.tsx`: the public home page. `app/start`: quick start. `app/challenges`: the challenge picker (search, filters, preview; Enter starts practice). Pages read the catalog (`content/catalog.json`) through `lib/library.ts` and `lib/queries.ts` (pure, tested). `app/(browse)/_components` holds pieces practice and the share pages use (markdown, examples, feedback, sharing, page tracking).
+- `app/challenges/[key]` (the page) and `app/practice`: practice (`ide.tsx`) on the challenge's live revision: one editable file, Run examples, Submit, feedback, completion and what comes next ([docs/workspace.md](../../docs/workspace.md)).
+- `app/workspace`: the editor (`editor.ts`, CodeMirror 6), the session that records practice (`session.ts`), save state, view continuity and the TypeScript type checker (`type-checker.ts`, its own worker).
+- `lib/progress.ts` (attempts and completions on this device), `lib/start.ts` (where a start came from, handed to practice), `lib/submission.ts` (a Submit's verdict), `lib/site-log.ts` (the site stream), `lib/environment.ts`.
+- `app/_terminal` (the terminal look: banner, status bar, menus, styles), `app/settings`: `/settings` lists the commands, each its own page (`/settings/<command>`, `/settings/profile/<question>`) ([docs/profile.md](../../docs/profile.md)).
+- `app/try/[key]` and `app/r/[card]`: a shared challenge and a shared result ([docs/start.md](../../docs/start.md)).
 - Runners live outside the app, in `packages/runner` (see the root `AGENTS.md`).
 
 ## Conventions
@@ -26,11 +28,12 @@ The product centers on solving coding challenges independently: challenge, code,
 - Anything read from localStorage or IndexedDB is read after mount, never during render, or hydration breaks.
 - Revision JSON goes to client components as a string and is parsed there: the RSC serializer drops a `"__proto__"` key, and fixtures use one on purpose.
 - The editor owns its document; typing must never re-render React.
-- UI copy is plain and specific. Goals, examples and constraints should be immediately understandable. Public requirements and visible examples must be clear. Hidden expected outputs and solutions stay hidden; give fixed failure categories rather than a hidden-test oracle. Use challenge for the task, practice for the working area and challenges for the catalog. Errors say what happened and whether it is the person's code ("this wasn't your code" for runner crashes).
-- Use real-world framing only when it naturally clarifies the task. Do not invent company context or require all challenges to resemble professional work. Keep implementation machinery out of the player journey unless it helps explain an actionable problem. Existing PR, board and merge records retain their historical meanings until an explicit compatibility contract changes how new challenge verification is represented. No telemetry, consent or legal change is implied by presentation work.
+- UI copy is plain and specific. Goals, examples and constraints should be immediately understandable. Hidden expected outputs and solutions stay hidden; give fixed failure categories rather than a hidden-test oracle. Use challenge for the task, practice for the working area and challenges for the list. Errors say what happened and whether it is the person's code ("this wasn't your code" for runner crashes).
+- Use real-world framing only when it naturally clarifies the task. Keep implementation machinery out of the journey unless it helps explain an actionable problem.
+- Something new to record goes into the practice or site stream's types (`packages/domain/practice.ts`, `site.ts`), [docs/telemetry.md](../../docs/telemetry.md) and the Privacy Notice together.
 
 ## Checking a change
 
 - `npm test` at the root and `npx tsc --noEmit -p apps/web`.
-- Look at UI changes in the running app (`npm run dev`, then `/challenges/<KEY>`). Runtime files are built by `predev`; the first run builds the Go and C# runners in Docker.
+- Look at UI changes in the running app (`npm run dev`, then `/challenges/<KEY>`); `tools/browser/practice-check.ts` drives practice end to end. Runtime files are built by `predev`; the first run builds the Go and C# runners in Docker.
 - After route renames, `rm -rf apps/web/.next` and restart the dev server.

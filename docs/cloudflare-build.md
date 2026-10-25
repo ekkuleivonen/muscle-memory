@@ -22,7 +22,7 @@ Wrangler is pinned to a compatible patch that fixes a transitive sharp advisory.
 
 ## Public deployment
 
-The Worker serves the custom domain `musclememory.run`, with `workers.dev` and version preview URLs disabled. The site is public: the app, `/play`, shared results (`/r/*`) and their preview images, and `/ingest/*` (the ingest Worker, [telemetry](telemetry.md)) are reachable without signing in. Accepting the Terms at `/consent` or `/play` is the only gate, and it is the app's, not Cloudflare's.
+The Worker serves the custom domain `musclememory.run`, with `workers.dev` and version preview URLs disabled. The site is public: the app, quick start (`/start`), shared challenges and results (`/r/*`) and their preview images, and `/ingest/*` (the ingest Worker, [telemetry](telemetry.md)) are reachable without signing in. Accepting the Terms at `/consent` (or by starting from `/start` or a shared challenge) is the only gate, and it is the app's, not Cloudflare's.
 
 Cloudflare Access is kept for what must stay private: the future admin routes, when they exist, get their own Access application with an owner-only email rule. Do not put Access back in front of the whole hostname; shared links and uploads would stop working for everyone else.
 

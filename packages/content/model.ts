@@ -1,5 +1,5 @@
 /**
- * The challenge model (docs/issue-model.md). A challenge has a permanent identity and live
+ * The challenge model (docs/challenges.md). A challenge has a permanent identity and live
  * metadata (title, summary, difficulty, tags); what a person works against is its revision,
  * identified by the SHA-256 of its canonical JSON. Recorded data names the revision it ran
  * against. Pure types and helpers: no filesystem, no hashing (see ./revision).
