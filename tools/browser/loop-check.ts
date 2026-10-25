@@ -98,7 +98,7 @@ try {
     0,
   );
   assert.equal(await page.locator(".outcome-actions").count(), 0);
-  assert.match(await page.locator(".pull-findings").innerText(), /CI only/);
+  assert.match(await page.locator(".pull-findings").innerText(), /Expected/);
   await keyActivate(page.locator(".pull-next-action"));
   await editor().waitFor();
   await fill("export function countWords(text) { while (true) {} }");
