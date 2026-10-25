@@ -222,7 +222,7 @@ export function Dashboard({
             <section className="section">
               <h2>
                 Your stack
-                <Link className="see-all" href="/settings?run=languages">
+                <Link className="see-all" href="/settings/profile/languages">
                   Change →
                 </Link>
               </h2>
@@ -416,7 +416,7 @@ function Stack({
     return (
       <p className="dim">
         No languages picked. Add some in{" "}
-        <Link href="/settings?run=languages">settings</Link> to get suggestions that
+        <Link href="/settings/profile/languages">settings</Link> to get suggestions that
         fit.
       </p>
     );

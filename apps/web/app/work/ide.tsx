@@ -977,7 +977,7 @@ export function Ide({
       <p className="tui-status">
         <span>
           <Shortcut /> submits · Esc, then Tab leaves the editor · 1 2 3 switch
-          panes · <Link href="/settings?run=editor">editor keys</Link>
+          panes · <Link href="/settings/profile/editor">editor keys</Link>
         </span>
       </p>
       <TermFooter trail={trail} />

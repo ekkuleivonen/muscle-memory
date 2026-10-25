@@ -47,6 +47,8 @@ export interface TerminalApi {
   ask(prompt: Prompt, options?: AskOptions): Promise<Answer | null>;
   /** Prints where it is going, then goes; the link is there if the push is slow. */
   go(path: string, label: string): void;
+  /** Goes at once, with nothing printed: moving between a terminal's own pages. */
+  open(path: string): void;
   /** Back to the page before, or home when there is none. */
   back(): void;
 }
@@ -120,6 +122,10 @@ export function Terminal({
     setTimeout(() => router.push(path), 900);
   }
 
+  function open(path: string) {
+    router.push(path);
+  }
+
   function back() {
     if (window.history.length > 1) router.back();
     else router.push("/");
@@ -129,7 +135,7 @@ export function Terminal({
     // Strict Mode mounts twice in development; boot once.
     if (booted.current) return;
     booted.current = true;
-    void run({ print, ask, go, back });
+    void run({ print, ask, go, open, back });
   }, []);
 
   useEffect(() => {
