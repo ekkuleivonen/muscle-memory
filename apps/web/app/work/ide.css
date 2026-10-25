@@ -1100,6 +1100,44 @@ dialog::backdrop {
   overflow-wrap: anywhere;
   font-size: 12.5px;
 }
+/* Examples as rows: `input → expected` on one line, or stacked when either is long. */
+.practice-challenge .challenge-examples.compact h2 .faint {
+  font-weight: 400;
+}
+.practice-challenge .challenge-examples.compact ol {
+  display: block;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+}
+.practice-challenge .challenge-examples.compact li {
+  display: grid;
+  grid-template-columns: 3ch minmax(0, 1fr);
+  padding: 6px 0;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: none;
+}
+.practice-challenge .challenge-examples.compact li > div {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 2ch;
+}
+.practice-challenge .challenge-examples.compact li.long > div {
+  flex-direction: column;
+}
+.practice-challenge .challenge-examples.compact li > div > span {
+  flex-basis: 100%;
+}
+.practice-challenge .challenge-examples.compact pre {
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  font-size: 12.5px;
+}
 .practice-editors {
   position: relative;
   flex: 1;

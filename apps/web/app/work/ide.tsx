@@ -702,7 +702,7 @@ export function Ide({
                 <pre>{challenge.schema}</pre>
               </details>
             )}
-            <ChallengeExamples examples={publishedExamples} />
+            <ChallengeExamples examples={publishedExamples} compact />
             <CopyIssueLink issueKey={issue.key} />
           </div>
         </section>

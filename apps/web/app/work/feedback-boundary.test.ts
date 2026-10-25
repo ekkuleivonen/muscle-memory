@@ -136,10 +136,12 @@ test("public expected/actual stay visible while nested hidden expected outputs a
       for (const token of ["PUBLIC_EXPECTED", "PUBLIC_ACTUAL"])
         assert.ok(text.includes(token), `${surface} lost ${token}`);
     }
-    const examples = render(ChallengeExamples, { examples: cases });
-    for (const token of hidden)
-      assert.ok(!examples.includes(token), `Examples leaked ${token}`);
-    assert.ok(examples.includes("PUBLIC_EXPECTED"));
+    for (const compact of [false, true]) {
+      const examples = render(ChallengeExamples, { examples: cases, compact });
+      for (const token of hidden)
+        assert.ok(!examples.includes(token), `Examples leaked ${token}`);
+      assert.ok(examples.includes("PUBLIC_EXPECTED"));
+    }
 
     // The historical outcome uses the real evidence reader: raw cases are not a rendering input.
     const fixture = live("frequency-map");

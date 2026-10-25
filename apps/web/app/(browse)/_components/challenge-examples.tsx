@@ -1,9 +1,19 @@
 import type { ReactNode } from "react";
 
-/** Published, visible examples only. Requirements are shown literally, never inferred. */
+/** A value on one line when it fits, indented JSON when it does not. */
+function compactJson(value: unknown): string {
+  const flat = JSON.stringify(value);
+  return flat.length <= 40 ? flat : JSON.stringify(value, null, 2);
+}
+
+/**
+ * Published, visible examples only. Requirements are shown literally, never inferred.
+ * `compact` lays them out as rows of input → expected, for the practice pane.
+ */
 export function ChallengeExamples({
   examples,
   heading = "Examples",
+  compact = false,
 }: {
   examples: readonly {
     name?: string;
@@ -12,9 +22,42 @@ export function ChallengeExamples({
     visible?: boolean;
   }[];
   heading?: ReactNode;
+  compact?: boolean;
 }) {
   const published = examples.filter((example) => example.visible !== false);
   if (!published.length) return null;
+  if (compact)
+    return (
+      <section className="challenge-examples compact" aria-label="Examples">
+        <h2>
+          {heading} <span className="faint">· input → expected</span>
+        </h2>
+        <ol>
+          {published.map((example, index) => {
+            const input = compactJson(example.input);
+            const expected = compactJson(example.expected);
+            const long = input.includes("\n") || expected.includes("\n");
+            return (
+              <li key={index} className={long ? "long" : undefined}>
+                <span className="faint">{index + 1}</span>
+                <div>
+                  {example.name && (
+                    <span className="faint">{example.name}</span>
+                  )}
+                  <pre>{input}</pre>
+                  <pre>
+                    <span className="faint" aria-label="expected">
+                      →{" "}
+                    </span>
+                    {expected}
+                  </pre>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+    );
   return (
     <section className="challenge-examples" aria-label="Examples">
       <h2>{heading}</h2>
