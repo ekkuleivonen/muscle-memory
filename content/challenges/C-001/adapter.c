@@ -13,7 +13,9 @@ mm_value *mm_call(const mm_value *args) {
     size_t size = (size_t)mm_integer(mm_at(args, 1));
     char *out = calloc(backing, 1);
     int len = normalize_host(host, out, size);
-    mm_value *result = len < 0 ? mm_new_null() : mm_new_string(out);
+    /* The return length is part of the contract, not just a success flag. */
+    int invalid = len < 0 || (size_t)len >= size || (size_t)len != strlen(out);
+    mm_value *result = invalid ? mm_new_null() : mm_new_string(out);
     free(out);
     return result;
 }
