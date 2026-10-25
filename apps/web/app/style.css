@@ -1075,6 +1075,7 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   max-width: 760px;
   margin: 0 auto;
   padding: 16px 20px 0;
@@ -2490,22 +2491,6 @@ button.home-cta:disabled {
 }
 .settings-terminal-nav + .term {
   top: 60px;
-}
-
-.home-workspace-preview {
-  margin: 32px 0;
-}
-.home-workspace-preview img {
-  width: 100%;
-  height: auto;
-  display: block;
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-}
-.home-workspace-preview figcaption {
-  color: var(--dim);
-  font-size: 13px;
-  margin-top: 10px;
 }
 
 .play-langs {
