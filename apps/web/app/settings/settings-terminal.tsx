@@ -102,14 +102,7 @@ async function settings(
     );
   }
   if (!command) {
-    t.print(
-      promptLine("ls"),
-      <span className="t-dim">
-        <span className="t-on">●</span> signed in as{" "}
-        <span className="t-brand">{handle}</span>
-      </span>,
-      "",
-    );
+    t.print(promptLine("ls"), "");
     const picked = await t.ask(MENU, { skipped: "closed" });
     if (picked === null) return t.back();
     return t.open(`/settings/${String(picked)}`);
