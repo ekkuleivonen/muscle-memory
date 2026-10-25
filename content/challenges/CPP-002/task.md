@@ -13,7 +13,7 @@ Fix the index without giving up the flat table.
 ## The table
 
 - A flat array of `slots` slots, allocated once when the index is created. `slots` is 0 or more.
-- A key's home slot is `key % slots` (keys are already hashes, used as unsigned); on a collision, the next slot, wrapping around at the end (linear probing).
+- Keys are already hashes, so any `int`, negative ones included. A key's home slot is `static_cast<unsigned>(key) % slots`: a negative key is converted to `unsigned` first, as the starter's `home` does. On a collision, the next slot, wrapping around at the end (linear probing).
 - A lookup walks from the home slot until it finds the key or reaches an empty slot.
 
 ## What to write

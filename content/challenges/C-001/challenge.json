@@ -10,6 +10,7 @@
   "file": "src/normalize_host.c",
   "entrypoint": "normalize_host",
   "parameters": [
-    "host"
+    "host",
+    "size"
   ]
 }

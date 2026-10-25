@@ -31,14 +31,14 @@ Every challenge is runnable: each has a runtime, and its solution passes in the 
 
 ## Matrix
 
-Revision is the live revision after this audit (first 12 hex digits of its hash). Cases are examples + hidden. Private is alternatives / wrong solutions.
+Revision is the live revision after this audit and the final integration corrections (first 12 hex digits of its hash). Cases are examples + hidden. Private is alternatives / wrong solutions.
 
 | Key | Revision | Title | Difficulty | Tags | Runtime | Cases | Rules | Private |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| C-001 | `c51663423d40` | Normalize Host headers, IPv6 literals included | easy | strings, parsing, http | Clang | 5+12 | 1 | 1/4 |
+| C-001 | `de6f7ecfe06b` | Normalize Host headers, IPv6 literals included | easy | strings, parsing, http | Clang | 5+17 | 1 | 1/5 |
 | C-002 | `4899b029c3c8` | Keep the last N request latencies in memory | medium | arrays, modular-arithmetic | Clang | 2+14 | 0 | 1/3 |
 | CPP-001 | `63cd99a0b96a` | Cache evicts entries that were just used | hard | caching, linked-lists, maps | Clang | 2+13 | 0 | 1/3 |
-| CPP-002 | `d3222414e5ee` | Open-addressing index loses keys after a purge | hard | hash-tables, caching, reading-code | Clang | 5+13 | 1 | 1/3 |
+| CPP-002 | `b60f7273efa7` | Open-addressing index loses keys after a purge | hard | hash-tables, caching, reading-code | Clang | 5+13 | 1 | 1/3 |
 | CS-001 | `1eb2bc05c432` | The composer says 1 word when the post is empty | easy | strings, edge-cases | Roslyn/.NET | 5+16 | 0 | 1/3 |
 | CS-002 | `790005e37bae` | Late fees are a cent off on some invoices | easy | rounding, decimals, finance | Roslyn/.NET | 6+17 | 0 | 1/3 |
 | GO-001 | `d73f7e05a154` | The composer says 1 word when the post is empty | easy | strings, edge-cases | Yaegi | 5+16 | 0 | 1/3 |
@@ -50,7 +50,7 @@ Revision is the live revision after this audit (first 12 hex digits of its hash)
 | GO-007 | `e566002e3c3b` | Upstream weights are ignored | medium | load-balancing, concurrency, algorithms | Yaegi | 5+11 | 1 | 1/3 |
 | HTML-001 | `e6472fd87067` | Product filter checkboxes have no labels | easy | accessibility, forms, semantics | linkedom | 4+12 | 0 | 1/4 |
 | JAVA-001 | `e9b1f62267ac` | The composer says 1 word when the post is empty | easy | strings, edge-cases | teavm-javac | 5+16 | 0 | 1/4 |
-| JAVA-002 | `7fdaa8d10677` | Password policy still allows 8-character passwords | easy | validation, strings, security | teavm-javac | 5+14 | 0 | 1/4 |
+| JAVA-002 | `e66f30751757` | Password policy still allows 8-character passwords | easy | validation, strings, security | teavm-javac | 5+17 | 0 | 1/6 |
 | JS-001 | `4e3890b9a4fc` | Guest checkout fails with a server error | easy | debugging, reading-logs | browser JS | 3+7 | 1 | 2/6 |
 | JS-002 | `2c358ce3b845` | The composer says 1 word when the post is empty | easy | strings, edge-cases | browser JS | 5+16 | 0 | 2/2 |
 | JS-003 | `59980dd4271a` | Cart shows prices as raw cents | easy | formatting, strings, numbers | browser JS | 5+13 | 0 | 2/2 |
@@ -72,11 +72,11 @@ Revision is the live revision after this audit (first 12 hex digits of its hash)
 | PY-010 | `8969155c54b3` | Bluefin settlements don't match their statements | hard | debugging, parsing, money, reading-code | Pyodide | 5+11 | 0 | 1/3 |
 | RB-001 | `841e463333b9` | The composer says 1 word when the post is empty | easy | strings, edge-cases | ruby.wasm | 5+16 | 0 | 1/3 |
 | RB-002 | `16a31aca47c2` | Workspace URLs break on names with accents | easy | strings, unicode, urls | ruby.wasm | 5+19 | 0 | 1/3 |
-| SQL-001 | `ef1446fd8427` | Revenue by customer for the monthly report | easy | aggregation, sorting | PGlite | 1+13 | 0 | 1/4 |
-| SQL-002 | `4ac78b7a53a2` | Collected-by-partner report overstates split payments | easy | joins, aggregation, reconciliation | PGlite | 5+10 | 1 | 1/4 |
+| SQL-001 | `c7146b957f34` | Revenue by customer for the monthly report | easy | aggregation, sorting | PGlite | 1+14 | 0 | 1/5 |
+| SQL-002 | `8069f186eae8` | Collected-by-partner report overstates split payments | easy | joins, aggregation, reconciliation | PGlite | 5+11 | 1 | 1/5 |
 | SQL-003 | `4cb69977e6d6` | Find orders with no matching payment | medium | joins, reconciliation | PGlite | 1+14 | 0 | 2/3 |
 | TS-001 | `87f3834b8d08` | The composer says 1 word when the post is empty | easy | strings, edge-cases | browser JS + Sucrase | 5+16 | 0 | 1/3 |
-| TS-002 | `cac19739d5bd` | Discount codes fail when typed in lowercase | easy | strings, validation | browser JS + Sucrase | 4+15 | 0 | 1/4 |
+| TS-002 | `a035e776c48a` | Discount codes fail when typed in lowercase | easy | strings, validation | browser JS + Sucrase | 4+15 | 0 | 1/4 |
 | TS-003 | `49b3238dff45` | Search box sends a request on every keystroke | medium | timing, events | browser JS + Sucrase | 3+15 | 0 | 1/3 |
 | TS-004 | `0a4a87c203c1` | Rate-limit login attempts | medium | sliding-window, queues | browser JS + Sucrase | 3+15 | 0 | 1/3 |
 | TS-005 | `f718959a5bcb` | Receipt tax lines don't add up to the tax charged | hard | money, rounding, debugging, reading-code | browser JS + Sucrase | 5+11 | 2 | 2/3 |
@@ -161,7 +161,7 @@ Each now opens with what the code does and a concrete example of the bug. The ta
 - SQL-003: reading "no payment" as "payments add up to 0".
 - C-001: cutting a hostname's port at the last `:` instead of the first.
 - GO-005: rejecting only ASCII whitespace.
-- CPP-002: no case had a negative key, though keys are used as unsigned.
+- CPP-002: no case had a negative key. The task now explicitly allows them and defines the unsigned home-slot calculation.
 
 **Wording.** JS-001 told the solver that the helpers were imported and could not be changed, though they sit in the same file under "you shouldn't need to change them". Its single-file wording is fixed. TS-004's starter comment now says "allowed attempts", matching the task.
 
@@ -175,14 +175,14 @@ None of these needs replacing. New challenges shouldn't add to them.
 
 **Single file.** Every challenge is one file. Helpers sit below the function in that file. No task needs another file, test sources, hints, comments or a pull request. Some file paths still carry a directory (`src/main/java/com/acme/…`, `queries/…`); that is only the file's name. The Java package name is needed by the adapter, so it stays.
 
-## What is still uncertain
+## Limits and final integration corrections
 
 - Nobody has played these as a reader study. Clarity verdicts are one reviewer's reading.
 - Case coverage is only as good as the mistakes tried. Every challenge now has at least two wrong solutions, but mistakes nobody thought of can still pass.
-- JAVA-002 says neither whether "12 characters" means UTF-16 units or code points, nor whether letters and digits are ASCII only. No case uses non-ASCII letters, digits or characters outside the BMP, so both readings pass.
-- SQL-001 doesn't say how to order customers with equal sums; no case has a tie. SQL-002's tie-break is specified, but a solution without it may pass by plan order.
-- TS-002 doesn't say what happens when two configured codes differ only in case.
-- C-001's "return -1 when the result does not fit" can't be tested: the adapter always passes a buffer of `strlen(host) + 1`, and a normalized host is never longer than its input. Testing it would mean changing the adapter.
+- JAVA-002 now states Java UTF-16 length and Character classification explicitly. Unicode digit/letter, supplementary-character length and Unicode whitespace cases distinguish the interpretations, with wrong variants retained.
+- SQL-001 now specifies customer-name ordering when revenue ties. Both SQL-001 and SQL-002 have explicit tied-total cases and descending-name wrong variants; no SQL-text pattern is required.
+- TS-002 now states that configured names are nonempty, unpadded and unique ignoring case; conflicting configuration is outside the stated input domain.
+- C-001 now supplies the logical output capacity as a second case argument. Zero-size, undersized, exact-fit and trailing-dot exact-fit cases exercise the existing buffer contract. Backing storage stays large enough to evaluate an incorrect write safely; returned content is not truncated to fake success. Its alternative was corrected to measure the normalized result before checking capacity.
 - PHP-003 says lockouts run from one minute, while cases and the task use 30 seconds left; that is time left, not the lock's length, so it is consistent, just easy to misread.
 - Generated output (`content/catalog.json`) is not committed. Revisions in the matrix are what `npm run build:content` produced for this change.
 

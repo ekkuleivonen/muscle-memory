@@ -11,7 +11,7 @@
 
 - `host` is the raw Host header value, a NUL-terminated string.
 - Write the normalized host into `out`, NUL-terminated, and return its length (not counting the terminator).
-- `size` is the size of `out` in bytes, terminator included. If the result plus its terminator does not fit, return `-1`.
+- `size` is the size of `out` in bytes, terminator included. If the result plus its terminator does not fit, return `-1`. Cases supply `[host, size]`; the harness supplies the output buffer. A size of 0 is possible.
 - Return `-1` when the value is not a host. The examples show `-1` as `null`, and a string for a host.
 
 ## Normalizing rules
