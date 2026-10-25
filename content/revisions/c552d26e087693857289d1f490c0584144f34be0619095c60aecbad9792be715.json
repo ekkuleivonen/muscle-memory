@@ -1,0 +1,109 @@
+{
+  "challenge": "HTML-003",
+  "task": "Build a native HTML disclosure for a short answer.\n\nUse one details element with an open attribute so it starts expanded. Its first element child must be a summary with text `What is a prime?`, followed by a p with text `A whole number greater than 1 with exactly two positive divisors.` Do not add buttons or scripts; the browser supplies the disclosure interaction.\n\nUse only HTML in this file; no JavaScript or CSS is needed. Keep the specified text, element order and attributes. Checks inspect the parsed DOM; whitespace and attribute order do not matter.\n\n## Example\n\nThe expanded disclosure shows `What is a prime?` as its summary, with the answer paragraph beneath it. The summary remains the native toggle when the browser renders it.\n",
+  "language": "html",
+  "file": "page.html",
+  "starter": "<div>\n  <h2>What is a prime?</h2>\n  <p>A whole number greater than 1 with exactly two positive divisors.</p>\n</div>\n",
+  "entrypoint": "page",
+  "parameters": [
+    "selector",
+    "read"
+  ],
+  "cases": [
+    {
+      "id": "case-1",
+      "input": [
+        "details summary",
+        "text"
+      ],
+      "expected": [
+        "What is a prime?"
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": [
+        "details[open]",
+        "count"
+      ],
+      "expected": 1,
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": [
+        "details",
+        "count"
+      ],
+      "expected": 1,
+      "hidden": true
+    },
+    {
+      "id": "case-4",
+      "input": [
+        "details > summary:first-child",
+        "count"
+      ],
+      "expected": 1,
+      "hidden": true
+    },
+    {
+      "id": "case-5",
+      "input": [
+        "details > p",
+        "text"
+      ],
+      "expected": [
+        "A whole number greater than 1 with exactly two positive divisors."
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-6",
+      "input": [
+        "summary",
+        "count"
+      ],
+      "expected": 1,
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": [
+        "button, script",
+        "count"
+      ],
+      "expected": 0,
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": [
+        "details > summary + p",
+        "count"
+      ],
+      "expected": 1,
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": [
+        "details > *",
+        "count"
+      ],
+      "expected": 2,
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": [
+        "p",
+        "count"
+      ],
+      "expected": 1,
+      "hidden": true
+    }
+  ],
+  "rules": []
+}

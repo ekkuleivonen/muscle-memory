@@ -1,0 +1,8 @@
+{
+  "title": "Encode consecutive character runs",
+  "summary": "Encode each consecutive run as its character followed by its decimal length.",
+  "difficulty": "medium",
+  "tags": ["strings", "encoding"],
+  "file": "Solution.cs",
+  "entrypoint": "Encode"
+}

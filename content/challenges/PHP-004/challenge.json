@@ -1,0 +1,8 @@
+{
+  "title": "Partition integers by parity",
+  "summary": "Return all even integers followed by all odd integers, preserving their original order within each group.",
+  "difficulty": "easy",
+  "tags": ["arrays", "partitioning"],
+  "file": "evensFirst.php",
+  "entrypoint": "evensFirst"
+}

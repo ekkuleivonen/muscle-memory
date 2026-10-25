@@ -1,0 +1,180 @@
+{
+  "challenge": "HTML-002",
+  "task": "Create a semantic table of two mountains.\n\nUse one table with caption `Mountain heights`, a thead row of two th elements `Mountain` and `Height (m)` with scope=\"col\", and a tbody with two rows in this order: `Fuji`, `3776`; `Kilimanjaro`, `5895`. Each body row starts with a th with scope=\"row\", followed by a td for the height. No additional rows or cells.\n\nUse only HTML in this file; no JavaScript or CSS is needed. Keep the specified text, element order and attributes. Checks inspect the parsed DOM; whitespace and attribute order do not matter.\n\n## Example\n\nThe table has two columns headed `Mountain` and `Height (m)`. Its first body row reads `Fuji | 3776`, followed by `Kilimanjaro | 5895`. The caption reads `Mountain heights`.\n",
+  "language": "html",
+  "file": "page.html",
+  "starter": "<table>\n  <tr>\n    <td>Mountain</td>\n    <td>Height (m)</td>\n  </tr>\n  <tr>\n    <td>Fuji</td>\n    <td>3776</td>\n  </tr>\n  <tr>\n    <td>Kilimanjaro</td>\n    <td>5895</td>\n  </tr>\n</table>\n",
+  "entrypoint": "page",
+  "parameters": [
+    "selector",
+    "read"
+  ],
+  "cases": [
+    {
+      "id": "case-1",
+      "input": [
+        "table caption",
+        "text"
+      ],
+      "expected": [
+        "Mountain heights"
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": [
+        "thead th",
+        "text"
+      ],
+      "expected": [
+        "Mountain",
+        "Height (m)"
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": [
+        "table",
+        "count"
+      ],
+      "expected": 1,
+      "hidden": true
+    },
+    {
+      "id": "case-4",
+      "input": [
+        "thead th",
+        "scope"
+      ],
+      "expected": [
+        "col",
+        "col"
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-5",
+      "input": [
+        "tbody th",
+        "text"
+      ],
+      "expected": [
+        "Fuji",
+        "Kilimanjaro"
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-6",
+      "input": [
+        "tbody th",
+        "scope"
+      ],
+      "expected": [
+        "row",
+        "row"
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": [
+        "tbody td",
+        "text"
+      ],
+      "expected": [
+        "3776",
+        "5895"
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": [
+        "tr",
+        "count"
+      ],
+      "expected": 3,
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": [
+        "th, td",
+        "count"
+      ],
+      "expected": 6,
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": [
+        "tbody tr:first-child th",
+        "text"
+      ],
+      "expected": [
+        "Fuji"
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": [
+        "tbody tr:first-child td",
+        "text"
+      ],
+      "expected": [
+        "3776"
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": [
+        "thead > tr",
+        "count"
+      ],
+      "expected": 1,
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": [
+        "thead > tr > th",
+        "count"
+      ],
+      "expected": 2,
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": [
+        "tbody > tr",
+        "count"
+      ],
+      "expected": 2,
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": [
+        "tbody > tr > th:first-child",
+        "count"
+      ],
+      "expected": 2,
+      "hidden": true
+    },
+    {
+      "id": "case-16",
+      "input": [
+        "tbody > tr > th + td",
+        "count"
+      ],
+      "expected": 2,
+      "hidden": true
+    }
+  ],
+  "rules": []
+}

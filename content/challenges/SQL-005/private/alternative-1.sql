@@ -1,0 +1,1 @@
+SELECT t.account_id,t.id,(SELECT SUM(p.amount) FROM transactions p WHERE p.account_id=t.account_id AND (p.sequence<t.sequence OR (p.sequence=t.sequence AND p.id<=t.id))) AS balance FROM transactions t ORDER BY t.account_id,t.sequence,t.id;
