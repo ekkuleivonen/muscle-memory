@@ -15,13 +15,14 @@ export const INGEST_PROTOCOL = "ingest-1";
 export const BATCH_MAX_RECORDS = 500;
 export const BATCH_MAX_BYTES = 1_000_000;
 /**
- * Capture versions the server accepts. Board 6.0.0 and 6.1.0 were live before replays and
- * deploys existed (6.1.0 added closing, 7.0.0 adds replays and deploys; each only adds), so
- * browsers may still hold queued records of either; older versions were never released.
+ * Capture versions the server accepts. Earlier board versions were live and browsers may
+ * still hold queued records of them: 6.0.0, 6.1.0 (closing), 7.0.0 (replays, deploys). Each
+ * record keeps the meaning of its own version; older versions were never released.
  */
 export const ACCEPTED_CAPTURE = [
   WORKSPACE_CAPTURE_VERSION,
   BOARD_CAPTURE_VERSION,
+  "board-capture-7.0.0",
   "board-capture-6.1.0",
   "board-capture-6.0.0",
 ] as const;

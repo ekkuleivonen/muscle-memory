@@ -117,13 +117,17 @@ for (const meta of catalog.issues) {
         request(revision, secret.reference),
         request(revision, secret.reference),
         request(revision, starter),
+        ...(secret.alternatives ?? []).map((change) => request(revision, change)),
+        ...(secret.wrong ?? []).map((change) => request(revision, change)),
       ],
     },
   );
-  const [first, second, start] = runs.map((outcome: any) => ({
+  const [first, second, start, ...others] = runs.map((outcome: any) => ({
     outcome,
     feedback: runFeedback(revision.checks.cases, outcome.cases ?? []),
   }));
+  const alternatives = others.slice(0, secret.alternatives?.length ?? 0);
+  const wrong = others.slice(alternatives.length);
   const problems: string[] = [];
   if (first.outcome.phase !== "tests" || first.feedback.correct !== first.feedback.total)
     problems.push(
@@ -134,10 +138,23 @@ for (const meta of catalog.issues) {
     problems.push("the reference gives different outputs on a second run");
   if (start.outcome.phase === "tests" && start.feedback.correct === start.feedback.total)
     problems.push("the starter already passes every case");
+  // Other correct designs must pass everything; plausible wrong fixes must fail something.
+  alternatives.forEach((run, i) => {
+    if (run.outcome.phase !== "tests" || run.feedback.correct !== run.feedback.total)
+      problems.push(`alternative ${i + 1} passes ${run.feedback.correct}/${run.feedback.total} cases`);
+  });
+  wrong.forEach((run, i) => {
+    if (run.outcome.phase === "tests" && run.feedback.correct === run.feedback.total)
+      problems.push(`wrong fix ${i + 1} passes every case`);
+  });
   if (problems.length) failures.push(`FAIL ${key} ${meta.id}: ${problems.join("; ")}`);
   else
     console.log(
-      `ok   ${key} ${meta.id}: reference ${first.feedback.correct}/${first.feedback.total} twice, starter ${start.feedback.correct}/${start.feedback.total}`,
+      `ok   ${key} ${meta.id}: reference ${first.feedback.correct}/${first.feedback.total} twice, starter ${start.feedback.correct}/${start.feedback.total}${
+        alternatives.length || wrong.length
+          ? `, ${alternatives.length} alternative${alternatives.length === 1 ? "" : "s"} pass, ${wrong.length} wrong fix${wrong.length === 1 ? "" : "es"} fail (${wrong.map((w) => `${w.feedback.correct}/${w.feedback.total}`).join(", ")})`
+          : ""
+      }`,
     );
 }
 await browser.close();

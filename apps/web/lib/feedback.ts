@@ -204,8 +204,12 @@ export interface Thread {
   push: number;
   at: string;
   replies: { at: string; text: string }[];
-  /** Set once resolved: by a push that no longer triggers it, or by a reply. */
-  resolved?: { at: string; by: "code" | "reply"; push?: number };
+  /**
+   * Set once resolved: by a push that no longer triggers it, by a reply, or by the person
+   * resolving it (Resolve). None of these touches CI; a while-true finding the code still
+   * triggers opens again on the next push.
+   */
+  resolved?: { at: string; by: "code" | "reply" | "resolve"; push?: number };
 }
 
 /** Issue comments and hints released into the issue's thread, oldest first. */
@@ -224,8 +228,24 @@ export interface Feedback {
   threads: Thread[];
 }
 
-export function feedbackOf(records: readonly WorkspaceRecord[], issue: string): Feedback {
+/** A CI finding's thread: opened by the failing push it names. */
+export function isCiFinding(comment: string): boolean {
+  return /^ci-push-\d+$/.test(comment);
+}
+
+/**
+ * Released feedback and review threads. With `revisionFor`, a finding whose comment needs an
+ * explicit Resolve (TeamComment.resolve) is cleared by Resolve only, never by a push or a reply.
+ */
+export function feedbackOf(
+  records: readonly WorkspaceRecord[],
+  issue: string,
+  revisionFor?: (id: string) => Revision | undefined,
+): Feedback {
   const { observations } = read(records, issue);
+  const explicit = (thread: Thread) =>
+    revisionFor?.(thread.issueRevision)?.team.find((c) => c.id === thread.comment)
+      ?.resolve === "explicit";
   const released: Released[] = [];
   const threads: Thread[] = [];
   // The latest thread for a comment on a pull request: where resolutions and replies go.
@@ -233,6 +253,29 @@ export function feedbackOf(records: readonly WorkspaceRecord[], issue: string): 
     threads.findLast((t) => t.number === number && t.comment === comment);
   for (const o of observations) {
     const d = o.data;
+    // CI findings (Revision.ciFindings): a failing push opens one unless one is already open.
+    if (
+      o.type === "observation.workspace.pull-request" &&
+      d.result !== "checks-passed" &&
+      revisionFor?.(o.issueRevision)?.ciFindings === "explicit"
+    ) {
+      const number = Number(d.number);
+      const open = threads.findLast(
+        (t) => t.number === number && isCiFinding(t.comment) && !t.resolved,
+      );
+      if (!open)
+        threads.push({
+          comment: `ci-push-${Number(d.push)}`,
+          issueRevision: o.issueRevision,
+          severity: "blocking",
+          wording: 0,
+          number,
+          push: Number(d.push),
+          at: o.occurredAt,
+          replies: [],
+        });
+      continue;
+    }
     if (o.type === "observation.workspace.comment" && d.where === "review")
       threads.push({
         comment: String(d.comment),
@@ -262,17 +305,56 @@ export function feedbackOf(records: readonly WorkspaceRecord[], issue: string): 
       });
     else if (o.type === "observation.workspace.thread-resolved") {
       const thread = latest(Number(d.pullRequest), String(d.comment));
-      if (thread && !thread.resolved)
+      if (thread && !thread.resolved && !explicit(thread))
         thread.resolved = { at: o.occurredAt, by: "code", push: Number(d.push) };
+    } else if (o.type === "observation.board.resolved") {
+      const thread = latest(Number(d.pullRequest), String(d.comment));
+      if (thread && !thread.resolved) thread.resolved = { at: o.occurredAt, by: "resolve" };
     } else if (o.type === "observation.board.replied") {
       const thread = latest(Number(d.pullRequest), String(d.comment));
       if (!thread) continue;
       thread.replies.push({ at: o.occurredAt, text: String(d.text) });
-      if (thread.severity === "blocking" && !thread.resolved)
+      if (thread.severity === "blocking" && !thread.resolved && !explicit(thread))
         thread.resolved = { at: o.occurredAt, by: "reply" };
     }
   }
   return { released, threads };
+}
+
+/**
+ * Whether a pull request can be merged now, and if not, why: CI and review are independent
+ * requirements, as with branch protection. Resolving a finding never satisfies CI, and only
+ * the latest push's checks count.
+ */
+export function mergeBlocker(
+  pull: { state: string; result: string; otherMerged?: number },
+  openBlockingCount: number,
+): "not-open" | "other-merged" | "checks" | "review" | null {
+  if (pull.state !== "open") return "not-open";
+  if (pull.otherMerged) return "other-merged";
+  if (pull.result !== "checks-passed") return "checks";
+  if (openBlockingCount > 0) return "review";
+  return null;
+}
+
+/**
+ * Open threads that must be resolved before merging: blocking ones, plus any whose comment
+ * needs an explicit Resolve (TeamComment.resolve), whatever its severity. Without explicit
+ * comments this is exactly openBlocking.
+ */
+export function openRequired(
+  feedback: Feedback,
+  number: number,
+  revisionFor: (id: string) => Revision | undefined,
+): Thread[] {
+  return feedback.threads.filter(
+    (t) =>
+      t.number === number &&
+      !t.resolved &&
+      (t.severity === "blocking" ||
+        revisionFor(t.issueRevision)?.team.find((c) => c.id === t.comment)?.resolve ===
+          "explicit"),
+  );
 }
 
 /** Blocking review threads on a pull request that are still open: they block merging. */
@@ -312,7 +394,7 @@ export function due(input: {
   push?: { number: number; push: number };
 }): Release[] {
   const { revision, records, issue, participantId, revisionFor, files, push } = input;
-  const feedback = feedbackOf(records, issue);
+  const feedback = feedbackOf(records, issue, revisionFor);
   const behaviour = behaviourOf(records, issue, revisionFor);
   const pushes = pushesOf(records, issue, revisionFor);
   const last = pushes.at(-1);
@@ -368,7 +450,8 @@ export function due(input: {
         if (fires)
           out.push(review(comment));
       } else if (thread.severity === "blocking" && !thread.resolved) {
-        if (!fires)
+        // An explicit finding stays open until the person resolves it, fixed or not.
+        if (!fires && comment.resolve !== "explicit")
           out.push({ kind: "resolved", comment: comment.id, pullRequest: push.number, push: push.push });
       } else if (thread.resolved && comment.repeat === "while-true" && fires)
         out.push(review(comment));

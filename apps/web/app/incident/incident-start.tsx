@@ -15,7 +15,6 @@ import {
 import { acceptsCurrent } from "../../lib/legal";
 import { useBoard } from "../(browse)/_components/board";
 import { logArrival, noteArrival } from "../(browse)/_components/board-log";
-import { pullHref } from "../(browse)/_components/pulls";
 
 type Via = "pointer" | "keyboard";
 const viaOf = (event: { detail: number }): Via =>
@@ -245,12 +244,12 @@ export function IncidentStart({
   const version = state.revision ? shortVersion(state.revision) : null;
   const label = attemptLabel(state.attempt.number);
 
-  // Done: the latest attempt was merged. Its report, or its deploy, and a replay on purpose.
+  // Done: the latest attempt was merged. Its report, and a replay on purpose.
   if (status === "done")
     return (
       <section className="play-start incident-start">
         {versionNotice}
-        {state.deployed ? (
+        {state.merged ? (
           <>
             <h2>You restored checkout.</h2>
             <p>
@@ -261,19 +260,6 @@ export function IncidentStart({
             <div className="home-actions">
               <Link className="home-cta" href="/incident/report">
                 Read your incident report →
-              </Link>
-            </div>
-          </>
-        ) : state.merged ? (
-          <>
-            <h2>Your fix is merged, but checkout is still down.</h2>
-            <p>It hasn&apos;t been deployed yet.</p>
-            <div className="home-actions">
-              <Link
-                className="home-cta"
-                href={pullHref(issue.key, state.merged.number)}
-              >
-                Deploy pull request #{state.merged.number} →
               </Link>
             </div>
           </>

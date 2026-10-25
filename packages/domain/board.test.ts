@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   BOARD_CAPTURE_VERSION,
-  boardDeploy,
+  boardResolve,
   boardMove,
   boardPayloads,
   boardRecord,
@@ -258,22 +258,29 @@ test("arrivals and shares carry a referral code, never anything that names a per
   );
 });
 
-test("a simulated deploy names the merged pull request and its run", () => {
-  const deploy = boardDeploy({
+test("resolving a review finding names the pull request and the finding, nothing else", () => {
+  const issue = { id: "checkout-guest-shipping", revision: "sha256:" + "b".repeat(64) };
+  const resolved = boardResolve({
     ...base,
-    issue: { id: "checkout-guest-shipping", revision: "sha256:" + "b".repeat(64) },
-    data: { issueKey: "INC-1", pullRequest: 2, runId: "run-7", via: "keyboard" },
+    issue,
+    data: { issueKey: "INC-1", pullRequest: 2, comment: "catch-hides-guests", via: "pointer" },
   });
-  assert.equal(deploy.type, "observation.board.deployed");
-  assert.equal(deploy.captureVersion, "board-capture-7.0.0");
-  assert.deepEqual(deploy.data, { issueKey: "INC-1", pullRequest: 2, runId: "run-7", via: "keyboard" });
+  assert.equal(resolved.type, "observation.board.resolved");
+  assert.equal(resolved.captureVersion, "board-capture-7.1.0");
+  assert.deepEqual(resolved.data, {
+    issueKey: "INC-1",
+    pullRequest: 2,
+    comment: "catch-hides-guests",
+    via: "pointer",
+  });
   const bad = (data: object) => () =>
-    boardDeploy({
+    boardResolve({
       ...base,
-      issue: { id: "checkout-guest-shipping", revision: "sha256:" + "b".repeat(64) },
-      data: { issueKey: "INC-1", pullRequest: 2, runId: "run-7", via: "pointer", ...data },
+      issue,
+      data: { issueKey: "INC-1", pullRequest: 2, comment: "catch-hides-guests", via: "pointer", ...data },
     });
   assert.throws(bad({ pullRequest: 0 }), /pull request/);
+  assert.throws(bad({ comment: "not a slug!" }), /identifier/);
   assert.throws(bad({ via: "automatic" }), /Unknown way/);
 });
 

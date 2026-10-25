@@ -52,7 +52,7 @@ export interface Result extends Metrics {
   readonly iv?: string;
   /** The incident only: which attempt, 1 for the first response, then replays. */
   readonly a?: number;
-  /** The incident only: wall-clock seconds from acknowledging the page to the deploy. */
+  /** The incident only: wall-clock seconds from acknowledging the page to merging the fix. */
   readonly e?: number;
 }
 
@@ -322,7 +322,7 @@ export function sentence(result: Result, language: string): string {
 }
 
 /**
- * How long the incident took, as the card says: wall-clock from the page to the deploy when the
+ * How long the incident took, as the card says: wall-clock from the page to the merge when the
  * card has it, and active work, labelled as such.
  */
 export function incidentTime(result: Result): string {

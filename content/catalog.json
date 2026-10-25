@@ -6,7 +6,7 @@
       "key": "INC",
       "title": "Incident: checkout is down",
       "summary": "One production incident at Kettlebrook, a homeware shop, played from /incident.",
-      "story": "Kettlebrook sells mugs, linen and candles to people who really want their mugs. `checkout-api` prices every basket: `POST /quote` turns a basket into a subtotal, shipping and a total, and the payment page charges exactly that.\n\nThe team leans on AI tools for most of its day. Tonight those tools are down, and so is checkout.\n\n- `src/checkout/quote.js`: the quote. The only file you change.\n- `src/checkout/shipping.js`, `src/checkout/money.js`: shipping thresholds and money helpers.\n- `logs/checkout-api.log`: the last few minutes of production logs.\n- `RUNBOOK.md`: what to do when paged.",
+      "story": "Kettlebrook sells mugs, linen and candles to people who really want their mugs. `checkout-api` prices every basket: `POST /quote` turns a basket into a subtotal, shipping and a total, and the payment page charges exactly that.\n\nThe team leans on AI tools for most of its day. Tonight those tools are down, and so is checkout.\n\n- `src/checkout/quote.js`: the quote.\n- `src/checkout/shipping.js`: shipping and its thresholds.\n- `src/checkout/money.js`: money helpers (read-only).\n- `logs/checkout-api.log`: the last few minutes of production logs.\n- `RUNBOOK.md`: what to do when paged.",
       "issues": [
         "checkout-guest-shipping"
       ],
@@ -133,7 +133,7 @@
         "incident-response"
       ],
       "state": "live",
-      "revision": "sha256:81a951d5526042a635ed204fce8f4c3801e0494aa7e9fb7739a190e9b2c4b400"
+      "revision": "sha256:ea2bec9e27fb47b645b7cef8c00448c735415c9bda6f93b61a44bedea479b104"
     },
     {
       "id": "word-count-python",
@@ -9827,377 +9827,6 @@
         "reviewers": []
       }
     },
-    "sha256:81a951d5526042a635ed204fce8f4c3801e0494aa7e9fb7739a190e9b2c4b400": {
-      "issue": "checkout-guest-shipping",
-      "kind": "bug",
-      "body": "**SEV-1 · checkout-api · paged 02:14**\n\n> **checkout-api: 5xx rate 58% (threshold 2%) for 9 minutes.** `POST /quote` is failing.\n\nYou're on call for Kettlebrook, a homeware shop. Checkout is failing for a lot of customers, and tonight the team's AI tools are down as well: the coding assistant, the log summariser and the bot that writes status updates. It's you, the logs and the tests.\n\n**Restore checkout**\n\n1. Find what's failing in `logs/checkout-api.log`.\n2. Reproduce it. The failing order from the logs is already a regression test in `src/checkout/quote.test.js`: run the tests (Ctrl/⌘-Enter).\n3. Fix `quoteOrder` in `src/checkout/quote.js` so every order gets a correct quote: guests and members, with free shipping where it applies.\n4. Open a pull request, get CI green, merge it, then deploy it from the pull request.\n\n`quoteOrder(order)` returns `{ subtotal, shipping, total }` in cents. Shipping is $4.95. It's free from $50 for everyone, and from $30 for loyalty members (CHK-412, shipped Thursday behind a flag). A guest is `{ guest: true }` and has no loyalty record; a member whose tier is `\"none\"` has lapsed and gets the standard threshold.",
-      "skills": [
-        "debugging",
-        "reading-logs",
-        "incident-response"
-      ],
-      "format": "code-change",
-      "workspace": {
-        "language": "javascript",
-        "files": {
-          "logs/checkout-api.log": {
-            "role": "docs",
-            "language": "text",
-            "text": "2026-10-24T01:58:02.114Z INFO  checkout-api  POST /quote 200 11ms order=88199 customer=guest items=1\n2026-10-24T01:59:40.870Z INFO  checkout-api  POST /quote 200 9ms order=88201 customer=member:30418 items=3\n2026-10-24T02:00:00.002Z INFO  flags         member-free-shipping rollout 10% -> 100% (scheduled, CHK-412)\n2026-10-24T02:00:07.551Z INFO  checkout-api  POST /quote 200 12ms order=88202 customer=member:41022 items=2\n2026-10-24T02:00:31.019Z ERROR checkout-api  POST /quote 500 3ms order=88203 customer=guest items=2\n    TypeError: Cannot read properties of undefined (reading 'tier')\n        at quoteOrder (src/checkout/quote.js:11:41)\n        at handleQuote (src/http/quote-route.js:27:18)\n2026-10-24T02:01:12.433Z INFO  checkout-api  POST /quote 200 10ms order=88204 customer=member:11873 items=1\n2026-10-24T02:02:48.902Z ERROR checkout-api  POST /quote 500 2ms order=88206 customer=guest items=1\n    TypeError: Cannot read properties of undefined (reading 'tier')\n        at quoteOrder (src/checkout/quote.js:11:41)\n        at handleQuote (src/http/quote-route.js:27:18)\n2026-10-24T02:05:00.000Z WARN  checkout-api  5xx rate 31% over 5m (threshold 2%)\n2026-10-24T02:09:17.640Z ERROR checkout-api  POST /quote 500 3ms order=88213 customer=guest items=[stoneware-mug 1800x2]\n    TypeError: Cannot read properties of undefined (reading 'tier')\n        at quoteOrder (src/checkout/quote.js:11:41)\n        at handleQuote (src/http/quote-route.js:27:18)\n2026-10-24T02:10:02.118Z INFO  checkout-api  POST /quote 200 13ms order=88214 customer=member:52990 items=4\n2026-10-24T02:12:44.305Z WARN  assistant     upstream unavailable (503); retrying in 300s\n2026-10-24T02:13:58.771Z WARN  checkout-api  5xx rate 58% over 9m (threshold 2%) -> paging on-call\n2026-10-24T02:14:00.000Z INFO  pager         SEV-1 checkout-api -> you\n2026-10-24T02:14:05.512Z WARN  status-bot    upstream unavailable (503); status update not posted\n"
-          },
-          "README.md": {
-            "role": "docs",
-            "language": "markdown",
-            "text": "# Incident: checkout is down\n\nKettlebrook sells mugs, linen and candles to people who really want their mugs. `checkout-api` prices every basket: `POST /quote` turns a basket into a subtotal, shipping and a total, and the payment page charges exactly that.\n\nThe team leans on AI tools for most of its day. Tonight those tools are down, and so is checkout.\n\n- `src/checkout/quote.js`: the quote. The only file you change.\n- `src/checkout/shipping.js`, `src/checkout/money.js`: shipping thresholds and money helpers.\n- `logs/checkout-api.log`: the last few minutes of production logs.\n- `RUNBOOK.md`: what to do when paged.\n"
-          },
-          "RUNBOOK.md": {
-            "role": "docs",
-            "language": "markdown",
-            "text": "# checkout-api on-call runbook\n\n_Last reviewed: when the assistant was up._\n\n1. Paste the alert into the assistant.\n2. Do what it says.\n3. If the assistant is unavailable, see step 1.\n\n## Appendix B (recovered from the 2019 wiki export)\n\n- Read the logs: `logs/checkout-api.log`. The stack trace names a file and a line.\n- Reproduce it with a test before changing anything. Run tests: Ctrl/⌘-Enter.\n- Fix it, open a pull request (Ctrl/⌘-Shift-Enter), wait for CI, merge it.\n- Deploy from the merged pull request, then check the error rate comes down.\n- Don't wrap it in a try/catch and go back to bed. We will find out.\n"
-          },
-          "src/checkout/money.js": {
-            "role": "read",
-            "language": "javascript",
-            "text": "/** Money is whole cents everywhere: never floats. */\n\n/** What one line of an order costs before shipping. */\nexport function lineTotal(item) {\n  return item.price * item.quantity;\n}\n\nexport function sum(amounts) {\n  return amounts.reduce((total, amount) => total + amount, 0);\n}\n"
-          },
-          "src/checkout/quote.js": {
-            "role": "edit",
-            "language": "javascript",
-            "text": "import { lineTotal, sum } from \"./money.js\";\nimport { shippingFor } from \"./shipping.js\";\n\n/**\n * The quote checkout shows and charges for an order, in cents. order.customer is\n * { guest: true } at guest checkout, or a member with a loyalty record.\n */\nexport function quoteOrder(order) {\n  const subtotal = sum(order.items.map(lineTotal));\n  // CHK-412: loyalty members get free shipping from $30.\n  const member = order.customer.loyalty.tier !== \"none\";\n  const shipping = shippingFor(subtotal, member);\n  return { subtotal, shipping, total: subtotal + shipping };\n}\n"
-          },
-          "src/checkout/quote.test.js": {
-            "role": "tests",
-            "language": "javascript",
-            "text": "// Acceptance criteria for INC-1. CI runs these cases and 3 more it does not show.\nimport { describe, expect, it } from \"vitest\";\nimport { quoteOrder } from \"./quote\";\n\nconst cases = [\n  [\"member, $35 order: free shipping from $30 (CHK-412)\", {\"customer\":{\"id\":\"m-41022\",\"loyalty\":{\"tier\":\"silver\"}},\"items\":[{\"sku\":\"wool-throw\",\"price\":3500,\"quantity\":1}]}, {\"subtotal\":3500,\"shipping\":0,\"total\":3500}],\n  [\"regression: guest order #88213 from the incident\", {\"customer\":{\"guest\":true},\"items\":[{\"sku\":\"stoneware-mug\",\"price\":1800,\"quantity\":2}]}, {\"subtotal\":3600,\"shipping\":495,\"total\":4095}],\n  [\"guest, $62 order: free shipping from $50\", {\"customer\":{\"guest\":true},\"items\":[{\"sku\":\"linen-sheets\",\"price\":6200,\"quantity\":1}]}, {\"subtotal\":6200,\"shipping\":0,\"total\":6200}],\n];\n\ndescribe(\"quoteOrder\", () => {\n  it.each(cases)(\"%s\", (_name, input, expected) => {\n    expect(quoteOrder(input)).toEqual(expected);\n  });\n});\n"
-          },
-          "src/checkout/shipping.js": {
-            "role": "read",
-            "language": "javascript",
-            "text": "/** Standard shipping, in cents. */\nexport const SHIPPING = 495;\n/** Free shipping from these subtotals, in cents: for everyone, and for loyalty members (CHK-412). */\nexport const FREE_FROM = 5000;\nexport const MEMBER_FREE_FROM = 3000;\n\n/** Shipping for an order's subtotal: free from $50, or from $30 for a loyalty member. */\nexport function shippingFor(subtotal, member) {\n  return subtotal >= (member ? MEMBER_FREE_FROM : FREE_FROM) ? 0 : SHIPPING;\n}\n"
-          }
-        },
-        "entry": "src/checkout/quote.js",
-        "entrypoint": "quoteOrder"
-      },
-      "checks": {
-        "cases": [
-          {
-            "id": "case-1",
-            "name": "member, $35 order: free shipping from $30 (CHK-412)",
-            "input": {
-              "customer": {
-                "id": "m-41022",
-                "loyalty": {
-                  "tier": "silver"
-                }
-              },
-              "items": [
-                {
-                  "sku": "wool-throw",
-                  "price": 3500,
-                  "quantity": 1
-                }
-              ]
-            },
-            "expected": {
-              "subtotal": 3500,
-              "shipping": 0,
-              "total": 3500
-            },
-            "visible": true
-          },
-          {
-            "id": "case-2",
-            "name": "regression: guest order #88213 from the incident",
-            "input": {
-              "customer": {
-                "guest": true
-              },
-              "items": [
-                {
-                  "sku": "stoneware-mug",
-                  "price": 1800,
-                  "quantity": 2
-                }
-              ]
-            },
-            "expected": {
-              "subtotal": 3600,
-              "shipping": 495,
-              "total": 4095
-            },
-            "visible": true
-          },
-          {
-            "id": "case-3",
-            "name": "guest, $62 order: free shipping from $50",
-            "input": {
-              "customer": {
-                "guest": true
-              },
-              "items": [
-                {
-                  "sku": "linen-sheets",
-                  "price": 6200,
-                  "quantity": 1
-                }
-              ]
-            },
-            "expected": {
-              "subtotal": 6200,
-              "shipping": 0,
-              "total": 6200
-            },
-            "visible": true
-          },
-          {
-            "id": "case-4",
-            "input": {
-              "customer": {
-                "id": "m-30418",
-                "loyalty": {
-                  "tier": "none"
-                }
-              },
-              "items": [
-                {
-                  "sku": "tea-towel",
-                  "price": 800,
-                  "quantity": 5
-                }
-              ]
-            },
-            "expected": {
-              "subtotal": 4000,
-              "shipping": 495,
-              "total": 4495
-            },
-            "visible": false
-          },
-          {
-            "id": "case-5",
-            "input": {
-              "customer": {
-                "guest": true
-              },
-              "items": [
-                {
-                  "sku": "egg-cup",
-                  "price": 600,
-                  "quantity": 2
-                }
-              ]
-            },
-            "expected": {
-              "subtotal": 1200,
-              "shipping": 495,
-              "total": 1695
-            },
-            "visible": false
-          },
-          {
-            "id": "case-6",
-            "input": {
-              "customer": {
-                "id": "m-11873",
-                "loyalty": {
-                  "tier": "gold"
-                }
-              },
-              "items": [
-                {
-                  "sku": "candle",
-                  "price": 1250,
-                  "quantity": 2
-                }
-              ]
-            },
-            "expected": {
-              "subtotal": 2500,
-              "shipping": 495,
-              "total": 2995
-            },
-            "visible": false
-          }
-        ]
-      },
-      "team": [
-        {
-          "id": "noor-1",
-          "author": {
-            "name": "Noor A",
-            "role": "Incident commander"
-          },
-          "where": "issue",
-          "severity": "info",
-          "text": [
-            "I'm on comms, you're on the fix. Checkout is failing for over half of orders. The assistant, the log summariser and the status bot are all down, so tonight's status updates are artisanal. Logs are in `logs/checkout-api.log`."
-          ],
-          "when": {
-            "event": "opened"
-          }
-        },
-        {
-          "id": "bea-2",
-          "author": {
-            "name": "Bea L",
-            "role": "Support"
-          },
-          "where": "issue",
-          "severity": "info",
-          "text": [
-            "Support queue is at 212. One customer has written MY MUGS four times, which is fair."
-          ],
-          "when": {
-            "event": "opened"
-          }
-        },
-        {
-          "id": "kai-flag",
-          "where": "issue",
-          "severity": "info",
-          "text": [
-            "Reading logs by hand at 2am. Respect. For what it's worth, a flag rolled to 100% at 02:00 and the first 500 is 31 seconds later. Coincidences are rare at this hour."
-          ],
-          "when": {
-            "opened": "logs/checkout-api.log"
-          },
-          "author": {
-            "name": "Kai M",
-            "role": "Platform"
-          }
-        },
-        {
-          "id": "tomasz-reproduced",
-          "where": "issue",
-          "severity": "info",
-          "text": [
-            "That failing test is my CHK-412 change. In my defence, I tested it as a member. I am always logged in as a member. I am, it turns out, the only customer I checked."
-          ],
-          "when": {
-            "ran": "case-2",
-            "is": "failing"
-          },
-          "author": {
-            "name": "Tomasz W",
-            "role": "Checkout"
-          }
-        },
-        {
-          "id": "noor-green",
-          "where": "issue",
-          "severity": "info",
-          "text": [
-            "Green locally. Open a pull request and I'll watch CI. Status page draft: \"We've identified the issue.\" First status update I've typed myself in years, and it's true."
-          ],
-          "when": {
-            "ran": "case-2",
-            "is": "passing"
-          },
-          "author": {
-            "name": "Noor A",
-            "role": "Incident commander"
-          }
-        },
-        {
-          "id": "noor-catch",
-          "where": "review",
-          "severity": "blocking",
-          "text": [
-            "A catch here turns a loud failure into a quiet wrong quote. Can we fix the guest case itself instead of hiding the error?"
-          ],
-          "when": {
-            "pattern": "catch\\s*[({]",
-            "present": true,
-            "file": "src/checkout/quote.js"
-          },
-          "repeat": "while-true",
-          "author": {
-            "name": "Noor A",
-            "role": "Incident commander"
-          }
-        },
-        {
-          "id": "bea-pr",
-          "where": "review",
-          "severity": "info",
-          "text": [
-            "I'll tell the 212 people in the queue the moment this is deployed. No pressure. Some pressure."
-          ],
-          "when": {
-            "event": "pull-request"
-          },
-          "author": {
-            "name": "Bea L",
-            "role": "Support"
-          }
-        },
-        {
-          "id": "ines-shipping",
-          "where": "review",
-          "severity": "info",
-          "text": [
-            "Finance, awake for reasons. Guests pay shipping under $50 again. I have never been this happy to see a fee."
-          ],
-          "when": {
-            "all": [
-              {
-                "check": "case-2",
-                "is": "passing"
-              },
-              {
-                "check": "case-5",
-                "is": "passing"
-              }
-            ]
-          },
-          "author": {
-            "name": "Ines R",
-            "role": "Finance"
-          }
-        }
-      ],
-      "hints": [
-        {
-          "id": "hint-1",
-          "level": 1,
-          "author": {
-            "name": "Noor A",
-            "role": "Incident commander"
-          },
-          "text": "Put the expected quote for order #88213 next to what came back. Who should get free shipping from $30, and is a guest one of them?",
-          "when": {
-            "behaviour": "runs-without-progress",
-            "atLeast": 2
-          }
-        },
-        {
-          "id": "hint-2",
-          "level": 2,
-          "author": {
-            "name": "Noor A",
-            "role": "Incident commander"
-          },
-          "text": "A guest has no loyalty record at all. Read your condition out loud for a customer like that: does it call them a member?",
-          "when": {
-            "any": [
-              {
-                "behaviour": "runs-without-progress",
-                "atLeast": 4
-              },
-              {
-                "behaviour": "failing-pushes",
-                "atLeast": 2
-              }
-            ]
-          }
-        }
-      ],
-      "authored": {
-        "by": "ai-drafted",
-        "reviewers": []
-      }
-    },
     "sha256:86a146e424989bee96291ed1854ee8fd73445b7a569e7257358448c650e45d6e": {
       "issue": "word-count-go",
       "kind": "bug",
@@ -15480,6 +15109,548 @@
         }
       ],
       "hints": [],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:ea2bec9e27fb47b645b7cef8c00448c735415c9bda6f93b61a44bedea479b104": {
+      "issue": "checkout-guest-shipping",
+      "kind": "bug",
+      "body": "**SEV-1 · checkout-api · paged 02:14**\n\n> **checkout-api: 5xx rate 58% (threshold 2%) for 9 minutes.** `POST /quote` is failing.\n\nYou're on call for Kettlebrook, a homeware shop. Checkout is failing for a lot of customers, and tonight the team's AI tools are down as well: the coding assistant, the log summariser and the bot that writes status updates. It's you, the logs and the tests. The rest of the team is in the chat.\n\n**Restore checkout**\n\n1. Find what's failing in `logs/checkout-api.log`.\n2. Reproduce it. The failing order from the logs is already a regression test in `src/checkout/quote.test.js`: run the tests (Ctrl/⌘-Enter).\n3. Fix it in `src/checkout/quote.js`, `src/checkout/shipping.js` or both, so every order gets a correct quote: guests and members, with free shipping where it applies.\n4. Open a pull request, get CI green and merge it. Main goes straight to production.\n\n`quoteOrder(order)` returns `{ subtotal, shipping, total }` in cents. Shipping is $4.95. It's free from $50 for everyone, and from $30 for loyalty members (CHK-412, shipped Thursday). A guest is `{ guest: true }` and has no loyalty record; a member whose tier is `\"none\"` has lapsed and gets the standard threshold.",
+      "skills": [
+        "debugging",
+        "reading-logs",
+        "incident-response"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "javascript",
+        "files": {
+          "logs/checkout-api.log": {
+            "role": "docs",
+            "language": "text",
+            "text": "2026-10-24T01:58:02.114Z ERROR checkout-api  POST /quote 500 3ms order=88199 customer=guest items=1\n    TypeError: Cannot read properties of undefined (reading 'tier')\n        at quoteOrder (src/checkout/quote.js:11:41)\n        at handleQuote (src/http/quote-route.js:27:18)\n2026-10-24T01:59:40.870Z INFO  checkout-api  POST /quote 200 9ms order=88201 customer=member:30418 items=3\n2026-10-24T02:00:00.002Z INFO  newsletter    \"Midnight mugs\" sent to 41,203 subscribers\n2026-10-24T02:00:07.551Z INFO  checkout-api  POST /quote 200 12ms order=88202 customer=member:41022 items=2\n2026-10-24T02:00:31.019Z ERROR checkout-api  POST /quote 500 3ms order=88203 customer=guest items=2\n    TypeError: Cannot read properties of undefined (reading 'tier')\n        at quoteOrder (src/checkout/quote.js:11:41)\n        at handleQuote (src/http/quote-route.js:27:18)\n2026-10-24T02:01:12.433Z INFO  checkout-api  POST /quote 200 10ms order=88204 customer=member:11873 items=1\n2026-10-24T02:02:48.902Z ERROR checkout-api  POST /quote 500 2ms order=88206 customer=guest items=1\n    TypeError: Cannot read properties of undefined (reading 'tier')\n        at quoteOrder (src/checkout/quote.js:11:41)\n        at handleQuote (src/http/quote-route.js:27:18)\n2026-10-24T02:05:00.000Z WARN  checkout-api  5xx rate 31% over 5m (threshold 2%)\n2026-10-24T02:09:17.640Z ERROR checkout-api  POST /quote 500 3ms order=88213 customer=guest items=[stoneware-mug 1800x2]\n    TypeError: Cannot read properties of undefined (reading 'tier')\n        at quoteOrder (src/checkout/quote.js:11:41)\n        at handleQuote (src/http/quote-route.js:27:18)\n2026-10-24T02:10:02.118Z INFO  checkout-api  POST /quote 200 13ms order=88214 customer=member:52990 items=4\n2026-10-24T02:12:44.305Z WARN  assistant     upstream unavailable (503); retrying in 300s\n2026-10-24T02:13:58.771Z WARN  checkout-api  5xx rate 58% over 9m (threshold 2%) -> paging on-call\n2026-10-24T02:14:00.000Z INFO  pager         SEV-1 checkout-api -> you\n2026-10-24T02:14:05.512Z WARN  status-bot    upstream unavailable (503); status update not posted\n"
+          },
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Incident: checkout is down\n\nKettlebrook sells mugs, linen and candles to people who really want their mugs. `checkout-api` prices every basket: `POST /quote` turns a basket into a subtotal, shipping and a total, and the payment page charges exactly that.\n\nThe team leans on AI tools for most of its day. Tonight those tools are down, and so is checkout.\n\n- `src/checkout/quote.js`: the quote.\n- `src/checkout/shipping.js`: shipping and its thresholds.\n- `src/checkout/money.js`: money helpers (read-only).\n- `logs/checkout-api.log`: the last few minutes of production logs.\n- `RUNBOOK.md`: what to do when paged.\n"
+          },
+          "RUNBOOK.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# checkout-api on-call runbook\n\n_Last reviewed: when the assistant was up._\n\n1. Paste the alert into the assistant.\n2. Do what it says.\n3. If the assistant is unavailable, see step 1.\n\n## Appendix B (recovered from the 2019 wiki export)\n\n- Read the logs: `logs/checkout-api.log`. The stack trace names a file and a line.\n- Reproduce it with a test before changing anything. Run tests: Ctrl/⌘-Enter.\n- Fix it, open a pull request (Ctrl/⌘-Shift-Enter), wait for CI, merge it. Main ships itself.\n- Don't wrap it in a try/catch and go back to bed. We will find out.\n"
+          },
+          "src/checkout/money.js": {
+            "role": "read",
+            "language": "javascript",
+            "text": "/** Money is whole cents everywhere: never floats. */\n\n/** What one line of an order costs before shipping. */\nexport function lineTotal(item) {\n  return item.price * item.quantity;\n}\n\nexport function sum(amounts) {\n  return amounts.reduce((total, amount) => total + amount, 0);\n}\n"
+          },
+          "src/checkout/quote.js": {
+            "role": "edit",
+            "language": "javascript",
+            "text": "import { lineTotal, sum } from \"./money.js\";\nimport { shippingFor } from \"./shipping.js\";\n\n/**\n * The quote checkout shows and charges for an order, in cents. order.customer is\n * { guest: true } at guest checkout, or a member with a loyalty record.\n */\nexport function quoteOrder(order) {\n  const subtotal = sum(order.items.map(lineTotal));\n  // CHK-412: loyalty members get free shipping from $30.\n  const member = order.customer.loyalty.tier !== \"none\";\n  const shipping = shippingFor(subtotal, member);\n  return { subtotal, shipping, total: subtotal + shipping };\n}\n"
+          },
+          "src/checkout/quote.test.js": {
+            "role": "tests",
+            "language": "javascript",
+            "text": "// Acceptance criteria for INC-1. CI runs these cases and 7 more it does not show.\nimport { describe, expect, it } from \"vitest\";\nimport { quoteOrder } from \"./quote\";\n\nconst cases = [\n  [\"member, $35 order: free shipping from $30 (CHK-412)\", {\"customer\":{\"id\":\"m-41022\",\"loyalty\":{\"tier\":\"silver\"}},\"items\":[{\"sku\":\"wool-throw\",\"price\":3500,\"quantity\":1}]}, {\"subtotal\":3500,\"shipping\":0,\"total\":3500}],\n  [\"regression: guest order #88213 from the incident\", {\"customer\":{\"guest\":true},\"items\":[{\"sku\":\"stoneware-mug\",\"price\":1800,\"quantity\":2}]}, {\"subtotal\":3600,\"shipping\":495,\"total\":4095}],\n  [\"guest, $62 order: free shipping from $50\", {\"customer\":{\"guest\":true},\"items\":[{\"sku\":\"linen-sheets\",\"price\":6200,\"quantity\":1}]}, {\"subtotal\":6200,\"shipping\":0,\"total\":6200}],\n];\n\ndescribe(\"quoteOrder\", () => {\n  it.each(cases)(\"%s\", (_name, input, expected) => {\n    expect(quoteOrder(input)).toEqual(expected);\n  });\n});\n"
+          },
+          "src/checkout/shipping.js": {
+            "role": "edit",
+            "language": "javascript",
+            "text": "/** Standard shipping, in cents. */\nexport const SHIPPING = 495;\n/** Free shipping from these subtotals, in cents: for everyone, and for loyalty members (CHK-412). */\nexport const FREE_FROM = 5000;\nexport const MEMBER_FREE_FROM = 3000;\n\n/** Shipping for an order's subtotal: free from $50, or from $30 for a loyalty member. */\nexport function shippingFor(subtotal, member) {\n  return subtotal >= (member ? MEMBER_FREE_FROM : FREE_FROM) ? 0 : SHIPPING;\n}\n"
+          }
+        },
+        "entry": "src/checkout/quote.js",
+        "entrypoint": "quoteOrder"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "name": "member, $35 order: free shipping from $30 (CHK-412)",
+            "input": {
+              "customer": {
+                "id": "m-41022",
+                "loyalty": {
+                  "tier": "silver"
+                }
+              },
+              "items": [
+                {
+                  "sku": "wool-throw",
+                  "price": 3500,
+                  "quantity": 1
+                }
+              ]
+            },
+            "expected": {
+              "subtotal": 3500,
+              "shipping": 0,
+              "total": 3500
+            },
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "name": "regression: guest order #88213 from the incident",
+            "input": {
+              "customer": {
+                "guest": true
+              },
+              "items": [
+                {
+                  "sku": "stoneware-mug",
+                  "price": 1800,
+                  "quantity": 2
+                }
+              ]
+            },
+            "expected": {
+              "subtotal": 3600,
+              "shipping": 495,
+              "total": 4095
+            },
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "name": "guest, $62 order: free shipping from $50",
+            "input": {
+              "customer": {
+                "guest": true
+              },
+              "items": [
+                {
+                  "sku": "linen-sheets",
+                  "price": 6200,
+                  "quantity": 1
+                }
+              ]
+            },
+            "expected": {
+              "subtotal": 6200,
+              "shipping": 0,
+              "total": 6200
+            },
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "name": "lapsed member, $40 order: standard threshold",
+            "input": {
+              "customer": {
+                "id": "m-30418",
+                "loyalty": {
+                  "tier": "none"
+                }
+              },
+              "items": [
+                {
+                  "sku": "tea-towel",
+                  "price": 800,
+                  "quantity": 5
+                }
+              ]
+            },
+            "expected": {
+              "subtotal": 4000,
+              "shipping": 495,
+              "total": 4495
+            },
+            "visible": false
+          },
+          {
+            "id": "case-5",
+            "name": "guest, $12 order: standard shipping",
+            "input": {
+              "customer": {
+                "guest": true
+              },
+              "items": [
+                {
+                  "sku": "egg-cup",
+                  "price": 600,
+                  "quantity": 2
+                }
+              ]
+            },
+            "expected": {
+              "subtotal": 1200,
+              "shipping": 495,
+              "total": 1695
+            },
+            "visible": false
+          },
+          {
+            "id": "case-6",
+            "name": "member, $25 order: under the member threshold",
+            "input": {
+              "customer": {
+                "id": "m-11873",
+                "loyalty": {
+                  "tier": "gold"
+                }
+              },
+              "items": [
+                {
+                  "sku": "candle",
+                  "price": 1250,
+                  "quantity": 2
+                }
+              ]
+            },
+            "expected": {
+              "subtotal": 2500,
+              "shipping": 495,
+              "total": 2995
+            },
+            "visible": false
+          },
+          {
+            "id": "case-7",
+            "name": "member at exactly $30: free shipping",
+            "input": {
+              "customer": {
+                "id": "m-52990",
+                "loyalty": {
+                  "tier": "gold"
+                }
+              },
+              "items": [
+                {
+                  "sku": "jug",
+                  "price": 3000,
+                  "quantity": 1
+                }
+              ]
+            },
+            "expected": {
+              "subtotal": 3000,
+              "shipping": 0,
+              "total": 3000
+            },
+            "visible": false
+          },
+          {
+            "id": "case-8",
+            "name": "guest at exactly $50: free shipping",
+            "input": {
+              "customer": {
+                "guest": true
+              },
+              "items": [
+                {
+                  "sku": "blanket",
+                  "price": 5000,
+                  "quantity": 1
+                }
+              ]
+            },
+            "expected": {
+              "subtotal": 5000,
+              "shipping": 0,
+              "total": 5000
+            },
+            "visible": false
+          },
+          {
+            "id": "case-9",
+            "name": "guest at $49.99: standard shipping",
+            "input": {
+              "customer": {
+                "guest": true
+              },
+              "items": [
+                {
+                  "sku": "blanket-small",
+                  "price": 4999,
+                  "quantity": 1
+                }
+              ]
+            },
+            "expected": {
+              "subtotal": 4999,
+              "shipping": 495,
+              "total": 5494
+            },
+            "visible": false
+          },
+          {
+            "id": "case-10",
+            "name": "lapsed member, $35 order: no member threshold",
+            "input": {
+              "customer": {
+                "id": "m-20077",
+                "loyalty": {
+                  "tier": "none"
+                }
+              },
+              "items": [
+                {
+                  "sku": "wool-throw",
+                  "price": 3500,
+                  "quantity": 1
+                }
+              ]
+            },
+            "expected": {
+              "subtotal": 3500,
+              "shipping": 495,
+              "total": 3995
+            },
+            "visible": false
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "kai-1",
+          "author": {
+            "name": "Kai M",
+            "role": "Platform"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Traffic jumped at 02:00 when the \"Midnight mugs\" newsletter went out. Most of those visitors check out as guests."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        },
+        {
+          "id": "bea-2",
+          "author": {
+            "name": "Bea L",
+            "role": "Support"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "Every complaint tonight is from someone checking out without an account. Members aren't writing in."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        },
+        {
+          "id": "tomasz-3",
+          "author": {
+            "name": "Tomasz W",
+            "role": "Checkout"
+          },
+          "where": "issue",
+          "severity": "info",
+          "text": [
+            "CHK-412 is mine, shipped Thursday: members get free shipping from $30. The member check is in `quote.js`, the thresholds in `shipping.js`. I tested it with my own account, which is a member account."
+          ],
+          "when": {
+            "event": "opened"
+          }
+        },
+        {
+          "id": "catch-hides-guests",
+          "where": "review",
+          "severity": "blocking",
+          "text": [
+            "A catch here turns the crash into a silently wrong quote. Handle the guest case explicitly instead of catching the error."
+          ],
+          "when": {
+            "pattern": "catch\\s*[({]",
+            "present": true
+          },
+          "repeat": "while-true",
+          "resolve": "explicit",
+          "author": {
+            "name": "Tomasz W",
+            "role": "Checkout"
+          }
+        },
+        {
+          "id": "thresholds-in-one-place",
+          "where": "review",
+          "severity": "nit",
+          "text": [
+            "Nit: these amounts are defined in `shipping.js`. Import the constants so the thresholds live in one place."
+          ],
+          "when": {
+            "pattern": "\\b(3000|5000|495)\\b",
+            "present": true,
+            "file": "src/checkout/quote.js"
+          },
+          "resolve": "explicit",
+          "author": {
+            "name": "Tomasz W",
+            "role": "Checkout"
+          }
+        }
+      ],
+      "ciFindings": "explicit",
+      "chat": [
+        {
+          "id": "noor-comms",
+          "after": {
+            "start": true
+          },
+          "text": "I'm on comms, you're on the fix. The status bot is down too, so tonight's updates are artisanal.",
+          "author": {
+            "name": "Noor A",
+            "role": "Incident commander"
+          }
+        },
+        {
+          "id": "bea-queue",
+          "after": {
+            "start": true
+          },
+          "text": "Support queue is at 212. One customer has written MY MUGS four times, which is fair.",
+          "author": {
+            "name": "Bea L",
+            "role": "Support"
+          }
+        },
+        {
+          "id": "mia-newsletter",
+          "after": {
+            "start": true
+          },
+          "text": "The newsletter was mine. \"No account needed!\" felt like a great headline at 6pm.",
+          "author": {
+            "name": "Mia S",
+            "role": "Marketing"
+          }
+        },
+        {
+          "id": "kai-logs",
+          "after": {
+            "opened": "logs/checkout-api.log"
+          },
+          "text": "Reading logs by hand at 2am. Respect.",
+          "author": {
+            "name": "Kai M",
+            "role": "Platform"
+          }
+        },
+        {
+          "id": "tomasz-red",
+          "after": {
+            "ran": "case-2",
+            "is": "failing"
+          },
+          "text": "Is that red test my change? Please say it isn't my change.",
+          "author": {
+            "name": "Tomasz W",
+            "role": "Checkout"
+          }
+        },
+        {
+          "id": "noor-green",
+          "after": {
+            "ran": "case-2",
+            "is": "passing"
+          },
+          "text": "Green locally? Status page draft: \"We've identified the issue.\" First update I've typed myself in years, and it's true.",
+          "author": {
+            "name": "Noor A",
+            "role": "Incident commander"
+          }
+        },
+        {
+          "id": "bea-pr",
+          "after": {
+            "pullRequest": true
+          },
+          "text": "I'll tell the queue the moment it's merged. No pressure. Some pressure.",
+          "author": {
+            "name": "Bea L",
+            "role": "Support"
+          }
+        },
+        {
+          "id": "ines-ci",
+          "after": {
+            "check": "case-2",
+            "is": "passing"
+          },
+          "text": "Finance, awake for reasons. Guests pay shipping under $50 again on that build. I have never been this happy to see a fee.",
+          "author": {
+            "name": "Ines R",
+            "role": "Finance"
+          }
+        },
+        {
+          "id": "noor-resolved",
+          "after": {
+            "merged": true
+          },
+          "text": "Merged and shipping. Marking it resolved on the status page, by hand, slowly, savouring it.",
+          "author": {
+            "name": "Noor A",
+            "role": "Incident commander"
+          }
+        },
+        {
+          "id": "bea-told",
+          "after": {
+            "merged": true
+          },
+          "text": "Telling the queue now. Someone already replied MY MUGS!! but happier.",
+          "author": {
+            "name": "Bea L",
+            "role": "Support"
+          }
+        },
+        {
+          "id": "mia-next",
+          "after": {
+            "merged": true
+          },
+          "text": "Next newsletter headline: \"Checkout works.\" Bold, I know.",
+          "author": {
+            "name": "Mia S",
+            "role": "Marketing"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "id": "hint-1",
+          "level": 1,
+          "author": {
+            "name": "Kai M",
+            "role": "Platform"
+          },
+          "text": "Put the expected quote for order #88213 next to what came back. Who should get free shipping from $30, and is a guest one of them?",
+          "when": {
+            "behaviour": "runs-without-progress",
+            "atLeast": 2
+          }
+        },
+        {
+          "id": "hint-2",
+          "level": 2,
+          "author": {
+            "name": "Kai M",
+            "role": "Platform"
+          },
+          "text": "A guest has no loyalty record at all, and a lapsed member's tier is \"none\". Read your membership check out loud for both: does it call either of them a member?",
+          "when": {
+            "any": [
+              {
+                "behaviour": "runs-without-progress",
+                "atLeast": 4
+              },
+              {
+                "behaviour": "failing-pushes",
+                "atLeast": 2
+              }
+            ]
+          }
+        }
+      ],
       "authored": {
         "by": "ai-drafted",
         "reviewers": []

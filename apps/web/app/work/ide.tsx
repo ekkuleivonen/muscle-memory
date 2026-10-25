@@ -26,7 +26,7 @@ import {
   type IssueKind,
   type Revision,
 } from "../../../../packages/content/model";
-import { runFeedback } from "../../../../packages/domain/workspace";
+import { runFeedback, type WorkspaceRecord } from "../../../../packages/domain/workspace";
 import type { Json } from "../../../../packages/domain/json";
 import {
   engineFor,
@@ -40,7 +40,8 @@ import {
   timeAgo,
   type PullRequestRecord,
 } from "../../lib/activity";
-import { attemptRecords } from "../../lib/attempts";
+import { attemptAt, attemptRecords } from "../../lib/attempts";
+import { chatOf, type ChatMessage } from "../../lib/chat";
 import { statusOf } from "../../lib/board";
 import { incidentState, isIncident } from "../../lib/incident";
 import { closedPullRequests, mergedPullRequests } from "../../lib/pulls";
@@ -61,6 +62,7 @@ import {
   type TreeNode,
 } from "../../lib/repo";
 import { LanguageDot } from "../(browse)/_components/bits";
+import { TeamChat } from "../(browse)/_components/team-chat";
 import { StatusMenu, useBoard } from "../(browse)/_components/board";
 import {
   PREVIOUS_PATH_KEY,
@@ -188,6 +190,11 @@ export function Ide({
   const [unread, setUnread] = useState(false);
   /** What teammates just said, shown where the person is working: the latest release only. */
   const [notes, setNotes] = useState<TeamNote[]>([]);
+  /** The team chat so far, for the attempt under way, and the attempt it belongs to. */
+  const [chat, setChat] = useState<{ messages: ChatMessage[]; scope: string }>({
+    messages: [],
+    scope: issue.slug,
+  });
 
   const router = useRouter();
   const layout = useIdeLayout();
@@ -246,11 +253,15 @@ export function Ide({
   /** Open blocking review threads by pull request number. */
   const blocking = useMemo(() => {
     const counts = new Map<number, number>();
+    // Blocking findings, and explicit ones of any severity (TeamComment.resolve).
+    const explicit = (t: Feedback["threads"][number]) =>
+      revisions[t.issueRevision]?.team.find((c) => c.id === t.comment)?.resolve ===
+      "explicit";
     for (const t of feedback.threads)
-      if (t.severity === "blocking" && !t.resolved)
+      if (!t.resolved && (t.severity === "blocking" || explicit(t)))
         counts.set(t.number, (counts.get(t.number) ?? 0) + 1);
     return counts;
-  }, [feedback]);
+  }, [feedback, revisions]);
 
   /** The open pull request once its checks pass and nothing blocks it: the next step is merging. */
   const reviewable =
@@ -273,6 +284,15 @@ export function Ide({
   const reviewing = useRef<Promise<void>>(Promise.resolve());
   const viewRef = useRef(view);
   viewRef.current = view;
+
+  /** The chat a revision carries, as far as this attempt's records have come. */
+  function chatFor(records: readonly WorkspaceRecord[]) {
+    const attempt = attemptAt(records, issue.slug);
+    return {
+      messages: chatOf(revision.chat ?? [], records, issue.slug, (id) => revisions[id]),
+      scope: `${issue.slug}@${attempt.start ?? "first"}`,
+    };
+  }
 
   /**
    * Releases whatever teammate feedback the revision's triggers say is due, from what is
@@ -319,8 +339,10 @@ export function Ide({
           )
             setUnread(true);
         }
-        if (session.current === current)
-          setFeedback(feedbackOf(records, issue.slug));
+        if (session.current === current) {
+          setFeedback(feedbackOf(records, issue.slug, (id) => revisions[id]));
+          setChat(chatFor(records));
+        }
       } catch (cause) {
         console.warn("Teammate feedback could not be checked.", cause);
       }
@@ -392,7 +414,8 @@ export function Ide({
       setPulls(history);
       setMerged(mergedNumbers);
       setClosed(closedNumbers);
-      setFeedback(feedbackOf(records, issue.slug));
+      setFeedback(feedbackOf(records, issue.slug, (id) => revisions[id]));
+      setChat(chatFor(all));
       session.current = new WorkspaceSession({
         participantId,
         consentVersion: `terms-${account?.accepted?.version ?? "unknown"}`,
@@ -1089,6 +1112,7 @@ export function Ide({
         />
       )}
       <div ref={sandboxHost} hidden />
+      <TeamChat messages={chat.messages} scope={chat.scope} inIde />
     </div>
   );
 }
@@ -1455,8 +1479,19 @@ function PullRequests({
               <b>Next: answer the review on #{latest.number}.</b> Its checks
               pass, but {comments(blocking.get(latest.number)!)}{" "}
               {blocking.get(latest.number) === 1 ? "blocks" : "block"} merging.
-              Change the code and push (<Shortcut shift />
-              ), or reply on #{latest.number} if it should stay as it is.
+              {revisions[issue.revision]?.team.some(
+                (c) => c.resolve === "explicit",
+              ) ? (
+                <>
+                  Change the code and push (<Shortcut shift />
+                  ), then resolve it on #{latest.number}.
+                </>
+              ) : (
+                <>
+                  Change the code and push (<Shortcut shift />
+                  ), or reply on #{latest.number} if it should stay as it is.
+                </>
+              )}
             </p>
             <ReviewComments
               threads={threads.filter((t) => t.number === latest.number)}
@@ -1466,7 +1501,11 @@ function PullRequests({
               className="ide-run secondary"
               href={pullHref(issue.key, latest.number)}
             >
-              Reply on #{latest.number} →
+              {revisions[issue.revision]?.team.some(
+                (c) => c.resolve === "explicit",
+              )
+                ? `Resolve on #${latest.number} →`
+                : `Reply on #${latest.number} →`}
             </Link>
           </div>
         ) : latest.result === "checks-passed" ? (
@@ -1500,12 +1539,8 @@ function PullRequests({
         ))}
       {done && mergedPull && isIncident(issue.key) && (
         <p className="ide-done">
-          Pull request #{mergedPull.number} is merged, but checkout is still
-          down until it ships.{" "}
-          <Link href={pullHref(issue.key, mergedPull.number)}>
-            Deploy it from the pull request
-          </Link>
-          .
+          Pull request #{mergedPull.number} is merged and main ships itself:
+          checkout is back. <Link href="/incident/report">Read the incident report</Link>.
         </p>
       )}
       {done && mergedPull && !isIncident(issue.key) && (
@@ -1627,7 +1662,7 @@ function entryPath(): string | null {
 }
 
 function comments(count: number): string {
-  return `${count} blocking comment${count === 1 ? "" : "s"}`;
+  return `${count} blocking finding${count === 1 ? "" : "s"}`;
 }
 
 /** One line in the panel saying what teammates just did. */

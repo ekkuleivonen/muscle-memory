@@ -106,6 +106,16 @@ function revisionOf(seed: SeedIssue, key: string, project: (typeof SEED_PROJECTS
         }),
       ),
     ],
+    ...(seed.ciFindings ? { ciFindings: seed.ciFindings } : {}),
+    // Only issues with a chat carry one, so every other revision keeps its id.
+    ...(seed.chat
+      ? {
+          chat: seed.chat.map(({ author, role, ...line }) => ({
+            ...line,
+            author: { name: author, role },
+          })),
+        }
+      : {}),
     hints: seed.hints.map((hint, index) => ({
       id: `hint-${index + 1}`,
       level: index + 1,

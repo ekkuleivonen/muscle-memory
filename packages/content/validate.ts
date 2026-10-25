@@ -122,6 +122,27 @@ export function validateRevision(revision: Revision, where: string): void {
     if (comment.severity === "blocking" && comment.where !== "review")
       fail(where, `comment ${comment.id} blocks merging, so it must be a review comment`);
     checkTrigger(comment.when, `${where} comment ${comment.id}`, caseIds, paths);
+    if (comment.resolve !== undefined && (comment.resolve !== "explicit" || comment.where !== "review"))
+      fail(where, `comment ${comment.id}: only a review comment can need an explicit Resolve`);
+  }
+  if (revision.ciFindings !== undefined && revision.ciFindings !== "explicit")
+    fail(where, "ciFindings is explicit or absent");
+  if (revision.chat) {
+    unique(revision.chat.map((c) => c.id), `${where} chat`);
+    for (const line of revision.chat) {
+      if (!ID.test(line.id)) fail(where, `chat line ${line.id} is not a slug`);
+      text(line.text, `${where} chat ${line.id}`);
+      text(line.author?.name, `${where} chat ${line.id} author`);
+      const after = line.after as Record<string, unknown>;
+      if (after?.start === true || after?.pullRequest === true || after?.merged === true) continue;
+      if (typeof after?.opened === "string") {
+        if (!paths.has(after.opened)) fail(where, `chat ${line.id} names unknown file ${after.opened}`);
+        continue;
+      }
+      const id = (after?.ran ?? after?.check) as unknown;
+      if (typeof id !== "string" || !caseIds.has(id) || !["failing", "passing"].includes(String(after.is)))
+        fail(where, `chat ${line.id} has an unknown trigger`);
+    }
   }
   unique(revision.hints.map((h) => h.id), `${where} hints`);
   revision.hints.forEach((hint, index) => {

@@ -2,8 +2,8 @@
  * The incident (docs/incident.md): INC-1, one production incident played from /incident. Its
  * version is the revision it is played on; a shared link names that revision, and an attempt
  * stays on the revision it started on. What an attempt has done (merged a fix whose checks all
- * passed, deployed it) is read only from this browser's records of that attempt, so a page
- * visit, an earlier attempt's merge or an unmerged push never counts.
+ * passed, which resolves the incident) is read only from this browser's records of that
+ * attempt, so a page visit, an earlier attempt's merge or an unmerged push never counts.
  */
 import { casesRun, type Revision } from "../../../packages/content/model";
 import {
@@ -98,10 +98,11 @@ export interface IncidentState {
   started: boolean;
   /** The revision this attempt is played on: the one its start or replay named. */
   revision: string | null;
-  /** This attempt's merged pull request, only if the push it merged passed every check. */
+  /**
+   * This attempt's merged pull request, only if the push it merged passed every check. Merging
+   * it resolves the incident: in the story, main ships itself; nothing more is recorded.
+   */
   merged: Merged | null;
-  /** The simulated deploy of that pull request, in this attempt. */
-  deployed: { at: string; number: number; runId: string } | null;
 }
 
 /** Where the latest (or the `at`) attempt at the incident stands, from its own records. */
@@ -150,24 +151,7 @@ export function incidentState(
         total: Number(push.data.total),
       };
   }
-  const deploy =
-    merged &&
-    own.find(
-      (o) =>
-        o.type === "observation.board.deployed" &&
-        Number(o.data.pullRequest) === merged.number &&
-        String(o.data.runId) === merged.runId &&
-        o.occurredAt >= merged.at,
-    );
-  return {
-    attempt,
-    started: own.length > 0,
-    revision,
-    merged,
-    deployed: deploy
-      ? { at: deploy.occurredAt, number: merged!.number, runId: merged!.runId }
-      : null,
-  };
+  return { attempt, started: own.length > 0, revision, merged };
 }
 
 export interface Moment {
@@ -177,7 +161,7 @@ export interface Moment {
 
 /**
  * The attempt's timeline as recorded: the IDE opened, the log read, the regression reproduced
- * and fixed by a local run, the pull request, the merge and the deploy. Each moment is the
+ * and fixed by a local run, the pull request and the merge. Each moment is the
  * first time it happened; a moment that never happened is left out.
  */
 export function incidentTimeline(
@@ -246,10 +230,6 @@ export function incidentTimeline(
     (o) =>
       o.type === "observation.board.moved" &&
       o.data.trigger === "pull-request-merged",
-  );
-  first(
-    "Deployed to production",
-    (o) => o.type === "observation.board.deployed",
   );
   return out.sort((a, b) => a.at.localeCompare(b.at));
 }

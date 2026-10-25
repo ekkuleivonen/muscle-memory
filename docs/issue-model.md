@@ -96,7 +96,9 @@ interface Checks {
 }
 ```
 
-The **private** part holds what a player must never receive: the **reference solution**, **trigger examples** (code that must and must not fire each comment), and **author notes**. It lives in the database next to each revision. Publication checks use it; it is never written to a bundle.
+The **private** part holds what a player must never receive: the **reference solution**, optional **alternatives** (other correct designs, which must pass every case) and **wrong fixes** (plausible mistakes, which must fail at least one), **trigger examples** (code that must and must not fire each comment), and **author notes**.
+
+A revision may also carry a **chat**: lines of team atmosphere, never clues, each released by a recorded action (the attempt starting, a file opened, a local run's case, a pull request, a CI case, the merge). What has been said is a pure function of the attempt's records, so it is shown, not recorded. Only the incident has one ([incident](incident.md)). It lives in the database next to each revision. Publication checks use it; it is never written to a bundle.
 
 ### Bundles: a whole mini repo in one object
 
@@ -123,6 +125,8 @@ interface TeamComment {
 - **The ticket's own thread** is the issue comments on the `opened` event: they are part of the ticket, shown on the issue page and in the IDE from the start, and not recorded as feedback.
 - **Other issue comments** are checked whenever feedback is (opening the IDE, after every run and push, and every 30 seconds) against the current code and the latest push's checks, and posted to the ticket's thread at most once.
 - **Review comments** are checked only when a push's checks finish, against the code pushed and that push's results, at most once per pull request. They appear on the pull request's page as threads, with the push they reviewed.
+- A revision may make CI failures findings (`ciFindings: "explicit"`, used by the incident): a failing push opens one on its pull request, cleared only by Resolve; passing checks are still required to merge.
+- A review comment may require an explicit **Resolve** (`resolve: "explicit"`, used by the incident): then only the person's Resolve clears it, never a fixing push or a reply.
 - A **blocking** review comment must be resolved before merging: either a later push no longer triggers it (recorded as resolved by code), or the player replies (resolved by reply). A reply needs no approval; its text is recorded. With `repeat: "while-true"` a resolved thread opens again on a later push that triggers it. A **nit** or **info** comment never blocks. Merge needs green CI *and* every blocking thread resolved. Only review comments may block.
 
 ### Hints
