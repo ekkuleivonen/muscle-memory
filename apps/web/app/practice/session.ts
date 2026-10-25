@@ -44,6 +44,7 @@ import { mediaTypeOf, type FileLanguage, type LanguageId } from "../../lib/langu
 import {
   createEditor,
   editorFeatures,
+  loadEditorModes,
   type ActivityHooks,
   type Keymap,
 } from "./editor";
@@ -225,9 +226,12 @@ export class PracticeSession {
     return this.options.challenge.revision.file;
   }
 
-  /** Mounts the editor; its edits are recorded as they happen. */
-  mount(parent: HTMLElement): void {
-    if (this.view) return;
+  /** Mounts the editor once its language and keymap have loaded; edits are recorded as they happen. */
+  async mount(parent: HTMLElement): Promise<void> {
+    const language = (this.options.language ?? "python") as FileLanguage;
+    const keys = this.options.keymap ?? "standard";
+    const modes = await loadEditorModes(language, keys);
+    if (this.view || this.closed) return;
     this.view = createEditor(
       parent,
       this.doc.toString(),
@@ -240,9 +244,9 @@ export class PracticeSession {
         onVimMode: this.options.onVimMode,
       },
       {
-        language: (this.options.language ?? "python") as FileLanguage,
-        keymap: this.options.keymap ?? "standard",
+        language,
         label: `Code editor: ${this.file}`,
+        modes,
         types: this.options.types,
         activity: this.activity(),
       },

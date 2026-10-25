@@ -39,58 +39,78 @@ import {
   syntaxHighlighting,
 } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
-import { pythonLanguage } from "@codemirror/lang-python";
-import {
-  javascriptLanguage,
-  typescriptLanguage,
-} from "@codemirror/lang-javascript";
-import { goLanguage } from "@codemirror/lang-go";
-import { rustLanguage } from "@codemirror/lang-rust";
-import { cppLanguage } from "@codemirror/lang-cpp";
-import { phpLanguage } from "@codemirror/lang-php";
-import { StandardSQL } from "@codemirror/lang-sql";
-import { htmlLanguage } from "@codemirror/lang-html";
-import { markdownLanguage } from "@codemirror/lang-markdown";
-import { javaLanguage } from "@codemirror/lang-java";
-import { csharp } from "@codemirror/legacy-modes/mode/clike";
-import { ruby } from "@codemirror/legacy-modes/mode/ruby";
-import { getCM, vim } from "@replit/codemirror-vim";
 import type { FileLanguage } from "../../lib/languages";
 import { TYPE_CHECK_FEATURES, type TypeChecker } from "./type-checker";
 
 export type Keymap = "standard" | "vim";
 
-/** Language data only (highlighting, indentation), never the completion sources. */
-function languageSupport(language: Exclude<FileLanguage, "text">): LanguageSupport {
+/**
+ * Language data only (highlighting, indentation), never the completion sources. Loaded on
+ * demand, so a challenge downloads its own language's grammar and not every other one.
+ */
+async function languageSupport(
+  language: Exclude<FileLanguage, "text">,
+): Promise<LanguageSupport> {
   switch (language) {
     case "python":
-      return new LanguageSupport(pythonLanguage);
+      return new LanguageSupport((await import("@codemirror/lang-python")).pythonLanguage);
     case "javascript":
-      return new LanguageSupport(javascriptLanguage);
+      return new LanguageSupport(
+        (await import("@codemirror/lang-javascript")).javascriptLanguage,
+      );
     case "typescript":
-      return new LanguageSupport(typescriptLanguage);
+      return new LanguageSupport(
+        (await import("@codemirror/lang-javascript")).typescriptLanguage,
+      );
     case "go":
-      return new LanguageSupport(goLanguage);
+      return new LanguageSupport((await import("@codemirror/lang-go")).goLanguage);
     case "rust":
-      return new LanguageSupport(rustLanguage);
+      return new LanguageSupport((await import("@codemirror/lang-rust")).rustLanguage);
     case "c":
     case "cpp":
-      return new LanguageSupport(cppLanguage);
+      return new LanguageSupport((await import("@codemirror/lang-cpp")).cppLanguage);
     case "php":
-      return new LanguageSupport(phpLanguage);
+      return new LanguageSupport((await import("@codemirror/lang-php")).phpLanguage);
     case "sql":
-      return new LanguageSupport(StandardSQL.language);
+      return new LanguageSupport((await import("@codemirror/lang-sql")).StandardSQL.language);
     case "html":
-      return new LanguageSupport(htmlLanguage);
+      return new LanguageSupport((await import("@codemirror/lang-html")).htmlLanguage);
     case "markdown":
-      return new LanguageSupport(markdownLanguage);
+      return new LanguageSupport(
+        (await import("@codemirror/lang-markdown")).markdownLanguage,
+      );
     case "java":
-      return new LanguageSupport(javaLanguage);
+      return new LanguageSupport((await import("@codemirror/lang-java")).javaLanguage);
     case "csharp":
-      return new LanguageSupport(StreamLanguage.define(csharp));
+      return new LanguageSupport(
+        StreamLanguage.define((await import("@codemirror/legacy-modes/mode/clike")).csharp),
+      );
     case "ruby":
-      return new LanguageSupport(StreamLanguage.define(ruby));
+      return new LanguageSupport(
+        StreamLanguage.define((await import("@codemirror/legacy-modes/mode/ruby")).ruby),
+      );
   }
+}
+
+/** What createEditor needs that is loaded on demand: the language's grammar and Vim. */
+export interface EditorModes {
+  language: LanguageSupport | null;
+  vim: typeof import("@replit/codemirror-vim") | null;
+}
+
+/**
+ * Loads the language and keymap an editor needs. Safe to call early to start the downloads;
+ * repeated calls share the same modules.
+ */
+export async function loadEditorModes(
+  language: FileLanguage,
+  keys: Keymap,
+): Promise<EditorModes> {
+  const [support, vim] = await Promise.all([
+    language === "text" ? null : languageSupport(language),
+    keys === "vim" ? import("@replit/codemirror-vim") : null,
+  ]);
+  return { language: support, vim };
 }
 
 /** Indentation people expect per language: Go uses tabs, the rest spaces. */
@@ -174,14 +194,14 @@ const highlight = HighlightStyle.define([
   { tag: tags.invalid, color: "var(--syn-invalid)" },
 ]);
 
-const shared = (language: FileLanguage): Extension[] => [
+const shared = (language: FileLanguage, modes: EditorModes): Extension[] => [
   lineNumbers(),
   highlightActiveLineGutter(),
   // A steady cursor, as in a terminal; the block shape is the stylesheet's.
   drawSelection({ cursorBlinkRate: 0 }),
   indentUnit.of(indent(language)),
   EditorState.tabSize.of(4),
-  ...(language === "text" ? [] : [languageSupport(language)]),
+  modes.language ?? [],
   syntaxHighlighting(highlight),
   EditorView.contentAttributes.of({
     spellcheck: "false",
@@ -322,13 +342,15 @@ export function createEditor(
   hooks: EditorHooks,
   options: {
     language: FileLanguage;
-    keymap: Keymap;
     label: string;
+    /** From loadEditorModes: the language's grammar, and Vim when that is the keymap. */
+    modes: EditorModes;
     /** Squiggles and hover types, for languages that have them. */
     types?: TypeChecker;
     activity?: ActivityHooks;
   },
 ): EditorView {
+  const { vim } = options.modes;
   const view = new EditorView({
     parent,
     state: EditorState.create({
@@ -344,8 +366,8 @@ export function createEditor(
           }),
         ),
         // Vim goes first so its keys win over the defaults.
-        options.keymap === "vim" ? vim() : [],
-        ...shared(options.language),
+        vim ? vim.vim() : [],
+        ...shared(options.language, options.modes),
         highlightActiveLine(),
         history(),
         indentOnInput(),
@@ -375,9 +397,9 @@ export function createEditor(
     }),
   });
   if (options.activity) watch(view, options.activity);
-  if (options.keymap === "vim" && hooks.onVimMode) {
+  if (vim && hooks.onVimMode) {
     hooks.onVimMode("normal");
-    getCM(view)?.on("vim-mode-change", (event: { mode: string }) =>
+    vim.getCM(view)?.on("vim-mode-change", (event: { mode: string }) =>
       hooks.onVimMode?.(event.mode),
     );
   }

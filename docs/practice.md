@@ -66,7 +66,7 @@ CodeMirror 6 with an explicit extension list (`apps/web/app/practice/editor.ts`)
 - A steady block cursor, as in a terminal. Syntax colours come from CSS variables (`--syn-*` in `practice.css`); the site is dark only.
 - No autocompletion, auto-closing brackets, linting or AI assistance. Autocomplete is undecided: ask first (root `AGENTS.md`).
 
-The editor owns its document, so typing does not re-render React, and work survives runs, errors, timeouts and cancels. Tab indents inside the editor; Escape then Tab moves focus out.
+The editor owns its document, so typing does not re-render React, and work survives runs, errors, timeouts and cancels. The language's grammar and Vim are loaded on demand (`loadEditorModes`), so a challenge downloads only its own language's mode. Tab indents inside the editor; Escape then Tab moves focus out.
 
 ## Saving and restoring
 

@@ -36,7 +36,7 @@ import {
 } from "../../../../packages/runner/runner";
 import { readProfile } from "../../lib/account";
 import { languageLabel } from "../../lib/challenges";
-import type { LanguageId } from "../../lib/languages";
+import type { FileLanguage, LanguageId } from "../../lib/languages";
 import { environmentOf } from "../../lib/environment";
 import {
   attemptFor,
@@ -53,7 +53,7 @@ import {
   setChallengeContext,
 } from "../../lib/site-log";
 import { Markdown } from "../_components/markdown";
-import { type Keymap } from "./editor";
+import { loadEditorModes, type Keymap } from "./editor";
 import { checksTypes, TypeChecker } from "./type-checker";
 import { caseLabel, transcript } from "./transcript";
 import { recoveryMessage, saveBadge } from "./save-state";
@@ -335,6 +335,8 @@ export function Practice({
       const keys: Keymap =
         account?.profile.editor === "vim" ? "vim" : "standard";
       setKeymap(keys);
+      // Starts the editor's language and keymap downloading while the store opens.
+      void loadEditorModes(challenge.language as FileLanguage, keys).catch(() => {});
       store.current ??= await openPracticeStore();
       const participantId = await store.current.participantId();
       const environment = await environmentOf();
@@ -430,7 +432,8 @@ export function Practice({
         environment,
       });
       session.current = opened;
-      opened.mount(host);
+      await opened.mount(host);
+      if (!current()) return;
       opened.page({
         visible: document.visibilityState === "visible",
         focused: document.hasFocus(),
