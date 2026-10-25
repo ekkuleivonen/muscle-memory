@@ -4,7 +4,9 @@ import { codeFromHash, decodeCode, type SharedFile } from "../../../lib/share";
 
 /**
  * The code a sharer chose to include, read from the link's fragment after mount (the server
- * never sees it). Closed until asked for, since it shows their fix. Shown as plain text.
+ * never sees it). Closed until asked for, since it shows their solution. Shown as plain text.
+ * A challenge has one file to edit, so a link carries one; links made when challenges had
+ * several files still carry all of them, and every one is shown, in full.
  */
 export function SharedCode() {
   const [files, setFiles] = useState<SharedFile[] | null | undefined>(
@@ -42,8 +44,9 @@ export function SharedCode() {
   return (
     <details className="shared-code">
       <summary>
-        Their code ({files.length === 1 ? "1 file" : `${files.length} files`}),
-        shared by choice. Opening it shows their fix.
+        {files.length === 1
+          ? "Their solution, shared by choice. Opening it shows their code."
+          : `Their code (${files.length} files), shared by choice. Opening it shows their solution.`}
       </summary>
       {files.map((file) => (
         <figure key={file.path}>

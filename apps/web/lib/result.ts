@@ -1,5 +1,6 @@
 /**
- * The result card shown when a pull request is merged, and the shared link that carries it:
+ * The result card of a completed challenge (version 2: made when a pull request was merged,
+ * the completion of the time), and the shared link that carries it:
  * what happened, measured from this browser's own records (keystrokes, edits, runs, the page).
  * No score and no rank of anyone; a comparison with anonymous aggregates comes separately.
  * The link carries the numbers in its path, so anyone can open it without the sharer's data,
@@ -382,9 +383,9 @@ export function comparisonLine(
   language: string,
 ): string | null {
   if (result.fp !== undefined)
-    return `Faster than ${result.fp}% of people who fixed it in ${language}.`;
+    return `Faster than ${result.fp}% of people who completed it in ${language}.`;
   if (result.fn !== undefined)
-    return `One of the first ${COMPARE_FROM} people to fix it in ${language}.`;
+    return `One of the first ${COMPARE_FROM} people to complete it in ${language}.`;
   return null;
 }
 
@@ -396,10 +397,85 @@ export function duration(seconds: number): string {
   return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
 }
 
-/** One sentence that says what happened, for posts and previews. */
-export function sentence(result: Result, language: string): string {
+/**
+ * One sentence that says what happened, for posts and previews, naming the challenge when its
+ * title is known. A version 2 card was made when a pull request was merged, which is how a
+ * challenge was completed then, so it reads as completed, with the checks it carries. Card
+ * evidence that says the work was not merged is described as it is. Nothing here attests how
+ * the person worked: "without AI" is a condition of the editor, never an observed fact.
+ */
+export function sentence(
+  result: Result,
+  language: string,
+  title?: string,
+  voice: "first" | "third" = "third",
+): string {
+  const named = title ? `“${title}” (${result.k})` : result.k;
   const checks = result.ev?.checks;
-  return checks && checks.total !== null
-    ? `Merged a fix for ${result.k} in ${language} without AI. ${checks.passed}/${checks.total} checks passed.`
-    : `Merged a fix for ${result.k} in ${language} without AI.`;
+  const [worked, completed] =
+    voice === "first"
+      ? ["I worked on", "I completed"]
+      : ["Worked on", "Completed"];
+  if (result.ev && result.ev.state !== "merged")
+    return `${worked} ${named} in ${language}. Not completed.`;
+  if (!checks) return `${completed} ${named} in ${language}.`;
+  return checks.total > 0 && checks.passed === checks.total
+    ? `${completed} ${named} in ${language}. All ${checks.total} checks passed.`
+    : `${completed} ${named} in ${language}. ${checks.passed}/${checks.total} checks passed.`;
+}
+
+/**
+ * The receipt's lines, for the shared card: what the person did on the challenge, in the
+ * words of the challenge (checks, examples), never a pull request's. A version 2 card's
+ * "pushes" each ran the full checks, so they read as full checks. Hints and open findings
+ * come from before both were retired; they are shown only when a card has some.
+ */
+export function receiptLines(
+  m: Metrics & { ev?: PublicEvidence },
+): [string, string, boolean?][] {
+  const hints: [string, string][] =
+    (m.ev?.hints ?? m.h) ? [["hints", String(m.ev?.hints ?? m.h)]] : [];
+  if (m.ev)
+    return [
+      [
+        "checks passed",
+        `${m.ev.checks.passed ?? "?"}/${m.ev.checks.total ?? "?"}`,
+        m.ev.checks.total > 0 && m.ev.checks.passed === m.ev.checks.total,
+      ],
+      [
+        "first full check",
+        m.ev.first
+          ? `${m.ev.first.passed ?? "?"}/${m.ev.first.total ?? "?"}`
+          : "not known",
+      ],
+      [
+        "checks beyond the examples",
+        m.ev.hidden
+          ? `${m.ev.hidden.passed}/${m.ev.hidden.total}`
+          : "not known",
+      ],
+      ["full checks run", String(m.ev.pushes)],
+      ["example runs", String(m.ev.runs)],
+      ...(m.ev.findings.open
+        ? [
+            ["rule findings open", String(m.ev.findings.open)] as [
+              string,
+              string,
+            ],
+          ]
+        : []),
+      ...hints,
+    ];
+  return [
+    [
+      "example runs",
+      m.g === 1
+        ? `${m.r} · all passed first try`
+        : m.g
+          ? `${m.r} · all passed on run ${m.g}`
+          : String(m.r),
+      m.g === 1,
+    ],
+    ...hints,
+  ];
 }

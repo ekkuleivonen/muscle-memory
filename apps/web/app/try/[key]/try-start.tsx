@@ -8,9 +8,9 @@ import { useBoard } from "../../(browse)/_components/board";
 import { logArrival, noteArrival } from "../../(browse)/_components/board-log";
 
 /**
- * Starting a shared issue. For someone new it also accepts the Terms, which the line above the
- * button says plainly, as on /play. It opens the visitor's own work on the issue: from the
- * starting code, or where they left it if they had started it here before.
+ * Starting a shared challenge. For someone new it also accepts the Terms, which the line above
+ * the button says plainly, as on /play. It opens the visitor's own attempt: from the starting
+ * code, or where they left it if they had started it here before.
  */
 export function TryStart({
   issue,
@@ -63,19 +63,20 @@ export function TryStart({
           {starting
             ? "Opening…"
             : status === "in-progress"
-              ? `Continue your work on ${issue.key} →`
+              ? `Continue your attempt at ${issue.key} →`
               : `Start ${issue.key} yourself →`}
         </button>
         {consented && (
           <Link className="home-note" href={`/issues/${issue.key}`}>
-            Open it in the tracker
+            Challenge details
           </Link>
         )}
       </div>
       <p className="faint try-note">
         You start from the same code as everyone else. A link never brings
         anyone else&apos;s code, progress or results with it.
-        {!runnable && " This repo has no test runner set up yet; you can still read and edit the code."}
+        {!runnable &&
+          " Checks aren't available for this challenge yet; you can still open and edit the code."}
       </p>
     </section>
   );
