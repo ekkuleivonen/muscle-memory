@@ -35,7 +35,7 @@ export default function Home() {
       />
       <div className="term home">
         {/* The question is this page's heading, not the wordmark. */}
-        <Banner description="Practice without AI." heading={false} />
+        <Banner description="Keep your craft." heading={false} />
         <main className="t-prose home-fold">
           <h1 className="t-line home-headline">
             <strong>You can ship with AI.</strong>

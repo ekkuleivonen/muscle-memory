@@ -247,7 +247,7 @@ export class PracticeSession {
         activity: this.activity(),
       },
     );
-    this.view.focus();
+    focusInPlace(this.view);
   }
 
   private restoring = false;
@@ -269,7 +269,7 @@ export class PracticeSession {
       restorePlace(view, place);
       setTimeout(() => (this.restoring = false), 100);
     }
-    if (focus) view.focus();
+    if (focus) focusInPlace(view);
   }
 
   /** The code now. */
@@ -677,4 +677,12 @@ export class PracticeSession {
 function statusOf(outcome: RunOutcome): RunStatus {
   if (outcome.status === "completed") return "result";
   return outcome.status;
+}
+
+/**
+ * Focuses the editor where it is, without scrolling the page to it: on a phone the panes stack,
+ * and the challenge above the editor stays in view.
+ */
+function focusInPlace(view: EditorView): void {
+  view.contentDOM.focus({ preventScroll: true });
 }

@@ -570,7 +570,7 @@ export function Practice({
           aria-label="Challenge"
           ref={challengePane}
         >
-          <h2 className="pane-title">
+          <div className="pane-title">
             <kbd>[1]</kbd> challenge{" "}
             <span className="faint">· {challenge.key}</span>{" "}
             <button
@@ -582,7 +582,7 @@ export function Practice({
             >
               {starred ? "★" : "☆"}
             </button>
-          </h2>
+          </div>
           <div
             className="pane-body"
             tabIndex={0}
@@ -617,13 +617,13 @@ export function Practice({
           onReset={() => resize({ challenge: null })}
         />
         <section className="pane practice-work" aria-label="Your code">
-          <h2 className="pane-title">
+          <div className="pane-title">
             <kbd>[2]</kbd> code{" "}
             <span className="faint">
               · {languageLabel(challenge.language)} ·{" "}
               {keymap === "vim" ? `vim ${vimMode}` : "standard keys"}
             </span>
-          </h2>
+          </div>
           <div className="practice-editors">
             <div
               className="practice-editor"
@@ -722,9 +722,9 @@ export function Practice({
           aria-label="Feedback"
           ref={resultsPane}
         >
-          <h2 className="pane-title">
+          <div className="pane-title">
             <kbd>[3]</kbd> feedback
-          </h2>
+          </div>
           <div className="pane-body" tabIndex={0} ref={resultsBody}>
             <p className="t-sr" role="status" aria-atomic="true">
               {exampleAnnouncement(run, revision)}

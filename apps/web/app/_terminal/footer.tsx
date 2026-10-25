@@ -7,11 +7,10 @@ export interface Crumb {
 }
 
 /**
- * Always reachable, on the right: the way home, every challenge, settings, the manifesto
- * and the legal pages. Settings asks for the Terms first, like any page behind the consent gate.
+ * Always reachable, on the right: every challenge, settings, the manifesto and the legal
+ * pages. Home is the trail's first segment. Settings asks for the Terms first, like any page behind the consent gate.
  */
 const LINKS = [
-  { href: "/", label: "home" },
   { href: "/challenges", label: "challenges" },
   { href: "/settings", label: "settings" },
   { href: "/manifesto", label: "manifesto" },
@@ -31,15 +30,27 @@ export function TermFooter({ trail = [] }: { trail?: readonly Crumb[] }) {
         <ol className="t-trail">
           {steps.map((step, index) => {
             const last = index === steps.length - 1;
+            // Home's segment shortens to ~ on a phone; screen readers still hear the name.
+            const label =
+              index === 0 ? (
+                <>
+                  <span className="t-home-long">{step.label}</span>
+                  <span className="t-home-short" aria-hidden>
+                    ~
+                  </span>
+                </>
+              ) : (
+                step.label
+              );
             return (
               <li key={step.href}>
                 {last ? (
                   <span className="t-footer-link" aria-current="page">
-                    {step.label}
+                    {label}
                   </span>
                 ) : (
                   <Link href={step.href} className="t-footer-link">
-                    {step.label}
+                    {label}
                   </Link>
                 )}
               </li>
