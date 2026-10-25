@@ -1,7 +1,7 @@
 [
   {
     "id": "debug-print",
-    "message": "Don't print anything: the scanner job ships everything on stdout to the warehouse logs.",
+    "message": "Don't print anything: return the counts.",
     "when": {
       "pattern": "^\\s*print\\(",
       "present": true

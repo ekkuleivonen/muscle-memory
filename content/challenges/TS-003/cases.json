@@ -236,5 +236,18 @@
       15000
     ],
     "hidden": true
+  },
+  {
+    "input": [
+      [
+        0,
+        300
+      ],
+      300
+    ],
+    "expected": [
+      600
+    ],
+    "hidden": true
   }
 ]

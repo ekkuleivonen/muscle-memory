@@ -1,5 +1,5 @@
 {
-  "title": "IPv6 requests get 421 Misdirected Request",
+  "title": "Normalize Host headers, IPv6 literals included",
   "summary": "Host headers with an IPv6 literal lose everything after the first colon.",
   "difficulty": "easy",
   "tags": [

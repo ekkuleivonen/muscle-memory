@@ -105,5 +105,12 @@
     ],
     "expected": "shop.example.com",
     "hidden": true
+  },
+  {
+    "input": [
+      "example.com:80:443"
+    ],
+    "expected": "example.com",
+    "hidden": true
   }
 ]

@@ -1,0 +1,518 @@
+{
+  "challenge": "SQL-003",
+  "task": "Before the month-end close, finance needs the orders nobody has paid for. Write the query.\n\nThe database (PostgreSQL) has two tables:\n\n| table | column | type | meaning |\n| --- | --- | --- | --- |\n| `orders` | `id` | `integer`, primary key | the order's id |\n| `orders` | `customer` | `text`, not null | the customer's name |\n| `payments` | `order_id` | `integer`, not null, references `orders (id)` | the order the payment is for |\n| `payments` | `amount` | `integer`, not null | the amount paid |\n\n`payments` has one row per payment, and an order can have any number of payments, including none.\n\nReturn one column, the order's `id`, with one row for each order that has no payment at all, smallest id first. Any payment counts, whatever its amount, and each unpaid order appears once. Column names don't matter. No unpaid orders gives no rows.\n",
+  "language": "sql",
+  "file": "queries/unpaid-orders.sql",
+  "starter": "-- Month-end close: orders that have no matching payment, smallest id first.\n-- orders(id, customer), payments(order_id, amount)\nSELECT id\nFROM orders;\n",
+  "entrypoint": "query",
+  "schema": "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  customer text NOT NULL\n);\n\nCREATE TABLE payments (\n  order_id integer NOT NULL REFERENCES orders (id),\n  amount integer NOT NULL\n);\n",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": {
+        "orders": [
+          [
+            1,
+            "ana"
+          ],
+          [
+            2,
+            "bo"
+          ],
+          [
+            3,
+            "cy"
+          ]
+        ],
+        "payments": [
+          [
+            1,
+            30
+          ],
+          [
+            3,
+            12
+          ]
+        ]
+      },
+      "expected": [
+        [
+          2
+        ]
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": {
+        "orders": [],
+        "payments": []
+      },
+      "expected": [],
+      "hidden": true
+    },
+    {
+      "id": "case-3",
+      "input": {
+        "orders": [
+          [
+            1,
+            "ana"
+          ],
+          [
+            2,
+            "bo"
+          ]
+        ],
+        "payments": []
+      },
+      "expected": [
+        [
+          1
+        ],
+        [
+          2
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-4",
+      "input": {
+        "orders": [
+          [
+            1,
+            "ana"
+          ],
+          [
+            2,
+            "bo"
+          ]
+        ],
+        "payments": [
+          [
+            1,
+            30
+          ],
+          [
+            2,
+            12
+          ]
+        ]
+      },
+      "expected": [],
+      "hidden": true
+    },
+    {
+      "id": "case-5",
+      "input": {
+        "orders": [
+          [
+            1,
+            "ana"
+          ],
+          [
+            2,
+            "bo"
+          ],
+          [
+            3,
+            "cy"
+          ]
+        ],
+        "payments": [
+          [
+            1,
+            10
+          ],
+          [
+            1,
+            20
+          ],
+          [
+            1,
+            5
+          ]
+        ]
+      },
+      "expected": [
+        [
+          2
+        ],
+        [
+          3
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-6",
+      "input": {
+        "orders": [
+          [
+            5,
+            "ana"
+          ],
+          [
+            2,
+            "bo"
+          ],
+          [
+            9,
+            "cy"
+          ],
+          [
+            1,
+            "dee"
+          ]
+        ],
+        "payments": [
+          [
+            9,
+            10
+          ]
+        ]
+      },
+      "expected": [
+        [
+          1
+        ],
+        [
+          2
+        ],
+        [
+          5
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": {
+        "orders": [
+          [
+            1,
+            "ana"
+          ],
+          [
+            2,
+            "ana"
+          ],
+          [
+            3,
+            "bo"
+          ]
+        ],
+        "payments": [
+          [
+            1,
+            30
+          ]
+        ]
+      },
+      "expected": [
+        [
+          2
+        ],
+        [
+          3
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": {
+        "orders": [
+          [
+            100,
+            "ana"
+          ],
+          [
+            10,
+            "bo"
+          ],
+          [
+            9,
+            "cy"
+          ],
+          [
+            50,
+            "dee"
+          ]
+        ],
+        "payments": [
+          [
+            50,
+            5
+          ]
+        ]
+      },
+      "expected": [
+        [
+          9
+        ],
+        [
+          10
+        ],
+        [
+          100
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": {
+        "orders": [
+          [
+            1,
+            "ana"
+          ]
+        ],
+        "payments": []
+      },
+      "expected": [
+        [
+          1
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": {
+        "orders": [
+          [
+            1,
+            "ana"
+          ]
+        ],
+        "payments": [
+          [
+            1,
+            30
+          ]
+        ]
+      },
+      "expected": [],
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": {
+        "orders": [
+          [
+            2147483647,
+            "ana"
+          ],
+          [
+            1,
+            "bo"
+          ]
+        ],
+        "payments": [
+          [
+            1,
+            8
+          ]
+        ]
+      },
+      "expected": [
+        [
+          2147483647
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": {
+        "orders": [
+          [
+            4,
+            "ana"
+          ],
+          [
+            5,
+            "bo"
+          ],
+          [
+            6,
+            "cy"
+          ]
+        ],
+        "payments": [
+          [
+            4,
+            10
+          ],
+          [
+            4,
+            15
+          ],
+          [
+            6,
+            3
+          ],
+          [
+            6,
+            3
+          ]
+        ]
+      },
+      "expected": [
+        [
+          5
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": {
+        "orders": [
+          [
+            1,
+            "c1"
+          ],
+          [
+            2,
+            "c2"
+          ],
+          [
+            3,
+            "c3"
+          ],
+          [
+            4,
+            "c4"
+          ],
+          [
+            5,
+            "c5"
+          ],
+          [
+            6,
+            "c6"
+          ],
+          [
+            7,
+            "c7"
+          ],
+          [
+            8,
+            "c8"
+          ],
+          [
+            9,
+            "c9"
+          ],
+          [
+            10,
+            "c10"
+          ]
+        ],
+        "payments": [
+          [
+            2,
+            20
+          ],
+          [
+            4,
+            40
+          ],
+          [
+            6,
+            60
+          ],
+          [
+            8,
+            80
+          ],
+          [
+            10,
+            100
+          ]
+        ]
+      },
+      "expected": [
+        [
+          1
+        ],
+        [
+          3
+        ],
+        [
+          5
+        ],
+        [
+          7
+        ],
+        [
+          9
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": {
+        "orders": [
+          [
+            1,
+            "ana"
+          ],
+          [
+            2,
+            "bo"
+          ]
+        ],
+        "payments": [
+          [
+            1,
+            0
+          ]
+        ]
+      },
+      "expected": [
+        [
+          2
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": {
+        "orders": [
+          [
+            1,
+            "ana"
+          ],
+          [
+            2,
+            "bo"
+          ]
+        ],
+        "payments": [
+          [
+            1,
+            10
+          ],
+          [
+            1,
+            -10
+          ]
+        ]
+      },
+      "expected": [
+        [
+          2
+        ]
+      ],
+      "hidden": true
+    }
+  ],
+  "rules": []
+}

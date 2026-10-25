@@ -1,11 +1,11 @@
 {
-  "title": "Cache hit ratio fell to 71% after the index change",
-  "summary": "Since #412, keys stored past a purged slot are reported as misses.",
+  "title": "Open-addressing index loses keys after a purge",
+  "summary": "Purge keys from a linear-probing table without breaking later lookups.",
   "difficulty": "hard",
   "tags": [
     "hash-tables",
     "caching",
-    "reviewing-changes"
+    "reading-code"
   ],
   "file": "src/cache_index.cpp",
   "entrypoint": "cache_index",

@@ -1,6 +1,4 @@
-Support escalated this from the help desk:
-
-> A customer returned one of two jackets from an order that used **SPRING10** (10% off). The receipt says they paid **$45.00** for that jacket, but the refund came through as **$40.50**.
+A customer returned one of two jackets from an order that used **SPRING10** (10% off). The receipt says they paid **$45.00** for that jacket, but the refund came through as **$40.50**.
 
 ```text
 Order #10482    SPRING10 (10% off)

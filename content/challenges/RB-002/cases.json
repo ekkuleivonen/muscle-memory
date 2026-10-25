@@ -98,5 +98,20 @@
     "input": "",
     "expected": "",
     "hidden": true
+  },
+  {
+    "input": "Résumé Team",
+    "expected": "resume-team",
+    "hidden": true
+  },
+  {
+    "input": "Tokyo日本Team",
+    "expected": "tokyo-team",
+    "hidden": true
+  },
+  {
+    "input": "Rocket🚀Launch",
+    "expected": "rocket-launch",
+    "hidden": true
   }
 ]

@@ -1,0 +1,138 @@
+{
+  "challenge": "JAVA-001",
+  "task": "`WordCount.count(text)` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.\n\n- A word is a run of characters that are not whitespace. Words are separated by any run of whitespace: spaces, tabs, newlines and carriage returns, in any mix and number.\n- Whitespace at the start or end adds no words, so an empty or blank post has 0 words.\n- Punctuation, digits, symbols and non-English letters are part of the word they are in, and a symbol standing on its own between spaces is a word.\n",
+  "language": "java",
+  "file": "src/main/java/com/acme/composer/WordCount.java",
+  "starter": "package com.acme.composer;\n\n/** The word count the composer shows under the text box. */\npublic final class WordCount {\n    private WordCount() {}\n\n    /** The number of words in a post. */\n    public static int count(String text) {\n        return text.split(\" \").length;\n    }\n}\n",
+  "entrypoint": "count",
+  "adapter": "import com.acme.composer.WordCount;\n\n/** [text] → its word count. */\nfinal class Adapter {\n    static Object call(Json args) {\n        return WordCount.count(args.at(0).asString());\n    }\n}\n",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": "",
+      "expected": 0,
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": "hello world",
+      "expected": 2,
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": "  spaced   out  ",
+      "expected": 2,
+      "hidden": false
+    },
+    {
+      "id": "case-4",
+      "input": "one",
+      "expected": 1,
+      "hidden": false
+    },
+    {
+      "id": "case-5",
+      "input": "tabs\tand\nnew lines",
+      "expected": 4,
+      "hidden": true
+    },
+    {
+      "id": "case-6",
+      "input": "   ",
+      "expected": 0,
+      "hidden": false
+    },
+    {
+      "id": "case-7",
+      "input": "\t",
+      "expected": 0,
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": "\n",
+      "expected": 0,
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": " \t\n \n\t ",
+      "expected": 0,
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": "  leading",
+      "expected": 1,
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": "trailing   ",
+      "expected": 1,
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": "a  b   c    d",
+      "expected": 4,
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": "line one\nline two\n",
+      "expected": 4,
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": "first\r\nsecond\r\n",
+      "expected": 2,
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": "Hello, world! It's done.",
+      "expected": 4,
+      "hidden": true
+    },
+    {
+      "id": "case-16",
+      "input": "café naïve über 日本語 👋",
+      "expected": 5,
+      "hidden": true
+    },
+    {
+      "id": "case-17",
+      "input": "Total: 42 items, 3.5 kg & 100% done - ok",
+      "expected": 10,
+      "hidden": true
+    },
+    {
+      "id": "case-18",
+      "input": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word ",
+      "expected": 500,
+      "hidden": true
+    },
+    {
+      "id": "case-19",
+      "input": "lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit lorem\tipsum\ndolor sit ",
+      "expected": 1000,
+      "hidden": true
+    },
+    {
+      "id": "case-20",
+      "input": "one\rtwo",
+      "expected": 2,
+      "hidden": true
+    },
+    {
+      "id": "case-21",
+      "input": "0 items",
+      "expected": 2,
+      "hidden": true
+    }
+  ],
+  "rules": []
+}
