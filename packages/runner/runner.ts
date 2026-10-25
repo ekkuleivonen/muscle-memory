@@ -87,10 +87,10 @@ export interface RunRequest {
 const TEXT_LIMIT = 65536;
 /**
  * How long a sandbox may take to start, not counting the download: a slow connection is not a
- * failed runtime. The download instead fails when no bytes arrive for STALL_MS.
+ * failed runtime. Downloads have a separate, bounded total duration.
  */
 const BOOT_TIMEOUT_MS = 60_000;
-const STALL_MS = 30_000;
+const DOWNLOAD_TIMEOUT_MS = 5 * 60_000;
 
 interface Sandbox {
   readonly frame: HTMLIFrameElement;
@@ -321,8 +321,9 @@ export class Runner {
  * origin, so the site's existing sign-in (such as a Cloudflare Access cookie) applies; a
  * sandbox receives bytes, never credentials. Each file must match its pinned hash, and any
  * redirect (for example to a sign-in page) fails instead of being followed. Download
- * progress is reported against the pinned sizes. A download that receives nothing for
- * `stallMs` fails rather than showing progress that will never move; `signal` stops it.
+ * progress counts verified bytes against pinned sizes. SRI fetch may withhold the response
+ * until the whole file is verified, so no stream-stall claim is made. A separate total
+ * download timeout bounds hangs; `signal` stops a disposed runner.
  */
 export async function loadPinned(
   pinned: {
@@ -331,7 +332,10 @@ export async function loadPinned(
   },
   base: URL,
   onProgress?: (progress: LoadProgress) => void,
-  { signal, stallMs = STALL_MS }: { signal?: AbortSignal; stallMs?: number } = {},
+  {
+    signal,
+    downloadTimeoutMs = DOWNLOAD_TIMEOUT_MS,
+  }: { signal?: AbortSignal; downloadTimeoutMs?: number } = {},
 ): Promise<Record<string, ArrayBuffer>> {
   const total = Object.values(pinned.sizes).reduce((a, b) => a + b, 0);
   let loaded = 0;
@@ -339,29 +343,23 @@ export async function loadPinned(
   const abort = () => stop.abort();
   signal?.addEventListener("abort", abort);
   if (signal?.aborted) stop.abort();
-  let stalled = false;
-  let watchdog: ReturnType<typeof setTimeout> | undefined;
-  const alive = () => {
-    clearTimeout(watchdog);
-    watchdog = setTimeout(() => {
-      stalled = true;
-      stop.abort();
-    }, stallMs);
-  };
+  let timedOut = false;
+  const watchdog = setTimeout(() => {
+    timedOut = true;
+    stop.abort();
+  }, downloadTimeoutMs);
   const count = (bytes: number) => {
-    alive();
     loaded += bytes;
     onProgress?.({ phase: "download", loaded: Math.min(loaded, total), total });
   };
   const failure = (name: string, fallback: string) =>
     new Error(
-      stalled
-        ? `Runtime file ${name} stopped downloading: nothing arrived for ${stallMs / 1000} s.`
+      timedOut
+        ? `Runtime download exceeded ${downloadTimeoutMs / 1000} s. Retry when your connection is ready.`
         : signal?.aborted
           ? `Loading runtime file ${name} was stopped.`
           : fallback,
     );
-  alive();
   try {
     const entries = await Promise.all(
       Object.entries(pinned.files).map(async ([name, integrity]) => {

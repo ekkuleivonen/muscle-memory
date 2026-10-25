@@ -182,7 +182,12 @@ export function Ide({
     ...editable.map((f) => f.path).filter((path) => path !== home),
     testsFile.path,
   ]);
-  const [active, setActive] = useState(home);
+  const [active, setActiveState] = useState(home);
+  const setActive = (path: string) => {
+    // Capture the old file while it still has a layout box.
+    session.current?.places();
+    setActiveState(path);
+  };
   const [panel, setPanel] = useState<"tests" | "output" | "pulls">("tests");
   const savedScope = useRef<string | null>(null);
   const pendingPlaces = useRef<Record<string, FileView>>({});
@@ -830,6 +835,7 @@ export function Ide({
   return (
     <div
       className="ide"
+      onClickCapture={persistView}
       style={
         {
           "--side-w": `${layout.side}px`,
@@ -995,11 +1001,6 @@ export function Ide({
       />
 
       <main className="ide-main" ref={mainRef}>
-        {offline && (
-          <p role="status">
-            You’re offline. Keep editing; retry checks when reconnected.
-          </p>
-        )}
         {runtime.state === "loading" && !booting && (
           <div
             className="ide-progress"
@@ -1211,7 +1212,14 @@ export function Ide({
       </main>
 
       <footer className="ide-status">
-        <span title="Branch">⎇ {repo.branch}</span>
+        <span
+          title={
+            offline ? "Keep editing; retry checks when reconnected." : "Branch"
+          }
+          role={offline ? "status" : undefined}
+        >
+          {offline ? "Offline · retry checks when online" : `⎇ ${repo.branch}`}
+        </span>
         {capture && (
           <span
             className={`ide-save ${saveBadge(capture).tone}`}

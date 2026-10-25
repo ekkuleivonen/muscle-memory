@@ -261,12 +261,14 @@ export class WorkspaceSession {
   }
 
   private restoring = new Set<string>();
+  private lastPlaces = new Map<string, FileView>();
 
   /** Each mounted editable file's cursor, selection and scroll, to come back to later. */
   places(): Record<string, FileView> {
-    return Object.fromEntries(
-      [...this.views].map(([path, view]) => [path, fileViewOf(view)]),
-    );
+    for (const [path, view] of this.views)
+      if (view.dom.getClientRects().length)
+        this.lastPlaces.set(path, fileViewOf(view));
+    return Object.fromEntries(this.lastPlaces);
   }
 
   /**
@@ -280,6 +282,7 @@ export class WorkspaceSession {
     const view = this.views.get(path);
     if (!view || this.closed) return;
     if (place) {
+      this.lastPlaces.set(path, place);
       this.restoring.add(path);
       restoreFileView(view, place);
       setTimeout(() => this.restoring.delete(path), 100);
