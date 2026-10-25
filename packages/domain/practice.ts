@@ -45,7 +45,7 @@ export type RunPurpose = "examples" | "submit";
 /** What a submission's run said. Errored: the code never got to the cases. */
 export type SubmitResult = "passed" | "failed" | "errored" | "cancelled";
 /**
- * Where a start came from: the picker, quick start, a shared link, the next challenge suggested
+ * Where a start came from: the picker, quick start, a shared result's invitation, the next challenge suggested
  * after completing one, practising a completed challenge again, or practice opened by its URL
  * with no attempt under way (direct).
  */

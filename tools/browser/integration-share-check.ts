@@ -187,14 +187,10 @@ try {
     await fresh.locator("body").innerText(),
     /without AI|faster than|percentile/i,
   );
-  await fresh
-    .getByRole("link")
-    .filter({ hasText: /JS-002/ })
-    .last()
-    .click();
-  await fresh
-    .getByRole("button", { name: "Start JS-002 yourself", exact: false })
-    .click();
+  // Your turn: through the Terms, into their own attempt, recorded as started from a link.
+  await fresh.getByRole("link", { name: /Try JS-002 yourself/ }).click();
+  await fresh.waitForURL(/\/consent/);
+  await fresh.getByRole("button", { name: /16 or older and accept/ }).click();
   const freshEditor = fresh.locator(
     '.practice-editor .cm-content[contenteditable="true"]',
   );
@@ -206,8 +202,26 @@ try {
       .count(),
     0,
   );
+  const started = await fresh.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("muscle-memory-local-practice");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    for (let i = 0; i < 50; i++) {
+      const all = await new Promise<any[]>((resolve) => {
+        const request = db.transaction("records").objectStore("records").getAll();
+        request.onsuccess = () => resolve(request.result.map((r: any) => JSON.parse(r.payload)));
+      });
+      const found = all.find((r) => r.type === "practice.started");
+      if (found) return found.data.from;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return null;
+  });
+  assert.equal(started, "link");
   passed(
-    "fresh recipients see only opted-in solution and start their own independent attempt",
+    "fresh recipients see only opted-in solution and start their own attempt, from the link",
   );
   await page.goto(`${origin}/challenges/SQL-002`);
   await editor().waitFor();

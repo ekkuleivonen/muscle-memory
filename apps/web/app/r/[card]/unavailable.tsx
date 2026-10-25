@@ -23,7 +23,7 @@ export function SharedHeader() {
  */
 export function Unavailable({ title, body }: { title: string; body: string }) {
   return (
-    <div className="legal home play">
+    <div className="legal home">
       <SharedHeader />
       <main className="legal-body home-body recovery-state shared-unavailable">
         <h1>{title}</h1>

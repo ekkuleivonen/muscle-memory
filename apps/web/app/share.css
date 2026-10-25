@@ -1,4 +1,4 @@
-/* Shared links: copy-link controls, the code opt-in, /try/KEY and the pages for links that can't be shown. */
+/* Shared links: copy-link controls, the code opt-in, and the pages for links that can't be shown. */
 .copy-link {
   font: inherit;
   font-size: 12.5px;
@@ -37,56 +37,6 @@
 .share-actions button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-.try-title {
-  font-size: 28px;
-  line-height: 1.2;
-  margin: 4px 0 8px;
-}
-.try-ticket h2 {
-  font-size: 14px;
-  margin: 18px 0 8px;
-}
-.try-ticket > :first-child {
-  margin-top: 0;
-}
-.try-criteria {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 12px;
-  font-size: 13px;
-}
-.try-criteria h3 {
-  font-size: 13px;
-  margin: 0 0 4px;
-}
-.try-criteria dl {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 4px 12px;
-  margin: 0;
-}
-.try-criteria dt {
-  color: var(--dim);
-}
-.try-criteria dd {
-  margin: 0;
-  min-width: 0;
-}
-.try-criteria pre {
-  margin: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font-size: 12.5px;
-}
-.try-start .home-actions {
-  align-items: center;
-  flex-wrap: wrap;
-}
-.try-note {
-  font-size: 13px;
 }
 .shared-code {
   margin-top: 16px;

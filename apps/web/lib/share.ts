@@ -1,5 +1,5 @@
 /**
- * Shared links: a challenge (`/try/RG-4`), a completed challenge's result (`/r/<card>`), and
+ * Shared links: a challenge (`/challenges/RG-4`), a completed challenge's result (`/r/<card>`), and
  * the solution someone chose to include with a result (`#code=…`, after the card).
  *
  * A link carries only what is in it. A challenge link is its permanent key, so it opens the
@@ -11,9 +11,6 @@
  */
 import { CHALLENGE_KEY } from "../../../packages/domain/records";
 import { decodeOutcome, type Outcome } from "./outcome";
-
-/** The public page of a challenge: what it is, and a fresh start on it. */
-export const tryHref = (key: string) => `/try/${key}`;
 
 /** What a result link turned out to be, so a bad or old one gets an honest page. */
 export type CardLink =
@@ -245,10 +242,9 @@ export function solutionOf(
 }
 
 /**
- * How a shared outcome invites the visitor in. `/try/<KEY>` always serves the challenge's live
+ * How a shared outcome invites the visitor in. Practice always serves the challenge's live
  * revision, so "the same starting code they did" is said only when the card names that exact
- * revision (a v3 card checked on it). An older v3 card, and every v2 card (no revision
- * identity), get the current challenge, said as such.
+ * revision; a card checked on an earlier one gets the current challenge, said as such.
  */
 export function startCopy(
   key: string,

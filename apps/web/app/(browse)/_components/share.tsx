@@ -21,17 +21,17 @@ import {
   REFUSALS,
   type CodeRefusal,
   solutionOf,
-  tryHref,
   type SharedFile,
 } from "../../../lib/share";
 import { logShare } from "../../../lib/site-log";
+import { practiceHref } from "../../../lib/paths";
 import { copyText, useReferral, type ResultInput } from "./result-card";
 import "../../share.css";
 
 type Channel = "copy" | "x" | "linkedin" | "native";
 
 /**
- * A small, secondary "Copy link" for anything with a public page: the challenge (`/try/KEY`) or
+ * A small, secondary "Copy link" for anything worth sending: the challenge (`/challenges/KEY`) or
  * a shared result. It copies the absolute URL and says so; it never opens anything.
  */
 export function CopyLink({
@@ -39,7 +39,7 @@ export function CopyLink({
   label = "Copy link",
   className,
 }: {
-  /** A path on this site, e.g. tryHref(issue.key). */
+  /** A path on this site, e.g. practiceHref(issue.key). */
   href: string;
   label?: string;
   className?: string;
@@ -64,11 +64,11 @@ export function CopyLink({
   );
 }
 
-/** The challenge's public link, for the challenge page and wherever it is worked on. */
+/** The challenge's link, from practice. */
 export function CopyIssueLink({ issueKey }: { issueKey: string }) {
   return (
     <div className="share-issue">
-      <CopyLink href={tryHref(issueKey)} label="Copy challenge link" />
+      <CopyLink href={practiceHref(issueKey)} label="Copy challenge link" />
       <p className="faint">
         Opens {issueKey} from its starting code for whoever you send it to.
         Never your code or your attempt.

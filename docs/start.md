@@ -7,15 +7,10 @@ The ways in, and how a result or a challenge gets shared. Every way in leads to 
 - **`/`**, public: what this is, in one screen, **try your first challenge →** to quick start and **explore all challenges** to the list. The manifesto (`/manifesto`, "I read code every day. Then I tried writing some.") tells the story behind it and what the data can and can't say.
 - **Quick start (`/start`)**, public: pick a language and get an easy challenge in it at once, the easiest one this device hasn't completed (`apps/web/lib/quick-start.ts`). The language a link names (`?lang=go`), or the profile's first, is offered first and highlighted, so Enter starts it. Starting accepts the Terms for someone new (the line above the list says so, including that every keystroke is recorded); the language picked is saved as a first guess at the profile's languages when there is none ([profile](profile.md)). Practice records the start as from `quick-start`.
 - **The list (`/challenges`)**: every challenge in one picker, like fzf. Type to narrow (plain words, or `lang:python`, `difficulty:easy`, `tag:strings`, `is:starred`, `is:completed`, `sort:`), toggle the filters, move with ↑↓, star with Ctrl-s, and read the highlighted challenge's task and examples in the preview. Easiest first. Enter opens practice, which records the start with the search and the position picked.
-- **A challenge's URL (`/challenges/<KEY>`)** opens practice on it directly: its attempt if there is one, otherwise a new one started `direct`.
-- **A shared challenge (`/try/<KEY>`)**, public: below.
+- **A challenge's URL (`/challenges/<KEY>`)** opens practice on it directly: its attempt if there is one, otherwise a new one started `direct`. **Copy challenge link** in practice copies it; it never carries anyone's code or attempt.
 - **A shared result (`/r/<card>`)**, public: below.
 
-Accepting the current Terms is the only thing any page requires (`requireConsent`). Someone who has not (a deep link, or the Terms changed since) is sent to `/consent`: the Terms in four points, one button, then on to the page they were heading for. `/start` and `/try/<KEY>` do the same inline. There is no onboarding: the profile questions are in settings, and nothing insists on them.
-
-## Sharing a challenge (`/try/<KEY>`)
-
-Every challenge has a public page: its task, its examples and **Start <KEY> yourself**, with the same Terms line as quick start. Starting opens the visitor's own attempt (from the starting code, or where they left it in that browser) and is recorded as from `link`. The link names only the challenge, never anyone's code or records. Its preview image (`opengraph-image.tsx`) names the challenge, its language and its one-line summary. **Copy challenge link** in practice copies it.
+Accepting the current Terms is the only thing any page requires (`requireConsent`). Someone who has not (a deep link, or the Terms changed since) is sent to `/consent`: the Terms in four points, one button, then on to the page they were heading for. `/start` does the same inline. There is no onboarding: the profile questions are in settings, and nothing insists on them.
 
 ## Sharing a result
 
@@ -23,7 +18,7 @@ After completing, practice offers **Share result**: a preview of exactly what a 
 
 **Code is left out unless the person ticks "Include my code"**, which starts unticked every time. Ticked, the editable file exactly as the completing run checked it (never the editor's current code) goes into the link's fragment, deflated (`/r/<card>#code=…`, `apps/web/lib/share.ts`): browsers never send a fragment to the server, so nothing stores it. A file kept only in part, or code over the size limits, is refused with a message saying why, never cut.
 
-**The shared page** reads "Completed “<title>” (<KEY>) in <language>. All <n> checks passed.", says when it was completed on an earlier revision than the live one, shows a preview image with the same sentence (1200×630), any included code collapsed as plain text, and **your turn**, which leads to `/try/<KEY>`. A link that cannot be shown says why and invents nothing: incomplete, an older card version, or a challenge that no longer exists.
+**The shared page** reads "Completed “<title>” (<KEY>) in <language>. All <n> checks passed.", says when it was completed on an earlier revision than the live one, shows a preview image with the same sentence (1200×630), any included code collapsed as plain text, and **Try <KEY> yourself**, which opens practice on the same challenge in the visitor's own attempt (through `/consent` for someone new), recorded as started from `link`. A link that cannot be shown says why and invents nothing: incomplete (including any card version but the current one), or a challenge that no longer exists.
 
 ## Measuring the loop
 

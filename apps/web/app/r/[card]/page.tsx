@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { hookFor } from "../../../lib/hooks";
 import { LANGUAGES } from "../../../lib/languages";
 import { getLibrary } from "../../../lib/load";
@@ -8,7 +7,8 @@ import {
   outcomeSentence,
   type Outcome,
 } from "../../../lib/outcome";
-import { inspectCard, startCopy, tryHref } from "../../../lib/share";
+import { inspectCard, startCopy } from "../../../lib/share";
+import { YourTurn } from "./your-turn";
 import { Arrived } from "./arrived";
 import { SharedCode } from "./shared-code";
 import { SharedHeader, Unavailable } from "./unavailable";
@@ -83,7 +83,7 @@ export default async function SharedResult(props: Props) {
       />
     );
   return (
-    <div className="legal home play">
+    <div className="legal home">
       <SharedHeader />
       <Arrived referral={shown.referral} />
       <main className="legal-body home-body">
@@ -107,10 +107,10 @@ export default async function SharedResult(props: Props) {
             {startCopy(issue.key, shown.sameVersion).lede}
           </p>
           <div className="home-actions">
-            <Link className="home-cta" href={tryHref(issue.key)}>
-              {/* Same version only when the card names the live revision; a v2 card names none. */}
-              {startCopy(issue.key, shown.sameVersion).cta}
-            </Link>
+            <YourTurn
+              challengeKey={issue.key}
+              label={startCopy(issue.key, shown.sameVersion).cta}
+            />
             <span className="home-note">No email needed.</span>
           </div>
         </section>

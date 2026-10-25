@@ -39,7 +39,7 @@ Everything inside a challenge at `/challenges/<KEY>` (`packages/domain/practice.
 
 | Type | Recorded |
 | --- | --- |
-| `practice.started` | an attempt began: the challenge key, where from (`picker`, `quick-start`, `link`, `next`, `again`, or `direct` for practice opened by its URL), and for a pick from the list the search then and the position in the list (from 1) |
+| `practice.started` | an attempt began: the challenge key, where from (`picker`, `quick-start`, `link` for a shared result's invitation, `next`, `again`, or `direct` for practice opened by its URL), and for a pick from the list the search then and the position in the list (from 1) |
 | `practice.opened` | the code revision and artifact, the app page it was opened from, the profile then, the window size, the environment, the editor's features and keymap, the runtime, and the declared capture gaps |
 | `practice.keys` | every key down and up and IME composition in the editor: `[elapsedMs, kind, key, code, modifiers, repeat]`, with both the character typed and the physical key, about a second at a time |
 | `practice.edit` | one per document-changing transaction: the CodeMirror change set (up to 16 KiB, else a snapshot), the user event (`input.type`, `input.paste`, `undo`, …), the selection and length |

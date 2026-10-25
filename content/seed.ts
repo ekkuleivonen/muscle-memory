@@ -474,11 +474,11 @@ func ParseDuration(text string) (int, error) {
 import { MORE } from "./more";
 
 const BASE_ISSUES: SeedIssue[] = [
-  // Quick fixes: five-minute bugs, one per language, for /play
+  // Quick fixes: the same small bug, one per language
   challenge("word-count-python", {
     key: "PY-001",
     title: "The composer says 1 word when the post is empty",
-    summary: "A five-minute bug: the word count under the text box is off.",
+    summary: "A small bug: the word count under the text box is off.",
     difficulty: "easy",
     language: "python",
     tags: ["strings", "edge-cases"],
@@ -545,7 +545,7 @@ def count_words(text):
   challenge("word-count-javascript", {
     key: "JS-002",
     title: "The composer says 1 word when the post is empty",
-    summary: "A five-minute bug: the word count under the text box is off.",
+    summary: "A small bug: the word count under the text box is off.",
     difficulty: "easy",
     language: "javascript",
     tags: ["strings", "edge-cases"],
@@ -615,7 +615,7 @@ export function countWords(text) {
   challenge("word-count-typescript", {
     key: "TS-001",
     title: "The composer says 1 word when the post is empty",
-    summary: "A five-minute bug: the word count under the text box is off.",
+    summary: "A small bug: the word count under the text box is off.",
     difficulty: "easy",
     language: "typescript",
     tags: ["strings", "edge-cases"],
@@ -658,7 +658,7 @@ export function countWords(text: string): number {
   challenge("word-count-go", {
     key: "GO-001",
     title: "The composer says 1 word when the post is empty",
-    summary: "A five-minute bug: the word count under the text box is off.",
+    summary: "A small bug: the word count under the text box is off.",
     difficulty: "easy",
     language: "go",
     tags: ["strings", "edge-cases"],
@@ -714,7 +714,7 @@ final class Adapter {
 }
 `,
     title: "The composer says 1 word when the post is empty",
-    summary: "A five-minute bug: the word count under the text box is off.",
+    summary: "A small bug: the word count under the text box is off.",
     difficulty: "easy",
     language: "java",
     tags: ["strings", "edge-cases"],
@@ -765,7 +765,7 @@ public final class WordCount {
   challenge("word-count-csharp", {
     key: "CS-001",
     title: "The composer says 1 word when the post is empty",
-    summary: "A five-minute bug: the word count under the text box is off.",
+    summary: "A small bug: the word count under the text box is off.",
     difficulty: "easy",
     language: "csharp",
     tags: ["strings", "edge-cases"],
@@ -815,7 +815,7 @@ public static class WordCount
   challenge("word-count-ruby", {
     key: "RB-001",
     title: "The composer says 1 word when the post is empty",
-    summary: "A five-minute bug: the word count under the text box is off.",
+    summary: "A small bug: the word count under the text box is off.",
     difficulty: "easy",
     language: "ruby",
     tags: ["strings", "edge-cases"],
@@ -858,7 +858,7 @@ end
   challenge("word-count-php", {
     key: "PHP-001",
     title: "The composer says 1 word when the post is empty",
-    summary: "A five-minute bug: the word count under the text box is off.",
+    summary: "A small bug: the word count under the text box is off.",
     difficulty: "easy",
     language: "php",
     tags: ["strings", "edge-cases"],

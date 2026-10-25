@@ -11,7 +11,6 @@ import {
   REFUSALS,
   solutionOf,
   startCopy,
-  tryHref,
   type SharedFile,
 } from "./share";
 
@@ -19,7 +18,6 @@ const segment = (value: unknown) =>
   Buffer.from(JSON.stringify(value)).toString("base64url");
 
 test("an issue link is its permanent key and nothing of the sender", () => {
-  assert.equal(tryHref("RG-4"), "/try/RG-4");
 });
 
 test("shared code survives its fragment, and anything we would not have made is refused", async () => {

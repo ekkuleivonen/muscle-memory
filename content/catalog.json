@@ -56,7 +56,7 @@
       "id": "word-count-csharp",
       "key": "CS-001",
       "title": "The composer says 1 word when the post is empty",
-      "summary": "A five-minute bug: the word count under the text box is off.",
+      "summary": "A small bug: the word count under the text box is off.",
       "difficulty": "easy",
       "tags": [
         "strings",
@@ -81,7 +81,7 @@
       "id": "word-count-go",
       "key": "GO-001",
       "title": "The composer says 1 word when the post is empty",
-      "summary": "A five-minute bug: the word count under the text box is off.",
+      "summary": "A small bug: the word count under the text box is off.",
       "difficulty": "easy",
       "tags": [
         "strings",
@@ -181,7 +181,7 @@
       "id": "word-count-java",
       "key": "JAVA-001",
       "title": "The composer says 1 word when the post is empty",
-      "summary": "A five-minute bug: the word count under the text box is off.",
+      "summary": "A small bug: the word count under the text box is off.",
       "difficulty": "easy",
       "tags": [
         "strings",
@@ -218,7 +218,7 @@
       "id": "word-count-javascript",
       "key": "JS-002",
       "title": "The composer says 1 word when the post is empty",
-      "summary": "A five-minute bug: the word count under the text box is off.",
+      "summary": "A small bug: the word count under the text box is off.",
       "difficulty": "easy",
       "tags": [
         "strings",
@@ -282,7 +282,7 @@
       "id": "word-count-php",
       "key": "PHP-001",
       "title": "The composer says 1 word when the post is empty",
-      "summary": "A five-minute bug: the word count under the text box is off.",
+      "summary": "A small bug: the word count under the text box is off.",
       "difficulty": "easy",
       "tags": [
         "strings",
@@ -319,7 +319,7 @@
       "id": "word-count-python",
       "key": "PY-001",
       "title": "The composer says 1 word when the post is empty",
-      "summary": "A five-minute bug: the word count under the text box is off.",
+      "summary": "A small bug: the word count under the text box is off.",
       "difficulty": "easy",
       "tags": [
         "strings",
@@ -449,7 +449,7 @@
       "id": "word-count-ruby",
       "key": "RB-001",
       "title": "The composer says 1 word when the post is empty",
-      "summary": "A five-minute bug: the word count under the text box is off.",
+      "summary": "A small bug: the word count under the text box is off.",
       "difficulty": "easy",
       "tags": [
         "strings",
@@ -511,7 +511,7 @@
       "id": "word-count-typescript",
       "key": "TS-001",
       "title": "The composer says 1 word when the post is empty",
-      "summary": "A five-minute bug: the word count under the text box is off.",
+      "summary": "A small bug: the word count under the text box is off.",
       "difficulty": "easy",
       "tags": [
         "strings",

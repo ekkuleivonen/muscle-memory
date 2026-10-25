@@ -19,7 +19,7 @@ export default async function Consent({ searchParams }: Props) {
   const store = await cookies();
   if (hasConsent(store.get(CONSENT_COOKIE)?.value)) redirect(next);
   return (
-    <div className="legal home play">
+    <div className="legal home">
       <header className="legal-head">
         <Link href="/" className="workspace-name">
           <img

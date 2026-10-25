@@ -1,6 +1,6 @@
 # The profile and its questions
 
-There is no onboarding. Accepting the current Terms is the only thing any page needs (one click at `/consent`, or starting from quick start or a shared challenge); after that, the questions wait in settings and nothing insists on them.
+There is no onboarding. Accepting the current Terms is the only thing any page needs (one click at `/consent`, or starting from quick start); after that, the questions wait in settings and nothing insists on them.
 
 ## The questions
 

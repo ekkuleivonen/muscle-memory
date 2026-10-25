@@ -19,7 +19,7 @@ The product centers on solving coding challenges independently: challenge, code,
 - `app/workspace`: the editor (`editor.ts`, CodeMirror 6), the session that records practice (`session.ts`), save state, view continuity and the TypeScript type checker (`type-checker.ts`, its own worker).
 - `lib/progress.ts` (attempts and completions on this device), `lib/start.ts` (where a start came from, handed to practice), `lib/submission.ts` (a Submit's verdict), `lib/site-log.ts` (the site stream), `lib/environment.ts`.
 - `app/_terminal` (the terminal look: banner, status bar, menus, styles), `app/settings`: `/settings` lists the commands, each its own page (`/settings/<command>`, `/settings/profile/<question>`) ([docs/profile.md](../../docs/profile.md)).
-- `app/try/[key]` and `app/r/[card]`: a shared challenge and a shared result ([docs/start.md](../../docs/start.md)).
+- `app/r/[card]`: a shared result ([docs/start.md](../../docs/start.md)).
 - Runners live outside the app, in `packages/runner` (see the root `AGENTS.md`).
 
 ## Conventions
