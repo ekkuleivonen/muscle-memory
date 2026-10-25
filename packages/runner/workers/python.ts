@@ -5,9 +5,13 @@
 export const PYTHON_WORKER = String.raw`
 const HARNESS = ${JSON.stringify(
   // Defines __mm_run(code, inputs_json, ...) -> JSON result. Each run uses a fresh interpreter,
-  // so state left by user code never reaches another run.
+  // so state left by user code never reaches another run. The repo's other source files are
+  // written under /repo first, so the entry file imports them as it would at work: from the
+  // repo root (from shop.money import cents) or from its own folder (import money).
   `
-import json, sys, traceback
+import json, os, sys, traceback, importlib
+
+REPO = "/repo"
 
 def __mm_bounded(text, limit):
     data = text.encode("utf-8", "replace")
@@ -25,8 +29,10 @@ def __mm_text(error, limit):
 def __mm_error(error, limit):
     try:
         lines = traceback.format_exception(error)
-        # Drop the harness's own frames so tracebacks point at the solution file.
+        # Drop the harness's own frames so tracebacks point at the solution file, and name
+        # the repo's other files by their repo path, as the entry file is.
         text = "".join(line for line in lines if '"<exec>"' not in line)
+        text = text.replace('File "' + REPO + '/', 'File "')
     except BaseException:
         text = type(error).__name__ + ": " + __mm_text(error, 2000) + "\\n"
     return {"type": type(error).__name__, "message": __mm_text(error, 2000),
@@ -62,7 +68,20 @@ def __mm_unconvertible(value, depth_limit, item_limit):
         stack.extend((child, depth + 1) for child in children)
     return None
 
+def __mm_paths(filename):
+    # The repo root and the entry file's folder, ahead of everything else; modules from an
+    # earlier run are forgotten so an edited file is imported afresh.
+    for path in (os.path.join(REPO, os.path.dirname(filename)), REPO):
+        if path in sys.path:
+            sys.path.remove(path)
+        sys.path.insert(0, path)
+    for name, module in list(sys.modules.items()):
+        if (getattr(module, "__file__", None) or "").startswith(REPO + "/"):
+            del sys.modules[name]
+    importlib.invalidate_caches()
+
 def __mm_run(code, inputs_json, function_name, spread, filename, limit):
+    __mm_paths(filename)
     tests = [json.dumps(value) for value in json.loads(inputs_json)]
     namespace = {"__name__": "solution"}
     try:
@@ -185,7 +204,16 @@ async function boot({ assets, config }) {
   postMessage({ type: "ready", bootMs: Math.round(performance.now() - started) });
 }
 
-function run({ runId, code, inputs, entrypoint, parameters, filename }) {
+/** The repo's other source files, by path from the root, under /repo for imports. */
+function writeFiles(files) {
+  for (const [path, text] of Object.entries(files || {})) {
+    const full = "/repo/" + path;
+    pyodide.FS.mkdirTree(full.slice(0, full.lastIndexOf("/")));
+    pyodide.FS.writeFile(full, text);
+  }
+}
+
+function run({ runId, code, inputs, entrypoint, parameters, filename, files }) {
   output = {
     stdout: { chunks: [], kept: 0, bytes: 0 },
     stderr: { chunks: [], kept: 0, bytes: 0 },
@@ -193,6 +221,7 @@ function run({ runId, code, inputs, entrypoint, parameters, filename }) {
   const started = performance.now();
   let result;
   try {
+    writeFiles(files);
     const raw = pyodide.globals
       .get("__mm_run")(
         code,

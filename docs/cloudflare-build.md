@@ -20,12 +20,12 @@ No deploy/upload script is provided. The app has no database, R2 bucket or crede
 
 Wrangler is pinned to a compatible patch that fixes a transitive sharp advisory. The root override raises the build-only `@node-minify/core` glob dependency to 10.5.0, which fixes its command-injection advisory. A clean install reported zero npm vulnerabilities. Revisit the override when upstream removes the older glob pin.
 
-## Owner preview deployment
+## Public deployment
 
-The Worker configuration reserves the custom domain `musclememory.run` and disables both `workers.dev` and version preview URLs. Before deploying, configure Cloudflare Access for the entire hostname with an explicit owner-only email rule. Do not add bypass policies or alternate public routes.
+The Worker serves the custom domain `musclememory.run`, with `workers.dev` and version preview URLs disabled. The site is public: the app, `/play`, shared results (`/r/*`) and their preview images, and `/ingest/*` (the ingest Worker, [telemetry](telemetry.md)) are reachable without signing in. Accepting the Terms at `/consent` or `/play` is the only gate, and it is the app's, not Cloudflare's.
 
-The app keeps practice records on the device; the hosted endpoint serves content only. Cloudflare Access is preview entry authentication, not a participant account or research consent system.
+Cloudflare Access is kept for what must stay private: the future admin routes, when they exist, get their own Access application with an owner-only email rule. Do not put Access back in front of the whole hostname; shared links and uploads would stop working for everyone else.
 
-For Cloudflare Workers Builds, use the repository root, build command `npm run check:content && npm run build:cloudflare`, and deploy command `npx wrangler deploy --config apps/web/wrangler.jsonc`. Select `main` only and disable nonproduction branch deployments. Use existing authorized integrations; never commit API tokens. Deployment setup and anonymous-access verification are tracked in Linear before claiming the preview is live.
+For Cloudflare Workers Builds, use the repository root, build command `npm run check:content && npm run build:cloudflare`, and deploy command `npx wrangler deploy --config apps/web/wrangler.jsonc`. Select `main` only and disable nonproduction branch deployments. Use existing authorized integrations; never commit API tokens. After a merge, check that a build ran (`npx wrangler deployments list --name muscle-memory` shows a new version); a manual deploy is the same build and deploy commands run locally with Node 22.
 
-The owner preview is deployed behind Cloudflare Access. Anonymous app and catalog requests redirect to the login gate; alternate workers.dev and version URLs are disabled. The Cloudflare Git connection targets main with preview branch builds disabled. The first automatic build must be verified before treating update delivery as proven; the local Mac is not a hosting dependency.
+The ingest Worker deploys separately: `npx wrangler deploy --config apps/ingest/wrangler.jsonc --env=""`, needed whenever a capture version or the ingest code changes.

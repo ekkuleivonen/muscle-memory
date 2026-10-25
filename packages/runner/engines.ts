@@ -75,6 +75,7 @@ export const ENGINES: Record<EngineId, Engine> = {
     sizes: pyodide.sizes,
     config: { lock: pyodide.lockInfo },
     worker: PYTHON_WORKER,
+    multiFile: true,
   },
   javascript: {
     id: "javascript",

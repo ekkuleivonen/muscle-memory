@@ -207,12 +207,10 @@ test("a pull request's timeline starts after the previous one and folds edits to
     detail.timeline.map((e) => e.kind),
     ["edits", "run", "pull-request", "checks", "merged"],
   );
-  const run = detail.timeline[1] as {
-    passed: number;
-    total: number;
-    tested: boolean;
-  };
-  assert.deepEqual([run.passed, run.total, run.tested], [total, total, true]);
+  // A local run is scored on the visible cases only; CI runs them all.
+  const visible = cases.filter((c) => c.visible).length;
+  const run = detail.timeline[1] as { passed: number; total: number; tested: boolean };
+  assert.deepEqual([run.passed, run.total, run.tested], [visible, visible, true]);
   assert.equal(detail.stats.edits, 1);
   assert.equal(detail.stats.runs, 1);
   assert.equal(detail.stats.firstGreenAt, detail.timeline[1].at);

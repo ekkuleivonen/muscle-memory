@@ -148,10 +148,11 @@ export function SettingsForm() {
         <p>
           Logging out keeps your code and progress here. Reset clears local
           practice, but keeps uploaded records. Delete removes local and
-          uploaded records; it needs a connection.
+          uploaded records; it needs a connection. Export saves everything
+          here as one file, to keep or to import in another browser.
         </p>
         <Link href="/settings?view=terminal">
-          Open session and deletion commands →
+          Open session, backup and deletion commands →
         </Link>
       </section>
     </main>
