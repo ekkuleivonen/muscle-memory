@@ -79,30 +79,6 @@ export interface TeamComment {
   readonly resolve?: "explicit";
 }
 
-/**
- * When a team chat line appears: the attempt began, or the person first opened a file, ran the
- * tests with a case failing or passing, opened a pull request, had a case pass or fail in CI, or
- * merged. Each is read from the attempt's own records, so the chat is a pure function of them.
- */
-export type ChatAfter =
-  | { readonly start: true }
-  | { readonly opened: string }
-  | { readonly ran: string; readonly is: "failing" | "passing" }
-  | { readonly pullRequest: true }
-  | { readonly check: string; readonly is: "failing" | "passing" }
-  | { readonly merged: true };
-
-/**
- * A line in the team chat: the workplace around the work, never a clue or a hint. Shown in
- * order of what released it; nothing is required of the person and nothing is gated on it.
- */
-export interface ChatLine {
-  readonly id: string;
-  readonly author: Persona;
-  readonly text: string;
-  readonly after: ChatAfter;
-}
-
 /** An idea about the approach, never solution code; released strictly in level order. */
 export interface Hint {
   readonly id: string;
@@ -165,8 +141,6 @@ export interface Revision {
   readonly checks: { readonly cases: readonly Case[] };
   readonly team: readonly TeamComment[];
   readonly hints: readonly Hint[];
-  /** The team chat around the work, when the issue has one (the incident). */
-  readonly chat?: readonly ChatLine[];
   /**
    * explicit: a push whose checks fail opens a CI finding on its pull request, which only the
    * person's Resolve clears (a later passing push does not). The checks themselves still decide

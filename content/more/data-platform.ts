@@ -377,7 +377,7 @@ The report is \`queries/collected-by-partner.sql\`. It should give one row per p
   {
     id: "dedupe-phone-customers",
     title: "Active customers report is short 212 customers",
-    summary: "The faster dedupe step merges customers it should keep apart.",
+    summary: "Monday's report lost 212 customers, all phone orders from the Leeds store.",
     difficulty: "medium",
     kind: "bug",
     language: "python",
@@ -485,6 +485,7 @@ Priya sped up the dedupe step on Tuesday: it used to compare every pair of recor
           ],
         },
         repeat: "while-true",
+        resolve: "explicit",
       },
       {
         id: "priya-long-dedupe",
@@ -494,19 +495,36 @@ Priya sped up the dedupe step on Tuesday: it used to compare every pair of recor
         severity: "nit",
         text: ["Nit: `dedupe_customers` has grown a fair bit. Is there a smaller change that does it?"],
         when: { metric: "function-lines", above: 30, file: "pipeline/dedupe.py" },
-      },
-      {
-        id: "rui-leeds",
-        author: "Rui F",
-        role: "Finance",
-        where: "review",
-        severity: "info",
-        text: ["Hollis Bakery, Marsh & Daughters and T. Okafor are all back in the test data. Thanks."],
-        when: { check: "case-2", is: "passing" },
+        resolve: "explicit",
       },
     ],
     private: {
       reference: { "pipeline/dedupe.py": DEDUPE_REFERENCE },
+      alternatives: [
+        // Keep the dict, but give each record without an email a key nothing else can share.
+        {
+          "pipeline/dedupe.py": DEDUPE_STARTER.replace(
+            '        key = normalize_email(row.get("email"))\n',
+            '        key = normalize_email(row.get("email"))\n        if key is None:\n            key = ("no email", len(customers))\n',
+          ),
+        },
+      ],
+      wrong: [
+        // Leaves the records without an email out altogether.
+        {
+          "pipeline/dedupe.py": DEDUPE_STARTER.replace(
+            '        key = normalize_email(row.get("email"))\n',
+            '        key = normalize_email(row.get("email"))\n        if key is None:\n            continue\n',
+          ),
+        },
+        // Keys the records without an email by name, merging two walk-ins with the same name.
+        {
+          "pipeline/dedupe.py": DEDUPE_STARTER.replace(
+            '        key = normalize_email(row.get("email"))\n',
+            '        key = normalize_email(row.get("email")) or row.get("name")\n',
+          ),
+        },
+      ],
       examples: {
         "priya-pairwise": {
           fires: [{ "pipeline/dedupe.py": `from pipeline.normalize import normalize_email
@@ -582,7 +600,8 @@ Bluefin,BF-FEE-10,adjustment,(3.00),EUR
         language: "python",
         text: PIPELINE_INIT("Nightly settlement pipeline: read partner exports, load the warehouse, report to finance."),
       },
-      { path: "pipeline/money.py", role: "read", language: "python", text: MONEY },
+      // Editable: teaching to_cents brackets is a reasonable fix too.
+      { path: "pipeline/money.py", role: "edit", language: "python", text: MONEY },
       { path: "pipeline/readers.py", role: "edit", language: "python", text: READERS_STARTER },
     ],
     inputs: [
@@ -649,8 +668,10 @@ Bluefin,BF-FEE-10,adjustment,(3.00),EUR
           "`abs()` in the reader changes what lands in `raw_settlements`: Bluefin's fees would show up there as credits. Can the reader keep the sign as written and leave what a refund means to the report?",
           "The reader's rows are what we send back when a partner disputes a night, so they need the partner's own signs. Could the `abs()` move out of the reader?",
         ],
-        when: { pattern: "\\babs\\(", present: true, file: "pipeline/readers.py" },
+        // An amount set from abs() loses the partner's sign; -abs() on a bracket keeps it.
+        when: { pattern: "(=|return)\\s*abs\\(", present: true, file: "pipeline/readers.py" },
         repeat: "while-true",
+        resolve: "explicit",
       },
       {
         id: "mateo-catch-all",
@@ -666,22 +687,59 @@ Bluefin,BF-FEE-10,adjustment,(3.00),EUR
           present: true,
           file: "pipeline/readers.py",
         },
-      },
-      {
-        id: "rui-bluefin",
-        author: "Rui F",
-        role: "Finance",
-        where: "review",
-        severity: "info",
-        text: ["€59.50, no rejected rows. That's Bluefin's 3 October statement to the cent."],
-        when: { check: "case-2", is: "passing" },
+        resolve: "explicit",
       },
     ],
     private: {
       reference: { "pipeline/readers.py": READERS_REFERENCE, "pipeline/report.py": REPORT_REFERENCE },
+      alternatives: [
+        // Brackets read in money.py, and the report subtracts a refund's size whichever its sign.
+        {
+          "pipeline/money.py": MONEY.replace(
+            "    try:\n        value = Decimal(text.strip())",
+            '    text = text.strip()\n    sign = 1\n    if len(text) > 2 and text[0] == "(" and text[-1] == ")":\n        sign, text = -1, text[1:-1]\n    try:\n        value = Decimal(text.strip())',
+          ).replace("    return int(value * 100)", "    return sign * int(value * 100)"),
+          "pipeline/report.py": REPORT_STARTER.replace(
+            '            total["net"] -= row["amount"]',
+            '            total["net"] -= row["amount"] if row["amount"] > 0 else -row["amount"]',
+          ),
+        },
+      ],
+      wrong: [
+        // Brackets read, but a bracketed refund now adds to net instead of reducing it.
+        { "pipeline/readers.py": READERS_REFERENCE },
+        // abs() in the reader: Bluefin's fees turn into credits.
+        {
+          "pipeline/readers.py": READERS_REFERENCE.replace(
+            '            amount = parse_amount(raw["amount"])',
+            '            amount = abs(parse_amount(raw["amount"]))',
+          ),
+          "pipeline/report.py": REPORT_REFERENCE,
+        },
+        // Strips the brackets and keeps the number positive.
+        {
+          "pipeline/readers.py": READERS_STARTER.replace(
+            '            amount = to_cents(raw["amount"])',
+            '            amount = to_cents(raw["amount"].strip().strip("()"))',
+          ),
+          "pipeline/report.py": REPORT_REFERENCE,
+        },
+      ],
       examples: {
         "priya-reader-sign": {
-          fires: [{ "pipeline/readers.py": `import csv
+          fires: [
+            {
+              "pipeline/readers.py": READERS_REFERENCE.replace(
+                '            amount = parse_amount(raw["amount"])',
+                '            amount = abs(parse_amount(raw["amount"]))',
+              ),
+            },
+          ],
+          // A bracket read as -abs(...) still keeps the partner's sign.
+          quiet: [
+            { "pipeline/readers.py": READERS_REFERENCE },
+            { "pipeline/report.py": REPORT_REFERENCE },
+            { "pipeline/readers.py": `import csv
 import io
 
 from pipeline.money import to_cents
@@ -724,8 +782,8 @@ def read_settlements(text):
             "amount": amount,
         })
     return rows, rejected
-` }],
-          quiet: [{ "pipeline/readers.py": READERS_REFERENCE }, { "pipeline/report.py": REPORT_REFERENCE }],
+` },
+          ],
         },
       },
     },

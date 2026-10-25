@@ -1,7 +1,7 @@
 /**
- * The incident (docs/incident.md): one playable production incident, unlisted, opened from
- * /incident. A fictional shop's checkout fails guest orders after a routine change, while the
- * team's AI tools are down. Both files of the change are the player's to edit.
+ * Guest checkout (INC-1): a fictional shop's checkout fails guest orders after a routine change.
+ * Both files of the change are the player's to edit. It began as the playable incident; its id
+ * and key stay, because recorded work names them.
  */
 import type { SeedIssue } from "../seed";
 
@@ -89,27 +89,24 @@ const quote = (subtotal: number, shipping: number) => ({
 export const issues: SeedIssue[] = [
   {
     id: "checkout-guest-shipping",
-    title: "SEV-1: checkout is failing for guest orders",
+    title: "Guest checkout fails with a server error",
     summary:
-      "Paged at 02:14: checkout-api is returning 500s. The usual AI tools are down too.",
+      "Since Thursday's release, guests get an error instead of a quote at checkout. Members are fine.",
     kind: "bug",
     difficulty: "easy",
     language: "javascript",
-    skills: ["debugging", "reading-logs", "incident-response"],
-    task: `**SEV-1 · checkout-api · paged 02:14**
+    skills: ["debugging", "reading-logs"],
+    task: `Kettlebrook's checkout has been failing for some customers since Thursday's release. From Bea in Support:
 
-> **checkout-api: 5xx rate 58% (threshold 2%) for 9 minutes.** \`POST /quote\` is failing.
+> Every complaint is from someone checking out without an account: the payment page says "Something went wrong" before they can pay. Members aren't writing in.
 
-You're on call for Kettlebrook, a homeware shop. Checkout is failing for a lot of customers, and tonight the team's AI tools are down as well: the coding assistant, the log summariser and the bot that writes status updates. It's you, the logs and the tests. The rest of the team is in the chat.
+\`POST /quote\` is returning 500s for those orders; the last hour of \`checkout-api\` logs is in \`logs/checkout-api.log\`, and one of the failing orders, #88213, is already a test in \`src/checkout/quote.test.js\`.
 
-**Restore checkout**
+\`quoteOrder(order)\` returns \`{ subtotal, shipping, total }\` in cents, and the payment page charges exactly that. Every order must get a correct quote:
 
-1. Find what's failing in \`logs/checkout-api.log\`.
-2. Reproduce it. The failing order from the logs is already a regression test in \`src/checkout/quote.test.js\`: run the tests (Ctrl/⌘-Enter).
-3. Fix it in \`src/checkout/quote.js\`, \`src/checkout/shipping.js\` or both, so every order gets a correct quote: guests and members, with free shipping where it applies.
-4. Open a pull request, get CI green and merge it. Main goes straight to production.
-
-\`quoteOrder(order)\` returns \`{ subtotal, shipping, total }\` in cents. Shipping is $4.95. It's free from $50 for everyone, and from $30 for loyalty members (CHK-412, shipped Thursday). A guest is \`{ guest: true }\` and has no loyalty record; a member whose tier is \`"none"\` has lapsed and gets the standard threshold.`,
+- Shipping is $4.95, and free from $50 for everyone.
+- Loyalty members get free shipping from $30 (CHK-412, shipped Thursday).
+- A guest is \`{ guest: true }\` and has no loyalty record. A member whose tier is \`"none"\` has lapsed and gets the standard threshold.`,
     entry: "src/checkout/quote.js",
     entrypoint: "quoteOrder",
     starter: QUOTE,
@@ -162,30 +159,7 @@ export function sum(amounts) {
         at quoteOrder (src/checkout/quote.js:11:41)
         at handleQuote (src/http/quote-route.js:27:18)
 2026-10-24T02:10:02.118Z INFO  checkout-api  POST /quote 200 13ms order=88214 customer=member:52990 items=4
-2026-10-24T02:12:44.305Z WARN  assistant     upstream unavailable (503); retrying in 300s
-2026-10-24T02:13:58.771Z WARN  checkout-api  5xx rate 58% over 9m (threshold 2%) -> paging on-call
-2026-10-24T02:14:00.000Z INFO  pager         SEV-1 checkout-api -> you
-2026-10-24T02:14:05.512Z WARN  status-bot    upstream unavailable (503); status update not posted
-`,
-      },
-      {
-        path: "RUNBOOK.md",
-        role: "docs",
-        language: "markdown",
-        text: `# checkout-api on-call runbook
-
-_Last reviewed: when the assistant was up._
-
-1. Paste the alert into the assistant.
-2. Do what it says.
-3. If the assistant is unavailable, see step 1.
-
-## Appendix B (recovered from the 2019 wiki export)
-
-- Read the logs: \`logs/checkout-api.log\`. The stack trace names a file and a line.
-- Reproduce it with a test before changing anything. Run tests: Ctrl/⌘-Enter.
-- Fix it, open a pull request (Ctrl/⌘-Shift-Enter), wait for CI, merge it. Main ships itself.
-- Don't wrap it in a try/catch and go back to bed. We will find out.
+2026-10-24T02:13:58.771Z WARN  checkout-api  5xx rate 58% over 9m (threshold 2%)
 `,
       },
     ],
@@ -224,7 +198,7 @@ _Last reviewed: when the assistant was up._
     ],
     names: [
       "member, $35 order: free shipping from $30 (CHK-412)",
-      "regression: guest order #88213 from the incident",
+      "regression: guest order #88213 from the logs",
       "guest, $62 order: free shipping from $50",
       "lapsed member, $40 order: standard threshold",
       "guest, $12 order: standard shipping",
@@ -235,17 +209,17 @@ _Last reviewed: when the assistant was up._
       "lapsed member, $35 order: no member threshold",
     ],
     hidden: [3, 4, 5, 6, 7, 8, 9],
-    // The ticket's thread from the start: what the team knows, as clues. Atmosphere is the chat's.
+    // The ticket's thread from the start: what the team knows, as clues.
     comments: [
       {
         author: "Kai M",
         role: "Platform",
-        body: 'Traffic jumped at 02:00 when the "Midnight mugs" newsletter went out. Most of those visitors check out as guests.',
+        body: 'The errors got loud at 02:00, when the "Midnight mugs" newsletter went out. Most of those visitors check out as guests.',
       },
       {
         author: "Bea L",
         role: "Support",
-        body: "Every complaint tonight is from someone checking out without an account. Members aren't writing in.",
+        body: "Two of the customers who wrote in got through after joining the loyalty scheme, so that's the workaround I'm giving out for now. It doesn't seem to matter what's in the basket.",
       },
       {
         author: "Tomasz W",
@@ -300,85 +274,6 @@ _Last reviewed: when the assistant was up._
           file: "src/checkout/quote.js",
         },
         resolve: "explicit",
-      },
-    ],
-    chat: [
-      {
-        id: "noor-comms",
-        author: "Noor A",
-        role: "Incident commander",
-        after: { start: true },
-        text: "I'm on comms, you're on the fix. The status bot is down too, so tonight's updates are artisanal.",
-      },
-      {
-        id: "bea-queue",
-        author: "Bea L",
-        role: "Support",
-        after: { start: true },
-        text: "Support queue is at 212. One customer has written MY MUGS four times, which is fair.",
-      },
-      {
-        id: "mia-newsletter",
-        author: "Mia S",
-        role: "Marketing",
-        after: { start: true },
-        text: 'The newsletter was mine. "No account needed!" felt like a great headline at 6pm.',
-      },
-      {
-        id: "kai-logs",
-        author: "Kai M",
-        role: "Platform",
-        after: { opened: "logs/checkout-api.log" },
-        text: "Reading logs by hand at 2am. Respect.",
-      },
-      {
-        id: "tomasz-red",
-        author: "Tomasz W",
-        role: "Checkout",
-        after: { ran: "case-2", is: "failing" },
-        text: "Is that red test my change? Please say it isn't my change.",
-      },
-      {
-        id: "noor-green",
-        author: "Noor A",
-        role: "Incident commander",
-        after: { ran: "case-2", is: "passing" },
-        text: "Green locally? Status page draft: \"We've identified the issue.\" First update I've typed myself in years, and it's true.",
-      },
-      {
-        id: "bea-pr",
-        author: "Bea L",
-        role: "Support",
-        after: { pullRequest: true },
-        text: "I'll tell the queue the moment it's merged. No pressure. Some pressure.",
-      },
-      {
-        id: "ines-ci",
-        author: "Ines R",
-        role: "Finance",
-        after: { check: "case-2", is: "passing" },
-        text: "Finance, awake for reasons. Guests pay shipping under $50 again on that build. I have never been this happy to see a fee.",
-      },
-      {
-        id: "noor-resolved",
-        author: "Noor A",
-        role: "Incident commander",
-        after: { merged: true },
-        text: "Merged and shipping. Marking it resolved on the status page, by hand, slowly, savouring it.",
-      },
-      {
-        id: "bea-told",
-        author: "Bea L",
-        role: "Support",
-        after: { merged: true },
-        text: "Telling the queue now. Someone already replied MY MUGS!! but happier.",
-      },
-      {
-        id: "mia-next",
-        author: "Mia S",
-        role: "Marketing",
-        after: { merged: true },
-        text: 'Next newsletter headline: "Checkout works." Bold, I know.',
       },
     ],
     private: {

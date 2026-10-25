@@ -509,12 +509,11 @@ test("INC-1's nit stays open on green CI and needs Resolve; other exercises keep
   assert.equal(openBlocking(fb(), 1).length, 0);
   play.resolve(1, "thresholds-in-one-place");
   assert.equal(blockerOf(play.records, 1), null);
-  // Every other exercise keeps its own rules: no explicit comments, so the gate is unchanged.
-  assert.ok(
-    catalog.issues
-      .filter((i) => i.id !== ISSUE)
-      .every((i) => catalog.revisions[i.revision].team.every((c) => c.resolve === undefined)),
-  );
+  // Explicit Resolve is for actionable review findings only, never for an informational note.
+  for (const i of catalog.issues)
+    for (const c of catalog.revisions[i.revision].team)
+      if (c.resolve === "explicit")
+        assert.ok(c.where === "review" && c.severity !== "info", `${i.id} ${c.id}`);
 });
 
 test("progress saved before replays existed reads exactly as it did", () => {

@@ -453,7 +453,7 @@ const reauth = (reason: string, revokeFamily = false) => ({ status: "reauth", re
 const refreshTokenReuse: SeedIssue = {
   id: "refresh-token-reuse",
   title: "Old refresh tokens work again since the grace window",
-  summary: "Mateo's grace window for parallel refreshes switched off reuse detection. Find what it broke and keep the mobile fix.",
+  summary: "A stolen refresh token kept a session alive for three days, and the reuse alert has gone quiet.",
   kind: "bug",
   difficulty: "hard",
   language: "typescript",

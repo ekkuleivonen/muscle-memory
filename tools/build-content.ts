@@ -23,7 +23,7 @@ import {
   type Revision,
   type TeamComment,
 } from "../packages/content/model";
-import { publishProblems } from "../packages/content/publish";
+import { continuityProblems, publishProblems } from "../packages/content/publish";
 import { revisionId, verifyCatalog } from "../packages/content/revision";
 import { SEED_ISSUES, SEED_PROJECTS, type SeedIssue } from "../content/seed";
 
@@ -107,15 +107,6 @@ function revisionOf(seed: SeedIssue, key: string, project: (typeof SEED_PROJECTS
       ),
     ],
     ...(seed.ciFindings ? { ciFindings: seed.ciFindings } : {}),
-    // Only issues with a chat carry one, so every other revision keeps its id.
-    ...(seed.chat
-      ? {
-          chat: seed.chat.map(({ author, role, ...line }) => ({
-            ...line,
-            author: { name: author, role },
-          })),
-        }
-      : {}),
     hints: seed.hints.map((hint, index) => ({
       id: `hint-${index + 1}`,
       level: index + 1,
@@ -153,6 +144,12 @@ for (const project of SEED_PROJECTS)
       if (problems.length)
         throw new Error(`${seed.id} cannot be published:\n  ${problems.join("\n  ")}`);
     }
+    // Work in progress restores onto the new revision by path; never strand it.
+    const live = previous?.issues.find((i) => i.id === id)?.revision;
+    const before = live ? previous?.revisions[live] : undefined;
+    const stranded = before ? continuityProblems(before, revision) : [];
+    if (stranded.length)
+      throw new Error(`${seed.id} would lose saved work:\n  ${stranded.join("\n  ")}`);
     const rid = revisionId(revision);
     revisions[rid] = revision;
     issues.push({

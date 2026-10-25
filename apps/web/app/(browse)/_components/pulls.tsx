@@ -36,6 +36,7 @@ import {
 import { metricsOf } from "../../../lib/result";
 import { Markdown } from "./markdown";
 import { Ask } from "./ask";
+import { PullOutcome } from "./pull-outcome";
 import { ResultFacts, useResult } from "./result-card";
 import { CopyIssueLink, ShareResult } from "./share";
 import { tryHref } from "../../../lib/share";
@@ -525,7 +526,7 @@ export function PullView({
             </Link>
           </span>
         </p>
-        {/* The pull request's outcome (open or merged) goes here, before what to practise next. */}
+        <PullOutcome records={attempt} issue={issue} number={number} revisions={revisions} mergedAt={merged} blocker={eligibility?.blocker} ideHref={workHref(issue)} />
         {pull.state === "merged" && (
           <NextPractice candidates={candidates} current={issue.key} />
         )}

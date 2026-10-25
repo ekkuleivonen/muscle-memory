@@ -7,7 +7,7 @@
  * An issue's `private` part (reference solution, trigger examples) is for publish checks only:
  * it is never written to the catalog, and nothing the app ships imports this file.
  */
-import type { ChatAfter, Trigger } from "../packages/content/model";
+import type { Trigger } from "../packages/content/model";
 
 /** A note in the ticket's own thread, there when the issue is opened. */
 export type Comment = { author: string; role: string; body: string };
@@ -50,8 +50,6 @@ export interface SeedIssue {
   team?: SeedTeamComment[];
   /** CI failures as findings only Resolve clears (see Revision.ciFindings). */
   ciFindings?: "explicit";
-  /** The team chat around the work: atmosphere, never a clue (see ChatLine). */
-  chat?: { id: string; author: string; role: string; text: string; after: ChatAfter }[];
   entrypoint: string;
   starter: string;
   /** Named when each input lists several arguments; otherwise it is the only one. */
@@ -558,22 +556,36 @@ const BASE_ISSUES: SeedIssue[] = [
         when: { behaviour: "failing-pushes", atLeast: 2 },
       },
     ],
-    team: [
-      {
-        id: "lena-shipped",
-        author: "Lena M",
-        role: "Product",
-        where: "review",
-        severity: "info",
-        text: ["Lovely, that's the one. Empty posts say 0 words again."],
-        when: { check: "case-1", is: "passing" },
-      },
-    ],
     private: {
       reference: { "count_words.py": `def count_words(text):
     """The number of words in a post, as the composer shows it under the text box."""
     return len(text.split())
 ` },
+      alternatives: [
+        { "count_words.py": `import re
+
+
+def count_words(text):
+    """The number of words in a post, as the composer shows it under the text box."""
+    return len(re.findall(r"\\S+", text))
+` },
+        { "count_words.py": `def count_words(text):
+    """The number of words in a post, as the composer shows it under the text box."""
+    return len([word for word in text.replace("\\t", " ").replace("\\r", " ").replace("\\n", " ").split(" ") if word])
+` },
+      ],
+      wrong: [
+        // Trimming fixes the empty post, not the double space.
+        { "count_words.py": `def count_words(text):
+    """The number of words in a post, as the composer shows it under the text box."""
+    return len(text.strip().split(" ")) if text.strip() else 0
+` },
+        // Runs of spaces collapse, tabs and newlines still join words.
+        { "count_words.py": `def count_words(text):
+    """The number of words in a post, as the composer shows it under the text box."""
+    return len([word for word in text.split(" ") if word])
+` },
+      ],
     },
   }),
   challenge("word-count-javascript", {
@@ -622,23 +634,39 @@ const BASE_ISSUES: SeedIssue[] = [
         when: { behaviour: "failing-pushes", atLeast: 2 },
       },
     ],
-    team: [
-      {
-        id: "lena-shipped",
-        author: "Lena M",
-        role: "Product",
-        where: "review",
-        severity: "info",
-        text: ["Lovely, that's the one. Empty posts say 0 words again."],
-        when: { check: "case-1", is: "passing" },
-      },
-    ],
     private: {
       reference: { "src/count-words.js": `/** The number of words in a post, as the composer shows it under the text box. */
 export function countWords(text) {
   return text.split(/\\s+/).filter(Boolean).length;
 }
 ` },
+      alternatives: [
+        { "src/count-words.js": `/** The number of words in a post, as the composer shows it under the text box. */
+export function countWords(text) {
+  return (text.match(/\\S+/g) ?? []).length;
+}
+` },
+        { "src/count-words.js": `/** The number of words in a post, as the composer shows it under the text box. */
+export function countWords(text) {
+  const trimmed = text.trim();
+  return trimmed === "" ? 0 : trimmed.split(/\\s+/).length;
+}
+` },
+      ],
+      wrong: [
+        // Trimming fixes the empty post, not the double space.
+        { "src/count-words.js": `/** The number of words in a post, as the composer shows it under the text box. */
+export function countWords(text) {
+  return text.trim() === "" ? 0 : text.trim().split(" ").length;
+}
+` },
+        // Runs of spaces collapse, tabs and newlines still join words.
+        { "src/count-words.js": `/** The number of words in a post, as the composer shows it under the text box. */
+export function countWords(text) {
+  return text.split(/ +/).filter(Boolean).length;
+}
+` },
+      ],
     },
   }),
   challenge("word-count-typescript", {
@@ -685,17 +713,6 @@ export function countWords(text) {
       {
         text: "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
         when: { behaviour: "failing-pushes", atLeast: 2 },
-      },
-    ],
-    team: [
-      {
-        id: "lena-shipped",
-        author: "Lena M",
-        role: "Product",
-        where: "review",
-        severity: "info",
-        text: ["Lovely, that's the one. Empty posts say 0 words again."],
-        when: { check: "case-1", is: "passing" },
       },
     ],
     private: {
@@ -750,17 +767,6 @@ export function countWords(text: string): number {
       {
         text: "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
         when: { behaviour: "failing-pushes", atLeast: 2 },
-      },
-    ],
-    team: [
-      {
-        id: "lena-shipped",
-        author: "Lena M",
-        role: "Product",
-        where: "review",
-        severity: "info",
-        text: ["Lovely, that's the one. Empty posts say 0 words again."],
-        when: { check: "case-1", is: "passing" },
       },
     ],
     private: {
@@ -830,17 +836,6 @@ final class Adapter {
         when: { behaviour: "failing-pushes", atLeast: 2 },
       },
     ],
-    team: [
-      {
-        id: "lena-shipped",
-        author: "Lena M",
-        role: "Product",
-        where: "review",
-        severity: "info",
-        text: ["Lovely, that's the one. Empty posts say 0 words again."],
-        when: { check: "case-1", is: "passing" },
-      },
-    ],
     private: {
       reference: { "src/main/java/com/acme/composer/WordCount.java": `package com.acme.composer;
 
@@ -901,17 +896,6 @@ public final class WordCount {
       {
         text: "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
         when: { behaviour: "failing-pushes", atLeast: 2 },
-      },
-    ],
-    team: [
-      {
-        id: "lena-shipped",
-        author: "Lena M",
-        role: "Product",
-        where: "review",
-        severity: "info",
-        text: ["Lovely, that's the one. Empty posts say 0 words again."],
-        when: { check: "case-1", is: "passing" },
       },
     ],
     private: {
@@ -975,17 +959,6 @@ public static class WordCount
         when: { behaviour: "failing-pushes", atLeast: 2 },
       },
     ],
-    team: [
-      {
-        id: "lena-shipped",
-        author: "Lena M",
-        role: "Product",
-        where: "review",
-        severity: "info",
-        text: ["Lovely, that's the one. Empty posts say 0 words again."],
-        when: { check: "case-1", is: "passing" },
-      },
-    ],
     private: {
       reference: { "lib/count_words.rb": `# The number of words in a post, as the composer shows it under the text box.
 def count_words(text)
@@ -1040,17 +1013,6 @@ end
         when: { behaviour: "failing-pushes", atLeast: 2 },
       },
     ],
-    team: [
-      {
-        id: "lena-shipped",
-        author: "Lena M",
-        role: "Product",
-        where: "review",
-        severity: "info",
-        text: ["Lovely, that's the one. Empty posts say 0 words again."],
-        when: { check: "case-1", is: "passing" },
-      },
-    ],
     private: {
       reference: { "src/countWords.php": `<?php
 
@@ -1066,13 +1028,19 @@ function countWords(string $text): int
   }),
   // Field notes: a warm-up
   challenge("frequency-map", {
-    title: "Frequency map",
-    summary: "Count every exact, case-sensitive label in a list.",
+    title: "Nightly vial tally is empty",
+    summary: "The vial scanner's labels need counting for the nightly sheet; the counter returns nothing.",
     kind: "feature",
     difficulty: "warm-up",
     language: "python",
     skills: ["iteration", "maps", "edge-cases"],
-    task: "Write `frequency_map(items)`: count each exact, case-sensitive string and return a dict of string to integer count. Empty input returns `{}`.",
+    task: `The vial scanner went in last week. Each night it reads the label on every vial that came back from the field, and the nightly sheet lists how many vials carry each label. The counting step was never finished, so the sheet comes out empty:
+
+\`\`\`text
+nightly sheet 2026-06-04: 212 vials scanned, 0 labels counted
+\`\`\`
+
+\`frequency_map(items)\` gets the night's labels, one string per vial, and returns how many vials carry each label: a dict of label to count. A label counts exactly as the scanner read it: case, spaces and blank labels included, since they tell the team which vials to relabel by hand. No vials gives \`{}\`.`,
     inputs: [
       ["a", "b", "a"],
       [],
@@ -1109,15 +1077,15 @@ function countWords(string $text): int
     ],
     hidden: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
     hints: [
-      "A dict can hold one counter for each distinct string.",
+      "A dict can hold one counter for each distinct label.",
       {
-        text: "Try the `__proto__` case by hand: what does your dict hold after the first label, and after the second?",
+        text: "Try `[\"A\", \"a\", \"A\"]` by hand: how many different labels did the scanner read, and how many vials carry each?",
         when: { behaviour: "failing-pushes", atLeast: 2 },
       },
     ],
     comments: [
       priya(
-        "Heads up: the scanner sometimes emits odd labels like __proto__. Please don't special-case anything; every label is just a string.",
+        "Heads up: trap codes are case-sensitive (`A3` and `a3` are different traps), and the scanner sometimes reads odd strings off smudged labels, `__proto__` and `None` among them. Please count them as they come; the relabelling list depends on it.",
       ),
     ],
     team: [
@@ -1133,6 +1101,7 @@ function countWords(string $text): int
         ],
         when: { pattern: "^\\s*print\\(", present: true },
         repeat: "while-true",
+        resolve: "explicit",
       },
       {
         id: "priya-long-function",
@@ -1144,15 +1113,7 @@ function countWords(string $text): int
           "Nit: `frequency_map` has grown quite long for what it does. Could the dict itself do more of the work?",
         ],
         when: { metric: "function-lines", above: 12 },
-      },
-      {
-        id: "priya-proto-passes",
-        author: "Priya K",
-        role: "Data",
-        where: "review",
-        severity: "info",
-        text: ["Nice, `__proto__` comes through as a plain label now. That was the one breaking the nightly run."],
-        when: { check: "case-4", is: "passing" },
+        resolve: "explicit",
       },
     ],
     private: {
@@ -1162,6 +1123,46 @@ function countWords(string $text): int
         counts[item] = counts.get(item, 0) + 1
     return counts
 ` },
+      alternatives: [
+        { "frequency_map.py": `from collections import Counter
+
+
+def frequency_map(items):
+    return dict(Counter(items))
+` },
+        { "frequency_map.py": `def frequency_map(items):
+    counts = {}
+    for item in items:
+        if item in counts:
+            counts[item] += 1
+        else:
+            counts[item] = 1
+    return counts
+` },
+      ],
+      wrong: [
+        // Folds case: A3 and a3 become one trap.
+        { "frequency_map.py": `def frequency_map(items):
+    counts = {}
+    for item in items:
+        key = item.lower()
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+` },
+        // Tidies labels: blanks dropped and spaces trimmed, so the relabelling list loses them.
+        { "frequency_map.py": `def frequency_map(items):
+    counts = {}
+    for item in items:
+        key = item.strip()
+        if key:
+            counts[key] = counts.get(key, 0) + 1
+    return counts
+` },
+        // Counts distinct labels, not vials.
+        { "frequency_map.py": `def frequency_map(items):
+    return {item: 1 for item in items}
+` },
+      ],
       examples: {
         "priya-debug-print": {
           fires: [{ "frequency_map.py": `def frequency_map(items):
@@ -1189,7 +1190,11 @@ function countWords(string $text): int
     difficulty: "warm-up",
     language: "javascript",
     skills: ["formatting", "strings", "numbers"],
-    task: 'Write `formatPrice(cents)`: return the amount in dollars with two decimals and comma thousands separators, e.g. `123456` → `"$1,234.56"`. Negative amounts are refunds and get a leading minus: `-500` → `"-$5.00"`.',
+    task: `Since the cart moved to integer cents, the cart drawer shows amounts the way the API stores them. From a support ticket:
+
+> My cart says the sofa costs **129900**. Is that dollars?? And my refund line says **-500**.
+
+\`formatPrice(cents)\` in \`src/format-price.js\` is what the drawer, the receipts and the refund lines use to show an amount. Show dollars with two decimals and comma thousands separators: \`123456\` → \`"$1,234.56"\`. Negative amounts are refunds, and the minus goes before the dollar sign, as on the receipts: \`-500\` → \`"-$5.00"\`.`,
     inputs: [
       123456, 5, 0, -500, 100000000, 1, 10, 99, 100, 1050, 99999, 100000, 123456789,
       12345678901, -1, -99, -123456, -100000000,
@@ -1233,6 +1238,42 @@ export function formatPrice(cents) {
   return \`\${sign}$\${dollars}.\${rest}\`;
 }
 ` },
+      alternatives: [
+        { "src/format-price.js": `const USD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
+/**
+ * Formats an amount in cents for the cart: 123456 → "$1,234.56".
+ * Refunds are negative and keep the minus first: -500 → "-$5.00".
+ */
+export function formatPrice(cents) {
+  return USD.format(cents / 100);
+}
+` },
+        { "src/format-price.js": `/**
+ * Formats an amount in cents for the cart: 123456 → "$1,234.56".
+ * Refunds are negative and keep the minus first: -500 → "-$5.00".
+ */
+export function formatPrice(cents) {
+  const amount = Math.abs(cents);
+  const dollars = Math.floor(amount / 100).toLocaleString("en-US");
+  const rest = String(amount % 100).padStart(2, "0");
+  return (cents < 0 ? "-$" : "$") + dollars + "." + rest;
+}
+` },
+      ],
+      wrong: [
+        // Dollars and cents, but no thousands separators.
+        { "src/format-price.js": `export function formatPrice(cents) {
+  return (cents < 0 ? "-$" : "$") + (Math.abs(cents) / 100).toFixed(2);
+}
+` },
+        // The minus lands after the dollar sign.
+        { "src/format-price.js": `export function formatPrice(cents) {
+  const dollars = (cents / 100).toFixed(2).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",");
+  return "$" + dollars;
+}
+` },
+      ],
     },
   }),
   challenge("discount-codes", {
@@ -1427,7 +1468,7 @@ export function debounceTimes(keystrokes: number[], waitMs: number): number[] {
   }),
 
   challenge("refund-totals", {
-    title: "Refund totals double-count discounts",
+    title: "Refunds give back less than the customer paid",
     summary: "Refunds on orders with a promo code give back less than the customer paid.",
     kind: "bug",
     difficulty: "medium",
@@ -1555,19 +1596,6 @@ export function allocate(code, lines) {
     ],
     team: [
       {
-        id: "ada-abs",
-        author: "Ada N",
-        role: "Frontend",
-        where: "review",
-        severity: "blocking",
-        text: [
-          "Taking the absolute value hides the sign we need for refunds. Can we keep refunds negative all the way through?",
-          "`Math.abs` here would turn a refund into a charge if the sign is ever wrong upstream. Can we keep refunds negative all the way through instead?",
-        ],
-        when: { pattern: "Math\\.abs\\(", present: true, file: "src/cart/totals.js" },
-        repeat: "while-true",
-      },
-      {
         id: "ada-order-total",
         author: "Ada N",
         role: "Frontend",
@@ -1576,12 +1604,14 @@ export function allocate(code, lines) {
         text: [
           "This changes `orderTotal` too, and checkout uses that. Can we keep this pull request to refunds?",
         ],
+        // Checkout's total still takes the code's discount off its subtotal, however it is written.
         when: {
-          pattern: "return subtotal - discountFor\\(order\\.code, subtotal\\);",
+          pattern: "discountFor\\(\\s*order\\.code",
           present: false,
           file: "src/cart/totals.js",
         },
         repeat: "while-true",
+        resolve: "explicit",
       },
       {
         id: "ada-long-refund",
@@ -1591,15 +1621,7 @@ export function allocate(code, lines) {
         severity: "nit",
         text: ["Nit: `refundTotal` is getting long. Would a helper for one line's amount read better?"],
         when: { metric: "function-lines", above: 12, file: "src/cart/totals.js" },
-      },
-      {
-        id: "sam-incident",
-        author: "Sam R",
-        role: "SRE",
-        where: "review",
-        severity: "info",
-        text: ["Nice, that's the jacket from the incident. I'll let support know once it's out."],
-        when: { check: "case-2", is: "passing" },
+        resolve: "explicit",
       },
     ],
     private: {
@@ -1621,9 +1643,9 @@ export function refundTotal(refund) {
   return -sum(refund.lines.map(lineTotal));
 }
 ` },
-      examples: {
-        "ada-abs": {
-          fires: [{ "src/cart/totals.js": `import { discountFor } from "./discounts.js";
+      alternatives: [
+        // Spelled out per line, without the helper.
+        { "src/cart/totals.js": `import { discountFor } from "./discounts.js";
 import { lineTotal, sum } from "./money.js";
 
 /** What an order charges at checkout, in cents: its lines less the promo code's discount. */
@@ -1637,11 +1659,50 @@ export function orderTotal(order) {
  * stay negative all the way to the ledger.
  */
 export function refundTotal(refund) {
-  // Each returned line already carries its share of the discount from checkout.
+  let paid = 0;
+  for (const line of refund.lines) paid += line.price * line.quantity - (line.discount ?? 0);
+  return -paid;
+}
+` },
+        // Taking the absolute value is fine too: refunds come out negative either way.
+        { "src/cart/totals.js": `import { discountFor } from "./discounts.js";
+import { lineTotal, sum } from "./money.js";
+
+/** What an order charges at checkout, in cents: its lines less the promo code's discount. */
+export function orderTotal(order) {
+  const subtotal = sum(order.lines.map((line) => line.price * line.quantity));
+  return subtotal - discountFor(order.code, subtotal);
+}
+
+/**
+ * What a refund gives back for the returned lines, in cents, as a negative amount: refunds
+ * stay negative all the way to the ledger.
+ */
+export function refundTotal(refund) {
   return -Math.abs(sum(refund.lines.map(lineTotal)));
 }
-` }],
-          quiet: [{ "src/cart/totals.js": `import { discountFor } from "./discounts.js";
+` },
+        // A tidier orderTotal, same behaviour: checkout is not touched.
+        { "src/cart/totals.js": `import { discountFor } from "./discounts.js";
+import { lineTotal, sum } from "./money.js";
+
+/** What an order charges at checkout, in cents: its lines less the promo code's discount. */
+export function orderTotal(order) {
+  const subtotal = sum(order.lines.map((line) => line.price * line.quantity));
+  const discount = discountFor(order.code, subtotal);
+  return subtotal - discount;
+}
+
+/** What a refund gives back for the returned lines, in cents, as a negative amount. */
+export function refundTotal(refund) {
+  return -sum(refund.lines.map(lineTotal));
+}
+` },
+      ],
+      wrong: [
+        // Works out the code's discount again on just the returned lines: right for the
+        // ticket's jacket, wrong for a fixed-amount code on part of an order.
+        { "src/cart/totals.js": `import { discountFor } from "./discounts.js";
 import { lineTotal, sum } from "./money.js";
 
 /** What an order charges at checkout, in cents: its lines less the promo code's discount. */
@@ -1655,11 +1716,48 @@ export function orderTotal(order) {
  * stay negative all the way to the ledger.
  */
 export function refundTotal(refund) {
-  // Each returned line already carries its share of the discount from checkout.
-  return -sum(refund.lines.map(lineTotal));
+  const gross = sum(refund.lines.map((line) => line.price * line.quantity));
+  return -(gross - discountFor(refund.code, gross));
 }
-` }],
-        },
+` },
+        // Gives back the full price, ignoring the discount altogether.
+        { "src/cart/totals.js": `import { discountFor } from "./discounts.js";
+import { lineTotal, sum } from "./money.js";
+
+/** What an order charges at checkout, in cents: its lines less the promo code's discount. */
+export function orderTotal(order) {
+  const subtotal = sum(order.lines.map((line) => line.price * line.quantity));
+  return subtotal - discountFor(order.code, subtotal);
+}
+
+/**
+ * What a refund gives back for the returned lines, in cents, as a negative amount: refunds
+ * stay negative all the way to the ledger.
+ */
+export function refundTotal(refund) {
+  return -sum(refund.lines.map((line) => line.price * line.quantity));
+}
+` },
+        // The right amount with the wrong sign.
+        { "src/cart/totals.js": `import { discountFor } from "./discounts.js";
+import { lineTotal, sum } from "./money.js";
+
+/** What an order charges at checkout, in cents: its lines less the promo code's discount. */
+export function orderTotal(order) {
+  const subtotal = sum(order.lines.map((line) => line.price * line.quantity));
+  return subtotal - discountFor(order.code, subtotal);
+}
+
+/**
+ * What a refund gives back for the returned lines, in cents, as a negative amount: refunds
+ * stay negative all the way to the ledger.
+ */
+export function refundTotal(refund) {
+  return sum(refund.lines.map(lineTotal));
+}
+` },
+      ],
+      examples: {
         "ada-order-total": {
           fires: [{ "src/cart/totals.js": `import { discountFor } from "./discounts.js";
 import { lineTotal, sum } from "./money.js";
@@ -2241,7 +2339,14 @@ func ParseLine(line string) Entry {
     difficulty: "easy",
     language: "python",
     skills: ["parsing", "strings", "csv"],
-    task: '`parse_csv_line(line)` splits a CSV line on commas, except inside double quotes. Quotes are removed, and a doubled quote inside a quoted field is a literal quote: `"say ""hi"""` → `say "hi"`.',
+    task: `Since Northwind started quoting company names, their nightly customer import loads rows into the wrong columns. From last night's load:
+
+\`\`\`text
+line   "Acme, Inc.",42,"NY"
+loaded name='"Acme'  account=' Inc."'  region='42'
+\`\`\`
+
+\`parse_csv_line(line)\` in \`parse_csv_line.py\` splits one line of a partner export into its fields. Fields are separated by commas, except inside double quotes. The quotes around a field are not part of it, and a doubled quote inside a quoted field is a literal quote: \`"say ""hi"""\` → \`say "hi"\`. A quoted field may contain a line break. Spaces are kept as written, and an empty line is a single empty field, which the import reports as a row with no name.`,
     inputs: [
       "a,b,c",
       '"Acme, Inc.",42,"NY"',
@@ -2311,6 +2416,83 @@ func ParseLine(line string) Entry {
     fields.append("".join(field))
     return fields
 ` },
+      alternatives: [
+        // The standard library's reader, with the blank line handled.
+        { "parse_csv_line.py": `import csv
+import io
+
+
+def parse_csv_line(line):
+    """Split a partner CSV line on commas, except inside double quotes.
+
+    Quotes are removed, and a doubled quote inside a quoted field is a literal quote.
+    """
+    return next(csv.reader(io.StringIO(line, newline="")), [""])
+` },
+        // A different hand-written parser: one field at a time.
+        { "parse_csv_line.py": `def parse_csv_line(line):
+    """Split a partner CSV line on commas, except inside double quotes.
+
+    Quotes are removed, and a doubled quote inside a quoted field is a literal quote.
+    """
+    fields = []
+    i = 0
+    while True:
+        if line[i : i + 1] == '"':
+            end = i + 1
+            value = ""
+            while True:
+                close = line.index('"', end)
+                value += line[end:close]
+                if line[close + 1 : close + 2] == '"':
+                    value += '"'
+                    end = close + 2
+                else:
+                    i = close + 1
+                    break
+            fields.append(value)
+        else:
+            comma = line.find(",", i)
+            stop = len(line) if comma == -1 else comma
+            fields.append(line[i:stop])
+            i = stop
+        if i >= len(line):
+            return fields
+        i += 1
+        if i == len(line):
+            fields.append("")
+            return fields
+` },
+      ],
+      wrong: [
+        // Drops every quote, then splits: Acme's comma still splits the name.
+        { "parse_csv_line.py": `def parse_csv_line(line):
+    return line.replace('"', "").split(",")
+` },
+        // Respects quotes but treats a doubled quote as closing and reopening the field.
+        { "parse_csv_line.py": `def parse_csv_line(line):
+    fields, field, quoted = [], [], False
+    for char in line:
+        if char == '"':
+            quoted = not quoted
+        elif char == "," and not quoted:
+            fields.append("".join(field))
+            field = []
+        else:
+            field.append(char)
+    fields.append("".join(field))
+    return fields
+` },
+        // Strips spaces the partner wrote.
+        { "parse_csv_line.py": `import csv
+import io
+
+
+def parse_csv_line(line):
+    row = next(csv.reader(io.StringIO(line, newline=""), skipinitialspace=True), [""])
+    return [field.strip() for field in row]
+` },
+      ],
     },
   }),
   challenge("dedupe-customers", {
@@ -2320,7 +2502,16 @@ func ParseLine(line string) Entry {
     difficulty: "medium",
     language: "python",
     skills: ["maps", "data-cleaning"],
-    task: "`dedupe(records)` keeps the first record for each email, comparing emails case-insensitively and ignoring surrounding spaces. Keep the original order.",
+    task: `Some subscribers got last week's newsletter three times. The sync sends one email per customer record, and the CRM export has several records for the same person:
+
+\`\`\`text
+id  email
+1   Ann@x.io
+2    ann@x.io
+3   bo@x.io
+\`\`\`
+
+\`dedupe(records)\` in \`dedupe.py\` runs before the newsletter sync. Keep the first record for each email and drop the later ones. Emails match case-insensitively, ignoring spaces around them. Records stay in their original order, and a kept record is passed on unchanged: the sync and the CRM both need the email as it was written.`,
     inputs: [
       [
         { id: 1, email: "Ann@x.io" },
@@ -2383,6 +2574,48 @@ func ParseLine(line string) Entry {
             kept.append(record)
     return kept
 ` },
+      alternatives: [
+        // A dict keeps the first record per email, in insertion order.
+        { "dedupe.py": `def dedupe(records):
+    first = {}
+    for record in records:
+        first.setdefault(record["email"].strip().casefold(), record)
+    return list(first.values())
+` },
+        { "dedupe.py": `def dedupe(records):
+    keys = [record["email"].strip().lower() for record in records]
+    return [record for i, record in enumerate(records) if keys[i] not in keys[:i]]
+` },
+      ],
+      wrong: [
+        // Matches case-insensitively but not across surrounding spaces.
+        { "dedupe.py": `def dedupe(records):
+    seen, kept = set(), []
+    for record in records:
+        key = record["email"].lower()
+        if key not in seen:
+            seen.add(key)
+            kept.append(record)
+    return kept
+` },
+        // Keeps the last record per email instead of the first.
+        { "dedupe.py": `def dedupe(records):
+    last = {}
+    for record in records:
+        last[record["email"].strip().lower()] = record
+    return list(last.values())
+` },
+        // Writes the normalised email back into the record.
+        { "dedupe.py": `def dedupe(records):
+    seen, kept = set(), []
+    for record in records:
+        email = record["email"].strip().lower()
+        if email not in seen:
+            seen.add(email)
+            kept.append({**record, "email": email})
+    return kept
+` },
+      ],
     },
   }),
   challenge("late-fee-rounding", {
@@ -2991,20 +3224,19 @@ func ParseDuration(text string) (int, error) {
 
 const BASE_PROJECTS: SeedProject[] = [
   {
+    // The id and key stay from when this was the incident: recorded work names INC-1.
     id: "incident-response",
     key: "INC",
-    listed: false,
-    title: "Incident: checkout is down",
-    summary: "One production incident at Kettlebrook, a homeware shop, played from /incident.",
-    story: `Kettlebrook sells mugs, linen and candles to people who really want their mugs. \`checkout-api\` prices every basket: \`POST /quote\` turns a basket into a subtotal, shipping and a total, and the payment page charges exactly that.
-
-The team leans on AI tools for most of its day. Tonight those tools are down, and so is checkout.
+    title: "Checkout",
+    summary: "Kettlebrook's checkout API: quotes, shipping and what the payment page charges.",
+    story: `Kettlebrook sells mugs, linen and candles. \`checkout-api\` prices every basket: \`POST /quote\` turns a basket into a subtotal, shipping and a total, and the payment page charges exactly that.
 
 - \`src/checkout/quote.js\`: the quote.
 - \`src/checkout/shipping.js\`: shipping and its thresholds.
-- \`src/checkout/money.js\`: money helpers (read-only).
-- \`logs/checkout-api.log\`: the last few minutes of production logs.
-- \`RUNBOOK.md\`: what to do when paged.`,
+- \`src/checkout/money.js\`: money helpers.
+- \`logs/checkout-api.log\`: recent production logs.
+
+Stack: JavaScript.`,
     issues: [],
   },
   {
