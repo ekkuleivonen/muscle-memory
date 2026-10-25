@@ -17,8 +17,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const issue = findIssue(decodeURIComponent((await params).key));
   return {
     title: issue
-      ? `${issue.key} · IDE · Muscle Memory`
-      : "Issue not found · Muscle Memory",
+      ? `${issue.key} · Practice · Muscle Memory`
+      : "Challenge not found · Muscle Memory",
   };
 }
 

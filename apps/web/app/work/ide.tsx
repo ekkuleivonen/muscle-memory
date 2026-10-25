@@ -107,6 +107,7 @@ import {
 } from "../workspace/continuity";
 
 import { ChallengeExamples } from "../(browse)/_components/challenge-examples";
+import { privateCheckFailure } from "./check-feedback";
 import { nextAction } from "./next-action";
 import { nextProblem } from "../../lib/next-problem";
 import type { IssueSummary } from "../../lib/library";
@@ -867,7 +868,7 @@ export function Ide({
         <Link
           href={`/issues/${issue.key}`}
           className="ide-back"
-          title="Back to the issue"
+          title="Back to the challenge"
         >
           ← <span className="mono">{issue.key}</span>
         </Link>
@@ -994,7 +995,7 @@ export function Ide({
           className="dialog-close"
           onClick={() => mobileSide.current?.close()}
         >
-          Back to editor ×
+          Back to practice ×
         </button>
         {sideContent}
       </dialog>
@@ -1529,8 +1530,13 @@ function Tests({
           <Case
             key={index}
             index={index}
-            label={check.name ?? caseLabel(challenge, check.input)}
-            expected={check.expected}
+            label={
+              check.visible
+                ? (check.name ?? caseLabel(challenge, check.input))
+                : `Additional check ${index + 1}`
+            }
+            visible={check.visible}
+            expected={check.visible ? check.expected : undefined}
             passed={feedback.passed[index]}
             result={o.cases[index]}
           />
@@ -1544,12 +1550,14 @@ function Case({
   index,
   label,
   expected,
+  visible,
   passed,
   result,
 }: {
   index: number;
   label: string;
   expected?: unknown;
+  visible: boolean;
   passed: boolean;
   result?: CaseResult;
 }) {
@@ -1558,7 +1566,10 @@ function Case({
       <span className="ide-case-mark">{passed ? "✔" : "✘"}</span>
       <span className="ide-case-body">
         <code>{label}</code>
-        {!passed && (
+        {!passed && !visible && (
+          <span className="ide-case-detail">{privateCheckFailure(result)}</span>
+        )}
+        {!passed && visible && (
           <span className="ide-case-detail">
             <span>
               expected <code>{JSON.stringify(expected)}</code>
@@ -2008,11 +2019,10 @@ function Boot({
         </p>
         <ol className="ide-boot-steps">
           <BootStep state="done">
-            Cloned <b>{root}</b>
+            Loaded challenge <b>{issue.key}</b>
           </BootStep>
           <BootStep state={opened ? "done" : "busy"}>
-            {opened ? "Checked out " : "Checking out "}
-            <b className="mono">{branch}</b>
+            {opened ? "Code ready" : "Restoring your code"}
             {!opened && "…"}
           </BootStep>
           {engine ? (
@@ -2052,7 +2062,7 @@ function Boot({
             className="ide-link ide-boot-skip"
             onClick={onSkip}
           >
-            Start editing now; tests can run once setup finishes
+            Start practicing; checks will be available when setup finishes
           </button>
         )}
       </div>

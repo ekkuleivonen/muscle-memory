@@ -54,7 +54,7 @@ export default async function ProjectPage(props: Props) {
               project: [projectFilterValue(project)],
             })}
           >
-            <FilterIcon /> View challenges
+            <FilterIcon /> Explore challenges
           </Link>
         }
       >

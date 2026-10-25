@@ -1,4 +1,6 @@
-# ENG-328 working-loop inventory
+# ENG-328 historical working-loop inventory
+
+Superseded by [the lean contract](eng-328-lean-contract.md) and dot’s decisions. PR/merge/Resolve below describe the preserved old implementation, not the approved player journey. Stale screenshots have been removed.
 
 Published before implementation, 2026-10-25. Baseline: `1edfb853356f7ee8cb53d5fef8efe4a5e070bfc8`; remote main matched at audit time. This stream owns route composition, not evidence, capture, consent or share serialization.
 
