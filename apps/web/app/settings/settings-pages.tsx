@@ -262,7 +262,7 @@ function Export() {
       <p>
         Your practice lives in this browser only: no account, no copy on our
         side you could sign back into. A backup is all of it in one file
-        (answers, board, every recorded keystroke and run), to keep safe or to
+        (answers, progress, stars and the practice this browser keeps), to keep safe or to
         import in another browser.
       </p>
       <p className="t-dim">
@@ -452,12 +452,12 @@ function Reset() {
     await resetProgress();
     setBusy(false);
     setAsking(false);
-    setResult({ tone: "ok", text: "Done. Fresh board." });
+    setResult({ tone: "ok", text: "Done. Progress cleared." });
   };
   return (
     <SettingsFrame title="Reset">
       <p>
-        This empties your board and deletes saved practice and recorded activity
+        This clears your progress and deletes saved practice and recorded activity
         from this browser. Your settings stay. Anything already uploaded stays
         with us until you delete your account.
       </p>
@@ -535,7 +535,7 @@ function Delete() {
   return (
     <SettingsFrame title="Delete account">
       <p>
-        This deletes your profile, board, saved practice and activity from this
+        This deletes your profile, progress, stars, saved practice and activity from this
         browser and from our servers, and signs you out.{" "}
         <span className="t-err">It can&apos;t be undone.</span> Published
         anonymised datasets aren&apos;t linked to you, so they stay.

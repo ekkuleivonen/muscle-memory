@@ -15,7 +15,7 @@ import {
  * Records every page of the app as it is shown, with its query (searches and filters are GET
  * forms and links, so they arrive as queries) and the page before it, and outside the IDE the
  * page becoming visible, hidden, focused or resized. The IDE records its own page state.
- * Nothing is recorded without the current Terms accepted (see board-log).
+ * Nothing is recorded without the current Terms accepted (see lib/site-log.ts).
  */
 export function TrackerActivity() {
   const path = usePathname();

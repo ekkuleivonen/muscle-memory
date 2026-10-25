@@ -21,8 +21,6 @@ import {
 /** Same-tab change notice; other tabs hear the storage event. */
 export const ACCOUNT_CHANGE = "muscle-memory:account";
 const YEAR_SECONDS = 60 * 60 * 24 * 365;
-/** Opt-in consent from before the Terms covered board moves; deleted with the account. */
-const LEGACY_ACTIVITY_KEY = "muscle-memory.activity-log";
 
 export function parseStoredProfile(raw: string | null): StoredProfile | null {
   try {
@@ -131,7 +129,7 @@ export function logOut() {
 }
 
 /**
- * Board, saved practice and recorded activity on this device. Profile, handle, settings and
+ * Progress, saved practice and recorded activity on this device. Profile, handle, settings and
  * the device identity stay, so anything already uploaded can still be deleted later.
  */
 export async function resetProgress(identity = false) {
@@ -161,7 +159,6 @@ export async function deleteAccount() {
   await resetProgress(true);
   localStorage.removeItem(PROFILE_KEY);
   localStorage.removeItem(STARS_KEY);
-  localStorage.removeItem(LEGACY_ACTIVITY_KEY);
   window.dispatchEvent(new Event(ACCOUNT_CHANGE));
   logOut();
 }

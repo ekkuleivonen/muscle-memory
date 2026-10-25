@@ -65,7 +65,7 @@ export function parseIssueQuery(q: string): IssueQuery {
     const match = /^([a-z]+):(.+)$/i.exec(token);
     const name = match?.[1].toLowerCase();
     if (name === "is") {
-      // is:starred, is:completed; anything else (is:runnable, old board statuses) is dropped.
+      // is:starred, is:completed; anything else (is:runnable, anything unknown) is dropped.
       for (const raw of match![2].toLowerCase().split(",")) {
         const value = raw.trim();
         if (MARKS.includes(value as Mark)) add(query.marks, value as Mark);

@@ -19,8 +19,6 @@ export const tryHref = (key: string) => `/try/${key}`;
 export type CardLink =
   /** A completed challenge (card version 3). */
   | { readonly kind: "outcome"; readonly outcome: Outcome }
-  /** It decodes, but from a card version we no longer show; the issue it names, if any. */
-  | { readonly kind: "older"; readonly key: string | null }
   | { readonly kind: "malformed" };
 
 /** Reads a result link's path segment. Never invents a result for one that does not decode. */
@@ -34,15 +32,6 @@ export function inspectCard(segment: string): CardLink {
       const outcome = decodeOutcome(segment);
       return outcome ? { kind: "outcome", outcome } : { kind: "malformed" };
     }
-    // Any other version, including the merged pull request cards (v2) of before.
-    if (value && typeof value === "object" && typeof value.v === "number")
-      return {
-        kind: "older",
-        key:
-          typeof value.k === "string" && CHALLENGE_KEY.test(value.k)
-            ? value.k
-            : null,
-      };
   } catch {
     // Not base64url JSON at all.
   }

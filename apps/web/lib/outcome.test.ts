@@ -175,14 +175,10 @@ test("a v3 link we would not have made is refused, never shown in part", () => {
   }
 });
 
-test("a card of an earlier version is older, naming its challenge; it is never shown as a result", () => {
-  const raw = (value: object) =>
-    Buffer.from(JSON.stringify(value)).toString("base64url");
-  // The merged pull request cards shared before v3.
+test("a card of another version is refused, never shown as a result", () => {
+  const raw = (value: object) => Buffer.from(JSON.stringify(value)).toString("base64url");
   assert.deepEqual(inspectCard(raw({ v: 2, k: "SQL-002", l: "sql", c: "ab12cd34ef56" })), {
-    kind: "older",
-    key: "SQL-002",
+    kind: "malformed",
   });
-  assert.deepEqual(inspectCard(raw({ v: 1, k: "<script>" })), { kind: "older", key: null });
   assert.deepEqual(inspectCard("not-a-card"), { kind: "malformed" });
 });

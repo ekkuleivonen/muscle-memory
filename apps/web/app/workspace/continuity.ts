@@ -1,5 +1,5 @@
 /**
- * Where someone was in the IDE, so leaving it (for the pull request, the ticket, another tab,
+ * Where someone was in practice, so leaving it (for another page, another tab,
  * a reload or the next day) and coming back puts them where they were: the open tabs, the file
  * shown, the side bar and panel, and each editable file's cursor, selection and scroll. The code
  * itself comes from the recorded edits (packages/capture/restore.ts); this is only the view, kept

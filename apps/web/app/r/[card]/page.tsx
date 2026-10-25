@@ -34,12 +34,7 @@ function view(card: Outcome, label: string, title: string, live: string) {
 async function read(props: Props) {
   const link = inspectCard((await props.params).card);
   const { findIssue } = await getLibrary();
-  if (link.kind !== "outcome")
-    return {
-      link,
-      issue:
-        link.kind === "older" && link.key ? findIssue(link.key) : undefined,
-    };
+  if (link.kind !== "outcome") return { link, issue: undefined };
   const card = link.outcome;
   const issue = findIssue(card.k);
   const label = LANGUAGES.find((l) => l.id === card.l)?.label ?? card.l;
@@ -78,14 +73,6 @@ export default async function SharedResult(props: Props) {
       <Unavailable
         title="This result link is incomplete"
         body="Part of the link is missing or changed, so there's no result to show. Ask whoever sent it to copy it again."
-      />
-    );
-  if (link.kind === "older")
-    return (
-      <Unavailable
-        title="This result is from an older version"
-        body="Result links from before an update can't be shown any more, and we won't guess at what it said."
-        issue={issue}
       />
     );
   if (!issue || !shown)

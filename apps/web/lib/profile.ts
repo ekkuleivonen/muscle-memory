@@ -42,12 +42,10 @@ export interface Profile {
   editor?: "standard" | "vim";
 }
 
-/** One profile question's history on this device: answered by the person, or put off. */
+/** One profile question's history on this device. */
 export interface Asked {
   /** When the person answered it themselves (not a guess, like quick start's language). */
   answeredAt?: string;
-  /** "Not now": not asked again anywhere until then. */
-  snoozedUntil?: string;
 }
 
 export interface StoredProfile {
@@ -65,7 +63,7 @@ export interface StoredProfile {
   stealth?: boolean;
   /** Logged out in settings: the consent page asks again instead of signing back in silently. */
   signedOut?: true;
-  /** Which questions were answered or put off, by question id. */
+  /** Which questions the person answered themselves, by question id. */
   asked?: Partial<Record<keyof Profile, Asked>>;
   profile: Profile;
 }
@@ -89,16 +87,4 @@ export function safeNext(value: unknown, fallback: string): string {
   } catch {
     return fallback;
   }
-}
-
-/**
- * Whether a question is still worth asking: unanswered and not put off. The languages answer
- * counts only once the person gives it; quick start's language is a guess that seeds
- * it, not an answer.
- */
-export function isOpen(stored: StoredProfile, id: keyof Profile, now = Date.now()): boolean {
-  const asked = stored.asked?.[id];
-  if (asked?.snoozedUntil && Date.parse(asked.snoozedUntil) > now) return false;
-  if (id === "languages") return !asked?.answeredAt;
-  return stored.profile[id] === undefined;
 }

@@ -89,7 +89,7 @@ export function ShareResult({
   issue,
   code,
 }: {
-  /** The card to share: a v3 outcome, or a legacy v2 result (a merged pull request). */
+  /** The card to share: a v3 outcome. */
   state: { result: Outcome | null; label: string };
   issue: ResultInput["issue"];
   /**

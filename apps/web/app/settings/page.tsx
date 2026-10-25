@@ -1,25 +1,14 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { requireConsent } from "../../lib/gate";
 import { TermFooter } from "../_terminal/footer";
 import { KeyMenu } from "../_terminal/key-menu";
 import "../_terminal/terminal.css";
-import { COMMANDS, GROUPS, runPath } from "./commands";
+import { COMMANDS, GROUPS } from "./commands";
 
 export const metadata: Metadata = { title: "Settings · Muscle Memory" };
 
-/**
- * Settings: every command as a row to pick by key or click, each its own page at /settings/<name>. Older
- * links name one with `?run=` and are sent to its page.
- */
-export default async function SettingsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ run?: string }>;
-}) {
-  const { run } = await searchParams;
-  const moved = run ? runPath(run) : null;
-  if (moved) redirect(moved);
+/** Settings: every command as a row to pick by key or click, each its own page at /settings/<name>. */
+export default async function SettingsPage() {
   await requireConsent("/settings");
   return (
     <>
