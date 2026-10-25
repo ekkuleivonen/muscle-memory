@@ -27,3 +27,11 @@ Published before implementation, 2026-10-25. Baseline: `1edfb853356f7ee8cb53d5fe
 ## Verification to deliver
 
 Before/after arrival, failure/review and completion screenshots; keyboard paths for green, failed CI, Resolve, cancellation/retry and pause/resume; regression tests, typecheck and production build. Sibling components remain integration dependencies until their contracts and commits are available. No merge or deployment is authorized.
+
+## Implemented integration
+
+ENG-329 PR #38 (`ca34b8c`, then keyboard-heading fix `12567c9`) is an explicit stack dependency, not a subsequent main change. `pulls.tsx` consumes its `Findings`, `Checks` and unchanged `PullOutcome` props; the duplicated local review components are removed. Replies are now passed through to Findings. The IDE follows its CI-only expected-value presentation. That presentation remains a product decision for dot as noted in the sibling audit.
+
+Completion includes the current unlisted issue in the next-problem lookup, so QUICK can suggest a listed next issue without adding QUICK to the catalog lists. Restored PR checks invalidate their visual Review promotion on the first edit only; no capture or evidence schema changed.
+
+ENG-332 has no active thread/delivered contract in this T3 project at implementation time. Existing `ShareResult` and `CopyIssueLink` controls are composed as secondary actions in `NextPractice` through a `share: ReactNode` slot. Its artifact/metadata changes can land independently; dot still needs to compose and verify that stream in the integrated release.

@@ -87,9 +87,24 @@ try {
   await run();
   await page.getByText(/failed ·/).waitFor();
   await hasPrimary("Run tests");
+  await push();
+  await page.getByText(/Open · checks failed/).waitFor();
+  await page.goto(`${origin}/pulls/QUICK-2/1`);
+  await page.locator(".pull-next-action").waitFor();
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Merge pull request", exact: true })
+      .count(),
+    0,
+  );
+  assert.equal(await page.locator(".outcome-actions").count(), 0);
+  assert.match(await page.locator(".pull-findings").innerText(), /CI only/);
+  await keyActivate(page.locator(".pull-next-action"));
+  await editor().waitFor();
   await fill("export function countWords(text) { while (true) {} }");
   await run();
   await keyActivate(page.getByRole("button", { name: /Cancel run/ }));
+  await keyActivate(page.getByRole("tab", { name: "Tests", exact: true }));
   await page.getByText("Run cancelled.", { exact: true }).waitFor();
   await hasPrimary("Run tests");
 
@@ -97,7 +112,7 @@ try {
     "export function countWords(text) { return text.trim() ? text.trim().split(/\\s+/).length : 0; }";
   await fill(good);
   await run();
-  await hasPrimary("Open pull request");
+  await hasPrimary("Push to #1");
   assert.equal(
     await editor().evaluate((el) => el === document.activeElement),
     true,
@@ -109,6 +124,10 @@ try {
     0,
   );
 
+  // Resume the eligible PR before editing: there is no local RunView on this mount.
+  await page.reload();
+  await editor().waitFor();
+  await hasPrimary("Review and merge #1");
   // Editing invalidates the visual promotion immediately and the PR's real gate after saving.
   await editor().press("End");
   await editor().press("Space");

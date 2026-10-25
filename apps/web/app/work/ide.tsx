@@ -562,6 +562,7 @@ export function Ide({
         types: types.current ?? undefined,
         runtime: issue.runnable && engine ? engine.runtime : null,
         pullRequestsBefore: numbered[0]?.number ?? 0,
+        hasPreviousChecks: numbered.length > 0,
         openPullRequest: () => {
           const open = openPullRef.current;
           return open ? { number: open.number, pushes: open.pushes } : null;
@@ -1525,7 +1526,7 @@ function Tests({
             key={index}
             index={index}
             label={check.name ?? caseLabel(challenge, check.input)}
-            expected={check.expected}
+            expected={check.visible ? check.expected : undefined}
             passed={feedback.passed[index]}
             result={o.cases[index]}
           />
@@ -1544,7 +1545,7 @@ function Case({
 }: {
   index: number;
   label: string;
-  expected: unknown;
+  expected?: unknown;
   passed: boolean;
   result?: CaseResult;
 }) {
@@ -1555,9 +1556,13 @@ function Case({
         <code>{label}</code>
         {!passed && (
           <span className="ide-case-detail">
-            <span>
-              expected <code>{JSON.stringify(expected)}</code>
-            </span>
+            {expected !== undefined ? (
+              <span>
+                expected <code>{JSON.stringify(expected)}</code>
+              </span>
+            ) : (
+              <span className="faint">CI only</span>
+            )}
             {result?.error ? (
               <pre className="ide-trace">{result.error.traceback.text}</pre>
             ) : result?.conversionError ? (

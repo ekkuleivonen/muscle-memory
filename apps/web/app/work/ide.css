@@ -1014,3 +1014,8 @@ dialog::backdrop {
   padding: 0 12px;
   font-size: 13px;
 }
+.ide-actions .btn.start {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: transparent;
+}
