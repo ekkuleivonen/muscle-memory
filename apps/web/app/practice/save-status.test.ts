@@ -27,13 +27,7 @@ function workspace(sink: CaptureSink, initialCode = "") {
     challenge: { key: ISSUE, revision: fixture.revision, revisionId: fixture.id },
     attemptId: ATTEMPT,
     sink,
-    files: {
-      [fixture.path]: {
-        text: initialCode,
-        language: "python",
-        mediaType: "text/x-python; charset=utf-8",
-      },
-    },
+    code: initialCode,
     runner: () =>
       ({
         running: false,
@@ -44,10 +38,10 @@ function workspace(sink: CaptureSink, initialCode = "") {
     onSaveStatus: (status) => updates.push(status),
   });
   // run() needs a mounted editor; the documents themselves come from the edits recorded.
-  (session as unknown as { views: Map<string, unknown> }).views.set(fixture.path, {});
+  (session as unknown as { view: unknown }).view = {};
   const dispatch = (transaction: Transaction) => {
     state = transaction.state;
-    session.recordEdit(fixture.path, transaction);
+    session.recordEdit(transaction);
   };
   return {
     session,

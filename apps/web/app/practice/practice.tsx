@@ -36,7 +36,7 @@ import {
 } from "../../../../packages/runner/runner";
 import { readProfile } from "../../lib/account";
 import { languageLabel } from "../../lib/challenges";
-import { mediaTypeOf, type FileLanguage, type LanguageId } from "../../lib/languages";
+import type { LanguageId } from "../../lib/languages";
 import { environmentOf } from "../../lib/environment";
 import {
   attemptFor,
@@ -64,13 +64,7 @@ import {
   type SaveStatus,
 } from "./session";
 
-import {
-  fitView,
-  readView,
-  writeView,
-  viewScope,
-  type FileView,
-} from "./continuity";
+import { fitPlace, readView, writeView, type Place } from "./continuity";
 
 import { ChallengeExamples } from "../_components/challenge-examples";
 import { TermFooter, type Crumb } from "../_terminal/footer";
@@ -154,22 +148,18 @@ export function Practice({
   challenge: PracticeChallenge;
 }) {
   const revision = useMemo(() => JSON.parse(revisionJson) as Revision, [revisionJson]);
-  const home = revision.file;
-  const editable = [{ path: home, text: revision.starter, language: revision.language }];
   const [outputOpen, setOutputOpen] = useState(false);
   const savedScope = useRef<string | null>(null);
-  const pendingPlaces = useRef<Record<string, FileView>>({});
-  const panelNow = useRef<"tests" | "output">("tests");
-  panelNow.current = outputOpen ? "output" : "tests";
+  /** A saved place waiting for the editor to mount. */
+  const pendingPlace = useRef<Place | null>(null);
+  const outputNow = useRef(false);
+  outputNow.current = outputOpen;
   const persistView = () => {
     if (savedScope.current && session.current)
       writeView({
         scope: savedScope.current,
-        tabs: [home],
-        active: home,
-        side: "ticket",
-        panel: panelNow.current,
-        files: { ...session.current.places(), ...pendingPlaces.current },
+        place: pendingPlace.current ?? session.current.place(),
+        outputOpen: outputNow.current,
         savedAt: new Date().toISOString(),
       });
   };
@@ -242,7 +232,7 @@ export function Practice({
       const pane = {
         "1": () => challengeBody.current,
         "2": () =>
-          hosts.current.get(home)?.querySelector<HTMLElement>(".cm-content"),
+          editorHost.current?.querySelector<HTMLElement>(".cm-content"),
         "3": () => resultsBody.current,
       }[event.key];
       const node = pane?.();
@@ -252,7 +242,7 @@ export function Practice({
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [home]);
+  }, []);
   const progress = useProgress();
   const stars = useStars();
   const starred = stars.includes(challenge.key);
@@ -283,7 +273,7 @@ export function Practice({
   // The session's callbacks outlive renders; they read the latest suggestion through this.
   const nextRef = useRef(next);
   nextRef.current = next;
-  const hosts = useRef(new Map<string, HTMLDivElement>());
+  const editorHost = useRef<HTMLDivElement>(null);
   const sandboxHost = useRef<HTMLDivElement>(null);
   const engine = engineFor(challenge.language);
   const runner = useRef<Runner | null>(null);
@@ -343,9 +333,9 @@ export function Practice({
       const participantId = await store.current.participantId();
       const environment = await environmentOf();
       const records = await store.current.records();
-      const homeHost = hosts.current.get(home);
+      const host = editorHost.current;
       // A superseded open must not create a session or record anything.
-      if (!homeHost || !current()) return;
+      if (!host || !current()) return;
       const start = takeStart(challenge.key);
       const now = new Date().toISOString();
       const chosen = attemptFor(
@@ -382,21 +372,12 @@ export function Practice({
             .filter(Boolean)
             .join(" "),
         );
-      savedScope.current = `${participantId}:${viewScope(challenge.key, attemptId)}`;
+      const code = recovered?.files[revision.file] ?? revision.starter;
+      savedScope.current = `${participantId}:${challenge.key}:${attemptId}`;
       const saved = readView(savedScope.current);
       if (saved) {
-        const fitted = fitView(saved, {
-          paths: editable.map((f) => f.path),
-          tabs: [home],
-          lengths: Object.fromEntries(
-            editable.map((f) => [
-              f.path,
-              (recovered?.files[f.path] ?? f.text).length,
-            ]),
-          ),
-        });
-        setOutputOpen(fitted.panel === "output");
-        pendingPlaces.current = { ...fitted.files };
+        setOutputOpen(saved.outputOpen);
+        pendingPlace.current = saved.place && fitPlace(saved.place, code.length);
       }
       const opened: PracticeSession = new PracticeSession({
         participantId,
@@ -415,16 +396,7 @@ export function Practice({
             }
           : null,
         sink: store.current,
-        files: Object.fromEntries(
-          editable.map((f) => [
-            f.path,
-            {
-              text: recovered?.files[f.path] ?? f.text,
-              language: f.language as FileLanguage,
-              mediaType: mediaTypeOf(f.language as LanguageId),
-            },
-          ]),
-        ),
+        code,
         restoredFrom: recovered?.revision,
         language: challenge.language,
         keymap: keys,
@@ -452,7 +424,7 @@ export function Practice({
         environment,
       });
       session.current = opened;
-      opened.mount(home, homeHost);
+      opened.mount(host);
       opened.page({
         visible: document.visibilityState === "visible",
         focused: document.hasFocus(),
@@ -539,10 +511,10 @@ export function Practice({
   const isOpen = opening.state === "open";
   useLayoutEffect(() => {
     if (!isOpen) return;
-    const place = pendingPlaces.current[home];
-    session.current?.restorePlace(home, place, Boolean(place));
-    delete pendingPlaces.current[home];
-  }, [home, isOpen]);
+    const place = pendingPlace.current;
+    session.current?.restorePlace(place, Boolean(place));
+    pendingPlace.current = null;
+  }, [isOpen]);
   useEffect(() => {
     if (!isOpen || runtime.state === "none") return;
     session.current?.runtimeState(
@@ -648,9 +620,7 @@ export function Practice({
             <div
               className="practice-editor"
               hidden={opening.state === "failed"}
-              ref={(node) => {
-                if (node) hosts.current.set(home, node);
-              }}
+              ref={editorHost}
             />
             {opening.state === "opening" && (
               <p role="status">Restoring your code…</p>

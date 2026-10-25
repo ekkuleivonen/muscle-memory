@@ -44,8 +44,6 @@ export interface Engine {
   readonly reusable?: boolean;
   /** The runtime builds functions from source text; see SANDBOX_CSP. */
   readonly allowEval?: boolean;
-  /** Loads the request's other source `files`, so the entry file can import them. */
-  readonly multiFile?: boolean;
 }
 
 const {
@@ -75,7 +73,6 @@ export const ENGINES: Record<EngineId, Engine> = {
     sizes: pyodide.sizes,
     config: { lock: pyodide.lockInfo },
     worker: PYTHON_WORKER,
-    multiFile: true,
   },
   javascript: {
     id: "javascript",
@@ -90,7 +87,6 @@ export const ENGINES: Record<EngineId, Engine> = {
     sizes: javascript.sizes,
     config: {},
     worker: JAVASCRIPT_WORKER,
-    multiFile: true,
   },
   pglite: {
     id: "pglite",

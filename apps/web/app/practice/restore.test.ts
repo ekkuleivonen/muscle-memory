@@ -37,13 +37,7 @@ function workspace(
     challenge,
     attemptId,
     sink,
-    files: {
-      [fixture.path]: {
-        text: initialCode,
-        language: "python",
-        mediaType: "text/x-python; charset=utf-8",
-      },
-    },
+    code: initialCode,
     runner: () =>
       ({
         running: false,
@@ -53,13 +47,10 @@ function workspace(
     onEditedAfterRun: () => undefined,
   });
   // run() needs a mounted editor; the documents themselves come from the edits recorded.
-  (session as unknown as { views: Map<string, unknown> }).views.set(
-    fixture.path,
-    {},
-  );
+  (session as unknown as { view: unknown }).view = {};
   const dispatch = (transaction: Transaction) => {
     state = transaction.state;
-    if (transaction.docChanged) session.recordEdit(fixture.path, transaction);
+    if (transaction.docChanged) session.recordEdit(transaction);
   };
   return {
     session,
@@ -324,63 +315,4 @@ test("when the latest session has nothing recoverable, an earlier one is used an
   assert.equal(recovered.files[fixture.path], "kept");
   assert.equal(recovered.fromEarlierSession, true);
   assert.equal(recovered.complete, false);
-});
-
-test("several editable files are recorded and restored together, each with its own edits", async () => {
-  const sink = new MemorySink();
-  const files = {
-    "src/a.js": {
-      text: "a\n",
-      language: "javascript",
-      mediaType: "text/x-javascript",
-    },
-    "src/b.js": {
-      text: "b\n",
-      language: "javascript",
-      mediaType: "text/x-javascript",
-    },
-  } as const;
-  const session = new PracticeSession({
-    participantId: P,
-    termsVersion: "2026-10-01",
-    challenge,
-    attemptId: ATTEMPT,
-    sink,
-    files,
-    runner: () =>
-      ({ running: false, cancel: () => undefined }) as unknown as Runner,
-    onRun: () => undefined,
-    onEditedAfterRun: () => undefined,
-  });
-  const states = {
-    "src/a.js": EditorState.create({ doc: "a\n" }),
-    "src/b.js": EditorState.create({ doc: "b\n" }),
-  };
-  const type = (path: keyof typeof states, insert: string) => {
-    const transaction = states[path].update({
-      changes: { from: states[path].doc.length, insert },
-      userEvent: "input.type",
-    });
-    states[path] = transaction.state;
-    session.recordEdit(path, transaction);
-  };
-  type("src/a.js", "one");
-  type("src/b.js", "two");
-  type("src/a.js", "three");
-  assert.deepEqual(session.editedFiles().sort(), ["src/a.js", "src/b.js"]);
-  await session.recorder.flush();
-  const recovered = latestSavedCode([...sink.records.values()], P, ISSUE, ATTEMPT)!;
-  assert.deepEqual(recovered.files, {
-    "src/a.js": "a\nonethree",
-    "src/b.js": "b\ntwo",
-  });
-  assert.equal(recovered.revision, 3);
-  assert.equal(recovered.complete, true);
-  // Every edit names its file.
-  const edits = [...sink.records.values()]
-    .map((r) => JSON.parse(r.payload))
-    .filter((o) => o.type === "practice.edit")
-    .map((o) => o.data.file);
-  assert.deepEqual(edits, ["src/a.js", "src/b.js", "src/a.js"]);
-  await session.close();
 });

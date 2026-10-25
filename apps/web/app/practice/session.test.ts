@@ -20,13 +20,7 @@ function session(sink: MemorySink, options: Partial<SessionOptions> = {}) {
     },
     attemptId: "attempt-1",
     sink,
-    files: {
-      [fixture.path]: {
-        text: "",
-        language: "python",
-        mediaType: "text/x-python; charset=utf-8",
-      },
-    },
+    code: "",
     runner: () => ({ running: false, cancel: () => undefined }) as unknown as Runner,
     onRun: () => undefined,
     onEditedAfterRun: () => undefined,
@@ -72,7 +66,7 @@ test("snapshots hold the exact text of the revision that triggered them, within 
     Array.from({ length: 30 }, (_, index) => `${index + 1};`),
   );
   // All 30 transactions belong to one editor update: the view already shows revision 30.
-  for (const transaction of batch) workspace.recordEdit(fixture.path, transaction);
+  for (const transaction of batch) workspace.recordEdit(transaction);
   await workspace.recorder.flush();
   const [periodic] = snapshots(sink).filter(
     (snapshot) => snapshot.reason === "periodic",
@@ -87,7 +81,7 @@ test("an oversize edit inside a batch is snapshotted at its own revision", async
   const sink = new MemorySink();
   const workspace = session(sink);
   const batch = transactions(["a", "x".repeat(20000), "b", "c"]);
-  for (const transaction of batch) workspace.recordEdit(fixture.path, transaction);
+  for (const transaction of batch) workspace.recordEdit(transaction);
   await workspace.recorder.flush();
   const [oversize] = snapshots(sink).filter(
     (snapshot) => snapshot.reason === "oversize-edit",
@@ -114,7 +108,7 @@ const observations = (sink: MemorySink) =>
 test("keys are batched with their own times; cursor bursts merge and are written before what follows", async () => {
   const sink = new MemorySink();
   const workspace = session(sink);
-  const hooks = workspace.activity(fixture.path);
+  const hooks = workspace.activity();
   hooks.onFocus(true);
   hooks.onKey("down", "a", "KeyA", "", false);
   hooks.onKey("up", "a", "KeyA", "", false);
@@ -123,7 +117,7 @@ test("keys are batched with their own times; cursor bursts merge and are written
   hooks.onSelection({ ranges: [{ anchor: 1, head: 1 }], main: 0 }, "select.pointer");
   hooks.onSelection({ ranges: [{ anchor: 2, head: 2 }], main: 0 }, "select.pointer");
   hooks.onSelection({ ranges: [{ anchor: 3, head: 3 }], main: 0 }, "select.pointer");
-  workspace.recordEdit(fixture.path, transactions(["x"])[0]);
+  workspace.recordEdit(transactions(["x"])[0]);
   hooks.onScroll(1, 20);
   hooks.onScroll(5, 24);
   hooks.onClipboard("copy", [{ from: 0, to: 1 }], false);
@@ -167,14 +161,14 @@ test("keys are batched with their own times; cursor bursts merge and are written
 test("closing writes what is still buffered; discarding does not", async () => {
   const kept = new MemorySink();
   const one = session(kept);
-  one.activity(fixture.path).onKey("down", "b", "KeyB", "", false);
+  one.activity().onKey("down", "b", "KeyB", "", false);
   await one.close();
   assert.ok(observations(kept).some((o) => o.type === "practice.keys"));
   assert.equal(observations(kept).at(-1).data.reason, "left");
 
   const dropped = new MemorySink();
   const two = session(dropped);
-  two.activity(fixture.path).onKey("down", "b", "KeyB", "", false);
+  two.activity().onKey("down", "b", "KeyB", "", false);
   await two.close(true);
   assert.ok(!observations(dropped).some((o) => o.type === "practice.keys"));
 });
@@ -189,7 +183,7 @@ test("restored checks are invalidated on the first edit only, without per-keystr
     },
   });
   for (const transaction of transactions(["a", "b", "c"]))
-    workspace.recordEdit(fixture.path, transaction);
+    workspace.recordEdit(transaction);
   assert.equal(changes, 1);
   await workspace.close();
 });

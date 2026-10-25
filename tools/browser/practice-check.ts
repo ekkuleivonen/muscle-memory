@@ -133,7 +133,7 @@ try {
   // Examples never complete; a passing submission does.
   await editor().fill(solution);
   await page.getByRole("button", { name: "Run examples", exact: true }).click();
-  await page.locator(".ide-summary.pass").waitFor();
+  await page.locator(".run-summary.pass").waitFor();
   assert.equal((await ofType("practice.completed")).length, 0, "examples cannot complete");
   await submit();
   await page.getByRole("heading", { name: "Next challenge", exact: true }).waitFor();
@@ -143,7 +143,7 @@ try {
   assert.equal(passed.data.result, "passed");
   assert.equal(completed.data.runId, passed.data.runId);
   const progress = await page.evaluate(() => JSON.parse(localStorage.getItem("muscle-memory.progress")!));
-  assert.equal(progress["word-count-javascript"].completions, 1);
+  assert.equal(progress["JS-002"].completions, 1);
   assert.equal(
     (await ofType("practice.clipboard")).filter((v) => v.data.source === "challenge").length,
     1,

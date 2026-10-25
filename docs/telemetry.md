@@ -29,7 +29,7 @@ Every observation (`packages/domain/records.ts`) carries:
 | `challenge`, `challengeRevision` | the challenge's key (such as `PY-003`) and the exact revision, when it is about one |
 | `attemptId` | the attempt, for practice |
 
-Code is stored once per revision as an `artifact.code-revision` (every editable file by path, each bounded) and cited by id.
+Code is stored once per revision as an `artifact.code-revision` (the file by its name, bounded) and cited by id.
 
 ## The practice stream
 

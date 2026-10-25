@@ -39,8 +39,8 @@ import {
   type Runner,
   type RunOutcome,
 } from "../../../../packages/runner/runner";
-import { fileViewOf, restoreFileView, type FileView } from "./continuity";
-import type { FileLanguage } from "../../lib/languages";
+import { placeOf, restorePlace, type Place } from "./continuity";
+import { mediaTypeOf, type FileLanguage, type LanguageId } from "../../lib/languages";
 import {
   createEditor,
   editorFeatures,
@@ -73,11 +73,11 @@ export interface SessionOptions {
   /** Set when this session begins the attempt: recorded as `started`, before `opened`. */
   readonly started?: PracticeData["practice.started"] | null;
   readonly sink: CaptureSink;
-  /** Every editable file and the text it starts with (the revision's, or restored work). */
-  readonly files: Readonly<Record<string, EditableFile>>;
+  /** The code the editor opens with: the starter, or restored work. */
+  readonly code: string;
   readonly restoredFrom?: number;
-  /** The challenge's language, for the runtime and the editor features recorded; Python unless told otherwise. */
-  readonly language?: FileLanguage;
+  /** The challenge's language, for the runtime, the editor and the features recorded; Python unless told otherwise. */
+  readonly language?: LanguageId;
   readonly keymap?: Keymap;
   /** Type hints (squiggles, hover types) for languages that have them. */
   readonly types?: TypeChecker;
@@ -117,12 +117,6 @@ const KEYS_AT_MOST = 200;
 const SELECTION_MERGE_MS = 100;
 const SCROLL_MERGE_MS = 250;
 
-export interface EditableFile {
-  readonly text: string;
-  readonly language: FileLanguage;
-  readonly mediaType: string;
-}
-
 /** Capture status plus whether the current code could be rebuilt exactly after a refresh. */
 export interface SaveStatus extends CaptureStatus {
   readonly recoverable: boolean;
@@ -132,11 +126,9 @@ export interface SaveStatus extends CaptureStatus {
 export class PracticeSession {
   readonly recorder: CaptureRecorder;
   readonly sourceId = `practice-${randomId()}`;
-  /** Editors by path, mounted when their tab is first shown. */
-  private readonly views = new Map<string, EditorView>();
-  /** Every editable file's current text, kept per transaction so snapshots never lag. */
-  private readonly docs = new Map<string, Text>();
-  private readonly edited = new Set<string>();
+  private view?: EditorView;
+  /** The code now, kept per transaction so snapshots never lag. */
+  private doc: Text;
   private revision = 0;
   private editsSinceSnapshot = 0;
   private lastRun?: RunView;
@@ -149,10 +141,10 @@ export class PracticeSession {
   private unsafeAt = 0;
   private unsafeReason = "";
   private statusKey = "";
-  /** Key events waiting to be written, by file. */
-  private readonly keys = new Map<string, KeyEvent[]>();
+  /** Key events waiting to be written. */
+  private keys: KeyEvent[] = [];
   private keysTimer: ReturnType<typeof setTimeout> | undefined;
-  /** A burst being merged (selection or scroll in one file), written when it settles. */
+  /** A burst being merged (selection or scroll), written when it settles. */
   private burst:
     | { key: string; emit: () => void; timer: ReturnType<typeof setTimeout> }
     | undefined;
@@ -176,9 +168,8 @@ export class PracticeSession {
       sink: options.sink,
       onTransition: () => this.notify(),
     });
+    this.doc = Text.of(options.code.split(/\r\n?|\n/));
     if (options.started) this.record("practice.started", options.started);
-    for (const [path, file] of Object.entries(options.files))
-      this.docs.set(path, Text.of(file.text.split(/\r\n?|\n/)));
     const code = this.artifact();
     this.markCopy(
       this.record(
@@ -229,15 +220,19 @@ export class PracticeSession {
     };
   }
 
-  /** Mounts the editor for one editable file; its edits are recorded under its path. */
-  mount(path: string, parent: HTMLElement): void {
-    const file = this.options.files[path];
-    if (!file || this.views.has(path)) return;
-    const view = createEditor(
+  /** The challenge's file name, which observations and code copies name. */
+  private get file(): string {
+    return this.options.challenge.revision.file;
+  }
+
+  /** Mounts the editor; its edits are recorded as they happen. */
+  mount(parent: HTMLElement): void {
+    if (this.view) return;
+    this.view = createEditor(
       parent,
-      this.docs.get(path)!.toString(),
+      this.doc.toString(),
       {
-        onChange: (transaction) => this.recordEdit(path, transaction),
+        onChange: (transaction) => this.recordEdit(transaction),
         onSubmit: () =>
           this.options.onSubmit
             ? this.options.onSubmit("keyboard")
@@ -245,61 +240,41 @@ export class PracticeSession {
         onVimMode: this.options.onVimMode,
       },
       {
-        language: file.language,
+        language: (this.options.language ?? "python") as FileLanguage,
         keymap: this.options.keymap ?? "standard",
-        label: `Code editor: ${path}`,
-        // The type checker knows one file: the entry file.
-        types:
-          path === this.options.challenge.revision.file
-            ? this.options.types
-            : undefined,
-        activity: this.activity(path),
+        label: `Code editor: ${this.file}`,
+        types: this.options.types,
+        activity: this.activity(),
       },
     );
-    this.views.set(path, view);
-    view.focus();
+    this.view.focus();
   }
 
-  private restoring = new Set<string>();
-  private lastPlaces = new Map<string, FileView>();
+  private restoring = false;
+  private lastPlace: Place | null = null;
 
-  /** Each mounted editable file's cursor, selection and scroll, to come back to later. */
-  places(): Record<string, FileView> {
-    for (const [path, view] of this.views)
-      if (view.dom.getClientRects().length)
-        this.lastPlaces.set(path, fileViewOf(view));
-    return Object.fromEntries(this.lastPlaces);
+  /** The cursor, selection and scroll, to come back to later. */
+  place(): Place | null {
+    if (this.view?.dom.getClientRects().length) this.lastPlace = placeOf(this.view);
+    return this.lastPlace;
   }
 
-  /**
-   * Restores local view state without recording app-driven selection or scroll as activity.
-   */
-  restorePlace(
-    path: string,
-    place: FileView | undefined,
-    focus: boolean,
-  ): void {
-    const view = this.views.get(path);
+  /** Restores the view without recording app-driven selection or scroll as activity. */
+  restorePlace(place: Place | null, focus: boolean): void {
+    const view = this.view;
     if (!view || this.closed) return;
     if (place) {
-      this.lastPlaces.set(path, place);
-      this.restoring.add(path);
-      restoreFileView(view, place);
-      setTimeout(() => this.restoring.delete(path), 100);
+      this.lastPlace = place;
+      this.restoring = true;
+      restorePlace(view, place);
+      setTimeout(() => (this.restoring = false), 100);
     }
     if (focus) view.focus();
   }
 
-  /** Editable files changed in this session. */
-  editedFiles(): string[] {
-    return [...this.edited];
-  }
-
-  /** The editable files' current text, by path. */
-  code(): Record<string, string> {
-    return Object.fromEntries(
-      [...this.docs].map(([path, doc]) => [path, doc.toString()]),
-    );
+  /** The code now. */
+  code(): string {
+    return this.doc.toString();
   }
 
   get currentRevision(): number {
@@ -346,7 +321,7 @@ export class PracticeSession {
     purpose: RunPurpose = "examples",
     via: "pointer" | "keyboard" = "pointer",
   ): Promise<void> {
-    if (!this.views.size || !this.runnable || this.options.runner().running)
+    if (!this.view || !this.runnable || this.options.runner().running)
       return;
     const revision = this.revision;
     const code = this.artifact();
@@ -361,7 +336,7 @@ export class PracticeSession {
       runtime: this.runtime,
       timeoutMs: this.options.runner().timeoutMs ?? RUN_TIMEOUT_MS,
     };
-    const files = this.code();
+    const text = this.code();
     this.snapshot(code, "run");
     this.editsSinceSnapshot = 0;
     const update = (status: RunStatus, outcome?: RunOutcome, verdict?: Verdict) => {
@@ -378,9 +353,8 @@ export class PracticeSession {
     const outcome = await this.options.runner().run(
       {
         runId,
-        code: files[challenge.file] ?? "",
+        code: text,
         filename: challenge.file,
-        files: {},
         language: this.options.language ?? "python",
         entrypoint: challenge.entrypoint,
         ...(challenge.parameters ? { parameters: challenge.parameters } : {}),
@@ -394,7 +368,7 @@ export class PracticeSession {
     );
     // The outcome belongs to `revision`, even if the editor has moved on since.
     if (purpose !== "submit") return update(statusOf(outcome), outcome);
-    const verdict = verdictOf(challenge, outcome, files[challenge.file] ?? "");
+    const verdict = verdictOf(challenge, outcome, text);
     this.record("practice.submitted", {
       runId,
       revision,
@@ -434,8 +408,8 @@ export class PracticeSession {
       this.record("practice.closed", { reason: "left" });
       await this.recorder.flush().catch(() => undefined);
     }
-    for (const view of this.views.values()) view.destroy();
-    this.views.clear();
+    this.view?.destroy();
+    this.view = undefined;
     await this.recorder.stop();
   }
 
@@ -473,21 +447,20 @@ export class PracticeSession {
     });
   }
 
-  /** What one file's editor reports besides its edits; read-only files too. */
-  activity(file: string): ActivityHooks {
+  /** What the editor reports besides its edits. */
+  activity(): ActivityHooks {
+    const file = this.file;
     return {
       onKey: (kind, key, code, modifiers, repeat) => {
         if (this.closed) return;
-        const waiting = this.keys.get(file) ?? [];
-        waiting.push([this.recorder.elapsed(), kind, key, code, modifiers, repeat]);
-        this.keys.set(file, waiting);
-        if (waiting.length >= KEYS_AT_MOST) this.writeKeys();
+        this.keys.push([this.recorder.elapsed(), kind, key, code, modifiers, repeat]);
+        if (this.keys.length >= KEYS_AT_MOST) this.writeKeys();
         else
           this.keysTimer ??= setTimeout(() => this.writeKeys(), KEYS_EVERY_MS);
       },
       onSelection: (selection, userEvent) => {
-        if (this.restoring.has(file)) return;
-        const key = `selection:${file}`;
+        if (this.restoring) return;
+        const key = "selection";
         const moves =
           this.burst?.key === key ? (this.merging as number) + 1 : 1;
         this.merge(key, SELECTION_MERGE_MS, moves, () =>
@@ -500,8 +473,8 @@ export class PracticeSession {
         );
       },
       onScroll: (fromLine, toLine) =>
-        !this.restoring.has(file) &&
-        this.merge(`scroll:${file}`, SCROLL_MERGE_MS, 0, () =>
+        !this.restoring &&
+        this.merge("scroll", SCROLL_MERGE_MS, 0, () =>
           this.record("practice.scroll", {
             file,
             fromLine,
@@ -554,14 +527,12 @@ export class PracticeSession {
     burst.emit();
   }
 
-  /** Writes waiting key events, one observation per file. */
+  /** Writes the key events waiting, as one observation. */
   private writeKeys(): void {
     clearTimeout(this.keysTimer);
     this.keysTimer = undefined;
-    for (const [file, keys] of this.keys)
-      if (keys.length)
-        this.recorder.observe("practice.keys", { file, keys });
-    this.keys.clear();
+    if (this.keys.length) this.recorder.observe("practice.keys", { file: this.file, keys: this.keys });
+    this.keys = [];
   }
 
   /**
@@ -577,18 +548,17 @@ export class PracticeSession {
     return this.recorder.observe(type, data, artifacts);
   }
 
-  /** Records one applied transaction in one file. Exposed for tests; the editor calls it per change. */
-  recordEdit(file: string, transaction: Transaction): void {
+  /** Records one applied transaction. Exposed for tests; the editor calls it per change. */
+  recordEdit(transaction: Transaction): void {
     this.revision++;
-    this.docs.set(file, transaction.newDoc);
-    this.edited.add(file);
+    this.doc = transaction.newDoc;
     const changes = transaction.changes.toJSON() as Json;
     const changesBytes = new TextEncoder().encode(
       JSON.stringify(changes),
     ).length;
     const oversize = changesBytes > EDIT_CHANGES_LIMIT_BYTES;
     const edit = this.record("practice.edit", {
-      file,
+      file: this.file,
       revision: this.revision,
       changes: oversize ? null : changes,
       changesBytes,
@@ -607,7 +577,7 @@ export class PracticeSession {
     // Recovery snapshots let the document be rebuilt from the stream; an oversize edit
     // has no change set, so it is followed by a snapshot immediately.
     if (oversize || ++this.editsSinceSnapshot >= SNAPSHOT_EVERY_EDITS) {
-      // This transaction's documents, not the views': one update can hold several
+      // This transaction's document, not the view's: one update can hold several
       // transactions, and the snapshot must match the revision it is labelled with.
       const code = this.artifact();
       this.snapshot(code, oversize ? "oversize-edit" : "periodic");
@@ -694,15 +664,12 @@ export class PracticeSession {
       this.sourceId,
       this.revision,
       PRACTICE_CAPTURE_VERSION,
-      Object.fromEntries(
-        [...this.docs].map(([path, doc]) => [
-          path,
-          {
-            text: doc.toString(),
-            mediaType: this.options.files[path].mediaType,
-          },
-        ]),
-      ),
+      {
+        [this.file]: {
+          text: this.doc.toString(),
+          mediaType: mediaTypeOf((this.options.language ?? "python") as LanguageId),
+        },
+      },
     );
   }
 }

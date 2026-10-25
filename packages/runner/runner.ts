@@ -63,11 +63,11 @@ export type LoadProgress =
 
 export interface RunRequest {
   readonly runId: string;
-  /** The entry file's source: CI loads it and calls the entry point. */
+  /** The challenge's file: the runner loads it and calls the entry point. */
   readonly code: string;
   /**
-   * The program's other source files by path, relative to the repo root, for engines that load
-   * more than one file (see `multiFile` in engines.ts). The entry file can import them.
+   * Other source files by path, which the JavaScript, TypeScript and Python workers let the file
+   * import. Challenges are one file, so practice sends none; the sandbox checks still cover it.
    */
   readonly files?: Readonly<Record<string, string>>;
   /** The entry file's path, used in error locations and to resolve relative imports. */

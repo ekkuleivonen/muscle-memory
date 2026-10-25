@@ -134,7 +134,7 @@ export function logOut() {
  */
 export async function resetProgress(identity = false) {
   localStorage.removeItem(PROGRESS_KEY);
-  localStorage.removeItem("muscle-memory.workspace-view");
+  localStorage.removeItem("muscle-memory.practice-view"); // app/practice/continuity.ts
   window.dispatchEvent(new Event(PROGRESS_CHANGE));
   const store = await openPracticeStore();
   try {
