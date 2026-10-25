@@ -1,0 +1,5 @@
+
+> typecheck
+> tsc --noEmit -p apps/web && tsc --noEmit -p apps/ingest
+
+# exit status: 0

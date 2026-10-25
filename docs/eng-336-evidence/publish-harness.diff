@@ -1,0 +1,13 @@
+--- content-check.ts
++++ .eng336-content-check.ts
+@@ -19 +19,3 @@
+-const challenges = readChallenges(join(root, "content/challenges"));
++const challenges = readChallenges(join(root, "content/challenges")).filter(c => ["C-003", "C-004", "C-005", "CPP-003", "CPP-004", "CPP-005", "CS-003", "CS-004", "CS-005", "HTML-002", "HTML-003", "HTML-004", "HTML-005", "JAVA-003", "JAVA-004", "JAVA-005", "PHP-004", "PHP-005", "RB-003", "RB-004", "RB-005", "SQL-004", "SQL-005"].includes(c.metadata.key));
++const selected = process.argv.slice(2);
++const checked = selected.length ? challenges.filter(c => selected.includes(c.metadata.key)) : challenges;
+@@ -74 +76 @@
+-for (const { metadata, revision, private: secret } of challenges) {
++for (const { metadata, revision, private: secret } of checked) {
+@@ -127,0 +130,2 @@
++  wrong.forEach((run,i) => { if(run.outcome.phase !== "tests" || run.outcome.cases?.some((c:any)=>c.error)) problems.push(`wrong ${i+1} must fail behaviorally, not with errors: ${JSON.stringify(run.outcome)}`); });
++  if(start.outcome.phase !== "tests" || start.outcome.cases?.some((c:any)=>c.error)) problems.push(`starter must run without errors: ${JSON.stringify(start.outcome)}`);

@@ -1,0 +1,82 @@
+{
+  "manifestSha256": "94db353f773d501a7884fc22500392b2d38c77e065dd2b4ec427469600e76fee",
+  "engines": [
+    {
+      "engine": "pyodide",
+      "version": "314.0.7",
+      "files": 4,
+      "bytes": 13412130,
+      "hashesAndSizesMatch": true
+    },
+    {
+      "engine": "javascript",
+      "version": "3.35.1",
+      "files": 1,
+      "bytes": 206034,
+      "hashesAndSizesMatch": true
+    },
+    {
+      "engine": "pglite",
+      "version": "0.5.11",
+      "files": 4,
+      "bytes": 17433851,
+      "hashesAndSizesMatch": true
+    },
+    {
+      "engine": "html",
+      "version": "0.18.14",
+      "files": 1,
+      "bytes": 323787,
+      "hashesAndSizesMatch": true
+    },
+    {
+      "engine": "php",
+      "version": "0.2.0",
+      "files": 2,
+      "bytes": 13447452,
+      "hashesAndSizesMatch": true
+    },
+    {
+      "engine": "ruby",
+      "version": "2.10.1",
+      "files": 2,
+      "bytes": 9275576,
+      "hashesAndSizesMatch": true
+    },
+    {
+      "engine": "typescript",
+      "version": "5.9.3",
+      "files": 2,
+      "bytes": 4121117,
+      "hashesAndSizesMatch": true
+    },
+    {
+      "engine": "go",
+      "version": "0.16.1",
+      "files": 2,
+      "bytes": 8689215,
+      "hashesAndSizesMatch": true
+    },
+    {
+      "engine": "clang",
+      "version": "22.0.0-git20542-10",
+      "files": 6,
+      "bytes": 28094042,
+      "hashesAndSizesMatch": true
+    },
+    {
+      "engine": "csharp",
+      "version": "4.12.0",
+      "files": 63,
+      "bytes": 22446064,
+      "hashesAndSizesMatch": true
+    },
+    {
+      "engine": "java",
+      "version": "208d4c9",
+      "files": 4,
+      "bytes": 4333246,
+      "hashesAndSizesMatch": true
+    }
+  ]
+}

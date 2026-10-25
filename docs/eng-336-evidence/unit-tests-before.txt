@@ -1,0 +1,917 @@
+
+> pretest
+> npm run build:content
+
+
+> build:content
+> node --import tsx tools/build-content.ts
+
+Wrote 69 challenges.
+
+> test
+> node --import tsx --test packages/*/*.test.ts apps/web/app/*/*.test.ts apps/web/lib/*.test.ts apps/ingest/src/*.test.ts
+
+TAP version 13
+# Subtest: a batch becomes one row per record, the payload kept verbatim
+ok 1 - a batch becomes one row per record, the payload kept verbatim
+  ---
+  duration_ms: 39.922483
+  type: 'test'
+  ...
+# Subtest: rows carry the country Cloudflare places the upload in, and never the IP address
+ok 2 - rows carry the country Cloudflare places the upload in, and never the IP address
+  ---
+  duration_ms: 2.690948
+  type: 'test'
+  ...
+# Subtest: gzipped bodies are read; a participant ID belongs to the device that first used it
+ok 3 - gzipped bodies are read; a participant ID belongs to the device that first used it
+  ---
+  duration_ms: 40.544909
+  type: 'test'
+  ...
+# Subtest: deleting needs the device secret, stops uploads, and leaves a tombstone for the erasure job
+ok 4 - deleting needs the device secret, stops uploads, and leaves a tombstone for the erasure job
+  ---
+  duration_ms: 11.489416
+  type: 'test'
+  ...
+# Subtest: malformed and oversized requests are refused; CORS only for listed origins
+ok 5 - malformed and oversized requests are refused; CORS only for listed origins
+  ---
+  duration_ms: 8.62123
+  type: 'test'
+  ...
+# Subtest: without a stream (local development) rows land in the control bucket
+ok 6 - without a stream (local development) rows land in the control bucket
+  ---
+  duration_ms: 2.734691
+  type: 'test'
+  ...
+# Subtest: too many requests from one participant or one address get 429, and the device keeps its records
+ok 7 - too many requests from one participant or one address get 429, and the device keeps its records
+  ---
+  duration_ms: 5.494141
+  type: 'test'
+  ...
+# Subtest: the events stream's schema has exactly the columns ingest writes
+ok 8 - the events stream's schema has exactly the columns ingest writes
+  ---
+  duration_ms: 2.804916
+  type: 'test'
+  ...
+# Subtest: select moves with arrows and vim keys, wrapping at both ends
+ok 9 - select moves with arrows and vim keys, wrapping at both ends
+  ---
+  duration_ms: 1.197052
+  type: 'test'
+  ...
+# Subtest: select submits the highlighted choice, or a numbered one directly
+ok 10 - select submits the highlighted choice, or a numbered one directly
+  ---
+  duration_ms: 1.066322
+  type: 'test'
+  ...
+# Subtest: multiselect toggles, keeps choice order and enforces its minimum
+ok 11 - multiselect toggles, keeps choice order and enforces its minimum
+  ---
+  duration_ms: 0.726946
+  type: 'test'
+  ...
+# Subtest: pointer choice submits a select and toggles a multiselect
+ok 12 - pointer choice submits a select and toggles a multiselect
+  ---
+  duration_ms: 0.385815
+  type: 'test'
+  ...
+# Subtest: answers become a profile; skipped questions are left out
+ok 13 - answers become a profile; skipped questions are left out
+  ---
+  duration_ms: 0.498881
+  type: 'test'
+  ...
+# Subtest: corrupt local views are dropped, and an unreadable place is no place
+ok 14 - corrupt local views are dropped, and an unreadable place is no place
+  ---
+  duration_ms: 2.11484
+  type: 'test'
+  ...
+# Subtest: a saved place is clamped to the code's length now
+ok 15 - a saved place is clamped to the code's length now
+  ---
+  duration_ms: 0.38302
+  type: 'test'
+  ...
+# Subtest: view history replaces only its own attempt and stays bounded
+ok 16 - view history replaces only its own attempt and stays bounded
+  ---
+  duration_ms: 0.404491
+  type: 'test'
+  ...
+# Subtest: public expected/actual stay visible while nested hidden expected outputs and solutions stay private across shell feedback
+ok 17 - public expected/actual stay visible while nested hidden expected outputs and solutions stay private across shell feedback
+  ---
+  duration_ms: 19.889103
+  type: 'test'
+  ...
+# Subtest: site activity about the challenge is not a newer practice session
+ok 18 - site activity about the challenge is not a newer practice session
+  ---
+  duration_ms: 13.353328
+  type: 'test'
+  ...
+# Subtest: only the given attempt's code is restored; a new attempt opens on the starter
+ok 19 - only the given attempt's code is restored; a new attempt opens on the starter
+  ---
+  duration_ms: 11.935657
+  type: 'test'
+  ...
+# Subtest: 1 to 24 ordinary edits since opening restore exactly
+ok 20 - 1 to 24 ordinary edits since opening restore exactly
+  ---
+  duration_ms: 53.199196
+  type: 'test'
+  ...
+# Subtest: edits after a run and after a periodic snapshot restore exactly
+ok 21 - edits after a run and after a periodic snapshot restore exactly
+  ---
+  duration_ms: 15.740538
+  type: 'test'
+  ...
+# Subtest: undo and redo restore exactly
+ok 22 - undo and redo restore exactly
+  ---
+  duration_ms: 2.102866
+  type: 'test'
+  ...
+# Subtest: writes that failed and were retried restore exactly
+ok 23 - writes that failed and were retried restore exactly
+  ---
+  duration_ms: 1507.277925
+  type: 'test'
+  ...
+# Subtest: a missing position stops replay at the last exact document and says so
+ok 24 - a missing position stops replay at the last exact document and says so
+  ---
+  duration_ms: 2.579817
+  type: 'test'
+  ...
+# Subtest: an invalid change is not applied; a later complete snapshot is a new safe start
+ok 25 - an invalid change is not applied; a later complete snapshot is a new safe start
+  ---
+  duration_ms: 7.245327
+  type: 'test'
+  ...
+# Subtest: a truncated snapshot and an oversize edit are never replayed as complete
+ok 26 - a truncated snapshot and an oversize edit are never replayed as complete
+  ---
+  duration_ms: 8.770725
+  type: 'test'
+  ...
+# Subtest: streams are never combined; participants and challenges are kept apart
+ok 27 - streams are never combined; participants and challenges are kept apart
+  ---
+  duration_ms: 9.475889
+  type: 'test'
+  ...
+# Subtest: when the latest session has nothing recoverable, an earlier one is used and disclosed
+ok 28 - when the latest session has nothing recoverable, an earlier one is used and disclosed
+  ---
+  duration_ms: 6.568357
+  type: 'test'
+  ...
+# Subtest: missing activity without a newer code revision does not claim lost edits
+ok 29 - missing activity without a newer code revision does not claim lost edits
+  ---
+  duration_ms: 1.565624
+  type: 'test'
+  ...
+# Subtest: fallback to an older session does not compare unrelated revision counters
+ok 30 - fallback to an older session does not compare unrelated revision counters
+  ---
+  duration_ms: 0.229598
+  type: 'test'
+  ...
+# Subtest: an edit removes the saved label at once, without an update per keystroke
+ok 31 - an edit removes the saved label at once, without an update per keystroke
+  ---
+  duration_ms: 8.703177
+  type: 'test'
+  ...
+# Subtest: a truncated large paste is never labelled saved until a complete copy is stored
+ok 32 - a truncated large paste is never labelled saved until a complete copy is stored
+  ---
+  duration_ms: 5.015068
+  type: 'test'
+  ...
+# Subtest: an oversize edit within 64 KiB is recoverable through its complete snapshot
+ok 33 - an oversize edit within 64 KiB is recoverable through its complete snapshot
+  ---
+  duration_ms: 1.635116
+  type: 'test'
+  ...
+# Subtest: an artifact conflict is not labelled saved until a later complete copy is stored
+ok 34 - an artifact conflict is not labelled saved until a later complete copy is stored
+  ---
+  duration_ms: 2.051891
+  type: 'test'
+  ...
+# Subtest: failing writes are reported, and saved returns only after they succeed
+ok 35 - failing writes are reported, and saved returns only after they succeed
+  ---
+  duration_ms: 1009.325988
+  type: 'test'
+  ...
+# Subtest: a later snapshot that only references a conflicted artifact never clears the warning
+ok 36 - a later snapshot that only references a conflicted artifact never clears the warning
+  ---
+  duration_ms: 4.351083
+  type: 'test'
+  ...
+# Subtest: snapshots hold the exact text of the revision that triggered them, within one update batch
+ok 37 - snapshots hold the exact text of the revision that triggered them, within one update batch
+  ---
+  duration_ms: 14.584113
+  type: 'test'
+  ...
+# Subtest: an oversize edit inside a batch is snapshotted at its own revision
+ok 38 - an oversize edit inside a batch is snapshotted at its own revision
+  ---
+  duration_ms: 1.701042
+  type: 'test'
+  ...
+# Subtest: keys are batched with their own times; cursor bursts merge and are written before what follows
+ok 39 - keys are batched with their own times; cursor bursts merge and are written before what follows
+  ---
+  duration_ms: 2.930767
+  type: 'test'
+  ...
+# Subtest: closing writes what is still buffered; discarding does not
+ok 40 - closing writes what is still buffered; discarding does not
+  ---
+  duration_ms: 1.185809
+  type: 'test'
+  ...
+# Subtest: restored checks are invalidated on the first edit only, without per-keystroke UI updates
+ok 41 - restored checks are invalidated on the first edit only, without per-keystroke UI updates
+  ---
+  duration_ms: 0.880208
+  type: 'test'
+  ...
+# Subtest: a thrown error shows with its trace under its case, after what was printed
+ok 42 - a thrown error shows with its trace under its case, after what was printed
+  ---
+  duration_ms: 1.875074
+  type: 'test'
+  ...
+# Subtest: a wrong value shows what was expected and what came back
+ok 43 - a wrong value shows what was expected and what came back
+  ---
+  duration_ms: 0.507487
+  type: 'test'
+  ...
+# Subtest: compile errors, timeouts and runtime failures are all shown
+ok 44 - compile errors, timeouts and runtime failures are all shown
+  ---
+  duration_ms: 0.92302
+  type: 'test'
+  ...
+# Subtest: additional checks reveal categories, never hidden names, values, traces or printed inputs
+ok 45 - additional checks reveal categories, never hidden names, values, traces or printed inputs
+  ---
+  duration_ms: 0.507988
+  type: 'test'
+  ...
+# Subtest: full Submit never reveals run-level compile/load error text with hidden cases
+ok 46 - full Submit never reveals run-level compile/load error text with hidden cases
+  ---
+  duration_ms: 0.417356
+  type: 'test'
+  ...
+# Subtest: a backup reads back with what it holds
+ok 47 - a backup reads back with what it holds
+  ---
+  duration_ms: 7.959339
+  type: 'test'
+  ...
+# Subtest: anything else is refused with a reason, before it can replace anything
+ok 48 - anything else is refused with a reason, before it can replace anything
+  ---
+  duration_ms: 0.50935
+  type: 'test'
+  ...
+# Subtest: the file is named for the day
+ok 49 - the file is named for the day
+  ---
+  duration_ms: 0.724962
+  type: 'test'
+  ...
+# Subtest: challenges are live metadata over their revisions
+ok 50 - challenges are live metadata over their revisions
+  ---
+  duration_ms: 2.018627
+  type: 'test'
+  ...
+# Subtest: every challenge is listed, by key, and runs in the browser
+not ok 51 - every challenge is listed, by key, and runs in the browser
+  ---
+  duration_ms: 3.782338
+  type: 'test'
+  location: '/home/ekku/Code/.worktrees/linear/4bd15606-effd-4217-9fc8-082029967c24/muscle-memory/apps/web/lib/challenges.test.ts:1:951'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    69 !== 46
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 46
+  actual: 69
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/home/ekku/Code/.worktrees/linear/4bd15606-effd-4217-9fc8-082029967c24/muscle-memory/apps/web/lib/challenges.test.ts:30:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: challenges are found by key, in any case
+ok 52 - challenges are found by key, in any case
+  ---
+  duration_ms: 0.21003
+  type: 'test'
+  ...
+# Subtest: qualifiers parse into filters; unknown ones stay as text
+ok 53 - qualifiers parse into filters; unknown ones stay as text
+  ---
+  duration_ms: 1.373588
+  type: 'test'
+  ...
+# Subtest: filters combine across qualifiers and match any value within one
+ok 54 - filters combine across qualifiers and match any value within one
+  ---
+  duration_ms: 14.587061
+  type: 'test'
+  ...
+# Subtest: toggles switch one value and round-trip through the search line
+ok 55 - toggles switch one value and round-trip through the search line
+  ---
+  duration_ms: 0.556861
+  type: 'test'
+  ...
+# Subtest: summaries for client components leave out the task and examples
+ok 56 - summaries for client components leave out the task and examples
+  ---
+  duration_ms: 0.251959
+  type: 'test'
+  ...
+# Subtest: marks parse as is: qualifiers and filter wherever marks are known
+ok 57 - marks parse as is: qualifiers and filter wherever marks are known
+  ---
+  duration_ms: 0.5933
+  type: 'test'
+  ...
+# Subtest: nothing submitted, or a submission running, is never done
+ok 58 - nothing submitted, or a submission running, is never done
+  ---
+  duration_ms: 0.907329
+  type: 'test'
+  ...
+# Subtest: completed comes only from the recorded completion
+ok 59 - completed comes only from the recorded completion
+  ---
+  duration_ms: 0.206794
+  type: 'test'
+  ...
+# Subtest: a failing submission carries its diagnosis and counts the failed cases
+ok 60 - a failing submission carries its diagnosis and counts the failed cases
+  ---
+  duration_ms: 0.158854
+  type: 'test'
+  ...
+# Subtest: a rule holds with every case passing, and says what to change
+ok 61 - a rule holds with every case passing, and says what to change
+  ---
+  duration_ms: 0.757404
+  type: 'test'
+  ...
+# Subtest: editing after a submission asks for another
+ok 62 - editing after a submission asks for another
+  ---
+  duration_ms: 0.309158
+  type: 'test'
+  ...
+# Subtest: checks that stop part-way say what is recorded, not where the code failed
+ok 63 - checks that stop part-way say what is recorded, not where the code failed
+  ---
+  duration_ms: 0.259665
+  type: 'test'
+  ...
+# Subtest: a failing public case shows its input, the expected value and what the code returned
+ok 64 - a failing public case shows its input, the expected value and what the code returned
+  ---
+  duration_ms: 2.233938
+  type: 'test'
+  ...
+# Subtest: a hidden case is no oracle: its name and failure category, never its values
+ok 65 - a hidden case is no oracle: its name and failure category, never its values
+  ---
+  duration_ms: 0.619581
+  type: 'test'
+  ...
+# Subtest: values that can't be compared get their own category
+ok 66 - values that can't be compared get their own category
+  ---
+  duration_ms: 0.281497
+  type: 'test'
+  ...
+# Subtest: a check that never reached the cases gives its error, not per-case guesses
+ok 67 - a check that never reached the cases gives its error, not per-case guesses
+  ---
+  duration_ms: 0.342824
+  type: 'test'
+  ...
+# Subtest: a passing run has no failures
+ok 68 - a passing run has no failures
+  ---
+  duration_ms: 0.204489
+  type: 'test'
+  ...
+# Subtest: the practice area's live results get the same categories, with no values or messages
+ok 69 - the practice area's live results get the same categories, with no values or messages
+  ---
+  duration_ms: 0.233435
+  type: 'test'
+  ...
+# Subtest: a hidden case is labelled by position, never by its call or its name
+ok 70 - a hidden case is labelled by position, never by its call or its name
+  ---
+  duration_ms: 0.208988
+  type: 'test'
+  ...
+# Subtest: a crash or timeout part-way through is reported as stopped, not as an error before the cases
+ok 71 - a crash or timeout part-way through is reported as stopped, not as an error before the cases
+  ---
+  duration_ms: 0.378251
+  type: 'test'
+  ...
+# Subtest: the practice area's check feedback carries no hidden values
+ok 72 - the practice area's check feedback carries no hidden values
+  ---
+  duration_ms: 10.175032
+  type: 'test'
+  ...
+# Subtest: a passing check shows a hidden case's position only
+ok 73 - a passing check shows a hidden case's position only
+  ---
+  duration_ms: 0.221762
+  type: 'test'
+  ...
+# Subtest: an error reported from the cases' stage, with no per-case results, is withheld
+ok 74 - an error reported from the cases' stage, with no per-case results, is withheld
+  ---
+  duration_ms: 1.96203
+  type: 'test'
+  ...
+# Subtest: failure categories hold no user-controlled text
+ok 75 - failure categories hold no user-controlled text
+  ---
+  duration_ms: 0.18936
+  type: 'test'
+  ...
+# Subtest: code is recorded with its language's media type
+ok 76 - code is recorded with its language's media type
+  ---
+  duration_ms: 0.775158
+  type: 'test'
+  ...
+# Subtest: the current Terms version is one observations accept
+ok 77 - the current Terms version is one observations accept
+  ---
+  duration_ms: 1.094727
+  type: 'test'
+  ...
+# Subtest: SQL challenge schemas render as structured tables without interpreting HTML
+ok 78 - SQL challenge schemas render as structured tables without interpreting HTML
+  ---
+  duration_ms: 4.078232
+  type: 'test'
+  ...
+# Subtest: blocks: paragraphs, headings, lists, quotes and fenced code
+ok 79 - blocks: paragraphs, headings, lists, quotes and fenced code
+  ---
+  duration_ms: 0.569185
+  type: 'test'
+  ...
+# Subtest: inline: code protects its contents and snake_case is not italics
+ok 80 - inline: code protects its contents and snake_case is not italics
+  ---
+  duration_ms: 0.519399
+  type: 'test'
+  ...
+# Subtest: links: only web and same-site targets become links
+ok 81 - links: only web and same-site targets become links
+  ---
+  duration_ms: 0.455539
+  type: 'test'
+  ...
+# Subtest: raw HTML stays text and unclosed markers are left alone
+ok 82 - raw HTML stays text and unclosed markers are left alone
+  ---
+  duration_ms: 0.259564
+  type: 'test'
+  ...
+# Subtest: after a Python challenge comes another Python one, never the JavaScript one listed first
+ok 83 - after a Python challenge comes another Python one, never the JavaScript one listed first
+  ---
+  duration_ms: 1.352488
+  type: 'test'
+  ...
+# Subtest: the same language comes first, at about the same difficulty
+ok 84 - the same language comes first, at about the same difficulty
+  ---
+  duration_ms: 0.439558
+  type: 'test'
+  ...
+# Subtest: leaves out the current challenge and completed ones
+not ok 85 - leaves out the current challenge and completed ones
+  ---
+  duration_ms: 2.220892
+  type: 'test'
+  location: '/home/ekku/Code/.worktrees/linear/4bd15606-effd-4217-9fc8-082029967c24/muscle-memory/apps/web/lib/next-problem.test.ts:1:1349'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    50 !== 67
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 67
+  actual: 50
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/home/ekku/Code/.worktrees/linear/4bd15606-effd-4217-9fc8-082029967c24/muscle-memory/apps/web/lib/next-problem.test.ts:38:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: when the language is used up, a profile language comes before the rest
+ok 86 - when the language is used up, a profile language comes before the rest
+  ---
+  duration_ms: 0.429859
+  type: 'test'
+  ...
+# Subtest: a card comes only from an attempt's recorded completion and its submissions
+ok 87 - a card comes only from an attempt's recorded completion and its submissions
+  ---
+  duration_ms: 10.804521
+  type: 'test'
+  ...
+# Subtest: f is the first submission only when its cases were decided; n counts submissions that ran
+ok 88 - f is the first submission only when its cases were decided; n counts submissions that ran
+  ---
+  duration_ms: 0.699653
+  type: 'test'
+  ...
+# Subtest: a v3 link carries exactly the allowlisted facts and reads back exactly
+ok 89 - a v3 link carries exactly the allowlisted facts and reads back exactly
+  ---
+  duration_ms: 1.327921
+  type: 'test'
+  ...
+# Subtest: a v3 link we would not have made is refused, never shown in part
+ok 90 - a v3 link we would not have made is refused, never shown in part
+  ---
+  duration_ms: 1.923766
+  type: 'test'
+  ...
+# Subtest: a card of another version is refused, never shown as a result
+ok 91 - a card of another version is refused, never shown as a result
+  ---
+  duration_ms: 0.374073
+  type: 'test'
+  ...
+# Subtest: practice lives under the picker, and only a challenge's own page is practice
+ok 92 - practice lives under the picker, and only a challenge's own page is practice
+  ---
+  duration_ms: 0.955551
+  type: 'test'
+  ...
+# Subtest: only the current Terms open the app
+ok 93 - only the current Terms open the app
+  ---
+  duration_ms: 0.806156
+  type: 'test'
+  ...
+# Subtest: next only ever leads to a path on this site, never back to /consent
+ok 94 - next only ever leads to a path on this site, never back to /consent
+  ---
+  duration_ms: 0.375295
+  type: 'test'
+  ...
+# Subtest: the first open starts an attempt; opening again resumes it
+ok 95 - the first open starts an attempt; opening again resumes it
+  ---
+  duration_ms: 1.656537
+  type: 'test'
+  ...
+# Subtest: after completing, a start begins a new attempt; a plain open resumes the completed one
+ok 96 - after completing, a start begins a new attempt; a plain open resumes the completed one
+  ---
+  duration_ms: 0.410443
+  type: 'test'
+  ...
+# Subtest: completing is once per attempt, and only the current attempt completes
+ok 97 - completing is once per attempt, and only the current attempt completes
+  ---
+  duration_ms: 0.151659
+  type: 'test'
+  ...
+# Subtest: malformed storage reads as no progress
+ok 98 - malformed storage reads as no progress
+  ---
+  duration_ms: 0.289161
+  type: 'test'
+  ...
+# Subtest: the easiest challenge in the language comes first, by key
+ok 99 - the easiest challenge in the language comes first, by key
+  ---
+  duration_ms: 9.302428
+  type: 'test'
+  ...
+# Subtest: completed ones are skipped, up the difficulties; with all done, the easiest again
+ok 100 - completed ones are skipped, up the difficulties; with all done, the easiest again
+  ---
+  duration_ms: 0.365076
+  type: 'test'
+  ...
+# Subtest: a card is recorded under the current site capture, unchanged, and ingest accepts it
+ok 101 - a card is recorded under the current site capture, unchanged, and ingest accepts it
+  ---
+  duration_ms: 2.946726
+  type: 'test'
+  ...
+# Subtest: a capture version ingest doesn't accept is refused, card or not
+ok 102 - a capture version ingest doesn't accept is refused, card or not
+  ---
+  duration_ms: 0.391245
+  type: 'test'
+  ...
+# Subtest: shared code survives its fragment, and anything we would not have made is refused
+ok 103 - shared code survives its fragment, and anything we would not have made is refused
+  ---
+  duration_ms: 131.208452
+  type: 'test'
+  ...
+# Subtest: all the code or none: bad names and partial files are refused, never cut
+ok 104 - all the code or none: bad names and partial files are refused, never cut
+  ---
+  duration_ms: 0.506555
+  type: 'test'
+  ...
+# Subtest: every code link that is made reads back exactly, whatever the characters
+ok 105 - every code link that is made reads back exactly, whatever the characters
+  ---
+  duration_ms: 277.500591
+  type: 'test'
+  ...
+# Subtest: code too big for a link is refused rather than cut
+ok 106 - code too big for a link is refused rather than cut
+  ---
+  duration_ms: 13.934827
+  type: 'test'
+  ...
+# Subtest: the solution offered is the checked artifact's file, exactly, or nothing
+ok 107 - the solution offered is the checked artifact's file, exactly, or nothing
+  ---
+  duration_ms: 0.668855
+  type: 'test'
+  ...
+# Subtest: only a card on the live revision claims the sender's starting code
+ok 108 - only a card on the live revision claims the sender's starting code
+  ---
+  duration_ms: 0.429879
+  type: 'test'
+  ...
+# Subtest: stars toggle by key and survive malformed storage
+ok 109 - stars toggle by key and survive malformed storage
+  ---
+  duration_ms: 1.75773
+  type: 'test'
+  ...
+# Subtest: uploaded site records and earlier attempts go; each challenge's latest attempt stays
+ok 110 - uploaded site records and earlier attempts go; each challenge's latest attempt stays
+  ---
+  duration_ms: 3.101501
+  type: 'test'
+  ...
+# Subtest: nothing still queued for upload is forgotten
+ok 111 - nothing still queued for upload is forgotten
+  ---
+  duration_ms: 0.683653
+  type: 'test'
+  ...
+# Subtest: the store compacts in place and keeps the upload queue
+ok 112 - the store compacts in place and keeps the upload queue
+  ---
+  duration_ms: 33.332404
+  type: 'test'
+  ...
+# Subtest: records and the pseudonymous identity survive reopen; retries deduplicate
+ok 113 - records and the pseudonymous identity survive reopen; retries deduplicate
+  ---
+  duration_ms: 12.45664
+  type: 'test'
+  ...
+# Subtest: clear removes records and the identity together
+ok 114 - clear removes records and the identity together
+  ---
+  duration_ms: 3.080881
+  type: 'test'
+  ...
+# Subtest: every record written is queued for upload, oldest first, until sent
+ok 115 - every record written is queued for upload, oldest first, until sent
+  ---
+  duration_ms: 4.820537
+  type: 'test'
+  ...
+# Subtest: a dump restores elsewhere as the same identity, records and upload queue
+ok 116 - a dump restores elsewhere as the same identity, records and upload queue
+  ---
+  duration_ms: 5.379974
+  type: 'test'
+  ...
+# Subtest: random ids are UUID v4, with or without crypto.randomUUID
+ok 117 - random ids are UUID v4, with or without crypto.randomUUID
+  ---
+  duration_ms: 3.356166
+  type: 'test'
+  ...
+# Subtest: the outbox drains oldest first; failures keep records and back off; uploaded site records are forgotten
+ok 118 - the outbox drains oldest first; failures keep records and back off; uploaded site records are forgotten
+  ---
+  duration_ms: 101.628319
+  type: 'test'
+  ...
+# Subtest: large backlogs go in several batches; a deleted participant stops uploading
+ok 119 - large backlogs go in several batches; a deleted participant stops uploading
+  ---
+  duration_ms: 269.632104
+  type: 'test'
+  ...
+# Subtest: observations keep source order across batches and get stable IDs
+ok 120 - observations keep source order across batches and get stable IDs
+  ---
+  duration_ms: 22.818256
+  type: 'test'
+  ...
+# Subtest: a failed write retries the same records; partial earlier writes deduplicate
+ok 121 - a failed write retries the same records; partial earlier writes deduplicate
+  ---
+  duration_ms: 15.663232
+  type: 'test'
+  ...
+# Subtest: a full buffer drops observations and discloses the exact gap; artifacts drop with them
+ok 122 - a full buffer drops observations and discloses the exact gap; artifacts drop with them
+  ---
+  duration_ms: 8.949135
+  type: 'test'
+  ...
+# Subtest: a conflicting stored payload is not overwritten and becomes a disclosed gap
+ok 123 - a conflicting stored payload is not overwritten and becomes a disclosed gap
+  ---
+  duration_ms: 1.264741
+  type: 'test'
+  ...
+# Subtest: stop waits for the in-flight write, then discards the buffer and writes nothing more
+ok 124 - stop waits for the in-flight write, then discards the buffer and writes nothing more
+  ---
+  duration_ms: 32.319424
+  type: 'test'
+  ...
+# Subtest: IndexedDB batches commit atomically, deduplicate, reject conflicts and clear with identity
+ok 125 - IndexedDB batches commit atomically, deduplicate, reject conflicts and clear with identity
+  ---
+  duration_ms: 16.861705
+  type: 'test'
+  ...
+# Subtest: keys are the language's code and three digits
+ok 126 - keys are the language's code and three digits
+  ---
+  duration_ms: 1.098835
+  type: 'test'
+  ...
+# Subtest: every challenge passes the publish checks
+ok 127 - every challenge passes the publish checks
+  ---
+  duration_ms: 3.376075
+  type: 'test'
+  ...
+# Subtest: a rule needs examples both ways, and must not fire on a correct solution
+ok 128 - a rule needs examples both ways, and must not fire on a correct solution
+  ---
+  duration_ms: 0.474884
+  type: 'test'
+  ...
+# Subtest: JavaScript and Python challenges show their checks accept other designs and catch mistakes
+ok 129 - JavaScript and Python challenges show their checks accept other designs and catch mistakes
+  ---
+  duration_ms: 0.182438
+  type: 'test'
+  ...
+# Subtest: the solution must change the starter
+ok 130 - the solution must change the starter
+  ---
+  duration_ms: 0.155426
+  type: 'test'
+  ...
+# Subtest: patterns look for text in the file, present or missing
+ok 131 - patterns look for text in the file, present or missing
+  ---
+  duration_ms: 1.066772
+  type: 'test'
+  ...
+# Subtest: combinators
+ok 132 - combinators
+  ---
+  duration_ms: 0.296745
+  type: 'test'
+  ...
+# Subtest: metrics read code as text: lines, the longest function, the deepest block
+ok 133 - metrics read code as text: lines, the longest function, the deepest block
+  ---
+  duration_ms: 1.453581
+  type: 'test'
+  ...
+# Subtest: broken lists the rules the code fires, in order
+ok 134 - broken lists the rules the code fires, in order
+  ---
+  duration_ms: 0.972583
+  type: 'test'
+  ...
+# Subtest: the catalog as built is valid
+ok 135 - the catalog as built is valid
+  ---
+  duration_ms: 2.977444
+  type: 'test'
+  ...
+# Subtest: a revision names its challenge by a key that fits its language
+ok 136 - a revision names its challenge by a key that fits its language
+  ---
+  duration_ms: 0.834852
+  type: 'test'
+  ...
+# Subtest: the file name is safe, and there is at least one example
+ok 137 - the file name is safe, and there is at least one example
+  ---
+  duration_ms: 0.294822
+  type: 'test'
+  ...
+# Subtest: a rule needs a message and a trigger read from the code
+ok 138 - a rule needs a message and a trigger read from the code
+  ---
+  duration_ms: 0.576269
+  type: 'test'
+  ...
+# Subtest: the SHA-256 fallback matches Web Crypto
+ok 139 - the SHA-256 fallback matches Web Crypto
+  ---
+  duration_ms: 9.379696
+  type: 'test'
+  ...
+# (node:76947) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: healthy SRI fetch may withhold its response past thirty seconds
+ok 140 - healthy SRI fetch may withhold its response past thirty seconds
+  ---
+  duration_ms: 20.095807
+  type: 'test'
+  ...
+# Subtest: a hanging integrity fetch has a total deadline and a later retry can succeed
+ok 141 - a hanging integrity fetch has a total deadline and a later retry can succeed
+  ---
+  duration_ms: 1.23331
+  type: 'test'
+  ...
+# Subtest: the pinned boot script hash matches the script
+ok 142 - the pinned boot script hash matches the script
+  ---
+  duration_ms: 0.948989
+  type: 'test'
+  ...
+1..142
+# tests 142
+# suites 0
+# pass 140
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3117.668248
