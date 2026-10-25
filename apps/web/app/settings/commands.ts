@@ -13,6 +13,12 @@ export const COMMANDS = {
 
 export type CommandName = keyof typeof COMMANDS;
 
+/** How the list groups them: what you keep here, then the account itself. */
+export const GROUPS: { label: string; commands: CommandName[] }[] = [
+  { label: "your data", commands: ["profile", "privacy", "export", "import"] },
+  { label: "account", commands: ["logout", "reset", "delete"] },
+];
+
 export function isCommand(name: string): name is CommandName {
   return Object.hasOwn(COMMANDS, name);
 }

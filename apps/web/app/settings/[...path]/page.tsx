@@ -4,6 +4,7 @@ import { requireConsent } from "../../../lib/gate";
 import { TermFooter, type Crumb } from "../../_terminal/footer";
 import "../../_terminal/terminal.css";
 import { isCommand, isQuestion } from "../commands";
+import { SettingsCommand } from "../settings-pages";
 import { SettingsTerminal } from "../settings-terminal";
 
 type Props = { params: Promise<{ path: string[] }> };
@@ -35,8 +36,14 @@ export default async function SettingsCommandPage({ params }: Props) {
   ];
   return (
     <>
-      {/* A fresh terminal per page: client navigation between commands reuses this route. */}
-      <SettingsTerminal key={here} command={command} question={question} />
+      {/* Fresh state per page: client navigation between commands reuses this route. */}
+      {command === "profile" ? (
+        <SettingsTerminal key={here} question={question} />
+      ) : (
+        <div className="term">
+          <SettingsCommand key={here} command={command} />
+        </div>
+      )}
       <TermFooter trail={trail} />
     </>
   );

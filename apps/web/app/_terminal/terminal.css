@@ -405,3 +405,111 @@
   color: var(--t-dim);
   font-weight: 400;
 }
+/* Settings: pages read and clicked, in the terminal's look. */
+.t-settings > p,
+.t-settings > section > p {
+  margin: 1.2em 0 0;
+}
+.t-group {
+  margin: 2em 0 0.4em;
+  color: var(--t-dim);
+  font-size: inherit;
+  font-weight: 400;
+}
+.t-group::before {
+  content: "# ";
+}
+.t-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.term .t-row {
+  display: grid;
+  grid-template-columns: 10ch minmax(0, 1fr);
+  gap: 2ch;
+  padding: 6px 1ch;
+  border-left: 2px solid transparent;
+  color: var(--t-fg);
+  text-decoration: none;
+}
+.term .t-row:hover,
+.term .t-row:focus-visible {
+  background: var(--t-current);
+  border-left-color: var(--t-accent);
+  outline: none;
+}
+.t-row-name {
+  font-weight: 700;
+}
+.t-row:hover .t-row-name,
+.t-row:focus-visible .t-row-name {
+  color: var(--t-accent);
+}
+.t-state {
+  padding: 4px 1ch;
+  border-left: 2px solid var(--t-accent);
+}
+.t-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1ch 1.5ch;
+  margin-top: 1.6em;
+}
+.term .t-actions .t-btn {
+  display: inline-block;
+}
+.term button.t-btn {
+  font: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.term button.t-btn-primary {
+  background: var(--t-accent);
+}
+.term .t-btn-danger {
+  color: var(--t-err);
+  border-color: var(--t-err);
+}
+.term .t-btn-danger:hover {
+  background: color-mix(in srgb, var(--t-err) 14%, transparent);
+  border-color: var(--t-err);
+}
+.term .t-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.term .t-btn:disabled:hover {
+  background: transparent;
+}
+.term .t-btn-primary:disabled:hover {
+  background: var(--t-accent);
+}
+.t-ask {
+  color: var(--t-err);
+}
+.t-result {
+  margin-top: 1.2em;
+}
+.t-field {
+  display: grid;
+  gap: 6px;
+  margin-top: 1.6em;
+  max-width: 40ch;
+}
+.t-field input {
+  padding: 6px 1ch;
+  border: 1px solid var(--t-dim);
+  background: transparent;
+  color: var(--t-fg);
+  font: inherit;
+  caret-color: var(--t-accent);
+}
+.t-field input:focus {
+  border-color: var(--t-accent);
+  outline: none;
+}
+.t-back {
+  margin-top: 3em !important;
+}
