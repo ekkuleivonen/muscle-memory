@@ -126,7 +126,6 @@
       "title": "Guest checkout fails with a server error",
       "summary": "Since Thursday's release, guests get an error instead of a quote at checkout. Members are fine.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "debugging",
         "reading-logs"
@@ -141,7 +140,6 @@
       "title": "The composer says 1 word when the post is empty",
       "summary": "A five-minute bug: the word count under the text box is off.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "strings",
         "edge-cases"
@@ -156,7 +154,6 @@
       "title": "The composer says 1 word when the post is empty",
       "summary": "A five-minute bug: the word count under the text box is off.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "strings",
         "edge-cases"
@@ -171,7 +168,6 @@
       "title": "The composer says 1 word when the post is empty",
       "summary": "A five-minute bug: the word count under the text box is off.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "strings",
         "edge-cases"
@@ -186,7 +182,6 @@
       "title": "The composer says 1 word when the post is empty",
       "summary": "A five-minute bug: the word count under the text box is off.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "strings",
         "edge-cases"
@@ -201,7 +196,6 @@
       "title": "The composer says 1 word when the post is empty",
       "summary": "A five-minute bug: the word count under the text box is off.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "strings",
         "edge-cases"
@@ -216,7 +210,6 @@
       "title": "The composer says 1 word when the post is empty",
       "summary": "A five-minute bug: the word count under the text box is off.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "strings",
         "edge-cases"
@@ -231,7 +224,6 @@
       "title": "The composer says 1 word when the post is empty",
       "summary": "A five-minute bug: the word count under the text box is off.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "strings",
         "edge-cases"
@@ -246,7 +238,6 @@
       "title": "The composer says 1 word when the post is empty",
       "summary": "A five-minute bug: the word count under the text box is off.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "strings",
         "edge-cases"
@@ -261,7 +252,6 @@
       "title": "Nightly vial tally is empty",
       "summary": "The vial scanner's labels need counting for the nightly sheet; the counter returns nothing.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "iteration",
         "maps",
@@ -277,7 +267,6 @@
       "title": "Herbarium import creates duplicate species from the tally sheet",
       "summary": "Monday's import added 14 \"new\" species the herbarium already had.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "refactoring",
         "reading-code",
@@ -293,7 +282,6 @@
       "title": "Length report crashes on the Oregon volunteers' sheets",
       "summary": "Read lengths in inches and without a space, and leave unmeasured lots out of the numbers.",
       "difficulty": "medium",
-      "estimate": 3,
       "labels": [
         "debugging",
         "parsing",
@@ -309,7 +297,6 @@
       "title": "Site summary undercounts since last week's speed-up",
       "summary": "Since the season summary got faster, its per-site lots and first visits are wrong.",
       "difficulty": "medium",
-      "estimate": 3,
       "labels": [
         "debugging",
         "reading-code",
@@ -325,7 +312,6 @@
       "title": "Volunteers have to expand ditto marks by hand",
       "summary": "Expand ditto marks the way the paper notebook means them, and list the rows that can't be expanded.",
       "difficulty": "hard",
-      "estimate": 5,
       "labels": [
         "parsing",
         "state",
@@ -341,7 +327,6 @@
       "title": "Cart shows prices as raw cents",
       "summary": "Format amounts as dollars with separators, including refunds.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "formatting",
         "strings",
@@ -357,7 +342,6 @@
       "title": "Discount codes fail when typed in lowercase",
       "summary": "Match promo codes case-insensitively and ignore stray spaces.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "strings",
         "validation"
@@ -372,7 +356,6 @@
       "title": "Product filter checkboxes have no labels",
       "summary": "Tie every filter checkbox to a label so it is accessible.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "accessibility",
         "forms",
@@ -388,7 +371,6 @@
       "title": "Search box sends a request on every keystroke",
       "summary": "Debounce search-as-you-type so the API sees one request per pause.",
       "difficulty": "medium",
-      "estimate": 3,
       "labels": [
         "timing",
         "events"
@@ -403,7 +385,6 @@
       "title": "Refunds give back less than the customer paid",
       "summary": "Refunds on orders with a promo code give back less than the customer paid.",
       "difficulty": "medium",
-      "estimate": 3,
       "labels": [
         "debugging",
         "money",
@@ -419,7 +400,6 @@
       "title": "Show how far the cart is from free shipping",
       "summary": "A banner in the cart drawer telling shoppers what's left to spend for free shipping.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "money",
         "reading-code",
@@ -435,7 +415,6 @@
       "title": "Cart drawer shows the old total after changing quantity",
       "summary": "Since the cart summary was memoised, some changes don't show up in the drawer.",
       "difficulty": "medium",
-      "estimate": 3,
       "labels": [
         "caching",
         "debugging",
@@ -451,7 +430,6 @@
       "title": "Receipt tax lines don't add up to the tax charged",
       "summary": "Line taxes on receipts and in the finance export don't sum to the order's tax, and gift cards get taxed.",
       "difficulty": "hard",
-      "estimate": 5,
       "labels": [
         "money",
         "rounding",
@@ -468,7 +446,6 @@
       "title": "List endpoints accept any page size",
       "summary": "Parse page and per_page with defaults and a hard cap.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "parsing",
         "validation",
@@ -484,7 +461,6 @@
       "title": "Password reset links expire after a minute",
       "summary": "The TTL is in minutes but the check compares seconds.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "time",
         "units"
@@ -499,7 +475,6 @@
       "title": "Rate-limit login attempts",
       "summary": "Allow at most n attempts in any sliding window.",
       "difficulty": "medium",
-      "estimate": 3,
       "labels": [
         "sliding-window",
         "queues"
@@ -514,7 +489,6 @@
       "title": "Access log parser drops fields on 5xx lines",
       "summary": "Turn an access log line into a structured record.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "parsing",
         "strings"
@@ -529,7 +503,6 @@
       "title": "Workspace URLs break on names with accents",
       "summary": "Make URL slugs from workspace names, accents and all.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "strings",
         "unicode",
@@ -545,7 +518,6 @@
       "title": "Password policy still allows 8-character passwords",
       "summary": "Enforce the new password rules and report every one that is broken.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "validation",
         "strings",
@@ -561,7 +533,6 @@
       "title": "Lockout message tells people to try again in 0 minutes",
       "summary": "The lockout message rounds the time left down, so people retry too early and lock themselves out again.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "time",
         "rounding",
@@ -577,7 +548,6 @@
       "title": "Sign-up creates a second account for the same email",
       "summary": "Look accounts up by a canonical form of the address, so case, spaces and Gmail dots don't make a new account.",
       "difficulty": "medium",
-      "estimate": 3,
       "labels": [
         "strings",
         "validation",
@@ -593,7 +563,6 @@
       "title": "Old refresh tokens work again since the grace window",
       "summary": "A stolen refresh token kept a session alive for three days, and the reuse alert has gone quiet.",
       "difficulty": "hard",
-      "estimate": 5,
       "labels": [
         "security",
         "sessions",
@@ -610,7 +579,6 @@
       "title": "CSV import splits company names on commas",
       "summary": "Respect quoted fields when parsing partner exports.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "parsing",
         "strings",
@@ -626,7 +594,6 @@
       "title": "Deduplicate customer records by email",
       "summary": "Keep the first record per email before the newsletter sync.",
       "difficulty": "medium",
-      "estimate": 3,
       "labels": [
         "maps",
         "data-cleaning"
@@ -641,7 +608,6 @@
       "title": "Revenue by customer for the monthly report",
       "summary": "Total each customer's orders, biggest first.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "aggregation",
         "sorting"
@@ -656,7 +622,6 @@
       "title": "Find orders with no matching payment",
       "summary": "Reconcile orders against payments before month-end close.",
       "difficulty": "medium",
-      "estimate": 3,
       "labels": [
         "joins",
         "reconciliation"
@@ -671,7 +636,6 @@
       "title": "Late fees are a cent off on some invoices",
       "summary": "Round late fees the way finance does: halves away from zero.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "rounding",
         "decimals",
@@ -687,7 +651,6 @@
       "title": "Collected-by-partner report overstates split payments",
       "summary": "Sum what was actually paid, and list partners who paid nothing.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "joins",
         "aggregation",
@@ -703,7 +666,6 @@
       "title": "Active customers report is short 212 customers",
       "summary": "Monday's report lost 212 customers, all phone orders from the Leeds store.",
       "difficulty": "medium",
-      "estimate": 3,
       "labels": [
         "debugging",
         "data-cleaning",
@@ -720,7 +682,6 @@
       "title": "Bluefin settlements don't match their statements",
       "summary": "Bluefin's new export writes refunds and fees in brackets; the report loses or misreads them.",
       "difficulty": "hard",
-      "estimate": 5,
       "labels": [
         "debugging",
         "parsing",
@@ -737,7 +698,6 @@
       "title": "Keep the last N request latencies in memory",
       "summary": "A fixed-size buffer that overwrites its oldest entry.",
       "difficulty": "medium",
-      "estimate": 3,
       "labels": [
         "arrays",
         "modular-arithmetic"
@@ -752,7 +712,6 @@
       "title": "Compute nearest-rank percentiles for the latency panel",
       "summary": "Compute nearest-rank percentiles for the metrics endpoint.",
       "difficulty": "medium",
-      "estimate": 3,
       "labels": [
         "sorting",
         "statistics"
@@ -767,7 +726,6 @@
       "title": "Cache evicts entries that were just used",
       "summary": "Reads must refresh recency in the LRU cache.",
       "difficulty": "hard",
-      "estimate": 5,
       "labels": [
         "caching",
         "linked-lists",
@@ -783,7 +741,6 @@
       "title": "Timeouts in config must be written in seconds",
       "summary": "Accept durations like 1h30m in config files.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "parsing",
         "config"
@@ -798,7 +755,6 @@
       "title": "IPv6 requests get 421 Misdirected Request",
       "summary": "Host headers with an IPv6 literal lose everything after the first colon.",
       "difficulty": "easy",
-      "estimate": 2,
       "labels": [
         "strings",
         "parsing",
@@ -814,7 +770,6 @@
       "title": "Upstream weights are ignored",
       "summary": "The balancer round-robins evenly, so the 10% canary would get half the traffic.",
       "difficulty": "medium",
-      "estimate": 3,
       "labels": [
         "load-balancing",
         "concurrency",
@@ -830,7 +785,6 @@
       "title": "Cache hit ratio fell to 71% after the index change",
       "summary": "Since #412, keys stored past a purged slot are reported as misses.",
       "difficulty": "hard",
-      "estimate": 5,
       "labels": [
         "hash-tables",
         "caching",

@@ -85,7 +85,6 @@ export default async function WorkPage({ params, searchParams }: Props) {
         task: content.body,
         kind: issue.kind,
         difficulty: issue.difficulty,
-        estimate: issue.estimate,
         labels: [...issue.labels],
         language: issue.language!,
         runnable: issue.runnable,

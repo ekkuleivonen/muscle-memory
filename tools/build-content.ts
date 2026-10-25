@@ -17,7 +17,6 @@ import { repoFor } from "../apps/web/lib/repo";
 import type { LanguageId } from "../apps/web/lib/languages";
 import type { Json } from "../packages/domain/json";
 import {
-  ESTIMATES,
   type Catalog,
   type IssueMetadata,
   type Persona,
@@ -187,7 +186,6 @@ for (const project of SEED_PROJECTS)
       title: seed.title,
       summary: seed.summary,
       difficulty: seed.difficulty,
-      estimate: ESTIMATES[seed.difficulty],
       labels: seed.skills,
       state: "live",
       revision: rid,

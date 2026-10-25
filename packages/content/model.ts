@@ -167,7 +167,6 @@ export interface IssueMetadata {
   readonly title: string;
   readonly summary: string;
   readonly difficulty: Difficulty;
-  readonly estimate: number;
   readonly labels: readonly string[];
   readonly state: IssueState;
   /** The live revision's id. */
@@ -203,13 +202,6 @@ export interface Catalog {
   readonly issues: readonly IssueMetadata[];
   readonly revisions: Readonly<Record<string, Revision>>;
 }
-
-/** Story points shown as an estimate, in the 1-2-3-5 scale trackers use. */
-export const ESTIMATES: Record<Difficulty, number> = {
-  easy: 2,
-  medium: 3,
-  hard: 5,
-};
 
 /** The files the player edits, by path. */
 export function editableFiles(workspace: Workspace): Record<string, WorkspaceFile> {

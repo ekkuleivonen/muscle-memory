@@ -5,7 +5,6 @@
  */
 import { inTicket } from "./feedback";
 import {
-  ESTIMATES,
   type Catalog,
   type Difficulty,
   type IssueKind,
@@ -16,7 +15,6 @@ import type { Json } from "../../../packages/domain/json";
 import { engineFor } from "../../../packages/runner/engines";
 import { LANGUAGES, type LanguageId } from "./languages";
 
-export { ESTIMATES };
 export const DIFFICULTIES: readonly Difficulty[] = [
   "easy",
   "medium",
@@ -58,7 +56,6 @@ export interface Issue {
   task: string;
   kind: IssueKind;
   difficulty: Difficulty;
-  estimate: number;
   language?: LanguageId;
   labels: readonly string[];
   /** The cases in the repo's test file; the rest only run in CI. */
@@ -122,7 +119,6 @@ function toIssue(
     task: revision.body,
     kind: revision.kind,
     difficulty: meta.difficulty,
-    estimate: meta.estimate,
     language: LANGUAGES.find((l) => l.id === revision.workspace.language)?.id,
     labels: meta.labels,
     criteria: revision.checks.cases

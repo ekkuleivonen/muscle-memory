@@ -33,8 +33,8 @@ test("issues are live metadata over their live revisions, grouped into projects"
   const issue = merged.findIssue("PY-002")!;
   const meta = catalog.issues.find((i) => i.id === "frequency-map")!;
   assert.deepEqual(
-    [issue.slug, issue.revision, issue.runnable, issue.kind, issue.estimate],
-    ["frequency-map", meta.revision, true, "feature", 2],
+    [issue.slug, issue.revision, issue.runnable, issue.kind],
+    ["frequency-map", meta.revision, true, "feature"],
   );
   assert.equal(issue.title, "Nightly vial tally is empty");
   assert.deepEqual(issue.project, {

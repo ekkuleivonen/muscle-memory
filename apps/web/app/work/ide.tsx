@@ -100,7 +100,6 @@ export interface IdeIssue {
   task: string;
   kind?: IssueKind;
   difficulty?: Difficulty;
-  estimate?: number;
   labels: string[];
   language: LanguageId;
   runnable: boolean;

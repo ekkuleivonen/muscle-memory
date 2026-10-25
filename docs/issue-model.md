@@ -46,7 +46,7 @@ An issue's fields fall into two groups:
 
 | Live metadata: edit any time                                                               | Revision content: a change makes a new revision                                                           |
 | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| title, summary, difficulty, estimate, labels, project placement and order, live or retired | ticket body, kind, skills, format, workspace files, checks, teammate comments, triggers, hints, relations |
+| title, summary, difficulty, labels, project placement and order, live or retired | ticket body, kind, skills, format, workspace files, checks, teammate comments, triggers, hints, relations |
 
 - **Live metadata** describes the issue on the board. It does not change what a player is measured on, so it changes in place. A change log records every edit with its time, so analysis can still tell what the board showed when.
 - **Revision content** is what the player works against. Saving a change makes a new revision: an immutable snapshot whose id is the SHA-256 of its canonical JSON (`sha256:…`). There is no version number to choose or bump.
@@ -66,7 +66,6 @@ interface IssueMetadata {
   title: string;
   summary: string;
   difficulty: "easy" | "medium" | "hard";
-  estimate: number; // points
   labels: string[];
   state: "draft" | "live" | "retired" | "disabled";
   live?: string; // revision id of the live revision

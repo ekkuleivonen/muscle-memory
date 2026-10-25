@@ -31,7 +31,6 @@ export default async function ChallengesPage({
     task: issue.task,
     kind: issue.kind,
     difficulty: issue.difficulty,
-    estimate: issue.estimate,
     language: issue.language,
     labels: [...issue.labels],
     runnable: issue.runnable,
