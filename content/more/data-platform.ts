@@ -515,13 +515,12 @@ Bluefin,BF-FEE-10,adjustment,(3.00),EUR
 
 \`settlement_summary(text)\` is what finance reconciles each partner's statement against. It takes a settlement export as CSV text, with the header \`partner,order_id,type,amount,currency\`, and returns \`{"partners": [...], "rejected": n}\`.
 
-**Reading rows.** \`read_settlements(text)\` reads the export into rows (\`partner\`, \`order\`, \`kind\`, \`currency\`, \`amount\`) and counts the rows it rejects.
+**Reading rows.** Each row of the export is read as follows. (In the starter, \`read_settlements(text)\` does the reading; only \`settlement_summary\`'s result is checked.)
 
 - \`partner\` and \`order\` are trimmed; \`currency\` is trimmed and upper-cased.
 - The type is trimmed and lower-cased, and must be \`sale\`, \`refund\` or \`adjustment\`; any other type rejects the row.
-- The amount is in whole cents (an int), signed as the partner wrote it. A plain amount is read by \`to_cents(text)\` from \`pipeline.money\` (already imported): a decimal number with an optional sign and at most two decimal places, with surrounding whitespace allowed (\`"12.50"\`, \`"-3"\`, \`" 7.05 "\`), becomes cents (\`1250\`, \`-300\`, \`705\`); anything else, including an empty string, \`NaN\` or more than two decimal places, raises \`ValueError\`. An amount in brackets, with surrounding whitespace allowed, is an accounting negative: \`(12.50)\` is \`-1250\`. What's inside the brackets must itself be a plain amount.
+- An amount is read in whole cents. A plain amount is read by \`to_cents(text)\` from \`pipeline.money\` (already imported): a decimal number with an optional sign and at most two decimal places, with surrounding whitespace allowed (\`"12.50"\`, \`"-3"\`, \`" 7.05 "\`), becomes cents (\`1250\`, \`-300\`, \`705\`); anything else, including an empty string, \`NaN\` or more than two decimal places, raises \`ValueError\`. An amount in brackets, with surrounding whitespace allowed, is an accounting negative: \`(12.50)\` is \`-1250\`. What's inside the brackets must itself be a plain amount.
 - A row whose amount can't be read is rejected: counted and left out, never guessed at. Only a bad type or a bad amount rejects a row; anything else wrong with the file (a missing column, say) is an error, not a rejected row.
-- These rows are also loaded into the warehouse and sent back to partners when they dispute a night, so they must keep every amount signed as the partner wrote it.
 
 **Summary.** One entry per partner and currency, as \`{"partner", "currency", "sales", "refunds", "net"}\`, sorted by partner and then currency:
 

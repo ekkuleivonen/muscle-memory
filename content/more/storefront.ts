@@ -1171,7 +1171,8 @@ Fix \`receipt(order)\` and \`lineTaxes(amounts, rate)\` so they follow Finance's
           "Keep the exported `lineTaxes(amounts, rate)`, returning each line's share of the order's tax, and take the receipt's line taxes from it: the finance export calls it too.",
         ],
         // A call, not the definition: in one file the function is defined right there.
-        when: { pattern: "(?<!function )\\blineTaxes\\(", present: false, file: "src/checkout/receipt.ts" },
+        // A call, with any spacing before the bracket; not the definition (any spacing after `function`).
+        when: { pattern: "(?<!function\\s+)\\blineTaxes\\s*\\(", present: false, file: "src/checkout/receipt.ts" },
         repeat: "while-true",
       },
       {
@@ -1209,6 +1210,12 @@ Fix \`receipt(order)\` and \`lineTaxes(amounts, rate)\` so they follow Finance's
   }`,
           ),
         },
+        // The same fix formatted with a space before each bracket: the rule must still see the call.
+        { "src/checkout/receipt.ts": swap(
+            swap(RECEIPT_REFERENCE, "const taxes = lineTaxes(taxable, order.taxRate);", "const taxes = lineTaxes (taxable, order.taxRate);"),
+            "export function lineTaxes(",
+            "export function lineTaxes (",
+          ) },
       ],
       wrong: [
         // Shares that add up, but gift cards are still taxed.
@@ -1236,9 +1243,22 @@ Fix \`receipt(order)\` and \`lineTaxes(amounts, rate)\` so they follow Finance's
                   "const taxes = taxable.map((amount) => Math.floor((amount * order.taxRate) / 10000));",
                 ),
             },
+            // lineTaxes still defined, even spaced like a call, but never called.
+            {
+              "src/checkout/receipt.ts": swap(
+                swap(RECEIPT_REFERENCE, "export function lineTaxes(", "export function lineTaxes ("),
+                "const taxes = lineTaxes(taxable, order.taxRate);",
+                "const taxes = taxable.map((amount) => Math.floor((amount * order.taxRate) / 10000));",
+              ),
+            },
           ],
           quiet: [
             { "src/checkout/receipt.ts": RECEIPT_REFERENCE },
+            { "src/checkout/receipt.ts": swap(
+            swap(RECEIPT_REFERENCE, "const taxes = lineTaxes(taxable, order.taxRate);", "const taxes = lineTaxes (taxable, order.taxRate);"),
+            "export function lineTaxes(",
+            "export function lineTaxes (",
+          ) },
             { "src/checkout/receipt.ts": RECEIPT_STARTER },
           ],
         },

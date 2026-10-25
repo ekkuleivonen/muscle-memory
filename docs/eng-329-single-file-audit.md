@@ -4,8 +4,8 @@ Read-only audit of the 46 published challenges (live revisions in `content/catal
 
 **Status: implemented** (approved by dot). The contract is enforced at publish (`packages/content/publish.ts`), and every live challenge was rewritten through the seed and rebuilt. The changed revisions are listed at the end. Rule decisions made along the way:
 
-- **Dropped (existed only to force the second-file edit):** FN-3 `mateo-units-in-report` and DATA-8 `priya-reader-sign`. DATA-8's "the reader keeps each amount signed as written" is still stated in the description but no longer enforced; no case calls the reader.
-- **Kept, trigger changed:** SHOP-8 `mateo-line-taxes` now requires a call to `lineTaxes(` (not its definition), since the function is defined in the same file.
+- **Dropped (existed only to force the second-file edit):** FN-3 `mateo-units-in-report` and DATA-8 `priya-reader-sign`. DATA-8's description no longer claims anything about the reader's rows: only `settlement_summary`'s result is checked, so only it is the contract (review fix).
+- **Kept, trigger changed:** SHOP-8 `mateo-line-taxes` requires an actual call to `lineTaxes`, with any spacing before the bracket, and never counts its definition (`(?<!function\s+)\blineTaxes\s*\(`). An alternative with spaced calls passes; an unused helper, even spaced, is blocked (review fix).
 - **Stated but not tested by any case:** EDGE-1 "no malloc on the hot path" and EDGE-2 "fast with two million samples" came from ticket comments; they are requirements in the description, not enforced.
 - **Hidden case names:** INC-1's seven hidden case names (which stated the answers) are now blank.
 

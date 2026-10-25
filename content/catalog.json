@@ -459,7 +459,7 @@
         "reading-code"
       ],
       "state": "live",
-      "revision": "sha256:2fd025fb6c478e65ff2ab71ac1db49b4bbb61721ce4e8f055a5676e63fe0e2ce"
+      "revision": "sha256:d52b73c22792aa51915c11af8d6ef64c230c498b1a8ceba3a371eef8fe67da5b"
     },
     {
       "id": "pagination-params",
@@ -728,7 +728,7 @@
         "reading-code"
       ],
       "state": "live",
-      "revision": "sha256:5d9a5155881d8daceda22b0469a3c5434c1aa1f74b73540a4082065b4e7762ec"
+      "revision": "sha256:6663cb7589ece35d5ea2deb8e63611ecc876b772c633833c9a61eb2ffdb2f10f"
     },
     {
       "id": "ring-buffer",
@@ -16194,6 +16194,344 @@
           }
         }
       ],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:6663cb7589ece35d5ea2deb8e63611ecc876b772c633833c9a61eb2ffdb2f10f": {
+      "issue": "bracketed-refunds",
+      "kind": "bug",
+      "body": "Rui escalated Bluefin's October reconciliation:\n\n> Bluefin's statement for 3 October says we're owed **€59.50** on 2 orders. Our settlement report says **€75.00** with **2 rejected rows**. Every night since 1 October has had rejected rows, always Bluefin's. Northwind still matches to the cent.\n\nBluefin's partner note from 28 September:\n\n> From 1 October our settlement exports write negative amounts in accounting format: refunds and fees appear in brackets, e.g. `(12.50)`.\n\nTheir file for 3 October:\n\n```text\npartner,order_id,type,amount,currency\nBluefin,BF-77101,sale,45.00,EUR\nBluefin,BF-77102,sale,30.00,EUR\nBluefin,BF-77101,refund,(12.50),EUR\nBluefin,BF-FEE-10,adjustment,(3.00),EUR\n```\n\n`settlement_summary(text)` is what finance reconciles each partner's statement against. It takes a settlement export as CSV text, with the header `partner,order_id,type,amount,currency`, and returns `{\"partners\": [...], \"rejected\": n}`.\n\n**Reading rows.** Each row of the export is read as follows. (In the starter, `read_settlements(text)` does the reading; only `settlement_summary`'s result is checked.)\n\n- `partner` and `order` are trimmed; `currency` is trimmed and upper-cased.\n- The type is trimmed and lower-cased, and must be `sale`, `refund` or `adjustment`; any other type rejects the row.\n- An amount is read in whole cents. A plain amount is read by `to_cents(text)` from `pipeline.money` (already imported): a decimal number with an optional sign and at most two decimal places, with surrounding whitespace allowed (`\"12.50\"`, `\"-3\"`, `\" 7.05 \"`), becomes cents (`1250`, `-300`, `705`); anything else, including an empty string, `NaN` or more than two decimal places, raises `ValueError`. An amount in brackets, with surrounding whitespace allowed, is an accounting negative: `(12.50)` is `-1250`. What's inside the brackets must itself be a plain amount.\n- A row whose amount can't be read is rejected: counted and left out, never guessed at. Only a bad type or a bad amount rejects a row; anything else wrong with the file (a missing column, say) is an error, not a rejected row.\n\n**Summary.** One entry per partner and currency, as `{\"partner\", \"currency\", \"sales\", \"refunds\", \"net\"}`, sorted by partner and then currency:\n\n- `sales` and `refunds` count the rows of each kind (adjustments aren't counted).\n- `net` in cents is sales less refunds, plus adjustments (fees, corrections) with their own sign. A refund always reduces net by its size, whichever way the partner writes it: Northwind writes refunds as positive amounts, Bluefin in brackets.\n\n`rejected` is the number of rejected rows, so nobody signs off on a partial file. A file with only the header gives `{\"partners\": [], \"rejected\": 0}`.",
+      "skills": [
+        "debugging",
+        "parsing",
+        "money",
+        "reading-code"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "python",
+        "files": {
+          "pipeline/__init__.py": {
+            "role": "read",
+            "language": "python",
+            "text": "\"\"\"Nightly settlement pipeline: read partner exports, load the warehouse, report to finance.\"\"\"\n"
+          },
+          "pipeline/money.py": {
+            "role": "read",
+            "language": "python",
+            "text": "\"\"\"Money is whole cents everywhere: never floats.\"\"\"\nfrom decimal import Decimal, InvalidOperation\n\n\ndef to_cents(text):\n    \"\"\"A plain decimal amount (\"12.50\", \"-3\", \" 7.05 \") as whole cents.\n\n    Raises ValueError for anything else. Partner-specific formats are the reader's job.\n    \"\"\"\n    try:\n        value = Decimal(text.strip())\n    except InvalidOperation:\n        raise ValueError(f\"not an amount: {text!r}\") from None\n    if not value.is_finite() or value != value.quantize(Decimal(\"0.01\")):\n        raise ValueError(f\"not an amount: {text!r}\")\n    return int(value * 100)\n"
+          },
+          "pipeline/report.py": {
+            "role": "edit",
+            "language": "python",
+            "text": "import csv\nimport io\n\nfrom pipeline.money import to_cents\n\nKINDS = {\"sale\", \"refund\", \"adjustment\"}\n\n\ndef read_settlements(text):\n    \"\"\"The rows of a partner settlement export, and how many rows were rejected.\n\n    Each row has partner, order, kind, currency and amount: signed cents, as the partner\n    wrote them. These rows are also loaded into raw_settlements as they are. A row that can't\n    be read is rejected (counted and left out) rather than guessed at.\n    \"\"\"\n    rows = []\n    rejected = 0\n    for raw in csv.DictReader(io.StringIO(text)):\n        kind = raw[\"type\"].strip().lower()\n        if kind not in KINDS:\n            rejected += 1\n            continue\n        try:\n            amount = to_cents(raw[\"amount\"])\n        except ValueError:\n            rejected += 1\n            continue\n        rows.append({\n            \"partner\": raw[\"partner\"].strip(),\n            \"order\": raw[\"order_id\"].strip(),\n            \"kind\": kind,\n            \"currency\": raw[\"currency\"].strip().upper(),\n            \"amount\": amount,\n        })\n    return rows, rejected\n\n\ndef settlement_summary(text):\n    \"\"\"What finance reconciles each partner's statement against.\n\n    Per partner and currency, sorted by both: how many sales and refunds, and net in cents.\n    Net is sales less refunds, plus adjustments (fees, corrections) with their own sign.\n    Also how many rows the reader rejected, so nobody signs off on a partial file.\n    \"\"\"\n    rows, rejected = read_settlements(text)\n    totals = {}\n    for row in rows:\n        key = (row[\"partner\"], row[\"currency\"])\n        if key not in totals:\n            totals[key] = {\"partner\": key[0], \"currency\": key[1], \"sales\": 0, \"refunds\": 0, \"net\": 0}\n        total = totals[key]\n        if row[\"kind\"] == \"sale\":\n            total[\"sales\"] += 1\n            total[\"net\"] += row[\"amount\"]\n        elif row[\"kind\"] == \"refund\":\n            total[\"refunds\"] += 1\n            total[\"net\"] -= row[\"amount\"]\n        else:\n            total[\"net\"] += row[\"amount\"]\n    return {\"partners\": [totals[key] for key in sorted(totals)], \"rejected\": rejected}\n"
+          },
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Data platform\n\nPartners drop CSV exports in a bucket every night. A pipeline cleans them, loads the warehouse and feeds the reports finance reads on Monday morning.\n\nThe exports are messier than anyone admits: quoted commas in company names, duplicate customers with slightly different emails, and orders that never got paid. When the numbers look wrong, this is where people come asking.\n\n## What you'll work on\n\n- Parsing awkward input files without losing data\n- Cleaning and deduplicating records before they reach the warehouse\n- SQL for the reports and reconciliations people rely on\n\n## Good fit if you\n\n- Work with data, or are the person on your team who ends up writing the SQL\n- Enjoy turning messy input into something you can trust\n- Know **Python**, **SQL** or **C#**, or want more practice with them\n\nStack: Python, SQL, and C# for the billing jobs.\n"
+          },
+          "tests/test_report.py": {
+            "role": "tests",
+            "language": "python",
+            "text": "# Acceptance criteria for DATA-8. CI runs these cases and 11 more it does not show.\nimport pytest\n\nfrom pipeline.report import settlement_summary\n\nCASES = [\n    (\"partner,order_id,type,amount,currency\\nNorthwind,NW-1001,sale,120.00,USD\\nNorthwind,NW-1002,sale,80.50,USD\\nNorthwind,NW-1001,refund,20.00,USD\\nNorthwind,NW-ADJ-9,adjustment,-3.00,USD\\n\", {\"partners\": [{\"partner\": \"Northwind\", \"currency\": \"USD\", \"sales\": 2, \"refunds\": 1, \"net\": 17750}], \"rejected\": 0}),\n    (\"partner,order_id,type,amount,currency\\nBluefin,BF-77101,sale,45.00,EUR\\nBluefin,BF-77102,sale,30.00,EUR\\nBluefin,BF-77101,refund,(12.50),EUR\\nBluefin,BF-FEE-10,adjustment,(3.00),EUR\\n\", {\"partners\": [{\"partner\": \"Bluefin\", \"currency\": \"EUR\", \"sales\": 2, \"refunds\": 1, \"net\": 5950}], \"rejected\": 0}),\n    (\"partner,order_id,type,amount,currency\\nNorthwind,NW-2001,sale,60.00,USD\\nBluefin,BF-78001,sale,100.00,EUR\\nBluefin,BF-78001,refund,(25.00),EUR\\nNorthwind,NW-2001,refund,15.00,USD\\nBluefin,BF-FEE-11,adjustment,(1.50),EUR\\n\", {\"partners\": [{\"partner\": \"Bluefin\", \"currency\": \"EUR\", \"sales\": 1, \"refunds\": 1, \"net\": 7350}, {\"partner\": \"Northwind\", \"currency\": \"USD\", \"sales\": 1, \"refunds\": 1, \"net\": 4500}], \"rejected\": 0}),\n    (\"partner,order_id,type,amount,currency\\nBluefin,BF-79001,sale,10.00,EUR\\nBluefin,BF-79002,sale,n/a,EUR\\nBluefin,BF-79001,chargeback,(10.00),EUR\\nBluefin,BF-79003,sale,22.00,EUR\\n\", {\"partners\": [{\"partner\": \"Bluefin\", \"currency\": \"EUR\", \"sales\": 2, \"refunds\": 0, \"net\": 3200}], \"rejected\": 2}),\n    (\"partner,order_id,type,amount,currency\\n\", {\"partners\": [], \"rejected\": 0}),\n]\n\n\n@pytest.mark.parametrize(\"given, expected\", CASES)\ndef test_settlement_summary(given, expected):\n    assert settlement_summary(given) == expected\n"
+          }
+        },
+        "entry": "pipeline/report.py",
+        "entrypoint": "settlement_summary"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": "partner,order_id,type,amount,currency\nNorthwind,NW-1001,sale,120.00,USD\nNorthwind,NW-1002,sale,80.50,USD\nNorthwind,NW-1001,refund,20.00,USD\nNorthwind,NW-ADJ-9,adjustment,-3.00,USD\n",
+            "expected": {
+              "partners": [
+                {
+                  "partner": "Northwind",
+                  "currency": "USD",
+                  "sales": 2,
+                  "refunds": 1,
+                  "net": 17750
+                }
+              ],
+              "rejected": 0
+            },
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": "partner,order_id,type,amount,currency\nBluefin,BF-77101,sale,45.00,EUR\nBluefin,BF-77102,sale,30.00,EUR\nBluefin,BF-77101,refund,(12.50),EUR\nBluefin,BF-FEE-10,adjustment,(3.00),EUR\n",
+            "expected": {
+              "partners": [
+                {
+                  "partner": "Bluefin",
+                  "currency": "EUR",
+                  "sales": 2,
+                  "refunds": 1,
+                  "net": 5950
+                }
+              ],
+              "rejected": 0
+            },
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": "partner,order_id,type,amount,currency\nNorthwind,NW-2001,sale,60.00,USD\nBluefin,BF-78001,sale,100.00,EUR\nBluefin,BF-78001,refund,(25.00),EUR\nNorthwind,NW-2001,refund,15.00,USD\nBluefin,BF-FEE-11,adjustment,(1.50),EUR\n",
+            "expected": {
+              "partners": [
+                {
+                  "partner": "Bluefin",
+                  "currency": "EUR",
+                  "sales": 1,
+                  "refunds": 1,
+                  "net": 7350
+                },
+                {
+                  "partner": "Northwind",
+                  "currency": "USD",
+                  "sales": 1,
+                  "refunds": 1,
+                  "net": 4500
+                }
+              ],
+              "rejected": 0
+            },
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": "partner,order_id,type,amount,currency\nBluefin,BF-79001,sale,10.00,EUR\nBluefin,BF-79002,sale,n/a,EUR\nBluefin,BF-79001,chargeback,(10.00),EUR\nBluefin,BF-79003,sale,22.00,EUR\n",
+            "expected": {
+              "partners": [
+                {
+                  "partner": "Bluefin",
+                  "currency": "EUR",
+                  "sales": 2,
+                  "refunds": 0,
+                  "net": 3200
+                }
+              ],
+              "rejected": 2
+            },
+            "visible": true
+          },
+          {
+            "id": "case-5",
+            "input": "partner,order_id,type,amount,currency\n",
+            "expected": {
+              "partners": [],
+              "rejected": 0
+            },
+            "visible": true
+          },
+          {
+            "id": "case-6",
+            "input": "partner,order_id,type,amount,currency\nBluefin,BF-80001,sale,50.00,EUR\nBluefin,BF-ADJ-1,adjustment,3.00,EUR\nBluefin,BF-FEE-12,adjustment,(0.05),EUR\n",
+            "expected": {
+              "partners": [
+                {
+                  "partner": "Bluefin",
+                  "currency": "EUR",
+                  "sales": 1,
+                  "refunds": 0,
+                  "net": 5295
+                }
+              ],
+              "rejected": 0
+            },
+            "visible": false
+          },
+          {
+            "id": "case-7",
+            "input": "partner,order_id,type,amount,currency\nCorvid,CV-1,sale,40.00,GBP\nCorvid,CV-1,refund,-4.00,GBP\n",
+            "expected": {
+              "partners": [
+                {
+                  "partner": "Corvid",
+                  "currency": "GBP",
+                  "sales": 1,
+                  "refunds": 1,
+                  "net": 3600
+                }
+              ],
+              "rejected": 0
+            },
+            "visible": false
+          },
+          {
+            "id": "case-8",
+            "input": "partner,order_id,type,amount,currency\nBluefin,BF-81001,sale,10.00,EUR\nBluefin,BF-81001,refund,(),EUR\n",
+            "expected": {
+              "partners": [
+                {
+                  "partner": "Bluefin",
+                  "currency": "EUR",
+                  "sales": 1,
+                  "refunds": 0,
+                  "net": 1000
+                }
+              ],
+              "rejected": 1
+            },
+            "visible": false
+          },
+          {
+            "id": "case-9",
+            "input": "partner,order_id,type,amount,currency\nBluefin,BF-82001,sale,10.00,EUR\nBluefin,BF-82001,refund,(abc),EUR\nBluefin,BF-82002,refund,(5.00,EUR\n",
+            "expected": {
+              "partners": [
+                {
+                  "partner": "Bluefin",
+                  "currency": "EUR",
+                  "sales": 1,
+                  "refunds": 0,
+                  "net": 1000
+                }
+              ],
+              "rejected": 2
+            },
+            "visible": false
+          },
+          {
+            "id": "case-10",
+            "input": "partner,order_id,type,amount,currency\nBluefin,BF-83001,sale,20.00,EUR\nBluefin,BF-83001,refund, (12.50) ,EUR\n",
+            "expected": {
+              "partners": [
+                {
+                  "partner": "Bluefin",
+                  "currency": "EUR",
+                  "sales": 1,
+                  "refunds": 1,
+                  "net": 750
+                }
+              ],
+              "rejected": 0
+            },
+            "visible": false
+          },
+          {
+            "id": "case-11",
+            "input": "partner,order_id,type,amount,currency\nBluefin,BF-84001,sale,10.00,USD\nBluefin,BF-84002,sale,30.00,EUR\nBluefin,BF-84002,refund,(30.00),EUR\nBluefin,BF-84001,refund,(2.00),usd\n",
+            "expected": {
+              "partners": [
+                {
+                  "partner": "Bluefin",
+                  "currency": "EUR",
+                  "sales": 1,
+                  "refunds": 1,
+                  "net": 0
+                },
+                {
+                  "partner": "Bluefin",
+                  "currency": "USD",
+                  "sales": 1,
+                  "refunds": 1,
+                  "net": 800
+                }
+              ],
+              "rejected": 0
+            },
+            "visible": false
+          },
+          {
+            "id": "case-12",
+            "input": "partner,order_id,type,amount,currency\nNorthwind,NW-3001,refund,9.99,USD\nBluefin,BF-85001,refund,(9.99),EUR\n",
+            "expected": {
+              "partners": [
+                {
+                  "partner": "Bluefin",
+                  "currency": "EUR",
+                  "sales": 0,
+                  "refunds": 1,
+                  "net": -999
+                },
+                {
+                  "partner": "Northwind",
+                  "currency": "USD",
+                  "sales": 0,
+                  "refunds": 1,
+                  "net": -999
+                }
+              ],
+              "rejected": 0
+            },
+            "visible": false
+          },
+          {
+            "id": "case-13",
+            "input": "partner,order_id,type,amount,currency\nNorthwind,NW-4001, Sale ,10.00,USD\nNorthwind,NW-4001, REFUND,1.00,USD\nBluefin,BF-86001,Refund,(1.00),EUR\nBluefin,BF-86002,Adjustment,(0.50),EUR\n",
+            "expected": {
+              "partners": [
+                {
+                  "partner": "Bluefin",
+                  "currency": "EUR",
+                  "sales": 0,
+                  "refunds": 1,
+                  "net": -150
+                },
+                {
+                  "partner": "Northwind",
+                  "currency": "USD",
+                  "sales": 1,
+                  "refunds": 1,
+                  "net": 900
+                }
+              ],
+              "rejected": 0
+            },
+            "visible": false
+          },
+          {
+            "id": "case-14",
+            "input": "partner,order_id,type,amount,currency\nBluefin,BF-87001,refund,(NaN),EUR\nBluefin,BF-87002,sale,NaN,EUR\nBluefin,BF-87003,sale,12.345,EUR\nBluefin,BF-87004,sale,(12.345),EUR\n",
+            "expected": {
+              "partners": [],
+              "rejected": 4
+            },
+            "visible": false
+          },
+          {
+            "id": "case-15",
+            "input": "partner,order_id,type,amount,currency\nBluefin,BF-88001,sale,0.10,EUR\nBluefin,BF-88001,refund,(0.00),EUR\nBluefin,BF-FEE-13,adjustment,(0.00),EUR\n",
+            "expected": {
+              "partners": [
+                {
+                  "partner": "Bluefin",
+                  "currency": "EUR",
+                  "sales": 1,
+                  "refunds": 1,
+                  "net": 10
+                }
+              ],
+              "rejected": 0
+            },
+            "visible": false
+          },
+          {
+            "id": "case-16",
+            "input": "partner,order_id,type,amount,currency\nBluefin,BF-89001,sale,1.25,EUR\nBluefin,BF-89002,sale,2.25,EUR\nBluefin,BF-89003,sale,3.25,EUR\nBluefin,BF-89004,sale,4.25,EUR\nBluefin,BF-89005,sale,5.25,EUR\nBluefin,BF-89001,refund,(1.25),EUR\nBluefin,BF-89002,refund,(2.25),EUR\nBluefin,BF-89003,refund,(3.25),EUR\nBluefin,BF-FEE-14,adjustment,(2.40),EUR\nBluefin,BF-ADJ-15,adjustment,1.10,EUR\n",
+            "expected": {
+              "partners": [
+                {
+                  "partner": "Bluefin",
+                  "currency": "EUR",
+                  "sales": 5,
+                  "refunds": 3,
+                  "net": 820
+                }
+              ],
+              "rejected": 0
+            },
+            "visible": false
+          }
+        ]
+      },
+      "team": [],
+      "hints": [],
       "authored": {
         "by": "ai-drafted",
         "reviewers": []
@@ -36393,6 +36731,848 @@
         ]
       },
       "team": [],
+      "hints": [],
+      "authored": {
+        "by": "ai-drafted",
+        "reviewers": []
+      }
+    },
+    "sha256:d52b73c22792aa51915c11af8d6ef64c230c498b1a8ceba3a371eef8fe67da5b": {
+      "issue": "receipt-tax-split",
+      "kind": "bug",
+      "body": "Finance's September sales-tax filing came out $310.22 under the tax customers were actually charged. The filing is the sum of what `lineTaxes` returns for every order, and those line taxes don't add up to the order's tax. A receipt also charged tax on a gift card.\n\nOne order, at 8.25%, as the receipt shows it today:\n\n```text\nOrder #20417                      net      tax\n  Rain jacket                  $45.00    $3.71\n  Tee × 2                      $45.00    $3.71\n  Socks                        $10.80    $0.89\n  Tax                                    $8.32   ← the lines add up to $8.31\n```\n\nFix `receipt(order)` and `lineTaxes(amounts, rate)` so they follow Finance's rules. All amounts are whole cents; rates are basis points (825 is 8.25%).\n\n**Input.** An `Order` is `{ id, taxRate, lines }`. Each line is `{ sku, price, quantity, discount, taxable }`: `price` is per unit, `discount` is the line's share of the order's promo code, and `taxable` is `false` for gift cards and donations.\n\n**Output.** A `Receipt` is `{ lines, net, tax, total }`, where `lines` has one `{ sku, net, tax }` per order line, in order.\n\n**Rules.**\n\n- A line's `net` is `price × quantity − discount`. The receipt's `net` is the sum of every line's net, gift cards included.\n- A line's taxable amount is its net when `taxable` is `true`, and 0 when it is `false`. A non-taxable line's tax is 0.\n- The order is taxed once: the sum of the taxable amounts times the rate, divided by 10,000 and rounded half up to the cent. That is the receipt's `tax`, and `total` is `net + tax`.\n- The line taxes add up to exactly the order's tax. Each line first gets its taxable amount times the rate, divided by 10,000 and rounded down. The cents still missing go one each to the lines with the largest remainders from that division; on a tie, the earlier line gets the cent first.\n- `lineTaxes(amounts, rate)` takes the lines' taxable amounts in order and returns each line's tax by the rule above. Keep it exported with that signature (the finance export calls it with the taxable amounts) and take the receipt's line taxes from it.\n- Keep money in whole cents: no `toFixed` or `parseFloat`.\n\n`taxOn(amount, rate)` in the file is the tax on one amount, rounded half up to the cent.",
+      "skills": [
+        "money",
+        "rounding",
+        "debugging",
+        "reading-code"
+      ],
+      "format": "code-change",
+      "workspace": {
+        "language": "typescript",
+        "files": {
+          "README.md": {
+            "role": "docs",
+            "language": "markdown",
+            "text": "# Shop\n\nThe online shop customers actually see: product listings, filters, the cart and a three-step checkout. Pages are server-rendered, with a thin layer of TypeScript for the interactive parts.\n\nConversion dipped after the last redesign. Support is fielding tickets about prices, promo codes and a search box that feels sluggish, and an accessibility audit came back with a long list.\n\n## What you'll work on\n\n- Formatting money and other values the way customers expect to read them\n- Form behaviour, validation and accessible markup\n- Small performance fixes in the browser, like debouncing input\n\n## Good fit if you\n\n- Build user interfaces, or want to get sharper at the details that make one feel solid\n- Are comfortable with **JavaScript**, **TypeScript** or plain **HTML**\n- Care what a bug looks like from the customer's side of the screen\n\nStack: TypeScript, JavaScript, HTML.\n"
+          },
+          "src/checkout/receipt.test.ts": {
+            "role": "tests",
+            "language": "typescript",
+            "text": "// Acceptance criteria for SHOP-8. CI runs these cases and 11 more it does not show.\nimport { describe, expect, it } from \"vitest\";\nimport { receipt } from \"./receipt\";\n\nconst cases: [unknown, unknown][] = [\n  [{\"id\":\"20417\",\"taxRate\":825,\"lines\":[{\"sku\":\"rain-jacket\",\"price\":5000,\"quantity\":1,\"discount\":500,\"taxable\":true},{\"sku\":\"tee\",\"price\":2500,\"quantity\":2,\"discount\":500,\"taxable\":true},{\"sku\":\"socks\",\"price\":1200,\"quantity\":1,\"discount\":120,\"taxable\":true}]}, {\"lines\":[{\"sku\":\"rain-jacket\",\"net\":4500,\"tax\":372},{\"sku\":\"tee\",\"net\":4500,\"tax\":371},{\"sku\":\"socks\",\"net\":1080,\"tax\":89}],\"net\":10080,\"tax\":832,\"total\":10912}],\n  [{\"id\":\"20533\",\"taxRate\":825,\"lines\":[{\"sku\":\"rain-jacket\",\"price\":5000,\"quantity\":1,\"discount\":0,\"taxable\":true},{\"sku\":\"gift-card\",\"price\":2500,\"quantity\":1,\"discount\":0,\"taxable\":false}]}, {\"lines\":[{\"sku\":\"rain-jacket\",\"net\":5000,\"tax\":413},{\"sku\":\"gift-card\",\"net\":2500,\"tax\":0}],\"net\":7500,\"tax\":413,\"total\":7913}],\n  [{\"id\":\"20540\",\"taxRate\":825,\"lines\":[{\"sku\":\"beanie\",\"price\":1999,\"quantity\":1,\"discount\":0,\"taxable\":true}]}, {\"lines\":[{\"sku\":\"beanie\",\"net\":1999,\"tax\":165}],\"net\":1999,\"tax\":165,\"total\":2164}],\n  [{\"id\":\"20611\",\"taxRate\":825,\"lines\":[{\"sku\":\"mug-red\",\"price\":1000,\"quantity\":1,\"discount\":0,\"taxable\":true},{\"sku\":\"mug-blue\",\"price\":1000,\"quantity\":1,\"discount\":0,\"taxable\":true},{\"sku\":\"mug-green\",\"price\":1000,\"quantity\":1,\"discount\":0,\"taxable\":true}]}, {\"lines\":[{\"sku\":\"mug-red\",\"net\":1000,\"tax\":83},{\"sku\":\"mug-blue\",\"net\":1000,\"tax\":83},{\"sku\":\"mug-green\",\"net\":1000,\"tax\":82}],\"net\":3000,\"tax\":248,\"total\":3248}],\n  [{\"id\":\"20650\",\"taxRate\":825,\"lines\":[{\"sku\":\"gift-card\",\"price\":2500,\"quantity\":1,\"discount\":0,\"taxable\":false},{\"sku\":\"cap\",\"price\":1800,\"quantity\":1,\"discount\":0,\"taxable\":true},{\"sku\":\"socks\",\"price\":1200,\"quantity\":1,\"discount\":0,\"taxable\":true}]}, {\"lines\":[{\"sku\":\"gift-card\",\"net\":2500,\"tax\":0},{\"sku\":\"cap\",\"net\":1800,\"tax\":149},{\"sku\":\"socks\",\"net\":1200,\"tax\":99}],\"net\":5500,\"tax\":248,\"total\":5748}],\n];\n\ndescribe(\"receipt\", () => {\n  it.each(cases)(\"case %#\", (input, expected) => {\n    expect(receipt(input as never)).toEqual(expected);\n  });\n});\n"
+          },
+          "src/checkout/receipt.ts": {
+            "role": "edit",
+            "language": "typescript",
+            "text": "/** A line at checkout, in cents. `discount` is its share of the order's promo code. */\nexport interface Line {\n  sku: string;\n  price: number;\n  quantity: number;\n  discount: number;\n  /** Gift cards and donations are not taxed. */\n  taxable: boolean;\n}\n\nexport interface Order {\n  id: string;\n  /** Sales tax rate in basis points: 825 is 8.25%. */\n  taxRate: number;\n  lines: Line[];\n}\n\nexport interface ReceiptLine {\n  sku: string;\n  /** What the line charges after its discount. */\n  net: number;\n  tax: number;\n}\n\nexport interface Receipt {\n  lines: ReceiptLine[];\n  net: number;\n  tax: number;\n  total: number;\n}\n\n/** The tax on an amount, rounded half up to the cent. Rates are basis points. */\nexport function taxOn(amount: number, rate: number): number {\n  return Math.round((amount * rate) / 10000);\n}\n\n/**\n * Each line's tax, in the order given, for amounts in cents. The finance export calls this too,\n * with each line's taxable amount, and files the sum of what it returns.\n */\nexport function lineTaxes(amounts: number[], rate: number): number[] {\n  return amounts.map((amount) => taxOn(amount, rate));\n}\n\n/** The receipt the order confirmation page and email show. */\nexport function receipt(order: Order): Receipt {\n  const nets = order.lines.map((line) => line.price * line.quantity - line.discount);\n  const taxes = lineTaxes(nets, order.taxRate);\n  const lines = order.lines.map((line, i) => ({ sku: line.sku, net: nets[i], tax: taxes[i] }));\n  const net = nets.reduce((a, b) => a + b, 0);\n  const tax = taxOn(net, order.taxRate);\n  return { lines, net, tax, total: net + tax };\n}\n"
+          }
+        },
+        "entry": "src/checkout/receipt.ts",
+        "entrypoint": "receipt"
+      },
+      "checks": {
+        "cases": [
+          {
+            "id": "case-1",
+            "input": {
+              "id": "20417",
+              "taxRate": 825,
+              "lines": [
+                {
+                  "sku": "rain-jacket",
+                  "price": 5000,
+                  "quantity": 1,
+                  "discount": 500,
+                  "taxable": true
+                },
+                {
+                  "sku": "tee",
+                  "price": 2500,
+                  "quantity": 2,
+                  "discount": 500,
+                  "taxable": true
+                },
+                {
+                  "sku": "socks",
+                  "price": 1200,
+                  "quantity": 1,
+                  "discount": 120,
+                  "taxable": true
+                }
+              ]
+            },
+            "expected": {
+              "lines": [
+                {
+                  "sku": "rain-jacket",
+                  "net": 4500,
+                  "tax": 372
+                },
+                {
+                  "sku": "tee",
+                  "net": 4500,
+                  "tax": 371
+                },
+                {
+                  "sku": "socks",
+                  "net": 1080,
+                  "tax": 89
+                }
+              ],
+              "net": 10080,
+              "tax": 832,
+              "total": 10912
+            },
+            "visible": true
+          },
+          {
+            "id": "case-2",
+            "input": {
+              "id": "20533",
+              "taxRate": 825,
+              "lines": [
+                {
+                  "sku": "rain-jacket",
+                  "price": 5000,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                },
+                {
+                  "sku": "gift-card",
+                  "price": 2500,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": false
+                }
+              ]
+            },
+            "expected": {
+              "lines": [
+                {
+                  "sku": "rain-jacket",
+                  "net": 5000,
+                  "tax": 413
+                },
+                {
+                  "sku": "gift-card",
+                  "net": 2500,
+                  "tax": 0
+                }
+              ],
+              "net": 7500,
+              "tax": 413,
+              "total": 7913
+            },
+            "visible": true
+          },
+          {
+            "id": "case-3",
+            "input": {
+              "id": "20540",
+              "taxRate": 825,
+              "lines": [
+                {
+                  "sku": "beanie",
+                  "price": 1999,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                }
+              ]
+            },
+            "expected": {
+              "lines": [
+                {
+                  "sku": "beanie",
+                  "net": 1999,
+                  "tax": 165
+                }
+              ],
+              "net": 1999,
+              "tax": 165,
+              "total": 2164
+            },
+            "visible": true
+          },
+          {
+            "id": "case-4",
+            "input": {
+              "id": "20611",
+              "taxRate": 825,
+              "lines": [
+                {
+                  "sku": "mug-red",
+                  "price": 1000,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                },
+                {
+                  "sku": "mug-blue",
+                  "price": 1000,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                },
+                {
+                  "sku": "mug-green",
+                  "price": 1000,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                }
+              ]
+            },
+            "expected": {
+              "lines": [
+                {
+                  "sku": "mug-red",
+                  "net": 1000,
+                  "tax": 83
+                },
+                {
+                  "sku": "mug-blue",
+                  "net": 1000,
+                  "tax": 83
+                },
+                {
+                  "sku": "mug-green",
+                  "net": 1000,
+                  "tax": 82
+                }
+              ],
+              "net": 3000,
+              "tax": 248,
+              "total": 3248
+            },
+            "visible": true
+          },
+          {
+            "id": "case-5",
+            "input": {
+              "id": "20650",
+              "taxRate": 825,
+              "lines": [
+                {
+                  "sku": "gift-card",
+                  "price": 2500,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": false
+                },
+                {
+                  "sku": "cap",
+                  "price": 1800,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                },
+                {
+                  "sku": "socks",
+                  "price": 1200,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                }
+              ]
+            },
+            "expected": {
+              "lines": [
+                {
+                  "sku": "gift-card",
+                  "net": 2500,
+                  "tax": 0
+                },
+                {
+                  "sku": "cap",
+                  "net": 1800,
+                  "tax": 149
+                },
+                {
+                  "sku": "socks",
+                  "net": 1200,
+                  "tax": 99
+                }
+              ],
+              "net": 5500,
+              "tax": 248,
+              "total": 5748
+            },
+            "visible": true
+          },
+          {
+            "id": "case-6",
+            "input": {
+              "id": "20702",
+              "taxRate": 825,
+              "lines": [
+                {
+                  "sku": "gift-card",
+                  "price": 5000,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": false
+                }
+              ]
+            },
+            "expected": {
+              "lines": [
+                {
+                  "sku": "gift-card",
+                  "net": 5000,
+                  "tax": 0
+                }
+              ],
+              "net": 5000,
+              "tax": 0,
+              "total": 5000
+            },
+            "visible": false
+          },
+          {
+            "id": "case-7",
+            "input": {
+              "id": "20703",
+              "taxRate": 825,
+              "lines": []
+            },
+            "expected": {
+              "lines": [],
+              "net": 0,
+              "tax": 0,
+              "total": 0
+            },
+            "visible": false
+          },
+          {
+            "id": "case-8",
+            "input": {
+              "id": "20788",
+              "taxRate": 1025,
+              "lines": [
+                {
+                  "sku": "scarf",
+                  "price": 1110,
+                  "quantity": 1,
+                  "discount": 111,
+                  "taxable": true
+                },
+                {
+                  "sku": "gloves",
+                  "price": 1665,
+                  "quantity": 1,
+                  "discount": 166,
+                  "taxable": true
+                },
+                {
+                  "sku": "gift-card",
+                  "price": 1000,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": false
+                },
+                {
+                  "sku": "boots",
+                  "price": 2888,
+                  "quantity": 1,
+                  "discount": 289,
+                  "taxable": true
+                },
+                {
+                  "sku": "gift-wrap",
+                  "price": 0,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                }
+              ]
+            },
+            "expected": {
+              "lines": [
+                {
+                  "sku": "scarf",
+                  "net": 999,
+                  "tax": 102
+                },
+                {
+                  "sku": "gloves",
+                  "net": 1499,
+                  "tax": 154
+                },
+                {
+                  "sku": "gift-card",
+                  "net": 1000,
+                  "tax": 0
+                },
+                {
+                  "sku": "boots",
+                  "net": 2599,
+                  "tax": 266
+                },
+                {
+                  "sku": "gift-wrap",
+                  "net": 0,
+                  "tax": 0
+                }
+              ],
+              "net": 6097,
+              "tax": 522,
+              "total": 6619
+            },
+            "visible": false
+          },
+          {
+            "id": "case-9",
+            "input": {
+              "id": "20801",
+              "taxRate": 0,
+              "lines": [
+                {
+                  "sku": "tee",
+                  "price": 2500,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                },
+                {
+                  "sku": "socks",
+                  "price": 1200,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                }
+              ]
+            },
+            "expected": {
+              "lines": [
+                {
+                  "sku": "tee",
+                  "net": 2500,
+                  "tax": 0
+                },
+                {
+                  "sku": "socks",
+                  "net": 1200,
+                  "tax": 0
+                }
+              ],
+              "net": 3700,
+              "tax": 0,
+              "total": 3700
+            },
+            "visible": false
+          },
+          {
+            "id": "case-10",
+            "input": {
+              "id": "20815",
+              "taxRate": 1000,
+              "lines": [
+                {
+                  "sku": "fleece",
+                  "price": 1990,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                },
+                {
+                  "sku": "hat",
+                  "price": 2510,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                }
+              ]
+            },
+            "expected": {
+              "lines": [
+                {
+                  "sku": "fleece",
+                  "net": 1990,
+                  "tax": 199
+                },
+                {
+                  "sku": "hat",
+                  "net": 2510,
+                  "tax": 251
+                }
+              ],
+              "net": 4500,
+              "tax": 450,
+              "total": 4950
+            },
+            "visible": false
+          },
+          {
+            "id": "case-11",
+            "input": {
+              "id": "20822",
+              "taxRate": 825,
+              "lines": [
+                {
+                  "sku": "tee",
+                  "price": 2500,
+                  "quantity": 3,
+                  "discount": 750,
+                  "taxable": true
+                },
+                {
+                  "sku": "jeans",
+                  "price": 5900,
+                  "quantity": 1,
+                  "discount": 590,
+                  "taxable": true
+                }
+              ]
+            },
+            "expected": {
+              "lines": [
+                {
+                  "sku": "tee",
+                  "net": 6750,
+                  "tax": 557
+                },
+                {
+                  "sku": "jeans",
+                  "net": 5310,
+                  "tax": 438
+                }
+              ],
+              "net": 12060,
+              "tax": 995,
+              "total": 13055
+            },
+            "visible": false
+          },
+          {
+            "id": "case-12",
+            "input": {
+              "id": "20830",
+              "taxRate": 825,
+              "lines": [
+                {
+                  "sku": "pin-1",
+                  "price": 333,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                },
+                {
+                  "sku": "pin-2",
+                  "price": 333,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                },
+                {
+                  "sku": "pin-3",
+                  "price": 333,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                },
+                {
+                  "sku": "pin-4",
+                  "price": 333,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                },
+                {
+                  "sku": "pin-5",
+                  "price": 333,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                },
+                {
+                  "sku": "pin-6",
+                  "price": 333,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                }
+              ]
+            },
+            "expected": {
+              "lines": [
+                {
+                  "sku": "pin-1",
+                  "net": 333,
+                  "tax": 28
+                },
+                {
+                  "sku": "pin-2",
+                  "net": 333,
+                  "tax": 28
+                },
+                {
+                  "sku": "pin-3",
+                  "net": 333,
+                  "tax": 28
+                },
+                {
+                  "sku": "pin-4",
+                  "net": 333,
+                  "tax": 27
+                },
+                {
+                  "sku": "pin-5",
+                  "net": 333,
+                  "tax": 27
+                },
+                {
+                  "sku": "pin-6",
+                  "net": 333,
+                  "tax": 27
+                }
+              ],
+              "net": 1998,
+              "tax": 165,
+              "total": 2163
+            },
+            "visible": false
+          },
+          {
+            "id": "case-13",
+            "input": {
+              "id": "20844",
+              "taxRate": 1025,
+              "lines": [
+                {
+                  "sku": "sofa",
+                  "price": 249999,
+                  "quantity": 2,
+                  "discount": 0,
+                  "taxable": true
+                },
+                {
+                  "sku": "cushion",
+                  "price": 3499,
+                  "quantity": 4,
+                  "discount": 1400,
+                  "taxable": true
+                }
+              ]
+            },
+            "expected": {
+              "lines": [
+                {
+                  "sku": "sofa",
+                  "net": 499998,
+                  "tax": 51250
+                },
+                {
+                  "sku": "cushion",
+                  "net": 12596,
+                  "tax": 1291
+                }
+              ],
+              "net": 512594,
+              "tax": 52541,
+              "total": 565135
+            },
+            "visible": false
+          },
+          {
+            "id": "case-14",
+            "input": {
+              "id": "20851",
+              "taxRate": 825,
+              "lines": [
+                {
+                  "sku": "tee",
+                  "price": 1000,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                },
+                {
+                  "sku": "free-sample",
+                  "price": 0,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                },
+                {
+                  "sku": "mug",
+                  "price": 1000,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                }
+              ]
+            },
+            "expected": {
+              "lines": [
+                {
+                  "sku": "tee",
+                  "net": 1000,
+                  "tax": 83
+                },
+                {
+                  "sku": "free-sample",
+                  "net": 0,
+                  "tax": 0
+                },
+                {
+                  "sku": "mug",
+                  "net": 1000,
+                  "tax": 82
+                }
+              ],
+              "net": 2000,
+              "tax": 165,
+              "total": 2165
+            },
+            "visible": false
+          },
+          {
+            "id": "case-15",
+            "input": {
+              "id": "20866",
+              "taxRate": 825,
+              "lines": [
+                {
+                  "sku": "hoodie",
+                  "price": 999,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                },
+                {
+                  "sku": "sticker",
+                  "price": 100,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                },
+                {
+                  "sku": "patch",
+                  "price": 100,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                }
+              ]
+            },
+            "expected": {
+              "lines": [
+                {
+                  "sku": "hoodie",
+                  "net": 999,
+                  "tax": 83
+                },
+                {
+                  "sku": "sticker",
+                  "net": 100,
+                  "tax": 8
+                },
+                {
+                  "sku": "patch",
+                  "net": 100,
+                  "tax": 8
+                }
+              ],
+              "net": 1199,
+              "tax": 99,
+              "total": 1298
+            },
+            "visible": false
+          },
+          {
+            "id": "case-16",
+            "input": {
+              "id": "20873",
+              "taxRate": 825,
+              "lines": [
+                {
+                  "sku": "donation",
+                  "price": 500,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": false
+                },
+                {
+                  "sku": "gift-card",
+                  "price": 2500,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": false
+                },
+                {
+                  "sku": "tee",
+                  "price": 2500,
+                  "quantity": 1,
+                  "discount": 0,
+                  "taxable": true
+                }
+              ]
+            },
+            "expected": {
+              "lines": [
+                {
+                  "sku": "donation",
+                  "net": 500,
+                  "tax": 0
+                },
+                {
+                  "sku": "gift-card",
+                  "net": 2500,
+                  "tax": 0
+                },
+                {
+                  "sku": "tee",
+                  "net": 2500,
+                  "tax": 206
+                }
+              ],
+              "net": 5500,
+              "tax": 206,
+              "total": 5706
+            },
+            "visible": false
+          }
+        ]
+      },
+      "team": [
+        {
+          "id": "mateo-line-taxes",
+          "where": "review",
+          "severity": "blocking",
+          "text": [
+            "Keep the exported `lineTaxes(amounts, rate)`, returning each line's share of the order's tax, and take the receipt's line taxes from it: the finance export calls it too."
+          ],
+          "when": {
+            "pattern": "(?<!function\\s+)\\blineTaxes\\s*\\(",
+            "present": false,
+            "file": "src/checkout/receipt.ts"
+          },
+          "repeat": "while-true",
+          "author": {
+            "name": "Mateo O",
+            "role": "Backend"
+          }
+        },
+        {
+          "id": "mateo-to-fixed",
+          "where": "review",
+          "severity": "blocking",
+          "text": [
+            "Keep money in whole cents: no `toFixed` or `parseFloat`."
+          ],
+          "when": {
+            "pattern": "\\.toFixed\\(|parseFloat\\(",
+            "present": true
+          },
+          "repeat": "while-true",
+          "author": {
+            "name": "Mateo O",
+            "role": "Backend"
+          }
+        }
+      ],
       "hints": [],
       "authored": {
         "by": "ai-drafted",
