@@ -34,7 +34,7 @@ test("issues are live metadata over their live revisions, grouped into projects"
   const meta = catalog.issues.find((i) => i.id === "frequency-map")!;
   assert.deepEqual(
     [issue.slug, issue.revision, issue.runnable, issue.kind, issue.estimate],
-    ["frequency-map", meta.revision, true, "feature", 1],
+    ["frequency-map", meta.revision, true, "feature", 2],
   );
   assert.equal(issue.title, "Nightly vial tally is empty");
   assert.deepEqual(issue.project, {
@@ -184,7 +184,7 @@ test("filters combine across qualifiers and match any value within one", () => {
     "EDGE-4",
     "EDGE-6",
   ]);
-  assert.equal(keys("sort:difficulty")[0], "FN-1");
+  assert.equal(keys("sort:difficulty")[0], "API-1");
   assert.equal(keys("sort:difficulty").at(-1), "SHOP-8");
 });
 

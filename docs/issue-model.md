@@ -65,7 +65,7 @@ interface IssueMetadata {
   project: string; // the project that lists it
   title: string;
   summary: string;
-  difficulty: "warm-up" | "easy" | "medium" | "hard";
+  difficulty: "easy" | "medium" | "hard";
   estimate: number; // points
   labels: string[];
   state: "draft" | "live" | "retired" | "disabled";

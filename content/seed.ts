@@ -34,7 +34,7 @@ export interface SeedIssue {
   id: string;
   title: string;
   summary: string;
-  difficulty: "warm-up" | "easy" | "medium" | "hard";
+  difficulty: "easy" | "medium" | "hard";
   kind: "feature" | "bug" | "performance" | "refactor";
   language: string;
   skills: string[];
@@ -513,7 +513,7 @@ const BASE_ISSUES: SeedIssue[] = [
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
     kind: "bug",
-    difficulty: "warm-up",
+    difficulty: "easy",
     language: "python",
     skills: ["strings", "edge-cases"],
     task: `\`count_words(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
@@ -580,7 +580,7 @@ def count_words(text):
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
     kind: "bug",
-    difficulty: "warm-up",
+    difficulty: "easy",
     language: "javascript",
     skills: ["strings", "edge-cases"],
     task: `\`countWords(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
@@ -650,7 +650,7 @@ export function countWords(text) {
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
     kind: "bug",
-    difficulty: "warm-up",
+    difficulty: "easy",
     language: "typescript",
     skills: ["strings", "edge-cases"],
     task: `\`countWords(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
@@ -693,7 +693,7 @@ export function countWords(text: string): number {
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
     kind: "bug",
-    difficulty: "warm-up",
+    difficulty: "easy",
     language: "go",
     skills: ["strings", "edge-cases"],
     task: `\`CountWords(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
@@ -749,7 +749,7 @@ final class Adapter {
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
     kind: "bug",
-    difficulty: "warm-up",
+    difficulty: "easy",
     language: "java",
     skills: ["strings", "edge-cases"],
     task: `\`WordCount.count(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
@@ -800,7 +800,7 @@ public final class WordCount {
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
     kind: "bug",
-    difficulty: "warm-up",
+    difficulty: "easy",
     language: "csharp",
     skills: ["strings", "edge-cases"],
     task: `\`WordCount.Count(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
@@ -850,7 +850,7 @@ public static class WordCount
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
     kind: "bug",
-    difficulty: "warm-up",
+    difficulty: "easy",
     language: "ruby",
     skills: ["strings", "edge-cases"],
     task: `\`count_words(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
@@ -893,7 +893,7 @@ end
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
     kind: "bug",
-    difficulty: "warm-up",
+    difficulty: "easy",
     language: "php",
     skills: ["strings", "edge-cases"],
     task: `\`countWords($text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
@@ -942,7 +942,7 @@ function countWords(string $text): int
     title: "Nightly vial tally is empty",
     summary: "The vial scanner's labels need counting for the nightly sheet; the counter returns nothing.",
     kind: "feature",
-    difficulty: "warm-up",
+    difficulty: "easy",
     language: "python",
     skills: ["iteration", "maps", "edge-cases"],
     task: `Each night the vial scanner reads the label on every vial that came back from the field, and the nightly sheet lists how many vials carry each label. The counting step was never finished, so the sheet comes out empty:
@@ -1074,7 +1074,7 @@ def frequency_map(items):
     title: "Cart shows prices as raw cents",
     summary: "Format amounts as dollars with separators, including refunds.",
     kind: "bug",
-    difficulty: "warm-up",
+    difficulty: "easy",
     language: "javascript",
     skills: ["formatting", "strings", "numbers"],
     task: `Since the cart moved to integer cents, the cart drawer shows amounts the way the API stores them. From a support ticket:
@@ -1223,7 +1223,7 @@ export function applyDiscount(totalCents: number, code: string, codes: Codes): n
     title: "Product filter checkboxes have no labels",
     summary: "Tie every filter checkbox to a label so it is accessible.",
     kind: "refactor",
-    difficulty: "warm-up",
+    difficulty: "easy",
     language: "html",
     skills: ["accessibility", "forms", "semantics"],
     task: `The category page's filter form has two checkboxes, \`in-stock\` and \`on-sale\`, with bare text next to them. The accessibility audit flagged them: screen readers announce "checkbox" and nothing else, and clicking the text does not toggle the box.

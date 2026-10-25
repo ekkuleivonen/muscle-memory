@@ -18,7 +18,6 @@ import { LANGUAGES, type LanguageId } from "./languages";
 
 export { ESTIMATES };
 export const DIFFICULTIES: readonly Difficulty[] = [
-  "warm-up",
   "easy",
   "medium",
   "hard",

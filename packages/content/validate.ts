@@ -14,7 +14,7 @@ import { engineFor } from "../runner/engines";
 const ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const KEY = /^[A-Z][A-Z0-9]{1,4}$/;
 const REVISION = /^sha256:[0-9a-f]{64}$/;
-const DIFFICULTIES: readonly Difficulty[] = ["warm-up", "easy", "medium", "hard"];
+const DIFFICULTIES: readonly Difficulty[] = ["easy", "medium", "hard"];
 const KINDS: readonly IssueKind[] = ["feature", "bug", "performance", "refactor"];
 const STATES = ["draft", "live", "retired", "disabled"];
 const ROLES = ["edit", "read", "tests", "docs"];

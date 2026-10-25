@@ -128,8 +128,13 @@ function revisionOf(seed: SeedIssue, key: string, project: (typeof SEED_PROJECTS
   };
 }
 
+// Only earlier revisions are kept from the old catalog, so only they are verified: its live
+// metadata (difficulty, labels, state) is rebuilt from the seed and may predate today's rules.
 const previous = await readFile(destination, "utf8").then(
-  (text) => verifyCatalog(JSON.parse(text)),
+  (text) => {
+    const old = JSON.parse(text) as Partial<Catalog>;
+    return verifyCatalog({ ...old, projects: [], issues: [] });
+  },
   () => null,
 );
 const seeds = new Map(SEED_ISSUES.map((s) => [s.id, s]));

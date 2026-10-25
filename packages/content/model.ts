@@ -6,7 +6,7 @@
  */
 import type { Json } from "../domain/json";
 
-export type Difficulty = "warm-up" | "easy" | "medium" | "hard";
+export type Difficulty = "easy" | "medium" | "hard";
 export type IssueKind = "feature" | "bug" | "performance" | "refactor";
 /** What the player hands in. Only code changes exist so far. */
 export type Format = "code-change";
@@ -206,7 +206,6 @@ export interface Catalog {
 
 /** Story points shown as an estimate, in the 1-2-3-5 scale trackers use. */
 export const ESTIMATES: Record<Difficulty, number> = {
-  "warm-up": 1,
   easy: 2,
   medium: 3,
   hard: 5,

@@ -149,23 +149,3 @@ export function boardIssues(
     return issue ? [{ issue, status: statusOf(items, issue.key) }] : [];
   });
 }
-
-/** Backlog issues worth moving to Todo: runnable first, then the person's stack, then easiest. */
-export function suggestions(
-  issues: readonly Issue[],
-  items: readonly BoardItem[],
-  languages: readonly string[],
-  count = 3,
-): Issue[] {
-  const rank = ["warm-up", "easy", "medium", "hard"];
-  const score = (i: Issue) =>
-    (i.runnable ? 0 : 100) +
-    (i.language && languages.includes(i.language) ? 0 : 10) +
-    (i.difficulty ? rank.indexOf(i.difficulty) : 4);
-  return issues
-    .filter((i) => !items.some((item) => item.key === i.key))
-    .map((issue, index) => ({ issue, index }))
-    .sort((a, b) => score(a.issue) - score(b.issue) || a.index - b.index)
-    .slice(0, count)
-    .map(({ issue }) => issue);
-}

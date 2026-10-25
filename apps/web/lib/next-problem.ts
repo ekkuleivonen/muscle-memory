@@ -11,7 +11,7 @@ type Candidate = Pick<
   "key" | "language" | "project" | "difficulty" | "runnable"
 >;
 
-const LEVELS = ["warm-up", "easy", "medium", "hard"];
+const LEVELS = ["easy", "medium", "hard"];
 
 /**
  * Issues worth doing next after `current`, best first. Leaves out `current`, whatever is Done

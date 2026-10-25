@@ -140,8 +140,8 @@
       "number": 1,
       "title": "The composer says 1 word when the post is empty",
       "summary": "A five-minute bug: the word count under the text box is off.",
-      "difficulty": "warm-up",
-      "estimate": 1,
+      "difficulty": "easy",
+      "estimate": 2,
       "labels": [
         "strings",
         "edge-cases"
@@ -155,8 +155,8 @@
       "number": 2,
       "title": "The composer says 1 word when the post is empty",
       "summary": "A five-minute bug: the word count under the text box is off.",
-      "difficulty": "warm-up",
-      "estimate": 1,
+      "difficulty": "easy",
+      "estimate": 2,
       "labels": [
         "strings",
         "edge-cases"
@@ -170,8 +170,8 @@
       "number": 3,
       "title": "The composer says 1 word when the post is empty",
       "summary": "A five-minute bug: the word count under the text box is off.",
-      "difficulty": "warm-up",
-      "estimate": 1,
+      "difficulty": "easy",
+      "estimate": 2,
       "labels": [
         "strings",
         "edge-cases"
@@ -185,8 +185,8 @@
       "number": 4,
       "title": "The composer says 1 word when the post is empty",
       "summary": "A five-minute bug: the word count under the text box is off.",
-      "difficulty": "warm-up",
-      "estimate": 1,
+      "difficulty": "easy",
+      "estimate": 2,
       "labels": [
         "strings",
         "edge-cases"
@@ -200,8 +200,8 @@
       "number": 5,
       "title": "The composer says 1 word when the post is empty",
       "summary": "A five-minute bug: the word count under the text box is off.",
-      "difficulty": "warm-up",
-      "estimate": 1,
+      "difficulty": "easy",
+      "estimate": 2,
       "labels": [
         "strings",
         "edge-cases"
@@ -215,8 +215,8 @@
       "number": 6,
       "title": "The composer says 1 word when the post is empty",
       "summary": "A five-minute bug: the word count under the text box is off.",
-      "difficulty": "warm-up",
-      "estimate": 1,
+      "difficulty": "easy",
+      "estimate": 2,
       "labels": [
         "strings",
         "edge-cases"
@@ -230,8 +230,8 @@
       "number": 7,
       "title": "The composer says 1 word when the post is empty",
       "summary": "A five-minute bug: the word count under the text box is off.",
-      "difficulty": "warm-up",
-      "estimate": 1,
+      "difficulty": "easy",
+      "estimate": 2,
       "labels": [
         "strings",
         "edge-cases"
@@ -245,8 +245,8 @@
       "number": 8,
       "title": "The composer says 1 word when the post is empty",
       "summary": "A five-minute bug: the word count under the text box is off.",
-      "difficulty": "warm-up",
-      "estimate": 1,
+      "difficulty": "easy",
+      "estimate": 2,
       "labels": [
         "strings",
         "edge-cases"
@@ -260,8 +260,8 @@
       "number": 1,
       "title": "Nightly vial tally is empty",
       "summary": "The vial scanner's labels need counting for the nightly sheet; the counter returns nothing.",
-      "difficulty": "warm-up",
-      "estimate": 1,
+      "difficulty": "easy",
+      "estimate": 2,
       "labels": [
         "iteration",
         "maps",
@@ -340,8 +340,8 @@
       "number": 1,
       "title": "Cart shows prices as raw cents",
       "summary": "Format amounts as dollars with separators, including refunds.",
-      "difficulty": "warm-up",
-      "estimate": 1,
+      "difficulty": "easy",
+      "estimate": 2,
       "labels": [
         "formatting",
         "strings",
@@ -371,8 +371,8 @@
       "number": 3,
       "title": "Product filter checkboxes have no labels",
       "summary": "Tie every filter checkbox to a label so it is accessible.",
-      "difficulty": "warm-up",
-      "estimate": 1,
+      "difficulty": "easy",
+      "estimate": 2,
       "labels": [
         "accessibility",
         "forms",
