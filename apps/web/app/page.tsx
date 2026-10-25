@@ -5,16 +5,12 @@ import { CONSENT_COOKIE, hasConsent } from "../lib/profile";
 /**
  * The public front door: why someone who builds with AI might write one challenge themselves,
  * the loop every challenge follows (challenge, code, feedback, next), and what is recorded.
- * Outside the consent gate; returning players get a way back to their challenges.
+ * Outside the consent gate; returning players get a way back to practice.
  */
 
 /** The loop every challenge follows. */
 const LOOP = [
-  [
-    "01",
-    "Challenge",
-    "A problem with a clear goal and the cases it has to pass.",
-  ],
+  ["01", "Challenge", "A clear goal, with the requirements spelled out."],
   [
     "02",
     "Code",
@@ -23,7 +19,7 @@ const LOOP = [
   [
     "03",
     "Feedback",
-    "See right away which cases pass, and for any that fail, what came back and what was expected. Then the next challenge.",
+    "See right away whether it passes. When it doesn't, the feedback says how it failed, without giving the answer away. Then the next challenge.",
   ],
 ];
 
@@ -37,7 +33,7 @@ export default async function Home() {
     </Link>
   ) : (
     <Link className="home-cta" href="/play">
-      Fix your first bug →
+      Start your first challenge →
     </Link>
   );
 
@@ -57,7 +53,7 @@ export default async function Home() {
         <nav>
           <Link href="/terms">Terms</Link>
           <Link href="/privacy">Privacy</Link>
-          <Link href="/issues">Challenges</Link>
+          <Link href="/issues">Explore</Link>
         </nav>
       </header>
 
@@ -80,10 +76,10 @@ export default async function Home() {
             <span className="home-note">
               No email needed. Progress stays in this browser.{" "}
               {signedIn ? (
-                <Link href="/issues">Browse challenges</Link>
+                <Link href="/issues">Explore challenges</Link>
               ) : (
                 <>
-                  Or <Link href="/issues">browse every challenge</Link>.
+                  Or <Link href="/issues">explore every challenge</Link>.
                 </>
               )}
             </span>
