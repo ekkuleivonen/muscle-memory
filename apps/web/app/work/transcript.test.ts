@@ -54,7 +54,7 @@ test("a thrown error shows with its trace under its case, after what was printed
   assert.equal(
     out,
     [
-      "dim|$ run tests · revision 3 · JavaScript (browser)",
+      "dim|$ run tests · JavaScript",
       "out|checking",
       "err|careful",
       "fail|✘ formatPrice(123456)",
@@ -111,7 +111,7 @@ test("compile errors, timeouts and runtime failures are all shown", () => {
   );
   assert.match(
     text(run({ status: "runner-error", phase: "bootstrap", message: "gone" })),
-    /err\|JavaScript \(browser\) failed \(bootstrap\), not your code: gone/,
+    /err\|The test runner crashed; this wasn't your code/,
   );
   assert.deepEqual(transcript(null, challenge, "x"), []);
 });

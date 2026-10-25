@@ -62,7 +62,7 @@ export function Dashboard({
   if (!hydrated || !account || !records)
     return (
       <p role="status" className="loading-state">
-        Reading your practice history…
+        Loading your desk…
       </p>
     );
   const resume = inProgress[0] ?? todo[0];
@@ -98,7 +98,7 @@ export function Dashboard({
             ? "Pick up where you left off"
             : doneCount
               ? "Ready for another issue?"
-              : "Your first practice session"}
+              : "Your first ticket"}
         </h2>
         {resume ? (
           <>
@@ -110,8 +110,8 @@ export function Dashboard({
         ) : (
           <>
             <p>
-              Read a ticket, change the code, run tests and merge your fix.
-              Start with one small bug; there is no timer.
+              Read the ticket, change the code, run the tests and merge your
+              fix. Start with one small bug; there is no timer.
             </p>
             <Link className="btn start" href="/play">
               Try the five-minute test →
@@ -119,10 +119,6 @@ export function Dashboard({
             <Link href="/issues">Browse all issues</Link>
           </>
         )}
-        <p className="dim">
-          Saved in this browser. Keep using this browser and device to return to
-          your code. Uploads are not a backup.
-        </p>
       </section>
       {onBoard.length > 0 && (
         <div className="stats">
@@ -144,9 +140,9 @@ export function Dashboard({
           />
           <Stat label="Points on your board" value={points} />
           <Stat
-            label="Days using the app"
+            label="Days at your desk"
             value={records && now ? activeDays(counts, now) : "…"}
-            hint="includes browsing · last 30 days"
+            hint="last 30 days"
           />
         </div>
       )}
@@ -198,12 +194,11 @@ export function Dashboard({
               </Link>
             </h2>
             <p className="dim">
-              Unstarted issues, prioritising runnable issues and easier
-              difficulty
+              Unstarted issues
               {account.profile.languages?.length
-                ? ", prioritising your languages"
+                ? " in your languages"
                 : " across languages"}
-              . Points indicate relative complexity, not minutes.
+              , easiest first. Points are complexity, not hours.
             </p>
             <Ask ids={["languages"]} from="dashboard" />
             <Suggestions issues={discoverable} />
