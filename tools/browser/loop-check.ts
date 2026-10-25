@@ -94,9 +94,9 @@ try {
     .locator(".ide-cases > li")
     .filter({ hasText: "Additional check" });
   assert.ok((await privateChecks.count()) > 0);
-  assert.doesNotMatch(
-    await privateChecks.allTextContents().then((lines) => lines.join("\n")),
-    /expected|got /i,
+  assert.equal(
+    await privateChecks.locator(".ide-case-detail code, .ide-trace").count(),
+    0,
   );
   await keyActivate(page.getByRole("tab", { name: "Output", exact: true }));
   assert.match(
