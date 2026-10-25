@@ -40,8 +40,8 @@ const ARTICLE = {
 
 /**
  * Why Muscle Memory exists, in the founder's words: what AI gave, what one attempt without it
- * showed, what we want to find out and why the data matters, what it can and can't say, and
- * the invitation. Public, like the home page.
+ * showed, what we want to find out and why the data matters, what it can and can't say, what
+ * the founder wants to keep, and the invitation. Public, like the home page.
  */
 export default function ManifestoPage() {
   return (
@@ -154,11 +154,19 @@ export default function ManifestoPage() {
               your browser.
             </p>
 
+            <h3>What I want to keep</h3>
+            <p>
+              I enjoy working on the bigger problems AI has opened up for me. I
+              also want to be able to take a smaller problem, understand how it
+              fits together, and write the code myself. I want that choice to
+              stay available to me. I still want to speak the language.
+            </p>
+
             <h3>Try one</h3>
             <p>
               Pick a coding challenge, write the solution yourself, and see how
-              it goes. Contribute knowingly, and help us see what actually
-              happens. I&apos;m curious whether my experience sounds familiar.
+              it goes. Maybe it feels rusty. Maybe it comes back easily. Either
+              way, I&apos;m curious.
             </p>
             <p>
               <Link href="/start">Try your first challenge →</Link>
