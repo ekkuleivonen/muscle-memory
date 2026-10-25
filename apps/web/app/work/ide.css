@@ -1,4 +1,3 @@
-/* The IDE: VS Code proportions in the app's colours. */
 /* Editor colours for every editor surface: the practice page and the older IDE. */
 .ide,
 .practice {
@@ -32,218 +31,7 @@
   color: var(--fg);
   font-size: 13px;
 }
-
-/* Title bar */
-.ide-title {
-  grid-area: title;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 0 12px;
-  background: var(--ide-bar);
-  border-bottom: 1px solid var(--line);
-}
-.ide-back {
-  color: var(--dim);
-  white-space: nowrap;
-}
-.ide-back:hover {
-  color: var(--fg);
-}
-.ide-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 600;
-}
-.ide-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.ide-run {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 28px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: var(--radius);
-  background: var(--accent);
-  color: var(--accent-fg);
-  font: 600 13px var(--font);
-  cursor: pointer;
-}
-.ide-run kbd {
-  border: 0;
-  padding: 0;
-  color: inherit;
-  opacity: 0.75;
-}
-.ide-run:disabled,
-.ide-run.disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-.ide-run.secondary {
-  background: none;
-  color: var(--fg);
-  box-shadow: inset 0 0 0 1px var(--line-strong);
-}
-.ide-run.secondary:hover:not(:disabled) {
-  background: var(--hover);
-}
-.ide-run.cancel {
-  background: var(--red);
-  color: #fff;
-}
-
-/* Activity bar and side bar */
-.ide-activity {
-  grid-area: activity;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding-top: 6px;
-  background: var(--ide-bar);
-  border-right: 1px solid var(--line);
-}
-.ide-activity-button {
-  width: 48px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-left: 2px solid transparent;
-  background: none;
-  color: var(--faint);
-  cursor: pointer;
-}
-.ide-activity-button {
-  position: relative;
-}
-.ide-activity-dot {
-  position: absolute;
-  top: 10px;
-  right: 11px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-}
-.ide-activity-button:hover {
-  color: var(--fg);
-}
-.ide-activity-button[aria-pressed="true"] {
-  color: var(--fg);
-  border-left-color: var(--accent);
-}
-.ide-side {
-  grid-area: side;
-  overflow-y: auto;
-  background: var(--ide-side);
-  border-right: 1px solid var(--line);
-}
-.ide-side h2 {
-  margin: 0;
-  padding: 10px 14px 6px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  color: var(--dim);
-}
-.ide-explorer ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.ide-root {
-  padding: 4px 8px;
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-}
-.ide-folder,
-.ide-file {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  height: 24px;
-  padding-right: 8px;
-  border: 0;
-  background: none;
-  color: var(--fg);
-  font: 13px var(--font);
-  text-align: left;
-}
-.ide-folder {
-  color: var(--dim);
-}
-.ide-file {
-  cursor: pointer;
-}
-.ide-file:hover {
-  background: var(--hover);
-}
-.ide-file[aria-current="true"] {
-  background: var(--active);
-}
-.ide-git {
-  margin-left: auto;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--amber);
-}
-.ide-ticket {
-  padding-bottom: 24px;
-}
-.ide-ticket > :not(h2) {
-  padding-left: 14px;
-  padding-right: 14px;
-}
-.ide-ticket-key {
-  margin: 4px 0 2px;
-  color: var(--faint);
-  font-size: 12px;
-}
-.ide-ticket h3 {
-  margin: 0 0 10px;
-  font-size: 15px;
-}
-.ide-ticket .markdown {
-  font-size: 13px;
-  min-width: 0;
-}
 /* A log or receipt in a ticket scrolls inside the narrow side bar instead of being cut off. */
-.ide-ticket .markdown pre {
-  max-width: 100%;
-  box-sizing: border-box;
-}
-.ide-ticket-tests {
-  margin: 12px 0;
-  color: var(--dim);
-}
-.ide-comments {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 6px;
-}
-.ide-comment {
-  padding: 8px 10px !important;
-  margin: 0 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--ide-editor);
-}
-.ide-comment .markdown {
-  margin-top: 4px;
-}
 .ide-link {
   border: 0;
   padding: 0;
@@ -255,178 +43,7 @@
   cursor: pointer;
 }
 
-/* Editor area */
-.ide-main {
-  grid-area: main;
-  position: relative;
-  display: grid;
-  /* The editor keeps at least 120px; the panel takes what was dragged. */
-  grid-template-rows: 36px 24px minmax(120px, 1fr) minmax(
-      0,
-      var(--panel-h, 260px)
-    );
-  min-width: 0;
-}
-.ide-tabs {
-  display: flex;
-  overflow-x: auto;
-  background: var(--ide-side);
-  border-bottom: 1px solid var(--line);
-}
-.ide-tab {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 0 10px 0 14px;
-  border-right: 1px solid var(--line);
-  color: var(--dim);
-  white-space: nowrap;
-  cursor: pointer;
-}
-.ide-tab[aria-selected="true"] {
-  background: var(--ide-editor);
-  color: var(--fg);
-  box-shadow: inset 0 1px 0 var(--accent);
-}
-.ide-close {
-  width: 18px;
-  height: 18px;
-  border: 0;
-  border-radius: 4px;
-  background: none;
-  color: var(--faint);
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-}
-.ide-close:hover {
-  background: var(--hover);
-  color: var(--fg);
-}
-.ide-dot {
-  width: 8px;
-  height: 8px;
-  margin: 0 5px;
-  border-radius: 50%;
-  background: var(--dim);
-}
-.ide-crumbs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 14px;
-  font-size: 12px;
-}
-.ide-ro {
-  margin-left: 6px;
-  padding: 0 6px;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  font-size: 11px;
-}
-.ide-editors {
-  position: relative;
-  min-height: 0;
-}
-.ide-editor {
-  position: absolute;
-  inset: 0;
-}
-.ide-editor[hidden] {
-  display: none;
-}
-.ide-editor .cm-editor {
-  height: 100%;
-  background: var(--ide-editor);
-  color: var(--syn-variable);
-  font-size: 13.5px;
-}
-.ide-editor .cm-editor.cm-focused {
-  outline: none;
-}
-.ide-editor .cm-scroller {
-  font-family: var(--mono);
-  line-height: 1.6;
-}
-.ide-editor .cm-gutters {
-  background: var(--ide-editor);
-  border-right: 0;
-  color: var(--faint);
-}
-.ide-editor .cm-activeLine,
-.ide-editor .cm-activeLineGutter {
-  background: color-mix(in srgb, var(--fg) 5%, transparent);
-}
-.ide-editor .cm-cursor {
-  border-left-color: var(--accent);
-}
-.ide-editor .cm-selectionBackground,
-.ide-editor .cm-focused .cm-selectionBackground {
-  background: color-mix(in srgb, var(--accent) 28%, transparent) !important;
-}
-.ide-editor .cm-matchingBracket {
-  background: color-mix(in srgb, var(--accent) 22%, transparent);
-  outline: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
-}
-/* Vim's block cursor. */
-.ide-editor .cm-fat-cursor {
-  background: color-mix(in srgb, var(--accent) 70%, transparent) !important;
-}
-.ide-overlay {
-  position: absolute;
-  top: 12px;
-  left: 60px;
-  margin: 0;
-}
-
 /* Bottom panel */
-.ide-panel {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  border-top: 1px solid var(--line);
-  background: var(--ide-panel);
-}
-.ide-panel-tabs {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 0 10px;
-  height: 34px;
-  flex: none;
-}
-.ide-panel-tabs [role="tab"] {
-  height: 34px;
-  padding: 0 10px;
-  border: 0;
-  border-bottom: 1px solid transparent;
-  background: none;
-  color: var(--faint);
-  font: 600 11px var(--font);
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-.ide-panel-tabs [role="tab"][aria-selected="true"] {
-  color: var(--fg);
-  border-bottom-color: var(--accent);
-}
-.ide-message {
-  margin-left: auto;
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ide-panel-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 4px 16px 16px;
-}
-.ide-panel-body p {
-  margin: 6px 0;
-}
 .ide-summary {
   font-weight: 600;
 }
@@ -435,45 +52,6 @@
 }
 .ide-summary.fail {
   color: var(--red);
-}
-.ide-done {
-  padding: 8px 12px;
-  border: 1px solid color-mix(in srgb, var(--green) 45%, var(--line));
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--green) 10%, transparent);
-}
-.ide-done a {
-  color: var(--accent);
-}
-.ide-review {
-  padding: 8px 12px;
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-  margin-bottom: 10px;
-}
-.ide-review p {
-  margin: 0;
-}
-.ide-review .ide-comments {
-  margin: 10px 0 0;
-}
-.ide-review a {
-  color: var(--accent);
-  font-weight: 600;
-}
-.ide-review .ide-run {
-  margin-top: 10px;
-  text-decoration: none;
-}
-.ide-review .ide-run:not(.secondary) {
-  color: var(--accent-fg);
-}
-.ide-review .ide-run.secondary {
-  color: var(--fg);
-}
-a.ide-run {
-  text-decoration: none;
 }
 .ide-cases {
   list-style: none;
@@ -543,185 +121,19 @@ a.ide-run {
 }
 
 /* Status bar */
-.ide-status {
-  grid-area: status;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 0 12px;
-  background: var(--accent);
-  color: var(--accent-fg);
-  font-size: 12px;
-}
-.ide-status-right {
-  margin-left: auto;
-  display: flex;
-  gap: 16px;
-}
-.ide-save.warn {
-  font-weight: 600;
-}
-.ide-vim {
-  font-family: var(--mono);
-  font-weight: 600;
-}
-
-.ide-missing {
-  max-width: 560px;
-  margin: 15vh auto;
-  padding: 0 20px;
-}
 
 @media (max-width: 860px) {
   .ide {
     grid-template-columns: 0 0 minmax(0, 1fr);
   }
-  .ide-activity,
-  .ide-side,
-  .ide-side-splitter {
-    display: none;
-  }
 }
 
 /* Pull requests */
-.ide-count {
-  margin-left: 4px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--hover);
-  color: var(--dim);
-  font-size: 11px;
-  letter-spacing: 0;
-}
 .ide-run-label {
   margin: 4px 0 0 !important;
   font-size: 12px;
 }
-.ide-pulls {
-  list-style: none;
-  margin: 8px 0 0;
-  padding: 0;
-}
-.ide-pulls li {
-  display: grid;
-  grid-template-columns: 18px 36px 130px minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: baseline;
-  padding: 7px 0;
-  border-top: 1px solid var(--line);
-}
-.ide-pr-mark {
-  font-weight: 700;
-}
-.ide-pr-label {
-  font-weight: 600;
-}
-.ide-pulls .pass .ide-pr-mark,
-.ide-pulls .pass .ide-pr-label {
-  color: var(--green);
-}
-.ide-pulls .fail .ide-pr-mark,
-.ide-pulls .fail .ide-pr-label {
-  color: var(--red);
-}
-.ide-pulls .merged .ide-pr-mark,
-.ide-pulls .merged .ide-pr-label {
-  color: #8250df;
-}
-.ide-pulls .busy .ide-pr-mark,
-.ide-pulls .busy .ide-pr-label {
-  color: var(--amber);
-}
-
-/* Opening: the boot screen, then a thin progress line while the runtime finishes loading. */
-.ide-boot {
-  position: absolute;
-  inset: 40px 0 24px;
-  z-index: 20;
-  display: grid;
-  place-items: center;
-  background: color-mix(in srgb, var(--ide-editor) 92%, transparent);
-  /* A short delay, so a page that opens instantly never flashes it. */
-  animation: ide-fade-in 0.2s ease 0.15s both;
-}
-.ide-boot-card {
-  width: min(460px, calc(100% - 32px));
-  padding: 24px 28px 20px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--ide-side);
-  box-shadow: 0 12px 40px rgb(0 0 0 / 0.12);
-}
-.ide-boot-logo {
-  width: 28px;
-  height: 28px;
-  display: block;
-  margin-bottom: 12px;
-}
-.ide-boot-title {
-  margin: 0 0 16px;
-  font-size: 14px;
-  font-weight: 600;
-}
-.ide-boot-steps {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 10px;
-}
-.ide-boot-step {
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
-  gap: 8px;
-  align-items: start;
-}
-.ide-boot-step.skipped {
-  color: var(--faint);
-}
-.ide-boot-mark {
-  width: 14px;
-  height: 14px;
-  margin-top: 2px;
-  display: grid;
-  place-items: center;
-  font-size: 12px;
-  color: var(--green);
-}
-.ide-boot-step.busy .ide-boot-mark {
-  border: 2px solid var(--line);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: ide-spin 0.8s linear infinite;
-}
-.ide-boot-bar {
-  display: block;
-  height: 4px;
-  margin-top: 6px;
-  border-radius: 2px;
-  background:
-    linear-gradient(var(--accent), var(--accent)) no-repeat 0 0 /
-      var(--progress, 0%) 100%,
-    var(--line);
-  transition: background-size 0.15s;
-}
-.ide-boot-skip {
-  margin-top: 18px;
-  font-size: 12px;
-}
-.ide-progress {
-  position: absolute;
-  inset: 0 0 auto;
-  z-index: 5;
-  height: 2px;
-  overflow: hidden;
-  background: linear-gradient(var(--accent), var(--accent)) no-repeat 0 0 /
-    var(--progress, 30%) 100%;
-}
 /* No byte count (starting up): VS Code's sliding indeterminate bar. */
-.ide-progress:not([aria-valuenow]) {
-  animation: ide-slide 1.2s ease-in-out infinite;
-}
 @keyframes ide-fade-in {
   from {
     opacity: 0;
@@ -738,13 +150,6 @@ a.ide-run {
   }
   to {
     background-position: 130% 0;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ide-boot,
-  .ide-boot-step.busy .ide-boot-mark,
-  .ide-progress {
-    animation: none;
   }
 }
 
@@ -774,198 +179,15 @@ a.ide-run {
   border-radius: 6px;
   background: var(--ide-side);
 }
-.ide-pr-blocking {
-  color: var(--red);
-  font-size: 12px;
-}
 
 /* Small screens retain the ticket and every file through a focus-trapped drawer. */
-.ide-mobile-tools {
-  display: none;
-}
-.ide-help,
-.ide-mobile-tools button,
-.dialog-close {
-  border: 1px solid var(--line-strong);
-  border-radius: 4px;
-  background: var(--bg);
-  color: var(--fg);
-  padding: 6px 10px;
-  font: inherit;
-  cursor: pointer;
-}
-.ide-mobile-dialog,
-.keyboard-help {
-  color: var(--fg);
-  background: var(--bg);
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  max-height: 85dvh;
-  width: min(540px, calc(100vw - 24px));
-  padding: 16px;
-  overflow: auto;
-}
 dialog::backdrop {
   background: #0008;
-}
-.dialog-close {
-  display: block;
-  margin: 0 0 16px auto;
-}
-.ide-tab-wrap {
-  display: flex;
-  align-items: center;
-  flex: none;
-  border-right: 1px solid var(--line);
-}
-.ide-tab {
-  border: 0;
-  background: transparent;
-  font: inherit;
-  height: 100%;
-}
-.ide-message {
-  margin: 8px 0 12px;
-  padding: 10px;
-  color: var(--fg);
-  background: var(--bg-subtle);
-  border: 1px solid var(--line-strong);
-  white-space: normal;
-  overflow-wrap: anywhere;
-  font-size: 13px;
 }
 @media (max-width: 860px) {
   .ide {
     grid-template-rows: auto minmax(0, 1fr) auto;
   }
-  .ide-title {
-    flex-wrap: wrap;
-    padding: 8px;
-    gap: 8px;
-  }
-  .ide-name {
-    flex-basis: calc(100% - 140px);
-  }
-  .ide-mobile-tools {
-    display: flex;
-    gap: 6px;
-  }
-  .ide-actions {
-    flex: 1 1 100%;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .ide-run {
-    min-height: 36px;
-    padding: 0 9px;
-  }
-  .ide-run kbd {
-    display: none;
-  }
-  .ide-main {
-    min-height: 0;
-    grid-template-rows: 36px 24px minmax(100px, 1fr) minmax(
-        0,
-        min(var(--panel-h, 220px), 34dvh)
-      );
-  }
-  .ide-crumbs {
-    overflow: auto;
-    white-space: nowrap;
-  }
-  .ide-status {
-    flex-wrap: wrap;
-    padding: 4px 8px;
-    gap: 4px 12px;
-  }
-  .ide-status > span:first-child:not([role="status"]) {
-    display: none;
-  }
-  .ide-status-right {
-    flex-wrap: wrap;
-    gap: 4px 10px;
-  }
-  .ide-pulls li {
-    grid-template-columns: 18px 28px minmax(0, 1fr);
-  }
-  .ide-pulls li > :nth-child(n + 4) {
-    grid-column: 3;
-  }
-  .ide-file {
-    min-height: 36px;
-  }
-}
-
-/* What a teammate just said, in the panel where the person is working. */
-.ide-team-notes {
-  margin: 8px 0 12px;
-}
-.ide-team-note {
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
-  margin: 0 0 6px;
-  padding: 8px 10px;
-  border: 1px solid var(--line-strong);
-  border-left: 3px solid var(--accent);
-  border-radius: var(--radius);
-  background: var(--bg-subtle);
-  font-size: 13px;
-}
-.ide-team-text {
-  flex: 1;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-}
-.ide-team-note > a,
-.ide-team-note > button {
-  flex: none;
-  white-space: nowrap;
-}
-.ide-team-note .ide-link {
-  font-family: inherit;
-  font-size: inherit;
-  text-decoration: underline;
-}
-@media (max-width: 860px) {
-  .ide-team-note {
-    flex-direction: column;
-    gap: 4px;
-  }
-  .ide-team-text {
-    -webkit-line-clamp: 5;
-  }
-}
-
-.ide-actions .btn.start {
-  height: 28px;
-  padding: 0 12px;
-  font-size: 13px;
-}
-.ide-actions .btn.start {
-  background: var(--accent);
-  color: var(--accent-fg);
-  border-color: transparent;
-}
-
-.ide-ticket .challenge-examples h2 {
-  font-size: 12px;
-  letter-spacing: normal;
-  text-transform: none;
-}
-.ide-ticket .challenge-examples h3 {
-  font-size: 12px;
-  margin: 0 0 8px;
-}
-.ide-ticket .challenge-examples li {
-  padding: 10px;
-  background: var(--panel);
-}
-.ide-ticket .challenge-examples pre {
-  font-size: 11.5px;
 }
 
 /*
@@ -991,7 +213,10 @@ dialog::backdrop {
 /* The 12px tracks between panes hold the drag handles; sizes come from them once dragged. */
 .tui-panes {
   display: grid;
-  grid-template-columns: var(--challenge-w, minmax(300px, 34%)) 12px minmax(0, 1fr);
+  grid-template-columns: var(--challenge-w, minmax(300px, 34%)) 12px minmax(
+      0,
+      1fr
+    );
   grid-template-rows: minmax(0, 1fr) 12px var(--feedback-h, minmax(120px, 38%));
   grid-template-areas:
     "challenge xsplit code"
@@ -1268,10 +493,29 @@ dialog::backdrop {
   }
 }
 
-.practice-recovery { padding: 20px; font-size: 13px; line-height: 1.6; }
-.practice-recovery .btn { margin: 8px 12px 0 0; }
-.practice-version { max-width: 680px; margin: 64px auto; padding: 24px; line-height: 1.6; }
+.practice-recovery {
+  padding: 20px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.practice-recovery .btn {
+  margin: 8px 12px 0 0;
+}
+.practice-version {
+  max-width: 680px;
+  margin: 64px auto;
+  padding: 24px;
+  line-height: 1.6;
+}
 
-.practice-editors { position: relative; }
-.practice-editors > p { position: absolute; inset: 20px; }
-.practice-recovery { max-height: 100%; overflow: auto; }
+.practice-editors {
+  position: relative;
+}
+.practice-editors > p {
+  position: absolute;
+  inset: 20px;
+}
+.practice-recovery {
+  max-height: 100%;
+  overflow: auto;
+}
