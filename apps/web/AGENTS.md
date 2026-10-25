@@ -20,6 +20,7 @@ The product centers on solving coding challenges independently: challenge, code,
 - `lib/progress.ts` (attempts and completions on this device), `lib/start.ts` (where a start came from, handed to practice), `lib/submission.ts` (a Submit's verdict), `lib/site-log.ts` (the site stream), `lib/environment.ts`.
 - `app/_terminal` (the terminal look: banner, status bar, menus, styles), `app/settings`: `/settings` lists the commands, each its own page (`/settings/<command>`, `/settings/profile/<question>`) ([docs/profile.md](../../docs/profile.md)).
 - `app/r/[card]`: a shared result ([docs/start.md](../../docs/start.md)).
+- Search and link previews: `lib/site.ts` (site name, description, `pageMetadata` for public pages: title and canonical), the layout's title template and Open Graph defaults, `opengraph-image.tsx` at the root, `manifesto/` and `r/[card]/` (all on `_components/og-card.tsx`), `robots.ts`, `sitemap.ts`, `manifest.ts`. A page that sets its own `openGraph` loses the inherited image, so only pages with their own image do. Pages behind the Terms, settings and share links are `noindex`.
 - Runners live outside the app, in `packages/runner` (see the root `AGENTS.md`).
 
 ## Conventions

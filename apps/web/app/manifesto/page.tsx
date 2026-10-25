@@ -1,12 +1,41 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SITE_NAME, SITE_URL, pageMetadata } from "../../lib/site";
 import { TermFooter } from "../_terminal/footer";
 import "../_terminal/terminal.css";
 
+const TITLE = "I read code every day. Then I tried writing some.";
+const DESCRIPTION =
+  "Why Muscle Memory exists: a year of working with AI, one surprising attempt at coding without it, and a question worth answering with data.";
+const AUTHOR = "Ekku Leivonen";
+const PUBLISHED = "2026-10-26";
+
 export const metadata: Metadata = {
-  title: "I read code every day. Then I tried writing some. · Muscle Memory",
-  description:
-    "Why Muscle Memory exists: a year of working with AI, one surprising attempt at coding without it, and a question worth answering with data.",
+  ...pageMetadata({ title: TITLE, description: DESCRIPTION, path: "/manifesto" }),
+  authors: [{ name: AUTHOR }],
+  // Its own opengraph-image, so setting Open Graph here keeps the picture.
+  openGraph: {
+    title: `${TITLE} · ${SITE_NAME}`,
+    description: DESCRIPTION,
+    url: "/manifesto",
+    siteName: SITE_NAME,
+    locale: "en_US",
+    type: "article",
+    publishedTime: PUBLISHED,
+    authors: [AUTHOR],
+  },
+};
+
+/** What search engines read about the piece: an article, by whom, when. */
+const ARTICLE = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  headline: TITLE,
+  description: DESCRIPTION,
+  author: { "@type": "Person", name: AUTHOR },
+  datePublished: PUBLISHED,
+  mainEntityOfPage: `${SITE_URL}/manifesto`,
+  publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
 };
 
 /**
@@ -17,11 +46,13 @@ export const metadata: Metadata = {
 export default function ManifestoPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(ARTICLE) }}
+      />
       <div className="term">
         <main className="t-prose">
-          <h1 className="t-doc-title">
-            I read code every day. Then I tried writing some.
-          </h1>
+          <h1 className="t-doc-title">{TITLE}</h1>
           <div className="markdown t-md">
             <h3>What AI gave me</h3>
             <p>
@@ -132,7 +163,7 @@ export default function ManifestoPage() {
             <p>
               <Link href="/start">Try your first challenge →</Link>
             </p>
-            <p className="t-dim">— Ekku Leivonen</p>
+            <p className="t-dim">— {AUTHOR}</p>
           </div>
         </main>
       </div>

@@ -17,12 +17,20 @@ const WORDMARK_NARROW = [
 
 /**
  * The terminal header: the wordmark and a line on what this is.
- * Screen readers get the words, not the drawing.
+ * Screen readers get the words, not the drawing; they are the page's heading unless the page
+ * has its own.
  */
-export function Banner({ description }: { description: ReactNode }) {
+export function Banner({
+  description,
+  heading = true,
+}: {
+  description: ReactNode;
+  heading?: boolean;
+}) {
+  const Name = heading ? "h1" : "p";
   return (
     <div className="t-banner">
-      <h1 className="t-sr">muscle memory</h1>
+      <Name className="t-sr">muscle memory</Name>
       <div className="t-art t-art-wide" aria-hidden>
         {WORDMARK}
       </div>

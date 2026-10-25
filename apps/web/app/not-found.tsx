@@ -3,7 +3,7 @@ import { TermFooter } from "./_terminal/footer";
 import { NotFoundView } from "./_terminal/not-found-view";
 import "./_terminal/terminal.css";
 
-export const metadata: Metadata = { title: "Not found · Muscle Memory" };
+export const metadata: Metadata = { title: "Not found" };
 
 export default function NotFound() {
   return (

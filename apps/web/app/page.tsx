@@ -1,13 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, pageMetadata } from "../lib/site";
 import { Banner } from "./_terminal/banner";
 import { TermFooter } from "./_terminal/footer";
 import "./_terminal/terminal.css";
 
-export const metadata: Metadata = {
-  title: "Muscle Memory",
-  description:
-    "You can ship with AI. Can you still code without it? Pick a challenge, write the solution yourself, and see what comes back naturally.",
+export const metadata: Metadata = pageMetadata({
+  title: `${SITE_NAME}: practice coding without AI`,
+  absolute: true,
+  description: SITE_DESCRIPTION,
+  path: "/",
+});
+
+/** What search engines read about the site as a whole. */
+const WEBSITE = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: SITE_NAME,
+  url: SITE_URL,
+  description: SITE_DESCRIPTION,
 };
 
 /**
@@ -18,14 +29,19 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(WEBSITE) }}
+      />
       <div className="term home">
-        <Banner description="Practice without AI." />
+        {/* The question is this page's heading, not the wordmark. */}
+        <Banner description="Practice without AI." heading={false} />
         <main className="t-prose home-fold">
-          <p className="t-line home-headline">
+          <h1 className="t-line home-headline">
             <strong>You can ship with AI.</strong>
             <br />
             <strong className="t-brand">Can you still code without it?</strong>
-          </p>
+          </h1>
           <p className="t-line">
             Pick a challenge. Write the solution yourself. See what comes back
             naturally, and what doesn&apos;t.

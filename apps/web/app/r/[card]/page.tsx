@@ -7,6 +7,7 @@ import {
   type Outcome,
 } from "../../../lib/outcome";
 import { inspectCard, startCopy } from "../../../lib/share";
+import { NOT_INDEXED, SITE_NAME } from "../../../lib/site";
 import { YourTurn } from "./your-turn";
 import { Arrived } from "./arrived";
 import { SharedCode } from "./shared-code";
@@ -48,13 +49,16 @@ async function read(props: Props) {
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { challenge, label, shown } = await read(props);
   if (!challenge || !shown)
-    return { title: "Result not available · Muscle Memory", robots: { index: false } };
+    return { title: "Result not available", robots: { index: false } };
   const title = shown.headline;
-  const description = `${challenge.summary || challenge.title} The same ${label} challenge, from its starting code.`;
+  const description = `${challenge.summary || challenge.title} Try the same ${label} challenge yourself.`;
+  const url = `/r/${(await props.params).card}`;
   return {
-    title,
+    title: { absolute: title },
     description,
-    openGraph: { title, description, siteName: "Muscle Memory" },
+    // Every share is its own address with the same challenge behind it: previews, not results.
+    robots: NOT_INDEXED,
+    openGraph: { title, description, url, siteName: SITE_NAME, locale: "en_US", type: "website" },
     twitter: { card: "summary_large_image", title, description },
   };
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { requireConsent } from "../../../lib/gate";
+import { NOT_INDEXED } from "../../../lib/site";
 import { TermFooter, type Crumb } from "../../_terminal/footer";
 import "../../_terminal/terminal.css";
 import { isCommand, isQuestion } from "../commands";
@@ -10,7 +11,11 @@ type Props = { params: Promise<{ path: string[] }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const [command] = (await params).path;
-  return { title: `${command} · Settings · Muscle Memory` };
+  // Never echo an address that isn't a command; the page itself is a 404.
+  return {
+    title: isCommand(command) ? `${command} · Settings` : "Not found",
+    robots: NOT_INDEXED,
+  };
 }
 
 /**
