@@ -7,6 +7,7 @@ import {
   diagnose,
   type CheckRow,
   type Diagnosis,
+  type FailureCategory,
 } from "../../../lib/diagnosis";
 import { isCiFinding, type Thread } from "../../../lib/feedback";
 import type { PullSummary } from "../../../lib/pulls";
@@ -14,9 +15,9 @@ import { Markdown } from "./markdown";
 
 /**
  * A pull request's review, as its page shows it: Findings (what is left to fix, and what was
- * fixed before, folded away) and the Checks tab (every case as CI ran it). A failing case reads as
- * its input, the expected value and what the code gave (lib/diagnosis.ts): the requirement is
- * plain, and nothing suggests code. Whether it can merge is said once, by the merge box.
+ * fixed before, folded away) and the Checks tab (every case as CI ran it). A failing public case
+ * reads as its input, the expected value and what the code gave; a hidden case gives its name and
+ * how it failed, never its values (lib/diagnosis.ts). Nothing suggests code. Whether it can merge is said once, by the merge box.
  */
 
 const clock = (at: string) =>
@@ -149,30 +150,56 @@ function failingSummary(
   return `${pull.passed} of ${pull.total} checks passed on push ${pull.pushes}.`;
 }
 
-/** Marks a case that isn't in the repo's test file: only the full check runs it. */
-const ExtraCase = () => (
-  <span className="ci-only" title="Not in the repo's test file">
-    not in the test file
+/** Marks a hidden case: only the full check runs it, and its values stay hidden. */
+const HiddenCase = () => (
+  <span
+    className="ci-only"
+    title="Not in the repo's test file. Its input and expected value stay hidden."
+  >
+    hidden case
   </span>
 );
 
-/** A case's input, the value it should give and, when it failed, what the code gave instead. */
+const FAILURE: Record<FailureCategory, string> = {
+  "wrong-value": "Returned a different value from the one expected.",
+  raised: "Raised an error.",
+  "not-json": "Returned a value that can't be compared.",
+  "cut-short": "Returned output too long to compare.",
+  "no-result": "Returned nothing.",
+};
+
+/** How a failing case failed, in words: all a hidden case shows. */
+function failureText(failure: NonNullable<CheckRow["failure"]>): string {
+  return failure.category === "raised" && failure.errorType
+    ? `Raised ${failure.errorType}.`
+    : FAILURE[failure.category];
+}
+
+/**
+ * A public case's input, the value it should give and, when it failed, what the code gave
+ * instead. A hidden case shows only how it failed.
+ */
 export function CaseDiff({ row }: { row: CheckRow }) {
+  const { detail } = row;
+  if (!detail)
+    return row.failure ? (
+      <p className="case-failure">{failureText(row.failure)}</p>
+    ) : null;
   return (
     <dl className="case-diff">
       <dt>Input</dt>
       <dd>
-        <code>{show(row.input)}</code>
+        <code>{show(detail.input)}</code>
       </dd>
       <dt>Expected</dt>
       <dd>
-        <code>{show(row.expected)}</code>
+        <code>{show(detail.expected)}</code>
       </dd>
-      {row.got && (
+      {detail.got && (
         <>
-          <dt>{row.got.label}</dt>
+          <dt>{detail.got.label}</dt>
           <dd className="case-got">
-            <code>{row.got.text}</code>
+            <code>{detail.got.text}</code>
           </dd>
         </>
       )}
@@ -180,7 +207,7 @@ export function CaseDiff({ row }: { row: CheckRow }) {
   );
 }
 
-/** The failing checks, each as its name, input, expected value and what the code gave. */
+/** The failing cases: the public ones in full, the hidden ones by name and how they failed. */
 export function FailedChecks({ diagnosis }: { diagnosis: Diagnosis | null }) {
   if (diagnosis?.kind === "error")
     return (
@@ -200,7 +227,7 @@ export function FailedChecks({ diagnosis }: { diagnosis: Diagnosis | null }) {
           </span>
           <div>
             <b>{row.name}</b>
-            {!row.visible && <ExtraCase />}
+            {!row.visible && <HiddenCase />}
             <CaseDiff row={row} />
           </div>
         </li>
@@ -418,13 +445,15 @@ export function Checks({
               </span>
               <div>
                 <b>{row.name}</b>
-                {!row.visible && <ExtraCase />}{" "}
+                {!row.visible && <HiddenCase />}{" "}
                 {row.passed ? (
-                  <>
-                    <code>{show(row.input)}</code>{" "}
-                    <span className="dim">→</span>{" "}
-                    <code>{show(row.expected)}</code>
-                  </>
+                  row.detail && (
+                    <>
+                      <code>{show(row.detail.input)}</code>{" "}
+                      <span className="dim">→</span>{" "}
+                      <code>{show(row.detail.expected)}</code>
+                    </>
+                  )
                 ) : (
                   <CaseDiff row={row} />
                 )}
@@ -433,12 +462,20 @@ export function Checks({
           ))}
         </ol>
       )}
-      {outcome?.stdout?.text && (
-        <details className="pull-output">
-          <summary>Printed output</summary>
-          <pre>{outcome.stdout.text}</pre>
-        </details>
-      )}
+      {outcome?.stdout?.text &&
+        (diagnosis.kind === "tests" &&
+        diagnosis.rows.some((r) => !r.visible) ? (
+          // Printing an argument would reveal a hidden case's input.
+          <p className="dim pull-output">
+            Printed output isn&apos;t shown for the full check, which includes
+            hidden cases. Run the tests to see what your code prints.
+          </p>
+        ) : (
+          <details className="pull-output">
+            <summary>Printed output</summary>
+            <pre>{outcome.stdout.text}</pre>
+          </details>
+        ))}
       {typeof outcome?.durationMs === "number" && (
         <p className="dim pull-duration">
           Ran in {Math.round(outcome.durationMs)} ms.

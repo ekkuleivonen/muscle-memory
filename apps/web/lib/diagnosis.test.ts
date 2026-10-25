@@ -24,7 +24,7 @@ const out = (value: unknown) => ({
   output: { text: JSON.stringify(value), truncated: false },
 });
 
-test("a failing case shows its input, the expected value and what the code returned", () => {
+test("a failing public case shows its input, the expected value and what the code returned", () => {
   const d = diagnose(
     {
       status: "completed",
@@ -33,22 +33,24 @@ test("a failing case shows its input, the expected value and what the code retur
     },
     cases,
   );
-  assert.equal(d?.kind, "tests");
-  if (d?.kind !== "tests") return;
+  if (d?.kind !== "tests") return assert.fail("expected per-case results");
   assert.equal(d.rows.length, 3);
   assert.deepEqual(d.failed, [
     {
       name: "counts words",
-      input: ["a a"],
       visible: true,
-      expected: { a: 2 },
       passed: false,
-      got: { label: "Got", text: '{"a":1}' },
+      failure: { category: "wrong-value", errorType: null },
+      detail: {
+        input: ["a a"],
+        expected: { a: 2 },
+        got: { label: "Got", text: '{"a":1}' },
+      },
     },
   ]);
 });
 
-test("a case not in the test file is as clear as one that is", () => {
+test("a hidden case is no oracle: its name and failure category, never its values", () => {
   const d = diagnose(
     {
       status: "completed",
@@ -64,15 +66,32 @@ test("a case not in the test file is as clear as one that is", () => {
   if (d?.kind !== "tests") return assert.fail("expected per-case results");
   const [unnamed, hidden] = d.failed;
   assert.equal(unnamed.name, "case 2");
-  assert.deepEqual(unnamed.got, { label: "Got", text: "nothing" });
-  assert.deepEqual(unnamed.expected, {});
-  assert.equal(hidden.name, "ignores case");
-  assert.equal(hidden.visible, false);
-  assert.deepEqual(hidden.expected, { a: 2 });
-  assert.deepEqual(hidden.got, { label: "Raised", text: "KeyError: 'A'" });
+  assert.deepEqual(unnamed.failure, { category: "no-result", errorType: null });
+  assert.deepEqual(unnamed.detail?.got, { label: "Got", text: "nothing" });
+  assert.deepEqual(hidden, {
+    name: "ignores case",
+    visible: false,
+    passed: false,
+    // The error's type, not its message: a message can echo the input.
+    failure: { category: "raised", errorType: "KeyError" },
+    detail: null,
+  });
+  // Passing hidden cases carry no values either.
+  const passing = diagnose(
+    {
+      status: "completed",
+      phase: "tests",
+      cases: [out({ a: 2 }), out({}), out({ a: 2 })],
+    },
+    cases,
+  );
+  if (passing?.kind !== "tests")
+    return assert.fail("expected per-case results");
+  assert.equal(passing.rows[2].detail, null);
+  assert.ok(!JSON.stringify(passing.rows[2]).includes("A a"));
 });
 
-test("values that can't be read are described as such", () => {
+test("values that can't be compared get their own category", () => {
   const d = diagnose(
     {
       status: "completed",
@@ -80,19 +99,23 @@ test("values that can't be read are described as such", () => {
       cases: [
         { output: { text: '{"a":', truncated: true } },
         { unserializable: "a function" },
-        out({ a: 2 }),
+        { output: { text: "[]", truncated: false } },
       ],
     },
     cases,
   );
   if (d?.kind !== "tests") return assert.fail("expected per-case results");
   assert.deepEqual(
-    d.failed.map((r) => r.got?.text),
-    ['{"a": (cut short)', "a value that isn't JSON (a function)"],
+    d.failed.map((r) => r.failure?.category),
+    ["cut-short", "not-json", "wrong-value"],
+  );
+  assert.deepEqual(
+    d.failed.map((r) => r.detail?.got?.text ?? null),
+    ['{"a": (cut short)', "a value that isn't JSON (a function)", null],
   );
 });
 
-test("CI that never reached the tests gives its error, not per-case guesses", () => {
+test("a check that never reached the cases gives its error, not per-case guesses", () => {
   assert.deepEqual(
     diagnose(
       {
