@@ -487,6 +487,7 @@ export function PullView({
             </Link>
           </span>
         </p>
+        {/* A merged pull request's outcome goes here, before what to practise next. */}
         {pull.state === "merged" && (
           <NextPractice candidates={candidates} current={issue.key} />
         )}
