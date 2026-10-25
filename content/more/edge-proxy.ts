@@ -22,7 +22,7 @@ static char lower(char c)
 
 /*
  * Writes the normalized host into out (size bytes, terminator included) and returns its
- * length, or -1 when the value is not a host. See docs/vhosts.md for the rules.
+ * length, or -1 when the value is not a host.
  */
 int normalize_host(const char *host, char *out, size_t size)
 {
@@ -74,7 +74,7 @@ static long host_length(const char *host)
 
 /*
  * Writes the normalized host into out (size bytes, terminator included) and returns its
- * length, or -1 when the value is not a host. See docs/vhosts.md for the rules.
+ * length, or -1 when the value is not a host.
  */
 int normalize_host(const char *host, char *out, size_t size)
 {
@@ -125,33 +125,6 @@ const HOST_ONE_FUNCTION = HOST_STARTER.replace(
     }`,
 );
 
-const VHOSTS_DOC = `# Virtual hosts
-
-Each request is routed on its Host header after \`normalize_host\` (src/normalize_host.c) has
-normalized it. The cache key uses the same value, so two spellings of one host share entries.
-
-## Normalizing
-
-- Lowercase: \`Shop.Example.COM\` → \`shop.example.com\`.
-- No port: \`shop.example.com:8443\` → \`shop.example.com\`.
-- No trailing dot: \`shop.example.com.\` → \`shop.example.com\`.
-- An IPv6 literal keeps its brackets and loses only the port after them:
-  \`[2001:db8::1]:8080\` → \`[2001:db8::1]\`. A literal that is never closed, or is followed by
-  anything other than a port, is not a host.
-- A value with nothing left is not a host.
-
-Anything that is not a host gets the default vhost's 421.
-
-## Config (edge.conf, excerpt)
-
-\`\`\`text
-vhost shop.example.com   { upstream shop; }
-vhost cdn.example.com    { upstream static; }
-vhost [2001:db8::1]      { upstream shop; }    # v6 listener, health checks
-default                  { return 421; }
-\`\`\`
-`;
-
 const ipv6HostHeader: SeedIssue = {
   id: "ipv6-host-header",
   title: "IPv6 requests get 421 Misdirected Request",
@@ -167,7 +140,30 @@ const ipv6HostHeader: SeedIssue = {
 421 GET http://[2001:db8::1]/healthz      host="["     vhost=default
 \`\`\`
 
-\`normalize_host(host, out, size)\` in \`src/normalize_host.c\` turns a Host header into the name routing and the cache key use. It writes it to \`out\` and returns its length, or \`-1\` when the value is not a host (\`null\` in the checks). The rules are in \`docs/vhosts.md\`: lowercase, no port, no trailing dot, and an IPv6 literal keeps its brackets and loses only the port after them. A literal that is never closed, or is followed by anything other than a port, is not a host. Plain hostnames already work and must keep working.`,
+The proxy routes each request on its Host header after \`normalize_host\` has normalized it, and the response cache keys on the same value, so two spellings of one host share a vhost and cache entries. Plain hostnames already work; IPv6 literals do not, because the current code treats the first \`:\` as the start of the port.
+
+## What to write
+
+\`int normalize_host(const char *host, char *out, size_t size)\`
+
+- \`host\` is the raw Host header value, a NUL-terminated string.
+- Write the normalized host into \`out\`, NUL-terminated, and return its length (not counting the terminator).
+- \`size\` is the size of \`out\` in bytes, terminator included. If the result plus its terminator does not fit, return \`-1\`.
+- Return \`-1\` when the value is not a host. The examples show \`-1\` as \`null\`, and a string for a host.
+
+## Normalizing rules
+
+- **Port:** remove the port. For a hostname, the port is everything from the first \`:\` on (\`example.com:8443\` becomes \`example.com\`).
+- **IPv6 literals:** a value starting with \`[\` is an IPv6 literal. It keeps its brackets and loses only a port after the closing \`]\` (\`[2001:db8::1]:8080\` becomes \`[2001:db8::1]\`). A literal that is never closed with \`]\`, or whose \`]\` is followed by anything other than nothing or a \`:\` port, is not a host.
+- **Trailing dot:** after the port is removed, a single trailing \`.\` is removed (\`cdn.example.com.\` becomes \`cdn.example.com\`).
+- **Case:** ASCII letters are lowercased, in hostnames and IPv6 literals alike (\`Example.COM\` becomes \`example.com\`).
+- **Empty:** a value with nothing left after these steps is not a host.
+
+Plain hostnames must keep normalizing exactly as they do now.
+
+## Constraints
+
+- No heap allocation: \`normalize_host\` runs on every request before routing, and \`out\` is the buffer to write into. Do not call \`malloc\`, \`calloc\`, \`realloc\`, \`strdup\` or \`strndup\`.`,
   entrypoint: "normalize_host",
   starter: HOST_STARTER,
   parameters: ["host"],
@@ -188,7 +184,6 @@ mm_value *mm_call(const mm_value *args) {
     return result;
 }
 `,
-  files: [{ path: "docs/vhosts.md", role: "docs", language: "markdown", text: VHOSTS_DOC }],
   inputs: [
     ["Example.COM"],
     ["example.com:8443"],
@@ -226,21 +221,8 @@ mm_value *mm_call(const mm_value *args) {
     "shop.example.com",
   ],
   hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-  comments: [
-    sam(
-      "About 3% of requests on the v6 listener, nearly all health checks, so it's not on fire. But I'd like the alert back before the weekend.",
-    ),
-  ],
-  hints: [
-    {
-      text: "Where does the host end and the port begin when the host itself is full of colons?",
-      when: { behaviour: "active-minutes-without-progress", atLeast: 8 },
-    },
-    {
-      text: "For a bracketed literal, the closing bracket marks the end of the host; whatever follows it can only be a port.",
-      when: { behaviour: "failing-pushes", atLeast: 2 },
-    },
-  ],
+  comments: [],
+  hints: [],
   team: [
     {
       id: "sam-no-malloc",
@@ -249,8 +231,7 @@ mm_value *mm_call(const mm_value *args) {
       where: "review",
       severity: "blocking",
       text: [
-        "This runs on every request before routing. Can we keep allocation out of it? `out` is already the buffer to write into.",
-        "No heap on the request path, please: this is called for every request and `out` is already sized for the result.",
+        "normalize_host must not allocate on the heap (no malloc, calloc, realloc, strdup or strndup): write the result into out.",
       ],
       when: {
         pattern: "\\b(malloc|calloc|realloc|strdup|strndup)\\s*\\(",
@@ -259,26 +240,6 @@ mm_value *mm_call(const mm_value *args) {
       },
       repeat: "while-true",
     },
-    {
-      id: "sam-nesting",
-      author: "Sam R",
-      role: "SRE",
-      where: "review",
-      severity: "nit",
-      text: [
-        "Nit: `normalize_host` now has two ways of finding the end of the host inline. A small helper for that would keep the function readable at 3am.",
-      ],
-      when: { metric: "nesting", above: 2, file: HOST_FILE },
-    },
-    {
-      id: "sam-healthz",
-      author: "Sam R",
-      role: "SRE",
-      where: "review",
-      severity: "info",
-      text: ["That's the health checker's Host header. I'll unsilence the alert once this is out."],
-      when: { check: "case-3", is: "passing" },
-    },
   ],
   private: {
     reference: { [HOST_FILE]: HOST_REFERENCE },
@@ -286,10 +247,6 @@ mm_value *mm_call(const mm_value *args) {
       "sam-no-malloc": {
         fires: [{ [HOST_FILE]: HOST_WITH_MALLOC }],
         quiet: [{ [HOST_FILE]: HOST_REFERENCE }, { [HOST_FILE]: HOST_ONE_FUNCTION }],
-      },
-      "sam-nesting": {
-        fires: [{ [HOST_FILE]: HOST_ONE_FUNCTION }],
-        quiet: [{ [HOST_FILE]: HOST_REFERENCE }],
       },
     },
   },
@@ -368,8 +325,8 @@ type Backend struct {
 
 // RoundRobin hands out the servers of one upstream in proportion to their
 // weights, spread out rather than in bursts (smooth weighted round robin, as
-// nginx does it; see docs/weighted-balancing.md). A config reload builds a new
-// one; Next is called from every connection's goroutine.
+// nginx does it). A config reload builds a new one; Next is called from every
+// connection's goroutine.
 type RoundRobin struct {
 	mu       sync.Mutex
 	backends []Backend
@@ -453,42 +410,6 @@ const BALANCER_LONG = BALANCER_REFERENCE.replace(
 `,
 );
 
-const WEIGHTED_DOC = `# Weighted balancing
-
-Status: agreed, for the origin-v2 canary. Owner: Mateo.
-
-\`server <name> weight=<n>;\` gives a server n shares of an upstream's requests. \`weight=0\`
-drains it: it keeps its place in the block but gets no requests. An upstream whose servers
-are all drained has nowhere to send a request.
-
-## Smooth, not bursty
-
-With 5:1:1 a naive scheme sends five requests in a row to the first server. We do what nginx
-does instead, so the small server's requests are spread out:
-
-1. Every server starts with a current value of 0.
-2. For each request, add each server's weight to its current value.
-3. Pick the server with the highest current value; on a tie, the one listed first.
-4. Subtract the total weight of all servers that took part from the picked server's value.
-
-Drained servers take part in nothing: their weight is not added and does not count towards
-the total.
-
-## Worked example: a=5, b=1, c=1
-
-| Request | After adding weights (a, b, c) | Picked | After subtracting 7 |
-|---|---|---|---|
-| 1 | 5, 1, 1 | a | -2, 1, 1 |
-| 2 | 3, 2, 2 | a | -4, 2, 2 |
-| 3 | 1, 3, 3 | b | 1, -4, 3 |
-| 4 | 6, -3, 4 | a | -1, -3, 4 |
-| 5 | 4, -2, 5 | c | 4, -2, -2 |
-| 6 | 9, -1, -1 | a | 2, -1, -1 |
-| 7 | 7, 0, 0 | a | 0, 0, 0 |
-
-After seven requests every value is back at 0 and the cycle repeats: a a b a c a a.
-`;
-
 const weightedUpstreams: SeedIssue = {
   id: "weighted-upstreams",
   title: "Upstream weights are ignored",
@@ -508,13 +429,40 @@ upstream origin {
 
 but the balancer never looks at weights. In staging last night origin-v2 got **10,041 of 20,000** requests (50.2%).
 
-\`PickOrder(backends, n)\` in \`pick_order.go\` returns where the next \`n\` requests go on a freshly loaded upstream; the proxy itself calls \`RoundRobin.Next\` once per request. Make the balancer honour weights the way \`docs/weighted-balancing.md\` describes: smooth, so origin-v2 gets one request in ten spread out rather than in a burst, ties to the server listed first, and \`weight=0\` drains a server. With no servers, or every server drained, there are no picks.`,
+Each \`server <name> weight=<n>;\` line is already parsed into a \`Backend\` (\`Name\`, \`Weight\`). The proxy calls \`RoundRobin.Next\` once per request; \`PickOrder(backends, n)\` returns where the next \`n\` requests go on a freshly loaded upstream (a new \`RoundRobin\` over \`backends\`), for previews before a rollout. Make the balancer honour weights.
+
+## Rules
+
+- A server with weight \`n\` gets \`n\` shares of the upstream's requests, spread out rather than in bursts (smooth weighted round robin, as nginx does it).
+- \`weight=0\` drains a server: it keeps its place in the list but gets no requests and takes no part in the calculation below.
+- With no servers, or every server drained, there is nowhere to send a request: \`Next\` returns \`false\` and \`PickOrder\` returns no picks (an empty list). \`PickOrder\` with \`n = 0\` also returns an empty list.
+- Otherwise \`PickOrder\` returns exactly \`n\` server names, in order.
+
+## The algorithm
+
+1. Every server starts with a current value of 0.
+2. For each request, add each non-drained server's weight to its current value.
+3. Pick the server with the highest current value; on a tie, the one listed first.
+4. Subtract the total weight of all non-drained servers from the picked server's current value.
+
+Worked example with weights a=5, b=1, c=1 (total 7):
+
+| Request | After adding weights (a, b, c) | Picked | After subtracting 7 |
+|---|---|---|---|
+| 1 | 5, 1, 1 | a | -2, 1, 1 |
+| 2 | 3, 2, 2 | a | -4, 2, 2 |
+| 3 | 1, 3, 3 | b | 1, -4, 3 |
+| 4 | 6, -3, 4 | a | -1, -3, 4 |
+| 5 | 4, -2, 5 | c | 4, -2, -2 |
+| 6 | 9, -1, -1 | a | 2, -1, -1 |
+| 7 | 7, 0, 0 | a | 0, 0, 0 |
+
+## Constraints
+
+- \`Next\` is called concurrently from every connection's goroutine and now updates shared state on each call: it must keep locking \`r.mu\` while it reads and updates that state.`,
   entrypoint: "PickOrder",
   starter: BALANCER_STARTER,
   parameters: ["backends", "n"],
-  files: [
-    { path: "docs/weighted-balancing.md", role: "docs", language: "markdown", text: WEIGHTED_DOC },
-  ],
   inputs: [
     [[{ name: "a", weight: 1 }, { name: "b", weight: 1 }, { name: "c", weight: 1 }], 6],
     [[{ name: "a", weight: 5 }, { name: "b", weight: 1 }, { name: "c", weight: 1 }], 7],
@@ -571,22 +519,8 @@ but the balancer never looks at weights. In staging last night origin-v2 got **1
     ["a", "a", "a", "a", "a"],
   ],
   hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-  comments: [
-    mateo(
-      "Weights are parsed into `Backend.Weight` already; config isn't the problem. I'd like `edgectl upstream preview` to show the real order before we flip the canary on.",
-    ),
-    sam("If origin-v2 misbehaves I'll drain it with weight=0 rather than editing the block, so that has to work too."),
-  ],
-  hints: [
-    {
-      text: "Plain round robin only remembers whose turn it is. With weights, each server also has to remember how far ahead of or behind its share it is.",
-      when: { behaviour: "active-minutes-without-progress", atLeast: 12 },
-    },
-    {
-      text: "Walk the 5:1:1 table in the design note against your code one request at a time. A drained server should play no part in any of the sums.",
-      when: { behaviour: "failing-pushes", atLeast: 2 },
-    },
-  ],
+  comments: [],
+  hints: [],
   team: [
     {
       id: "mateo-keep-lock",
@@ -595,29 +529,10 @@ but the balancer never looks at weights. In staging last night origin-v2 got **1
       where: "review",
       severity: "blocking",
       text: [
-        "`Next` runs on every connection's goroutine, and now it reads and writes the counters on each call. Without the lock two requests race on them. Can we keep it?",
-        "The lock went missing from `Next`. Every connection goroutine calls it and it updates shared counters, so the race detector will flag this on the first load test.",
+        "RoundRobin.Next is called concurrently from every connection's goroutine, so it must lock r.mu while it reads and updates the balancer's state.",
       ],
       when: { pattern: "\\.Lock\\(\\)", present: false, file: BALANCER_FILE },
       repeat: "while-true",
-    },
-    {
-      id: "mateo-long-next",
-      author: "Mateo O",
-      role: "Backend",
-      where: "review",
-      severity: "nit",
-      text: ["Nit: `Next` is getting long for something on the request path. Is all of it needed?"],
-      when: { metric: "function-lines", above: 26, file: BALANCER_FILE },
-    },
-    {
-      id: "sam-canary",
-      author: "Sam R",
-      role: "SRE",
-      where: "review",
-      severity: "info",
-      text: ["That's the 9:1 we want. I'll roll it to one PoP first and watch origin-v2's error rate."],
-      when: { check: "case-3", is: "passing" },
     },
   ],
   private: {
@@ -626,10 +541,6 @@ but the balancer never looks at weights. In staging last night origin-v2 got **1
       "mateo-keep-lock": {
         fires: [{ [BALANCER_FILE]: BALANCER_UNLOCKED }],
         quiet: [{ [BALANCER_FILE]: BALANCER_REFERENCE }, { [BALANCER_FILE]: BALANCER_LONG }],
-      },
-      "mateo-long-next": {
-        fires: [{ [BALANCER_FILE]: BALANCER_LONG }],
-        quiet: [{ [BALANCER_FILE]: BALANCER_REFERENCE }],
       },
     },
   },
@@ -810,7 +721,7 @@ const INDEX_NODE_MAP = INDEX_REFERENCE.replace(
   "    std::vector<Slot> slots_;\n    std::unordered_map<int, int> overflow_;\n",
 );
 
-/** The same fix as two passes over the chain: correct, and twice the length. */
+/** The same fix as two passes over the chain: correct, still a flat table. */
 const INDEX_TWO_PASS = INDEX_REFERENCE.replace(
   INDEX_REFERENCE.slice(
     INDEX_REFERENCE.indexOf("    bool put(int key, int value) {"),
@@ -849,29 +760,6 @@ const INDEX_TWO_PASS = INDEX_REFERENCE.replace(
 `,
 );
 
-const INDEX_DOC = `# #412: open-addressing cache index
-
-Author: Mateo O. Merged Thursday, deployed to every PoP by 14:00.
-
-## Why
-
-The response cache's index was a \`std::unordered_map<int, int>\`: one heap node per insert. At
-peak that was 9% of CPU on the edge flame graphs, most of it in \`operator new\` and \`free\`.
-
-## What
-
-A flat array of \`cache.index_slots\` slots, allocated once at startup. A key's home slot is
-\`key % slots\`; on a collision, the next slot, wrapping around at the end (linear probing).
-A lookup walks from the home slot until it finds the key or reaches an empty slot. When every
-slot holds an entry, a new response is served without being cached.
-
-## Results (canary PoP, 24 h)
-
-- CPU at peak: -9.2%
-- p99 time to first byte: 3.1 ms → 2.6 ms
-- Allocations per request on the cache path: 1 → 0
-`;
-
 const cacheIndexPurge: SeedIssue = {
   id: "cache-index-purge",
   title: "Cache hit ratio fell to 71% after the index change",
@@ -880,7 +768,7 @@ const cacheIndexPurge: SeedIssue = {
   difficulty: "hard",
   language: "cpp",
   skills: ["hash-tables", "caching", "reviewing-changes"],
-  task: `Mateo replaced the response cache's \`std::unordered_map\` index with an open-addressing table on Thursday (#412, notes in \`docs/412-cache-index.md\`) to take the per-insert allocation off the hot path. CPU at peak is down 9%, but since the deploy:
+  task: `On Thursday (#412) the response cache's index, a \`std::unordered_map<int, int>\`, was replaced with an open-addressing table. The map allocated one heap node per insert, about 9% of CPU at peak; the table allocates nothing per request. CPU at peak is down 9%, but since the deploy:
 
 - the cache hit ratio went from **94.1%** to **71.3%**, worst on the PoPs that purge the most;
 - origin requests are up **3.2×**;
@@ -892,7 +780,31 @@ const cacheIndexPurge: SeedIssue = {
 14:02:19 get   key=19  miss                 (arena slot 5: key=19, age 38s)
 \`\`\`
 
-\`cache_index(slots, ops)\` in \`src/cache_index.cpp\` replays a cache log against an index of \`slots\` slots: \`["put", key, value]\`, \`["get", key]\` and \`["erase", key]\` (a purge). It returns what each get found, \`-1\` for a miss. The index must behave like a map of at most \`slots\` entries: a get finds the latest value put under its key unless the key was purged since, and a put is refused (the response is served uncached) only when every slot holds a live entry. A purged response must never come back. Keep the flat table: going back to a node-based map is not the fix.`,
+Fix the index without giving up the flat table.
+
+## The table
+
+- A flat array of \`slots\` slots, allocated once when the index is created. \`slots\` is 0 or more.
+- A key's home slot is \`key % slots\` (keys are already hashes, used as unsigned); on a collision, the next slot, wrapping around at the end (linear probing).
+- A lookup walks from the home slot until it finds the key or reaches an empty slot.
+
+## What to write
+
+\`cache_index(slots, ops)\` replays a cache log against a new index of \`slots\` slots and returns what each get found, in order, \`-1\` for a miss. Each op is one of:
+
+- \`["put", key, value]\`: store \`value\` (0 or more) under \`key\`, replacing any value already stored under it;
+- \`["get", key]\`: look \`key\` up;
+- \`["erase", key]\`: purge \`key\`, if it is stored (purging a key that is not stored does nothing).
+
+The index must behave like a map of at most \`slots\` entries:
+
+- A get finds the latest value put under its key, unless the key was purged since; otherwise it is a miss.
+- A purged response must never come back.
+- A put of a key that is already stored always succeeds. A put of a new key is refused (the response is served uncached, and later gets miss) only when every slot holds a live entry; slots freed by purges must be usable again.
+
+## Constraints
+
+- Keep the flat table, allocation-free: no node-based or heap containers (\`std::map\`, \`std::unordered_map\`, \`std::set\`, \`std::unordered_set\`, \`std::list\`), no \`new\`, and no \`make_unique\` or \`make_shared\`.`,
   entrypoint: "cache_index",
   starter: INDEX_STARTER,
   parameters: ["slots", "ops"],
@@ -922,7 +834,6 @@ mm_value *mm_call(const mm_value *args) {
     return result;
 }
 `,
-  files: [{ path: "docs/412-cache-index.md", role: "docs", language: "markdown", text: INDEX_DOC }],
   inputs: [
     [8, [["put", 1, 100], ["put", 2, 200], ["get", 1], ["get", 2], ["get", 3]]],
     [8, [["put", 3, 30], ["put", 11, 110], ["put", 19, 190], ["erase", 3], ["get", 11], ["get", 19], ["get", 3]]],
@@ -962,24 +873,8 @@ mm_value *mm_call(const mm_value *args) {
     [6, 3, 4, -1],
   ],
   hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-  comments: [
-    mateo(
-      "That's my change. The CPU win is real and I'd rather keep the table than revert, so I'd like a fix on top of it. I tested puts and gets; I don't think I ever replayed a purge.",
-    ),
-    priya(
-      "Hit ratio on the edge dashboard: 94.1% the week before, 71.3% since Thursday 14:00. FRA and AMS are worst, and they run the most purges.",
-    ),
-  ],
-  hints: [
-    {
-      text: "Follow key 11 from the log: where does its lookup start, which slots does it pass, and where does it stop once key 3 has been purged?",
-      when: { behaviour: "active-minutes-without-progress", atLeast: 15 },
-    },
-    {
-      text: "A purged slot must stop matching its old key without ending the chain through it. And before a put takes a free slot, it has to know its key isn't stored further along.",
-      when: { behaviour: "failing-pushes", atLeast: 2 },
-    },
-  ],
+  comments: [],
+  hints: [],
   team: [
     {
       id: "mateo-flat-table",
@@ -988,8 +883,7 @@ mm_value *mm_call(const mm_value *args) {
       where: "review",
       severity: "blocking",
       text: [
-        "This brings a heap allocation back onto the cache path, which is what #412 took out. Can we fix the probing in the flat table instead?",
-        "Please keep the index allocation-free: a node-based container here puts `operator new` back on the flame graph we just cleaned up.",
+        "The index must stay an allocation-free flat table: no std::map, std::unordered_map, std::set, std::unordered_set or std::list, no new and no make_unique or make_shared.",
       ],
       when: {
         pattern:
@@ -999,35 +893,17 @@ mm_value *mm_call(const mm_value *args) {
       },
       repeat: "while-true",
     },
-    {
-      id: "mateo-long-put",
-      author: "Mateo O",
-      role: "Backend",
-      where: "review",
-      severity: "nit",
-      text: ["Nit: `put` is getting long for the hot path. A single walk of the chain can look for the key and remember the first free slot at the same time."],
-      when: { metric: "function-lines", above: 26, file: INDEX_FILE },
-    },
-    {
-      id: "priya-purges",
-      author: "Priya K",
-      role: "Data",
-      where: "review",
-      severity: "info",
-      text: ["That's the purge from the incident log. I'll watch the FRA hit ratio after the deploy."],
-      when: { check: "case-2", is: "passing" },
-    },
   ],
   private: {
     reference: { [INDEX_FILE]: INDEX_REFERENCE },
     examples: {
       "mateo-flat-table": {
         fires: [{ [INDEX_FILE]: INDEX_NODE_MAP }],
-        quiet: [{ [INDEX_FILE]: INDEX_REFERENCE }, { [INDEX_FILE]: INDEX_STARTER }],
-      },
-      "mateo-long-put": {
-        fires: [{ [INDEX_FILE]: INDEX_TWO_PASS }],
-        quiet: [{ [INDEX_FILE]: INDEX_REFERENCE }],
+        quiet: [
+          { [INDEX_FILE]: INDEX_REFERENCE },
+          { [INDEX_FILE]: INDEX_STARTER },
+          { [INDEX_FILE]: INDEX_TWO_PASS },
+        ],
       },
     },
   },

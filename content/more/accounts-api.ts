@@ -1,5 +1,4 @@
 import type { SeedIssue } from "../seed";
-import { jo, mateo, sam } from "../team";
 
 /* ---------------------------------------------------------------- lockout-retry-message */
 
@@ -52,15 +51,14 @@ const lockoutRetryMessage: SeedIssue = {
   difficulty: "easy",
   language: "php",
   skills: ["time", "rounding", "copy"],
-  task: `Jo forwarded this from the help desk:
+  task: `During a lockout the login form says when to try again. Today it rounds the time left down, so with 30 seconds left it says **"Too many attempts. Try again in 0 minutes."**, people retry straight away and lock themselves out again.
 
-> I got locked out after a few wrong passwords and the page said **"Too many attempts. Try again in 0 minutes."** So I tried again straight away, and it locked me out again.
+\`retryMessage($secondsLeft)\` takes the whole seconds left on the lock and returns the message. Lockouts run from one minute up to 24 hours.
 
-\`retryMessage($secondsLeft)\` in \`src/retryMessage.php\` writes the message the login form shows during a lockout. Lockouts run from one minute up to 24 hours.
-
-- Round the time left **up**, so nobody is told to come back before the lock ends.
-- Under 60 minutes (after rounding), say minutes: \`Too many attempts. Try again in 1 minute.\`, \`Too many attempts. Try again in 15 minutes.\`
+- Round the time left **up**, so nobody is told to come back before the lock ends. Never round down: no \`floor()\` or \`intdiv()\`.
+- Under 60 minutes (after rounding up), say minutes: \`Too many attempts. Try again in 1 minute.\`, \`Too many attempts. Try again in 15 minutes.\`
 - From 60 minutes on, say hours, also rounded up: \`Too many attempts. Try again in 1 hour.\`, \`Too many attempts. Try again in 2 hours.\`
+- Use the singular for exactly 1 minute or 1 hour, the plural otherwise.
 - The lock can end between the check and the page render, so the seconds left can be zero or negative. Then the form says \`You can try again now.\``,
   entrypoint: "retryMessage",
   starter: RETRY_STARTER,
@@ -86,19 +84,8 @@ const lockoutRetryMessage: SeedIssue = {
     "Too many attempts. Try again in 10 minutes.",
   ],
   hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
-  comments: [
-    jo("Eleven tickets this week with a screenshot of \"0 minutes\". Most of them locked themselves out twice."),
-  ],
-  hints: [
-    {
-      text: "Work out by hand what the form should say with 59 minutes and 1 second left. Does it read as minutes or as hours?",
-      when: { behaviour: "active-minutes-without-progress", atLeast: 8 },
-    },
-    {
-      text: "Integer division drops the remainder, and the remainder is exactly the time people are being told they don't have to wait.",
-      when: { behaviour: "failing-pushes", atLeast: 2 },
-    },
-  ],
+  hints: [],
+  comments: [],
   team: [
     {
       id: "mateo-round-down",
@@ -106,21 +93,9 @@ const lockoutRetryMessage: SeedIssue = {
       role: "Backend",
       where: "review",
       severity: "blocking",
-      text: [
-        "Rounding down is how we got \"0 minutes\" in the first place. If this rounds, can it round up?",
-        "This still rounds down somewhere. Anything that rounds down here tells someone to come back before the lock ends.",
-      ],
+      text: ["Never round the time left down: no `floor()` or `intdiv()`."],
       when: { pattern: "\\b(floor|intdiv)\\(", present: true, file: "src/retryMessage.php" },
       repeat: "while-true",
-    },
-    {
-      id: "jo-thirty-seconds",
-      author: "Jo T",
-      role: "Support",
-      where: "issue",
-      severity: "info",
-      text: ["Tried the preview with 30 seconds left: \"1 minute\". That's the one I'll quote back to people."],
-      when: { check: "case-1", is: "passing" },
     },
   ],
   private: {
@@ -198,14 +173,14 @@ const canonicalSignupEmail: SeedIssue = {
   difficulty: "medium",
   language: "go",
   skills: ["strings", "validation", "normalization"],
-  task: `Support merges duplicate accounts by hand, and it is always the same story: someone signs up as \`Jane.Doe@Example.com\`, forgets, and signs up again a month later as \`jane.doe@example.com \` from their phone. Sign-up compares addresses exactly as typed, so it never finds the first account.
+  task: `Sign-up compares email addresses exactly as typed, so someone who signed up as \`Jane.Doe@Example.com\` and signs up again as \`jane.doe@example.com \` gets a second account. Write the key sign-up looks accounts up by, so one person gets one account however they type their address. (The address itself is still stored exactly as typed; this is only the lookup key.)
 
-\`CanonicalEmail(raw)\` in \`canonical_email.go\` should return the key sign-up looks accounts up by, and \`ok\` false for anything we don't accept as an address:
+\`CanonicalEmail(raw)\` returns the key and \`ok\` true, or \`""\` and \`ok\` false for anything that is not an address we accept:
 
-- Surrounding whitespace is ignored. Whitespace anywhere inside the address makes it invalid.
+- Surrounding whitespace is ignored. Whitespace anywhere inside the address (spaces, tabs, any Unicode space) makes it invalid.
 - An address has exactly one \`@\`, with something on both sides of it.
 - The whole address is lowercased: every provider our users are on treats the local part case-insensitively.
-- For **gmail.com** and **googlemail.com** (those exact domains, nothing else), dots in the local part are dropped, so is everything from the first \`+\` on, and the domain becomes \`gmail.com\`. Other domains keep their dots and \`+\` tags as they are: plenty of mail servers deliver \`+\` addresses to different people.
+- For **gmail.com** and **googlemail.com** (those exact domains after lowercasing; not their subdomains or longer domains), dots in the local part are dropped, so is everything from the first \`+\` on, and the domain becomes \`gmail.com\`. Other domains keep their dots and \`+\` tags as they are: plenty of mail servers deliver \`+\` addresses to different people.
 - If the Gmail rules leave the local part empty, the address is invalid.`,
   entrypoint: "CanonicalEmail",
   starter: EMAIL_STARTER,
@@ -252,40 +227,8 @@ const canonicalSignupEmail: SeedIssue = {
     null,
   ],
   hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-  comments: [
-    jo("31 duplicate accounts merged by hand this month. Every pair differs only by capitals, a trailing space or Gmail dots."),
-    mateo("This only builds the lookup key. We keep storing the address exactly as typed, so emails still go to what the person entered."),
-  ],
-  hints: [
-    {
-      text: "Settle whether an address is valid before applying the Gmail rules, then check once more after them: dropping a tag can leave nothing behind.",
-      when: { behaviour: "active-minutes-without-progress", atLeast: 12 },
-    },
-    {
-      text: "Which domains count as Gmail? Try an address at a subdomain of gmail.com, and one at gmail.com.au, against your check.",
-      when: { behaviour: "failing-pushes", atLeast: 2 },
-    },
-  ],
-  team: [
-    {
-      id: "mateo-long-function",
-      author: "Mateo O",
-      role: "Backend",
-      where: "review",
-      severity: "nit",
-      text: ["Nit: `CanonicalEmail` is getting long. Would the Gmail rules read better as a small helper of their own?"],
-      when: { metric: "function-lines", above: 30, file: "canonical_email.go" },
-    },
-    {
-      id: "jo-gmail-dots",
-      author: "Jo T",
-      role: "Support",
-      where: "issue",
-      severity: "info",
-      text: ["Saw the Gmail dots case go green. That's about half of the duplicates I merge."],
-      when: { check: "case-3", is: "passing" },
-    },
-  ],
+  hints: [],
+  comments: [],
   private: {
     reference: { "canonical_email.go": EMAIL_REFERENCE },
   },
@@ -363,7 +306,7 @@ const REFRESH_STARTER = `import { REFRESH_GRACE_MS, SESSION_LIFETIME_MS } from "
 import { current, findToken, nextToken, type RefreshResult, type SessionFamily } from "./tokens";
 
 /**
- * Exchanges a refresh token for the family's next one, by the rules in policy.ts. Pure: the
+ * Exchanges a refresh token for the family's next one, by the session rules. Pure: the
  * caller stores whatever this decides.
  */
 export function refresh(family: SessionFamily, presented: string, now: number): RefreshResult {
@@ -390,7 +333,7 @@ const REFRESH_REFERENCE = `import { REFRESH_GRACE_MS, SESSION_LIFETIME_MS } from
 import { current, findToken, nextToken, type RefreshResult, type SessionFamily } from "./tokens";
 
 /**
- * Exchanges a refresh token for the family's next one, by the rules in policy.ts. Pure: the
+ * Exchanges a refresh token for the family's next one, by the session rules. Pure: the
  * caller stores whatever this decides.
  */
 export function refresh(family: SessionFamily, presented: string, now: number): RefreshResult {
@@ -458,13 +401,33 @@ const refreshTokenReuse: SeedIssue = {
   difficulty: "hard",
   language: "typescript",
   skills: ["security", "sessions", "code-review", "reading-code"],
-  task: `Mateo's change to session refresh last Tuesday (#412) added a grace window, so the mobile app stops logging people out when two screens refresh at the same moment. The logouts stopped. Two other things started:
+  task: `Last week's change to session refresh (#412) added a grace window so the mobile app stops logging people out when two screens refresh at the same moment. The logouts stopped, but the \`refresh_reuse\` alert, about 40 a day before, has not fired since, and a pentest exchanged a refresh token captured on Oct 20 for a fresh one on Oct 23 while the victim's session stayed alive.
 
-> **Sam (on-call):** The \`refresh_reuse\` alert hasn't fired once since Tuesday. It averaged about 40 a day before. Either every credential thief retired, or we stopped noticing them.
+\`refresh(family, presented, now)\` decides one refresh. Find everything #412 broke against the rules below and fix it. Keep the grace window: the mobile fix has to stay. \`refresh\` is pure: the caller stores whatever it decides. Times are Unix milliseconds.
 
-> **Pentest report, finding 3 (high):** A refresh token captured from a test device on Oct 20 was exchanged for a fresh one on Oct 23. The victim's session stayed alive the whole time.
+**Sessions.** A login starts a session family. A client refreshes with the family's current refresh token and gets the next one; each refresh token works once.
 
-\`refresh(family, presented, now)\` in \`src/gateway/refresh.ts\` decides each refresh. The rules security signed off on are in \`src/gateway/policy.ts\`, including the order the checks happen in. Find everything #412 broke against them and fix it. Keep the grace window: the mobile fix has to stay. Times are Unix milliseconds.`,
+- \`family\` is \`{ id, userId, loginAt, revoked, tokens }\`. \`tokens\` lists the family's refresh tokens oldest first, and the last is the current one. Each is \`{ token, issuedAt, rotatedAt }\`, where \`rotatedAt\` is when it was exchanged for the next token, or \`null\` while it is current.
+- \`presented\` is the token string the client sent; \`now\` is the time of the request.
+
+**The rules, in this order** (the first that applies decides):
+
+1. A token that is not in the family: \`{ status: "reauth", reason: "unknown", revokeFamily: false }\`.
+2. A revoked family (signed out everywhere, password changed): \`{ status: "reauth", reason: "revoked", revokeFamily: false }\`.
+3. A family \`SESSION_LIFETIME_MS\` (30 days) or more after its \`loginAt\`: \`{ status: "reauth", reason: "expired", revokeFamily: false }\`.
+4. A token that was already rotated (\`rotatedAt\` is not \`null\`):
+   - up to \`REFRESH_GRACE_MS\` (10 seconds) after that token's own rotation, inclusive, the client lost a race with itself: \`{ status: "ok", token }\` with the family's current token, and nothing new is issued;
+   - any later, someone else has a copy: \`{ status: "reauth", reason: "reuse", revokeFamily: true }\`.
+5. Otherwise rotate: \`{ status: "ok", token }\` with the family's next token, \`\${family.id}.\${tokens.length + 1}\`.
+
+Only "reuse" revokes the family (\`revokeFamily: true\`).
+
+**Code the file imports.** From \`./policy\`: \`SESSION_LIFETIME_MS\` (30 days) and \`REFRESH_GRACE_MS\` (10,000). From \`./tokens\`: \`findToken(family, presented)\` returns the family's token with that string, or \`undefined\`; \`current(family)\` returns the family's last token; \`nextToken(family)\` returns the string a rotation issues, as in rule 5; and the types \`SessionFamily\` and \`RefreshResult\`.
+
+**Requirements.**
+
+- Keep the grace window, measured with \`REFRESH_GRACE_MS\`.
+- No console logging (\`console.log\`, \`info\`, \`debug\`, \`warn\` or \`error\`): the gateway's output is searchable company-wide, and must never sit next to a refresh token.`,
   entrypoint: "refresh",
   parameters: ["family", "presented", "now"],
   entry: "src/gateway/refresh.ts",
@@ -512,20 +475,8 @@ const refreshTokenReuse: SeedIssue = {
     reauth("unknown"),
   ],
   hidden: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-  comments: [
-    sam("Paging on refresh_reuse is muted until this ships. I'd like it back before the weekend."),
-    mateo("That's my change, sorry. I tested the race on two phones and never tried an old token. Happy to review."),
-  ],
-  hints: [
-    {
-      text: "Follow the pentester's token, rotated three days before it came back, through `refresh` one line at a time. Which return does it reach, and which one should it?",
-      when: { behaviour: "active-minutes-without-progress", atLeast: 12 },
-    },
-    {
-      text: "Put the checks in refresh.ts next to the numbered list in policy.ts. A token inside the grace window skips some checks it should not skip.",
-      when: { behaviour: "failing-pushes", atLeast: 2 },
-    },
-  ],
+  hints: [],
+  comments: [],
   team: [
     {
       id: "mateo-keep-grace",
@@ -533,10 +484,7 @@ const refreshTokenReuse: SeedIssue = {
       role: "Backend",
       where: "review",
       severity: "blocking",
-      text: [
-        "This takes the grace window out, and that's what fixed the mobile logouts (Jo had 300 tickets the week before #412). Can we keep it and fix the reuse path around it?",
-        "Without `REFRESH_GRACE_MS` the two-screen race logs people out again. Please keep the grace window in.",
-      ],
+      text: ["Keep the grace window for a just-rotated token, measured with `REFRESH_GRACE_MS`."],
       when: { pattern: "REFRESH_GRACE_MS", present: false, file: "src/gateway/refresh.ts" },
       repeat: "while-true",
     },
@@ -546,20 +494,9 @@ const refreshTokenReuse: SeedIssue = {
       role: "SRE",
       where: "review",
       severity: "blocking",
-      text: [
-        "Please no console logging in the gateway: stdout goes straight to Datadog, and anything logged next to a refresh token ends up searchable by half the company.",
-      ],
+      text: ["No console logging in the gateway: no `console.log`, `info`, `debug`, `warn` or `error`."],
       when: { pattern: "console\\.(log|info|debug|warn|error)\\(", present: true, file: "src/gateway/refresh.ts" },
       repeat: "while-true",
-    },
-    {
-      id: "sam-pentest-green",
-      author: "Sam R",
-      role: "SRE",
-      where: "issue",
-      severity: "info",
-      text: ["The pentest token gets refused on your branch. I'll unmute the reuse alert once this merges."],
-      when: { check: "case-3", is: "passing" },
     },
   ],
   private: {

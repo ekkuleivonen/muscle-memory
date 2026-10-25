@@ -33,3 +33,27 @@ export function live(issue: string): {
     starter: editableFiles(revision.workspace)[revision.workspace.entry].text,
   };
 }
+
+/**
+ * An issue's revision as it was live just before the single-file normalization (ENG-329): with
+ * hints, a ticket thread, nits and explicit Resolve. Those revisions stay published, because
+ * recorded work names them, so what they release is still tested on them.
+ */
+export function historical(issue: string): ReturnType<typeof live> {
+  const ids = JSON.parse(
+    readFileSync(
+      new URL("./pre-single-file-revisions.json", import.meta.url),
+      "utf8",
+    ),
+  ) as Record<string, string>;
+  const revision = catalog.revisions[ids[issue]];
+  if (!revision)
+    throw new Error(`No earlier revision of ${issue} in the catalog.`);
+  return {
+    id: ids[issue],
+    revision,
+    executable: executableOf(revision),
+    path: revision.workspace.entry,
+    starter: editableFiles(revision.workspace)[revision.workspace.entry].text,
+  };
+}

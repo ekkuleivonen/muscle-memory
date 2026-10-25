@@ -1,8 +1,8 @@
 "use client";
-import Link from "next/link";
 import { useMemo } from "react";
 import type { Revision } from "../../../../../packages/content/model";
 import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
+import { briefOf } from "../../../lib/brief";
 import {
   evidenceOf,
   type Evidence,
@@ -17,8 +17,8 @@ const STATUS: Record<EvidenceItem["status"], string> = {
 };
 
 /**
- * One pull request's outcome, from what its page already holds: shown at once when merged, and
- * what to do first while open. Renders nothing for a closed one or while records are loading.
+ * One pull request's outcome, from what its page already holds: shown at once when merged.
+ * Renders nothing while open or closed, or while records are loading.
  */
 export function PullOutcome({
   records,
@@ -27,7 +27,6 @@ export function PullOutcome({
   revisions,
   mergedAt,
   blocker,
-  ideHref,
 }: {
   /** The pull request's attempt (lib/attempts), or null while loading. */
   records: readonly WorkspaceRecord[] | null;
@@ -37,11 +36,12 @@ export function PullOutcome({
   /** When it was merged, including a moment ago on this page before the records catch up. */
   mergedAt?: string | null;
   /**
-   * The merge gate's verdict (`eligibility.blocker`, lib/merge.ts): what Before merging lists.
+   * The merge gate's verdict (`eligibility.blocker`, lib/merge.ts), passed on to the evidence.
    * Leave it out when not known; then stale checks are never claimed.
    */
   blocker?: MergeBlocker | null;
-  ideHref: string;
+  /** Unused since open pull requests show no outcome; kept so callers need no change. */
+  ideHref?: string;
 }) {
   const evidence = useMemo(() => {
     if (!records) return null;
@@ -62,70 +62,62 @@ export function PullOutcome({
         }
       : read;
   }, [records, issue.slug, number, revisions, mergedAt, blocker]);
-  return evidence && <OutcomeView evidence={evidence} ideHref={ideHref} />;
+  return evidence && <OutcomeView evidence={evidence} />;
 }
 
 /**
- * A pull request's outcome on its own page, with no extra step: once merged, what changed and
- * what the evidence shows, each line marked observed, not known or a limited reading; while open,
- * what stands between it and merging. Embeddable anywhere a pull request's evidence is at hand
- * (lib/evidence.ts); it holds no state and records nothing.
+ * A merged pull request's outcome on its own page: the result against the first submission and
+ * a few lines first (lib/brief.ts), the full evidence one click away, each line marked observed,
+ * not known or a limited reading. Nothing for an open pull request: the merge box is the one
+ * place that says what is left before merging, and Findings lists what to fix. Embeddable
+ * anywhere a pull request's evidence is at hand (lib/evidence.ts); it holds no state and records
+ * nothing.
  */
 export function OutcomeView({
   evidence,
-  ideHref,
 }: {
   evidence: Evidence;
-  /** The IDE on this issue, where failing or stale checks are fixed. */
-  ideHref: string;
+  /** Unused since the merge box says what to do on an open pull request; kept for callers. */
+  ideHref?: string;
 }) {
-  const { facts, sections, actions } = evidence;
-  if (facts.state === "open")
-    return actions.length ? (
-      <section
-        className="outcome-actions"
-        aria-labelledby="outcome-actions-title"
-      >
-        <h2 id="outcome-actions-title">Before merging</h2>
-        <ul>
-          {actions.map((action) => (
-            <li key={action.id}>
-              {action.text}{" "}
-              {action.where === "ide" ? (
-                <Link href={ideHref}>Open the IDE →</Link>
-              ) : action.where === "findings" ? (
-                <a href="#pull-findings-title">Go to Findings ↓</a>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      </section>
-    ) : null;
-  if (facts.state !== "merged") return null;
+  const brief = briefOf(evidence.facts);
+  if (!brief) return null;
   return (
     <section className="outcome" aria-labelledby="outcome-title">
       <h2 id="outcome-title">Outcome</h2>
-      <p className="outcome-note dim">
-        From this pull request&apos;s history. Each line says whether it was{" "}
-        <b>observed</b>, is <b>not known</b>, or is a limited <b>reading</b> of
-        what was observed.
+      <p className={`outcome-headline${brief.firstMissing ? " missing" : ""}`}>
+        {brief.headline}
       </p>
-      {sections.map((section) => (
-        <div
-          key={section.id}
-          className={`outcome-section ${section.id === "timing" ? "secondary" : ""}`}
-        >
-          <h3>{section.title}</h3>
-          <ul>
-            {section.items.map((item) => (
-              <li key={item.id} className={`${item.status} ${item.tone}`}>
-                <span className="outcome-status">{STATUS[item.status]}</span>
-                <span>{item.text}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+      <Lines items={brief.items} />
+      <details className="outcome-details">
+        <summary>All evidence</summary>
+        <p className="outcome-note dim">
+          Each line is <b>observed</b>, <b>not known</b>, or a limited{" "}
+          <b>reading</b> of what was observed.
+        </p>
+        {evidence.sections.map((section) => (
+          <div
+            key={section.id}
+            className={`outcome-section ${section.id === "timing" ? "secondary" : ""}`}
+          >
+            <h3>{section.title}</h3>
+            <Lines items={section.items} />
+          </div>
+        ))}
+      </details>
     </section>
+  );
+}
+
+function Lines({ items }: { items: readonly EvidenceItem[] }) {
+  return (
+    <ul className="outcome-lines">
+      {items.map((item) => (
+        <li key={item.id} className={`${item.status} ${item.tone}`}>
+          <span className="outcome-status">{STATUS[item.status]}</span>
+          <span>{item.text}</span>
+        </li>
+      ))}
+    </ul>
   );
 }

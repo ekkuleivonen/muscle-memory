@@ -57,6 +57,16 @@ const AUDITED = new Set(["javascript", "python"]);
 export function publishProblems(revision: Revision, secret: Private): string[] {
   const problems: string[] = [];
   const editable = editableFiles(revision.workspace);
+  // One editable file: the entry. Support code and the tests stay internal (role read, tests).
+  const { entry } = revision.workspace;
+  for (const path of Object.keys(editable))
+    if (path !== entry) problems.push(`${path} is editable, but only the entry ${entry} may be`);
+  // Everything required is in the description: no hints, no ticket thread, no advice-only
+  // comments. A blocking rule stays, as a requirement its trigger enforces.
+  if (revision.hints.length) problems.push("hints are not published: put what is required in the description");
+  for (const comment of revision.team)
+    if (comment.severity !== "blocking")
+      problems.push(`comment ${comment.id} is not a blocking rule: put what is required in the description`);
   for (const path of Object.keys(secret.reference))
     if (!editable[path]) problems.push(`the reference changes ${path}, which is not editable`);
   if (
@@ -126,12 +136,18 @@ export function publishProblems(revision: Revision, secret: Private): string[] {
  * Problems with replacing an issue's live revision: saved code is restored by path, so an
  * editable file that is renamed, removed or made read-only would silently drop someone's work
  * in progress, and a renamed entry point would leave it untested. Editable files may only be
- * added.
+ * added, with one exception: collapsing to the single editable entry (ENG-329). Then the entry
+ * keeps its path and function, so its saved code still restores. Edits to the files that stopped
+ * being editable are not restored, and the practice area names them when it opens. The earlier
+ * revision stays published and openable as it was.
  */
 export function continuityProblems(previous: Revision, next: Revision): string[] {
   const kept = editableFiles(next.workspace);
+  const { entry } = next.workspace;
+  const single =
+    Object.keys(kept).length === 1 && !!kept[entry] && previous.workspace.entry === entry;
   const problems = Object.keys(editableFiles(previous.workspace))
-    .filter((path) => !kept[path])
+    .filter((path) => !kept[path] && !(single && path !== entry))
     .map((path) => `${path} was editable in the live revision and no longer is`);
   // Restored code still defines the old function: the tests must keep calling it.
   if (previous.workspace.entrypoint !== next.workspace.entrypoint)

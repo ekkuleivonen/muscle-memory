@@ -9,6 +9,7 @@
  *   node --import tsx tools/build-content.ts           write the catalog
  *   node --import tsx tools/build-content.ts --check   fail if it is out of date
  *   node --import tsx tools/build-content.ts --prune   drop revisions no issue points at
+ *   node --import tsx tools/build-content.ts --dry-run run every check, write nothing
  */
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -30,6 +31,7 @@ import { SEED_ISSUES, SEED_PROJECTS, type SeedIssue } from "../content/seed";
 const destination = resolve("content/catalog.json");
 const check = process.argv.includes("--check");
 const prune = process.argv.includes("--prune");
+const dryRun = process.argv.includes("--dry-run");
 
 /** Minutes of active work without progress before each hint level. */
 const HINT_MINUTES = 10;
@@ -133,6 +135,8 @@ const previous = await readFile(destination, "utf8").then(
 const seeds = new Map(SEED_ISSUES.map((s) => [s.id, s]));
 const revisions: Record<string, Revision> = prune ? {} : { ...previous?.revisions };
 const issues: IssueMetadata[] = [];
+// Every issue's problems, so one run lists them all.
+const blocked: string[] = [];
 for (const project of SEED_PROJECTS)
   project.issues.forEach((id, index) => {
     const seed = seeds.get(id);
@@ -142,14 +146,14 @@ for (const project of SEED_PROJECTS)
     if (seed.private) {
       const problems = publishProblems(revision, seed.private);
       if (problems.length)
-        throw new Error(`${seed.id} cannot be published:\n  ${problems.join("\n  ")}`);
+        blocked.push(`${seed.id} cannot be published:\n  ${problems.join("\n  ")}`);
     }
     // Work in progress restores onto the new revision by path; never strand it.
     const live = previous?.issues.find((i) => i.id === id)?.revision;
     const before = live ? previous?.revisions[live] : undefined;
     const stranded = before ? continuityProblems(before, revision) : [];
     if (stranded.length)
-      throw new Error(`${seed.id} would lose saved work:\n  ${stranded.join("\n  ")}`);
+      blocked.push(`${seed.id} would lose saved work:\n  ${stranded.join("\n  ")}`);
     const rid = revisionId(revision);
     revisions[rid] = revision;
     issues.push({
@@ -165,6 +169,7 @@ for (const project of SEED_PROJECTS)
       revision: rid,
     });
   });
+if (blocked.length) throw new Error(blocked.join("\n"));
 for (const id of seeds.keys())
   if (!issues.some((i) => i.id === id)) throw new Error(`${id} is in no project.`);
 
@@ -188,6 +193,8 @@ if (check) {
   if ((await readFile(destination, "utf8").catch(() => "")) !== text)
     throw new Error("content/catalog.json is out of date. Run npm run build:content.");
   console.log("Content catalog is current.");
+} else if (dryRun) {
+  console.log(`Checked ${issues.length} issues; nothing written.`);
 } else {
   await writeFile(destination, text);
   console.log(

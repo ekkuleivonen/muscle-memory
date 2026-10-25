@@ -2545,13 +2545,17 @@ button.home-cta:disabled {
 .pull-findings .finding.ci p {
   margin: 0 0 6px;
 }
-.pull-findings .finding.ci ul {
-  margin: 0 0 10px;
-  padding-left: 18px;
-  list-style: none;
-  font-family: var(--mono);
-  font-size: 12.5px;
-  color: var(--red);
+/* Resolved findings are history: folded under what is still open. */
+.pull-resolved {
+  margin-top: 8px;
+  font-size: 13px;
+}
+.pull-resolved summary {
+  cursor: pointer;
+  color: var(--dim);
+}
+.pull-resolved .pull-review {
+  margin-top: 8px;
 }
 .pull-review {
   list-style: none;
@@ -2581,30 +2585,127 @@ button.home-cta:disabled {
   text-decoration: underline;
 }
 
-.review-card .ci-failing {
-  margin: 4px 0 6px;
-  padding-left: 0;
+/* A failing check (review.tsx): the case, its input and what the code did. */
+.ci-failing {
+  margin: 4px 0 10px;
+  padding: 0;
   list-style: none;
-  font-family: var(--mono);
+  font-size: 13px;
+}
+.ci-failing li {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0;
+}
+.ci-failing .mark {
+  flex: none;
+  color: var(--red);
+  font-weight: 700;
+}
+.ci-error {
+  color: var(--dim);
+}
+/* A failing case: input, expected and what the code gave, aligned. */
+.case-diff {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 1px 10px;
+  margin: 4px 0 0;
   font-size: 12.5px;
+}
+.case-diff dt {
+  color: var(--dim);
+}
+.case-diff dd {
+  margin: 0;
+}
+.case-diff .case-got code {
   color: var(--red);
 }
-/* A pull request's outcome (pull-outcome.tsx): evidence lines, each marked by kind. */
-.outcome,
-.outcome-actions {
+.case-diff code,
+.ci-error code {
+  font: 12.5px var(--mono);
+  overflow-wrap: anywhere;
+  color: var(--fg);
+}
+.ci-error {
+  margin: 0 0 10px;
+}
+.case-failure {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--dim);
+}
+.ci-only {
+  margin-left: 6px;
+  padding: 0 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  font-size: 11px;
+  color: var(--dim);
+}
+/* The latest full check in the practice area (review.tsx CheckFeedbackView). */
+.check-feedback {
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+.check-feedback.fail {
+  border-left-color: var(--red);
+}
+.check-feedback.pass {
+  border-left-color: var(--green);
+}
+.check-feedback.busy {
+  border-left-color: var(--amber);
+}
+.check-headline {
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+.check-required {
+  margin: 4px 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.check-required li + li {
+  margin-top: 6px;
+}
+.check-next {
+  margin: 6px 0 0;
+}
+/* A merged pull request's outcome (pull-outcome.tsx): a brief, then every evidence line. */
+.outcome {
   margin: 20px 0;
   padding: 16px 18px;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
   background: var(--bg-subtle);
 }
-.outcome h2,
-.outcome-actions h2 {
+.outcome h2 {
   margin: 0 0 6px;
   font-size: 15px;
 }
+.outcome-headline {
+  margin: 0 0 8px;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+.outcome-headline.missing {
+  font-weight: 500;
+}
+.outcome-details {
+  margin-top: 10px;
+}
+.outcome-details summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--dim);
+}
 .outcome-note {
-  margin: 0 0 12px;
+  margin: 8px 0 0;
   font-size: 13px;
 }
 .outcome-section h3 {
@@ -2612,13 +2713,12 @@ button.home-cta:disabled {
   font-size: 13px;
   font-weight: 600;
 }
-.outcome-section ul,
-.outcome-actions ul {
+.outcome-lines {
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.outcome-section li {
+.outcome-lines li {
   display: grid;
   grid-template-columns: 76px 1fr;
   gap: 8px;
@@ -2633,27 +2733,20 @@ button.home-cta:disabled {
   color: var(--faint);
   padding-top: 2px;
 }
-.outcome-section li.observed.pass .outcome-status {
+.outcome-lines li.observed.pass .outcome-status {
   color: var(--green);
 }
-.outcome-section li.observed.fail .outcome-status {
+.outcome-lines li.observed.fail .outcome-status {
   color: var(--red);
 }
-.outcome-section li.missing,
-.outcome-section li.inferred {
+.outcome-lines li.missing,
+.outcome-lines li.inferred {
   color: var(--dim);
 }
-.outcome-section li.inferred span:last-child {
+.outcome-lines li.inferred span:last-child {
   font-style: italic;
 }
 .outcome-section.secondary li {
   font-size: 12.5px;
   color: var(--dim);
-}
-.outcome-actions {
-  border-color: var(--amber);
-}
-.outcome-actions li {
-  padding: 3px 0;
-  font-size: 13.5px;
 }
