@@ -68,6 +68,13 @@ interface FullCheck {
   seq: number;
   /** The run's terminal status, when recorded. */
   status: string | null;
+  /**
+   * How many cases the raw run scored completely, when it did: it finished without a
+   * run-level error in the tests phase, and every case either returned an untruncated output
+   * or raised. Null for anything else (compile error, cancelled, timed out, crashed part-way,
+   * cut-short output), whatever summary counts were recorded for it.
+   */
+  scored: number | null;
   /** The recorded full-check result, when there is one. */
   result: { result: string; passed: number; total: number } | null;
 }
@@ -82,7 +89,7 @@ function fullChecks(
   const of = (runId: string, at: string, seq: number) => {
     let check = byRun.get(runId);
     if (!check) {
-      check = { runId, at, seq, status: null, result: null };
+      check = { runId, at, seq, status: null, scored: null, result: null };
       byRun.set(runId, check);
     }
     // Ordered by when the run first appears (it is queued before it reports).
@@ -109,7 +116,10 @@ function fullChecks(
         o.data.purpose === "pull-request"
       ) {
         const check = of(o.data.runId, o.occurredAt, seq);
-        if (TERMINAL.has(o.data.status)) check.status = o.data.status;
+        if (TERMINAL.has(o.data.status)) {
+          check.status = o.data.status;
+          check.scored = scored(o.data.status, o.data.outcome);
+        }
       } else if (o.type === "observation.workspace.pull-request") {
         const value = { passed: o.data.passed, total: o.data.total };
         const check = of(o.data.runId, o.occurredAt, seq);
@@ -123,6 +133,36 @@ function fullChecks(
   return [...byRun.values()].sort(
     (a, b) => a.at.localeCompare(b.at) || a.seq - b.seq,
   );
+}
+
+/** See `FullCheck.scored`: the raw outcome, never the summary record's synthesized counts. */
+function scored(status: unknown, outcome: unknown): number | null {
+  const o = outcome as {
+    status?: unknown;
+    phase?: unknown;
+    cases?: unknown;
+  } | null;
+  if (
+    status !== "result" ||
+    !o ||
+    o.status !== "completed" ||
+    o.phase !== "tests" ||
+    !Array.isArray(o.cases)
+  )
+    return null;
+  const decided = (c: {
+    output?: { truncated?: unknown; text?: unknown };
+    error?: unknown;
+    conversionError?: unknown;
+    unserializable?: unknown;
+  }) =>
+    (!!c?.output &&
+      c.output.truncated === false &&
+      typeof c.output.text === "string") ||
+    c?.error !== undefined ||
+    c?.conversionError !== undefined ||
+    c?.unserializable !== undefined;
+  return o.cases.every(decided) ? o.cases.length : null;
 }
 
 const TERMINAL = new Set([
@@ -143,7 +183,8 @@ const TERMINAL = new Set([
  *   evaluated and none left outstanding (`required`, from ENG-328's gate: `[]`; null when
  *   not evaluated refuses).
  *
- * `f` is the first full check of the attempt on that revision, or null when its result is
+ * `f` is the first full check of the attempt on that revision, with counts only when its raw run
+ * was scored completely (see `FullCheck.scored`); otherwise null. That is, null when its result is
  * missing or incomplete (errored, cancelled, cut short). `n` counts the full checks that ran
  * (not cancelled) in the attempt through the completing run; nothing after it.
  */
@@ -167,24 +208,31 @@ export function outcomeOf(input: {
   const final = all[index]?.result;
   if (
     !final ||
+    all[index].scored !== final.total ||
     final.result !== "checks-passed" ||
     final.total === 0 ||
     final.passed !== final.total
   )
     return null;
   const through = all.slice(0, index + 1);
-  const first = through[0].result;
-  const complete = (r: FullCheck["result"]) =>
-    !!r &&
-    (r.result === "checks-passed" || r.result === "checks-failed") &&
-    r.total === final.total;
+  const first = through[0];
+  // Counts only for a first check whose raw run was scored completely, on the whole suite;
+  // a synthesized 0/N for a cancelled, errored or cut-short run is not an observed result.
+  const complete = (c: FullCheck) =>
+    !!c.result &&
+    (c.result.result === "checks-passed" ||
+      c.result.result === "checks-failed") &&
+    c.result.total === final.total &&
+    c.scored === c.result.total;
   return publicOutcome({
     v: 3,
     k: completion.key,
     l: input.language,
     rv: revision,
     o: { passed: final.passed, total: final.total },
-    f: complete(first) ? { passed: first!.passed, total: first!.total } : null,
+    f: complete(first)
+      ? { passed: first.result!.passed, total: first.result!.total }
+      : null,
     n: through.filter((c) => c.status !== "cancelled").length,
     c: input.referral,
   });
