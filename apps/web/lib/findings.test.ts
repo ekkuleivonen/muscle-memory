@@ -8,19 +8,12 @@ import assert from "node:assert/strict";
 import type { WorkspaceRecord } from "../../../packages/domain/workspace";
 import { attemptAt, attemptRecords } from "./attempts";
 import {
-  due,
   feedbackOf,
-  openBlocking,
   openRequired,
   type Release,
 } from "./feedback";
 import { mergeEligibility } from "./merge";
 import { allPullRequests } from "./pulls";
-import {
-  decodeResult,
-  encodeResult,
-  type Result,
-} from "./result";
 import { catalog, historical } from "./test-fixtures";
 
 const ISSUE = "checkout-guest-shipping";
@@ -278,48 +271,10 @@ function incident() {
   };
 }
 
-/** What the IDE would release now, from the latest attempt's records. */
-function released(
-  records: readonly WorkspaceRecord[],
-  files = { [fixture.path]: fixture.starter },
-) {
-  return due({
-    revision: fixture.revision,
-    records: attemptRecords(records, ISSUE),
-    issue: ISSUE,
-    participantId: "p",
-    revisionFor,
-    files,
-  }).map((r) =>
-    r.kind === "comment"
-      ? r.comment.id
-      : r.kind === "hint"
-        ? r.hint.id
-        : r.comment,
-  );
-}
-
 const CATCH = fixture.starter.replace(
   `  const member = order.customer.loyalty.tier !== "none";`,
   `  let member = false;\n  try {\n    member = order.customer.loyalty.tier !== "none";\n  } catch (error) {\n    member = false;\n  }`,
 );
-
-/** What review would release on a push whose checks just finished. */
-function reviewed(
-  records: readonly WorkspaceRecord[],
-  number: number,
-  push: number,
-): Release[] {
-  return due({
-    revision: fixture.revision,
-    records: attemptRecords(records, ISSUE),
-    issue: ISSUE,
-    participantId: "p",
-    revisionFor,
-    files: { [fixture.path]: fixture.starter },
-    push: { number, push },
-  });
-}
 
 /** What stands between pull request `number` and merging, as the merge button and the merge read it. */
 function blockerOf(
@@ -372,88 +327,6 @@ test("a replay starts fresh: an earlier merge never satisfies it, and nothing ea
   assert.equal(pulls().find((p) => p.number === 3)?.state, "merged");
 });
 
-test("the ticket's clues are there from the start; nothing is released into the issue thread", () => {
-  const opened = fixture.revision.team.filter((c) => c.where === "issue");
-  assert.ok(opened.length >= 3);
-  assert.ok(
-    opened.every((c) => "event" in c.when && c.when.event === "opened"),
-  );
-  assert.ok(
-    fixture.revision.team
-      .filter((c) => c.where === "review")
-      .every((c) => c.severity !== "info"),
-    "the pull request only gets actionable findings",
-  );
-  const play = incident();
-  play.start();
-  play.open();
-  play.openFile(LOG);
-  play.run(false);
-  play.run(true);
-  play.wait(60);
-  assert.deepEqual(
-    released(play.records, { [fixture.path]: FIX }),
-    [],
-    "no issue comment is released",
-  );
-});
-
-test("hints come from runs and pushes without progress, not time", () => {
-  const play = incident();
-  play.start();
-  play.run(false);
-  play.wait(60);
-  assert.deepEqual(released(play.records), []);
-  play.run(false);
-  play.run(false);
-  assert.deepEqual(released(play.records), ["hint-1"]);
-});
-
-test("an explicit finding stays open through a fixing push until Resolve; CI stays its own gate", () => {
-  const play = incident();
-  play.start();
-  const fb = () => feedbackOf(attemptRecords(play.records, ISSUE), ISSUE, revisionFor);
-  const open = () => openRequired(fb(), 1, revisionFor).map((t) => t.comment).sort();
-  const pullOne = () => allPullRequests(play.records).find((p) => p.number === 1)!;
-  const blocker = () => blockerOf(play.records, 1);
-  const ids = (releases: Release[]) =>
-    releases.map((r) => (r.kind === "comment" ? r.comment.id : `${r.kind}:${"comment" in r ? r.comment : ""}`));
-
-  // Push 1 hides the crash with a catch, and CI fails: a review finding and a CI finding.
-  play.push(1, 1, false, CATCH);
-  assert.deepEqual(ids(reviewed(play.records, 1, 1)), ["catch-hides-guests"]);
-  play.review(1, 1, "catch-hides-guests");
-  assert.deepEqual(open(), ["catch-hides-guests", "ci-push-1"]);
-  assert.equal(blocker(), "checks", "CI is checked first and on its own");
-
-  // Push 2 is a valid correction and CI passes. Neither finding is resolved for the person.
-  play.push(1, 2, true, FIX);
-  assert.deepEqual(ids(reviewed(play.records, 1, 2)), [], "no automatic resolution, no new thread");
-  assert.deepEqual(open(), ["catch-hides-guests", "ci-push-1"]);
-  assert.equal(blocker(), "review", "green CI alone does not merge past open findings");
-  // Nor does a code-resolution record from elsewhere.
-  play.resolvedByCode(1, 2, "catch-hides-guests");
-  assert.equal(blocker(), "review");
-
-  // Resolving one leaves the other; resolving both, with the current push green, allows it.
-  play.resolve(1, "catch-hides-guests");
-  assert.deepEqual(open(), ["ci-push-1"]);
-  assert.equal(blocker(), "review");
-  play.resolve(1, "ci-push-1");
-  assert.equal(blocker(), null);
-
-  // If the current push fails, Resolve does not help: CI blocks, and a new CI finding opens.
-  play.push(1, 3, false, FIX);
-  assert.deepEqual(open(), ["ci-push-3"]);
-  assert.equal(blocker(), "checks");
-  // A push that brings the catch back reopens the review finding after it was resolved.
-  play.push(1, 4, true, CATCH);
-  assert.deepEqual(ids(reviewed(play.records, 1, 4)), ["catch-hides-guests"]);
-  play.review(1, 4, "catch-hides-guests");
-  assert.deepEqual(open(), ["catch-hides-guests", "ci-push-3"]);
-  assert.equal(blocker(), "review");
-});
-
 test("a CI failure is a finding only Resolve clears; Resolve never makes failing CI mergeable", () => {
   const play = incident();
   play.start();
@@ -488,32 +361,6 @@ test("a CI failure is a finding only Resolve clears; Resolve never makes failing
       .filter((i) => i.id !== ISSUE)
       .every((i) => catalog.revisions[i.revision].ciFindings === undefined),
   );
-});
-
-test("JS-001's nit stays open on green CI and needs Resolve; other exercises keep severity rules", () => {
-  const play = incident();
-  play.start();
-  const HARD_CODED = FIX.replace("shippingFor(subtotal, member)", "subtotal >= (member ? 3000 : 5000) ? 0 : 495");
-  play.push(1, 1, true, HARD_CODED);
-  const nit = reviewed(play.records, 1, 1).filter((r) => r.kind === "comment");
-  assert.deepEqual(nit.map((r) => r.kind === "comment" && r.comment.id), ["thresholds-in-one-place"]);
-  play.review(1, 1, "thresholds-in-one-place", "nit");
-  // A later push fixes the code and CI is green; the nit is not resolved for the person.
-  play.push(1, 2, true, FIX);
-  const fb = () => feedbackOf(attemptRecords(play.records, ISSUE), ISSUE, revisionFor);
-  const pull = () => allPullRequests(play.records).find((p) => p.number === 1)!;
-  assert.equal(fb().threads[0].resolved, undefined, "still listed as unresolved");
-  assert.deepEqual(openRequired(fb(), 1, revisionFor).map((t) => t.comment), ["thresholds-in-one-place"]);
-  assert.equal(blockerOf(play.records, 1), "review");
-  // Severity alone would have let it through: the explicit Resolve is what the gate adds.
-  assert.equal(openBlocking(fb(), 1).length, 0);
-  play.resolve(1, "thresholds-in-one-place");
-  assert.equal(blockerOf(play.records, 1), null);
-  // Explicit Resolve is for actionable review findings only, never for an informational note.
-  for (const i of catalog.issues)
-    for (const c of catalog.revisions[i.revision].team)
-      if (c.resolve === "explicit")
-        assert.ok(c.where === "review" && c.severity !== "info", `${i.id} ${c.id}`);
 });
 
 test("progress saved before replays existed reads exactly as it did", () => {

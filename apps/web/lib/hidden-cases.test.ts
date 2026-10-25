@@ -1,5 +1,5 @@
 /**
- * Hidden cases are no oracle, on every feedback surface ENG-329 owns: Findings, the Checks tab,
+ * Hidden cases are no oracle, on every feedback surface practice shows:
  * the practice area's check feedback and the completion outcome. Each renders a check whose hidden
  * case carries sentinel values in its name, input, expected value, returned value and error
  * message; none may appear in the HTML, while the public case's input, expected value and
@@ -12,12 +12,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { Case } from "../../../packages/content/model";
 import { checkFeedbackOf } from "./check-feedback";
 import { diagnose, failureOf, failureText } from "./diagnosis";
-import type { PullSummary } from "./pulls";
 
 // The root test runner compiles JSX the classic way (React.createElement), so the components
 // need React in scope before they load.
 (globalThis as { React?: unknown }).React = React;
-const { CheckFeedbackView, Checks, Findings } = await import(
+const { CheckFeedbackView } = await import(
   "../app/(browse)/_components/review"
 );
 const { createElement } = React;
@@ -72,56 +71,10 @@ const outcome = {
   durationMs: 4,
 };
 
-const pull: PullSummary = {
-  issue: "x",
-  issueRevision: "r",
-  number: 1,
-  runId: "run",
-  codeRevision: 1,
-  codeArtifactId: "a",
-  result: "checks-failed",
-  passed: 0,
-  total: 3,
-  at: "2026-10-25T10:00:00.000Z",
-  openedAt: "2026-10-25T10:00:00.000Z",
-  pushes: 1,
-  state: "open",
-};
-
 function assertNoSecrets(html: string, surface: string) {
   for (const secret of SECRET)
     assert.ok(!html.includes(secret), `${surface} leaks ${secret}`);
 }
-
-test("Findings: hidden cases by position and failure category; the public case in full", () => {
-  const html = renderToStaticMarkup(
-    createElement(Findings, {
-      pull,
-      outcome,
-      cases,
-      threads: [],
-      revisions: {},
-    }),
-  );
-  assertNoSecrets(html, "Findings");
-  for (const shown of [
-    "PUBLIC_INPUT",
-    "PUBLIC_EXPECTED",
-    "PUBLIC_GOT",
-    "hidden case 2",
-    "hidden case 3",
-  ])
-    assert.ok(html.includes(shown), `Findings should show ${shown}`);
-  assert.ok(html.includes("Raised an error."));
-  assert.ok(html.includes("Returned a different value from the one expected."));
-});
-
-test("the Checks tab: no hidden values, and no printed output from a full check", () => {
-  const html = renderToStaticMarkup(createElement(Checks, { outcome, cases }));
-  assertNoSecrets(html, "Checks");
-  assert.ok(html.includes("PUBLIC_EXPECTED"));
-  assert.ok(html.includes("Printed output isn&#x27;t shown"));
-});
 
 test("the practice area's check feedback carries no hidden values", () => {
   const feedback = checkFeedbackOf({
@@ -150,10 +103,6 @@ test("a passing check shows a hidden case's position only", () => {
       out("SECRET_EXPECTED"),
     ],
   };
-  const html = renderToStaticMarkup(
-    createElement(Checks, { outcome: passing, cases }),
-  );
-  assertNoSecrets(html, "Checks (passing)");
   assertNoSecrets(
     JSON.stringify(diagnose(passing, cases)),
     "diagnose (passing)",
@@ -175,22 +124,6 @@ test("an error reported from the cases' stage, with no per-case results, is with
   const diagnosis = diagnose(crashed, cases);
   assertNoSecrets(JSON.stringify(diagnosis), "diagnose (run-level error)");
   for (const [surface, html] of [
-    [
-      "Checks",
-      renderToStaticMarkup(createElement(Checks, { outcome: crashed, cases })),
-    ],
-    [
-      "Findings",
-      renderToStaticMarkup(
-        createElement(Findings, {
-          pull,
-          outcome: crashed,
-          cases,
-          threads: [],
-          revisions: {},
-        }),
-      ),
-    ],
     [
       "CheckFeedbackView",
       renderToStaticMarkup(
@@ -229,20 +162,19 @@ test("an error reported from the cases' stage, with no per-case results, is with
       traceback: null,
     });
     assertNoSecrets(
-      renderToStaticMarkup(createElement(Checks, { outcome: early, cases })),
-      `Checks (${phase})`,
-    );
-    assertNoSecrets(
       renderToStaticMarkup(
-        createElement(Findings, {
-          pull,
-          outcome: early,
-          cases,
-          threads: [],
-          revisions: {},
+        createElement(CheckFeedbackView, {
+          feedback: checkFeedbackOf({
+            blocker: "checks",
+            running: false,
+            completed: false,
+            latest: { passed: 0, total: 3 },
+            diagnosis: d,
+            required: [],
+          }),
         }),
       ),
-      `Findings (${phase})`,
+      `CheckFeedbackView (${phase})`,
     );
   }
   // A run of public cases only keeps the full error: nothing hidden to give away.

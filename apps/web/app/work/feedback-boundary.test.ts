@@ -12,7 +12,7 @@ import { transcript } from "./transcript";
 import type { RunView } from "../workspace/session";
 
 (globalThis as { React?: unknown }).React = React;
-const { CheckFeedbackView, Checks, Findings } = await import(
+const { CheckFeedbackView } = await import(
   "../(browse)/_components/review"
 );
 const { ChallengeExamples } = await import(
@@ -99,14 +99,6 @@ test("public expected/actual stay visible while nested hidden expected outputs a
     const render = (component: React.ElementType, props: object) =>
       renderToStaticMarkup(React.createElement(component, props));
     const full = {
-      Findings: render(Findings, {
-        pull,
-        outcome,
-        cases,
-        threads: [],
-        revisions: {},
-      }),
-      Checks: render(Checks, { outcome, cases }),
       Practice: render(CheckFeedbackView, { feedback }),
       Output: transcript(
         {

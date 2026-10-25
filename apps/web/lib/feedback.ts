@@ -12,10 +12,7 @@ import {
   type TeamComment,
 } from "../../../packages/content/model";
 import {
-  evaluate,
-  wordingFor,
   type Behaviour,
-  type Facts,
 } from "../../../packages/content/triggers";
 import { runFeedback, type WorkspaceRecord } from "../../../packages/domain/workspace";
 
@@ -229,7 +226,7 @@ export interface Feedback {
 }
 
 /** A CI finding's thread: opened by the failing push it names. */
-export function isCiFinding(comment: string): boolean {
+function isCiFinding(comment: string): boolean {
   return /^ci-push-\d+$/.test(comment);
 }
 
@@ -341,13 +338,6 @@ export function openRequired(
   );
 }
 
-/** Blocking review threads on a pull request that are still open: they block merging. */
-export function openBlocking(feedback: Feedback, number: number): Thread[] {
-  return feedback.threads.filter(
-    (t) => t.number === number && t.severity === "blocking" && !t.resolved,
-  );
-}
-
 /** Comments on the `opened` event are the ticket's own thread: shown, never released. */
 export function inTicket(comment: TeamComment): boolean {
   return (
@@ -361,93 +351,3 @@ export type Release =
   | { kind: "comment"; comment: TeamComment; wording: number; pullRequest?: number; push?: number }
   | { kind: "hint"; hint: Hint }
   | { kind: "resolved"; comment: string; pullRequest: number; push: number };
-
-/**
- * What the revision's triggers release now. Issue comments and the next hint are checked
- * against the current code; review comments only when `push` names a push whose checks just
- * finished, against the code pushed. At most one hint at a time.
- */
-export function due(input: {
-  revision: Revision;
-  records: readonly WorkspaceRecord[];
-  issue: string;
-  participantId: string;
-  revisionFor: (id: string) => Revision | undefined;
-  /** The editable files' current text. */
-  files: Record<string, string>;
-  push?: { number: number; push: number };
-}): Release[] {
-  const { revision, records, issue, participantId, revisionFor, files, push } = input;
-  const feedback = feedbackOf(records, issue, revisionFor);
-  const behaviour = behaviourOf(records, issue, revisionFor);
-  const pushes = pushesOf(records, issue, revisionFor);
-  const last = pushes.at(-1);
-  const { opened, ran } = investigationOf(records, issue, revisionFor);
-  const event = push ? (push.push === 1 ? "pull-request" : "push") : undefined;
-  const current: Facts = {
-    files,
-    behaviour,
-    opened,
-    ...(ran ? { ran } : {}),
-    ...(last?.cases ? { cases: last.cases } : {}),
-    ...(event ? { event } : {}),
-  };
-  const wording = (c: TeamComment) => wordingFor(participantId, c.id, c.text.length);
-  const out: Release[] = [];
-
-  const released = new Set(
-    feedback.released.flatMap((r) => (r.kind === "comment" ? [r.comment] : [])),
-  );
-  for (const comment of revision.team)
-    if (
-      comment.where === "issue" &&
-      !inTicket(comment) &&
-      !released.has(comment.id) &&
-      evaluate(comment.when, current)
-    )
-      out.push({ kind: "comment", comment, wording: wording(comment) });
-
-  const pushed = push && pushes.find((p) => p.number === push.number && p.push === push.push);
-  if (push && pushed?.files) {
-    const facts: Facts = {
-      files: pushed.files,
-      behaviour,
-      opened,
-      ...(ran ? { ran } : {}),
-      ...(pushed.cases ? { cases: pushed.cases } : {}),
-      event: event!,
-    };
-    const review = (comment: TeamComment): Release => ({
-      kind: "comment",
-      comment,
-      wording: wording(comment),
-      pullRequest: push.number,
-      push: push.push,
-    });
-    for (const comment of revision.team) {
-      if (comment.where !== "review") continue;
-      const thread = feedback.threads.findLast(
-        (t) => t.number === push.number && t.comment === comment.id,
-      );
-      const fires = evaluate(comment.when, facts);
-      if (!thread) {
-        if (fires)
-          out.push(review(comment));
-      } else if (thread.severity === "blocking" && !thread.resolved) {
-        // An explicit finding stays open until the person resolves it, fixed or not.
-        if (!fires && comment.resolve !== "explicit")
-          out.push({ kind: "resolved", comment: comment.id, pullRequest: push.number, push: push.push });
-      } else if (thread.resolved && comment.repeat === "while-true" && fires)
-        out.push(review(comment));
-    }
-  }
-
-  const hints = new Set(
-    feedback.released.flatMap((r) => (r.kind === "hint" ? [r.hint] : [])),
-  );
-  const next = [...revision.hints]
-    .sort((a, b) => a.level - b.level)
-    .find((h) => !hints.has(h.id));
-  if (next && evaluate(next.when, current)) out.push({ kind: "hint", hint: next });
-  return out;
-}
