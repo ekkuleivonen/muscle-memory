@@ -1,6 +1,6 @@
 [
   {
-    "name": "member, $35 order: free shipping from $30 (CHK-412)",
+    "name": "member, $35 order: free shipping from $30",
     "input": {
       "customer": {
         "id": "m-41022",
@@ -23,7 +23,7 @@
     }
   },
   {
-    "name": "regression: guest order #88213 from the logs",
+    "name": "guest, two mugs at $18.00",
     "input": {
       "customer": {
         "guest": true

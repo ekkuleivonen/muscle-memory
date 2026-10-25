@@ -88,5 +88,10 @@
     "input": "jane\t@example.com",
     "expected": null,
     "hidden": true
+  },
+  {
+    "input": "jane\u00a0doe@example.com",
+    "expected": null,
+    "hidden": true
   }
 ]

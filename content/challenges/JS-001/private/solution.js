@@ -4,7 +4,7 @@
  */
 export function quoteOrder(order) {
   const subtotal = sum(order.items.map(lineTotal));
-  // CHK-412: loyalty members get free shipping from $30.
+  // Loyalty members get free shipping from $30.
   // Guests have no loyalty record; a lapsed member's tier is "none".
   const member = (order.customer.loyalty?.tier ?? "none") !== "none";
   const shipping = shippingFor(subtotal, member);
@@ -16,7 +16,7 @@ export function quoteOrder(order) {
 
 /** Standard shipping, in cents. */
 const SHIPPING = 495;
-/** Free shipping from these subtotals, in cents: for everyone, and for loyalty members (CHK-412). */
+/** Free shipping from these subtotals, in cents: for everyone, and for loyalty members. */
 const FREE_FROM = 5000;
 const MEMBER_FREE_FROM = 3000;
 

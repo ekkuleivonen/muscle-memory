@@ -1,11 +1,9 @@
-Since the IPv6 listener went live on Tuesday, every request that addresses the proxy by its v6 literal gets the default vhost's **421 Misdirected Request**. The health checker on `[2001:db8::1]:8080` has been red since; on-call silenced it at 02:10.
+`normalize_host` turns a request's Host header into the key a proxy routes and caches on, so two spellings of one host share a key. Plain hostnames already work. IPv6 literals do not, because the current code treats the first `:` as the start of the port:
 
 ```text
-421 GET http://[2001:db8::1]:8080/healthz host="[2001" vhost=default
-421 GET http://[2001:db8::1]/healthz      host="["     vhost=default
+[2001:db8::1]:8080   →  "[2001"   (should be "[2001:db8::1]")
+[2001:db8::1]        →  "["       (should be "[2001:db8::1]")
 ```
-
-The proxy routes each request on its Host header after `normalize_host` has normalized it, and the response cache keys on the same value, so two spellings of one host share a vhost and cache entries. Plain hostnames already work; IPv6 literals do not, because the current code treats the first `:` as the start of the port.
 
 ## What to write
 
@@ -28,4 +26,4 @@ Plain hostnames must keep normalizing exactly as they do now.
 
 ## Constraints
 
-- No heap allocation: `normalize_host` runs on every request before routing, and `out` is the buffer to write into. Do not call `malloc`, `calloc`, `realloc`, `strdup` or `strndup`.
+- No heap allocation: `out` is the buffer to write into. Do not call `malloc`, `calloc`, `realloc`, `strdup` or `strndup`.

@@ -19,7 +19,7 @@ test("challenges are live metadata over their revisions", () => {
     [challenge.key, challenge.revision, challenge.runnable, challenge.difficulty],
     ["PY-002", meta.revision, true, "easy"],
   );
-  assert.equal(challenge.title, "Nightly vial tally is empty");
+  assert.equal(challenge.title, "Count how often each string appears");
   assert.deepEqual(challenge.tags, ["iteration", "maps", "edge-cases"]);
   // The examples are the visible cases, as they are shown.
   assert.deepEqual(challenge.criteria[1], { input: [], expected: {} });

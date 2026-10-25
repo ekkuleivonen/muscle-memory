@@ -1,6 +1,6 @@
 {
   "title": "Guest checkout fails with a server error",
-  "summary": "Since Thursday's release, guests get an error instead of a quote at checkout. Members are fine.",
+  "summary": "Since loyalty members got free shipping from $30, guests get an error instead of a quote.",
   "difficulty": "easy",
   "tags": [
     "debugging",

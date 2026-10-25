@@ -1,4 +1,4 @@
-Kettlebrook's checkout has been failing since Thursday's release, which shipped CHK-412 (free shipping from $30 for loyalty members). Every customer checking out as a guest gets "Something went wrong" on the payment page instead of a quote: `POST /quote` returns 500 with `TypeError: Cannot read properties of undefined (reading 'tier')` thrown in `quoteOrder`. Members' orders still get quotes. For example, guest order #88213 (two stoneware mugs at $18.00 each) failed.
+Loyalty members now get free shipping from $30. Since that change, every guest checkout fails: `quoteOrder` throws `TypeError: Cannot read properties of undefined (reading 'tier')`, because a guest has no loyalty record. Members still get quotes. For example, a guest buying two mugs at $18.00 each gets an error instead of `{ subtotal: 3600, shipping: 495, total: 4095 }`.
 
 Fix `quoteOrder` so that every order gets a correct quote.
 
@@ -19,7 +19,7 @@ Fix `quoteOrder` so that every order gets a correct quote.
 
 ## Code you can use
 
-The starter imports these; their code is fixed and you cannot change it:
+Further down the file; you shouldn't need to change them:
 
 - `lineTotal(item)` returns `item.price * item.quantity`; `sum(amounts)` adds a list of numbers (0 for an empty list).
 - `shippingFor(subtotal, member)` returns the shipping in cents under the rules above: 0 when `subtotal` is at least 3000 if `member` is `true`, or at least 5000 if it is `false`; 495 otherwise. The module also exports the constants `SHIPPING` (495), `FREE_FROM` (5000) and `MEMBER_FREE_FROM` (3000).

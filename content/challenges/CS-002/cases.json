@@ -152,5 +152,29 @@
     ],
     "expected": 0,
     "hidden": true
+  },
+  {
+    "input": [
+      1.4,
+      5
+    ],
+    "expected": 0.04,
+    "hidden": true
+  },
+  {
+    "input": [
+      0.35,
+      20
+    ],
+    "expected": 0.04,
+    "hidden": true
+  },
+  {
+    "input": [
+      3,
+      11
+    ],
+    "expected": 0.17,
+    "hidden": true
   }
 ]

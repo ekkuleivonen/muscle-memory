@@ -1,6 +1,6 @@
 {
-  "title": "Nightly vial tally is empty",
-  "summary": "The vial scanner's labels need counting for the nightly sheet; the counter returns nothing.",
+  "title": "Count how often each string appears",
+  "summary": "Map each distinct string in a list to its count.",
   "difficulty": "easy",
   "tags": [
     "iteration",

@@ -1,0 +1,568 @@
+{
+  "challenge": "TS-006",
+  "task": "A recent change to session refresh added a grace window, so a mobile app that refreshes from two screens at once isn't logged out. It also broke token-reuse detection: an old refresh token captured days ago can still be exchanged for a fresh one, and the family is never revoked.\n\n`refresh(family, presented, now)` decides one refresh. Find everything that change broke against the rules below and fix it. Keep the grace window: the mobile fix has to stay. `refresh` is pure: the caller stores whatever it decides. Times are Unix milliseconds.\n\n**Sessions.** A login starts a session family. A client refreshes with the family's current refresh token and gets the next one; each refresh token works once.\n\n- `family` is `{ id, userId, loginAt, revoked, tokens }`. `tokens` lists the family's refresh tokens oldest first, and the last is the current one. Each is `{ token, issuedAt, rotatedAt }`, where `rotatedAt` is when it was exchanged for the next token, or `null` while it is current.\n- `presented` is the token string the client sent; `now` is the time of the request.\n\n**The rules, in this order** (the first that applies decides):\n\n1. A token that is not in the family: `{ status: \"reauth\", reason: \"unknown\", revokeFamily: false }`.\n2. A revoked family (signed out everywhere, password changed): `{ status: \"reauth\", reason: \"revoked\", revokeFamily: false }`.\n3. A family `SESSION_LIFETIME_MS` (30 days) or more after its `loginAt`: `{ status: \"reauth\", reason: \"expired\", revokeFamily: false }`.\n4. A token that was already rotated (`rotatedAt` is not `null`):\n   - up to `REFRESH_GRACE_MS` (10 seconds) after that token's own rotation, inclusive, the client lost a race with itself: `{ status: \"ok\", token }` with the family's current token, and nothing new is issued;\n   - any later, someone else has a copy: `{ status: \"reauth\", reason: \"reuse\", revokeFamily: true }`.\n5. Otherwise rotate: `{ status: \"ok\", token }` with the family's next token, `${family.id}.${tokens.length + 1}`.\n\nOnly \"reuse\" revokes the family (`revokeFamily: true`).\n\n**Code further down the file.** `SESSION_LIFETIME_MS` (30 days) and `REFRESH_GRACE_MS` (10,000); `findToken(family, presented)` returns the family's token with that string, or `undefined`; `current(family)` returns the family's last token; `nextToken(family)` returns the string a rotation issues, as in rule 5; and the types `SessionFamily` and `RefreshResult`.\n\n**Requirements.**\n\n- Keep the grace window, measured with `REFRESH_GRACE_MS`.\n- No console logging (`console.log`, `info`, `debug`, `warn` or `error`): the gateway's output is searchable company-wide, and must never sit next to a refresh token.\n",
+  "language": "typescript",
+  "file": "refresh.ts",
+  "starter": "/**\n * Exchanges a refresh token for the family's next one, by the session rules. Pure: the\n * caller stores whatever this decides.\n */\nexport function refresh(family: SessionFamily, presented: string, now: number): RefreshResult {\n  const token = findToken(family, presented);\n  if (!token) return { status: \"reauth\", reason: \"unknown\", revokeFamily: false };\n\n  // The mobile app refreshes from two screens at once, and the loser of the race\n  // presents the token the winner just rotated. Hand it the winner's token instead of\n  // logging the user out.\n  if (token.rotatedAt !== null && now - token.rotatedAt <= REFRESH_GRACE_MS) {\n    return { status: \"ok\", token: current(family).token };\n  }\n\n  if (family.revoked) return { status: \"reauth\", reason: \"revoked\", revokeFamily: false };\n  if (now - family.loginAt >= SESSION_LIFETIME_MS) {\n    return { status: \"reauth\", reason: \"expired\", revokeFamily: false };\n  }\n\n  return { status: \"ok\", token: nextToken(family) };\n}\n\n\n// ---- policy: helpers this code uses. You shouldn't need to change them. ----\n\n/**\n * Session rules for the login gateway.\n *\n * A login starts a session family. A client refreshes with the family's current refresh token\n * and gets the next one; each refresh token works once. A refresh is decided in this order:\n *\n *   1. A token that is not in the family: sign in again (\"unknown\").\n *   2. A revoked family (signed out everywhere, password changed): sign in again (\"revoked\").\n *   3. A family SESSION_LIFETIME_MS or more after its login: sign in again (\"expired\").\n *   4. A token that was already rotated:\n *      - up to REFRESH_GRACE_MS after its rotation (inclusive), the client lost a race with\n *        itself: answer with the family's current token and issue nothing new;\n *      - any later, someone else has a copy: sign in again (\"reuse\") and revoke the family.\n *   5. Otherwise rotate: issue the family's next token.\n *\n * Only \"reuse\" revokes the family: every token in it stops working, the current one included.\n */\n\n/** Mobile sessions last 30 days from login, however often they refresh. */\nconst SESSION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;\n\n/** How long a just-rotated token is still answered, for clients that refresh twice at once. */\nconst REFRESH_GRACE_MS = 10 * 1000;\n\n\n// ---- tokens: helpers this code uses. You shouldn't need to change them. ----\n\n/** One refresh token in a session family. Times are Unix milliseconds. */\ninterface RefreshToken {\n  token: string;\n  issuedAt: number;\n  /** When it was exchanged for the next one; null while it is the current token. */\n  rotatedAt: number | null;\n}\n\n/** Everything one login produced: its refresh tokens, oldest first; the last is current. */\ninterface SessionFamily {\n  id: string;\n  userId: string;\n  loginAt: number;\n  revoked: boolean;\n  tokens: RefreshToken[];\n}\n\ntype RefreshResult =\n  | { status: \"ok\"; token: string }\n  | {\n      status: \"reauth\";\n      reason: \"unknown\" | \"revoked\" | \"expired\" | \"reuse\";\n      /** The store revokes the whole family when this is true. */\n      revokeFamily: boolean;\n    };\n\nfunction findToken(family: SessionFamily, presented: string): RefreshToken | undefined {\n  return family.tokens.find((t) => t.token === presented);\n}\n\n/** The family's current refresh token: the one a client should hold right now. */\nfunction current(family: SessionFamily): RefreshToken {\n  return family.tokens[family.tokens.length - 1];\n}\n\n/** The token a rotation issues. The store saves it and marks the presented one rotated. */\nfunction nextToken(family: SessionFamily): string {\n  return `${family.id}.${family.tokens.length + 1}`;\n}\n",
+  "entrypoint": "refresh",
+  "parameters": [
+    "family",
+    "presented",
+    "now"
+  ],
+  "cases": [
+    {
+      "id": "case-1",
+      "input": [
+        {
+          "id": "fam_7Qx",
+          "userId": "u_1042",
+          "loginAt": 1761379200000,
+          "revoked": false,
+          "tokens": [
+            {
+              "token": "fam_7Qx.1",
+              "issuedAt": 1761379200000,
+              "rotatedAt": 1761380100000
+            },
+            {
+              "token": "fam_7Qx.2",
+              "issuedAt": 1761380100000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "fam_7Qx.2",
+        1761381000000
+      ],
+      "expected": {
+        "status": "ok",
+        "token": "fam_7Qx.3"
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": [
+        {
+          "id": "fam_7Qx",
+          "userId": "u_1042",
+          "loginAt": 1761379200000,
+          "revoked": false,
+          "tokens": [
+            {
+              "token": "fam_7Qx.1",
+              "issuedAt": 1761379200000,
+              "rotatedAt": 1761380100000
+            },
+            {
+              "token": "fam_7Qx.2",
+              "issuedAt": 1761380100000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "fam_7Qx.1",
+        1761380104000
+      ],
+      "expected": {
+        "status": "ok",
+        "token": "fam_7Qx.2"
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": [
+        {
+          "id": "fam_7Qx",
+          "userId": "u_1042",
+          "loginAt": 1761379200000,
+          "revoked": false,
+          "tokens": [
+            {
+              "token": "fam_7Qx.1",
+              "issuedAt": 1761379200000,
+              "rotatedAt": 1761380100000
+            },
+            {
+              "token": "fam_7Qx.2",
+              "issuedAt": 1761380100000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "fam_7Qx.1",
+        1761638400000
+      ],
+      "expected": {
+        "status": "reauth",
+        "reason": "reuse",
+        "revokeFamily": true
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-4",
+      "input": [
+        {
+          "id": "fam_7Qx",
+          "userId": "u_1042",
+          "loginAt": 1761379200000,
+          "revoked": false,
+          "tokens": [
+            {
+              "token": "fam_7Qx.1",
+              "issuedAt": 1761379200000,
+              "rotatedAt": 1761380100000
+            },
+            {
+              "token": "fam_7Qx.2",
+              "issuedAt": 1761380100000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "fam_9Zz.4",
+        1761380400000
+      ],
+      "expected": {
+        "status": "reauth",
+        "reason": "unknown",
+        "revokeFamily": false
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-5",
+      "input": [
+        {
+          "id": "fam_7Qx",
+          "userId": "u_1042",
+          "loginAt": 1761379200000,
+          "revoked": false,
+          "tokens": [
+            {
+              "token": "fam_7Qx.1",
+              "issuedAt": 1761379200000,
+              "rotatedAt": 1761380100000
+            },
+            {
+              "token": "fam_7Qx.2",
+              "issuedAt": 1761380100000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "fam_7Qx.2",
+        1763971200000
+      ],
+      "expected": {
+        "status": "reauth",
+        "reason": "expired",
+        "revokeFamily": false
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-6",
+      "input": [
+        {
+          "id": "fam_7Qx",
+          "userId": "u_1042",
+          "loginAt": 1761379200000,
+          "revoked": true,
+          "tokens": [
+            {
+              "token": "fam_7Qx.1",
+              "issuedAt": 1761379200000,
+              "rotatedAt": 1761380100000
+            },
+            {
+              "token": "fam_7Qx.2",
+              "issuedAt": 1761380100000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "fam_7Qx.2",
+        1761381000000
+      ],
+      "expected": {
+        "status": "reauth",
+        "reason": "revoked",
+        "revokeFamily": false
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-7",
+      "input": [
+        {
+          "id": "fam_7Qx",
+          "userId": "u_1042",
+          "loginAt": 1761379200000,
+          "revoked": false,
+          "tokens": [
+            {
+              "token": "fam_7Qx.1",
+              "issuedAt": 1761379200000,
+              "rotatedAt": 1761380100000
+            },
+            {
+              "token": "fam_7Qx.2",
+              "issuedAt": 1761380100000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "fam_7Qx.1",
+        1761380110000
+      ],
+      "expected": {
+        "status": "ok",
+        "token": "fam_7Qx.2"
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": [
+        {
+          "id": "fam_7Qx",
+          "userId": "u_1042",
+          "loginAt": 1761379200000,
+          "revoked": false,
+          "tokens": [
+            {
+              "token": "fam_7Qx.1",
+              "issuedAt": 1761379200000,
+              "rotatedAt": 1761380100000
+            },
+            {
+              "token": "fam_7Qx.2",
+              "issuedAt": 1761380100000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "fam_7Qx.1",
+        1761380110001
+      ],
+      "expected": {
+        "status": "reauth",
+        "reason": "reuse",
+        "revokeFamily": true
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": [
+        {
+          "id": "fam_7Qx",
+          "userId": "u_1042",
+          "loginAt": 1761379200000,
+          "revoked": true,
+          "tokens": [
+            {
+              "token": "fam_7Qx.1",
+              "issuedAt": 1761379200000,
+              "rotatedAt": 1761380100000
+            },
+            {
+              "token": "fam_7Qx.2",
+              "issuedAt": 1761380100000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "fam_7Qx.1",
+        1761380104000
+      ],
+      "expected": {
+        "status": "reauth",
+        "reason": "revoked",
+        "revokeFamily": false
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": [
+        {
+          "id": "fam_E5t",
+          "userId": "u_1042",
+          "loginAt": 1761379200000,
+          "revoked": false,
+          "tokens": [
+            {
+              "token": "fam_E5t.1",
+              "issuedAt": 1761379200000,
+              "rotatedAt": 1763971197000
+            },
+            {
+              "token": "fam_E5t.2",
+              "issuedAt": 1763971197000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "fam_E5t.1",
+        1763971202000
+      ],
+      "expected": {
+        "status": "reauth",
+        "reason": "expired",
+        "revokeFamily": false
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": [
+        {
+          "id": "fam_7Qx",
+          "userId": "u_1042",
+          "loginAt": 1761379200000,
+          "revoked": false,
+          "tokens": [
+            {
+              "token": "fam_7Qx.1",
+              "issuedAt": 1761379200000,
+              "rotatedAt": 1761380100000
+            },
+            {
+              "token": "fam_7Qx.2",
+              "issuedAt": 1761380100000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "fam_7Qx.2",
+        1763971199999
+      ],
+      "expected": {
+        "status": "ok",
+        "token": "fam_7Qx.3"
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": [
+        {
+          "id": "fam_B2k",
+          "userId": "u_1042",
+          "loginAt": 1761379200000,
+          "revoked": false,
+          "tokens": [
+            {
+              "token": "fam_B2k.1",
+              "issuedAt": 1761379200000,
+              "rotatedAt": 1761380100000
+            },
+            {
+              "token": "fam_B2k.2",
+              "issuedAt": 1761380100000,
+              "rotatedAt": 1761381000000
+            },
+            {
+              "token": "fam_B2k.3",
+              "issuedAt": 1761381000000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "fam_B2k.1",
+        1761381003000
+      ],
+      "expected": {
+        "status": "reauth",
+        "reason": "reuse",
+        "revokeFamily": true
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": [
+        {
+          "id": "fam_B2k",
+          "userId": "u_1042",
+          "loginAt": 1761379200000,
+          "revoked": false,
+          "tokens": [
+            {
+              "token": "fam_B2k.1",
+              "issuedAt": 1761379200000,
+              "rotatedAt": 1761380100000
+            },
+            {
+              "token": "fam_B2k.2",
+              "issuedAt": 1761380100000,
+              "rotatedAt": 1761381000000
+            },
+            {
+              "token": "fam_B2k.3",
+              "issuedAt": 1761381000000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "fam_B2k.2",
+        1761381005000
+      ],
+      "expected": {
+        "status": "ok",
+        "token": "fam_B2k.3"
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": [
+        {
+          "id": "fam_B2k",
+          "userId": "u_1042",
+          "loginAt": 1761379200000,
+          "revoked": false,
+          "tokens": [
+            {
+              "token": "fam_B2k.1",
+              "issuedAt": 1761379200000,
+              "rotatedAt": 1761380100000
+            },
+            {
+              "token": "fam_B2k.2",
+              "issuedAt": 1761380100000,
+              "rotatedAt": 1761381000000
+            },
+            {
+              "token": "fam_B2k.3",
+              "issuedAt": 1761381000000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "fam_B2k.3",
+        1761381600000
+      ],
+      "expected": {
+        "status": "ok",
+        "token": "fam_B2k.4"
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": [
+        {
+          "id": "fam_7Qx",
+          "userId": "u_1042",
+          "loginAt": 1761379200000,
+          "revoked": true,
+          "tokens": [
+            {
+              "token": "fam_7Qx.1",
+              "issuedAt": 1761379200000,
+              "rotatedAt": 1761380100000
+            },
+            {
+              "token": "fam_7Qx.2",
+              "issuedAt": 1761380100000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "fam_7Qx.1",
+        1761638400000
+      ],
+      "expected": {
+        "status": "reauth",
+        "reason": "revoked",
+        "revokeFamily": false
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-16",
+      "input": [
+        {
+          "id": "fam_E5t",
+          "userId": "u_1042",
+          "loginAt": 1761379200000,
+          "revoked": false,
+          "tokens": [
+            {
+              "token": "fam_E5t.1",
+              "issuedAt": 1761379200000,
+              "rotatedAt": 1763971197000
+            },
+            {
+              "token": "fam_E5t.2",
+              "issuedAt": 1763971197000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "fam_E5t.1",
+        1763971199000
+      ],
+      "expected": {
+        "status": "ok",
+        "token": "fam_E5t.2"
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-17",
+      "input": [
+        {
+          "id": "fam_7Qx",
+          "userId": "u_1042",
+          "loginAt": 1761379200000,
+          "revoked": false,
+          "tokens": [
+            {
+              "token": "fam_7Qx.1",
+              "issuedAt": 1761379200000,
+              "rotatedAt": 1761380100000
+            },
+            {
+              "token": "fam_7Qx.2",
+              "issuedAt": 1761380100000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "",
+        1761380400000
+      ],
+      "expected": {
+        "status": "reauth",
+        "reason": "unknown",
+        "revokeFamily": false
+      },
+      "hidden": true
+    }
+  ],
+  "rules": [
+    {
+      "id": "keep-grace",
+      "message": "Keep the grace window for a just-rotated token, measured with `REFRESH_GRACE_MS`.",
+      "when": {
+        "pattern": "^(?!\\s*(\\*|//|const REFRESH_GRACE_MS\\b)).*\\bREFRESH_GRACE_MS\\b",
+        "present": false
+      }
+    },
+    {
+      "id": "no-console",
+      "message": "No console logging in the gateway: no `console.log`, `info`, `debug`, `warn` or `error`.",
+      "when": {
+        "pattern": "console\\.(log|info|debug|warn|error)\\(",
+        "present": true
+      }
+    }
+  ]
+}

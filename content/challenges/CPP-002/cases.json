@@ -811,5 +811,25 @@
       -1
     ],
     "hidden": true
+  },
+  {
+    "input": [
+      8,
+      [
+        [
+          "put",
+          -1,
+          5
+        ],
+        [
+          "get",
+          -1
+        ]
+      ]
+    ],
+    "expected": [
+      5
+    ],
+    "hidden": true
   }
 ]
