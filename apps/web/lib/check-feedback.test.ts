@@ -6,6 +6,7 @@ import type { Diagnosis } from "./diagnosis";
 const input = (over: Partial<CheckFeedbackInput> = {}): CheckFeedbackInput => ({
   blocker: null,
   running: false,
+  completed: false,
   latest: { passed: 5, total: 5 },
   diagnosis: null,
   required: [],
@@ -39,7 +40,8 @@ test("only a clear gate reads as passed; every blocker says what is left", () =>
       ["code-unconfirmed", "unconfirmed"],
       ["revision", "revision"],
       ["review", "required"],
-      ["not-open", "completed"],
+      ["not-open", "closed"],
+      ["other-merged", "closed"],
     ] as const
   ).map(([blocker, state]) => {
     const f = checkFeedbackOf(
@@ -49,7 +51,7 @@ test("only a clear gate reads as passed; every blocker says what is left", () =>
     return f;
   });
   // Edited, stale, pending and failing states always offer a way on and never pass.
-  for (const f of states.slice(0, 6)) assert.notEqual(f.tone, "pass");
+  for (const f of states) assert.notEqual(f.tone, "pass");
   for (const f of states.slice(2, 5))
     assert.equal(f.next?.includes("heck"), true);
 });
@@ -124,4 +126,43 @@ test("no pull request vocabulary reaches the person", () => {
       `${f.headline} ${f.next ?? ""}`,
       /pull request|\bpush|merge|\bCI\b/i,
     );
+});
+
+test("completed comes only from a recorded completion, never from the gate's not-open", () => {
+  // A closed attempt whose last check passed 4 of 5: the gate says not-open, nothing completed it.
+  const closed = checkFeedbackOf(
+    input({ blocker: "not-open", latest: { passed: 4, total: 5 } }),
+  );
+  assert.equal(closed.state, "closed");
+  assert.notEqual(closed.tone, "pass");
+  assert.doesNotMatch(closed.headline, /Done/);
+  // A closed attempt that failed outright reads the same.
+  assert.equal(
+    checkFeedbackOf(
+      input({ blocker: "not-open", latest: { passed: 0, total: 5 } }),
+    ).state,
+    "closed",
+  );
+  // A genuinely completed attempt, historical (merged) or new (checks passed), is done.
+  for (const blocker of ["not-open", "other-merged", null] as const) {
+    const done = checkFeedbackOf(input({ blocker, completed: true }));
+    assert.equal(done.state, "completed");
+    assert.equal(done.tone, "pass");
+  }
+});
+
+test("checks that stop part-way say what is recorded, not where the code failed", () => {
+  const errored = checkFeedbackOf(
+    input({
+      blocker: "checks",
+      latest: { passed: 0, total: 5 },
+      diagnosis: {
+        kind: "error",
+        error: { type: "Error", message: "boom" },
+        traceback: null,
+      },
+    }),
+  );
+  assert.equal(errored.headline, "The checks did not complete.");
+  assert.doesNotMatch(errored.headline, /before any case/);
 });

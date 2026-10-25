@@ -49,7 +49,7 @@ export type Diagnosis =
       reason: "timeout" | "runner-error" | "cancelled";
       timeoutMs: number | null;
     }
-  /** The code failed before any case ran (a syntax or import error). */
+  /** The checks did not complete, with the error recorded; the stage it stopped at isn't claimed. */
   | {
       kind: "error";
       error: { type: string; message: string };
@@ -160,7 +160,7 @@ export function diagnose(
       kind: "error",
       error: {
         type: outcome.error?.type ?? "Error",
-        message: outcome.error?.message ?? "the checks didn't reach the tests",
+        message: outcome.error?.message ?? "the checks did not complete",
       },
       traceback: outcome.error?.traceback?.text || null,
     };

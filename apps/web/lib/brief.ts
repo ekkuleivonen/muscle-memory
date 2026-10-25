@@ -26,8 +26,9 @@ type Checks = Pick<Submission, "result" | "passed" | "total" | "legacy">;
 function result(c: Checks): string {
   if (c.legacy) return "every case passed";
   if (c.result === "checks-passed") return `all ${c.total} cases passed`;
-  if (c.result === "checks-errored")
-    return "the code errored before any case ran";
+  // A compile error, a crash or a timeout part-way through all record as errored: the stage and
+  // cause aren't known, so say only that the checks didn't finish.
+  if (c.result === "checks-errored") return "the checks did not complete";
   if (c.result === "cancelled") return "the check was cancelled";
   return `${c.passed} of ${c.total} cases passed`;
 }

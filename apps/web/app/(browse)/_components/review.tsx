@@ -141,7 +141,7 @@ function failingSummary(
       diagnosis.failed.length === 1 ? "fails" : "fail"
     } on push ${pull.pushes}.`;
   if (diagnosis?.kind === "error")
-    return `CI didn't reach the tests on push ${pull.pushes}.`;
+    return `The checks did not complete on push ${pull.pushes}.`;
   if (diagnosis?.kind === "stopped")
     return diagnosis.reason === "timeout"
       ? `CI timed out on push ${pull.pushes}.`

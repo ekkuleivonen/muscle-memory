@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { briefOf } from "./brief";
+import { pullRequestResult } from "../../../packages/domain/workspace";
 import { describe, type EvidenceFacts } from "./evidence";
 
 /** A merged pull request opened once, its tested code passing every check. */
@@ -80,7 +81,7 @@ test("completed after a failing first check: the first result is kept apart from
   });
   assert.equal(
     briefOf(errored)!.headline,
-    "All 12 cases passed on check 2. On the first check, the code errored before any case ran.",
+    "All 12 cases passed on check 2. On the first check, the checks did not complete.",
   );
   // Pushed again after a review, the first push passing too.
   assert.equal(
@@ -168,4 +169,41 @@ test("open, failing, stale and closed pull requests have no brief: the merge box
     facts({ state: "closed" }),
   ])
     assert.equal(briefOf(f), null);
+});
+
+test("a first check that crashed or timed out part-way is 'did not complete', with no cause claimed", () => {
+  const checks = Array.from({ length: 12 }, () => ({ expected: 1 }));
+  for (const status of ["timeout", "runner-error"]) {
+    // Five cases had run when it stopped.
+    const recorded = pullRequestResult(checks, {
+      status,
+      phase: "tests",
+      cases: Array.from({ length: 5 }, () => ({
+        output: { text: "1", truncated: false },
+      })),
+    });
+    assert.equal(recorded.result, "checks-errored");
+    const f = facts({
+      pushes: 2,
+      first: {
+        push: 1,
+        ...recorded,
+        legacy: false,
+        visible: null,
+        hidden: null,
+      },
+    });
+    const brief = briefOf(f)!;
+    assert.equal(
+      brief.headline,
+      "All 12 cases passed on check 2. On the first check, the checks did not complete.",
+    );
+    const all = describe(f)
+      .flatMap((s) => s.items.map((i) => i.text))
+      .join(" ");
+    assert.doesNotMatch(
+      `${brief.headline} ${all}`,
+      /before any case|errored before (any|reaching)/,
+    );
+  }
 });

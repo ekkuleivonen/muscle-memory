@@ -17,7 +17,9 @@ export type CheckState =
   | "revision"
   | "required"
   | "passed"
-  | "completed";
+  | "completed"
+  /** The attempt ended without a recorded completion (closed, or another one completed). */
+  | "closed";
 
 /**
  * A deterministic correctness or safety rule the checked code still triggers: it blocks until the
@@ -49,6 +51,12 @@ export interface CheckFeedbackInput {
   blocker: MergeBlocker | null | undefined;
   /** A full check is running now in this page. */
   running: boolean;
+  /**
+   * The challenge's completion is recorded for this attempt (a `pull-request-merged` or
+   * `checks-passed` move to Done). The only source of "completed": the gate's `not-open` also
+   * covers an attempt closed without completing.
+   */
+  completed: boolean;
   /** The latest check's counts, when one was recorded. */
   latest: { passed: number; total: number } | null;
   /** The latest check's failing cases (lib/diagnosis `diagnose`). */
@@ -62,6 +70,8 @@ const CHECK_AGAIN = "Check your code again.";
 export function checkFeedbackOf(input: CheckFeedbackInput): CheckFeedback {
   const { blocker, running, latest, diagnosis } = input;
   const base = { diagnosis: null, required: [] as RequiredRule[], next: null };
+  if (input.completed)
+    return { ...base, state: "completed", tone: "pass", headline: "Done." };
   if (running || blocker === "checks-pending")
     return {
       ...base,
@@ -78,13 +88,18 @@ export function checkFeedbackOf(input: CheckFeedbackInput): CheckFeedback {
       next: "Check your code to run every case, including hidden ones.",
     };
   if (blocker === "not-open" || blocker === "other-merged")
-    return { ...base, state: "completed", tone: "pass", headline: "Done." };
+    return {
+      ...base,
+      state: "closed",
+      tone: "neutral",
+      headline: "This attempt ended without being completed.",
+    };
   if (blocker === "checks") {
     const headline =
       diagnosis?.kind === "tests"
         ? `${diagnosis.failed.length} of ${cases(diagnosis.rows.length)} failed.`
         : diagnosis?.kind === "error"
-          ? "Your code failed before any case ran."
+          ? "The checks did not complete."
           : diagnosis?.kind === "stopped"
             ? diagnosis.reason === "timeout"
               ? "The check timed out before every case finished. Look for a loop that never ends."

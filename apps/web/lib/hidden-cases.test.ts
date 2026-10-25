@@ -127,6 +127,7 @@ test("the practice area's check feedback carries no hidden values", () => {
   const feedback = checkFeedbackOf({
     blocker: "checks",
     running: false,
+    completed: false,
     latest: { passed: 0, total: 3 },
     diagnosis: diagnose(outcome, cases),
     required: [],

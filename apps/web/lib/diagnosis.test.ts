@@ -183,3 +183,22 @@ test("a hidden case is labelled by position, never by its call or its name", () 
   );
   assert.ok(!JSON.stringify(d.rows[1]).includes("secret"));
 });
+
+test("a crash or timeout part-way through is reported as stopped, not as an error before the cases", () => {
+  // Two cases had run when the runner stopped.
+  const partial = [out({ a: 2 }), out({})];
+  for (const status of ["timeout", "runner-error"] as const) {
+    const d = diagnose(
+      { status, phase: "tests", cases: partial, timeoutMs: 5000 },
+      cases,
+    );
+    assert.equal(d?.kind, "stopped", status);
+  }
+  // An error with the cases missing names no stage.
+  const d = diagnose({ status: "user-error", phase: "tests" }, cases);
+  assert.deepEqual(d, {
+    kind: "error",
+    error: { type: "Error", message: "the checks did not complete" },
+    traceback: null,
+  });
+});

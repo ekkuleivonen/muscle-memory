@@ -715,7 +715,7 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
     c.legacy
       ? "every case passed (the per-case breakdown isn't available)"
       : c.result === "checks-errored"
-        ? "the code errored before any case ran"
+        ? "the checks did not complete"
         : c.result === "cancelled"
           ? "the check was cancelled"
           : `${c.passed} of ${c.total} cases passed`;
@@ -755,7 +755,7 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
     correctness.push(
       observed(
         "visible",
-        `The repo's own tests: ${visible.passed} of ${visible.total} passed.`,
+        `The examples: ${visible.passed} of ${visible.total} passed.`,
         visible.passed === visible.total ? "pass" : "fail",
       ),
     );
@@ -891,14 +891,10 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
   );
   // Said only while it is true: the recorded features list every kind of help that was on.
   const completion = features?.some((x) => /complet/.test(x));
-  const assist: EvidenceItem[] = [
-    observed(
-      "hints",
-      assistance.hints
-        ? `${plural(assistance.hints, "hint")} from a teammate.`
-        : "No hints.",
-    ),
-  ];
+  // Challenges no longer offer hints; one used in an earlier version is still a fact.
+  const assist: EvidenceItem[] = assistance.hints
+    ? [observed("hints", `${plural(assistance.hints, "built-in hint")} used.`)]
+    : [];
   if (assistance.comments)
     assist.push(
       observed(
@@ -969,7 +965,7 @@ export function actionsOf(
     text:
       facts.checks.result === "checks-failed"
         ? `${facts.checks.total - facts.checks.passed} of ${facts.checks.total} checks fail on push ${push}. Fix them in the IDE and push again.`
-        : `CI didn't reach the tests on push ${push}. Fix the error in the IDE and push again.`,
+        : `The checks did not complete on push ${push}. Fix the error in the IDE and push again.`,
   });
   if (blocker === undefined) {
     if (facts.checks.result !== "checks-passed") out.push(checks());
