@@ -21,7 +21,6 @@ import type { Profile } from "../../lib/profile";
 import { logProfile } from "../(browse)/_components/board-log";
 import type { Answer, Prompt } from "../_terminal/prompts";
 import { QUESTIONS, toProfile } from "../../lib/questions";
-import { Banner } from "../_terminal/banner";
 import {
   profileLines,
   TermLink,
@@ -90,15 +89,13 @@ async function settings(t: TerminalApi, start?: string) {
     return t.go("/consent?next=%2Fsettings", "the Terms");
   }
   t.print(
-    <Banner
-      description="Settings. Pick a command; Esc takes you back to the app."
-      status={
-        <>
-          <span className="t-on">●</span> signed in as{" "}
-          <span className="t-brand">{handle}</span>
-        </>
-      }
-    />,
+    <span>
+      <span className="t-dim">~/settings $</span> ls
+    </span>,
+    <span className="t-dim">
+      <span className="t-on">●</span> signed in as{" "}
+      <span className="t-brand">{handle}</span>
+    </span>,
     "",
   );
   const first = startCommand(start);
