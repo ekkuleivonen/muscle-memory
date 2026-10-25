@@ -1,4 +1,4 @@
-> The active player surface is Practice: challenge, code, Submit, immediate feedback and Next challenge. The [ENG-328 compatibility contract](eng-328-lean-contract.md) documents the approved board-capture 7.2 automatic completion. Internal full-suite submission records remain temporarily compatible; workplace/PR controls described below are historical implementation details, not required player steps. Workspace capture and local-run scope are unchanged.
+> Current practice has one editable entry: challenge, code, Submit, diagnostic feedback and Next challenge. Support/test sources, file navigation, hints and comment surfaces are internal/removed. SQL retains its public schema. The [ENG-328 contract](eng-328-lean-contract.md) documents explicit historical recovery and approved board 7.2 automatic completion. Internal full-suite submission records, workspace capture 6.0.0 and visible-only local-run scope keep their meaning. Workplace details below describe historical implementation, not the current player journey.
 
 # The IDE
 

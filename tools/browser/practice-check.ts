@@ -4,6 +4,10 @@
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { chromium } from "playwright";
+import { codeRevision, toRecord } from "../../packages/domain/workspace";
+import { catalog } from "../../apps/web/lib/test-fixtures";
+import { library } from "../../apps/web/lib/library";
+import { editableFiles } from "../../packages/content/model";
 import { SEED_ISSUES } from "../../content/seed";
 const origin = process.env.LOOP_ORIGIN ?? "http://localhost:3000";
 const screenshots = process.env.PRACTICE_SCREENSHOTS;
@@ -205,31 +209,159 @@ try {
     .getByRole("heading", { name: "Next challenge", exact: true })
     .waitFor();
   assert.equal((await finished()).length, 2);
-  // Existing multi-file content stays editable without a file explorer.
-  await page.goto(
-    `${origin}/work/SHOP-8?revision=sha256:675596eb25cb85f7ed035b3f24ad21a489ffc4b37bb5214aa3ef196ba9b0c068`,
+  // The normalized TypeScript challenge is really one editable source and still runs.
+  await page.goto(`${origin}/work/SHOP-8`);
+  await ready();
+  assert.equal(await page.locator(".practice-editor").count(), 1);
+  assert.equal(
+    await page.getByRole("combobox", { name: "Editable source" }).count(),
+    0,
+  );
+  assert.equal(
+    await page
+      .locator(".practice-context, .practice-requirements, [role=tablist]")
+      .count(),
+    0,
+  );
+  const shop = library(catalog).findIssue("SHOP-8")!;
+  const shopSeed = SEED_ISSUES.find((i) => i.id === shop.slug)!;
+  await editor().fill(Object.values(shopSeed.private.reference)[0]);
+  await submit();
+  await page
+    .getByRole("heading", { name: "Next challenge", exact: true })
+    .waitFor();
+  assert.equal((await finished()).length, 3);
+
+  // Historical multi-file bundles remain intact, but are never made one-file by hiding a source.
+  const legacyRevision =
+    "sha256:675596eb25cb85f7ed035b3f24ad21a489ffc4b37bb5214aa3ef196ba9b0c068";
+  const beforeHistorical = (await records()).filter(
+    (v) => v.type === "observation.workspace.opened",
+  ).length;
+  await page.goto(`${origin}/work/SHOP-8?revision=${legacyRevision}`);
+  await page
+    .getByRole("heading", {
+      name: "This older version is not supported in one-file practice",
+    })
+    .waitFor();
+  assert.equal(await page.locator(".cm-content").count(), 0);
+  assert.equal(
+    (await records()).filter((v) => v.type === "observation.workspace.opened")
+      .length,
+    beforeHistorical,
+  );
+  const legacy = catalog.revisions[legacyRevision];
+  const participantId = all[0].participantId;
+  const previousOpen = all.find(
+    (v) => v.type === "observation.workspace.opened",
+  )!;
+  async function seedLegacy(suffix: string) {
+    const sourceId = `legacy-recovery-${suffix}`;
+    const files = Object.fromEntries(
+      Object.entries(editableFiles(legacy.workspace)).map(([path, file]) => [
+        path,
+        {
+          mediaType: "text/typescript",
+          text:
+            file.text +
+            (path === legacy.workspace.entry
+              ? "\n// LEGACY_ENTRY_SENTINEL"
+              : "\n// LEGACY_HELPER_SENTINEL"),
+        },
+      ]),
+    );
+    const artifact = toRecord(codeRevision(participantId, sourceId, 1, files));
+    const observed = {
+      ...previousOpen,
+      observationId: `${sourceId}.1`,
+      source: { id: sourceId, sequence: 1 },
+      occurredAt: new Date().toISOString(),
+      issue: shop.slug,
+      issueRevision: legacyRevision,
+      data: {
+        ...previousOpen.data,
+        revision: 1,
+        codeArtifactId: artifact.recordId,
+      },
+    };
+    const fixture = [
+      artifact,
+      {
+        recordId: observed.observationId,
+        kind: "observation",
+        participantId,
+        payload: JSON.stringify(observed),
+      },
+    ];
+    await page.evaluate(async (fixture) => {
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const r = indexedDB.open("muscle-memory-local-practice");
+        r.onsuccess = () => resolve(r.result);
+        r.onerror = () => reject(r.error);
+      });
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const tx = db.transaction("workspace", "readwrite");
+          for (const r of fixture) tx.objectStore("workspace").add(r);
+          tx.oncomplete = () => resolve();
+          tx.onabort = () => reject(tx.error);
+        });
+      } finally {
+        db.close();
+      }
+    }, fixture);
+    return JSON.parse(artifact.payload);
+  }
+  const retainedEntry = await seedLegacy("entry");
+  const beforeChoice = (await records()).filter(
+    (v) =>
+      v.type.startsWith("observation.workspace.") ||
+      v.type === "artifact.code-revision",
+  ).length;
+  await page.goto(`${origin}/work/SHOP-8`);
+  await page.getByRole("region", { name: "Saved version recovery" }).waitFor();
+  assert.equal(await editor().count(), 0);
+  assert.equal(
+    (await records()).filter(
+      (v) =>
+        v.type.startsWith("observation.workspace.") ||
+        v.type === "artifact.code-revision",
+    ).length,
+    beforeChoice,
+    "no new workspace records before a lossy restoration choice",
+  );
+  await activate(
+    page.getByRole("button", { name: "Restore saved entry only", exact: true }),
   );
   await ready();
-  const source = page.getByRole("combobox", {
-    name: "Editable source",
-    exact: true,
-  });
-  const paths = await source
-    .locator("option")
-    .evaluateAll((nodes) => nodes.map((n) => n.getAttribute("value")!));
-  assert.ok(paths.length > 1);
-  await source.selectOption(paths[1]);
-  await editor().fill((await editor().innerText()) + "\n// source continuity");
+  assert.match(await editor().innerText(), /LEGACY_ENTRY_SENTINEL/);
   await page.getByText("Saved", { exact: true }).waitFor();
-  await source.selectOption(paths[0]);
-  await source.selectOption(paths[1]);
-  assert.match(await editor().innerText(), /source continuity/);
+  assert.deepEqual(
+    (await records()).find((v) => v.artifactId === retainedEntry.artifactId),
+    retainedEntry,
+  );
   await page.reload();
   await ready();
-  assert.equal(await source.inputValue(), paths[1]);
-  assert.match(await editor().innerText(), /source continuity/);
+  assert.match(await editor().innerText(), /LEGACY_ENTRY_SENTINEL/);
+  // Explicit starter choice appends a new source without rewriting old entry/helper artifacts.
+  await page.goto(`${origin}/profile`);
+  const retainedStarter = await seedLegacy("starter");
+  await page.goto(`${origin}/work/SHOP-8`);
+  await page.getByRole("region", { name: "Saved version recovery" }).waitFor();
+  await shot("practice-version-recovery");
+  await activate(
+    page.getByRole("button", { name: "Use current starter", exact: true }),
+  );
+  await ready();
+  assert.doesNotMatch(await editor().innerText(), /LEGACY_ENTRY_SENTINEL/);
+  assert.deepEqual(
+    (await records()).find((v) => v.artifactId === retainedStarter.artifactId),
+    retainedStarter,
+  );
+
+  // SQL is a first-class one-file challenge: schema is public; harness and test code stay internal.
   await page.goto(`${origin}/work/DATA-3`);
-  await editor().waitFor();
+  await ready();
   await page.getByText("Data schema", { exact: true }).waitFor();
   assert.match(
     await page
@@ -238,6 +370,15 @@ try {
       .innerText(),
     /CREATE TABLE/i,
   );
+  assert.equal(await page.locator(".practice-editor").count(), 1);
+  const sql = library(catalog).findIssue("DATA-3")!;
+  const sqlSeed = SEED_ISSUES.find((i) => i.id === sql.slug)!;
+  await editor().fill(Object.values(sqlSeed.private.reference)[0]);
+  await submit();
+  await page
+    .getByRole("heading", { name: "Next challenge", exact: true })
+    .waitFor();
+  assert.equal((await finished()).length, 4);
   // Mobile keeps the public requirements, examples and code accessible without an overlay.
   await page.setViewportSize({ width: 390, height: 844 });
   assert.equal(await page.getByRole("dialog").count(), 0);
@@ -248,8 +389,30 @@ try {
     true,
   );
   await shot("practice-mobile");
+  // Next challenge uses client navigation: it must open a fresh session for the new key.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const nextLink = page.locator(".practice-next .btn.start");
+  const nextHref = await nextLink.getAttribute("href");
+  assert.ok(nextHref);
+  await activate(nextLink);
+  await page.waitForURL(`${origin}${nextHref}`);
+  await ready();
+  const nextKey = new URL(page.url()).pathname.split("/").at(-1)!;
+  const nextIssue = library(catalog).findIssue(nextKey)!;
+  assert.match(
+    await page.locator(".practice-header > span").innerText(),
+    new RegExp(nextKey),
+  );
+  assert.ok(
+    (await records()).some(
+      (v) =>
+        v.type === "observation.workspace.opened" &&
+        v.issue === nextIssue.slug &&
+        v.issueRevision === nextIssue.revision,
+    ),
+  );
   console.log(
-    "PASS: actual full-suite Submit, failed hidden checks, cancel/retry, public-only green, automatic completion, stale/edit/reload, atomic records, required-rule recovery, profile, historical read-only URL, keyboard focus and mobile",
+    "PASS: actual full-suite Submit, failed hidden checks, cancel/retry, public-only green, automatic completion, stale/edit/reload, atomic records, required-rule recovery, profile, one-file TypeScript/SQL, safe historical revision recovery, keyboard focus and mobile",
   );
 } finally {
   await context.close();
