@@ -188,8 +188,8 @@ function Properties({ issue }: { issue: Issue }) {
       />
       {!issue.runnable && (
         <p className="note">
-          Opens in the IDE; running {issue.language} in the browser isn&apos;t
-          available yet.
+          This repo has no test runner or CI set up yet; you can still open
+          it in the IDE.
         </p>
       )}
     </aside>

@@ -3,14 +3,10 @@
 export default function BrowseError({ reset }: { reset: () => void }) {
   return (
     <main className="content recovery-state" role="alert">
-      <h1>Your workspace could not be loaded</h1>
+      <h1>This page didn&apos;t load</h1>
       <p>
-        We could not read the page or your saved practice. This does not mean
-        your history is empty.
-      </p>
-      <p>
-        Check your connection and that browser storage is available. Keep this
-        browser's data while you try again.
+        Your work isn&apos;t lost. Try again, or reload the page if it keeps
+        happening.
       </p>
       <button className="btn" onClick={reset}>
         Try again

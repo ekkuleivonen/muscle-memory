@@ -45,7 +45,6 @@ export interface PullIssue {
 /** The IDE on the issue's live revision; pushes still go to the open pull request. */
 const workHref = (issue: PullIssue) => `/work/${issue.key}`;
 
-const shortRevision = (id: string) => id.replace(/^sha256:/, "").slice(0, 8);
 
 type State = PullSummary["state"];
 const STATE_LABELS: Record<State, string> = {
@@ -312,8 +311,7 @@ export function PullView({
   if (!detail)
     return (
       <p className="empty">
-        Pull request #{number} for {issue.key} isn&apos;t recorded in this
-        browser. Pull requests stay on the device they were opened on.
+        There&apos;s no pull request #{number} for {issue.key}.
       </p>
     );
   const pull: PullSummary = mergedNow
@@ -505,7 +503,7 @@ export function PullView({
           <dt>Checks</dt>
           <dd>{checksText(pull)}</dd>
           <dt>Elapsed</dt>
-          <dd title="Wall-clock time from the first recorded activity to the pull request; breaks included.">
+          <dd title="From first opening the issue to this pull request, breaks included">
             {duration(detail.stats.startedAt, detail.openedAt)}
           </dd>
           {result ? (
@@ -518,15 +516,12 @@ export function PullView({
           )}
           <dt>Edits</dt>
           <dd>{detail.stats.edits}</dd>
-          <dt>Revision</dt>
-          <dd>
-            <span className="mono" title={pull.issueRevision}>
-              {shortRevision(pull.issueRevision)}
-            </span>
-            {issue.revision && issue.revision !== pull.issueRevision && (
-              <span className="dim">(issue updated since)</span>
-            )}
-          </dd>
+          {issue.revision && issue.revision !== pull.issueRevision && (
+            <>
+              <dt>Ticket</dt>
+              <dd className="dim">Updated since</dd>
+            </>
+          )}
         </dl>
         {pull.state !== "merged" && !pull.otherMerged && (
           <Link
@@ -537,10 +532,6 @@ export function PullView({
             Continue in the IDE →
           </Link>
         )}
-        <p className="note">
-          Recorded in this browser as you worked. These are raw facts; nothing
-          here is a grade.
-        </p>
       </aside>
     </div>
   );
@@ -587,7 +578,7 @@ function Timeline({
   return (
     <div className="pull-timeline">
       <p className="pull-summary dim">
-        {duration(stats.startedAt, detail.openedAt)} (wall clock) from{" "}
+        {duration(stats.startedAt, detail.openedAt)} from{" "}
         {previous
           ? `pull request #${previous.number}`
           : "first opening the issue"}{" "}
@@ -756,7 +747,7 @@ function Entry({
 const RUN_STATUS: Record<string, string> = {
   "user-error": "the code raised an error",
   timeout: "timed out",
-  "runner-error": "the runner failed",
+  "runner-error": "the test runner crashed",
   cancelled: "cancelled",
 };
 
@@ -788,7 +779,7 @@ function Checks({
   if (!outcome || !cases)
     return (
       <p className="dim">
-        This pull request&apos;s check run wasn&apos;t recorded.
+        No CI results for this pull request.
       </p>
     );
   if (outcome.status === "timeout")
@@ -799,7 +790,12 @@ function Checks({
       </p>
     );
   if (outcome.status === "runner-error")
-    return <p className="pull-error">The runner failed: {outcome.message}</p>;
+    return (
+      <p className="pull-error">
+        CI crashed before the checks finished; this wasn&apos;t your code.
+        Push again to rerun them.
+      </p>
+    );
   if (outcome.status === "cancelled")
     return <p className="dim">The checks were cancelled.</p>;
   const verdicts =
@@ -883,7 +879,7 @@ function Files({ saved, changes }: { saved: boolean; changes: FileChange[] }) {
   if (!saved || !changes.length)
     return (
       <p className="dim">
-        The submitted code wasn&apos;t saved in this browser.
+        The code for this pull request isn&apos;t available.
       </p>
     );
   const changed = changes.filter((c) => c.stats.added || c.stats.removed);
@@ -908,8 +904,7 @@ function Files({ saved, changes }: { saved: boolean; changes: FileChange[] }) {
           </table>
           {truncated && (
             <p className="dim diff-empty">
-              This file was longer than the capture limit; only its start was
-              saved.
+              This file is too long to show in full.
             </p>
           )}
         </div>
@@ -1160,9 +1155,7 @@ function NextPractice({
       {next && (
         <>
           <p>
-            Try next: {next.title} · {next.difficulty}. An unstarted issue
-            selected from your language preferences, prioritising runnable
-            issues and easier difficulty.
+            Try next: {next.title} · {next.difficulty}.
           </p>
           <StartWork issue={next} href={`/work/${next.key}`} />
         </>

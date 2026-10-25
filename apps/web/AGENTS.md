@@ -26,7 +26,8 @@ The product is a 9-to-5 job before AI: issues on a board, a VS Code-style IDE, t
 - Anything read from localStorage or IndexedDB is read after mount, never during render, or hydration breaks.
 - Revision JSON goes to client components as a string and is parsed there: the RSC serializer drops a `"__proto__"` key, and fixtures use one on purpose.
 - The editor owns its document; typing must never re-render React.
-- UI copy is plain and specific, in the voice of a workplace tool. Errors say what happened and whether it is the person's code ("not your code" for runtime failures).
+- UI copy is plain and specific, in the voice of a workplace tool. Errors say what happened and whether it is the person's code ("this wasn't your code" for runner crashes).
+- Stay in the fiction. Inside the app (dashboard, board, issues, pull requests, the IDE) nothing mentions browsers, devices, storage, uploads, recording, revisions, sandboxes or runtimes: it is a company's tracker and editor. A runner is "the test runner", a missing one "no test runner set up for this repo", loading a runtime "installing Python 3.14". Technical detail goes to the console and the records. The consent page, the legal pages and the settings terminal are outside the fiction and say plainly what is recorded and where it is kept.
 
 ## Checking a change
 
