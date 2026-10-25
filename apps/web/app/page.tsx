@@ -3,9 +3,9 @@ import { cookies } from "next/headers";
 import { CONSENT_COOKIE, hasConsent } from "../lib/profile";
 
 /**
- * The public front door: what the practice is (realistic development problems, solved without
- * AI), the one loop every issue follows, and what is recorded. Outside the consent gate;
- * returning players get a way back to their desk.
+ * The public front door: why someone who builds with AI might write one issue themselves, the
+ * loop every issue follows, and what is recorded. Outside the consent gate; returning players
+ * get a way back to their desk.
  */
 
 /** The loop every issue follows, as it actually goes in the workspace. */
@@ -13,7 +13,7 @@ const LOOP = [
   [
     "01",
     "Issue",
-    "A bug report or feature request, with the repo it lives in.",
+    "A bug report or feature request, written the way a teammate would file it.",
   ],
   [
     "02",
@@ -73,14 +73,15 @@ export default async function Home() {
         <section className="home-hero">
           <p className="home-kicker">Practice without AI</p>
           <h1>
-            Realistic development problems.
+            Use AI at work.
             <br />
-            <span className="home-punch">Solved by you.</span>
+            <span className="home-punch">Write this one yourself.</span>
           </h1>
           <p className="home-lede">
-            Read the issue, change the code, run the tests and open a pull
-            request. CI checks it, review may ask for changes, and you merge.
-            Completion, chat and generated code are off.
+            AI can help you build more than you could alone. You may also have
+            noticed moments where the code works and you&apos;re not quite sure
+            why. Here, take one realistic issue from bug report to merge and
+            work through every part of it yourself.
           </p>
           <div className="home-actions">
             {start}
@@ -105,13 +106,18 @@ export default async function Home() {
             alt="Muscle Memory workspace: a bug ticket beside its starter Python file, with Tests, Output and Pull requests tabs below."
           />
           <figcaption>
-            The actual workspace, before any edits: issue, code and tests
-            together. Your solution is yours to write.
+            The actual workspace, before any edits: the issue, the code and its
+            tests.
           </figcaption>
         </figure>
 
         <section className="home-section">
-          <h2>One loop, every issue</h2>
+          <h2>From bug report to merge</h2>
+          <p>
+            A check fails. You read what came back, form a hunch and try it.
+            Wrong. Then it clicks: you see why, make the change, and it goes
+            green. The fix is yours, and so is the understanding.
+          </p>
           <ol className="home-schedule">
             {LOOP.map(([step, title, detail]) => (
               <li key={step}>
@@ -122,6 +128,11 @@ export default async function Home() {
               </li>
             ))}
           </ol>
+          <p>
+            After the merge, look back at what you changed, what CI caught and
+            how you got there. No scores, ranks or badges, and nothing here is a
+            hiring signal.
+          </p>
           <p className="home-fine">
             Python, JavaScript, TypeScript, SQL, HTML, PHP, Ruby, Go, C, C++, C#
             and Java, running in your browser. Syntax highlighting, type errors
@@ -130,28 +141,14 @@ export default async function Home() {
         </section>
 
         <section className="home-section">
-          <h2>What you get</h2>
-          <ul className="home-promises">
-            <li>
-              <strong>Problems that read like work.</strong> Issues written the
-              way a teammate would file them, and tests that check behaviour
-              rather than one expected answer.
-            </li>
-            <li>
-              <strong>Your own record.</strong> Every run, push and merged fix
-              stays reviewable. No scores, ranks or badges, and nothing here is
-              a hiring signal.
-            </li>
-          </ul>
-        </section>
-
-        <section className="home-section">
           <h2>Why it records your practice</h2>
           <p>
-            What AI tools do for developers&apos; skills, good or bad, is still
-            an open question. Unaided practice is what we record, to help study
-            it; it is not a verdict on you or on AI, so use whatever tools you
-            like at your day job.
+            This isn&apos;t a case for going back to coding without AI. It is
+            part of how software gets built now, and nothing here asks you to
+            give it up. What it changes about how developers work and understand
+            their code, good or bad, is still an open question. Unaided practice
+            is what we record, to help study it in the open; it is not a verdict
+            on you or on AI.
           </p>
           <ul className="home-promises">
             <li>
@@ -176,17 +173,13 @@ export default async function Home() {
         </section>
 
         <section className="home-section home-invite">
-          <h2>Pick an issue.</h2>
+          <h2>This one&apos;s yours.</h2>
           <p>
-            It&apos;s an early preview, and the issues are still growing toward
-            the messy, multi-file work of a real job.
+            Pick a bug, make it green and merge it. It&apos;s an early preview,
+            and the issues are still growing toward the messy, multi-file work
+            of a real job.
           </p>
-          <div className="home-actions">
-            {start}
-            <Link className="home-note" href="/issues">
-              Browse every issue instead
-            </Link>
-          </div>
+          <div className="home-actions">{start}</div>
         </section>
       </main>
     </div>

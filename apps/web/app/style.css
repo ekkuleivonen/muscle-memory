@@ -1223,6 +1223,10 @@ kbd {
   margin: 0 0 24px;
   max-width: 38em;
 }
+/* What the loop leaves behind, after the steps. */
+.home-schedule + p {
+  margin-top: 20px;
+}
 .home-section .home-fine {
   margin: 20px 0 0;
   font-size: 14px;
