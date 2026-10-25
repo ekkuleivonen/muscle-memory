@@ -311,3 +311,97 @@
   outline: 1px solid var(--t-accent);
   outline-offset: 2px;
 }
+/* A notice in the flow of output, such as a draft warning. */
+.t-note {
+  margin: 0 0 1.6em;
+  padding: 4px 1ch;
+  border-left: 2px solid #f0b03c;
+  color: #f0b03c;
+}
+.t-note strong {
+  color: inherit;
+}
+.t-doc-title {
+  margin: 1.6em 0 0;
+  color: var(--t-accent);
+  font-size: inherit;
+  font-weight: 700;
+}
+/* Markdown as a terminal reader (glow, bat) shows it: marked headings, dash bullets. */
+.t-md {
+  margin-top: 1.6em;
+}
+.t-md p {
+  margin: 0 0 1.6em;
+}
+.t-md h3,
+.t-md h4 {
+  margin: 2.4em 0 0.8em;
+  font-size: inherit;
+  font-weight: 700;
+}
+.t-md h3::before {
+  content: "## ";
+  color: var(--t-accent);
+}
+.t-md h4::before {
+  content: "### ";
+  color: var(--t-accent);
+}
+.t-md > h3:first-child {
+  margin-top: 0;
+}
+.t-md ul,
+.t-md ol {
+  margin: 0 0 1.6em;
+  padding-left: 2ch;
+}
+.t-md ol {
+  padding-left: 3ch;
+}
+.t-md ul {
+  list-style: none;
+}
+.t-md ul > li::before {
+  content: "-";
+  display: inline-block;
+  width: 2ch;
+  margin-left: -2ch;
+  color: var(--t-dim);
+}
+.t-md ol > li::marker {
+  color: var(--t-dim);
+}
+.t-md a {
+  color: var(--t-ok);
+  text-decoration: underline dotted;
+  text-underline-offset: 4px;
+}
+.t-md code {
+  padding: 0 0.5ch;
+  border: 0;
+  border-radius: 0;
+  background: var(--t-current);
+  font: inherit;
+}
+.t-md blockquote {
+  margin: 0 0 1.6em;
+  padding-left: 2ch;
+  border-left: 2px solid var(--t-dim);
+  color: var(--t-dim);
+}
+.t-md table {
+  border-collapse: collapse;
+  margin: 0 0 1.6em;
+}
+.t-md th,
+.t-md td {
+  padding: 2px 2ch 2px 0;
+  border-bottom: 1px solid var(--t-current);
+  text-align: left;
+  vertical-align: top;
+}
+.t-md th {
+  color: var(--t-dim);
+  font-weight: 400;
+}
