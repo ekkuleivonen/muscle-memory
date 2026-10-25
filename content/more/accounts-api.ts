@@ -48,10 +48,9 @@ const lockoutRetryMessage: SeedIssue = {
   key: "PHP-003",
   title: "Lockout message tells people to try again in 0 minutes",
   summary: "The lockout message rounds the time left down, so people retry too early and lock themselves out again.",
-  kind: "bug",
   difficulty: "easy",
   language: "php",
-  skills: ["time", "rounding", "copy"],
+  tags: ["time", "rounding", "copy"],
   task: `During a lockout the login form says when to try again. Today it rounds the time left down, so with 30 seconds left it says **"Too many attempts. Try again in 0 minutes."**, people retry straight away and lock themselves out again.
 
 \`retryMessage($secondsLeft)\` takes the whole seconds left on the lock and returns the message. Lockouts run from one minute up to 24 hours.
@@ -85,24 +84,17 @@ const lockoutRetryMessage: SeedIssue = {
     "Too many attempts. Try again in 10 minutes.",
   ],
   hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
-  hints: [],
-  comments: [],
-  team: [
+  rules: [
     {
-      id: "mateo-round-down",
-      author: "Mateo O",
-      role: "Backend",
-      where: "review",
-      severity: "blocking",
-      text: ["Never round the time left down: no `floor()` or `intdiv()`."],
+      id: "round-down",
+      message: "Never round the time left down: no `floor()` or `intdiv()`.",
       when: { pattern: "\\b(floor|intdiv)\\(", present: true, file: "src/retryMessage.php" },
-      repeat: "while-true",
     },
   ],
   private: {
     reference: { "src/retryMessage.php": RETRY_REFERENCE },
     examples: {
-      "mateo-round-down": {
+      "round-down": {
         fires: [
           { "src/retryMessage.php": RETRY_STARTER },
           {
@@ -171,10 +163,9 @@ const canonicalSignupEmail: SeedIssue = {
   key: "GO-005",
   title: "Sign-up creates a second account for the same email",
   summary: "Look accounts up by a canonical form of the address, so case, spaces and Gmail dots don't make a new account.",
-  kind: "feature",
   difficulty: "medium",
   language: "go",
-  skills: ["strings", "validation", "normalization"],
+  tags: ["strings", "validation", "normalization"],
   task: `Sign-up compares email addresses exactly as typed, so someone who signed up as \`Jane.Doe@Example.com\` and signs up again as \`jane.doe@example.com \` gets a second account. Write the key sign-up looks accounts up by, so one person gets one account however they type their address. (The address itself is still stored exactly as typed; this is only the lookup key.)
 
 \`CanonicalEmail(raw)\` returns the key and \`ok\` true, or \`""\` and \`ok\` false for anything that is not an address we accept:
@@ -229,8 +220,6 @@ const canonicalSignupEmail: SeedIssue = {
     null,
   ],
   hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-  hints: [],
-  comments: [],
   private: {
     reference: { "canonical_email.go": EMAIL_REFERENCE },
   },
@@ -400,10 +389,9 @@ const refreshTokenReuse: SeedIssue = {
   key: "TS-006",
   title: "Old refresh tokens work again since the grace window",
   summary: "A stolen refresh token kept a session alive for three days, and the reuse alert has gone quiet.",
-  kind: "bug",
   difficulty: "hard",
   language: "typescript",
-  skills: ["security", "sessions", "code-review", "reading-code"],
+  tags: ["security", "sessions", "code-review", "reading-code"],
   task: `Last week's change to session refresh (#412) added a grace window so the mobile app stops logging people out when two screens refresh at the same moment. The logouts stopped, but the \`refresh_reuse\` alert, about 40 a day before, has not fired since, and a pentest exchanged a refresh token captured on Oct 20 for a fresh one on Oct 23 while the victim's session stayed alive.
 
 \`refresh(family, presented, now)\` decides one refresh. Find everything #412 broke against the rules below and fix it. Keep the grace window: the mobile fix has to stay. \`refresh\` is pure: the caller stores whatever it decides. Times are Unix milliseconds.
@@ -478,34 +466,22 @@ Only "reuse" revokes the family (\`revokeFamily: true\`).
     reauth("unknown"),
   ],
   hidden: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-  hints: [],
-  comments: [],
-  team: [
+  rules: [
     {
-      id: "mateo-keep-grace",
-      author: "Mateo O",
-      role: "Backend",
-      where: "review",
-      severity: "blocking",
-      text: ["Keep the grace window for a just-rotated token, measured with `REFRESH_GRACE_MS`."],
+      id: "keep-grace",
+      message: "Keep the grace window for a just-rotated token, measured with `REFRESH_GRACE_MS`.",
       when: { pattern: "REFRESH_GRACE_MS", present: false, file: "src/gateway/refresh.ts" },
-      repeat: "while-true",
     },
     {
-      id: "sam-no-console",
-      author: "Sam R",
-      role: "SRE",
-      where: "review",
-      severity: "blocking",
-      text: ["No console logging in the gateway: no `console.log`, `info`, `debug`, `warn` or `error`."],
+      id: "no-console",
+      message: "No console logging in the gateway: no `console.log`, `info`, `debug`, `warn` or `error`.",
       when: { pattern: "console\\.(log|info|debug|warn|error)\\(", present: true, file: "src/gateway/refresh.ts" },
-      repeat: "while-true",
     },
   ],
   private: {
     reference: { "src/gateway/refresh.ts": REFRESH_REFERENCE },
     examples: {
-      "mateo-keep-grace": {
+      "keep-grace": {
         fires: [
           {
             "src/gateway/refresh.ts": REFRESH_REFERENCE.replace(
@@ -519,7 +495,7 @@ Only "reuse" revokes the family (\`revokeFamily: true\`).
         ],
         quiet: [{ "src/gateway/refresh.ts": REFRESH_REFERENCE }, { "src/gateway/refresh.ts": REFRESH_STARTER }],
       },
-      "sam-no-console": {
+      "no-console": {
         fires: [
           {
             "src/gateway/refresh.ts": REFRESH_REFERENCE.replace(

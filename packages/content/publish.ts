@@ -1,19 +1,19 @@
 /**
  * Publish checks on a revision and its private part (docs/issue-model.md). The private part
- * (reference solution, trigger examples) is never published; these checks are why it exists.
+ * (reference solution, rule examples) is never published; these checks are why it exists.
  * Everything here reads code as text and runs nothing: whether the reference passes and the
  * starter fails is checked in the browser sandbox (tools/browser/content-check.ts).
  */
-import { editableFiles, sourceFiles, type Revision } from "./model";
-import { evaluate } from "./triggers";
+import { editableFiles, type Revision } from "./model";
+import { fires } from "./rules";
 
 export interface Private {
-  /** The editable files after a correct fix, by path. */
+  /** The editable file after a correct solution, by path. */
   readonly reference: Readonly<Record<string, string>>;
-  /** Other correct designs and plausible wrong fixes; the browser check runs them. */
+  /** Other correct designs and plausible wrong ones; the browser check runs them. */
   readonly alternatives?: readonly Readonly<Record<string, string>>[];
   readonly wrong?: readonly Readonly<Record<string, string>>[];
-  /** Per teammate comment: edits that must fire it, and edits that must not. */
+  /** Per rule: edits that must fire it, and edits that must not. */
   readonly examples?: Readonly<
     Record<
       string,
@@ -25,9 +25,7 @@ export interface Private {
   >;
 }
 
-const idle = { activeMinutesWithoutProgress: 0, runsWithoutProgress: 0, failingPushes: 0 };
-
-/** The editable files as the starter has them, with `changes` applied. */
+/** The editable file as the starter has it, with `changes` applied. */
 function edited(revision: Revision, changes: Readonly<Record<string, string>>) {
   return {
     ...Object.fromEntries(
@@ -37,19 +35,14 @@ function edited(revision: Revision, changes: Readonly<Record<string, string>>) {
   };
 }
 
-/** What a push of these files would trigger, before any checks have run. */
-function fires(revision: Revision, id: string, changes: Readonly<Record<string, string>>) {
-  const comment = revision.team.find((c) => c.id === id)!;
-  return evaluate(comment.when, {
-    files: edited(revision, changes),
-    behaviour: idle,
-    event: "push",
-  });
+function ruleFires(revision: Revision, id: string, changes: Readonly<Record<string, string>>) {
+  const rule = revision.checks.rules.find((r) => r.id === id)!;
+  return fires(rule.when, edited(revision, changes));
 }
 
 /**
- * Languages whose issues must show their checks are fair: at least one other correct design that
- * passes and plausible wrong fixes that fail (the browser check runs both).
+ * Languages whose challenges must show their checks are fair: at least one other correct design
+ * that passes and plausible wrong solutions that fail (the browser check runs both).
  */
 const AUDITED = new Set(["javascript", "python"]);
 
@@ -57,25 +50,13 @@ const AUDITED = new Set(["javascript", "python"]);
 export function publishProblems(revision: Revision, secret: Private): string[] {
   const problems: string[] = [];
   const editable = editableFiles(revision.workspace);
-  // One editable file: the entry. Support code and the tests stay internal (role read, tests).
-  const { entry } = revision.workspace;
-  for (const path of Object.keys(editable))
-    if (path !== entry) problems.push(`${path} is editable, but only the entry ${entry} may be`);
-  // Everything required is in the description: no hints, no ticket thread, no advice-only
-  // comments. A blocking rule stays, as a requirement its trigger enforces.
-  if (revision.hints.length) problems.push("hints are not published: put what is required in the description");
-  for (const comment of revision.team)
-    if (comment.severity !== "blocking")
-      problems.push(`comment ${comment.id} is not a blocking rule: put what is required in the description`);
   for (const path of Object.keys(secret.reference))
     if (!editable[path]) problems.push(`the reference changes ${path}, which is not editable`);
-  if (
-    Object.entries(secret.reference).every(([path, text]) => editable[path]?.text === text)
-  )
+  if (Object.entries(secret.reference).every(([path, text]) => editable[path]?.text === text))
     problems.push("the reference is the starter unchanged");
   for (const [kind, list] of [
     ["alternative", secret.alternatives ?? []],
-    ["wrong fix", secret.wrong ?? []],
+    ["wrong solution", secret.wrong ?? []],
   ] as const)
     list.forEach((change, i) => {
       for (const path of Object.keys(change))
@@ -83,74 +64,36 @@ export function publishProblems(revision: Revision, secret: Private): string[] {
     });
 
   const examples = secret.examples ?? {};
+  const rules = revision.checks.rules;
   for (const [id, { fires: firing, quiet }] of Object.entries(examples)) {
-    if (!revision.team.some((c) => c.id === id)) {
-      problems.push(`examples for unknown comment ${id}`);
+    if (!rules.some((r) => r.id === id)) {
+      problems.push(`examples for unknown rule ${id}`);
       continue;
     }
     firing.forEach((example, i) => {
-      if (!fires(revision, id, example)) problems.push(`${id}: example ${i + 1} should fire it`);
+      if (!ruleFires(revision, id, example)) problems.push(`${id}: example ${i + 1} should fire it`);
     });
     quiet.forEach((example, i) => {
-      if (fires(revision, id, example))
-        problems.push(`${id}: quiet example ${i + 1} fires it`);
+      if (ruleFires(revision, id, example)) problems.push(`${id}: quiet example ${i + 1} fires it`);
     });
   }
-  for (const comment of revision.team)
-    if (comment.severity === "blocking") {
-      const own = examples[comment.id];
-      if (!own?.fires.length || !own.quiet.length)
-        problems.push(`blocking comment ${comment.id} needs examples that fire it and that do not`);
-      // A correct fix must be mergeable without arguing, whichever correct design it is.
-      if (fires(revision, comment.id, secret.reference))
-        problems.push(`blocking comment ${comment.id} fires on the reference solution`);
-      (secret.alternatives ?? []).forEach((change, i) => {
-        if (fires(revision, comment.id, change))
-          problems.push(`blocking comment ${comment.id} fires on alternative ${i + 1}`);
-      });
-    }
+  for (const rule of rules) {
+    const own = examples[rule.id];
+    if (!own?.fires.length || !own.quiet.length)
+      problems.push(`rule ${rule.id} needs examples that fire it and that do not`);
+    // A correct solution must complete, whichever correct design it is.
+    if (ruleFires(revision, rule.id, secret.reference))
+      problems.push(`rule ${rule.id} fires on the reference solution`);
+    (secret.alternatives ?? []).forEach((change, i) => {
+      if (ruleFires(revision, rule.id, change))
+        problems.push(`rule ${rule.id} fires on alternative ${i + 1}`);
+    });
+  }
   if (AUDITED.has(revision.workspace.language)) {
     if (!secret.alternatives?.length)
       problems.push("no alternative: name another correct design the checks accept");
     if ((secret.wrong?.length ?? 0) < 2)
-      problems.push("fewer than two wrong fixes: name plausible mistakes the checks must catch");
+      problems.push("fewer than two wrong solutions: name plausible mistakes the checks must catch");
   }
-
-  // A hint is an idea, never the fix: no line the reference adds may appear in one.
-  const starter = new Set(
-    Object.values(sourceFiles(revision.workspace)).flatMap((f) =>
-      f.text.split("\n").map((l) => l.trim()),
-    ),
-  );
-  const added = Object.values(secret.reference)
-    .flatMap((text) => text.split("\n").map((l) => l.trim()))
-    .filter((line) => line.length >= 12 && !starter.has(line));
-  for (const hint of revision.hints)
-    for (const line of added)
-      if (hint.text.includes(line))
-        problems.push(`hint ${hint.id} gives away the reference: ${line}`);
-  return problems;
-}
-
-/**
- * Problems with replacing an issue's live revision: saved code is restored by path, so an
- * editable file that is renamed, removed or made read-only would silently drop someone's work
- * in progress, and a renamed entry point would leave it untested. Editable files may only be
- * added, with one exception: collapsing to the single editable entry (ENG-329). Then the entry
- * keeps its path and function, so its saved code still restores. Edits to the files that stopped
- * being editable are not restored, and the practice area names them when it opens. The earlier
- * revision stays published and openable as it was.
- */
-export function continuityProblems(previous: Revision, next: Revision): string[] {
-  const kept = editableFiles(next.workspace);
-  const { entry } = next.workspace;
-  const single =
-    Object.keys(kept).length === 1 && !!kept[entry] && previous.workspace.entry === entry;
-  const problems = Object.keys(editableFiles(previous.workspace))
-    .filter((path) => !kept[path] && !(single && path !== entry))
-    .map((path) => `${path} was editable in the live revision and no longer is`);
-  // Restored code still defines the old function: the tests must keep calling it.
-  if (previous.workspace.entrypoint !== next.workspace.entrypoint)
-    problems.push(`the entry point changed from ${previous.workspace.entrypoint}`);
   return problems;
 }

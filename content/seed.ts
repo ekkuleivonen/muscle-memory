@@ -1,34 +1,20 @@
 /**
- * Seed content: the projects and issues the app starts with, written the way the admin system
- * will store them later. Five projects, one per engineering area plus a warm-up, with the kind
- * of issues people meet in a normal job. tools/build-content.ts turns this into the catalog
- * (content/catalog.json): it generates each issue's repo and hashes each revision.
+ * Seed content: the challenges the app starts with, written the way an admin system will store
+ * them later. tools/build-content.ts turns this into the catalog (content/catalog.json): it lays
+ * out each challenge's files and hashes each revision.
  *
- * An issue's `private` part (reference solution, trigger examples) is for publish checks only:
+ * A challenge's `private` part (reference solution, rule examples) is for publish checks only:
  * it is never written to the catalog, and nothing the app ships imports this file.
  */
-import type { Trigger } from "../packages/content/model";
+import type { RuleTrigger } from "../packages/content/model";
 
-/** A note in the ticket's own thread, there when the issue is opened. */
-export type Comment = { author: string; role: string; body: string };
-
-/** A teammate's later comment, on the ticket or in a pull request review, with its trigger. */
-export interface SeedTeamComment {
+/** A rule a submission must also pass: while `when` holds on the code, it is not complete. */
+export interface SeedRule {
   id: string;
-  author: string;
-  role: string;
-  where: "issue" | "review";
-  severity: "blocking" | "nit" | "info";
-  /** A few wordings of the same comment; each person sees one. */
-  text: string[];
-  when: Trigger;
-  repeat?: "once" | "while-true";
-  /** Only the person's Resolve clears it (see TeamComment.resolve). */
-  resolve?: "explicit";
+  /** What to change, shown in the feedback while the rule fires. */
+  message: string;
+  when: RuleTrigger;
 }
-
-/** A hint: an idea, never solution code. A plain string waits for active minutes. */
-export type SeedHint = string | { text: string; when: Trigger };
 
 export interface SeedIssue {
   id: string;
@@ -48,13 +34,8 @@ export interface SeedIssue {
   expected: unknown[];
   /** What each case is about, by index: the repo's tests use them as test names. */
   names?: string[];
-  /** Released one at a time, in order, by the lead of the ticket's thread. */
-  hints: SeedHint[];
-  comments: Comment[];
-  /** Later comments released by triggers: on the ticket, or reviewing a pull request. */
-  team?: SeedTeamComment[];
-  /** CI failures as findings only Resolve clears (see Revision.ciFindings). */
-  ciFindings?: "explicit";
+  /** Checks on the code itself, beyond the cases: no float money, keep the memo, … */
+  rules?: SeedRule[];
   entrypoint: string;
   starter: string;
   /** Named when each input lists several arguments; otherwise it is the only one. */
@@ -66,18 +47,18 @@ export interface SeedIssue {
   /** JavaScript, TypeScript and Python: where the entry file lives, when not the default. */
   entry?: string;
   /**
-   * More of the repo: more files to change (edit), source the code uses but may not change
-   * (read), and documents (docs). Only multi-file runners (engines.ts) load other source files.
+   * Source the code uses but may not change (read), by path. Only multi-file runners
+   * (engines.ts) load other source files.
    */
   files?: SeedFile[];
-  /** Cases left out of the repo's test file, by index: only CI runs them. */
+  /** Cases kept hidden, by index: only Submit runs them, and their values are never shown. */
   hidden?: number[];
   private?: SeedPrivate;
 }
 
 export interface SeedFile {
   path: string;
-  role: "edit" | "read" | "docs";
+  role: "read";
   language: string;
   text: string;
 }
@@ -86,10 +67,7 @@ export interface SeedFile {
 export interface SeedPrivate {
   /** The editable files after a correct fix, by path: it must pass every case. */
   reference: Record<string, string>;
-  /**
-   * Per teammate comment: changes to the editable files that must fire it, and changes that
-   * must not. Every blocking review comment needs both.
-   */
+  /** Per rule: changes to the editable file that must fire it, and changes that must not. */
   examples?: Record<string, { fires: Record<string, string>[]; quiet: Record<string, string>[] }>;
   /** Other correct designs, as changes to the editable files: each must pass every case. */
   alternatives?: Record<string, string>[];
@@ -97,34 +75,17 @@ export interface SeedPrivate {
   wrong?: Record<string, string>[];
 }
 
-export interface SeedProject {
-  id: string;
-  key: string;
-  title: string;
-  summary: string;
-  story: string;
-  /** Issue ids in board order; an issue's number is its position here, from 1. */
-  issues: string[];
-  /** False keeps the project out of lists and suggestions (see Project.listed). */
-  listed?: boolean;
-}
-
 const challenge = (
   id: string,
-  fields: Omit<SeedIssue, "id" | "hints" | "comments" | "entrypoint" | "starter"> & {
-    hints?: SeedHint[];
-    comments?: Comment[];
-  },
+  fields: Omit<SeedIssue, "id" | "entrypoint" | "starter">,
 ): SeedIssue => ({
   id,
-  hints: [],
-  comments: [],
   ...fields,
   ...STARTERS[id],
 });
 
 /**
- * The file each issue opens in the IDE: an entry point and starter code in the issue's own
+ * The file each challenge opens in practice: an entry point and starter code in its own
  * language, written like the file you would find at work. Whether it runs in the browser is
  * up to the app's runners, not the content.
  */
@@ -518,10 +479,9 @@ const BASE_ISSUES: SeedIssue[] = [
     key: "PY-001",
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
-    kind: "bug",
     difficulty: "easy",
     language: "python",
-    skills: ["strings", "edge-cases"],
+    tags: ["strings", "edge-cases"],
     task: `\`count_words(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
 
 - A word is a run of characters that are not whitespace. Words are separated by any run of whitespace: spaces, tabs, newlines and carriage returns, in any mix and number.
@@ -586,10 +546,9 @@ def count_words(text):
     key: "JS-002",
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
-    kind: "bug",
     difficulty: "easy",
     language: "javascript",
-    skills: ["strings", "edge-cases"],
+    tags: ["strings", "edge-cases"],
     task: `\`countWords(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
 
 - A word is a run of characters that are not whitespace. Words are separated by any run of whitespace: spaces, tabs, newlines and carriage returns, in any mix and number.
@@ -657,10 +616,9 @@ export function countWords(text) {
     key: "TS-001",
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
-    kind: "bug",
     difficulty: "easy",
     language: "typescript",
-    skills: ["strings", "edge-cases"],
+    tags: ["strings", "edge-cases"],
     task: `\`countWords(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
 
 - A word is a run of characters that are not whitespace. Words are separated by any run of whitespace: spaces, tabs, newlines and carriage returns, in any mix and number.
@@ -701,10 +659,9 @@ export function countWords(text: string): number {
     key: "GO-001",
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
-    kind: "bug",
     difficulty: "easy",
     language: "go",
-    skills: ["strings", "edge-cases"],
+    tags: ["strings", "edge-cases"],
     task: `\`CountWords(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
 
 - A word is a run of characters that are not whitespace. Words are separated by any run of whitespace: spaces, tabs, newlines and carriage returns, in any mix and number.
@@ -758,10 +715,9 @@ final class Adapter {
 `,
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
-    kind: "bug",
     difficulty: "easy",
     language: "java",
-    skills: ["strings", "edge-cases"],
+    tags: ["strings", "edge-cases"],
     task: `\`WordCount.count(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
 
 - A word is a run of characters that are not whitespace. Words are separated by any run of whitespace: spaces, tabs, newlines and carriage returns, in any mix and number.
@@ -810,10 +766,9 @@ public final class WordCount {
     key: "CS-001",
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
-    kind: "bug",
     difficulty: "easy",
     language: "csharp",
-    skills: ["strings", "edge-cases"],
+    tags: ["strings", "edge-cases"],
     task: `\`WordCount.Count(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
 
 - A word is a run of characters that are not whitespace. Words are separated by any run of whitespace: spaces, tabs, newlines and carriage returns, in any mix and number.
@@ -861,10 +816,9 @@ public static class WordCount
     key: "RB-001",
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
-    kind: "bug",
     difficulty: "easy",
     language: "ruby",
-    skills: ["strings", "edge-cases"],
+    tags: ["strings", "edge-cases"],
     task: `\`count_words(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
 
 - A word is a run of characters that are not whitespace. Words are separated by any run of whitespace: spaces, tabs, newlines and carriage returns, in any mix and number.
@@ -905,10 +859,9 @@ end
     key: "PHP-001",
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
-    kind: "bug",
     difficulty: "easy",
     language: "php",
-    skills: ["strings", "edge-cases"],
+    tags: ["strings", "edge-cases"],
     task: `\`countWords($text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
 
 - A word is a run of characters that are not whitespace. Words are separated by any run of whitespace: spaces, tabs, newlines and carriage returns, in any mix and number.
@@ -955,10 +908,9 @@ function countWords(string $text): int
     key: "PY-002",
     title: "Nightly vial tally is empty",
     summary: "The vial scanner's labels need counting for the nightly sheet; the counter returns nothing.",
-    kind: "feature",
     difficulty: "easy",
     language: "python",
-    skills: ["iteration", "maps", "edge-cases"],
+    tags: ["iteration", "maps", "edge-cases"],
     task: `Each night the vial scanner reads the label on every vial that came back from the field, and the nightly sheet lists how many vials carry each label. The counting step was never finished, so the sheet comes out empty:
 
 \`\`\`text
@@ -1005,16 +957,11 @@ nightly sheet 2026-06-04: 212 vials scanned, 0 labels counted
       { "é": 2, e: 1 },
     ],
     hidden: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
-    team: [
+    rules: [
       {
-        id: "priya-debug-print",
-        author: "Priya K",
-        role: "Data",
-        where: "review",
-        severity: "blocking",
-        text: ["Don't print anything: the scanner job ships everything on stdout to the warehouse logs."],
+        id: "debug-print",
+        message: "Don't print anything: the scanner job ships everything on stdout to the warehouse logs.",
         when: { pattern: "^\\s*print\\(", present: true },
-        repeat: "while-true",
       },
     ],
     private: {
@@ -1065,7 +1012,7 @@ def frequency_map(items):
 ` },
       ],
       examples: {
-        "priya-debug-print": {
+        "debug-print": {
           fires: [{ "frequency_map.py": `def frequency_map(items):
     counts = {}
     for item in items:
@@ -1088,10 +1035,9 @@ def frequency_map(items):
     key: "JS-003",
     title: "Cart shows prices as raw cents",
     summary: "Format amounts as dollars with separators, including refunds.",
-    kind: "bug",
     difficulty: "easy",
     language: "javascript",
-    skills: ["formatting", "strings", "numbers"],
+    tags: ["formatting", "strings", "numbers"],
     task: `Since the cart moved to integer cents, the cart drawer shows amounts the way the API stores them. From a support ticket:
 
 > My cart says the sofa costs **129900**. Is that dollars?? And my refund line says **-500**.
@@ -1182,10 +1128,9 @@ export function formatPrice(cents) {
     parameters: ["totalCents", "code", "codes"],
     title: "Discount codes fail when typed in lowercase",
     summary: "Match promo codes case-insensitively and ignore stray spaces.",
-    kind: "bug",
     difficulty: "easy",
     language: "typescript",
-    skills: ["strings", "validation"],
+    tags: ["strings", "validation"],
     task: `Customers type promo codes the way they read them in the email, and checkout rejects codes typed in lowercase or with stray spaces.
 
 \`applyDiscount(totalCents, code, codes)\` returns an order's total after its promo code's discount.
@@ -1239,10 +1184,9 @@ export function applyDiscount(totalCents: number, code: string, codes: Codes): n
     parameters: ["selector", "read"],
     title: "Product filter checkboxes have no labels",
     summary: "Tie every filter checkbox to a label so it is accessible.",
-    kind: "refactor",
     difficulty: "easy",
     language: "html",
-    skills: ["accessibility", "forms", "semantics"],
+    tags: ["accessibility", "forms", "semantics"],
     task: `The category page's filter form has two checkboxes, \`in-stock\` and \`on-sale\`, with bare text next to them. The accessibility audit flagged them: screen readers announce "checkbox" and nothing else, and clicking the text does not toggle the box.
 
 Tie each checkbox to a label:
@@ -1309,10 +1253,9 @@ Each check runs a CSS selector against the page and reads something from the mat
     title: "Search box sends a request on every keystroke",
     summary:
       "Debounce search-as-you-type so the API sees one request per pause.",
-    kind: "performance",
     difficulty: "medium",
     language: "typescript",
-    skills: ["timing", "events"],
+    tags: ["timing", "events"],
     task: `The search box sends a request on every keystroke, about eight per query. It should send one request per pause in typing.
 
 \`debounceTimes(keystrokes, waitMs)\` gets the keystroke times in milliseconds, in order (several can share a time), and the wait in milliseconds (0 or more). Return the times at which a search request fires, in order.
@@ -1377,10 +1320,9 @@ export function debounceTimes(keystrokes: number[], waitMs: number): number[] {
     key: "JS-005",
     title: "Refunds give back less than the customer paid",
     summary: "Refunds on orders with a promo code give back less than the customer paid.",
-    kind: "bug",
     difficulty: "medium",
     language: "javascript",
-    skills: ["debugging", "money", "reading-code"],
+    tags: ["debugging", "money", "reading-code"],
     task: `Support escalated this from the help desk:
 
 > A customer returned one of two jackets from an order that used **SPRING10** (10% off). The receipt says they paid **$45.00** for that jacket, but the refund came through as **$40.50**.
@@ -1503,23 +1445,16 @@ export function allocate(code, lines) {
     ],
     expected: [-5000, -4500, -4000, -2400, 0, 0, -4500, -2400, -283, -966, 0, -9109, -4800, -9000, -2002, -4186, -939],
     hidden: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    team: [
+    rules: [
       {
-        id: "ada-order-total",
-        author: "Ada N",
-        role: "Frontend",
-        where: "review",
-        severity: "blocking",
-        text: [
-          "Leave `orderTotal` as it is: checkout uses it, and it must keep taking the code's discount off the order's subtotal. Keep the change to refunds.",
-        ],
+        id: "order-total",
+        message: "Leave `orderTotal` as it is: checkout uses it, and it must keep taking the code's discount off the order's subtotal. Keep the change to refunds.",
         // Checkout's total still takes the code's discount off its subtotal, however it is written.
         when: {
           pattern: "discountFor\\(\\s*order\\.code",
           present: false,
           file: "src/cart/totals.js",
         },
-        repeat: "while-true",
       },
     ],
     private: {
@@ -1656,7 +1591,7 @@ export function refundTotal(refund) {
 ` },
       ],
       examples: {
-        "ada-order-total": {
+        "order-total": {
           fires: [{ "src/cart/totals.js": `import { discountFor } from "./discounts.js";
 import { lineTotal, sum } from "./money.js";
 
@@ -1702,10 +1637,9 @@ export function refundTotal(refund) {
     key: "GO-002",
     title: "List endpoints accept any page size",
     summary: "Parse page and per_page with defaults and a hard cap.",
-    kind: "bug",
     difficulty: "easy",
     language: "go",
-    skills: ["parsing", "validation", "http"],
+    tags: ["parsing", "validation", "http"],
     task: `The list endpoints accept any page size, and the mobile app sends \`per_page=500\` to fetch everything in one go. Cap it, don't reject it.
 
 \`ParsePage(query)\` reads \`page\` and \`per_page\` from a URL query string without the leading \`?\`, such as \`page=2&per_page=50\`, and returns them as a \`Page\`.
@@ -1798,10 +1732,9 @@ func positiveOr(text string, fallback int) int {
     parameters: ["issuedAt", "now", "ttlMinutes"],
     title: "Password reset links expire after a minute",
     summary: "The TTL is in minutes but the check compares seconds.",
-    kind: "bug",
     difficulty: "easy",
     language: "php",
-    skills: ["time", "units"],
+    tags: ["time", "units"],
     task: `Customers say password reset emails never work. They do, if you click within a minute: links expire far too early.
 
 \`isExpired($issuedAt, $now, $ttlMinutes)\` returns whether a password reset link has expired. \`$issuedAt\` and \`$now\` are Unix timestamps in seconds, and \`$ttlMinutes\` is how long the link lasts, in minutes (0 or more).
@@ -1853,10 +1786,9 @@ function isExpired(int $issuedAt, int $now, int $ttlMinutes): bool
     parameters: ["times", "limit", "windowMs"],
     title: "Rate-limit login attempts",
     summary: "Allow at most n attempts in any sliding window.",
-    kind: "feature",
     difficulty: "medium",
     language: "typescript",
-    skills: ["sliding-window", "queues"],
+    tags: ["sliding-window", "queues"],
     task: `A credential-stuffing bot hit the login endpoint again last night. Limit login attempts with a sliding window.
 
 \`allow(times, limit, windowMs)\` gets the times of login attempts in milliseconds, in order (several can share a time), and returns, for each attempt, whether it is allowed.
@@ -1926,10 +1858,9 @@ export function allow(times: number[], limit: number, windowMs: number): boolean
     key: "RB-002",
     title: "Workspace URLs break on names with accents",
     summary: "Make URL slugs from workspace names, accents and all.",
-    kind: "bug",
     difficulty: "easy",
     language: "ruby",
-    skills: ["strings", "unicode", "urls"],
+    tags: ["strings", "unicode", "urls"],
     task: `Workspace URLs are \`/w/<slug>\`. For names with accents, the link we email is percent-encoded and 404s.
 
 \`slugify(name)\` turns a workspace name into its slug:
@@ -2013,10 +1944,9 @@ final class Adapter {
 `,
     title: "Password policy still allows 8-character passwords",
     summary: "Enforce the new password rules and report every one that is broken.",
-    kind: "bug",
     difficulty: "easy",
     language: "java",
-    skills: ["validation", "strings", "security"],
+    tags: ["validation", "strings", "security"],
     task: `Security raised the minimum password length to 12, and the sign-up form says 12, but the API still checks 8 and reports no other rule.
 
 \`PasswordPolicy.violations(password)\` returns every rule the password breaks, in this order:
@@ -2111,10 +2041,9 @@ public final class PasswordPolicy {
     key: "GO-003",
     title: "Access log parser drops fields on 5xx lines",
     summary: "Turn an access log line into a structured record.",
-    kind: "bug",
     difficulty: "easy",
     language: "go",
-    skills: ["parsing", "strings"],
+    tags: ["parsing", "strings"],
     task: `Alerting is blind to the 502s: the access log parser comes back with empty fields.
 
 \`ParseLine(line)\` parses one access log line, such as \`GET /cart 200 12ms\`, into an \`Entry\`. A line has four fields separated by single spaces:
@@ -2195,10 +2124,9 @@ func ParseLine(line string) Entry {
     key: "PY-004",
     title: "CSV import splits company names on commas",
     summary: "Respect quoted fields when parsing partner exports.",
-    kind: "bug",
     difficulty: "easy",
     language: "python",
-    skills: ["parsing", "strings", "csv"],
+    tags: ["parsing", "strings", "csv"],
     task: `Since Northwind started quoting company names, their nightly customer import loads rows into the wrong columns. From last night's load:
 
 \`\`\`text
@@ -2360,10 +2288,9 @@ def parse_csv_line(line):
     key: "PY-007",
     title: "Deduplicate customer records by email",
     summary: "Keep the first record per email before the newsletter sync.",
-    kind: "feature",
     difficulty: "medium",
     language: "python",
-    skills: ["maps", "data-cleaning"],
+    tags: ["maps", "data-cleaning"],
     task: `Some subscribers got last week's newsletter three times. The sync sends one email per customer record, and the CRM export has several records for the same person:
 
 \`\`\`text
@@ -2484,10 +2411,9 @@ id  email
     parameters: ["balance", "daysLate"],
     title: "Late fees are a cent off on some invoices",
     summary: "Round late fees the way finance does: halves away from zero.",
-    kind: "bug",
     difficulty: "easy",
     language: "csharp",
-    skills: ["rounding", "decimals", "finance"],
+    tags: ["rounding", "decimals", "finance"],
     task: `Customers keep emailing about a one-cent difference between the invoice and the reminder: the late fee doesn't round the way finance's spreadsheet does.
 
 \`LateFee(balance, daysLate)\` returns the late fee on an overdue invoice. \`balance\` is the amount owed in dollars (0 or more, to the cent), and the fee is in dollars too.
@@ -2543,10 +2469,9 @@ public static class LateFees
     schema: "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  customer text NOT NULL,\n  total integer NOT NULL\n);",
     title: "Revenue by customer for the monthly report",
     summary: "Total each customer's orders, biggest first.",
-    kind: "feature",
     difficulty: "easy",
     language: "sql",
-    skills: ["aggregation", "sorting"],
+    tags: ["aggregation", "sorting"],
     task: `The monthly report needs revenue by customer. Write the query.
 
 The database (PostgreSQL) has one table, \`orders\`, with one row per order:
@@ -2615,10 +2540,9 @@ ORDER BY revenue DESC;
     schema: "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  customer text NOT NULL\n);\n\nCREATE TABLE payments (\n  order_id integer NOT NULL REFERENCES orders (id),\n  amount integer NOT NULL\n);",
     title: "Find orders with no matching payment",
     summary: "Reconcile orders against payments before month-end close.",
-    kind: "feature",
     difficulty: "medium",
     language: "sql",
-    skills: ["joins", "reconciliation"],
+    tags: ["joins", "reconciliation"],
     task: `Before the month-end close, finance needs the orders nobody has paid for. Write the query.
 
 The database (PostgreSQL) has two tables:
@@ -2713,10 +2637,9 @@ mm_value *mm_call(const mm_value *args) {
     parameters: ["capacity", "values"],
     title: "Keep the last N request latencies in memory",
     summary: "A fixed-size buffer that overwrites its oldest entry.",
-    kind: "feature",
     difficulty: "medium",
     language: "c",
-    skills: ["arrays", "modular-arithmetic"],
+    tags: ["arrays", "modular-arithmetic"],
     task: `The edge proxy keeps the most recent request latencies in memory, in a fixed-size ring buffer that overwrites its oldest entry when it is full.
 
 \`ring_buffer(capacity, values, count, out)\` pushes the \`count\` integers in \`values\`, in order, into an empty buffer that holds \`capacity\` entries. A push into a full buffer overwrites the oldest entry. Then it writes what the buffer holds into \`out\`, oldest first, and returns how many entries it wrote.
@@ -2808,10 +2731,9 @@ size_t ring_buffer(size_t capacity, const int *values, size_t count, int *out)
     parameters: ["samples", "p"],
     title: "Compute nearest-rank percentiles for the latency panel",
     summary: "Compute nearest-rank percentiles for the metrics endpoint.",
-    kind: "feature",
     difficulty: "medium",
     language: "go",
-    skills: ["sorting", "statistics"],
+    tags: ["sorting", "statistics"],
     task: `The latency panel shows percentiles of request latencies, such as the p99.
 
 \`Percentile(samples, p)\` returns the nearest-rank percentile of the latency samples. \`samples\` are in any order and can repeat; \`p\` is greater than 0 and at most 100.
@@ -2903,10 +2825,9 @@ mm_value *mm_call(const mm_value *args) {
     parameters: ["capacity", "ops"],
     title: "Cache evicts entries that were just used",
     summary: "Reads must refresh recency in the LRU cache.",
-    kind: "bug",
     difficulty: "hard",
     language: "cpp",
-    skills: ["caching", "linked-lists", "maps"],
+    tags: ["caching", "linked-lists", "maps"],
     task: `The cache's hit rate dropped to 12% after the last deploy: entries that were just read get evicted.
 
 \`simulate(capacity, ops)\` runs \`ops\` in order against an empty least-recently-used (LRU) cache that holds at most \`capacity\` entries (at least 1), and returns the result of each get, in order.
@@ -3022,10 +2943,9 @@ std::vector<int> simulate(int capacity, const std::vector<Op>& ops) {
     key: "GO-004",
     title: "Timeouts in config must be written in seconds",
     summary: "Accept durations like 1h30m in config files.",
-    kind: "feature",
     difficulty: "easy",
     language: "go",
-    skills: ["parsing", "config"],
+    tags: ["parsing", "config"],
     task: `Timeouts in config must be written in seconds, and somebody set \`idle_timeout = 3600\` meaning minutes. Let people write \`1h\`.
 
 \`ParseDuration(text)\` turns a duration such as \`"1h30m"\`, \`"45s"\` or \`"2h"\` into seconds, or returns an error when the text isn't a valid duration (the checks show an error as \`null\`).
@@ -3109,163 +3029,5 @@ func ParseDuration(text string) (int, error) {
   }),
 ];
 
-const BASE_PROJECTS: SeedProject[] = [
-  {
-    // The id and key stay from when this was the incident: recorded work names JS-001.
-    id: "incident-response",
-    key: "INC",
-    title: "Checkout",
-    summary: "Kettlebrook's checkout API: quotes, shipping and what the payment page charges.",
-    story: `Kettlebrook sells mugs, linen and candles. \`checkout-api\` prices every basket: \`POST /quote\` turns a basket into a subtotal, shipping and a total, and the payment page charges exactly that.
-
-- \`src/checkout/quote.js\`: the quote.
-- \`src/checkout/shipping.js\`: shipping and its thresholds.
-- \`src/checkout/money.js\`: money helpers.
-- \`logs/checkout-api.log\`: recent production logs.
-
-Stack: JavaScript.`,
-    issues: [],
-  },
-  {
-    id: "quick-fixes",
-    key: "QUICK",
-    listed: false,
-    title: "Quick fixes",
-    summary: "Five-minute bugs: the same small bug in each language, for the five-minute test.",
-    story: `Small bugs the writing app's team never got round to. Each takes about five minutes, which makes it the five-minute test at /play: pick a language, fix it, merge it.`,
-    issues: ["word-count-python", "word-count-javascript", "word-count-typescript", "word-count-go", "word-count-java", "word-count-csharp", "word-count-ruby", "word-count-php"],
-  },
-  {
-    id: "field-notes",
-    key: "FN",
-    title: "Field notes",
-    summary: "Warm-up: help a field researcher make sense of a messy notebook.",
-    story: `A field researcher keeps specimen labels in a notebook and needs exact tallies. A good first ticket: small, in Python, with one surprise in the data.`,
-    issues: ["frequency-map"],
-  },
-  {
-    id: "storefront",
-    key: "SHOP",
-    title: "Shop",
-    summary: "Frontend: the customer-facing shop, cart and checkout.",
-    story: `The online shop customers actually see: product listings, filters, the cart and a three-step checkout. Pages are server-rendered, with a thin layer of TypeScript for the interactive parts.
-
-Conversion dipped after the last redesign. Support is fielding tickets about prices, promo codes and a search box that feels sluggish, and an accessibility audit came back with a long list.
-
-## What you'll work on
-
-- Formatting money and other values the way customers expect to read them
-- Form behaviour, validation and accessible markup
-- Small performance fixes in the browser, like debouncing input
-
-## Good fit if you
-
-- Build user interfaces, or want to get sharper at the details that make one feel solid
-- Are comfortable with **JavaScript**, **TypeScript** or plain **HTML**
-- Care what a bug looks like from the customer's side of the screen
-
-Stack: TypeScript, JavaScript, HTML.`,
-    issues: [
-      "format-price",
-      "discount-codes",
-      "filter-form-labels",
-      "debounce-search",
-      "refund-totals",
-    ],
-  },
-  {
-    id: "accounts-api",
-    key: "API",
-    title: "Accounts API",
-    summary: "Backend: sign-up, login and account endpoints behind every app.",
-    story: `The service every client talks to for sign-up, login, sessions and password resets. Most of it is Go, a few older endpoints are still PHP, the admin back office is a small Ruby app, the password service is Java, and the login gateway in front is TypeScript.
-
-It mostly works, and the on-call channel has opinions about the rest: list endpoints that accept any page size, reset links that expire too soon, and logs that are hard to search during an incident.
-
-## What you'll work on
-
-- Parsing and validating request parameters with sensible defaults
-- Time and expiry logic, where off-by-one and unit mix-ups hide
-- Rate limiting and log handling for the people on call
-
-## Good fit if you
-
-- Write backend services, or want practice with the bugs they actually get
-- Like **input validation**, edge cases and reading a stack trace at 2am
-- Know **Go**, **PHP**, **Ruby**, **Java** or **TypeScript**, or want to try one of them on familiar problems
-
-Stack: Go, PHP, Ruby, Java, TypeScript.`,
-    issues: [
-      "pagination-params",
-      "reset-link-expiry",
-      "rate-limiter",
-      "parse-log-line",
-      "workspace-slugs",
-      "password-policy",
-    ],
-  },
-  {
-    id: "data-platform",
-    key: "DATA",
-    title: "Data platform",
-    summary:
-      "Data: nightly partner imports, cleaning and the reports finance relies on.",
-    story: `Partners drop CSV exports in a bucket every night. A pipeline cleans them, loads the warehouse and feeds the reports finance reads on Monday morning.
-
-The exports are messier than anyone admits: quoted commas in company names, duplicate customers with slightly different emails, and orders that never got paid. When the numbers look wrong, this is where people come asking.
-
-## What you'll work on
-
-- Parsing awkward input files without losing data
-- Cleaning and deduplicating records before they reach the warehouse
-- SQL for the reports and reconciliations people rely on
-
-## Good fit if you
-
-- Work with data, or are the person on your team who ends up writing the SQL
-- Enjoy turning messy input into something you can trust
-- Know **Python**, **SQL** or **C#**, or want more practice with them
-
-Stack: Python, SQL, and C# for the billing jobs.`,
-    issues: [
-      "csv-quoted-fields",
-      "dedupe-customers",
-      "top-customers",
-      "unpaid-orders",
-      "late-fee-rounding",
-    ],
-  },
-  {
-    id: "edge-proxy",
-    key: "EDGE",
-    title: "Edge proxy",
-    summary: "Systems: the low-latency proxy in front of everything.",
-    story: `A small proxy in front of everything: it terminates connections, caches hot responses and exports latency metrics. The hot path is C and C++; the control plane and metrics are Go.
-
-Every allocation shows up on a flame graph here. The backlog is about doing more with fixed memory, measuring the right thing, and keeping configuration readable for whoever is paged.
-
-## What you'll work on
-
-- Fixed-size data structures such as ring buffers and LRU caches
-- Latency percentiles and the metrics behind dashboards
-- Small, strict configuration formats
-
-## Good fit if you
-
-- Do systems or performance work, or want to get closer to the metal
-- Think about memory, ordering and what happens under load
-- Know **C**, **C++** or **Go**, or are learning one of them
-
-Stack: C, C++, Go.`,
-    issues: ["ring-buffer", "p99-latency", "lru-cache", "parse-duration"],
-  },
-];
-
-/** Every issue: the ones above, then each project's later issues (content/more). */
-export const SEED_ISSUES: SeedIssue[] = [...BASE_ISSUES, ...Object.values(MORE).flat()];
-
-/** Later issues go after a project's first ones, so existing keys never change. */
-export const SEED_PROJECTS: SeedProject[] = BASE_PROJECTS.map((project) => ({
-  ...project,
-  issues: [...project.issues, ...(MORE[project.id] ?? []).map((issue) => issue.id)],
-}));
+/** Every challenge: the ones above, then the later ones (content/more). */
+export const SEED_ISSUES: SeedIssue[] = [...BASE_ISSUES, ...MORE];

@@ -160,10 +160,9 @@ const speciesTally: SeedIssue = {
   key: "PY-003",
   title: "Herbarium import creates duplicate species from the tally sheet",
   summary: "Monday's import added 14 \"new\" species the herbarium already had.",
-  kind: "refactor",
   difficulty: "easy",
   language: "python",
-  skills: ["refactoring", "reading-code", "strings"],
+  tags: ["refactoring", "reading-code", "strings"],
   task: `Monday's import into the herbarium database created 14 "new" species that it already had. From the import log:
 
 \`\`\`text
@@ -232,18 +231,11 @@ Requirement: the names must come from \`canonical_name\` itself, not from a nami
     {"Leistus o'brieni":2},
   ],
   hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-  comments: [],
-  hints: [],
-  team: [
+  rules: [
     {
-      id: "priya-shared-helper",
-      author: "Priya K",
-      role: "Data",
-      where: "review",
-      severity: "blocking",
-      text: ["Species names must come from `canonical_name` in `notebook.names`, not from a naming rule of your own."],
+      id: "shared-helper",
+      message: "Species names must come from `canonical_name` in `notebook.names`, not from a naming rule of your own.",
       when: { pattern: "canonical_name", present: false, file: "notebook/tally.py" },
-      repeat: "while-true",
     },
   ],
   private: {
@@ -281,7 +273,7 @@ def species_tally(lines):
       },
     ],
     examples: {
-      "priya-shared-helper": {
+      "shared-helper": {
         fires: [{ "notebook/tally.py": TALLY_OWN_COPY }],
         quiet: [{ "notebook/tally.py": TALLY_REFERENCE }, { "notebook/tally.py": TALLY_KEEPS_CLEAN }],
       },
@@ -381,10 +373,9 @@ const lengthReport: SeedIssue = {
   key: "PY-005",
   title: "Length report crashes on the Oregon volunteers' sheets",
   summary: "Read lengths in inches and without a space, and leave unmeasured lots out of the numbers.",
-  kind: "bug",
   difficulty: "medium",
   language: "python",
-  skills: ["debugging", "parsing", "units"],
+  tags: ["debugging", "parsing", "units"],
   task: `The season report fails as soon as it reaches the sheets from the Oregon volunteers:
 
 \`\`\`text
@@ -446,8 +437,6 @@ A length is a number (digits, optionally with a decimal part), then any amount o
     {"Carabus nemoralis":{"measured":2,"min_mm":15.2,"max_mm":15.2,"mean_mm":15.2}},
   ],
   hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-  comments: [],
-  hints: [],
   private: {
     reference: { "notebook/report.py": REPORT_REFERENCE },
     alternatives: [
@@ -618,10 +607,9 @@ const siteSummary: SeedIssue = {
   key: "PY-006",
   title: "Site summary undercounts since last week's speed-up",
   summary: "Since the season summary got faster, its per-site lots and first visits are wrong.",
-  kind: "bug",
   difficulty: "medium",
   language: "python",
-  skills: ["debugging", "reading-code", "iteration"],
+  tags: ["debugging", "reading-code", "iteration"],
   task: `Last week's change to \`site_summary\` took the season summary from 9 s to under a second on the 40,000-line export. Since then the numbers are wrong. From Lena:
 
 > Ridge B shows 6 lots. We have 19 on paper, I counted them twice. And Alder Creek's first visit says June 14, but we set the traps there on May 28.
@@ -709,18 +697,11 @@ Requirement: it must stay fast. Don't go over all the lines once for each site.`
     {"Ridge B":{"lots":3,"individuals":4,"species":1,"first":"2026-06-05","last":"2026-06-12"}},
   ],
   hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-  comments: [],
-  hints: [],
-  team: [
+  rules: [
     {
-      id: "priya-rescan",
-      author: "Priya K",
-      role: "Data",
-      where: "review",
-      severity: "blocking",
-      text: ["Don't go over all the lines once for each site: the summary has to stay fast on a 40,000-line export."],
+      id: "rescan",
+      message: "Don't go over all the lines once for each site: the summary has to stay fast on a 40,000-line export.",
       when: { pattern: "==\\s*site\\b", present: true, file: "notebook/sites.py" },
-      repeat: "while-true",
     },
   ],
   private: {
@@ -744,7 +725,7 @@ Requirement: it must stay fast. Don't go over all the lines once for each site.`
       },
     ],
     examples: {
-      "priya-rescan": {
+      "rescan": {
         fires: [{ "notebook/sites.py": SITES_RESCAN }],
         quiet: [{ "notebook/sites.py": SITES_REFERENCE }, { "notebook/sites.py": SITES_SORTED }],
       },
@@ -853,10 +834,9 @@ const dittoMarks: SeedIssue = {
   key: "PY-009",
   title: "Volunteers have to expand ditto marks by hand",
   summary: "Expand ditto marks the way the paper notebook means them, and list the rows that can't be expanded.",
-  kind: "feature",
   difficulty: "hard",
   language: "python",
-  skills: ["parsing", "state", "edge-cases"],
+  tags: ["parsing", "state", "edge-cases"],
   task: `The volunteers typing up the 2026 notebooks are expanding every ditto mark by hand, and it's slow: three of 41 notebooks done. From Marta, who leads the fieldwork:
 
 > We've always written " under the row above when nothing changed. Some of the older volunteers write 〃 or do. Please let them type the page as it looks.
@@ -926,18 +906,11 @@ Requirement: the code must not print anything. The transcription job's standard 
     {"rows":[{"date":"2026-05-20","site":"Fen Margin","species":"Abax parallelepipedus","length":"21 mm","count":1}],"unresolved":[6]},
   ],
   hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-  comments: [],
-  hints: [],
-  team: [
+  rules: [
     {
-      id: "priya-transcribe-print",
-      author: "Priya K",
-      role: "Data",
-      where: "review",
-      severity: "blocking",
-      text: ["The code must not print anything: the transcription job's standard output goes into the volunteers' upload log."],
+      id: "transcribe-print",
+      message: "The code must not print anything: the transcription job's standard output goes into the volunteers' upload log.",
       when: { pattern: "^\\s*print\\(", present: true, file: "notebook/transcribe.py" },
-      repeat: "while-true",
     },
   ],
   private: {
@@ -967,7 +940,7 @@ Requirement: the code must not print anything. The transcription job's standard 
       },
     ],
     examples: {
-      "priya-transcribe-print": {
+      "transcribe-print": {
         fires: [{ "notebook/transcribe.py": TRANSCRIBE_PRINTS }],
         quiet: [{ "notebook/transcribe.py": TRANSCRIBE_REFERENCE }],
       },

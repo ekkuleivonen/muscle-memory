@@ -83,11 +83,10 @@ const tab = await browser.newPage();
 await tab.goto(origin + "/");
 const failures: string[] = [];
 const unchecked: string[] = [];
-for (const meta of catalog.issues) {
+for (const meta of catalog.challenges) {
   const revision = catalog.revisions[meta.revision];
   const secret = SEED_ISSUES.find((s) => s.id === meta.id)?.private;
-  const project = catalog.projects.find((p) => p.id === meta.project)!;
-  const key = `${project.key}-${meta.number}`;
+  const key = meta.key;
   if (!secret) {
     unchecked.push(key);
     continue;

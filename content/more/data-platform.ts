@@ -209,9 +209,8 @@ export const issues: SeedIssue[] = [
     title: "Collected-by-partner report overstates split payments",
     summary: "Sum what was actually paid, and list partners who paid nothing.",
     difficulty: "easy",
-    kind: "bug",
     language: "sql",
-    skills: ["joins", "aggregation", "reconciliation"],
+    tags: ["joins", "aggregation", "reconciliation"],
     schema:
       "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  partner text NOT NULL,\n  total numeric(12, 2) NOT NULL\n);\n\nCREATE TABLE payments (\n  id integer PRIMARY KEY,\n  order_id integer NOT NULL REFERENCES orders (id),\n  amount numeric(12, 2) NOT NULL\n);",
     task: `Rui sent this after reconciling September:
@@ -278,27 +277,20 @@ Requirement: every payment counts. Two payments of the same amount are two payme
       [["Bluefin", 120], ["Northwind", 120]],
     ],
     hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
-    comments: [],
-    hints: [],
-    team: [
+    rules: [
       {
-        id: "priya-sum-distinct",
-        author: "Priya K",
-        role: "Data",
-        where: "review",
-        severity: "blocking",
-        text: ["Every payment counts: two payments of the same amount are two payments, so don't add up only the distinct amounts."],
+        id: "sum-distinct",
+        message: "Every payment counts: two payments of the same amount are two payments, so don't add up only the distinct amounts.",
         when: {
           pattern: "[Ss][Uu][Mm]\\s*\\(\\s*[Dd][Ii][Ss][Tt][Ii][Nn][Cc][Tt]",
           present: true,
         },
-        repeat: "while-true",
       },
     ],
     private: {
       reference: { "queries/collected-by-partner.sql": COLLECTED_REFERENCE },
       examples: {
-        "priya-sum-distinct": {
+        "sum-distinct": {
           fires: [
             {
               "queries/collected-by-partner.sql": COLLECTED_REFERENCE.replace(
@@ -324,9 +316,8 @@ Requirement: every payment counts. Two payments of the same amount are two payme
     title: "Active customers report is short 212 customers",
     summary: "Monday's report lost 212 customers, all phone orders from the Leeds store.",
     difficulty: "medium",
-    kind: "bug",
     language: "python",
-    skills: ["debugging", "data-cleaning", "reading-code", "maps"],
+    tags: ["debugging", "data-cleaning", "reading-code", "maps"],
     task: `Rui, first thing Monday:
 
 > Monday's active-customers report says **18,406**. Last Monday it was **18,618**, and nobody closed 212 accounts over the weekend. I spot-checked three of the missing ones and they're all phone orders from the Leeds store:
@@ -399,16 +390,10 @@ Requirement: keep it to one pass with a lookup by email. Don't compare each reco
       [{"id": "C-9601", "name": "Quin Hart", "email": "quin@example.com", "phone": "0113 496 0960"}],
     ],
     hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    comments: [],
-    hints: [],
-    team: [
+    rules: [
       {
-        id: "priya-pairwise",
-        author: "Priya K",
-        role: "Data",
-        where: "review",
-        severity: "blocking",
-        text: ["Keep it to one pass with a lookup by email: don't compare each record against the customers kept so far."],
+        id: "pairwise",
+        message: "Keep it to one pass with a lookup by email: don't compare each record against the customers kept so far.",
         when: {
           any: [
             {
@@ -421,7 +406,6 @@ Requirement: keep it to one pass with a lookup by email. Don't compare each reco
             { pattern: "in range\\(len\\(", present: true, file: "pipeline/dedupe.py" },
           ],
         },
-        repeat: "while-true",
       },
     ],
     private: {
@@ -452,7 +436,7 @@ Requirement: keep it to one pass with a lookup by email. Don't compare each reco
         },
       ],
       examples: {
-        "priya-pairwise": {
+        "pairwise": {
           fires: [{ "pipeline/dedupe.py": `from pipeline.normalize import normalize_email
 
 
@@ -495,9 +479,8 @@ def dedupe_customers(rows):
     title: "Bluefin settlements don't match their statements",
     summary: "Bluefin's new export writes refunds and fees in brackets; the report loses or misreads them.",
     difficulty: "hard",
-    kind: "bug",
     language: "python",
-    skills: ["debugging", "parsing", "money", "reading-code"],
+    tags: ["debugging", "parsing", "money", "reading-code"],
     task: `Rui escalated Bluefin's October reconciliation:
 
 > Bluefin's statement for 3 October says we're owed **€59.50** on 2 orders. Our settlement report says **€75.00** with **2 rejected rows**. Every night since 1 October has had rejected rows, always Bluefin's. Northwind still matches to the cent.
@@ -580,8 +563,6 @@ Bluefin,BF-FEE-10,adjustment,(3.00),EUR
       {"partners": [{"partner": "Bluefin", "currency": "EUR", "sales": 5, "refunds": 3, "net": 820}], "rejected": 0},
     ],
     hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    comments: [],
-    hints: [],
     private: {
       reference: { "pipeline/report.py": REPORT_REFERENCE },
       alternatives: [

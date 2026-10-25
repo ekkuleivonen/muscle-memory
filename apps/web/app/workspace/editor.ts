@@ -46,7 +46,7 @@ import { javaLanguage } from "@codemirror/lang-java";
 import { csharp } from "@codemirror/legacy-modes/mode/clike";
 import { ruby } from "@codemirror/legacy-modes/mode/ruby";
 import { getCM, vim } from "@replit/codemirror-vim";
-import type { FileLanguage } from "../../lib/repo";
+import type { FileLanguage } from "../../lib/entry";
 import { TYPE_CHECK_FEATURES, type TypeChecker } from "./type-checker";
 
 export type Keymap = "standard" | "vim";

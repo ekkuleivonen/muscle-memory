@@ -7,7 +7,6 @@ import { languageLabel } from "../../../lib/library";
 import { getLibrary } from "../../../lib/load";
 import { CONSENT_COOKIE, hasConsent } from "../../../lib/profile";
 import { tryHref } from "../../../lib/share";
-import { KIND_LABELS } from "../../(browse)/_components/icons";
 import { Markdown } from "../../(browse)/_components/markdown";
 import { SharedHeader, Unavailable } from "../../r/[card]/unavailable";
 import { TryStart } from "./try-start";
@@ -61,9 +60,8 @@ export default async function TryIssue(props: Props) {
       <SharedHeader />
       <main className="legal-body home-body try-issue">
         <p className="home-kicker">
-          <span className="mono">{issue.key}</span> · {issue.project.title} ·{" "}
-          {issue.kind ? KIND_LABELS[issue.kind] : "Challenge"} · {language}
-          {issue.difficulty ? ` · ${issue.difficulty}` : ""}
+          <span className="mono">{issue.key}</span> · {language} ·{" "}
+          {issue.difficulty}
         </p>
         <h1 className="try-title">{issue.title}</h1>
         {(hookFor(issue) ?? issue.summary) && (
@@ -101,12 +99,6 @@ export default async function TryIssue(props: Props) {
           consented={consented}
           runnable={issue.runnable}
         />
-        {issue.project.key === "QUICK" && (
-          <p className="faint try-other">
-            The same challenge is in eight languages:{" "}
-            <Link href="/play">pick another</Link>.
-          </p>
-        )}
       </main>
     </div>
   );

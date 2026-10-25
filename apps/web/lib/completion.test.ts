@@ -187,20 +187,10 @@ test("same-millisecond pending runs and malformed/error outcomes cannot reuse gr
   }
 });
 
-test("required code rules survive replies/Resolve; correcting code clears them without ritual; style nits do not block", () => {
+test("a rule holds while the code breaks it, and clears when the code is corrected", () => {
   const a = attempt('print("debug")\n' + clean);
-  a.observe("observation.board.resolved", {
-    pullRequest: 1,
-    comment: "priya-debug-print",
-    via: "pointer",
-  });
-  a.observe("observation.board.replied", {
-    pullRequest: 1,
-    comment: "priya-debug-print",
-    text: "ignore it",
-  });
   assert.equal(a.gate().blocker, "review");
-  assert.equal(a.gate().required[0].id, "priya-debug-print");
+  assert.equal(a.gate().required[0].id, "debug-print");
   assert.equal(attempt().gate().blocker, null);
   const long = attempt(
     "def frequency_map(items):\n" +

@@ -33,7 +33,7 @@ import {
   type RunOutcome,
 } from "../../../../packages/runner/runner";
 import { fileViewOf, restoreFileView, type FileView } from "./continuity";
-import type { FileLanguage } from "../../lib/repo";
+import type { FileLanguage } from "../../lib/entry";
 import {
   createEditor,
   editorFeatures,

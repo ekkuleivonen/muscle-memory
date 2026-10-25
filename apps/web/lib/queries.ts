@@ -1,11 +1,12 @@
 /**
  * The challenge search: one `q` string with qualifiers such as
- * `kind:bug lang:python,go difficulty:easy label:maps is:starred`, plus free text. Commas mean "any of"; different qualifiers must all match. Unknown qualifiers
- * and values are kept as plain text rather than rejected, so hand-typed queries still work.
+ * `lang:python,go difficulty:easy tag:maps is:starred`, plus free text. Commas mean "any of";
+ * different qualifiers must all match. Unknown qualifiers and values are kept as plain text
+ * rather than rejected, so hand-typed queries still work.
  */
-import type { Difficulty, IssueKind } from "../../../packages/content/model";
+import type { Difficulty } from "../../../packages/content/model";
 import { LANGUAGES, type LanguageId } from "./languages";
-import { DIFFICULTIES, KINDS, languageLabel, type Issue } from "./library";
+import { DIFFICULTIES, languageLabel, type Issue } from "./library";
 
 export const SORTS = ["key", "difficulty", "title"] as const;
 export type Sort = (typeof SORTS)[number];
@@ -14,31 +15,27 @@ export const MARKS = ["starred", "completed"] as const;
 export type Mark = (typeof MARKS)[number];
 export interface IssueQuery {
   language: LanguageId[];
-  kind: IssueKind[];
   difficulty: Difficulty[];
-  label: string[];
+  tag: string[];
   /** Marks live in the browser, so the server leaves this filter to the client. */
   marks: Mark[];
   sort: Sort;
   text: string[];
 }
 
-export type ListKey = "language" | "kind" | "difficulty" | "label" | "marks";
+export type ListKey = "language" | "difficulty" | "tag" | "marks";
 
 const LANGUAGE_IDS = LANGUAGES.map((l) => l.id);
 /** Qualifier names people type, mapped to the filter they set. */
 const QUALIFIERS: Record<string, ListKey> = {
   lang: "language",
   language: "language",
-  kind: "kind",
-  type: "kind",
   difficulty: "difficulty",
   diff: "difficulty",
-  label: "label",
+  tag: "tag",
 };
 const ALLOWED: Partial<Record<ListKey, readonly string[]>> = {
   language: LANGUAGE_IDS,
-  kind: KINDS,
   difficulty: DIFFICULTIES,
 };
 const SLUG = /^[a-z0-9][a-z0-9-]{0,127}$/;
@@ -46,9 +43,8 @@ const MAX_QUERY = 200;
 
 export const emptyIssueQuery = (): IssueQuery => ({
   language: [],
-  kind: [],
   difficulty: [],
-  label: [],
+  tag: [],
   marks: [],
   sort: "key",
   text: [],
@@ -102,10 +98,9 @@ export function formatQuery(query: IssueQuery): string {
   const parts: string[] = [];
   if (query.marks.length) parts.push(`is:${query.marks.join(",")}`);
   const lists: [string, readonly string[]][] = [
-    ["kind", query.kind],
     ["lang", query.language],
     ["difficulty", query.difficulty],
-    ["label", query.label],
+    ["tag", query.tag],
   ];
   for (const [name, values] of lists)
     if (values.length) parts.push(`${name}:${values.join(",")}`);
@@ -141,11 +136,10 @@ function issueText(issue: Issue): string[] {
     issue.title,
     issue.summary ?? "",
     issue.task,
-    issue.kind ?? "",
     issue.difficulty ?? "",
     issue.language ?? "",
     languageLabel(issue.language),
-    ...issue.labels,
+    ...issue.tags,
   ];
 }
 
@@ -182,10 +176,9 @@ export function filterIssues(
     .filter(
       (issue) =>
         within(query.language, issue.language) &&
-        within(query.kind, issue.kind) &&
         within(query.difficulty, issue.difficulty) &&
-        (query.label.length === 0 ||
-          issue.labels.some((l) => query.label.includes(l))) &&
+        (query.tag.length === 0 ||
+          issue.tags.some((t) => query.tag.includes(t))) &&
         matchesText(issueText(issue), query.text),
     )
     .sort(SORTERS[query.sort]);

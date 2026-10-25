@@ -22,22 +22,7 @@ export default async function ChallengesPage({
     q ? `/challenges?q=${encodeURIComponent(q)}` : "/challenges",
   );
   const { issues } = await getLibrary();
-  const challenges: PickerChallenge[] = issues.map((issue) => ({
-    key: issue.key,
-    slug: issue.slug,
-    revision: issue.revision,
-    title: issue.title,
-    summary: issue.summary,
-    task: issue.task,
-    kind: issue.kind,
-    difficulty: issue.difficulty,
-    language: issue.language,
-    labels: [...issue.labels],
-    runnable: issue.runnable,
-    project: issue.project,
-    comments: [],
-    criteria: issue.criteria,
-  }));
+  const challenges: PickerChallenge[] = issues;
   return (
     <>
       <Picker challengesJson={JSON.stringify(challenges)} initialQuery={q} />

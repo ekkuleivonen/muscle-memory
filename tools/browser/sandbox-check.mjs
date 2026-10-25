@@ -980,7 +980,7 @@ async function clangCheck(browserType) {
     const catalog = await (await fetch("/catalog.json")).json();
     // An issue's live revision, flattened to what the engines take.
     const issue = (id) => {
-      const meta = catalog.issues.find((i) => i.id === id);
+      const meta = catalog.challenges.find((i) => i.id === id);
       const { workspace, checks } = catalog.revisions[meta.revision];
       return {
         ...workspace,
@@ -1124,7 +1124,7 @@ async function csharpCheck(browserType) {
     const catalog = await (await fetch("/catalog.json")).json();
     // An issue's live revision, flattened to what the engines take.
     const issue = (id) => {
-      const meta = catalog.issues.find((i) => i.id === id);
+      const meta = catalog.challenges.find((i) => i.id === id);
       const { workspace, checks } = catalog.revisions[meta.revision];
       return {
         ...workspace,
@@ -1226,7 +1226,7 @@ async function javaCheck(browserType) {
     const catalog = await (await fetch("/catalog.json")).json();
     // An issue's live revision, flattened to what the engines take.
     const find = (id) => {
-      const meta = catalog.issues.find((i) => i.id === id);
+      const meta = catalog.challenges.find((i) => i.id === id);
       const { workspace, checks } = catalog.revisions[meta.revision];
       return {
         ...workspace,

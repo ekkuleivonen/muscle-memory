@@ -20,7 +20,6 @@ import {
   casesRun,
   executableOf,
   type Difficulty,
-  type IssueKind,
   type Revision,
 } from "../../../../packages/content/model";
 import {
@@ -41,7 +40,7 @@ import { statusOf } from "../../lib/board";
 import { closedPullRequests, mergedPullRequests } from "../../lib/pulls";
 import { languageLabel } from "../../lib/library";
 import type { LanguageId } from "../../lib/languages";
-import { mediaTypeOf, type FileLanguage } from "../../lib/repo";
+import { mediaTypeOf, type FileLanguage } from "../../lib/entry";
 import { StartWork, useBoard } from "../(browse)/_components/board";
 import {
   PREVIOUS_PATH_KEY,
@@ -87,7 +86,6 @@ import { diagnose } from "../../lib/diagnosis";
 import { CheckFeedbackView } from "../(browse)/_components/review";
 import { CopyIssueLink, ShareOutcome } from "../(browse)/_components/share";
 import { shareCompletionProof } from "../../lib/share-completion";
-import { incompatibleSavedPaths } from "../../lib/practice-contract";
 import { nextProblem } from "../../lib/next-problem";
 import { isPracticePath, practiceHref } from "../../lib/paths";
 import type { IssueSummary } from "../../lib/library";
@@ -99,9 +97,8 @@ export interface IdeIssue {
   revision: string;
   title: string;
   task: string;
-  kind?: IssueKind;
   difficulty?: Difficulty;
-  labels: string[];
+  tags: string[];
   language: LanguageId;
   runnable: boolean;
 }
@@ -113,7 +110,6 @@ type Runtime =
   | { state: "unavailable"; message: string };
 
 type Opening =
-  | { state: "recovery"; paths: string[] }
   | { state: "opening" }
   | { state: "open" }
   | { state: "failed"; message: string };
@@ -385,10 +381,7 @@ export function Ide({
   }
 
   /** Opens the session on the editable files, restoring the latest saved code. */
-  async function open(
-    current: () => boolean,
-    recoveryChoice?: "entry" | "starter",
-  ) {
+  async function open(current: () => boolean) {
     try {
       const account = readProfile();
       const keys: Keymap =
@@ -405,14 +398,7 @@ export function Ide({
         participantId,
         issue.slug,
       );
-      const dropped = savedCode
-        ? incompatibleSavedPaths(revision, savedCode.files)
-        : [];
-      if (dropped.length && !recoveryChoice) {
-        if (current()) setOpening({ state: "recovery", paths: dropped });
-        return;
-      }
-      const recovered = recoveryChoice === "starter" ? null : savedCode;
+      const recovered = savedCode;
       const history = pullRequestHistory(records, participantId, issue.slug);
       // Numbers continue across attempts, so they come from every pull request.
       const numbered = pullRequestHistory(all, participantId, issue.slug);
@@ -437,7 +423,7 @@ export function Ide({
                 return false;
               }
             })
-              ? `The challenge changed since your last visit. Your matching files were restored.${dropped.length ? ` You chose not to restore ${dropped.join(", ")}; those files remain in history.` : " Review the current requirements before checking again."}`
+              ? "The challenge changed since your last visit. Your code was restored; review the requirements before checking again."
               : "",
           ]
             .filter(Boolean)
@@ -762,51 +748,11 @@ export function Ide({
           <div className="practice-editors">
             <div
               className="practice-editor"
-              hidden={
-                opening.state === "recovery" || opening.state === "failed"
-              }
+              hidden={opening.state === "failed"}
               ref={(node) => {
                 if (node) hosts.current.set(home, node);
               }}
             />
-            {opening.state === "recovery" && (
-              <section
-                className="practice-recovery"
-                aria-label="Saved version recovery"
-              >
-                <h2>Your saved version used more than one file</h2>
-                <p>
-                  The current version is a single-file challenge. These saved
-                  files remain in history but cannot be restored here:{" "}
-                  {opening.paths.join(", ")}.
-                </p>
-                <p>
-                  Use the current starter, or explicitly restore only your
-                  matching entry code. Earlier records and files remain
-                  unchanged.
-                </p>
-                <button
-                  className="btn primary"
-                  onClick={() => {
-                    const attempt = generation.current;
-                    setOpening({ state: "opening" });
-                    void open(() => attempt === generation.current, "starter");
-                  }}
-                >
-                  Use current starter
-                </button>
-                <button
-                  className="btn"
-                  onClick={() => {
-                    const attempt = generation.current;
-                    setOpening({ state: "opening" });
-                    void open(() => attempt === generation.current, "entry");
-                  }}
-                >
-                  Restore saved entry only
-                </button>
-              </section>
-            )}
             {opening.state === "opening" && (
               <p role="status">Restoring your code…</p>
             )}
@@ -816,7 +762,7 @@ export function Ide({
               </p>
             )}
           </div>
-          {opening.state !== "recovery" && (
+          {
             <div className="practice-controls">
               <span role="status">
                 {capture ? saveBadge(capture).label : "Opening…"}
@@ -868,7 +814,7 @@ export function Ide({
                 </>
               )}
             </div>
-          )}
+          }
         </section>
         <Splitter
           axis="y"

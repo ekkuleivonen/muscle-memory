@@ -1,45 +1,33 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import type { Revision } from "./model";
-import { validateRevision } from "./validate";
+import type { Catalog, Revision } from "./model";
+import { validateCatalog, validateRevision } from "./validate";
 
-const catalog = JSON.parse(
+const catalog: Catalog = JSON.parse(
   readFileSync(new URL("../../content/catalog.json", import.meta.url), "utf8"),
 );
-const revisionOf = (issue: string): Revision => {
-  const meta = catalog.issues.find((i: { id: string }) => i.id === issue);
-  return catalog.revisions[meta.revision];
-};
+const revisionOf = (id: string): Revision =>
+  catalog.revisions[catalog.challenges.find((c) => c.id === id)!.revision];
 
-test("a workspace may have several editable files and read-only sources, if its runner loads them", () => {
+test("the catalog as built is valid", () => {
+  assert.equal(validateCatalog(catalog), catalog);
+});
+
+test("read-only sources are allowed when the runner loads several files", () => {
   const js = revisionOf("format-price");
-  const multi: Revision = {
-    ...js,
-    workspace: {
-      ...js.workspace,
-      files: {
-        ...js.workspace.files,
-        "src/money.js": { role: "read", language: "javascript", text: "export const x = 1;\n" },
-        "src/other.js": { role: "edit", language: "javascript", text: "\n" },
-      },
-    },
-  };
-  validateRevision(multi, "js");
-  // Python loads the repo's other files too.
-  const py = revisionOf("frequency-map");
   validateRevision(
     {
-      ...py,
+      ...js,
       workspace: {
-        ...py.workspace,
+        ...js.workspace,
         files: {
-          ...py.workspace.files,
-          "helpers.py": { role: "read", language: "python", text: "\n" },
+          ...js.workspace.files,
+          "src/money.js": { role: "read", language: "javascript", text: "export const x = 1;\n" },
         },
       },
     },
-    "py",
+    "js",
   );
   // Go's runner loads one file, so a second source file is refused.
   const go = revisionOf("pagination-params");
@@ -62,20 +50,42 @@ test("a workspace may have several editable files and read-only sources, if its 
   );
 });
 
-test("the entry must be a source file, and something must be editable", () => {
+test("the entry is the one editable file", () => {
   const js = revisionOf("format-price");
-  assert.throws(
-    () => validateRevision({ ...js, workspace: { ...js.workspace, entry: "README.md" } }, "x"),
-    /entry README.md is not one of its source files/,
-  );
+  const second = {
+    ...js,
+    workspace: {
+      ...js.workspace,
+      files: {
+        ...js.workspace.files,
+        "src/other.js": { role: "edit" as const, language: "javascript", text: "\n" },
+      },
+    },
+  };
+  assert.throws(() => validateRevision(second, "x"), /must be the one editable file/);
   const readOnly = Object.fromEntries(
-    Object.entries(js.workspace.files).map(([p, f]) => [
-      p,
-      f.role === "edit" ? { ...f, role: "read" as const } : f,
-    ]),
+    Object.entries(js.workspace.files).map(([p, f]) => [p, { ...f, role: "read" as const }]),
   );
   assert.throws(
     () => validateRevision({ ...js, workspace: { ...js.workspace, files: readOnly } }, "x"),
-    /at least one editable file/,
+    /must be the one editable file/,
+  );
+});
+
+test("a rule needs a message and a trigger read from the code", () => {
+  const js = revisionOf("format-price");
+  const withRule = (rule: unknown) =>
+    ({ ...js, checks: { ...js.checks, rules: [rule] } }) as Revision;
+  validateRevision(
+    withRule({ id: "cents", message: "Keep money in cents.", when: { pattern: "toFixed", present: true } }),
+    "x",
+  );
+  assert.throws(
+    () => validateRevision(withRule({ id: "cents", message: "", when: { pattern: "x", present: true } }), "x"),
+    /needs text/,
+  );
+  assert.throws(
+    () => validateRevision(withRule({ id: "late", message: "Hurry.", when: { behaviour: "slow" } }), "x"),
+    /unknown trigger/,
   );
 });

@@ -1,6 +1,6 @@
 /** Exact-code completion gate. Legacy merge/Resolve history is never reinterpreted. */
 import { editableFiles, type Revision } from "../../../packages/content/model";
-import { evaluate } from "../../../packages/content/triggers";
+import { broken } from "../../../packages/content/rules";
 import {
   runFeedback,
   type WorkspaceRecord,
@@ -10,7 +10,6 @@ import {
   validateBoardMoveData,
 } from "../../../packages/domain/board";
 import { attemptRecords } from "./attempts";
-import { behaviourOf, investigationOf } from "./feedback";
 import { mergeEligibility, type MergeEligibility } from "./merge";
 import { allPullRequests } from "./pulls";
 import type { RequiredRule } from "./check-feedback";
@@ -222,26 +221,11 @@ export function completionEligibility(input: {
   )
     return { ...fail("checks"), via };
   const files = Object.fromEntries(paths.map((p) => [p, artifact![p].text]));
-  const { opened, ran } = investigationOf(own, input.issue, input.revisionFor);
-  const facts = {
-    files,
-    cases: Object.fromEntries(checks.map((c) => [c.id, true])),
-    ran: ran ?? undefined,
-    opened,
-    event: (gate.latest.push === 1 ? "pull-request" : "push") as
-      | "pull-request"
-      | "push",
-    behaviour: behaviourOf(own, input.issue, input.revisionFor),
-  };
-  // Blocking authored rules remain required, irrespective of an old Resolve/reply observation.
-  const required = revision.team
-    .filter(
-      (rule) => rule.severity === "blocking" && evaluate(rule.when, facts),
-    )
-    .map((rule) => ({
-      id: rule.id,
-      text: rule.text[0],
-    }));
+  // Rules read the submitted code alone, the same for everyone and every time.
+  const required = broken(revision.checks.rules, files).map((rule) => ({
+    id: rule.id,
+    text: rule.message,
+  }));
   return {
     ...gate,
     ...base,

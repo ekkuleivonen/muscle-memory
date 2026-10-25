@@ -1,14 +1,14 @@
 /**
- * What to work on after merging: the next problem in the language just used, so finishing a
- * Python issue never lands on a JavaScript one because it happens to come first in the catalog.
- * Pure, so the pull request page and the IDE suggest the same issue.
+ * What to work on after completing a challenge: the next one in the language just used, so
+ * finishing a Python challenge never lands on a JavaScript one because it comes first in the
+ * catalog. Pure, so it is testable.
  */
 import type { BoardItem } from "./board";
 import type { IssueSummary } from "./library";
 
 type Candidate = Pick<
   IssueSummary,
-  "key" | "language" | "project" | "difficulty" | "runnable"
+  "key" | "language" | "difficulty" | "runnable"
 >;
 
 const LEVELS = ["easy", "medium", "hard"];
@@ -16,9 +16,8 @@ const LEVELS = ["easy", "medium", "hard"];
 /**
  * Issues worth doing next after `current`, best first. Leaves out `current`, whatever is Done
  * and whatever is already In progress (the dashboard resumes those). In order of weight: it
- * runs here; the same language, in the same project before another; then a language from the
- * person's profile; then the same difficulty, one step harder, one step easier; then catalog
- * order.
+ * runs here; the same language; then a language from the person's profile; then the same
+ * difficulty, one step harder, one step easier; then catalog order.
  */
 export function nextProblems<T extends Candidate>(
   current: Candidate,
@@ -38,12 +37,10 @@ export function nextProblems<T extends Candidate>(
   };
   const relevance = (issue: Candidate) =>
     issue.language && issue.language === current.language
-      ? issue.project.slug === current.project.slug
-        ? 0
-        : 1
+      ? 0
       : issue.language && languages.includes(issue.language)
-        ? 2
-        : 3;
+        ? 1
+        : 2;
   return candidates
     .map((issue, index) => ({ issue, index }))
     .filter(

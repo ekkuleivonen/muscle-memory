@@ -1,5 +1,4 @@
 import type { SeedIssue } from "../seed";
-import { mateo, priya, sam } from "../team";
 
 // ---------------------------------------------------------------------------------------------
 // C-001: IPv6 Host headers (C)
@@ -130,10 +129,9 @@ const ipv6HostHeader: SeedIssue = {
   key: "C-001",
   title: "IPv6 requests get 421 Misdirected Request",
   summary: "Host headers with an IPv6 literal lose everything after the first colon.",
-  kind: "bug",
   difficulty: "easy",
   language: "c",
-  skills: ["strings", "parsing", "http"],
+  tags: ["strings", "parsing", "http"],
   task: `Since the IPv6 listener went live on Tuesday, every request that addresses the proxy by its v6 literal gets the default vhost's **421 Misdirected Request**. The health checker on \`[2001:db8::1]:8080\` has been red since; on-call silenced it at 02:10.
 
 \`\`\`text
@@ -222,30 +220,21 @@ mm_value *mm_call(const mm_value *args) {
     "shop.example.com",
   ],
   hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-  comments: [],
-  hints: [],
-  team: [
+  rules: [
     {
-      id: "sam-no-malloc",
-      author: "Sam R",
-      role: "SRE",
-      where: "review",
-      severity: "blocking",
-      text: [
-        "normalize_host must not allocate on the heap (no malloc, calloc, realloc, strdup or strndup): write the result into out.",
-      ],
+      id: "no-malloc",
+      message: "normalize_host must not allocate on the heap (no malloc, calloc, realloc, strdup or strndup): write the result into out.",
       when: {
         pattern: "\\b(malloc|calloc|realloc|strdup|strndup)\\s*\\(",
         present: true,
         file: HOST_FILE,
       },
-      repeat: "while-true",
     },
   ],
   private: {
     reference: { [HOST_FILE]: HOST_REFERENCE },
     examples: {
-      "sam-no-malloc": {
+      "no-malloc": {
         fires: [{ [HOST_FILE]: HOST_WITH_MALLOC }],
         quiet: [{ [HOST_FILE]: HOST_REFERENCE }, { [HOST_FILE]: HOST_ONE_FUNCTION }],
       },
@@ -416,10 +405,9 @@ const weightedUpstreams: SeedIssue = {
   key: "GO-007",
   title: "Upstream weights are ignored",
   summary: "The balancer round-robins evenly, so the 10% canary would get half the traffic.",
-  kind: "feature",
   difficulty: "medium",
   language: "go",
-  skills: ["load-balancing", "concurrency", "algorithms"],
+  tags: ["load-balancing", "concurrency", "algorithms"],
   task: `We want to start the origin-v2 canary on Monday at 10% of traffic. The upstream block already says so:
 
 \`\`\`text
@@ -521,26 +509,17 @@ Worked example with weights a=5, b=1, c=1 (total 7):
     ["a", "a", "a", "a", "a"],
   ],
   hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-  comments: [],
-  hints: [],
-  team: [
+  rules: [
     {
-      id: "mateo-keep-lock",
-      author: "Mateo O",
-      role: "Backend",
-      where: "review",
-      severity: "blocking",
-      text: [
-        "RoundRobin.Next is called concurrently from every connection's goroutine, so it must lock r.mu while it reads and updates the balancer's state.",
-      ],
+      id: "keep-lock",
+      message: "RoundRobin.Next is called concurrently from every connection's goroutine, so it must lock r.mu while it reads and updates the balancer's state.",
       when: { pattern: "\\.Lock\\(\\)", present: false, file: BALANCER_FILE },
-      repeat: "while-true",
     },
   ],
   private: {
     reference: { [BALANCER_FILE]: BALANCER_REFERENCE },
     examples: {
-      "mateo-keep-lock": {
+      "keep-lock": {
         fires: [{ [BALANCER_FILE]: BALANCER_UNLOCKED }],
         quiet: [{ [BALANCER_FILE]: BALANCER_REFERENCE }, { [BALANCER_FILE]: BALANCER_LONG }],
       },
@@ -767,10 +746,9 @@ const cacheIndexPurge: SeedIssue = {
   key: "CPP-002",
   title: "Cache hit ratio fell to 71% after the index change",
   summary: "Since #412, keys stored past a purged slot are reported as misses.",
-  kind: "bug",
   difficulty: "hard",
   language: "cpp",
-  skills: ["hash-tables", "caching", "reviewing-changes"],
+  tags: ["hash-tables", "caching", "reviewing-changes"],
   task: `On Thursday (#412) the response cache's index, a \`std::unordered_map<int, int>\`, was replaced with an open-addressing table. The map allocated one heap node per insert, about 9% of CPU at peak; the table allocates nothing per request. CPU at peak is down 9%, but since the deploy:
 
 - the cache hit ratio went from **94.1%** to **71.3%**, worst on the PoPs that purge the most;
@@ -876,31 +854,22 @@ mm_value *mm_call(const mm_value *args) {
     [6, 3, 4, -1],
   ],
   hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-  comments: [],
-  hints: [],
-  team: [
+  rules: [
     {
-      id: "mateo-flat-table",
-      author: "Mateo O",
-      role: "Backend",
-      where: "review",
-      severity: "blocking",
-      text: [
-        "The index must stay an allocation-free flat table: no std::map, std::unordered_map, std::set, std::unordered_set or std::list, no new and no make_unique or make_shared.",
-      ],
+      id: "flat-table",
+      message: "The index must stay an allocation-free flat table: no std::map, std::unordered_map, std::set, std::unordered_set or std::list, no new and no make_unique or make_shared.",
       when: {
         pattern:
           "#include\\s*<(unordered_map|map|list|unordered_set|set)>|std::(unordered_map|map|list|unordered_set|set)\\s*<|\\bnew\\s+[A-Za-z_]|make_(unique|shared)\\s*<",
         present: true,
         file: INDEX_FILE,
       },
-      repeat: "while-true",
     },
   ],
   private: {
     reference: { [INDEX_FILE]: INDEX_REFERENCE },
     examples: {
-      "mateo-flat-table": {
+      "flat-table": {
         fires: [{ [INDEX_FILE]: INDEX_NODE_MAP }],
         quiet: [
           { [INDEX_FILE]: INDEX_REFERENCE },

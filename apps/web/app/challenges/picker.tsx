@@ -10,12 +10,7 @@ import {
 } from "react";
 import { engineFor, warmRuntime } from "../../../../packages/runner/runner";
 import { statusOf } from "../../lib/board";
-import {
-  DIFFICULTIES,
-  KINDS,
-  languageLabel,
-  type Issue,
-} from "../../lib/library";
+import { DIFFICULTIES, languageLabel, type Issue } from "../../lib/library";
 import {
   filterByMarks,
   filterIssues,
@@ -41,8 +36,8 @@ import { Markdown } from "../(browse)/_components/markdown";
 /** A challenge as the picker lists, searches and previews it. */
 export type PickerChallenge = Issue;
 
-/** How many topics get a toggle; the rest match when typed. */
-const TOPICS = 10;
+/** How many tags get a toggle; the rest match when typed. */
+const TAGS = 10;
 
 function subscribeStars(onChange: () => void) {
   window.addEventListener("storage", onChange);
@@ -64,7 +59,7 @@ function useStars(): string[] {
 }
 
 /**
- * The challenge picker: type to narrow (plain words, or lang: difficulty: kind: label:, and
+ * The challenge picker: type to narrow (plain words, or lang: difficulty: tag:, and
  * is:starred or is:completed), click the filter toggles, move with ↑↓ (or Ctrl-n/p), Ctrl-s
  * stars, Enter starts practice. Completed is a verified completion (the board's done). Easiest first
  * unless the search says sort:. The search line is mirrored into the URL.
@@ -106,8 +101,7 @@ export function Picker({
   const facets = useMemo(() => {
     const count = new Map<string, number>();
     for (const issue of all)
-      for (const label of issue.labels)
-        count.set(label, (count.get(label) ?? 0) + 1);
+      for (const tag of issue.tags) count.set(tag, (count.get(tag) ?? 0) + 1);
     const present = <T,>(
       values: readonly T[],
       of: (i: Issue) => T | undefined,
@@ -137,19 +131,11 @@ export function Picker({
         })),
       },
       {
-        name: "kind",
-        key: "kind" as ListKey,
-        values: present(KINDS, (i) => i.kind).map((k) => ({
-          value: k,
-          label: k,
-        })),
-      },
-      {
-        name: "topic",
-        key: "label" as ListKey,
+        name: "tag",
+        key: "tag" as ListKey,
         values: [...count.entries()]
           .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-          .slice(0, TOPICS)
+          .slice(0, TAGS)
           .map(([label]) => ({ value: label, label })),
       },
     ];
@@ -334,8 +320,8 @@ export function Picker({
               <h1 className="t-doc-title">{current.title}</h1>
               <p className="t-dim">
                 {current.key} · {languageLabel(current.language).toLowerCase()}{" "}
-                · {current.difficulty} · {current.kind}
-                {current.labels.length > 0 && ` · ${current.labels.join(", ")}`}
+                · {current.difficulty}
+                {current.tags.length > 0 && ` · ${current.tags.join(", ")}`}
               </p>
               <button
                 type="button"

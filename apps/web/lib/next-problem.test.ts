@@ -23,17 +23,18 @@ test("after a Python issue comes another Python issue, never the JavaScript one 
     assert.equal(suggested.language, "python");
 });
 
-test("the same project comes first, at about the same difficulty", () => {
+test("the same language comes first, at about the same difficulty", () => {
   const current = bySlug("frequency-map");
-  // PY-003 is easy like PY-002, in the same project.
-  assert.equal(nextProblem(current, issues, [done("frequency-map")])?.slug, "species-tally-shared-names");
-  // With the rest of field-notes done, data-platform's Python comes before any other language.
-  const fieldNotes = issues.filter((i) => i.project.slug === "field-notes");
-  const next = nextProblem(current, issues, fieldNotes.map((i) => done(i.slug)));
-  assert.equal(next?.project.slug, "data-platform");
+  // PY-003 is easy like PY-002: the next easy Python challenge by key (PY-001 aside, also easy).
+  const next = nextProblem(current, issues, [done("frequency-map")]);
   assert.equal(next?.language, "python");
+  assert.equal(next?.difficulty, "easy");
+  // With every other easy Python challenge done, a medium Python one comes before any other language.
+  const easyPython = issues.filter((i) => i.language === "python" && i.difficulty === "easy");
+  const after = nextProblem(current, issues, easyPython.map((i) => done(i.slug)));
+  assert.equal(after?.language, "python");
+  assert.equal(after?.difficulty, "medium");
 });
-
 test("leaves out the current issue, Done ones and work already in progress", () => {
   const current = bySlug("format-price");
   const items: BoardItem[] = [
@@ -49,7 +50,9 @@ test("leaves out the current issue, Done ones and work already in progress", () 
 
 test("when the language is used up, a profile language comes before the rest", () => {
   const current = bySlug("workspace-slugs");
-  const next = nextProblem(current, issues, [done("workspace-slugs")], ["go"]);
+  // Every Ruby challenge done: the profile's Go comes next.
+  const ruby = issues.filter((i) => i.language === "ruby").map((i) => done(i.slug));
+  const next = nextProblem(current, issues, ruby, ["go"]);
   assert.equal(next?.language, "go");
   assert.equal(nextProblem(current, [current], []), null);
 });

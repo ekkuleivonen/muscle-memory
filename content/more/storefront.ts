@@ -439,9 +439,8 @@ export const issues: SeedIssue[] = [
     title: "Show how far the cart is from free shipping",
     summary: "A banner in the cart drawer telling shoppers what's left to spend for free shipping.",
     difficulty: "easy",
-    kind: "feature",
     language: "javascript",
-    skills: ["money", "reading-code", "ui-copy"],
+    tags: ["money", "reading-code", "ui-copy"],
     task: `Write \`shippingBanner(order)\`: the text of the banner above the checkout button in the cart drawer, telling the shopper how far the cart is from free shipping, or \`null\` when there is no banner.
 
 **Input.** An order is \`{ code, lines }\`. Each line is \`{ sku, price, quantity }\`, with \`price\` per unit in whole cents. \`code\` is the promo code: \`null\`, a percentage (\`{ percent: 10 }\`) or a fixed amount in cents (\`{ amount: 500 }\`).
@@ -522,8 +521,6 @@ export const issues: SeedIssue[] = [
       "Spend $0.05 more for free shipping",
     ],
     hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    hints: [],
-    comments: [],
     private: {
       reference: { "src/cart/shipping.js": SHIPPING_REFERENCE },
       alternatives: [
@@ -574,9 +571,8 @@ export const issues: SeedIssue[] = [
     title: "Cart drawer shows the old total after changing quantity",
     summary: "Since the cart summary was memoised, some changes don't show up in the drawer.",
     difficulty: "medium",
-    kind: "bug",
     language: "javascript",
-    skills: ["caching", "debugging", "code-review"],
+    tags: ["caching", "debugging", "code-review"],
     task: `The cart drawer and the header badge show whatever \`Cart.summary()\` returns. To keep the drawer fast, \`summary()\` was memoised: the drawer calls it on every render, and repricing a 60-line cart each time cost 38 ms a frame (now about 2). Since then the drawer sometimes shows an old total. A shopper's report:
 
 > I changed the jeans from 1 to 2 in my cart and it still said $59.00. Then checkout charged me $118.00.
@@ -763,18 +759,10 @@ Removing an item shows the right total; changing a quantity doesn't. Make every 
       ],
     ],
     hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    hints: [],
-    comments: [],
-    team: [
+    rules: [
       {
-        id: "ada-keep-memo",
-        author: "Ada N",
-        role: "Frontend",
-        where: "review",
-        severity: "blocking",
-        text: [
-          "Keep `summary()` memoised: cache its result in a field of the cart (such as `this.cache`, a version number or a dirty flag) instead of repricing on every call.",
-        ],
+        id: "keep-memo",
+        message: "Keep `summary()` memoised: cache its result in a field of the cart (such as `this.cache`, a version number or a dirty flag) instead of repricing on every call.",
         // Any field that remembers a summary or that the cart changed counts as keeping the memo.
         when: {
           pattern:
@@ -782,7 +770,6 @@ Removing an item shows the right total; changing a quantity doesn't. Make every 
           present: false,
           file: "src/cart/cart.js",
         },
-        repeat: "while-true",
       },
     ],
     private: {
@@ -826,7 +813,7 @@ Removing an item shows the right total; changing a quantity doesn't. Make every 
         },
       ],
       examples: {
-        "ada-keep-memo": {
+        "keep-memo": {
           fires: [
             {
               "src/cart/cart.js": swap(
@@ -861,9 +848,8 @@ Removing an item shows the right total; changing a quantity doesn't. Make every 
     summary:
       "Line taxes on receipts and in the finance export don't sum to the order's tax, and gift cards get taxed.",
     difficulty: "hard",
-    kind: "bug",
     language: "typescript",
-    skills: ["money", "rounding", "debugging", "reading-code"],
+    tags: ["money", "rounding", "debugging", "reading-code"],
     task: `Finance's September sales-tax filing came out $310.22 under the tax customers were actually charged. The filing is the sum of what \`lineTaxes\` returns for every order, and those line taxes don't add up to the order's tax. A receipt also charged tax on a gift card.
 
 One order, at 8.25%, as the receipt shows it today:
@@ -1161,32 +1147,18 @@ Fix \`receipt(order)\` and \`lineTaxes(amounts, rate)\` so they follow Finance's
       },
     ],
     hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    hints: [],
-    comments: [],
-    team: [
+    rules: [
       {
-        id: "mateo-line-taxes",
-        author: "Mateo O",
-        role: "Backend",
-        where: "review",
-        severity: "blocking",
-        text: [
-          "Keep the exported `lineTaxes(amounts, rate)`, returning each line's share of the order's tax, and take the receipt's line taxes from it: the finance export calls it too.",
-        ],
+        id: "line-taxes",
+        message: "Keep the exported `lineTaxes(amounts, rate)`, returning each line's share of the order's tax, and take the receipt's line taxes from it: the finance export calls it too.",
         // A call, not the definition: in one file the function is defined right there.
         // A call, with any spacing before the bracket; not the definition (any spacing after `function`).
         when: { pattern: "(?<!function\\s+)\\blineTaxes\\s*\\(", present: false, file: "src/checkout/receipt.ts" },
-        repeat: "while-true",
       },
       {
-        id: "mateo-to-fixed",
-        author: "Mateo O",
-        role: "Backend",
-        where: "review",
-        severity: "blocking",
-        text: ["Keep money in whole cents: no `toFixed` or `parseFloat`."],
+        id: "to-fixed",
+        message: "Keep money in whole cents: no `toFixed` or `parseFloat`.",
         when: { pattern: "\\.toFixed\\(|parseFloat\\(", present: true },
-        repeat: "while-true",
       },
     ],
     private: {
@@ -1235,7 +1207,7 @@ Fix \`receipt(order)\` and \`lineTaxes(amounts, rate)\` so they follow Finance's
         },
       ],
       examples: {
-        "mateo-line-taxes": {
+        "line-taxes": {
           fires: [
             {
               "src/checkout/receipt.ts":
@@ -1265,7 +1237,7 @@ Fix \`receipt(order)\` and \`lineTaxes(amounts, rate)\` so they follow Finance's
             { "src/checkout/receipt.ts": RECEIPT_STARTER },
           ],
         },
-        "mateo-to-fixed": {
+        "to-fixed": {
           fires: [
             {
               "src/checkout/receipt.ts": swap(

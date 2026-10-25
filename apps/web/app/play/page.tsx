@@ -23,9 +23,17 @@ export default async function Play({ searchParams }: Props) {
   const { ref, lang } = await searchParams;
   const store = await cookies();
   const consented = hasConsent(store.get(CONSENT_COOKIE)?.value);
-  const { findProject } = await getLibrary();
-  const quick = findProject("QUICK");
-  const choices = (quick?.issues ?? []).map((issue) => ({
+  const { issues } = await getLibrary();
+  // The easiest challenge in each language: the first easy one by key.
+  const starters = [
+    ...new Map(
+      issues
+        .filter((i) => i.difficulty === "easy" && i.language)
+        .map((i) => [i.language, i] as const)
+        .reverse(),
+    ).values(),
+  ].reverse();
+  const choices = starters.map((issue) => ({
     key: issue.key,
     slug: issue.slug,
     revision: issue.revision,

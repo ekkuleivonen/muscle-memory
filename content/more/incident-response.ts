@@ -82,10 +82,9 @@ export const issues: SeedIssue[] = [
     title: "Guest checkout fails with a server error",
     summary:
       "Since Thursday's release, guests get an error instead of a quote at checkout. Members are fine.",
-    kind: "bug",
     difficulty: "easy",
     language: "javascript",
-    skills: ["debugging", "reading-logs"],
+    tags: ["debugging", "reading-logs"],
     task: `Kettlebrook's checkout has been failing since Thursday's release, which shipped CHK-412 (free shipping from $30 for loyalty members). Every customer checking out as a guest gets "Something went wrong" on the payment page instead of a quote: \`POST /quote\` returns 500 with \`TypeError: Cannot read properties of undefined (reading 'tier')\` thrown in \`quoteOrder\`. Members' orders still get quotes. For example, guest order #88213 (two stoneware mugs at $18.00 each) failed.
 
 Fix \`quoteOrder\` so that every order gets a correct quote.
@@ -188,20 +187,11 @@ export function sum(amounts) {
       "",
     ],
     hidden: [3, 4, 5, 6, 7, 8, 9],
-    comments: [],
-    hints: [],
-    team: [
+    rules: [
       {
         id: "catch-hides-guests",
-        author: "Tomasz W",
-        role: "Checkout",
-        where: "review",
-        severity: "blocking",
-        text: [
-          "Do not use catch: handle guests and lapsed members explicitly, so a missing loyalty record can never turn into a silently wrong quote.",
-        ],
+        message: "Do not use catch: handle guests and lapsed members explicitly, so a missing loyalty record can never turn into a silently wrong quote.",
         when: { pattern: "catch\\s*[({]", present: true },
-        repeat: "while-true",
       },
     ],
     private: {
