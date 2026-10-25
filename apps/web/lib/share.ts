@@ -23,16 +23,16 @@ const KEY = /^[A-Z][A-Z0-9]{1,4}-[1-9]\d{0,3}$/;
 
 /** Reads a result link's path segment. Never invents a result for one that does not decode. */
 export function inspectCard(segment: string): CardLink {
-  const result = decodeResult(segment);
-  // Cards from the retired incident carry its version; that page is gone, but its issue may not be.
-  if (result?.iv !== undefined) return { kind: "older", key: result.k };
-  if (result) return { kind: "result", result };
   try {
     const binary = atob(segment.replace(/-/g, "+").replace(/_/g, "/"));
     const value = JSON.parse(
       new TextDecoder().decode(Uint8Array.from(binary, (c) => c.charCodeAt(0))),
     );
-    if (value && typeof value === "object" && typeof value.v === "number" && value.v !== 2)
+    if (
+      value &&
+      typeof value === "object" &&
+      (value.iv !== undefined || (typeof value.v === "number" && value.v !== 2))
+    )
       return {
         kind: "older",
         key: typeof value.k === "string" && KEY.test(value.k) ? value.k : null,
@@ -40,7 +40,8 @@ export function inspectCard(segment: string): CardLink {
   } catch {
     // Not base64url JSON at all.
   }
-  return { kind: "malformed" };
+  const result = decodeResult(segment);
+  return result ? { kind: "result", result } : { kind: "malformed" };
 }
 
 /** One file as shared: its path in the repo and the text pushed. */
@@ -62,11 +63,21 @@ const PATH = /^(?!.*\.\.)[A-Za-z0-9_][A-Za-z0-9_./-]{0,119}$/;
 const base64url = (bytes: Uint8Array) => {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 };
 
-async function through(bytes: Uint8Array, stream: GenericTransformStream, limit = Infinity) {
-  const reader = new Blob([bytes as BlobPart]).stream().pipeThrough(stream).getReader();
+async function through(
+  bytes: Uint8Array,
+  stream: GenericTransformStream,
+  limit = Infinity,
+) {
+  const reader = new Blob([bytes as BlobPart])
+    .stream()
+    .pipeThrough(stream)
+    .getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
   for (;;) {
@@ -90,14 +101,20 @@ async function through(bytes: Uint8Array, stream: GenericTransformStream, limit 
 }
 
 /** Why code could not go into a link. Never a partial snapshot: all of it, or none. */
-export type CodeRefusal = "empty" | "too-many-files" | "invalid-path" | "incomplete" | "too-large";
+export type CodeRefusal =
+  | "empty"
+  | "too-many-files"
+  | "invalid-path"
+  | "incomplete"
+  | "too-large";
 
 /** What the person is told when their code can't be included. */
 export const REFUSALS: Record<CodeRefusal, string> = {
   empty: "There are no changed files to include.",
   "too-many-files": `This pull request changed more than ${MAX_FILES} files, too many to fit in a link.`,
   "invalid-path": "A changed file has a name that can't go in a link.",
-  incomplete: "A changed file wasn't saved in full, so your code can't be shared exactly.",
+  incomplete:
+    "A changed file wasn't saved in full, so your code can't be shared exactly.",
   "too-large": "Your code is too long to fit in a link.",
 };
 
@@ -105,10 +122,18 @@ export const REFUSALS: Record<CodeRefusal, string> = {
 function check(files: readonly SharedFile[]): CodeRefusal | null {
   if (!files.length) return "empty";
   if (files.length > MAX_FILES) return "too-many-files";
-  if (files.some((f) => typeof f.path !== "string" || !PATH.test(f.path) || typeof f.text !== "string"))
+  if (
+    files.some(
+      (f) =>
+        typeof f.path !== "string" ||
+        !PATH.test(f.path) ||
+        typeof f.text !== "string",
+    )
+  )
     return "invalid-path";
   if (files.some((f) => f.truncated)) return "incomplete";
-  if (files.reduce((n, f) => n + f.text.length, 0) > MAX_TEXT) return "too-large";
+  if (files.reduce((n, f) => n + f.text.length, 0) > MAX_TEXT)
+    return "too-large";
   return null;
 }
 
@@ -125,8 +150,11 @@ export async function encodeCode(
     JSON.stringify({ v: 1, f: files.map((f) => [f.path, f.text]) }),
   );
   if (json.length > MAX_JSON_BYTES) return { ok: false, reason: "too-large" };
-  const packed = base64url(await through(json, new CompressionStream("deflate-raw")));
-  if (packed.length > MAX_CODE_FRAGMENT) return { ok: false, reason: "too-large" };
+  const packed = base64url(
+    await through(json, new CompressionStream("deflate-raw")),
+  );
+  if (packed.length > MAX_CODE_FRAGMENT)
+    return { ok: false, reason: "too-large" };
   // What the recipient will read, checked here: if the two sides ever disagree on a rule,
   // no link is made rather than one that does not open.
   const back = await decodeCode(packed);
@@ -139,14 +167,24 @@ export async function encodeCode(
 /** Files from a fragment value, or null when it is not something `encodeCode` made. */
 export async function decodeCode(value: string): Promise<SharedFile[] | null> {
   try {
-    if (!/^[A-Za-z0-9_-]+$/.test(value) || value.length > MAX_CODE_FRAGMENT) return null;
+    if (!/^[A-Za-z0-9_-]+$/.test(value) || value.length > MAX_CODE_FRAGMENT)
+      return null;
     const binary = atob(value.replace(/-/g, "+").replace(/_/g, "/"));
     const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
-    const json = await through(bytes, new DecompressionStream("deflate-raw"), MAX_JSON_BYTES);
-    const parsed = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(json));
+    const json = await through(
+      bytes,
+      new DecompressionStream("deflate-raw"),
+      MAX_JSON_BYTES,
+    );
+    const parsed = JSON.parse(
+      new TextDecoder("utf-8", { fatal: true }).decode(json),
+    );
     if (parsed?.v !== 1 || !Array.isArray(parsed.f)) return null;
-    if (!parsed.f.every((e: unknown) => Array.isArray(e) && e.length === 2)) return null;
-    const files: SharedFile[] = parsed.f.map(([path, text]: [string, string]) => ({ path, text }));
+    if (!parsed.f.every((e: unknown) => Array.isArray(e) && e.length === 2))
+      return null;
+    const files: SharedFile[] = parsed.f.map(
+      ([path, text]: [string, string]) => ({ path, text }),
+    );
     return check(files) ? null : files;
   } catch {
     return null;
@@ -154,7 +192,8 @@ export async function decodeCode(value: string): Promise<SharedFile[] | null> {
 }
 
 /** The `#code=` part of a result link, or "" without code. */
-export const codeFragment = (packed?: string | null) => (packed ? `#code=${packed}` : "");
+export const codeFragment = (packed?: string | null) =>
+  packed ? `#code=${packed}` : "";
 
 /** The fragment value from `location.hash`, if it has one. */
 export function codeFromHash(hash: string): string | null {

@@ -104,3 +104,9 @@ Not included: editor timelines beyond transactions, keystroke timing, participan
 ## Small screens and keyboard access
 
 Below 860px, Ticket and Files open native modal drawers; Escape closes them and restores focus. Run and pull-request controls wrap, while the editor and result panel retain their own scrolling. File, result and pull-request tabs support arrows, Home and End with roving focus and labelled panels. The `?` button explains run shortcuts and Escape then Tab to leave the editor; shortcut labels use Ctrl on Windows/Linux and Command on macOS.
+
+## Returning to work
+
+Editor text continues to recover from the attempt’s recorded code. The local-only `muscle-memory.workspace-view` entry remembers tabs, active file, side/panel choice, cursor and scroll per participant and attempt (up to twenty views). Restoring that view adds no activity observations. Replay and a reset start with their own view. A changed ticket keeps code on matching editable paths and names any paths no longer present.
+
+Runtime files warm while an individual issue is being read or its Start work link receives focus/hover. Warming fetches pinned same-origin files only and creates no sandbox. Editing stays available during loading. Downloads fail after thirty seconds without bytes, separately from the sixty-second sandbox startup timeout, and disposal aborts pending downloads. Offline status and the existing retry action explain failures without blaming code. Recorded timing meanings and capture versions are unchanged.

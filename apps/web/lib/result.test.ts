@@ -29,7 +29,7 @@ test("a card survives its link, and anything we would not have made is refused",
   ])
     assert.equal(decodeResult(encodeResult(bad as unknown as Result)), null);
   assert.equal(decodeResult("not base64 json"), null);
-  assert.equal(sentence(card, "Go"), "Fixed a real bug in Go without AI in 4 minutes. Green on the first run.");
+  assert.equal(sentence(card, "Go"), "Merged a fix for QUICK-4 in Go without AI.");
   assert.equal(duration(252), "4 min 12 s");
   assert.equal(duration(48), "48 s");
 });
@@ -77,7 +77,7 @@ test("the numbers come from keystrokes, edits, runs and the page, up to the merg
   ];
   const m = metricsOf(records, "word-count-python", at(60), (id) => (id === fixture.id ? fixture.revision : undefined));
   assert.deepEqual(m, {
-    t: 26, // 9 s + 4 + 1 + 11 + 10 of activity gaps: the 5 s the page was hidden do not count
+    t: 31, // 9 s + 4 + 1 + 16 + 10 of activity gaps (page and pull-request events are not activity)
     rd: 9,
     ks: 23,
     ty: 1,

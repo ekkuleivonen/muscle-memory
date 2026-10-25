@@ -6,18 +6,17 @@
  * and nobody should trust it more than a screenshot. It carries the device's referral code,
  * never the participant ID.
  */
+import { parsePublicEvidence, type PublicEvidence } from "./evidence";
 import type { Revision } from "../../../packages/content/model";
 import { casesRun } from "../../../packages/content/model";
-import { runFeedback, type WorkspaceRecord } from "../../../packages/domain/workspace";
-import { activeTime } from "./active-time";
+import {
+  runFeedback,
+  type WorkspaceRecord,
+} from "../../../packages/domain/workspace";
 
 /** Version 2 of the card's numbers; the meaning of each is in `metricsOf`. */
 export interface Metrics {
-  /**
-   * Active time in seconds: gaps between the person's activity in the IDE, each counted up to a
-   * minute, within one page load and less any time the page was hidden or only the test runner
-   * was busy (see active-time.ts).
-   */
+  /** Active time in seconds: gaps between activity, each counted up to a minute. */
   readonly t: number;
   /** Seconds from first opening the issue to the first edit. */
   readonly rd: number;
@@ -42,6 +41,7 @@ export interface Metrics {
 }
 
 export interface Result extends Metrics {
+  readonly ev?: PublicEvidence;
   readonly v: 2;
   /** Faster than this percent of the people who fixed the same issue, when there are enough. */
   readonly fp?: number;
@@ -53,16 +53,33 @@ export interface Result extends Metrics {
   readonly l: string;
   /** The sharer's referral code. */
   readonly c: string;
-  /** The incident only: the version played (8 hex digits of its revision), so a friend gets the same one. */
-  readonly iv?: string;
-  /** The incident only: which attempt, 1 for the first response, then replays. */
-  readonly a?: number;
-  /** The incident only: wall-clock seconds from acknowledging the page to merging the fix. */
-  readonly e?: number;
 }
 
-const TERMINAL = new Set(["result", "user-error", "runner-error", "timeout", "cancelled"]);
-const MODIFIERS = new Set(["Shift", "Control", "Alt", "Meta", "CapsLock", "AltGraph", "Fn"]);
+const ACTIVE = new Set([
+  "observation.workspace.edit",
+  "observation.workspace.keys",
+  "observation.workspace.selection",
+  "observation.workspace.scroll",
+  "observation.workspace.clipboard",
+  "observation.workspace.run",
+  "observation.workspace.navigated",
+]);
+const TERMINAL = new Set([
+  "result",
+  "user-error",
+  "runner-error",
+  "timeout",
+  "cancelled",
+]);
+const MODIFIERS = new Set([
+  "Shift",
+  "Control",
+  "Alt",
+  "Meta",
+  "CapsLock",
+  "AltGraph",
+  "Fn",
+]);
 const DELETES = new Set(["Backspace", "Delete"]);
 
 interface Observation {
@@ -88,7 +105,11 @@ export function metricsOf(
     if (record.kind !== "observation") continue;
     try {
       const o = JSON.parse(record.payload);
-      if (o.issue === issue && typeof o.occurredAt === "string" && o.occurredAt <= until)
+      if (
+        o.issue === issue &&
+        typeof o.occurredAt === "string" &&
+        o.occurredAt <= until
+      )
         observations.push({ ...o, data: o.data ?? {} });
     } catch {
       // Unreadable records say nothing.
@@ -100,23 +121,39 @@ export function metricsOf(
       (a.source?.sequence ?? 0) - (b.source?.sequence ?? 0),
   );
 
-  // Breaks, other tabs, other pages and the test runner's own time do not count.
-  const active = activeTime(observations);
+  // Active time: each gap between activity counts up to a minute, so breaks do not.
+  let active = 0;
+  let previous: number | null = null;
+  for (const o of observations) {
+    if (!ACTIVE.has(o.type)) continue;
+    const at = Date.parse(o.occurredAt);
+    if (previous !== null) active += Math.min(at - previous, 60_000);
+    previous = at;
+  }
 
-  const opened = observations.find((o) => o.type === "observation.workspace.opened");
-  const edited = observations.find((o) => o.type === "observation.workspace.edit");
+  const opened = observations.find(
+    (o) => o.type === "observation.workspace.opened",
+  );
+  const edited = observations.find(
+    (o) => o.type === "observation.workspace.edit",
+  );
   const read =
     opened && edited
-      ? Math.max(0, Date.parse(edited.occurredAt) - Date.parse(opened.occurredAt))
+      ? Math.max(
+          0,
+          Date.parse(edited.occurredAt) - Date.parse(opened.occurredAt),
+        )
       : 0;
 
   // Keys, per source (one page load), in the order they were pressed.
   const bySource = new Map<string, [number, string][]>();
   for (const o of observations)
     if (o.type === "observation.workspace.keys") {
-      const keys = (o.data.keys as [number, string, string, string, boolean][]) ?? [];
+      const keys =
+        (o.data.keys as [number, string, string, string, boolean][]) ?? [];
       const list = bySource.get(o.source?.id ?? "") ?? [];
-      for (const [t, kind, key] of keys) if (kind === "down") list.push([t, key]);
+      for (const [t, kind, key] of keys)
+        if (kind === "down") list.push([t, key]);
       bySource.set(o.source?.id ?? "", list);
     }
   let keystrokes = 0;
@@ -164,9 +201,14 @@ export function metricsOf(
       TERMINAL.has(String(o.data.status))
     ) {
       runs++;
-      const revision = o.issueRevision ? revisionFor(o.issueRevision) : undefined;
+      const revision = o.issueRevision
+        ? revisionFor(o.issueRevision)
+        : undefined;
       const outcome = o.data.outcome as
-        | { phase?: string; cases?: { output?: { text: string; truncated: boolean } }[] }
+        | {
+            phase?: string;
+            cases?: { output?: { text: string; truncated: boolean } }[];
+          }
         | undefined;
       if (!green && revision && outcome?.phase === "tests" && outcome.cases) {
         const { correct, total } = runFeedback(
@@ -178,9 +220,13 @@ export function metricsOf(
     }
     if (o.type === "observation.workspace.pull-request") pushes++;
     if (o.type === "observation.workspace.hint") hints++;
-    if (o.type === "observation.workspace.edit" && String(o.data.userEvent ?? "").startsWith("input.paste"))
+    if (
+      o.type === "observation.workspace.edit" &&
+      String(o.data.userEvent ?? "").startsWith("input.paste")
+    )
       pastes++;
-    if (o.type === "observation.workspace.page" && o.data.visible === false) left++;
+    if (o.type === "observation.workspace.page" && o.data.visible === false)
+      left++;
   }
   return {
     t: Math.max(1, Math.round(active / 1000)),
@@ -203,14 +249,33 @@ export function metricsOf(
  * listed here on purpose. Never demographics, the participant ID, records or code.
  */
 const PUBLIC: readonly (keyof Result)[] = [
-  "v", "k", "l", "c", "t", "rd", "ks", "ty", "w", "r", "g", "p", "h", "ps", "lt",
-  "fp", "fn", "iv", "a", "e",
+  "v",
+  "k",
+  "l",
+  "c",
+  "t",
+  "rd",
+  "ks",
+  "ty",
+  "w",
+  "r",
+  "g",
+  "p",
+  "h",
+  "ps",
+  "lt",
+  "fp",
+  "fn",
+  "ev",
 ];
 
 /** The card as it may leave the browser: only the allowlisted fields. */
 export function publicResult(result: Result): Result {
   return Object.fromEntries(
-    PUBLIC.filter((k) => result[k] !== undefined).map((k) => [k, result[k]]),
+    PUBLIC.filter((k) => result[k] !== undefined).map((k) => [
+      k,
+      k === "ev" ? (parsePublicEvidence(result.ev) ?? undefined) : result[k],
+    ]),
   ) as unknown as Result;
 }
 
@@ -219,7 +284,10 @@ export function encodeResult(result: Result): string {
   const bytes = new TextEncoder().encode(JSON.stringify(publicResult(result)));
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
 const count = (v: unknown, max: number) =>
@@ -253,25 +321,28 @@ export function decodeResult(segment: string): Result | null {
       /^[a-z+#]{1,16}$/.test(value.l) &&
       typeof value.c === "string" &&
       /^[a-z0-9]{6,32}$/.test(value.c) &&
-      (Object.keys(LIMITS) as (keyof Metrics)[]).every((k) => count(value[k], LIMITS[k]));
+      (Object.keys(LIMITS) as (keyof Metrics)[]).every((k) =>
+        count(value[k], LIMITS[k]),
+      );
     if (!ok) return null;
     const metrics = Object.fromEntries(
       (Object.keys(LIMITS) as (keyof Metrics)[]).map((k) => [k, value[k]]),
     ) as unknown as Metrics;
     const comparison =
-      count(value.fp, 100) && count(value.fn, 10_000_000) ? { fp: value.fp, fn: value.fn } : {};
-    const incident =
-      typeof value.iv === "string" &&
-      /^[0-9a-f]{8}$/.test(value.iv) &&
-      count(value.a, 10_000) &&
-      value.a >= 1
-        ? {
-            iv: value.iv,
-            a: value.a,
-            ...(count(value.e, 10_000_000) ? { e: value.e } : {}),
-          }
+      count(value.fp, 100) && count(value.fn, 10_000_000)
+        ? { fp: value.fp, fn: value.fn }
         : {};
-    return { v: 2, k: value.k, l: value.l, c: value.c, ...metrics, ...comparison, ...incident };
+    return {
+      v: 2,
+      k: value.k,
+      l: value.l,
+      c: value.c,
+      ...metrics,
+      ...comparison,
+      ...(value.ev !== undefined
+        ? { ev: parsePublicEvidence(value.ev) ?? undefined }
+        : {}),
+    };
   } catch {
     return null;
   }
@@ -299,12 +370,19 @@ export function compare(
   const people = aggregate?.n ?? 0;
   if (!aggregate?.t?.length || people < COMPARE_FROM) return { people };
   const slower = aggregate.t.filter((q) => q > seconds).length;
-  return { fasterThan: Math.round((100 * slower) / aggregate.t.length), people };
+  return {
+    fasterThan: Math.round((100 * slower) / aggregate.t.length),
+    people,
+  };
 }
 
 /** The comparison line, or null when there is nothing to compare with. */
-export function comparisonLine(result: Pick<Result, "fp" | "fn">, language: string): string | null {
-  if (result.fp !== undefined) return `Faster than ${result.fp}% of people who fixed it in ${language}.`;
+export function comparisonLine(
+  result: Pick<Result, "fp" | "fn">,
+  language: string,
+): string | null {
+  if (result.fp !== undefined)
+    return `Faster than ${result.fp}% of people who fixed it in ${language}.`;
   if (result.fn !== undefined)
     return `One of the first ${COMPARE_FROM} people to fix it in ${language}.`;
   return null;
@@ -320,27 +398,8 @@ export function duration(seconds: number): string {
 
 /** One sentence that says what happened, for posts and previews. */
 export function sentence(result: Result, language: string): string {
-  const time = result.t < 60 ? "under a minute" : `${Math.round(result.t / 60)} minutes`;
-  const green =
-    result.g === 1 ? " Green on the first run." : result.g ? ` Green on run ${result.g}.` : "";
-  const comparison = result.fp !== undefined ? ` Faster than ${result.fp}% of people who fixed it.` : "";
-  return `Fixed a real bug in ${language} without AI in ${time}.${green}${comparison}`;
-}
-
-/**
- * How long the incident took, as the card says: wall-clock from the page to the merge when the
- * card has it, and active work, labelled as such.
- */
-export function incidentTime(result: Result): string {
-  const active = `${duration(result.t)} active`;
-  return result.e !== undefined ? `${duration(result.e)} (${active})` : active;
-}
-
-/**
- * The incident's sentence, for posts and previews: the story's premise, then the card's own
- * numbers. "No AI" is the simulation's rule, not a claim about the player.
- */
-export function incidentSentence(result: Result): string {
-  const replay = result.a && result.a > 1 ? ", on a replay" : "";
-  return `Production was down. AI was down. In a no-AI incident sim I restored checkout in ${incidentTime(result)}${replay}.`;
+  const checks = result.ev?.checks;
+  return checks && checks.total !== null
+    ? `Merged a fix for ${result.k} in ${language} without AI. ${checks.passed}/${checks.total} checks passed.`
+    : `Merged a fix for ${result.k} in ${language} without AI.`;
 }

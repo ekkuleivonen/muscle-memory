@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { requireConsent } from "../../../lib/gate";
 import { inTicket } from "../../../lib/feedback";
-import { projectFilterValue } from "../../../lib/library";
+import { projectFilterValue, summarize } from "../../../lib/library";
 import { getLibrary } from "../../../lib/load";
 import "../ide.css";
 import { Ide } from "../ide";
@@ -35,7 +35,7 @@ export default async function WorkPage({ params, searchParams }: Props) {
   await requireConsent(
     `/work/${key}${wanted ? `?revision=${encodeURIComponent(wanted)}` : ""}`,
   );
-  const { findIssue, revisionsOf } = await getLibrary();
+  const { findIssue, revisionsOf, issues } = await getLibrary();
   const issue = findIssue(decodeURIComponent(key));
   if (!issue) notFound();
   if (key !== issue.key) redirect(`/work/${issue.key}`);
@@ -47,6 +47,7 @@ export default async function WorkPage({ params, searchParams }: Props) {
   return (
     <Ide
       revisionsJson={JSON.stringify(published)}
+      candidates={issues.map(summarize)}
       issue={{
         key: issue.key,
         slug: issue.slug,

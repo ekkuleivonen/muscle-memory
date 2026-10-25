@@ -26,7 +26,10 @@ import {
   type IssueKind,
   type Revision,
 } from "../../../../packages/content/model";
-import { runFeedback, type WorkspaceRecord } from "../../../../packages/domain/workspace";
+import {
+  runFeedback,
+  type WorkspaceRecord,
+} from "../../../../packages/domain/workspace";
 import type { Json } from "../../../../packages/domain/json";
 import {
   engineFor,
@@ -40,7 +43,7 @@ import {
   timeAgo,
   type PullRequestRecord,
 } from "../../lib/activity";
-import { attemptRecords } from "../../lib/attempts";
+import { attemptAt, attemptRecords } from "../../lib/attempts";
 import { statusOf } from "../../lib/board";
 import {
   allPullRequests,
@@ -66,7 +69,7 @@ import {
   type TreeNode,
 } from "../../lib/repo";
 import { LanguageDot } from "../(browse)/_components/bits";
-import { StatusMenu, useBoard } from "../(browse)/_components/board";
+import { StartWork, StatusMenu, useBoard } from "../(browse)/_components/board";
 import {
   PREVIOUS_PATH_KEY,
   setIssueContext,
@@ -80,7 +83,12 @@ import {
 } from "../workspace/editor";
 import { checksTypes, TypeChecker } from "../workspace/type-checker";
 import { PANEL, panelMax, SIDE, Splitter, useIdeLayout } from "./splitter";
-import { caseLabel, toolchain, transcript, type Executable } from "./transcript";
+import {
+  caseLabel,
+  toolchain,
+  transcript,
+  type Executable,
+} from "./transcript";
 import { recoveryMessage, saveBadge, saveState } from "../workspace/save-state";
 import {
   RUN_TIMEOUT_MS,
@@ -88,6 +96,17 @@ import {
   type RunView,
   type SaveStatus,
 } from "../workspace/session";
+
+import {
+  fitView,
+  readView,
+  writeView,
+  viewScope,
+  type FileView,
+} from "../workspace/continuity";
+
+import { nextProblem } from "../../lib/next-problem";
+import type { IssueSummary } from "../../lib/library";
 
 export interface IdeIssue {
   key: string;
@@ -123,6 +142,7 @@ type Opening =
  */
 export function Ide({
   revisionsJson,
+  candidates,
   issue,
   root,
 }: {
@@ -132,6 +152,7 @@ export function Ide({
    * earlier ones is read from theirs.
    */
   revisionsJson: string;
+  candidates: IssueSummary[];
   issue: IdeIssue;
   /** The repo's folder: the project's key, as in project:shop. */
   root: string;
@@ -163,6 +184,19 @@ export function Ide({
   ]);
   const [active, setActive] = useState(home);
   const [panel, setPanel] = useState<"tests" | "output" | "pulls">("tests");
+  const savedScope = useRef<string | null>(null);
+  const pendingPlaces = useRef<Record<string, FileView>>({});
+  const viewNow = useRef({ tabs, active, side: view, panel });
+  viewNow.current = { tabs, active, side: view, panel };
+  const persistView = () => {
+    if (savedScope.current && session.current)
+      writeView({
+        scope: savedScope.current,
+        ...viewNow.current,
+        files: { ...session.current.places(), ...pendingPlaces.current },
+        savedAt: new Date().toISOString(),
+      });
+  };
   /** This person's pull requests for the issue, newest first, across sessions. */
   const [pulls, setPulls] = useState<PullRequestRecord[]>([]);
   /** Which of them the person has merged (on the pull request's page). */
@@ -171,6 +205,17 @@ export function Ide({
   const [closed, setClosed] = useState<ReadonlySet<number>>(new Set());
   const [opening, setOpening] = useState<Opening>({ state: "opening" });
   const [message, setMessage] = useState("");
+  const [offline, setOffline] = useState(false);
+  useEffect(() => {
+    const update = () => setOffline(!navigator.onLine);
+    update();
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
   const mobileSide = useRef<HTMLDialogElement>(null);
   const [runtime, setRuntime] = useState<Runtime>(
     issue.runnable ? { state: "loading" } : { state: "none" },
@@ -203,6 +248,10 @@ export function Ide({
   const layout = useIdeLayout();
   const mainRef = useRef<HTMLElement>(null);
   const board = useBoard();
+  const currentProblem = candidates.find((i) => i.key === issue.key);
+  const next = currentProblem
+    ? nextProblem(currentProblem, candidates, board.items)
+    : null;
   // The session's callbacks outlive renders; they read the latest board through this.
   const done = statusOf(board.items, issue.key) === "done";
   /** The pull request new work is pushed to: the latest one, unless it was merged or closed. */
@@ -258,8 +307,8 @@ export function Ide({
     const counts = new Map<number, number>();
     // Blocking findings, and explicit ones of any severity (TeamComment.resolve).
     const explicit = (t: Feedback["threads"][number]) =>
-      revisions[t.issueRevision]?.team.find((c) => c.id === t.comment)?.resolve ===
-      "explicit";
+      revisions[t.issueRevision]?.team.find((c) => c.id === t.comment)
+        ?.resolve === "explicit";
     for (const t of feedback.threads)
       if (!t.resolved && (t.severity === "blocking" || explicit(t)))
         counts.set(t.number, (counts.get(t.number) ?? 0) + 1);
@@ -307,7 +356,10 @@ export function Ide({
       try {
         await current.recorder.flush();
         // Feedback belongs to the attempt under way: a replay hears it all again.
-        let records = attemptRecords(await opened.workspaceRecords(), issue.slug);
+        let records = attemptRecords(
+          await opened.workspaceRecords(),
+          issue.slug,
+        );
         const releases = due({
           revision,
           records,
@@ -327,7 +379,11 @@ export function Ide({
           // the pull request, so the status line announces them and resolutions.
           setMessage(
             announcement(
-              releases.filter((r) => r.kind === "resolved" || ("pullRequest" in r && r.pullRequest)),
+              releases.filter(
+                (r) =>
+                  r.kind === "resolved" ||
+                  ("pullRequest" in r && r.pullRequest),
+              ),
             ),
           );
           if (
@@ -420,7 +476,52 @@ export function Ide({
       const homeHost = hosts.current.get(home);
       // A superseded open must not create a session or record anything.
       if (!homeHost || !current()) return;
-      if (recovered) setMessage(recoveryMessage(recovered));
+      if (recovered) {
+        const dropped = Object.keys(recovered.files).filter(
+          (path) => !editable.some((f) => f.path === path),
+        );
+        setMessage(
+          [
+            recoveryMessage(recovered),
+            records.some((r) => {
+              try {
+                const o = JSON.parse(r.payload);
+                return (
+                  o.type === "observation.workspace.opened" &&
+                  o.issue === issue.slug &&
+                  o.issueRevision !== issue.revision
+                );
+              } catch {
+                return false;
+              }
+            })
+              ? `The ticket changed since your last visit. Your matching files were restored.${dropped.length ? ` Files no longer present: ${dropped.join(", ")}.` : " Review the current requirements before checking again."}`
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" "),
+        );
+      }
+      savedScope.current = `${participantId}:${viewScope(issue.slug, attemptAt(all, issue.slug).start)}`;
+      const saved = readView(savedScope.current);
+      if (saved) {
+        const fitted = fitView(saved, {
+          paths: repo.files.map((f) => f.path),
+          tabs: [home, ...editable.map((f) => f.path), testsFile.path],
+          lengths: Object.fromEntries(
+            editable.map((f) => [
+              f.path,
+              (recovered?.files[f.path] ?? f.text).length,
+            ]),
+          ),
+        });
+        setTabs([...fitted.tabs]);
+        setActive(fitted.active);
+        setView(fitted.side);
+        setPanel(fitted.panel);
+        pendingPlaces.current = { ...fitted.files };
+        setBooted(true);
+      }
       setPulls(history);
       setMerged(mergedNumbers);
       setClosed(closedNumbers);
@@ -522,7 +623,10 @@ export function Ide({
     if (checksTypes(issue.language))
       types.current = new TypeChecker(challenge.entry);
     void open(() => attempt === generation.current);
+    const saveView = () => persistView();
+    window.addEventListener("pagehide", saveView);
     const timer = setInterval(() => {
+      persistView();
       // Counts refresh each second; state changes arrive at once through onSaveStatus.
       setCapture(session.current?.saveStatus() ?? null);
       const changed = session.current?.editedFiles() ?? [];
@@ -535,7 +639,9 @@ export function Ide({
     // Hints wait for active minutes, which pass without any other event.
     const feedbackTimer = setInterval(() => review(), 30_000);
     return () => {
+      window.removeEventListener("pagehide", saveView);
       generation.current++;
+      persistView();
       clearInterval(timer);
       clearInterval(feedbackTimer);
       runner.current?.dispose();
@@ -631,6 +737,15 @@ export function Ide({
   useEffect(() => {
     if (!isOpen) return;
     const how = via();
+    const place = pendingPlaces.current[active];
+    requestAnimationFrame(() => {
+      session.current?.restorePlace(
+        active,
+        place,
+        how !== "app" || Boolean(place),
+      );
+    });
+    delete pendingPlaces.current[active];
     session.current?.navigated("file", "show", active, how);
     // Opening a file is investigation, which teammates may respond to.
     if (how !== "app") review();
@@ -880,6 +995,11 @@ export function Ide({
       />
 
       <main className="ide-main" ref={mainRef}>
+        {offline && (
+          <p role="status">
+            You’re offline. Keep editing; retry checks when reconnected.
+          </p>
+        )}
         {runtime.state === "loading" && !booting && (
           <div
             className="ide-progress"
@@ -1026,8 +1146,7 @@ export function Ide({
                   <p key={index} className="ide-team-note">
                     <span className="ide-team-text">
                       <b>{note.author}</b>{" "}
-                      <span className="faint">· {note.role}</span>{" "}
-                      {note.text}
+                      <span className="faint">· {note.role}</span> {note.text}
                     </span>{" "}
                     {note.pullRequest ? (
                       <Link href={pullHref(issue.key, note.pullRequest)}>
@@ -1058,6 +1177,7 @@ export function Ide({
             )}
             {panel === "pulls" ? (
               <PullRequests
+                next={next}
                 pulls={pulls}
                 merged={merged}
                 closed={closed}
@@ -1304,8 +1424,8 @@ function Tests({
   if (!issue.runnable)
     return (
       <p className="faint">
-        This repo has no test runner set up yet. Your edits are saved as you
-        go; the {visible} cases are in {testsPath}.
+        This repo has no test runner set up yet. Your edits are saved as you go;
+        the {visible} cases are in {testsPath}.
       </p>
     );
   if (runtime.state === "unavailable")
@@ -1360,12 +1480,7 @@ function Tests({
       <p className={`ide-summary ${failed ? "fail" : "pass"}`}>
         {failed ? "✘" : "✔"} {feedback.correct} passed
         {failed > 0 && `, ${failed} failed`} · {o.durationMs} ms
-        {stale && (
-          <span className="faint">
-            {" "}
-            · you&apos;ve edited since
-          </span>
-        )}
+        {stale && <span className="faint"> · you&apos;ve edited since</span>}
       </p>
       <ol className="ide-cases">
         {cases.map((check, index) => (
@@ -1446,6 +1561,7 @@ const CLOSED = { mark: "×", label: "Closed", tone: "faint" };
 const PULLS_NEWEST = 3;
 
 function PullRequests({
+  next,
   pulls,
   merged,
   closed,
@@ -1457,6 +1573,7 @@ function PullRequests({
   done,
   runnable,
 }: {
+  next: IssueSummary | null;
   pulls: PullRequestRecord[];
   /** The pull request that can be merged now (lib/merge), if any. */
   mergeable: number | null;
@@ -1484,7 +1601,8 @@ function PullRequests({
       {latest && !done && closed.has(latest.number) && (
         <p className="ide-review">
           Pull request #{latest.number} is closed. When your code is ready, open
-          a new one (<Shortcut shift />).
+          a new one (<Shortcut shift />
+          ).
         </p>
       )}
       {latest &&
@@ -1529,10 +1647,9 @@ function PullRequests({
           </div>
         ) : latest.result === "checks-passed" && mergeable !== latest.number ? (
           <p className="ide-review">
-            Pull request #{latest.number} passed its checks, but they
-            don&apos;t cover the code or ticket you have now. Push again (
-            <Shortcut shift />
-            ) so CI checks what you have.{" "}
+            Pull request #{latest.number} passed its checks, but they don&apos;t
+            cover the code or ticket you have now. Push again (
+            <Shortcut shift />) so CI checks what you have.{" "}
             <Link href={pullHref(issue.key, latest.number)}>
               View #{latest.number}
             </Link>
@@ -1548,10 +1665,7 @@ function PullRequests({
               threads={threads.filter((t) => t.number === latest.number)}
               revisions={revisions}
             />
-            <Link
-              className="ide-run"
-              href={pullHref(issue.key, latest.number)}
-            >
+            <Link className="ide-run" href={pullHref(issue.key, latest.number)}>
               Review and merge #{latest.number} →
             </Link>
           </div>
@@ -1569,7 +1683,15 @@ function PullRequests({
       {done && mergedPull && (
         <p className="ide-done">
           Pull request #{mergedPull.number} merged. {issue.key} is <b>Done</b>.{" "}
-          <Link href="/dashboard">Back to your dashboard</Link> or{" "}
+          <Link href={pullHref(issue.key, mergedPull.number)}>
+            View outcome
+          </Link>{" "}
+          ·{" "}
+          {next && (
+            <>
+              <StartWork issue={next} href={`/work/${next.key}`} /> ·{" "}
+            </>
+          )}{" "}
           <Link href="/issues">pick the next one</Link>.
         </p>
       )}
@@ -1584,8 +1706,8 @@ function PullRequests({
             </>
           ) : (
             <>
-              CI isn&apos;t set up for this repo yet, so pull requests can&apos;t
-              be opened. Your edits are saved.
+              CI isn&apos;t set up for this repo yet, so pull requests
+              can&apos;t be opened. Your edits are saved.
             </>
           )}
         </p>
@@ -1604,7 +1726,10 @@ function PullRequests({
                   {pr.result === "running" ? (
                     <span className="mono">#{pr.number}</span>
                   ) : (
-                    <Link className="mono" href={pullHref(issue.key, pr.number)}>
+                    <Link
+                      className="mono"
+                      href={pullHref(issue.key, pr.number)}
+                    >
                       #{pr.number}
                     </Link>
                   )}
@@ -1614,12 +1739,14 @@ function PullRequests({
                       ? `${pr.total} checks`
                       : `${pr.passed}/${pr.total} checks`}
                     {pr.pushes > 1 && ` · ${pr.pushes} pushes`}
-                    {!isMerged(pr) && !closed.has(pr.number) && blocking.get(pr.number) && (
-                      <span className="ide-pr-blocking">
-                        {" · "}
-                        {comments(blocking.get(pr.number)!)}
-                      </span>
-                    )}
+                    {!isMerged(pr) &&
+                      !closed.has(pr.number) &&
+                      blocking.get(pr.number) && (
+                        <span className="ide-pr-blocking">
+                          {" · "}
+                          {comments(blocking.get(pr.number)!)}
+                        </span>
+                      )}
                   </span>
                   <time className="faint" dateTime={pr.at}>
                     {timeAgo(pr.at, now)}
@@ -1720,7 +1847,13 @@ function teamNotes(releases: readonly Release[]): TeamNote[] {
     if (r.kind === "comment" && r.pullRequest) return [];
     const plain = (text: string) => text.replace(/`/g, "");
     if (r.kind === "hint")
-      return [{ author: r.hint.author.name, role: r.hint.author.role, text: plain(r.hint.text) }];
+      return [
+        {
+          author: r.hint.author.name,
+          role: r.hint.author.role,
+          text: plain(r.hint.text),
+        },
+      ];
     return [
       {
         author: r.comment.author.name,

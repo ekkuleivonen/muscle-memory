@@ -249,13 +249,18 @@ export class WorkspaceSession {
         keymap: this.options.keymap ?? "standard",
         label: `Code editor: ${path}`,
         // The type checker knows one file: the entry file.
-        types: path === this.options.executable.entry ? this.options.types : undefined,
+        types:
+          path === this.options.executable.entry
+            ? this.options.types
+            : undefined,
         activity: this.activity(path),
       },
     );
     this.views.set(path, view);
     view.focus();
   }
+
+  private restoring = new Set<string>();
 
   /** Each mounted editable file's cursor, selection and scroll, to come back to later. */
   places(): Record<string, FileView> {
@@ -265,13 +270,20 @@ export class WorkspaceSession {
   }
 
   /**
-   * Puts an editable file's editor back where it was when the person left (recorded as a
-   * `select.restore` selection), and focuses it when asked.
+   * Restores local view state without recording app-driven selection or scroll as activity.
    */
-  restorePlace(path: string, place: FileView | undefined, focus: boolean): void {
+  restorePlace(
+    path: string,
+    place: FileView | undefined,
+    focus: boolean,
+  ): void {
     const view = this.views.get(path);
     if (!view || this.closed) return;
-    if (place) restoreFileView(view, place);
+    if (place) {
+      this.restoring.add(path);
+      restoreFileView(view, place);
+      setTimeout(() => this.restoring.delete(path), 100);
+    }
     if (focus) view.focus();
   }
 
@@ -374,7 +386,9 @@ export class WorkspaceSession {
         ...(this.options.executable.adapter
           ? { adapter: this.options.executable.adapter }
           : {}),
-        inputs: casesRun(this.options.executable.cases, purpose).map((c) => c.input),
+        inputs: casesRun(this.options.executable.cases, purpose).map(
+          (c) => c.input,
+        ),
       },
       () => update("running"),
     );
@@ -407,7 +421,9 @@ export class WorkspaceSession {
           where: r.comment.where,
           severity: r.comment.severity,
           wording: r.wording,
-          ...(r.pullRequest ? { pullRequest: r.pullRequest, push: r.push } : {}),
+          ...(r.pullRequest
+            ? { pullRequest: r.pullRequest, push: r.push }
+            : {}),
         });
       else if (r.kind === "hint")
         this.record("observation.workspace.hint", {
@@ -450,12 +466,19 @@ export class WorkspaceSession {
     if (this.closed) return;
     this.settle();
     this.writeKeys();
-    this.record("observation.workspace.closed", { reason: "page-hidden-for-unload" });
+    this.record("observation.workspace.closed", {
+      reason: "page-hidden-for-unload",
+    });
     void this.recorder.flush().catch(() => undefined);
   }
 
   /** The page became visible or hidden, gained or lost focus, or was resized. */
-  page(state: { visible: boolean; focused: boolean; width: number; height: number }): void {
+  page(state: {
+    visible: boolean;
+    focused: boolean;
+    width: number;
+    height: number;
+  }): void {
     this.record("observation.workspace.page", state);
   }
 
@@ -466,10 +489,18 @@ export class WorkspaceSession {
     value: string,
     via: "pointer" | "keyboard" | "app",
   ): void {
-    this.record("observation.workspace.navigated", { target, action, value, via });
+    this.record("observation.workspace.navigated", {
+      target,
+      action,
+      value,
+      via,
+    });
   }
 
-  runtimeState(state: "loading" | "ready" | "unavailable", message?: string): void {
+  runtimeState(
+    state: "loading" | "ready" | "unavailable",
+    message?: string,
+  ): void {
     this.record("observation.workspace.runtime", {
       state,
       ...(message ? { message } : {}),
@@ -485,11 +516,14 @@ export class WorkspaceSession {
         waiting.push([this.recorder.elapsed(), kind, key, modifiers, repeat]);
         this.keys.set(file, waiting);
         if (waiting.length >= KEYS_AT_MOST) this.writeKeys();
-        else this.keysTimer ??= setTimeout(() => this.writeKeys(), KEYS_EVERY_MS);
+        else
+          this.keysTimer ??= setTimeout(() => this.writeKeys(), KEYS_EVERY_MS);
       },
       onSelection: (selection, userEvent) => {
+        if (this.restoring.has(file)) return;
         const key = `selection:${file}`;
-        const moves = this.burst?.key === key ? (this.merging as number) + 1 : 1;
+        const moves =
+          this.burst?.key === key ? (this.merging as number) + 1 : 1;
         this.merge(key, SELECTION_MERGE_MS, moves, () =>
           this.record("observation.workspace.selection", {
             file,
@@ -500,14 +534,29 @@ export class WorkspaceSession {
         );
       },
       onScroll: (fromLine, toLine) =>
+        !this.restoring.has(file) &&
         this.merge(`scroll:${file}`, SCROLL_MERGE_MS, 0, () =>
-          this.record("observation.workspace.scroll", { file, fromLine, toLine }),
+          this.record("observation.workspace.scroll", {
+            file,
+            fromLine,
+            toLine,
+          }),
         ),
-      onFocus: (focused) => this.record("observation.workspace.focus", { file, focused }),
+      onFocus: (focused) =>
+        this.record("observation.workspace.focus", { file, focused }),
       onClipboard: (kind, ranges, wholeLines) =>
-        this.record("observation.workspace.clipboard", { file, kind, ranges, wholeLines }),
+        this.record("observation.workspace.clipboard", {
+          file,
+          kind,
+          ranges,
+          wholeLines,
+        }),
       onAssist: (kind, items) =>
-        this.record("observation.workspace.assist", { file, kind, items: items as Json }),
+        this.record("observation.workspace.assist", {
+          file,
+          kind,
+          items: items as Json,
+        }),
     };
   }
 
@@ -515,7 +564,12 @@ export class WorkspaceSession {
   private merging = 0;
 
   /** Holds the latest of a burst until it settles; a different burst settles this one first. */
-  private merge(key: string, ms: number, count: number, emit: () => void): void {
+  private merge(
+    key: string,
+    ms: number,
+    count: number,
+    emit: () => void,
+  ): void {
     if (this.closed) return;
     if (this.burst && this.burst.key !== key) this.settle();
     if (this.burst) clearTimeout(this.burst.timer);
@@ -538,7 +592,8 @@ export class WorkspaceSession {
     clearTimeout(this.keysTimer);
     this.keysTimer = undefined;
     for (const [file, keys] of this.keys)
-      if (keys.length) this.recorder.observe("observation.workspace.keys", { file, keys });
+      if (keys.length)
+        this.recorder.observe("observation.workspace.keys", { file, keys });
     this.keys.clear();
   }
 
@@ -674,7 +729,10 @@ export class WorkspaceSession {
       Object.fromEntries(
         [...this.docs].map(([path, doc]) => [
           path,
-          { text: doc.toString(), mediaType: this.options.files[path].mediaType },
+          {
+            text: doc.toString(),
+            mediaType: this.options.files[path].mediaType,
+          },
         ]),
       ),
     );

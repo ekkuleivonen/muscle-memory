@@ -3,6 +3,11 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { openPracticeStore } from "../../../../../packages/browser/practice-store";
 import type { Revision } from "../../../../../packages/content/model";
 import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
+import {
+  evidenceOf,
+  publicEvidence,
+  type PublicEvidence,
+} from "../../../lib/evidence";
 import { readProfile } from "../../../lib/account";
 import { LANGUAGES } from "../../../lib/languages";
 import { INGEST_URL } from "../../../lib/ingest";
@@ -17,13 +22,34 @@ import {
 } from "../../../lib/result";
 
 /** The receipt's lines, shared by the card here and the shared page. */
-export function receiptLines(m: Metrics): [string, string, boolean?][] {
+export function receiptLines(
+  m: Metrics & { ev?: PublicEvidence },
+): [string, string, boolean?][] {
+  if (m.ev)
+    return [
+      [
+        "latest checks",
+        `${m.ev.checks.passed ?? "?"}/${m.ev.checks.total ?? "?"}`,
+      ],
+      [
+        "first submission",
+        m.ev.first
+          ? `${m.ev.first.passed ?? "?"}/${m.ev.first.total ?? "?"}`
+          : "not known",
+      ],
+      [
+        "CI-only checks",
+        m.ev.hidden
+          ? `${m.ev.hidden.passed}/${m.ev.hidden.total}`
+          : "not known",
+      ],
+      ["pushes", String(m.ev.pushes)],
+      ["local test runs", String(m.ev.runs)],
+      ["findings still open", String(m.ev.findings.open)],
+      ["hints", String(m.ev.hints)],
+      ["production outcome", "not measured"],
+    ];
   return [
-    ["active time", duration(m.t)],
-    ["opened to first edit", duration(m.rd)],
-    ["keystrokes", String(m.ks)],
-    ["typos fixed (est.)", String(m.ty)],
-    ["peak speed", m.w ? `${m.w} wpm` : "–"],
     [
       "test runs",
       m.g === 1
@@ -34,8 +60,6 @@ export function receiptLines(m: Metrics): [string, string, boolean?][] {
       m.g === 1,
     ],
     ["hints", m.h ? String(m.h) : "none"],
-    ["pastes", String(m.ps)],
-    ["left the tab", m.lt ? `${m.lt}×` : "never"],
   ];
 }
 
@@ -63,7 +87,7 @@ export function Receipt({
       </div>
       <p className="receipt-head">{headline}</p>
       <p className="receipt-sub">{detail}</p>
-      {comparison && <p className="receipt-compare">{comparison}</p>}
+
       <dl className="receipt-rows">
         {receiptLines(metrics).map(([label, value, good]) => (
           <div key={label} className="receipt-row">
@@ -79,6 +103,7 @@ export function Receipt({
 }
 
 export interface ResultInput {
+  number: number;
   issue: { key: string; slug: string; title: string; revision: string };
   language: string;
   records: readonly WorkspaceRecord[];
@@ -150,13 +175,30 @@ export function useResult(input: ResultInput | null): ResultState | null {
   const comparison = aggregate
     ? { fn: people, ...(fasterThan !== undefined ? { fp: fasterThan } : {}) }
     : {};
+  const evidence = evidenceOf({
+    records: input.records,
+    issue: issue.slug,
+    number: input.number,
+    revisionFor: (id) => input.revisions[id],
+    until: input.mergedAt,
+  });
+  const ev = evidence
+    ? publicEvidence({ ...evidence.facts, state: "merged" })
+    : undefined;
   const result: Result | null = code
-    ? { v: 2, k: issue.key, l: language, c: code, ...metrics, ...comparison }
+    ? {
+        v: 2,
+        k: issue.key,
+        l: language,
+        c: code,
+        ...metrics,
+        ...(ev ? { ev } : {}),
+      }
     : null;
   return {
     metrics,
     result,
-    comparison: comparisonLine(comparison, label),
+    comparison: null,
     label,
   };
 }

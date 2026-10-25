@@ -73,7 +73,7 @@ export default async function IssuePage(props: Props) {
           <h1>{issue.title}</h1>
           {issue.summary && <p className="lede">{issue.summary}</p>}
           <div className="mobile-start">
-            <StartWork issue={issue} href={`/work/${issue.key}`} />
+            <StartWork issue={issue} href={`/work/${issue.key}`} warmOnMount />
           </div>
           <section className="section">
             <h2>Description</h2>

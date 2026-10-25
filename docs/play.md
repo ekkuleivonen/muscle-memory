@@ -88,3 +88,5 @@ The incident (INC-1, "Production is down. AI is down.") was retired as a wrapper
 - A shared incident card (`/r/<card>` for INC-1) still shows its incident wording, and its link leads through `/incident` to INC-1. The card route is being reworked separately.
 
 INC-1 stays an ordinary issue under the same key and id, so attempts already made keep their pull requests, findings and records. Revisions that carry the retired chat lines are still in the catalog; nothing shows them.
+
+The integrated ordinary PR outcome and public result use the same factual evidence projection: first submission and latest checks, CI-only checks, runs, pushes, findings and hints, with missing evidence labelled. Public cards omit code unless explicitly selected, retain no demographic/private fields, and make no typing-speed ranking or production-success claim.

@@ -3,15 +3,12 @@
  * a reload or the next day) and coming back puts them where they were: the open tabs, the file
  * shown, the side bar and panel, and each editable file's cursor, selection and scroll. The code
  * itself comes from the recorded edits (packages/capture/restore.ts); this is only the view, kept
- * per attempt so a replay starts clean and never inherits another attempt's place.
+ * per participant and attempt so replays never inherit another attempt's place.
  *
- * Kept in localStorage on this device, never recorded or uploaded. A cursor put back on reopening
- * is recorded as a selection with the user event `select.restore`, so it is never mistaken for
- * the person moving it.
+ * Kept locally, never recorded or uploaded. Restoring the view adds no analytics event.
  */
 import { EditorSelection } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { RESTORED_SELECTION } from "../../lib/active-time";
 
 export const WORKSPACE_VIEW_KEY = "muscle-memory.workspace-view";
 /** Views kept, most recent first; older attempts' places are forgotten. */
@@ -22,7 +19,10 @@ export type PanelView = "tests" | "output" | "pulls";
 
 export interface FileView {
   /** CodeMirror's selection as JSON: ranges of anchor and head, and the main range. */
-  readonly ranges: readonly { readonly anchor: number; readonly head: number }[];
+  readonly ranges: readonly {
+    readonly anchor: number;
+    readonly head: number;
+  }[];
   readonly main: number;
   /** The first line in view, 1-based. */
   readonly topLine: number;
@@ -50,8 +50,10 @@ const isCount = (v: unknown): v is number =>
 function parseFile(value: unknown): FileView | null {
   const v = value as Partial<FileView> | null;
   if (!v || !Array.isArray(v.ranges) || !v.ranges.length) return null;
-  if (!v.ranges.every((r) => r && isCount(r.anchor) && isCount(r.head))) return null;
-  if (!isCount(v.main) || v.main >= v.ranges.length || !isCount(v.topLine)) return null;
+  if (!v.ranges.every((r) => r && isCount(r.anchor) && isCount(r.head)))
+    return null;
+  if (!isCount(v.main) || v.main >= v.ranges.length || !isCount(v.topLine))
+    return null;
   return {
     ranges: v.ranges.map((r) => ({ anchor: r.anchor, head: r.head })),
     main: v.main,
@@ -139,7 +141,10 @@ export function fitView(
     if (length === undefined) continue;
     const clamp = (n: number) => Math.min(n, length);
     files[path] = {
-      ranges: file.ranges.map((r) => ({ anchor: clamp(r.anchor), head: clamp(r.head) })),
+      ranges: file.ranges.map((r) => ({
+        anchor: clamp(r.anchor),
+        head: clamp(r.head),
+      })),
       main: file.main,
       topLine: file.topLine,
     };
@@ -202,8 +207,7 @@ export function fileViewOf(view: EditorView): FileView {
 }
 
 /**
- * Puts an editor back where it was. Recorded as a selection with the user event
- * `select.restore` (and the scroll it causes), not as the person's own move.
+ * Puts an editor back where it was. The session suppresses restoration activity.
  */
 export function restoreFileView(view: EditorView, file: FileView): void {
   const { doc } = view.state;
@@ -211,10 +215,11 @@ export function restoreFileView(view: EditorView, file: FileView): void {
   const line = doc.line(Math.min(file.topLine, doc.lines));
   view.dispatch({
     selection: EditorSelection.create(
-      file.ranges.map((r) => EditorSelection.range(clamp(r.anchor), clamp(r.head))),
+      file.ranges.map((r) =>
+        EditorSelection.range(clamp(r.anchor), clamp(r.head)),
+      ),
       file.main,
     ),
     effects: EditorView.scrollIntoView(line.from, { y: "start" }),
-    userEvent: RESTORED_SELECTION,
   });
 }

@@ -254,7 +254,7 @@ test("a clean success: observed correctness, verification before push, no recove
   assert.equal(evidence.sections.at(-1)?.id, "timing");
 });
 
-test("failure and recovery: failed runs, a failing push, a review finding fixed by code", () => {
+test("failure and recovery: failed runs, a failing push, an explicitly resolved review finding", () => {
   const a = attempt();
   a.opened(0);
   a.edit(1, 1);
@@ -266,7 +266,7 @@ test("failure and recovery: failed runs, a failing push, a review finding fixed 
   a.review(7, 1, 1);
   a.edit(8, 3);
   a.push(9, 1, 2, 3, cases.length);
-  a.resolvedByCode(10, 1, 2);
+  a.add("observation.board.resolved", 10, {pullRequest: 1, comment: "priya-debug-print"});
   a.merged(11, 1);
   const { facts, sections } = evidenceOf({
     records: a.records,
@@ -280,9 +280,9 @@ test("failure and recovery: failed runs, a failing push, a review finding fixed 
   assert.equal(facts.recovery.failedPushes, 1);
   assert.deepEqual(facts.recovery.findings, {
     raised: 1,
-    byCode: 1,
+    byCode: 0,
     byReply: 0,
-    byResolve: 0,
+    byResolve: 1,
     open: 0,
   });
   // The code was edited after the last local run, so only CI checked what was pushed.
@@ -294,7 +294,7 @@ test("failure and recovery: failed runs, a failing push, a review finding fixed 
   );
   assert.match(
     recovery.find((i) => i.id === "findings")!.text,
-    /1 by a change to the code/,
+    /1 resolved by you/,
   );
 });
 

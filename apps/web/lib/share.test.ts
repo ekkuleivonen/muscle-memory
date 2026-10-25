@@ -16,8 +16,21 @@ import {
 } from "./share";
 
 const card: Result = {
-  v: 2, k: "QUICK-4", l: "go", c: "ab12cd34ef56",
-  t: 252, rd: 48, ks: 214, ty: 9, w: 71, r: 1, g: 1, p: 1, h: 0, ps: 0, lt: 0,
+  v: 2,
+  k: "QUICK-4",
+  l: "go",
+  c: "ab12cd34ef56",
+  t: 252,
+  rd: 48,
+  ks: 214,
+  ty: 9,
+  w: 71,
+  r: 1,
+  g: 1,
+  p: 1,
+  h: 0,
+  ps: 0,
+  lt: 0,
 };
 const segment = (value: unknown) =>
   Buffer.from(JSON.stringify(value)).toString("base64url");
@@ -41,40 +54,88 @@ test("only allowlisted fields leave the browser, whatever the card was built fro
 });
 
 test("a result link is a result, an older version, or malformed; never a guess", () => {
-  assert.deepEqual(inspectCard(encodeResult(card)), { kind: "result", result: card });
-  assert.deepEqual(inspectCard(segment({ v: 1, k: "QUICK-4", t: 1 })), { kind: "older", key: "QUICK-4" });
-  assert.deepEqual(inspectCard(segment({ v: 3, k: "<b>" })), { kind: "older", key: null });
-  assert.deepEqual(inspectCard(encodeResult({ ...card, k: "INC-1", iv: "0a1b2c3d", a: 1 })), { kind: "older", key: "INC-1" });
+  assert.deepEqual(inspectCard(encodeResult(card)), {
+    kind: "result",
+    result: card,
+  });
+  assert.deepEqual(inspectCard(segment({ v: 1, k: "QUICK-4", t: 1 })), {
+    kind: "older",
+    key: "QUICK-4",
+  });
+  assert.deepEqual(inspectCard(segment({ v: 3, k: "<b>" })), {
+    kind: "older",
+    key: null,
+  });
+  assert.deepEqual(
+    inspectCard(segment({ ...card, k: "INC-1", iv: "0a1b2c3d", a: 1 })),
+    { kind: "older", key: "INC-1" },
+  );
   // A current card with a field out of range is not "older": it is not one we made.
-  assert.deepEqual(inspectCard(encodeResult({ ...card, t: -1 })), { kind: "malformed" });
-  for (const bad of ["", "%%%", "bm90IGpzb24", segment("just a string"), segment(null)])
+  assert.deepEqual(inspectCard(encodeResult({ ...card, t: -1 })), {
+    kind: "malformed",
+  });
+  for (const bad of [
+    "",
+    "%%%",
+    "bm90IGpzb24",
+    segment("just a string"),
+    segment(null),
+  ])
     assert.deepEqual(inspectCard(bad), { kind: "malformed" }, bad);
 });
 
 test("shared code survives its fragment, and anything we would not have made is refused", async () => {
   const files = [
-    { path: "src/count_words.py", text: "def count_words(text):\n    return len(text.split())\n" },
+    {
+      path: "src/count_words.py",
+      text: "def count_words(text):\n    return len(text.split())\n",
+    },
   ];
   const packed = await packedOf(files);
   assert.match(packed, /^[A-Za-z0-9_-]+$/);
   assert.deepEqual(await decodeCode(packed), files);
   assert.equal(codeFromHash(codeFragment(packed)), packed);
   assert.equal(codeFragment(null), "");
-  for (const hash of ["", "#", "#code=", "#code=a b", "#other=abc", "#code=abc&x=1"])
+  for (const hash of [
+    "",
+    "#",
+    "#code=",
+    "#code=a b",
+    "#other=abc",
+    "#code=abc&x=1",
+  ])
     assert.equal(codeFromHash(hash), null, hash);
 
-  for (const value of ["", "!!!", "AAAA", Buffer.from("not deflate").toString("base64url")])
+  for (const value of [
+    "",
+    "!!!",
+    "AAAA",
+    Buffer.from("not deflate").toString("base64url"),
+  ])
     assert.equal(await decodeCode(value), null, value);
-  assert.equal(await decodeCode(await pack({ v: 2, f: [["a.py", "x"]] })), null);
-  assert.equal(await decodeCode(await pack({ v: 1, f: [["<img src=x>", "x"]] })), null);
+  assert.equal(
+    await decodeCode(await pack({ v: 2, f: [["a.py", "x"]] })),
+    null,
+  );
+  assert.equal(
+    await decodeCode(await pack({ v: 1, f: [["<img src=x>", "x"]] })),
+    null,
+  );
   assert.equal(await decodeCode(await pack({ v: 1, f: [["a.py", 1]] })), null);
   // A small link that inflates into something huge is refused before it is all read.
-  assert.equal(await decodeCode(await pack({ v: 1, f: [["a.py", "a".repeat(5_000_000)]] })), null);
+  assert.equal(
+    await decodeCode(
+      await pack({ v: 1, f: [["a.py", "a".repeat(5_000_000)]] }),
+    ),
+    null,
+  );
 });
 
 const pack = async (value: unknown) => {
   const deflated = await new Response(
-    new Blob([JSON.stringify(value)]).stream().pipeThrough(new CompressionStream("deflate-raw")),
+    new Blob([JSON.stringify(value)])
+      .stream()
+      .pipeThrough(new CompressionStream("deflate-raw")),
   ).arrayBuffer();
   return Buffer.from(deflated).toString("base64url");
 };
@@ -94,10 +155,31 @@ test("all the code or none: too many files, bad paths and partial files are refu
   assert.deepEqual(await decodeCode(await packedOf(eight)), eight);
   assert.equal(await refusal([...eight, file(8)]), "too-many-files");
   assert.equal(await refusal([]), "empty");
-  for (const path of ["../etc/passwd", "src/../x.py", "/abs.py", "<img>.py", "a b.py", ".hidden", ""])
-    assert.equal(await refusal([file(1), { path, text: "x" }]), "invalid-path", path);
-  assert.equal(await refusal([file(1), { ...file(2), truncated: true }]), "incomplete");
-  for (const reason of ["empty", "too-many-files", "invalid-path", "incomplete", "too-large"] as const)
+  for (const path of [
+    "../etc/passwd",
+    "src/../x.py",
+    "/abs.py",
+    "<img>.py",
+    "a b.py",
+    ".hidden",
+    "",
+  ])
+    assert.equal(
+      await refusal([file(1), { path, text: "x" }]),
+      "invalid-path",
+      path,
+    );
+  assert.equal(
+    await refusal([file(1), { ...file(2), truncated: true }]),
+    "incomplete",
+  );
+  for (const reason of [
+    "empty",
+    "too-many-files",
+    "invalid-path",
+    "incomplete",
+    "too-large",
+  ] as const)
     assert.ok(REFUSALS[reason].length > 10);
 });
 
@@ -106,15 +188,22 @@ test("every code link that is made reads back exactly, whatever the characters",
   const wide = "// " + "界".repeat(50_000) + "\nexport const x = 1;\n";
   assert.equal(await refusal([{ path: "wide.js", text: wide }]), "too-large");
   // Just under the byte budget: compresses into a link, and must decode.
-  const fits = "// " + "界".repeat(Math.floor((MAX_JSON_BYTES - 200) / 3)) + "\n";
-  assert.deepEqual(await decodeCode(await packedOf([{ path: "fits.js", text: fits }])), [
-    { path: "fits.js", text: fits },
-  ]);
+  const fits =
+    "// " + "界".repeat(Math.floor((MAX_JSON_BYTES - 200) / 3)) + "\n";
+  assert.deepEqual(
+    await decodeCode(await packedOf([{ path: "fits.js", text: fits }])),
+    [{ path: "fits.js", text: fits }],
+  );
   // Control characters escape to six bytes each in JSON (\u0001): counted as bytes, not characters.
-  const controls = Array.from({ length: 30_000 }, (_, i) => String.fromCharCode(1 + (i % 8))).join("");
-  assert.equal(await refusal([{ path: "ctl.txt", text: controls }]), "too-large");
+  const controls = Array.from({ length: 30_000 }, (_, i) =>
+    String.fromCharCode(1 + (i % 8)),
+  ).join("");
+  assert.equal(
+    await refusal([{ path: "ctl.txt", text: controls }]),
+    "too-large",
+  );
   const awkward = [
-    "tabs\tquotes \" backslashes \\ newlines\r\n nul \u0000 bell \u0007 escape \u001b",
+    'tabs\tquotes " backslashes \\ newlines\r\n nul \u0000 bell \u0007 escape \u001b',
     "emoji 🧪👩🏽‍💻 combining é RTL ‏שלום‎ BOM ﻿ line sep   para sep  ",
     "</script><script>alert(1)</script> ${template} `backtick`",
     "界".repeat(1000),
@@ -127,14 +216,18 @@ test("every code link that is made reads back exactly, whatever the characters",
   // Whatever is accepted decodes: random mixes of the above, near the limits.
   let seed = 7;
   const next = () => (seed = (seed * 48271) % 2147483647);
-  const alphabet = ["a", "界", "\u0001", "\"", "\\", "\n", "🧪", " ", "é"];
+  const alphabet = ["a", "界", "\u0001", '"', "\\", "\n", "🧪", " ", "é"];
   for (let round = 0; round < 12; round++) {
     const files = Array.from({ length: 1 + (next() % MAX_FILES) }, (_, i) => ({
       path: `src/r${round}_${i}.js`,
-      text: Array.from({ length: next() % 20_000 }, () => alphabet[next() % alphabet.length]).join(""),
+      text: Array.from(
+        { length: next() % 20_000 },
+        () => alphabet[next() % alphabet.length],
+      ).join(""),
     }));
     const out = await encodeCode(files);
-    if (out.ok) assert.deepEqual(await decodeCode(out.packed), files, `round ${round}`);
+    if (out.ok)
+      assert.deepEqual(await decodeCode(out.packed), files, `round ${round}`);
     else assert.equal(out.reason, "too-large", `round ${round}`);
   }
 });
@@ -145,6 +238,39 @@ test("code too big for a link is refused rather than cut", async () => {
     String.fromCharCode(33 + ((seed = (seed * 48271) % 2147483647) % 90)),
   ).join("");
   assert.equal(await refusal([{ path: "big.py", text: noise }]), "too-large");
-  const fits = await packedOf([{ path: "ok.py", text: "x = 1\n".repeat(2000) }]);
+  const fits = await packedOf([
+    { path: "ok.py", text: "x = 1\n".repeat(2000) },
+  ]);
   assert.ok(fits.length <= MAX_CODE_FRAGMENT);
+});
+
+test("public evidence survives the result link and strips nested private fields", () => {
+  const ev = {
+    v: 1,
+    state: "merged",
+    checks: { passed: 15, total: 15, result: "checks-passed" },
+    first: { passed: 5, total: 15, result: "checks-failed" },
+    hidden: { passed: 10, total: 10 },
+    changed: { files: 2, added: 4, removed: 2 },
+    pushes: 2,
+    runs: 3,
+    testedBeforePush: "tested-passing",
+    failedPushes: 1,
+    findings: { raised: 1, open: 0 },
+    hints: 0,
+    gaps: false,
+    profile: { secret: "private-profile" },
+    code: "private-source",
+  };
+  const encoded = encodeResult({ ...card, ev } as unknown as Result);
+  const json = Buffer.from(encoded, "base64url").toString();
+  assert.ok(!json.includes("private-profile"));
+  assert.ok(!json.includes("private-source"));
+  const read = inspectCard(encoded);
+  assert.equal(read.kind, "result");
+  if (read.kind === "result") {
+    assert.equal(read.result.ev?.first?.passed, 5);
+    assert.equal(read.result.ev?.checks.passed, 15);
+    assert.equal(read.result.ev?.findings.open, 0);
+  }
 });
