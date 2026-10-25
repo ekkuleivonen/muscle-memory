@@ -1,6 +1,6 @@
 "use client";
 import { tabKeys } from "../../../lib/tab-keys";
-import { suggestions } from "../../../lib/board";
+import { nextProblem } from "../../../lib/next-problem";
 import { useAccount } from "./profile-menu";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -36,18 +36,21 @@ import {
 import { metricsOf } from "../../../lib/result";
 import { Markdown } from "./markdown";
 import { Ask } from "./ask";
-import { ResultFacts, ShareResult, useResult } from "./result-card";
+import { PullOutcome } from "./pull-outcome";
+import { useResult } from "./result-card";
+import { CopyIssueLink, ShareResult } from "./share";
+import { tryHref } from "../../../lib/share";
 import { useNow, useRecords } from "./records";
 import {
   feedbackOf,
   isCiFinding,
-  mergeBlocker,
   openRequired,
   type Thread,
 } from "../../../lib/feedback";
 import { attemptRecords } from "../../../lib/attempts";
-import { isIncident } from "../../../lib/incident";
-import { IncidentResolved } from "./incident-resolved";
+import { mergeEligibility, type MergeEligibility } from "../../../lib/merge";
+import { openPracticeStore } from "../../../../../packages/browser/practice-store";
+import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
 
 export interface PullIssue {
   key: string;
@@ -59,7 +62,6 @@ export interface PullIssue {
 
 /** The IDE on the issue's live revision; pushes still go to the open pull request. */
 const workHref = (issue: PullIssue) => `/work/${issue.key}`;
-
 
 type State = PullSummary["state"];
 const STATE_LABELS: Record<State, string> = {
@@ -235,10 +237,17 @@ export function PullList({
 }
 
 /** The issue's pull requests, newest first, in its properties like a linked branch. */
-export function IssuePulls({ issue }: { issue: { key: string; slug: string } }) {
+export function IssuePulls({
+  issue,
+}: {
+  issue: { key: string; slug: string };
+}) {
   const records = useRecords();
   const pulls = useMemo(
-    () => (records ? allPullRequests(records).filter((p) => p.issue === issue.slug) : []),
+    () =>
+      records
+        ? allPullRequests(records).filter((p) => p.issue === issue.slug)
+        : [],
     [records, issue.slug],
   );
   return (
@@ -347,6 +356,7 @@ export function PullView({
             language,
             records: attempt,
             mergedAt: merged,
+            number,
             revisions,
           }
         : null,
@@ -362,6 +372,32 @@ export function PullView({
     ],
   );
   const result = useResult(resultInput);
+  /** Whether this pull request can be merged, from a set of records: the button and the merge. */
+  const eligibilityFrom = (
+    all: readonly WorkspaceRecord[],
+  ): MergeEligibility | null => {
+    const found = pullRequestDetail(
+      all,
+      issue.slug,
+      number,
+      (id) => revisions[id],
+    );
+    if (!found) return null;
+    const own = attemptRecords(all, issue.slug, found.openedAt);
+    return mergeEligibility({
+      records: own,
+      issue: issue.slug,
+      number,
+      pull: found.pull,
+      published: (id) => !!revisions[id],
+      openRequired: openRequired(
+        feedbackOf(own, issue.slug, (id) => revisions[id]),
+        number,
+        (id) => revisions[id],
+      ).length,
+    });
+  };
+  const eligibility = records ? eligibilityFrom(records) : null;
   if (!records)
     return (
       <p className="loading-state" role="status">
@@ -371,7 +407,10 @@ export function PullView({
   if (!detail)
     return (
       <p className="empty">
-        There&apos;s no pull request #{number} for {issue.key}.
+        There&apos;s no pull request #{number} for {issue.key} here. Pull
+        requests open only where they were made: if someone sent you this link,
+        ask them for their result link, or{" "}
+        <Link href={tryHref(issue.key)}>try {issue.key} yourself</Link>.
       </p>
     );
   const pull: PullSummary = mergedNow
@@ -421,7 +460,12 @@ export function PullView({
   const resolve = async (thread: Thread, via: BoardMoveVia) => {
     await logResolve(
       { id: issue.slug, revision: thread.issueRevision },
-      { issueKey: issue.key, pullRequest: number, comment: thread.comment, via },
+      {
+        issueKey: issue.key,
+        pullRequest: number,
+        comment: thread.comment,
+        via,
+      },
     );
     setVersion((v) => v + 1);
   };
@@ -433,13 +477,25 @@ export function PullView({
     );
     setVersion((v) => v + 1);
   };
-  const merge = (via: BoardMoveVia) => {
-    // The same gate the button shows: never a merge on failing CI or an open finding.
-    if (mergeBlocker(pull, blocking.length) !== null) return;
+  const merge = async (via: BoardMoveVia) => {
+    // The same gate the button shows, on the records as stored now: another tab may have
+    // pushed, edited or merged since this page read them.
+    const store = await openPracticeStore();
+    let now: MergeEligibility | null;
+    try {
+      now = eligibilityFrom(await store.workspaceRecords());
+    } finally {
+      store.close();
+    }
+    if (!now || now.blocker !== null || !now.latest) {
+      setVersion((v) => v + 1);
+      return;
+    }
+    const shipped = now.latest;
     // The result card's numbers as they stand at the merge: what the aggregates are made of.
     if (revision)
       void logResult(
-        { id: issue.slug, revision: pull.issueRevision },
+        { id: issue.slug, revision: shipped.issueRevision },
         {
           issueKey: issue.key,
           pullRequest: pull.number,
@@ -458,12 +514,12 @@ export function PullView({
         {
           key: issue.key,
           slug: issue.slug,
-          revision: issue.revision ?? pull.issueRevision,
+          revision: issue.revision ?? shipped.issueRevision,
         },
-        { number: pull.number, runId: pull.runId },
+        { number: pull.number, runId: shipped.runId },
         via,
       )
-      // Read the records again once the merge is stored: the incident's outcome needs it.
+      // Read the records again once the merge is stored.
       .then(() => setVersion((v) => v + 1));
     setMergedNow(new Date().toISOString());
   };
@@ -489,16 +545,18 @@ export function PullView({
             </Link>
           </span>
         </p>
-        {pull.state === "merged" &&
-          (isIncident(issue.key) ? (
-            <IncidentResolved
-              number={number}
-              openedAt={detail.openedAt}
-              records={records}
-            />
-          ) : (
-            <NextPractice candidates={candidates} current={issue.key} />
-          ))}
+        <PullOutcome
+          records={attempt}
+          issue={issue}
+          number={number}
+          revisions={revisions}
+          mergedAt={merged}
+          blocker={eligibility?.blocker}
+          ideHref={workHref(issue)}
+        />
+        {pull.state === "merged" && (
+          <NextPractice candidates={candidates} current={issue.key} />
+        )}
         <Findings
           pull={pull}
           outcome={detail.outcome}
@@ -506,7 +564,6 @@ export function PullView({
           threads={threads}
           revisions={revisions}
           onResolve={pull.state === "open" ? resolve : undefined}
-          onReply={pull.state === "open" ? reply : undefined}
         />
         <div
           className="pull-tabs"
@@ -539,7 +596,9 @@ export function PullView({
           {tab === "timeline" && (
             <Timeline
               detail={
-                mergedNow
+                // Shown at once on merging, until the stored merge is read back.
+                mergedNow &&
+                !detail.timeline.some((entry) => entry.kind === "merged")
                   ? {
                       ...detail,
                       timeline: [
@@ -563,20 +622,31 @@ export function PullView({
           pull={pull}
           issue={issue}
           blocking={blocking.length}
+          eligibility={eligibility}
           explicit={blocking.some(
             (t) =>
               isCiFinding(t.comment) ||
               revisions[t.issueRevision]?.team.find((c) => c.id === t.comment)
                 ?.resolve === "explicit",
           )}
-          onMerge={merge}
+          onMerge={(via) => void merge(via)}
           onClose={(via) => void close(via, !!pull.otherMerged)}
           share={
-            // The incident is shared from its report.
-            !isIncident(issue.key) &&
             result &&
             resultInput && (
-              <ShareResult state={result} issue={resultInput.issue} />
+              <ShareResult
+                state={result}
+                issue={resultInput.issue}
+                // Offered, never included by default: every file this pull request changed.
+                // A file kept only in part is passed as such, so sharing is refused, not partial.
+                code={changes
+                  .filter((c) => c.stats.added + c.stats.removed > 0)
+                  .map((c) => ({
+                    path: c.path,
+                    text: detail.code![c.path]?.text ?? "",
+                    truncated: c.truncated,
+                  }))}
+              />
             )
           }
         />
@@ -612,14 +682,8 @@ export function PullView({
           <dd title="From first opening the issue to this pull request, breaks included">
             {duration(detail.stats.startedAt, detail.openedAt)}
           </dd>
-          {result ? (
-            <ResultFacts state={result} />
-          ) : (
-            <>
-              <dt>Test runs</dt>
-              <dd>{detail.stats.runs}</dd>
-            </>
-          )}
+          <dt>Test runs</dt>
+          <dd>{detail.stats.runs}</dd>
           <dt>Edits</dt>
           <dd>{detail.stats.edits}</dd>
           {issue.revision && issue.revision !== pull.issueRevision && (
@@ -638,6 +702,7 @@ export function PullView({
             Continue in the IDE →
           </Link>
         )}
+        <CopyIssueLink issueKey={issue.key} />
       </aside>
     </div>
   );
@@ -707,12 +772,13 @@ function Timeline({
           type="button"
           className="pull-more"
           aria-expanded={all}
+          aria-controls="pull-timeline-list"
           onClick={() => setAll((v) => !v)}
         >
           {all ? "See less" : `See more (${hidden} earlier)`}
         </button>
       )}
-      <ol>
+      <ol id="pull-timeline-list">
         {(all || !hidden) && previous && (
           <TimelineRow at={previous.at} tone="dim">
             Follows{" "}
@@ -760,12 +826,17 @@ function Entry({
       const thread = threads.find(
         (t) => t.comment === entry.comment && t.at === entry.at,
       );
-      const comment = thread && revisions[thread.issueRevision]?.team.find(
-        (c) => c.id === thread.comment,
-      );
+      const comment =
+        thread &&
+        revisions[thread.issueRevision]?.team.find(
+          (c) => c.id === thread.comment,
+        );
       if (!thread || !comment) return null;
       return (
-        <TimelineRow at={entry.at} tone={thread.severity === "blocking" ? "fail" : "dim"}>
+        <TimelineRow
+          at={entry.at}
+          tone={thread.severity === "blocking" ? "fail" : "dim"}
+        >
           {comment.author.name} reviewed push {thread.push}:{" "}
           {thread.severity === "blocking"
             ? "requested changes"
@@ -911,11 +982,7 @@ function Checks({
 }) {
   const outcome = raw as unknown as Outcome | null;
   if (!outcome || !cases)
-    return (
-      <p className="dim">
-        No CI results for this pull request.
-      </p>
-    );
+    return <p className="dim">No CI results for this pull request.</p>;
   if (outcome.status === "timeout")
     return (
       <p className="pull-error">
@@ -926,8 +993,8 @@ function Checks({
   if (outcome.status === "runner-error")
     return (
       <p className="pull-error">
-        CI crashed before the checks finished; this wasn&apos;t your code.
-        Push again to rerun them.
+        CI crashed before the checks finished; this wasn&apos;t your code. Push
+        again to rerun them.
       </p>
     );
   if (outcome.status === "cancelled")
@@ -1146,8 +1213,9 @@ function Findings({
         <div className="finding ci">
           <p>
             <b>CI</b> <span className="review-badge blocking">Failing</span>{" "}
-            {ci.length} of {pull.total} checks {ci.length === 1 ? "fails" : "fail"} on
-            push {pull.pushes}. Only a push whose checks pass clears this.
+            {ci.length} of {pull.total} checks{" "}
+            {ci.length === 1 ? "fails" : "fail"} on push {pull.pushes}. Only a
+            push whose checks pass clears this.
           </p>
           <ul>
             {ci.map((name) => (
@@ -1208,7 +1276,9 @@ function CiFinding({
           {thread.resolved ? (
             <span className="review-badge resolved">Resolved</span>
           ) : (
-            <span className="review-badge blocking">Unresolved · blocks merging</span>
+            <span className="review-badge blocking">
+              Unresolved · blocks merging
+            </span>
           )}
           <time dateTime={thread.at}>{clock(thread.at)}</time>
         </header>
@@ -1227,8 +1297,8 @@ function CiFinding({
         )}
         {thread.resolved ? (
           <p className="faint">
-            Resolved by you. CI still has to pass before merging; another failing push opens a
-            new finding.
+            Resolved by you. CI still has to pass before merging; another
+            failing push opens a new finding.
           </p>
         ) : (
           onResolve && (
@@ -1236,7 +1306,10 @@ function CiFinding({
               type="button"
               className="review-resolve"
               onClick={(event) =>
-                void onResolve(thread, event.detail === 0 ? "keyboard" : "pointer")
+                void onResolve(
+                  thread,
+                  event.detail === 0 ? "keyboard" : "pointer",
+                )
               }
             >
               Resolve
@@ -1287,9 +1360,13 @@ function ReviewThread({
           {thread.resolved ? (
             <span className="review-badge resolved">Resolved</span>
           ) : blocking ? (
-            <span className="review-badge blocking">Unresolved · blocks merging</span>
+            <span className="review-badge blocking">
+              Unresolved · blocks merging
+            </span>
           ) : comment.resolve === "explicit" ? (
-            <span className="review-badge blocking">Unresolved nit · blocks merging</span>
+            <span className="review-badge blocking">
+              Unresolved nit · blocks merging
+            </span>
           ) : (
             <span className="review-badge">Unresolved · nit</span>
           )}
@@ -1317,7 +1394,10 @@ function ReviewThread({
             type="button"
             className="review-resolve"
             onClick={(event) =>
-              void onResolve(thread, event.detail === 0 ? "keyboard" : "pointer")
+              void onResolve(
+                thread,
+                event.detail === 0 ? "keyboard" : "pointer",
+              )
             }
           >
             Resolve
@@ -1361,6 +1441,7 @@ function MergeBox({
   pull,
   issue,
   blocking,
+  eligibility,
   explicit = false,
   onMerge,
   onClose,
@@ -1370,6 +1451,8 @@ function MergeBox({
   issue: PullIssue;
   /** Open blocking review threads. */
   blocking: number;
+  /** Whether it can be merged now (lib/merge); null while it cannot be told. */
+  eligibility: MergeEligibility | null;
   /** Some open finding is cleared by Resolve only (TeamComment.resolve). */
   explicit?: boolean;
   onMerge: (via: BoardMoveVia) => void;
@@ -1425,45 +1508,81 @@ function MergeBox({
         {closeButton}
       </div>
     );
-  const checks = passed(pull.result);
-  const green = mergeBlocker(pull, blocking) === null;
+  const blocker = eligibility ? eligibility.blocker : "checks-pending";
+  const latest = eligibility?.latest ?? pull;
+  const pushNumber = eligibility?.latest?.push ?? pull.pushes;
+  const green = blocker === null;
+  const ide = <Link href={workHref(issue)}>IDE</Link>;
+  const pushAgain = (
+    <>
+      Push again from the {ide} (<kbd>⌘⇧⏎</kbd>) so CI checks what you have.
+    </>
+  );
   return (
     <div className={green ? "merge-box ready" : "merge-box blocked"}>
       <span className="merge-mark" aria-hidden>
         {green ? "✔" : "✘"}
       </span>
       <div className="merge-text">
-        {checks && !green ? (
+        {green ? (
+          <>
+            <b>All {latest.total} checks passed.</b> Read through your changes,
+            then merge when you&apos;re happy with them. Merging moves{" "}
+            {issue.key} to Done.
+          </>
+        ) : blocker === "review" ? (
           <>
             <b>
-              All {pull.total} checks passed, but {blocking} blocking finding
+              All {latest.total} checks passed, but {blocking} blocking finding
               {blocking === 1 ? " is" : "s are"} open.
             </b>{" "}
             {explicit ? (
               <>
-                Deal with it in the <Link href={workHref(issue)}>IDE</Link> if the
-                code needs it, then Resolve it under Findings: a push alone
-                doesn&apos;t resolve it.
+                Deal with it in the {ide} if the code needs it, then Resolve it
+                under Findings: a push alone doesn&apos;t resolve it.
               </>
             ) : (
               <>
-                Change the code in the <Link href={workHref(issue)}>IDE</Link>{" "}
-                and push to it (<kbd>⌘⇧⏎</kbd>), or resolve the finding under
-                Findings if the code should stay as it is.
+                Change the code in the {ide} and push to it (<kbd>⌘⇧⏎</kbd>), or
+                resolve the finding under Findings if the code should stay as it
+                is.
               </>
             )}
           </>
-        ) : green ? (
+        ) : blocker === "checks-pending" ? (
           <>
-            <b>All {pull.total} checks passed.</b> Read through your changes,
-            then merge when you&apos;re happy with them. Merging moves{" "}
-            {issue.key} to Done.
+            <b>
+              Merging is blocked: CI hasn&apos;t reported on the latest push.
+            </b>{" "}
+            Wait for its checks in the {ide}. If it never finished, push again (
+            <kbd>⌘⇧⏎</kbd>).
+          </>
+        ) : blocker === "code-changed" ? (
+          <>
+            <b>Merging is blocked: the code changed after push {pushNumber}.</b>{" "}
+            {pushAgain}
+          </>
+        ) : blocker === "code-unconfirmed" ? (
+          <>
+            <b>
+              Merging is blocked: your saved code can&apos;t be matched to push{" "}
+              {pushNumber}.
+            </b>{" "}
+            {pushAgain}
+          </>
+        ) : blocker === "revision" ? (
+          <>
+            <b>
+              Merging is blocked: these checks ran against an earlier version of
+              the ticket.
+            </b>{" "}
+            {pushAgain}
           </>
         ) : (
           <>
-            <b>Merging is blocked: {checksText(pull)}.</b> Every check has to
-            pass. The pull request stays open: keep working in the{" "}
-            <Link href={workHref(issue)}>IDE</Link> and push to it (
+            <b>Merging is blocked: {checksText(latest)}.</b> Every check has to
+            pass, and resolving findings doesn&apos;t change that. The pull
+            request stays open: keep working in the {ide} and push to it (
             <kbd>⌘⇧⏎</kbd>), and CI runs again.
           </>
         )}
@@ -1490,14 +1609,13 @@ function NextPractice({
 }) {
   const { items } = useBoard();
   const account = useAccount();
-  const next = suggestions(
-    candidates.filter((i) => i.key !== current),
-    items,
-    account?.profile.languages ?? [],
-  )[0];
+  const from = candidates.find((i) => i.key === current);
+  const next = from
+    ? nextProblem(from, candidates, items, account?.profile.languages ?? [])
+    : null;
   return (
     <section className="practice-next">
-      <h2>Fix merged. Nice work.</h2>
+      <h2>Next problem</h2>
       <p>Your code passed CI and this issue is now Done on your board.</p>
       {next && (
         <>

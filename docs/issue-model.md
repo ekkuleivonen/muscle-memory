@@ -98,7 +98,7 @@ interface Checks {
 
 The **private** part holds what a player must never receive: the **reference solution**, optional **alternatives** (other correct designs, which must pass every case) and **wrong fixes** (plausible mistakes, which must fail at least one), **trigger examples** (code that must and must not fire each comment), and **author notes**.
 
-A revision may also carry a **chat**: lines of team atmosphere, never clues, each released by a recorded action (the attempt starting, a file opened, a local run's case, a pull request, a CI case, the merge). What has been said is a pure function of the attempt's records, so it is shown, not recorded. Only the incident has one ([incident](incident.md)). It lives in the database next to each revision. Publication checks use it; it is never written to a bundle.
+A revision may also carry a **chat**: lines of team atmosphere, never clues, each released by a recorded action (the attempt starting, a file opened, a local run's case, a pull request, a CI case, the merge). What has been said is a pure function of the attempt's records, so it is shown, not recorded. Only INC-1's earlier revisions, from the retired incident, have one. The app no longer shows a chat anywhere, so the lines are kept only as part of those revisions' content. It lives in the database next to each revision. Publication checks use it; it is never written to a bundle.
 
 ### Bundles: a whole mini repo in one object
 
@@ -125,8 +125,8 @@ interface TeamComment {
 - **The ticket's own thread** is the issue comments on the `opened` event: they are part of the ticket, shown on the issue page and in the IDE from the start, and not recorded as feedback.
 - **Other issue comments** are checked whenever feedback is (opening the IDE, after every run and push, and every 30 seconds) against the current code and the latest push's checks, and posted to the ticket's thread at most once.
 - **Review comments** are checked only when a push's checks finish, against the code pushed and that push's results, at most once per pull request. They appear on the pull request's page as threads, with the push they reviewed.
-- A revision may make CI failures findings (`ciFindings: "explicit"`, used by the incident): a failing push opens one on its pull request, cleared only by Resolve; passing checks are still required to merge.
-- A review comment may require an explicit **Resolve** (`resolve: "explicit"`, used by the incident): then only the person's Resolve clears it, never a fixing push or a reply.
+- A revision may make CI failures findings (`ciFindings: "explicit"`, used by INC-1): a failing push opens one on its pull request, cleared only by Resolve; passing checks are still required to merge.
+- A review comment may require an explicit **Resolve** (`resolve: "explicit"`): then only the person's Resolve clears it, never a fixing push or a reply. Every blocking and nit review comment in the JavaScript and Python issues needs one; informational notes never do.
 - A **blocking** review comment must be resolved before merging: either a later push no longer triggers it (recorded as resolved by code), or the player replies (resolved by reply). A reply needs no approval; its text is recorded. With `repeat: "while-true"` a resolved thread opens again on a later push that triggers it. A **nit** or **info** comment never blocks. Merge needs green CI *and* every blocking thread resolved. Only review comments may block.
 
 ### Hints
@@ -176,9 +176,9 @@ From these, every attempt can say when it stopped being unaided, which feedback 
 
 ## A worked example
 
-**SHOP-5 · Refund totals double-count discounts** (bug, medium, JavaScript), in `content/seed.ts`:
+**SHOP-5 · Refunds give back less than the customer paid** (bug, medium, JavaScript), in `content/seed.ts`:
 
-- **Ticket:** support escalated a refund on an order with a promo code that gave back less than the customer paid, with the receipt in the body. No failing test is given.
+- **Ticket:** support escalated a refund on an order with a promo code that gave back less than the customer paid, with the receipt in the body. The title names the symptom, not the cause, and no failing test is given.
 - **Workspace:**
   - `src/cart/totals.js` (edit, the entry file);
   - `src/cart/money.js` and `src/cart/discounts.js` (read): `lineTotal` already takes off each line's share of the discount, which checkout allocates;
@@ -187,15 +187,15 @@ From these, every attempt can say when it stopped being unaided, which feedback 
 - **Checks:** seventeen cases, three visible and fourteen hidden: a refund without a code, with a percentage and with a fixed amount, then the edge cases only CI runs (larger percentages, empty and free lines, partial refunds, the line that got the leftover cent of an allocation).
 - **Team:**
   - *Jo T (Support), the ticket's thread:* "40 tickets about this since Monday. Every one of them used a promo code."
-  - *Ada N (Frontend), review, blocking, pattern* `Math\.abs\(` *in* `totals.js`: "Taking the absolute value hides the sign we need for refunds. Can we keep refunds negative all the way through?"
-  - *Ada N, review, blocking, `orderTotal`'s return line missing:* "This changes `orderTotal` too, and checkout uses that. Can we keep this pull request to refunds?"
-  - *Ada N, review, nit, metric* `function-lines > 12`: "`refundTotal` is getting long. Would a helper for one line's amount read better?"
-  - *Sam R (SRE), review, info, check `case-2` passes:* "Nice, that's the jacket from the incident."
+  - *Ada N (Frontend), review, blocking, explicit Resolve, when `orderTotal` no longer takes the code's discount (pattern* `discountFor\(\s*order\.code` *absent):* "This changes `orderTotal` too, and checkout uses that. Can we keep this pull request to refunds?"
+  - *Ada N, review, nit, explicit Resolve, metric* `function-lines > 12`: "`refundTotal` is getting long. Would a helper for one line's amount read better?"
 - **Hints:**
   - level 1, after 12 active minutes without progress: "Where does a returned line's discount come from? Have a look at what `lineTotal` already does with it."
   - level 2, after 3 failing pushes: "Try the jacket from the ticket on paper: $50.00, $5.00 off at checkout. How many times does the refund take a discount off?"
 - **Private:**
   - the reference fix;
+  - three other correct designs (a hand-written loop, `-Math.abs(…)`, a reworded `orderTotal`), which must pass every case and fire no blocking comment;
+  - three plausible wrong fixes, which must each fail a case: recomputing the code's discount on just the returned lines (right for the ticket's jacket, wrong for a fixed-amount code on part of an order), ignoring the discount, and the wrong sign;
   - for each review comment that reads code, an example that must fire it and one that must not.
 
 ## Managing issues
@@ -213,13 +213,15 @@ AI draft ─▶ human edit ─▶ checks ─▶ approved ─▶ published (live)
   - the **starter** fails at least one case;
   - running twice gives the same result (no flaky checks);
   - every **trigger example** fires or stays quiet as declared;
-  - the **reference solution** triggers no blocking comment;
+  - the **reference solution** and every **alternative** trigger no blocking comment: review may not insist on one correct design;
+  - a JavaScript or Python issue names at least one **alternative** and two **wrong fixes**, so its checks are shown to accept other designs and to catch plausible mistakes;
+  - a new revision keeps every file the live one let people edit, and its entry point: saved code is restored by path, so renaming or locking a file would drop work in progress (`continuityProblems`, checked by the content build);
   - **hints** contain no line the reference solution adds;
   - every **blocking** comment has examples both ways.
 
-  Today the content build runs the checks that read code as text, and `npm run check:publish` runs the reference (twice) and the starter in the browser sandbox; issues without a reference yet are listed as unchecked.
+  Today the content build runs the checks that read code as text, and `npm run check:publish` runs the reference (twice), the starter, the alternatives and the wrong fixes in the browser sandbox; issues without a reference yet are listed as unchecked. The [content audit](audits/content-2026-10-25.md) says which issues were last reviewed against these rules.
 - **Approved** by a person who did not draft it.
-- **Published.** The revision is frozen, written as a bundle, and becomes the issue's live revision. Players starting the issue get this revision; work in progress on an older one keeps its own.
+- **Published.** The revision is frozen, written as a bundle, and becomes the issue's live revision. Ordinary issue links open the current live revision. A published revision can be opened explicitly with `/work/<KEY>?revision=<hash>`; saved work is restored by editable file path. The workspace explains a changed ticket before continuing.
 - **Retired.** Out of lists and no new starts; recorded work stays valid. This is how issues rotate to keep the board fresh.
 - **Disabled.** For problems that must stop now (a leaked answer, a broken check), with a reason.
 

@@ -157,8 +157,8 @@ const tallyRow = (species: string, count = 1) => row(D, "Ridge B", species, "14.
 
 const speciesTally: SeedIssue = {
   id: "species-tally-shared-names",
-  title: "Species tally keeps its own copy of name clean-up",
-  summary: "Tally species under the herbarium's names by using the shared helper, not a drifted copy.",
+  title: "Herbarium import creates duplicate species from the tally sheet",
+  summary: "Monday's import added 14 \"new\" species the herbarium already had.",
   kind: "refactor",
   difficulty: "easy",
   language: "python",
@@ -171,7 +171,7 @@ new species: Carabus Sp.              (have: Carabus sp.)
 new species: Pterostichus Niger       (have: Pterostichus niger)
 \`\`\`
 
-\`species_tally(lines)\` in \`notebook/tally.py\` totals individuals per species for the end-of-day tally sheet, and the sheet is what gets imported. It still has its own \`_clean\` from before \`notebook/names.py\` existed, and the two have drifted apart. The tally should key every species by \`canonical_name\`, the way the herbarium files it, and \`_clean\` should go. Blank lines are skipped, as now.`,
+\`species_tally(lines)\` in \`notebook/tally.py\` totals individuals per species for the end-of-day tally sheet, and the sheet is what gets imported. The import matches names exactly, so every species on the sheet must be written the way the herbarium files it (\`notebook/names.py\` is what the herbarium export uses), with one naming rule for both, so they can't drift apart again. Blank lines are skipped, as now.`,
   entry: "notebook/tally.py",
   entrypoint: "species_tally",
   starter: TALLY_STARTER,
@@ -239,13 +239,14 @@ new species: Pterostichus Niger       (have: Pterostichus niger)
       author: "Priya K",
       role: "Data",
       where: "review",
-      severity: "blocking",
+      severity: "nit",
       text: [
-        "Could we delete `_clean` rather than keep it around? Two copies of the same rule is how we got here.",
-        "`_clean` is still in tally.py. If it stays, someone will change it again and the two will drift. Can it go?",
+        "Nit: could we delete `_clean` rather than keep it around? Two copies of the same rule is how we got here.",
+        "Nit: `_clean` is still in tally.py. If it stays, someone will change it again and the two will drift. Can it go?",
       ],
       when: { pattern: "def _clean\\(", present: true, file: "notebook/tally.py" },
       repeat: "while-true",
+      resolve: "explicit",
     },
     {
       id: "priya-shared-helper",
@@ -258,19 +259,43 @@ new species: Pterostichus Niger       (have: Pterostichus niger)
       ],
       when: { pattern: "canonical_name", present: false, file: "notebook/tally.py" },
       repeat: "while-true",
-    },
-    {
-      id: "priya-import-clean",
-      author: "Priya K",
-      role: "Data",
-      where: "review",
-      severity: "info",
-      text: ["Nice. I'll rerun Monday's import against this and clear out the 14 duplicates."],
-      when: { check: "case-1", is: "passing" },
+      resolve: "explicit",
     },
   ],
   private: {
     reference: { "notebook/tally.py": TALLY_REFERENCE },
+    alternatives: [
+      // The module rather than the function, and a dict that counts.
+      {
+        "notebook/tally.py": `"""Individuals per species for the end-of-day tally sheet."""
+from collections import Counter
+
+from notebook import names
+from notebook.labels import parse_line
+
+
+def species_tally(lines):
+    """Individuals per species across the notebook lines, keyed by the herbarium's name."""
+    totals = Counter()
+    for line in lines:
+        if line.strip():
+            row = parse_line(line)
+            totals[names.canonical_name(row["species"])] += row["count"]
+    return dict(totals)
+`,
+      },
+    ],
+    wrong: [
+      // The old clean-up, kept: title case is not how the herbarium writes a name.
+      { "notebook/tally.py": TALLY_STARTER.replace("name.strip().title()", "name.strip().capitalize()") },
+      // Lowercases everything, genus included.
+      {
+        "notebook/tally.py": TALLY_REFERENCE.replace(
+          'name = canonical_name(row["species"])',
+          'name = " ".join(row["species"].split()).lower()',
+        ),
+      },
+    ],
     examples: {
       "priya-keep-clean": {
         fires: [{ "notebook/tally.py": TALLY_KEEPS_CLEAN }],
@@ -508,19 +533,75 @@ The label printer converts lengths with \`to_mm\` in \`notebook/units.py\` too, 
       ],
       when: { pattern: "25\\.4", present: true, file: "notebook/report.py" },
       repeat: "while-true",
-    },
-    {
-      id: "priya-oregon-green",
-      author: "Priya K",
-      role: "Data",
-      where: "review",
-      severity: "info",
-      text: ["That's the Oregon sheets going through. I'll rerun the season report once this is in."],
-      when: { check: "case-2", is: "passing" },
+      resolve: "explicit",
     },
   ],
   private: {
     reference: { "notebook/report.py": REPORT_REFERENCE, "notebook/units.py": UNITS_REFERENCE },
+    alternatives: [
+      // Units read by peeling the letters off the end, and unmeasured lots skipped inline.
+      {
+        "notebook/units.py": `"""Lengths as written in the notebook, converted to millimetres. The label printer uses
+to_mm too."""
+
+MM_PER = {"mm": 1, "cm": 10, "in": 25.4}
+
+
+def to_mm(text):
+    """'14.5 mm', '1.2 cm', '0.6 in', '12mm' or '1.3 CM' in millimetres."""
+    text = text.strip().lower()
+    number = text.rstrip("abcdefghijklmnopqrstuvwxyz").strip()
+    unit = text[len(text.rstrip("abcdefghijklmnopqrstuvwxyz")):]
+    return float(number) * MM_PER[unit]
+`,
+        "notebook/report.py": `"""Body lengths per species for the season report."""
+from notebook.labels import parse_line
+from notebook.units import to_mm
+
+
+def length_report(lines):
+    """Per species: how many lots were measured, and the shortest, longest and mean length in
+    millimetres, each to one decimal. A species with no measured lot still appears."""
+    lengths = {}
+    for line in lines:
+        row = parse_line(line)
+        values = lengths.setdefault(row["species"], [])
+        if row["length"] in ("", "?"):
+            continue
+        values.append(to_mm(row["length"]))
+    report = {}
+    for species, values in lengths.items():
+        measured = len(values)
+        report[species] = {
+            "measured": measured,
+            "min_mm": round(min(values), 1) if values else None,
+            "max_mm": round(max(values), 1) if values else None,
+            "mean_mm": round(sum(values) / measured, 1) if values else None,
+        }
+    return report
+`,
+      },
+    ],
+    wrong: [
+      // Reads inches as centimetres' cousin: 2.54 instead of 25.4.
+      {
+        "notebook/report.py": REPORT_REFERENCE,
+        "notebook/units.py": UNITS_REFERENCE.replace('"in": 25.4', '"in": 2.54'),
+      },
+      // Unmeasured lots dropped entirely, so their species disappears from the report.
+      {
+        "notebook/report.py": REPORT_REFERENCE.replace(
+          '        values = lengths.setdefault(row["species"], [])\n        if row["length"] not in UNMEASURED:\n            values.append(to_mm(row["length"]))',
+          '        if row["length"] not in UNMEASURED:\n            lengths.setdefault(row["species"], []).append(to_mm(row["length"]))',
+        ),
+        "notebook/units.py": UNITS_REFERENCE,
+      },
+      // Inches fixed, but a length without a space still can't be read.
+      {
+        "notebook/report.py": REPORT_REFERENCE,
+        "notebook/units.py": UNITS_STARTER.replace('{"mm": 1, "cm": 10}', '{"mm": 1, "cm": 10, "in": 25.4}'),
+      },
+    ],
     examples: {
       "mateo-units-in-report": {
         fires: [{ "notebook/report.py": REPORT_CONVERTS_INCHES }],
@@ -637,7 +718,7 @@ const AP = "Abax parallelepipedus";
 const siteSummary: SeedIssue = {
   id: "site-summary-groupby",
   title: "Site summary undercounts since last week's speed-up",
-  summary: "Priya's one-pass site summary is fast but splits and drops sites. Find out why and fix it.",
+  summary: "Since the season summary got faster, its per-site lots and first visits are wrong.",
   kind: "bug",
   difficulty: "medium",
   language: "python",
@@ -746,19 +827,29 @@ We go back to the same sites all season, and pages are often typed up days late,
       ],
       when: { pattern: "==\\s*site\\b", present: true, file: "notebook/sites.py" },
       repeat: "while-true",
-    },
-    {
-      id: "priya-dates-order",
-      author: "Priya K",
-      role: "Data",
-      where: "review",
-      severity: "info",
-      text: ["Good catch on the dates as well. I'd assumed pages get typed up in order; they very much don't."],
-      when: { check: "case-5", is: "passing" },
+      resolve: "explicit",
     },
   ],
   private: {
     reference: { "notebook/sites.py": SITES_REFERENCE },
+    // Sorting first keeps groupby and stays fast enough: n log n, not a pass per site.
+    alternatives: [{ "notebook/sites.py": SITES_SORTED }],
+    wrong: [
+      // Fixes the dates but still restarts a site each time it turns up again.
+      {
+        "notebook/sites.py": SITES_STARTER.replace(
+          '            "first": group[0]["date"],\n            "last": group[-1]["date"],',
+          '            "first": min(row["date"] for row in group),\n            "last": max(row["date"] for row in group),',
+        ),
+      },
+      // Groups by site, but takes first and last in typing order, not by date.
+      {
+        "notebook/sites.py": SITES_SORTED.replace(
+          'key=lambda row: (row["site"], row["date"])',
+          'key=lambda row: row["site"]',
+        ),
+      },
+    ],
     examples: {
       "priya-rescan": {
         fires: [{ "notebook/sites.py": SITES_RESCAN }],
@@ -825,6 +916,37 @@ def _resolve(values, above):
     return row
 `;
 
+/** Another design: one page at a time, dittos expanded field by field against the row above. */
+const TRANSCRIBE_ALTERNATIVE = `"""Reads typed-up notebook pages into specimen rows."""
+from notebook.labels import FIELDS, fields
+
+DITTO = ('"', "〃", "do.")
+
+
+def read_notebook(text):
+    """The specimen rows in a typed-up notebook, and the line numbers (from 1) of rows that could
+    not be read. Blank lines and notes (lines starting with #) are skipped."""
+    rows, unresolved = [], []
+    previous = {}
+    for number, line in enumerate(text.splitlines(), start=1):
+        if line.strip().startswith("=="):
+            previous = {}
+            continue
+        if not line.strip() or line.strip().startswith("#"):
+            continue
+        current = {}
+        for name, value in zip(FIELDS, fields(line)):
+            current[name] = previous.get(name) if value in DITTO else value
+        previous = current
+        if any(value is None for value in current.values()):
+            unresolved.append(number)
+            continue
+        current = dict(current)
+        current["count"] = int(current["count"])
+        rows.append(current)
+    return {"rows": rows, "unresolved": unresolved}
+`;
+
 const TRANSCRIBE_PRINTS = TRANSCRIBE_REFERENCE.replace(
   "        row = _resolve(fields(line), above)\n",
   "        row = _resolve(fields(line), above)\n        print(number, row)\n",
@@ -835,7 +957,7 @@ const p15 = "== p. 15 ==";
 
 const dittoMarks: SeedIssue = {
   id: "notebook-ditto-marks",
-  title: "Read ditto marks in the typed-up notebook",
+  title: "Volunteers have to expand ditto marks by hand",
   summary: "Expand ditto marks the way the paper notebook means them, and list the rows that can't be expanded.",
   kind: "feature",
   difficulty: "hard",
@@ -922,6 +1044,7 @@ const dittoMarks: SeedIssue = {
       ],
       when: { pattern: "^\\s*print\\(", present: true, file: "notebook/transcribe.py" },
       repeat: "while-true",
+      resolve: "explicit",
     },
     {
       id: "priya-transcribe-long",
@@ -931,19 +1054,35 @@ const dittoMarks: SeedIssue = {
       severity: "nit",
       text: ["Nit: `read_notebook` is doing a lot in one function. Would expanding one row's dittos read better as its own helper?"],
       when: { metric: "function-lines", above: 30, file: "notebook/transcribe.py" },
-    },
-    {
-      id: "lena-pages",
-      author: "Lena M",
-      role: "Product",
-      where: "review",
-      severity: "info",
-      text: ["Nice. Page breaks were the thing Marta was most worried about. I'll let her know."],
-      when: { check: "case-4", is: "passing" },
+      resolve: "explicit",
     },
   ],
   private: {
     reference: { "notebook/transcribe.py": TRANSCRIBE_REFERENCE },
+    alternatives: [{ "notebook/transcribe.py": TRANSCRIBE_ALTERNATIVE }],
+    wrong: [
+      // Copies from the row as typed, so a ditto of a ditto stays a ditto mark.
+      {
+        "notebook/transcribe.py": TRANSCRIBE_REFERENCE.replace(
+          "        above = row\n",
+          "        above = dict(zip(FIELDS, fields(line)))\n",
+        ),
+      },
+      // Lets a ditto reach back across a page heading.
+      {
+        "notebook/transcribe.py": TRANSCRIBE_REFERENCE.replace(
+          "            above = None  # a new page: the row above is on another sheet of paper\n",
+          "",
+        ),
+      },
+      // Counts line numbers without the skipped lines.
+      {
+        "notebook/transcribe.py": TRANSCRIBE_REFERENCE.replace(
+          "    for number, line in enumerate(text.splitlines(), start=1):\n        stripped = line.strip()\n",
+          "    number = 0\n    for line in text.splitlines():\n        stripped = line.strip()\n        if stripped and not stripped.startswith((\"#\", \"==\")):\n            number += 1\n",
+        ),
+      },
+    ],
     examples: {
       "priya-transcribe-print": {
         fires: [{ "notebook/transcribe.py": TRANSCRIBE_PRINTS }],

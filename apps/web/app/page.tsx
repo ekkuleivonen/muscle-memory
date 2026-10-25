@@ -3,28 +3,34 @@ import { cookies } from "next/headers";
 import { CONSENT_COOKIE, hasConsent } from "../lib/profile";
 
 /**
- * The public front door: tonight's incident first (the hook), then what the practice is, what
- * people get, and why it matters. Outside the consent gate; returning players also get a way
- * back to their desk.
+ * The public front door: what the practice is (realistic development problems, solved without
+ * AI), the one loop every issue follows, and what is recorded. Outside the consent gate;
+ * returning players get a way back to their desk.
  */
 
-/** The first day, as it actually goes: Terms, the desk, the first ticket. */
-const SCHEDULE = [
-  ["01", "Paperwork", "Short, plain Terms and a Privacy Notice."],
+/** The loop every issue follows, as it actually goes in the workspace. */
+const LOOP = [
+  [
+    "01",
+    "Issue",
+    "A bug report or feature request, with the repo it lives in.",
+  ],
   [
     "02",
-    "Your desk",
-    "A board, a backlog and a team. No forms: questions about you come up where they matter, and you can always say not now.",
+    "Code",
+    "Change the files the fix needs, in an editor you already know.",
   ],
   [
     "03",
-    "Your first ticket",
-    "A feature, a bug, a slow query, or the refactor nobody wanted.",
+    "Tests",
+    "Run them as often as you like before anyone else sees the code.",
   ],
+  ["04", "Pull request", "CI runs every check on exactly the code you pushed."],
+  ["05", "Feedback", "Review may ask for changes before it can merge."],
   [
-    "04",
-    "Review and merge",
-    "CI has run every check. Read your own diff, merge it, and the ticket moves to Done.",
+    "06",
+    "Merge",
+    "Checks green and review addressed: merge, and the issue is Done.",
   ],
 ];
 
@@ -38,12 +44,7 @@ export default async function Home() {
     </Link>
   ) : (
     <Link className="home-cta" href="/play">
-      Take the five-minute test →
-    </Link>
-  );
-  const incident = (
-    <Link className="home-cta" href="/incident">
-      Take the incident →
+      Fix your first bug →
     </Link>
   );
 
@@ -63,58 +64,36 @@ export default async function Home() {
         <nav>
           <Link href="/terms">Terms</Link>
           <Link href="/privacy">Privacy</Link>
-          <Link href={signedIn ? "/dashboard" : "/dashboard"}>
-            {signedIn ? "Your desk" : "Clock in"}
-          </Link>
+          <Link href="/issues">Issues</Link>
+          <Link href="/dashboard">{signedIn ? "Your desk" : "Clock in"}</Link>
         </nav>
       </header>
 
       <main className="legal-body home-body">
-        <section className="home-hero home-incident">
-          <p className="home-kicker">
-            <span className="incident-sev">SEV-1</span> Paged 02:14 ·
-            checkout-api · a fictional shop
-          </p>
+        <section className="home-hero">
+          <p className="home-kicker">Practice without AI</p>
           <h1>
-            Production is down. AI is down.
+            Realistic development problems.
             <br />
-            <span className="home-punch">You&apos;re on call.</span>
+            <span className="home-punch">Solved by you.</span>
           </h1>
           <p className="home-lede">
-            Kettlebrook runs on AI tools. Tonight checkout breaks while every
-            one of them is unavailable. You get the logs, the code, a failing
-            test and a team chat. Can you restore service? Five to ten minutes,
-            no timer.
-          </p>
-          <div className="home-actions">
-            {incident}
-            <span className="home-note">
-              No email needed. Progress stays in this browser.{" "}
-              {signedIn ? (
-                <Link href="/dashboard">Back to your desk</Link>
-              ) : (
-                <>
-                  Or <Link href="/play">take the five-minute test</Link>.
-                </>
-              )}
-            </span>
-          </div>
-        </section>
-        <section className="home-section">
-          <h2>A developer job from before AI</h2>
-          <p>
-            The incident is one shift. The rest is a job: tickets, tests, a
-            pull request, and nobody writing it for you. Start with a small bug
-            in about five minutes, or work at your own pace.
+            Read the issue, change the code, run the tests and open a pull
+            request. CI checks it, review may ask for changes, and you merge.
+            Completion, chat and generated code are off.
           </p>
           <div className="home-actions">
             {start}
-            {!signedIn && (
-              <span className="home-note">
-                No email needed. Or{" "}
-                <Link href="/dashboard">start your first day</Link>.
-              </span>
-            )}
+            <span className="home-note">
+              No email needed. Progress stays in this browser.{" "}
+              {signedIn ? (
+                <Link href="/issues">Browse issues</Link>
+              ) : (
+                <>
+                  Or <Link href="/issues">browse every issue</Link>.
+                </>
+              )}
+            </span>
           </div>
         </section>
 
@@ -126,16 +105,17 @@ export default async function Home() {
             alt="Muscle Memory workspace: a bug ticket beside its starter Python file, with Tests, Output and Pull requests tabs below."
           />
           <figcaption>
-            The actual workspace, before any edits: ticket, starter code and
-            tests together. Your solution is yours to write.
+            The actual workspace, before any edits: issue, code and tests
+            together. Your solution is yours to write.
           </figcaption>
         </figure>
+
         <section className="home-section">
-          <h2>A short practice session</h2>
+          <h2>One loop, every issue</h2>
           <ol className="home-schedule">
-            {SCHEDULE.map(([time, title, detail]) => (
-              <li key={time}>
-                <span className="mono">{time}</span>
+            {LOOP.map(([step, title, detail]) => (
+              <li key={step}>
+                <span className="mono">{step}</span>
                 <span>
                   <strong>{title}.</strong> {detail}
                 </span>
@@ -145,8 +125,7 @@ export default async function Home() {
           <p className="home-fine">
             Python, JavaScript, TypeScript, SQL, HTML, PHP, Ruby, Go, C, C++, C#
             and Java, running in your browser. Syntax highlighting, type errors
-            and hover types are on. Completion, chat and generated code are off,
-            and always will be.
+            and hover types are on. Completion, chat and generated code are off.
           </p>
         </section>
 
@@ -154,25 +133,24 @@ export default async function Home() {
           <h2>What you get</h2>
           <ul className="home-promises">
             <li>
-              <strong>An honest read on your skills.</strong> What you can still
-              do from memory, what went rusty, and whether practice brings it
-              back.
+              <strong>Problems that read like work.</strong> Issues written the
+              way a teammate would file them, and tests that check behaviour
+              rather than one expected answer.
             </li>
             <li>
-              <strong>Progress only you see.</strong> Review your runs, code
-              changes and merged fixes. Community comparisons need published
-              aggregate data; model benchmarks are planned. No leaderboards, and
-              nothing here is a hiring signal.
+              <strong>Your own record.</strong> Every run, push and merged fix
+              stays reviewable. No scores, ranks or badges, and nothing here is
+              a hiring signal.
             </li>
           </ul>
         </section>
 
         <section className="home-section">
-          <h2>Why it matters</h2>
+          <h2>Why it records your practice</h2>
           <p>
-            Everyone has a take on what AI is doing to developers&apos; skills.
-            We want to add evidence. Your practice helps change that: unaided
-            work is what we measure, not a moral stance, so use all the AI you
+            What AI tools do for developers&apos; skills, good or bad, is still
+            an open question. Unaided practice is what we record, to help study
+            it; it is not a verdict on you or on AI, so use whatever tools you
             like at your day job.
           </p>
           <ul className="home-promises">
@@ -198,19 +176,16 @@ export default async function Home() {
         </section>
 
         <section className="home-section home-invite">
-          <h2>Your desk is ready.</h2>
+          <h2>Pick an issue.</h2>
           <p>
-            It&apos;s an early preview: the tickets are still growing toward the
-            messy, multi-file work of a real job. Start with the five-minute
-            test, or go straight to your first day.
+            It&apos;s an early preview, and the issues are still growing toward
+            the messy, multi-file work of a real job.
           </p>
           <div className="home-actions">
             {start}
-            {!signedIn && (
-              <Link className="home-note" href="/dashboard">
-                Start your first day instead
-              </Link>
-            )}
+            <Link className="home-note" href="/issues">
+              Browse every issue instead
+            </Link>
           </div>
         </section>
       </main>

@@ -20,6 +20,7 @@ import { Sep, Topbar } from "../../_components/topbar";
 import { Ask } from "../../_components/ask";
 import { StartWork, StatusMenu } from "../../_components/board";
 import { Markdown } from "../../_components/markdown";
+import { CopyIssueLink } from "../../_components/share";
 
 type Props = { params: Promise<{ key: string }> };
 
@@ -72,7 +73,7 @@ export default async function IssuePage(props: Props) {
           <h1>{issue.title}</h1>
           {issue.summary && <p className="lede">{issue.summary}</p>}
           <div className="mobile-start">
-            <StartWork issue={issue} href={`/work/${issue.key}`} />
+            <StartWork issue={issue} href={`/work/${issue.key}`} warmOnMount />
           </div>
           <section className="section">
             <h2>Description</h2>
@@ -179,6 +180,7 @@ function Properties({ issue }: { issue: Issue }) {
         issue={{ key: issue.key, slug: issue.slug, revision: issue.revision }}
         href={`/work/${issue.key}`}
       />
+      <CopyIssueLink issueKey={issue.key} />
       <Ask
         className="issue-ask"
         ids={["editor"]}

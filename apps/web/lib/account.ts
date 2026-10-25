@@ -159,6 +159,7 @@ export function logOut() {
  */
 export async function resetProgress(identity = false) {
   localStorage.removeItem(BOARD_KEY);
+  localStorage.removeItem("muscle-memory.workspace-view");
   window.dispatchEvent(new Event(BOARD_CHANGE));
   const store = await openPracticeStore();
   try {

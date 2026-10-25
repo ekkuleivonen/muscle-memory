@@ -29,7 +29,7 @@ test("a card survives its link, and anything we would not have made is refused",
   ])
     assert.equal(decodeResult(encodeResult(bad as unknown as Result)), null);
   assert.equal(decodeResult("not base64 json"), null);
-  assert.equal(sentence(card, "Go"), "Fixed a real bug in Go without AI in 4 minutes. Green on the first run.");
+  assert.equal(sentence(card, "Go"), "Merged a fix for QUICK-4 in Go without AI.");
   assert.equal(duration(252), "4 min 12 s");
   assert.equal(duration(48), "48 s");
 });

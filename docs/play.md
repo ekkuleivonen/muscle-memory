@@ -14,7 +14,17 @@ How people arrive from a shared link, and how a result gets shared. The goal is 
 Accepting the current Terms is the only thing any page requires (`requireConsent`):
 
 - Someone who has not (a deep link, or the Terms changed since) is sent to `/consent`: the Terms in four points, one button, then on to the page they were heading for. `/play` does the same inline.
-- "Start your first day" on the landing page goes to the dashboard (through `/consent`). There is no onboarding: the profile questions are asked in place, one at a time, and can always wait ([profile](profile.md)).
+- "Clock in" and "browse every issue" on the landing page go to the dashboard and `/issues` (through `/consent`). There is no onboarding: the profile questions are asked in place, one at a time, and can always wait ([profile](profile.md)).
+
+## The outcome
+
+A merged pull request shows its **Outcome** at the top of its page, with no extra step: evidence read from the same records as the pull request (`apps/web/lib/evidence.ts`, rendered by `pull-outcome.tsx`), never written back and never a score, rank or badge. In order: what changed (files and lines against the starter code, pushes), correctness (CI on the first submitted push and, separately, on the latest one, with what came back in between by recorded push order: failing CI on earlier pushes and review comments on them; the repo's own tests), what CI checked beyond the visible tests, verification (local runs, and whether the code pushed last was tested first: only a local run that finished before that push started, on the same code (the same artifact, or identical complete files) and the same version of the ticket, counts; when no earlier run can be matched it is not known, never assumed), recovery (failed or errored runs before the first green one, failing pushes, earlier pull requests closed, review findings and how each was resolved), help (hints, teammate comments, the editor features on, pastes) and, last, time.
+
+The outcome is read up to the merge (or now, while open): anything recorded on the issue afterwards, such as a later session, never changes it. Each line is marked **observed** (a fact in the records), **not known** (the code wasn't kept, a capture gap, a check that never reached the tests, an older record without the breakdown) or a limited **reading** of observed facts. Production is always "not known": the checks ran in the test runner and nothing was deployed. Time is reported with the caveat that it includes reading and waiting on the runner; pastes, page switches and time say what happened, not how good anyone is, and nothing infers anything about AI use.
+
+While a pull request is open, the same evidence lists what to do **before merging**, taken from the one merge gate's verdict (`mergeEligibility` in `lib/merge.ts`, passed in as `blocker`): checks failing, still running, run against a different version of the ticket, or on code that has changed since (or can't be matched to) the latest push. Findings still to resolve are listed alongside. The latest result is the highest push number, as the gate reads it. Without the gate's verdict nothing is called stale; only failing checks and open findings are listed.
+
+`publicEvidence` is the outcome as it may leave the browser, for sharing: counts and statuses only, the first submission's checks next to the latest's (no code, file paths, comment text, timing or assistance beyond the hint count), and `parsePublicEvidence` reads one back from untrusted input.
 
 ## The result
 
@@ -28,9 +38,11 @@ A merged pull request's Details list what happened, next to the facts already th
 - **test runs**, and which one first passed every case ("green first try");
 - **hints**, **pastes** and **left the tab** (times the page was hidden).
 
-The fix itself is never shown, so a friend still gets a fair go. The same numbers are recorded at the merge as a `result` event, so aggregates use exactly the definitions people see. Under the merge, the experience and AI-use questions are asked while open, one tap each, recorded as `profile` with `from: "result"`.
+The fix itself is never shown, so a friend still gets a fair go. The same numbers are recorded at the merge as a `result` event, so aggregates use exactly the definitions people see. After the outcome, at the foot of the page, the experience and AI-use questions are asked while open, one tap each and skippable with Not now, recorded as `profile` with `from: "result"`.
 
-**Share result** in the merge box opens a preview of exactly what a post or chat will show (the shared link's image and text), then copy link, X, LinkedIn or the system share sheet. The link is `/r/<card>`: the numbers, base64url-encoded in the path, plus this device's **referral code**, a random code separate from the participant ID. The link is a brag, not a record: anyone could edit it, so nothing trusts it.
+**Share result** in the merge box opens a preview of exactly what a post or chat will show (the shared link's image and text), then copy link, X, LinkedIn or the system share sheet. The link is `/r/<card>`: the numbers, base64url-encoded in the path, plus this device's **referral code**, a random code separate from the participant ID. Only allowlisted fields are ever encoded (`publicResult` in `apps/web/lib/result.ts`): a field added to the metrics stays out of links until it is listed there. The link is a brag, not a record: anyone could edit it, so nothing trusts it.
+
+**Code is left out unless the person ticks "Include my code"**, which starts unticked every time the dialog opens and says who can read it. Ticked, the files the pull request changed go into the link itself, deflated in its fragment (`/r/<card>#code=…`, `apps/web/lib/share.ts`): browsers never send a fragment to the server, so nothing stores the code, and copying a link without the box ticked never includes it. It is all the changed files or none: more than eight files, a name that can't go in a link, a file kept only in part, or code over the size limits (inflated UTF-8 JSON bytes, `MAX_JSON_BYTES`, the same budget the reader enforces, and `MAX_CODE_FRAGMENT` characters of link) is refused with a message saying why, never cut or partly shared. A link is only offered once it has been read back as exactly those files. The `shared` event records the card only, not whether code was included.
 
 ## Comparing with everyone else
 
@@ -38,9 +50,15 @@ A player against anonymous aggregates, never a list of people. `tools/aggregates
 
 The card compares in the browser: "Faster than 72% of people who fixed it in Python", once at least 50 people have finished that issue (`COMPARE_FROM`); before that, "One of the first 50 people to fix it in Python". The shared link carries the comparison, so the shared page and preview show it. Stealth players see no comparison, as the Privacy Notice says. "People who fixed it", not "developers": the players chose to be here.
 
+## Sharing an issue (`/try/<KEY>`)
+
+Every issue has a public page at `/try/<KEY>` (the permanent key; a lowercase key or the issue's id redirect to it): the ticket, its acceptance criteria and **Start <KEY> yourself**, with the same Terms line as `/play` for someone new. Starting opens the visitor's own work on the issue: from the starting code, or where they left it if they had started it in that browser. The link names only the issue, so it never carries anyone's code, attempt, board or records. **Copy issue link** on the issue page and in a pull request's details copies it. A key that is not in the catalog gets a page saying so.
+
+A pull request lives in the browser that opened it, so `/pulls/<KEY>/<n>` opened anywhere else says there is no such pull request there and offers the issue; it never shows that browser's own work in its place. The result link is how a pull request is shared.
+
 ## The shared page (`/r/<card>`)
 
-Public. It shows the receipt, a preview image (the headline sentence and keystrokes, typos, speed and pastes) for posts and chats (`opengraph-image.tsx`, 1200×630), and "Your turn", which leads to `/play?ref=<code>&lang=<language>`. A link that does not decode to a card we would have made goes to `/play`.
+Public. It shows the receipt, a preview image (the headline sentence and keystrokes, typos, speed and pastes) for posts and chats (`opengraph-image.tsx`, 1200×630), and "Your turn", which leads to `/try/<KEY>` for the same issue. Code included by choice is read from the fragment in the page, shown collapsed below as plain text ("opening it shows their fix"); a fragment that does not decode says so and shows nothing. A link that cannot be shown gets a page that says why and invents nothing: **incomplete** (does not decode to a card we would have made), **older version** (an earlier card version, or one from the retired incident; offers the issue it named if it still exists), or **issue retired**.
 
 ## Measuring the loop
 
@@ -54,3 +72,21 @@ Joining `shared.ref` to `arrived.ref` gives shares, the arrivals each brought, a
 ## Returning to practice
 
 Entry pages explain browser-local identity and saved work: uploads do not provide recovery or device sync. Five minutes is a guide, not a timer. A merged result leads to a deterministic unstarted issue (runnable, preferred language, then easier difficulty) and back to the desk, before optional sharing and questions. The dashboard prioritises unfinished work, then a quick start; optional language preferences sit beside suggestions.
+
+## Entry points and legacy links
+
+Every way in leads to the same loop: issue, code, tests, pull request, feedback, merge. There is no incident wrapper, team chat or completion ceremony around it.
+
+- `/` says what the practice is and offers the five-minute test (or the desk, once the Terms are accepted) and the issue list.
+- `/issues/<KEY>` is an issue's exact entry; **Start work** opens `/work/<KEY>` on its live revision. `/work/<KEY>?revision=sha256:…` opens one of that issue's published revisions exactly; a revision that is not published opens the live one at the plain URL.
+- `/pulls/<KEY>/<n>` is this browser's own pull request: nobody else's records are ever read.
+
+The incident (INC-1, "Production is down. AI is down.") was retired as a wrapper. Its links still work:
+
+- `/incident` (with any `?v=` or `?ref=`) goes to `/issues/INC-1`, the ordinary issue. A shared card already noted its referral when it was opened.
+- `/incident/report` goes to `/pulls`, this browser's own pull requests (through the Terms). A merged INC-1 fix is listed there like any other.
+- A shared incident card (`/r/<card>` for INC-1) still shows its incident wording, and its link leads through `/incident` to INC-1. The card route is being reworked separately.
+
+INC-1 stays an ordinary issue under the same key and id, so attempts already made keep their pull requests, findings and records. Revisions that carry the retired chat lines are still in the catalog; nothing shows them.
+
+The integrated ordinary PR outcome and public result use the same factual evidence projection: first submission and latest checks, CI-only checks, runs, pushes, findings and hints, with missing evidence labelled. Public cards omit code unless explicitly selected, retain no demographic/private fields, and make no typing-speed ranking or production-success claim.

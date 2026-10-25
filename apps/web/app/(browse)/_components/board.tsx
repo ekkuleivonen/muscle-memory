@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { engineFor, warmRuntime } from "../../../../../packages/runner/runner";
 import {
   useEffect,
   useMemo,
@@ -105,7 +106,10 @@ export function useBoard() {
    * which starts a new attempt (lib/attempts). `issue.revision` is the revision replayed.
    * Resolves once the move is stored, so the IDE opens on the new attempt.
    */
-  const replay = async (issue: IssueRef, via: BoardMoveVia): Promise<boolean> => {
+  const replay = async (
+    issue: IssueRef,
+    via: BoardMoveVia,
+  ): Promise<boolean> => {
     const current = parseBoard(localStorage.getItem(BOARD_KEY));
     if (statusOf(current, issue.key) !== "done") return false;
     const stored = await logBoardMove(
@@ -122,7 +126,10 @@ export function useBoard() {
     );
     // Without the record there is no new attempt, so the board stays as it was.
     if (!stored) return false;
-    localStorage.setItem(BOARD_KEY, serializeBoard(replay_(current, issue.key)));
+    localStorage.setItem(
+      BOARD_KEY,
+      serializeBoard(replay_(current, issue.key)),
+    );
     window.dispatchEvent(new Event(CHANGE));
     return true;
   };
@@ -346,12 +353,29 @@ export function StatusMenu({ issue }: { issue: IssueRef }) {
  * Opens the workspace and, since that is starting, moves the issue to In progress on the way.
  * Already in progress (or done) stays as is.
  */
-export function StartWork({ issue, href }: { issue: IssueRef; href: string }) {
+export function StartWork({
+  issue,
+  href,
+  warmOnMount = false,
+}: {
+  issue: IssueRef & { language?: string | null };
+  href: string;
+  warmOnMount?: boolean;
+}) {
+  const warm = () => {
+    const engine = issue.language && engineFor(issue.language);
+    if (engine) warmRuntime(engine);
+  };
+  useEffect(() => {
+    if (warmOnMount) warm();
+  }, [issue.language, warmOnMount]);
   const { items, move } = useBoard();
   const status = statusOf(items, issue.key);
   return (
     <Link
       className="btn start"
+      onFocus={warm}
+      onPointerEnter={warm}
       href={href}
       onClick={(event) =>
         // detail is 0 when a key, not a pointer, activated the link.

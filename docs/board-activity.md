@@ -8,7 +8,7 @@ Setting an issue's status by hand (Backlog, Todo or In progress, from its Status
 
 - `issueKey` (`API-2`), `from` and `to` (`backlog`, `todo`, `in-progress`)
 - `via`: `pointer` or `keyboard` (the Status menu opened with `s` and driven by arrows, Enter on Start work, or the Merge button)
-- `trigger`: `status-menu`; `start-work` when Start work on an issue moved it to In progress on the way to the IDE; `replay`, the only move out of Done, back to In progress, when the person chose to take [the incident](incident.md) again, starting a new attempt; or `pull-request-merged` for the move to Done when you merge a pull request (only possible once its checks all pass), which also carries the `pullRequest` number and the `runId` of the run that checked it, so the move links to its evidence
+- `trigger`: `status-menu`; `start-work` when Start work on an issue moved it to In progress on the way to the IDE; `replay`, the only move out of Done, back to In progress, when the person chose to take a done issue again (offered by the retired incident page), starting a new attempt; or `pull-request-merged` for the move to Done when you merge a pull request (only possible once its checks all pass), which also carries the `pullRequest` number and the `runId` of the run that checked it, so the move links to its evidence
 - `onBoardBefore`: how many issues were on the board (Todo and In progress) just before
 - `nudged`: whether the soft limit asked "finish one first?" first
 
@@ -24,8 +24,8 @@ Every page of the app is recorded as it is shown (`TrackerActivity` in the root 
 - `observation.board.arrived`: once per browser, after the Terms are accepted: the first landing page and when, and the referral code of the shared result that brought them ([the five-minute test](play.md)).
 - `observation.board.shared`: a result card shared, with the channel, the card and this device's referral code.
 - `observation.board.resolved`: the person resolving one of a pull request's review findings themselves (Resolve): `issueKey`, `pullRequest`, the `comment` id and `via`. It resolves that thread only; CI is untouched, and a while-true finding the code still triggers opens again on the next push.
-- `observation.board.deployed` (7.0.0 only): the person pressing a simulated Deploy on a merged [incident](incident.md) fix. No longer recorded from 7.1.0, when merging became what resolves the incident; records already made keep their meaning.
-- `observation.board.result`: a merged pull request's result card numbers (counted within the attempt, see [the incident](incident.md)) (metrics version 2, see [the five-minute test](play.md)), the source of the aggregate percentiles.
+- `observation.board.deployed` (7.0.0 only): the person pressing a simulated Deploy on a merged fix to the retired incident (INC-1). No longer recorded from 7.1.0; records already made keep their meaning.
+- `observation.board.result`: a merged pull request's result card numbers (counted within the attempt, see `apps/web/lib/attempts.ts`) (metrics version 2, see [the five-minute test](play.md)), the source of the aggregate percentiles.
 
 Every board observation has `elapsedMs`, a monotonic clock from the page load. Declared gaps: visits before the Terms are accepted, keystrokes in text fields (a search is recorded as its query, a reply as the text sent), pointer movement and hovering, menus opened without a choice, activity in other tabs and apps, and writes cut short when the page closes. A missing source position was not recorded; it is not evidence that nothing happened.
 

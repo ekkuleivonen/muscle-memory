@@ -1,11 +1,11 @@
 import { ImageResponse } from "next/og";
 import { LANGUAGES } from "../../../lib/languages";
-import { isIncident } from "../../../lib/incident";
-import { decodeResult, incidentSentence, sentence } from "../../../lib/result";
+import { sentence } from "../../../lib/result";
+import { inspectCard } from "../../../lib/share";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "A result from the five-minute test";
+export const alt = "A self-reported practice outcome";
 
 /** The picture a shared link shows in posts and chats: the result as a headline and numbers. */
 export default async function Image({
@@ -13,8 +13,9 @@ export default async function Image({
 }: {
   params: Promise<{ card: string }>;
 }) {
-  const result = decodeResult((await params).card);
-  const incident = result && isIncident(result.k);
+  // Only a card the page would show; anything else gets the plain invitation.
+  const link = inspectCard((await params).card);
+  const result = link.kind === "result" ? link.result : null;
   const label = result
     ? (LANGUAGES.find((l) => l.id === result.l)?.label ?? result.l)
     : "";
@@ -40,34 +41,40 @@ export default async function Image({
         }}
       >
         <div style={{ fontSize: 26, color: "#b69cff", letterSpacing: 2 }}>
-          {incident
-            ? `MUSCLE MEMORY · INCIDENT INC-1${result.iv ? ` · VERSION ${result.iv}` : ""}`
-            : "MUSCLE MEMORY · SHIPPED WITHOUT AI"}
+          {result
+            ? `MUSCLE MEMORY · ${result.k} · PRACTICE WITHOUT AI`
+            : "MUSCLE MEMORY · PRACTICE WITHOUT AI"}
         </div>
         <div style={{ fontSize: 52, lineHeight: 1.2 }}>
-          {incident
-            ? incidentSentence(result)
-            : result
-              ? sentence({ ...result, fp: undefined }, label)
-              : "One bug. No AI. Try a small fix at your own pace."}
+          {result
+            ? sentence({ ...result, fp: undefined }, label)
+            : "One bug. No AI. Try a small fix at your own pace."}
         </div>
-        {result?.fp !== undefined && (
-          <div style={{ fontSize: 38, color: "#4ade80" }}>
-            {`Faster than ${result.fp}% of people who fixed it in ${label}.`}
-          </div>
-        )}
         {result && (
           <div style={{ display: "flex" }}>
-            {stat(String(result.ks), "keystrokes")}
-            {stat(String(result.ty), "typos fixed")}
-            {result.w ? stat(String(result.w), "wpm peak") : null}
-            {stat(String(result.ps), result.ps === 1 ? "paste" : "pastes")}
+            {result.ev ? (
+              <>
+                {stat(
+                  `${result.ev.checks.passed}/${result.ev.checks.total}`,
+                  "latest checks",
+                )}
+                {stat(
+                  result.ev.first
+                    ? `${result.ev.first.passed}/${result.ev.first.total}`
+                    : "?",
+                  "first submission",
+                )}
+                {stat(String(result.ev.pushes), "pushes")}
+              </>
+            ) : (
+              stat(String(result.r), "recorded test runs")
+            )}
           </div>
         )}
         <div style={{ fontSize: 30, color: "#cfd2db" }}>
-          {incident
-            ? "Production is down. AI is down. You're on call. → musclememory.run"
-            : "You use AI every day. Keep your coding skills in practice. → musclememory.run"}
+          {
+            "One practice attempt. Production outcome not measured. → musclememory.run"
+          }
         </div>
       </div>
     ),

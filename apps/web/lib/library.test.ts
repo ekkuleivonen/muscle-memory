@@ -22,6 +22,7 @@ import {
   parsePullQuery,
   toggle,
 } from "./queries";
+import { continuityProblems } from "../../../packages/content/publish";
 import { catalog } from "./test-fixtures";
 
 const merged = library(catalog);
@@ -48,7 +49,7 @@ test("issues are live metadata over their live revisions, grouped into projects"
     [issue.slug, issue.revision, issue.runnable, issue.kind, issue.estimate],
     ["frequency-map", meta.revision, true, "feature", 1],
   );
-  assert.equal(issue.title, "Frequency map");
+  assert.equal(issue.title, "Nightly vial tally is empty");
   assert.deepEqual(issue.project, {
     slug: "field-notes",
     title: "Field notes",
@@ -64,6 +65,7 @@ test("issues are live metadata over their live revisions, grouped into projects"
   assert.deepEqual(
     merged.projects.map((p) => [p.slug, p.issues.length]),
     [
+      ["incident-response", 1],
       ["field-notes", 5],
       ["storefront", 8],
       ["accounts-api", 9],
@@ -95,7 +97,7 @@ test("retired issues leave lists, but every published revision still resolves", 
 
 test("issues run when their language has an engine; project summaries span their issues", () => {
   // Every seed issue's language has an engine, with what that engine needs.
-  assert.equal(merged.issues.length, 37);
+  assert.equal(merged.issues.length, 38);
   assert.ok(merged.issues.every((i) => i.runnable));
   const edge = merged.projects.find((c) => c.slug === "edge-proxy")!;
   assert.equal(difficultyRange(edge.issues), "easy–hard");
@@ -109,7 +111,7 @@ test("issue keys come from the project key and the issue's number", () => {
   assert.equal(keys["lru-cache"], "EDGE-3");
   assert.deepEqual(
     merged.projects.map((c) => c.key),
-    ["FN", "SHOP", "API", "DATA", "EDGE"],
+    ["INC", "FN", "SHOP", "API", "DATA", "EDGE"],
   );
   assert.ok(merged.projects.every((c) => c.hue >= 0 && c.hue < 8));
 });
@@ -157,6 +159,7 @@ test("filters combine across qualifiers and match any value within one", () => {
     "EDGE-7",
     "FN-3",
     "FN-4",
+    "INC-1",
     "SHOP-1",
     "SHOP-2",
     "SHOP-5",
@@ -229,17 +232,17 @@ test("groups keep their declared order and drop empty ones", () => {
       g.issues.length,
     ]),
     [
-      ["bug", 22],
+      ["bug", 23],
       ["performance", 2],
     ],
   );
   assert.deepEqual(
     groupIssues(issues, "project", merged.projects).map((g) => g.id),
-    ["field-notes", "storefront", "accounts-api", "data-platform", "edge-proxy"],
+    ["incident-response", "field-notes", "storefront", "accounts-api", "data-platform", "edge-proxy"],
   );
   assert.equal(
     groupIssues(issues, "none", merged.projects)[0].issues.length,
-    24,
+    25,
   );
 });
 
@@ -248,7 +251,7 @@ test("project queries search their issues too", () => {
     filterProjects(merged.projects, parseProjectQuery(q)).map((c) => c.slug);
   assert.deepEqual(slugs("lang:cpp"), ["edge-proxy"]);
   assert.deepEqual(slugs("csv"), ["data-platform"]);
-  assert.equal(slugs("").length, 5);
+  assert.equal(slugs("").length, 6);
 });
 
 test("links toggle one value and round-trip through the URL", () => {
@@ -388,20 +391,25 @@ test("pull requests search like issues, plus their own state and checks", () => 
   assert.deepEqual(numbers("project:api"), []);
 });
 
-test("adding the incident left every other issue's live revision as it was", () => {
+test("content revisions stay published and never strand work in progress", () => {
   // Every live revision id on main just before the incident was merged (3c40dd4), checked in
-  // so the comparison never depends on git history being available.
+  // so the comparison never depends on git history being available. Since then the ENG-325
+  // audit revised many issues; their earlier revisions stay, because recorded work names them.
   const before = JSON.parse(
     readFileSync(new URL("./pre-incident-revisions.json", import.meta.url), "utf8"),
   ) as Record<string, string>;
   assert.equal(Object.keys(before).length, 45);
+  // INC-1 as it was played while it was the incident, with its chat.
+  before["checkout-guest-shipping"] =
+    "sha256:ea2bec9e27fb47b645b7cef8c00448c735415c9bda6f93b61a44bedea479b104";
   for (const [id, revision] of Object.entries(before)) {
-    assert.equal(catalog.issues.find((i) => i.id === id)?.revision, revision, id);
     assert.ok(catalog.revisions[revision], `${id} revision kept`);
+    // Saved code is restored by path onto the live revision: nothing it had may disappear.
+    const live = catalog.revisions[catalog.issues.find((i) => i.id === id)!.revision];
+    assert.deepEqual(continuityProblems(catalog.revisions[revision], live), [], id);
   }
-  // The incident is live on its current revision (the first one, 81a951d5, was replaced).
-  assert.equal(
-    catalog.issues.find((i) => i.id === "checkout-guest-shipping")?.revision,
-    "sha256:ea2bec9e27fb47b645b7cef8c00448c735415c9bda6f93b61a44bedea479b104",
-  );
+  // The chat lives on only in the revision that had it, read as stored.
+  const chat = (revision: string) => (catalog.revisions[revision] as { chat?: unknown[] }).chat;
+  assert.ok(chat(before["checkout-guest-shipping"])?.length);
+  assert.equal(chat(catalog.issues.find((i) => i.id === "checkout-guest-shipping")!.revision), undefined);
 });

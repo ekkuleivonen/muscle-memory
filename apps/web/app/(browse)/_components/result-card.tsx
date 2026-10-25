@@ -1,9 +1,13 @@
 "use client";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { openPracticeStore } from "../../../../../packages/browser/practice-store";
 import type { Revision } from "../../../../../packages/content/model";
-import type { Json } from "../../../../../packages/domain/json";
 import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
+import {
+  evidenceOf,
+  publicEvidence,
+  type PublicEvidence,
+} from "../../../lib/evidence";
 import { readProfile } from "../../../lib/account";
 import { LANGUAGES } from "../../../lib/languages";
 import { INGEST_URL } from "../../../lib/ingest";
@@ -11,25 +15,41 @@ import {
   compare,
   comparisonLine,
   duration,
-  encodeResult,
   metricsOf,
-  sentence,
   type Aggregate,
   type Metrics,
   type Result,
 } from "../../../lib/result";
-import { logShare } from "./board-log";
-
-type Channel = "copy" | "x" | "linkedin" | "native";
 
 /** The receipt's lines, shared by the card here and the shared page. */
-export function receiptLines(m: Metrics): [string, string, boolean?][] {
+export function receiptLines(
+  m: Metrics & { ev?: PublicEvidence },
+): [string, string, boolean?][] {
+  if (m.ev)
+    return [
+      [
+        "latest checks",
+        `${m.ev.checks.passed ?? "?"}/${m.ev.checks.total ?? "?"}`,
+      ],
+      [
+        "first submission",
+        m.ev.first
+          ? `${m.ev.first.passed ?? "?"}/${m.ev.first.total ?? "?"}`
+          : "not known",
+      ],
+      [
+        "CI-only checks",
+        m.ev.hidden
+          ? `${m.ev.hidden.passed}/${m.ev.hidden.total}`
+          : "not known",
+      ],
+      ["pushes", String(m.ev.pushes)],
+      ["local test runs", String(m.ev.runs)],
+      ["findings still open", String(m.ev.findings.open)],
+      ["hints", String(m.ev.hints)],
+      ["production outcome", "not measured"],
+    ];
   return [
-    ["active time", duration(m.t)],
-    ["opened to first edit", duration(m.rd)],
-    ["keystrokes", String(m.ks)],
-    ["typos fixed (est.)", String(m.ty)],
-    ["peak speed", m.w ? `${m.w} wpm` : "–"],
     [
       "test runs",
       m.g === 1
@@ -40,8 +60,6 @@ export function receiptLines(m: Metrics): [string, string, boolean?][] {
       m.g === 1,
     ],
     ["hints", m.h ? String(m.h) : "none"],
-    ["pastes", String(m.ps)],
-    ["left the tab", m.lt ? `${m.lt}×` : "never"],
   ];
 }
 
@@ -69,7 +87,7 @@ export function Receipt({
       </div>
       <p className="receipt-head">{headline}</p>
       <p className="receipt-sub">{detail}</p>
-      {comparison && <p className="receipt-compare">{comparison}</p>}
+
       <dl className="receipt-rows">
         {receiptLines(metrics).map(([label, value, good]) => (
           <div key={label} className="receipt-row">
@@ -85,6 +103,7 @@ export function Receipt({
 }
 
 export interface ResultInput {
+  number: number;
   issue: { key: string; slug: string; title: string; revision: string };
   language: string;
   records: readonly WorkspaceRecord[];
@@ -156,13 +175,30 @@ export function useResult(input: ResultInput | null): ResultState | null {
   const comparison = aggregate
     ? { fn: people, ...(fasterThan !== undefined ? { fp: fasterThan } : {}) }
     : {};
+  const evidence = evidenceOf({
+    records: input.records,
+    issue: issue.slug,
+    number: input.number,
+    revisionFor: (id) => input.revisions[id],
+    until: input.mergedAt,
+  });
+  const ev = evidence
+    ? publicEvidence({ ...evidence.facts, state: "merged" })
+    : undefined;
   const result: Result | null = code
-    ? { v: 2, k: issue.key, l: language, c: code, ...metrics, ...comparison }
+    ? {
+        v: 2,
+        k: issue.key,
+        l: language,
+        c: code,
+        ...metrics,
+        ...(ev ? { ev } : {}),
+      }
     : null;
   return {
     metrics,
     result,
-    comparison: comparisonLine(comparison, label),
+    comparison: null,
     label,
   };
 }
@@ -215,115 +251,4 @@ export async function copyText(text: string): Promise<boolean> {
   } finally {
     area.remove();
   }
-}
-
-/**
- * Share, with a preview of exactly what a post or chat will show (the shared link's image),
- * then copy, X, LinkedIn or the system share sheet. The fix itself is never shared.
- */
-export function ShareResult({
-  state,
-  issue,
-}: {
-  state: ResultState;
-  issue: ResultInput["issue"];
-}) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const [copied, setCopied] = useState(false);
-  const { result } = state;
-  if (!result) return null;
-  const segment = encodeResult(result);
-  const url = `${location.origin}/r/${segment}`;
-  const text = `${sentence(result, state.label)} Keep your coding skills in practice.`;
-  const share = async (channel: Channel) => {
-    void logShare(
-      { id: issue.slug, revision: issue.revision },
-      {
-        issueKey: issue.key,
-        channel,
-        ref: result.c,
-        card: result as unknown as Json,
-      },
-    );
-    if (channel === "copy") setCopied(await copyText(`${text} ${url}`));
-    else if (channel === "x")
-      window.open(
-        `https://x.com/intent/post?${new URLSearchParams({ text, url })}`,
-        "_blank",
-        "noopener",
-      );
-    else if (channel === "linkedin")
-      window.open(
-        `https://www.linkedin.com/sharing/share-offsite/?${new URLSearchParams({ url })}`,
-        "_blank",
-        "noopener",
-      );
-    else await navigator.share?.({ text, url }).catch(() => undefined);
-  };
-  return (
-    <>
-      <button
-        type="button"
-        className="share-open"
-        onClick={() => dialog.current?.showModal()}
-      >
-        Share result
-      </button>
-      <dialog
-        ref={dialog}
-        className="share-dialog"
-        aria-label="Share your result"
-        onClick={(event) =>
-          event.target === dialog.current && dialog.current?.close()
-        }
-        onClose={() => setCopied(false)}
-      >
-        <div className="share-body">
-          <div className="share-head">
-            <b>Share your result</b>
-            <button
-              type="button"
-              className="share-close"
-              aria-label="Close"
-              onClick={() => dialog.current?.close()}
-            >
-              ×
-            </button>
-          </div>
-          {/* eslint-disable-next-line @next/next/no-img-element -- the generated preview, as posted */}
-          <img
-            className="share-preview"
-            src={`/r/${segment}/opengraph-image`}
-            alt={text}
-            width={1200}
-            height={630}
-          />
-          <p className="share-text">{text}</p>
-          <p className="faint share-note">
-            Your numbers and a link to try the same bug. Never your code.
-          </p>
-          <div className="share-actions">
-            <button
-              type="button"
-              className="primary"
-              onClick={() => void share("copy")}
-            >
-              {copied ? "Copied" : "Copy link"}
-            </button>
-            <button type="button" onClick={() => void share("x")}>
-              Post on X
-            </button>
-            <button type="button" onClick={() => void share("linkedin")}>
-              LinkedIn
-            </button>
-            {"share" in navigator && (
-              <button type="button" onClick={() => void share("native")}>
-                Share…
-              </button>
-            )}
-          </div>
-        </div>
-      </dialog>
-    </>
-  );
 }
