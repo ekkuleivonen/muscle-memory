@@ -668,3 +668,11 @@
 .picker-keys {
   margin: 8px 0 0;
 }
+/*
+ * Text fields use a terminal's cursor, as the editor does: a steady block. Browsers without
+ * caret-shape or caret-animation keep their usual line.
+ */
+.term input {
+  caret-shape: block;
+  caret-animation: manual;
+}
