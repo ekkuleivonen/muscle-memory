@@ -248,14 +248,6 @@ kbd {
 .home-body {
   padding-top: 72px;
 }
-.home-kicker {
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin: 0 0 16px;
-}
 .home-hero h1 {
   font-size: 44px;
   text-wrap: balance;
@@ -305,25 +297,6 @@ kbd {
 .home-note {
   color: var(--dim);
   font-size: 14px;
-}
-/* Each item: a bold title on its own line, the explanation under it. */
-.home-promises {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 20px;
-}
-.home-promises strong {
-  display: block;
-  font-size: 16px;
-  margin-bottom: 2px;
-}
-.home-promises li {
-  color: var(--dim);
-}
-.home-promises li strong {
-  color: var(--fg);
 }
 @media (max-width: 600px) {
   .home-body {
@@ -398,19 +371,6 @@ kbd {
 }
 .receipt-row dd.good {
   color: #4ade80;
-}
-/* /consent: the Terms in four points, then one button. */
-.consent-points {
-  margin-top: 8px;
-}
-button.home-cta {
-  font: inherit;
-  border: 0;
-  cursor: pointer;
-}
-button.home-cta:disabled {
-  opacity: 0.7;
-  cursor: default;
 }
 
 /* The result card on its page. */

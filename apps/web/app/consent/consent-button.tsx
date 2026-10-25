@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { acceptConsent, readProfile } from "../../lib/account";
 import { acceptsCurrent } from "../../lib/legal";
 import { logArrival, noteArrival } from "../../lib/site-log";
+import { KeyActions } from "../_terminal/key-actions";
 
 /**
  * Accepts the current Terms and goes on; says so when the Terms changed since the last
@@ -51,28 +52,37 @@ export function ConsentButton({ next }: { next: string }) {
       );
     }
   };
+  const note = returning
+    ? "Everything you did is still in this browser."
+    : renewal
+      ? "The Terms changed since you last accepted them."
+      : "No email needed. Saved in this browser.";
   return (
-    <div className="home-actions">
-      {error && <p role="alert">{error}</p>}
-      <button
-        type="button"
-        className="home-cta"
-        disabled={busy}
-        onClick={() => void accept()}
-      >
-        {busy
-          ? "Opening…"
-          : returning
-            ? "Sign back in"
-            : "I'm 16 or older and accept"}
-      </button>
-      <span className="home-note">
-        {returning
-          ? "Everything you did is still in this browser."
-          : renewal
-            ? "The Terms changed since you last accepted them."
-            : "No email needed. Saved in this browser."}
-      </span>
+    <div className="t-consent-actions">
+      {error && (
+        <p className="t-line t-err" role="alert">
+          {error}
+        </p>
+      )}
+      <KeyActions
+        id="consent"
+        message={returning ? "Sign back in?" : "Go in?"}
+        autoFocus
+        actions={[
+          {
+            label: busy
+              ? "opening…"
+              : returning
+                ? "sign back in"
+                : "I'm 16 or older and accept",
+            kind: "primary",
+            key: "y",
+            disabled: busy && "opening",
+            run: () => void accept(),
+          },
+        ]}
+      />
+      <p className="t-line t-dim">{note}</p>
     </div>
   );
 }
