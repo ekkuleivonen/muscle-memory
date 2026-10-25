@@ -52,10 +52,34 @@
 }
 .try-criteria {
   margin: 0;
-  padding-left: 18px;
+  padding: 0;
+  list-style: none;
   display: grid;
-  gap: 4px;
+  gap: 12px;
   font-size: 13px;
+}
+.try-criteria h3 {
+  font-size: 13px;
+  margin: 0 0 4px;
+}
+.try-criteria dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 12px;
+  margin: 0;
+}
+.try-criteria dt {
+  color: var(--dim);
+}
+.try-criteria dd {
+  margin: 0;
+  min-width: 0;
+}
+.try-criteria pre {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12.5px;
 }
 .try-start .home-actions {
   align-items: center;
