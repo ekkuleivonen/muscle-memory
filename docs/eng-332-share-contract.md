@@ -49,7 +49,12 @@ The sender (`ShareResult`) is still mounted only by the merged pull request in `
 
    It renders nothing unless that completion is `automatic`, names this challenge, is on the open revision, and `required` is `[]`. Please supply `required` from the gate evaluated for the completing run's artifact. Today's `completionEligibility` returns `required: []` on early failures too, so pass `null` unless the gate reached rule evaluation for that `runId`.
 
-2. **Shared event card JSON.** `observation.board.shared.card` now holds a v3 card when shared from practice. v2 cards from merged pull requests keep their meaning. No reader of `shared.card` exists in `tools/`, `apps/ingest` or the aggregates. Since ENG-328 owns the 7.2.0 bump, please add this line to its version comment in `packages/domain/board.ts` rather than making a separate bump: "`shared.card` may be a version 3 outcome card (`apps/web/lib/outcome.ts`: v, k, l, rv, o, optional f and n, c), shared after a `checks-passed` completion; version 2 cards keep their meaning."
+2. **Shared event card JSON: no capture version change.** `observation.board.shared.card` is opaque JSON that names its own version (`card.v`: 2 for a merged pull request's card, 3 for a completed challenge). `boardShare` validates only `issueKey`, `channel` and `ref`, and ingest never reads the card. So a v3 card is recorded under whatever board capture version is current (7.2.0 with ENG-328), and ENG-332 asks for **no** board capture bump. A global bump would risk hiding new completions, because `completions()` and ingest pin `checks-passed` to exactly 7.2.0. No reader of `shared.card` exists in `tools/`, `apps/ingest` or the aggregates. Optionally, as documentation only, ENG-328 may note in its 7.2.0 comment: "`shared.card` may be a version 3 outcome card (`apps/web/lib/outcome.ts`); the card carries its own version."
+
+   Coverage is in `apps/web/lib/share-capture.test.ts`:
+   - A v3 card is recorded under the current board version unchanged, and ingest accepts it.
+   - Shares queued under every older accepted board version (with v2 or v3 cards) are still accepted, and an unaccepted version is still refused.
+   - Composed with ENG-328, a `checks-passed` completion stays visible in `completions()` beside a v3 share, and a legacy merge queued under 7.1.0 is still accepted and read. On this branch alone that test skips, because `completion.ts` isn't present. It was verified on a scratch merge of PR40 `794d404` with this branch: tsc clean, `npm test` 256/256 with nothing skipped. Since ENG-332 emits no new version, nothing waits on ingest being live first.
 
 ## Selected hooks (dot, 2026-10-25), revalidated
 
