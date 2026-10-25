@@ -237,3 +237,39 @@ test("board records from 6.0.0, 6.1.0, 7.0.0 and 7.1.0 are accepted, older ones 
     ],
   );
 });
+
+test("7.2 checked completion remains visible beside a v3 share; ingest preserves it and old queued merges verbatim", async () => {
+  const { boardMove, boardRecord, boardShare } = await import("../../../packages/domain/board");
+  const { completions } = await import("../../web/lib/completion");
+  const { env, sent } = fakes();
+  const me = await device();
+  const make = (sequence: number, trigger: "checks-passed" | "pull-request-merged") => boardRecord(boardMove({
+    participantId: me.participantId, sourceId: "completion-test", sequence, occurredAt: "2026-10-25T10:00:00Z", elapsedMs: sequence,
+    termsVersion: "2026-10-25.1", issue: { id: "frequency-map", revision: "sha256:" + "a".repeat(64) }, data: {
+      issueKey: "FN-1", from: "in-progress", to: "done", via: "keyboard", trigger, onBoardBefore: 1, nudged: false,
+      pullRequest: 1, runId: "run-submitted",
+    },
+  }));
+  const checked = make(1, "checks-passed");
+  const shared = boardRecord(boardShare({
+    participantId: me.participantId, sourceId: "completion-share-test", sequence: 1,
+    occurredAt: "2026-10-25T10:01:00Z", elapsedMs: 1,
+    termsVersion: "2026-10-25.1", issue: { id: "frequency-map", revision: "sha256:" + "a".repeat(64) },
+    data: { issueKey: "FN-1", channel: "copy", ref: "ab12cd34ef56", card: {
+      v: 3, k: "FN-1", l: "javascript", rv: "a".repeat(64), o: { passed: 4, total: 4 },
+    } },
+  }));
+  const legacyRaw = make(2, "pull-request-merged");
+  const legacy = { ...legacyRaw, payload: JSON.stringify({ ...JSON.parse(legacyRaw.payload), captureVersion: "board-capture-7.1.0" }) };
+  const wrongRaw = make(3, "checks-passed");
+  const wrongVersion = { ...wrongRaw, payload: JSON.stringify({ ...JSON.parse(wrongRaw.payload), captureVersion: "board-capture-7.1.0" }) };
+  const invalidRaw = make(4, "checks-passed");
+  const value = JSON.parse(invalidRaw.payload); delete value.data.runId;
+  const invalid = { ...invalidRaw, payload: JSON.stringify(value) };
+  const response = await handle(post("/ingest/v1/batches", { protocol: INGEST_PROTOCOL, participantId: me.participantId, proof: me.proof, records: [checked, shared, legacy, wrongVersion, invalid] }), env);
+  const body = await response.json();
+  assert.equal(body.accepted, 3);
+  assert.deepEqual(sent.map((row) => row.payload), [checked.payload, shared.payload, legacy.payload]);
+  assert.deepEqual(sent.map((row) => row.capture_version), ["board-capture-7.2.0", "board-capture-7.2.0", "board-capture-7.1.0"]);
+  assert.deepEqual(completions([checked, shared, legacy]).map(({ automatic }) => automatic), [true, false]);
+});

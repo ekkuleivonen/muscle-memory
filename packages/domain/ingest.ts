@@ -7,7 +7,7 @@
  * verbatim as the raw record.
  */
 import { safeIdentifier } from "./capture";
-import { BOARD_CAPTURE_VERSION } from "./board";
+import { BOARD_CAPTURE_VERSION, validateBoardMoveData, type BoardMoveData } from "./board";
 import { WORKSPACE_CAPTURE_VERSION, type WorkspaceRecord } from "./workspace";
 
 export const INGEST_PROTOCOL = "ingest-1";
@@ -22,6 +22,7 @@ export const BATCH_MAX_BYTES = 1_000_000;
 export const ACCEPTED_CAPTURE = [
   WORKSPACE_CAPTURE_VERSION,
   BOARD_CAPTURE_VERSION,
+  "board-capture-7.1.0",
   "board-capture-7.0.0",
   "board-capture-6.1.0",
   "board-capture-6.0.0",
@@ -133,6 +134,23 @@ export function checkRecord(
   if (value.observationId !== recordId) return refuse("record id does not match");
   if (!capture || !(ACCEPTED_CAPTURE as readonly string[]).includes(capture))
     return refuse("unknown capture version");
+  const moved = value.data as BoardMoveData | undefined;
+  if (type === "observation.board.moved" && moved?.trigger === "checks-passed") {
+    if (capture !== "board-capture-7.2.0")
+      return refuse("checks-passed requires board capture 7.2.0");
+    if (
+      typeof value.issue !== "string" ||
+      !value.issue ||
+      typeof value.issueRevision !== "string" ||
+      !/^sha256:[0-9a-f]{64}$/.test(value.issueRevision)
+    )
+      return refuse("checks-passed requires its issue and pinned revision");
+    try {
+      validateBoardMoveData(moved);
+    } catch {
+      return refuse("invalid checks-passed completion");
+    }
+  }
   const source = value.source as { id?: unknown; sequence?: unknown } | undefined;
   if (typeof source?.id !== "string" || !Number.isSafeInteger(source.sequence))
     return refuse("no source position");

@@ -1,3 +1,5 @@
+> Current practice has one editable entry: challenge, code, Submit, diagnostic feedback and Next challenge. Support/test sources, file navigation, hints and comment surfaces are internal/removed. SQL retains its public schema. The [ENG-328 contract](eng-328-lean-contract.md) documents explicit historical recovery and approved board 7.2 automatic completion. Internal full-suite submission records, workspace capture 6.0.0 and visible-only local-run scope keep their meaning. Workplace details below describe historical implementation, not the current player journey.
+
 # The IDE
 
 `/work/<KEY>` (for example `/work/FN-1`, always on the issue's live revision) opens an issue in a VS Code-style IDE: a title bar with the issue's status and **Run tests**, an activity bar switching between the ticket and the file explorer, editor tabs, a bottom panel with **Tests** and **Output**, and a status bar with the branch, save state, Vim mode and runtime. An issue's **Start work** button links here and moves the issue to In progress.
@@ -110,3 +112,11 @@ Below 860px, Ticket and Files open native modal drawers; Escape closes them and 
 Editor text continues to recover from the attempt’s recorded code. The local-only `muscle-memory.workspace-view` entry remembers tabs, active file, side/panel choice, cursor and scroll per participant and attempt (up to twenty views). Restoring that view adds no activity observations. Replay and a reset start with their own view. A changed ticket keeps code on matching editable paths and names any paths no longer present.
 
 Runtime files warm while an individual issue is being read or its Start work link receives focus/hover. Warming fetches pinned same-origin files only and creates no sandbox. Editing stays available during loading. Downloads have a five-minute total limit (SRI may withhold progress until a file is verified), separately from the sixty-second sandbox startup timeout, and disposal aborts pending downloads. Offline status and the existing retry action explain failures without blaming code. Recorded timing meanings and capture versions are unchanged.
+
+## Current next action
+
+The IDE gives one action visual priority: **Run tests** on arrival, after a failure or after editing; **Open pull request** / **Push to #n** after a current passing local run; **Review and merge** when the existing merge gate allows it, or **Resolve findings** when review alone blocks it. Both run and push remain available by their existing shortcuts and as secondary buttons. Reopening an eligible PR and editing withdraws Review immediately. Cancellation and environment retry take priority while needed. The empty Tests panel names the editable entry file beside the ticket.
+
+The PR page puts its current merge/recovery control before Findings and history. Only eligible code offers Merge; a blocked PR instead leads to the IDE or Findings. Resolve remains explicit where required and never replaces passing CI. A merged outcome is followed by one next-issue action, then optional sharing and alternate destinations. Run, push, history, diff, detailed evidence and editing remain available.
+
+The route/keyboard regression is `LOOP_ORIGIN=http://localhost:3000 node --import tsx tools/browser/loop-check.ts` against a running app with built runtime assets. It creates isolated synthetic records and exercises failure, cancellation, environment retry, stale-code recovery, explicit Resolve, merge, sharing and resume.
