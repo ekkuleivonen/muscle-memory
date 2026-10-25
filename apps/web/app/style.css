@@ -2782,3 +2782,24 @@ button.home-cta:disabled {
     justify-content: flex-start;
   }
 }
+
+.practice-next h2 {
+  font-size: 17px;
+}
+.practice-actions .btn.start {
+  height: 36px;
+  padding: 0 14px;
+  color: var(--accent-fg);
+  background: var(--accent);
+  border-color: transparent;
+  font-weight: 600;
+}
+.practice-actions .share-open {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 12px;
+}
+.practice-actions .share-issue {
+  margin-top: 0;
+  flex-basis: 100%;
+}

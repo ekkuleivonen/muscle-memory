@@ -103,7 +103,9 @@ export interface SessionOptions {
   /** The page's current runner; it changes when the runtime is reloaded. */
   readonly runner: () => Runner;
   readonly onRun: (run: RunView) => void;
-  /** Called on the first edit after a run, so its result can be shown as stale. */
+  /** A prior PR's checks were restored; its first edit also invalidates the shown result. */
+  readonly hasPreviousChecks?: boolean;
+  /** Called once on the first edit after current or restored checks, to mark them stale. */
   readonly onEditedAfterRun: () => void;
   /** Called only when the save status shown to the player may have changed. */
   readonly onSaveStatus?: (status: SaveStatus) => void;
@@ -171,6 +173,7 @@ export class WorkspaceSession {
 
   constructor(private readonly options: SessionOptions) {
     this.pullRequests = options.pullRequestsBefore ?? 0;
+    this.staleNotified = !options.hasPreviousChecks;
     this.recorder = new CaptureRecorder({
       participantId: options.participantId,
       sourceId: this.sourceId,
@@ -650,7 +653,7 @@ export class WorkspaceSession {
       this.editsSinceSnapshot = 0;
     }
     this.notify();
-    if (this.lastRun && !this.staleNotified) {
+    if (!this.staleNotified) {
       this.staleNotified = true;
       this.options.onEditedAfterRun();
     }
