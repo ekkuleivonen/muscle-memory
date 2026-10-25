@@ -72,7 +72,7 @@ try {
   await start.focus();
   await page.keyboard.press("Enter");
   const editor = page.locator(
-    '.ide-editor:not([hidden]) .cm-content[contenteditable="true"]',
+    '.practice-editor:not([hidden]) .cm-content[contenteditable="true"]',
   );
   await editor.waitFor();
   assert.equal(
@@ -80,7 +80,7 @@ try {
     true,
   );
   const workingPairs = await page
-    .locator(".ide-side .challenge-examples li")
+    .locator(".practice-challenge .challenge-examples li")
     .evaluateAll((nodes) =>
       nodes.map((node) =>
         [...node.querySelectorAll("pre")].map((pre) =>
@@ -97,15 +97,8 @@ try {
   await editor.waitFor();
   assert.match(await editor.innerText(), /return 123/);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page
-    .getByRole("button", { name: "Challenge", exact: true })
-    .last()
-    .click();
-  await page.getByRole("dialog", { name: "Challenge", exact: true }).waitFor();
-  assert.equal(
-    await page.getByRole("dialog").locator(".challenge-examples li").count(),
-    issue.criteria.length,
-  );
+  assert.equal(await page.getByRole("dialog").count(), 0);
+  assert.equal(await page.locator(".practice-challenge .challenge-examples li").count(), issue.criteria.length);
   assert.equal(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

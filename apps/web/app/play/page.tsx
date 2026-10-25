@@ -59,7 +59,7 @@ export default async function Play({ searchParams }: Props) {
             <span className="home-punch">Practice at your pace.</span>
           </h1>
           <p className="home-lede">
-            Read the ticket, fix the bug, run tests and merge your pull request.
+            Read the challenge, write code and submit it for immediate feedback.
             Syntax highlighting is on; AI and autocomplete are off. About five
             minutes, with no timer.
           </p>
