@@ -43,7 +43,7 @@ export default async function PullPage({ params }: Props) {
             title: issue.title,
             revision: issue.revision,
           }}
-          candidates={issues}
+          candidates={[issue, ...issues.filter((i) => i.key !== issue.key)]}
           number={n}
           revisionsJson={JSON.stringify(revisionsOf(issue.slug))}
         />

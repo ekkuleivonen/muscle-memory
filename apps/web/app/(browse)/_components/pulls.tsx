@@ -545,17 +545,55 @@ export function PullView({
             </Link>
           </span>
         </p>
-        <PullOutcome
-          records={attempt}
-          issue={issue}
-          number={number}
-          revisions={revisions}
-          mergedAt={merged}
-          blocker={eligibility?.blocker}
-          ideHref={workHref(issue)}
-        />
-        {pull.state === "merged" && (
-          <NextPractice candidates={candidates} current={issue.key} />
+        {pull.state === "merged" ? (
+          <>
+            <PullOutcome
+              records={attempt}
+              issue={issue}
+              number={number}
+              revisions={revisions}
+              mergedAt={merged}
+              blocker={eligibility?.blocker}
+              ideHref={workHref(issue)}
+            />
+            <NextPractice
+              candidates={candidates}
+              current={issue.key}
+              share={
+                result &&
+                resultInput && (
+                  <ShareResult
+                    state={result}
+                    issue={resultInput.issue}
+                    // Offered, never included by default: every file this pull request changed.
+                    // A file kept only in part is passed as such, so sharing is refused, not partial.
+                    code={changes
+                      .filter((c) => c.stats.added + c.stats.removed > 0)
+                      .map((c) => ({
+                        path: c.path,
+                        text: detail.code![c.path]?.text ?? "",
+                        truncated: c.truncated,
+                      }))}
+                  />
+                )
+              }
+            />
+          </>
+        ) : (
+          <MergeBox
+            pull={pull}
+            issue={issue}
+            blocking={blocking.length}
+            eligibility={eligibility}
+            explicit={blocking.some(
+              (t) =>
+                isCiFinding(t.comment) ||
+                revisions[t.issueRevision]?.team.find((c) => c.id === t.comment)
+                  ?.resolve === "explicit",
+            )}
+            onMerge={(via) => void merge(via)}
+            onClose={(via) => void close(via, !!pull.otherMerged)}
+          />
         )}
         <Findings
           pull={pull}
@@ -618,38 +656,6 @@ export function PullView({
           )}
           {tab === "files" && <Files saved={!!detail.code} changes={changes} />}
         </div>
-        <MergeBox
-          pull={pull}
-          issue={issue}
-          blocking={blocking.length}
-          eligibility={eligibility}
-          explicit={blocking.some(
-            (t) =>
-              isCiFinding(t.comment) ||
-              revisions[t.issueRevision]?.team.find((c) => c.id === t.comment)
-                ?.resolve === "explicit",
-          )}
-          onMerge={(via) => void merge(via)}
-          onClose={(via) => void close(via, !!pull.otherMerged)}
-          share={
-            result &&
-            resultInput && (
-              <ShareResult
-                state={result}
-                issue={resultInput.issue}
-                // Offered, never included by default: every file this pull request changed.
-                // A file kept only in part is passed as such, so sharing is refused, not partial.
-                code={changes
-                  .filter((c) => c.stats.added + c.stats.removed > 0)
-                  .map((c) => ({
-                    path: c.path,
-                    text: detail.code![c.path]?.text ?? "",
-                    truncated: c.truncated,
-                  }))}
-              />
-            )
-          }
-        />
         {pull.state === "merged" && (
           <Ask
             className="pull-ask"
@@ -693,16 +699,7 @@ export function PullView({
             </>
           )}
         </dl>
-        {pull.state === "open" && !pull.otherMerged && (
-          <Link
-            className="pull-continue"
-            href={workHref(issue)}
-            title={`Back to the IDE to keep working; push to #${number} from there (⌘⇧⏎)`}
-          >
-            Continue in the IDE →
-          </Link>
-        )}
-        <CopyIssueLink issueKey={issue.key} />
+        {pull.state !== "merged" && <CopyIssueLink issueKey={issue.key} />}
       </aside>
     </div>
   );
@@ -1203,7 +1200,7 @@ function Findings({
   if (!ci.length && !review.length) return null;
   return (
     <section className="pull-findings" aria-labelledby="pull-findings-title">
-      <h2 id="pull-findings-title">
+      <h2 id="pull-findings-title" tabIndex={-1}>
         Findings{" "}
         <span className={open ? "count open" : "count"}>
           {open ? `${open} unresolved` : "all resolved"}
@@ -1445,7 +1442,6 @@ function MergeBox({
   explicit = false,
   onMerge,
   onClose,
-  share,
 }: {
   pull: PullSummary;
   issue: PullIssue;
@@ -1457,19 +1453,8 @@ function MergeBox({
   explicit?: boolean;
   onMerge: (via: BoardMoveVia) => void;
   onClose: (via: BoardMoveVia) => void;
-  /** Shown once merged: sharing the result. */
-  share?: React.ReactNode;
 }) {
-  if (pull.state === "merged")
-    return (
-      <div className="merge-box merged">
-        <PullIcon state="merged" size={18} />
-        <div className="merge-text">
-          <b>Merged.</b> {issue.key} is Done.
-        </div>
-        {share}
-      </div>
-    );
+  if (pull.state === "merged") return null;
   // A click from the keyboard (Enter or Space) has no pointer position.
   const via = (event: React.MouseEvent): BoardMoveVia =>
     event.detail === 0 ? "keyboard" : "pointer";
@@ -1512,12 +1497,7 @@ function MergeBox({
   const latest = eligibility?.latest ?? pull;
   const pushNumber = eligibility?.latest?.push ?? pull.pushes;
   const green = blocker === null;
-  const ide = <Link href={workHref(issue)}>IDE</Link>;
-  const pushAgain = (
-    <>
-      Push again from the {ide} (<kbd>⌘⇧⏎</kbd>) so CI checks what you have.
-    </>
-  );
+  const pushAgain = <>Push again so CI checks your current code.</>;
   return (
     <div className={green ? "merge-box ready" : "merge-box blocked"}>
       <span className="merge-mark" aria-hidden>
@@ -1526,26 +1506,24 @@ function MergeBox({
       <div className="merge-text">
         {green ? (
           <>
-            <b>All {latest.total} checks passed.</b> Read through your changes,
-            then merge when you&apos;re happy with them. Merging moves{" "}
-            {issue.key} to Done.
+            <b>All {latest.total} checks passed.</b> Review the changes below
+            before merging.
           </>
         ) : blocker === "review" ? (
           <>
             <b>
-              All {latest.total} checks passed, but {blocking} blocking finding
-              {blocking === 1 ? " is" : "s are"} open.
+              All {latest.total} checks passed. {blocking} required finding
+              {blocking === 1 ? " remains" : "s remain"}.
             </b>{" "}
             {explicit ? (
               <>
-                Deal with it in the {ide} if the code needs it, then Resolve it
-                under Findings: a push alone doesn&apos;t resolve it.
+                Fix the code if needed, then Resolve below; a push alone
+                doesn&apos;t resolve it.
               </>
             ) : (
               <>
-                Change the code in the {ide} and push to it (<kbd>⌘⇧⏎</kbd>), or
-                resolve the finding under Findings if the code should stay as it
-                is.
+                Update the code and push, or resolve below if the code should
+                stay as it is.
               </>
             )}
           </>
@@ -1554,8 +1532,7 @@ function MergeBox({
             <b>
               Merging is blocked: CI hasn&apos;t reported on the latest push.
             </b>{" "}
-            Wait for its checks in the {ide}. If it never finished, push again (
-            <kbd>⌘⇧⏎</kbd>).
+            Return to the IDE to check progress or retry the push.
           </>
         ) : blocker === "code-changed" ? (
           <>
@@ -1580,22 +1557,31 @@ function MergeBox({
           </>
         ) : (
           <>
-            <b>Merging is blocked: {checksText(latest)}.</b> Every check has to
-            pass, and resolving findings doesn&apos;t change that. The pull
-            request stays open: keep working in the {ide} and push to it (
-            <kbd>⌘⇧⏎</kbd>), and CI runs again.
+            <b>Merging is blocked: {checksText(latest)}.</b> Fix the failing
+            checks, then push again. Resolve never replaces passing CI.
           </>
         )}
       </div>
-      {closeButton}
-      <button
-        type="button"
-        className="merge-button"
-        disabled={!green}
-        onClick={(event) => onMerge(via(event))}
-      >
-        Merge pull request
-      </button>
+      <div className="pull-action-controls">
+        {green ? (
+          <button
+            type="button"
+            className="merge-button"
+            onClick={(event) => onMerge(via(event))}
+          >
+            Merge pull request
+          </button>
+        ) : blocker === "review" ? (
+          <a className="btn pull-next-action" href="#pull-findings-title">
+            Resolve findings ↓
+          </a>
+        ) : (
+          <Link className="btn pull-next-action" href={workHref(issue)}>
+            Continue in the IDE →
+          </Link>
+        )}
+        {closeButton}
+      </div>
     </div>
   );
 }
@@ -1603,9 +1589,11 @@ function MergeBox({
 function NextPractice({
   candidates,
   current,
+  share,
 }: {
   candidates: IssueSummary[];
   current: string;
+  share?: React.ReactNode;
 }) {
   const { items } = useBoard();
   const account = useAccount();
@@ -1614,20 +1602,33 @@ function NextPractice({
     ? nextProblem(from, candidates, items, account?.profile.languages ?? [])
     : null;
   return (
-    <section className="practice-next">
-      <h2>Next problem</h2>
-      <p>Your code passed CI and this issue is now Done on your board.</p>
-      {next && (
+    <section className="practice-next" aria-label="Continue practicing">
+      {next ? (
         <>
-          <p>
-            Try next: {next.title} · {next.difficulty}.
-          </p>
-          <StartWork issue={next} href={`/work/${next.key}`} />
+          <h2>Next: {next.title}</h2>
+          <div className="practice-actions">
+            <StartWork issue={next} href={`/work/${next.key}`} />
+            {share}
+            <CopyIssueLink issueKey={current} />
+          </div>
         </>
+      ) : (
+        <div className="practice-actions">
+          <Link className="btn start" href="/issues">
+            Browse issues →
+          </Link>
+          {share}
+          <CopyIssueLink issueKey={current} />
+        </div>
       )}
-      <p>
-        <Link href="/dashboard">Back to your desk →</Link> ·{" "}
-        <Link href="/issues">Browse issues</Link>
+      <p className="dim">
+        <Link href="/dashboard">Back to your desk</Link>
+        {next && (
+          <>
+            {" "}
+            · <Link href="/issues">Browse issues</Link>
+          </>
+        )}
       </p>
     </section>
   );
