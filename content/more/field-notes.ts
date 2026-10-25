@@ -1,10 +1,10 @@
 import type { SeedFile, SeedIssue } from "../seed";
-import { lena, mateo, priya } from "../team";
 
 /*
  * Field notes grows from one warm-up into a small notebook package: notebook lines typed up
  * from the paper field notebook (labels.py), species names as the herbarium files them
- * (names.py), lengths in millimetres (units.py), and the reports built on them.
+ * (names.py), and the reports built on them. Each issue edits one file; the support modules
+ * are read-only, and every description states what of them the solution relies on.
  */
 
 /** A notebook line as the volunteers type it: date | site | species | length | count. */
@@ -163,7 +163,7 @@ const speciesTally: SeedIssue = {
   difficulty: "easy",
   language: "python",
   skills: ["refactoring", "reading-code", "strings"],
-  task: `Monday's import into the herbarium database created 14 "new" species that we already had. From the import log:
+  task: `Monday's import into the herbarium database created 14 "new" species that it already had. From the import log:
 
 \`\`\`text
 new species: Carabus Nemoralis        (have: Carabus nemoralis)
@@ -171,7 +171,17 @@ new species: Carabus Sp.              (have: Carabus sp.)
 new species: Pterostichus Niger       (have: Pterostichus niger)
 \`\`\`
 
-\`species_tally(lines)\` in \`notebook/tally.py\` totals individuals per species for the end-of-day tally sheet, and the sheet is what gets imported. The import matches names exactly, so every species on the sheet must be written the way the herbarium files it (\`notebook/names.py\` is what the herbarium export uses), with one naming rule for both, so they can't drift apart again. Blank lines are skipped, as now.`,
+The import matches species names exactly, so every name on the end-of-day tally sheet must be written the way the herbarium writes it.
+
+\`species_tally(lines)\` takes the day's notebook lines (a list of strings) and returns a dict from species name to the total number of individuals of that species.
+
+- A line reads \`date | site | species | length | count\`, for example \`2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\`. \`parse_line(line)\` from \`notebook.labels\` (already imported) returns it as a dict with the keys \`date\`, \`site\`, \`species\` and \`length\` (strings, stripped of surrounding spaces) and \`count\` (an int).
+- Lines that are empty or only whitespace are skipped.
+- Each species is keyed by its herbarium name, which \`canonical_name(name)\` from \`notebook.names\` returns: it splits the name on whitespace, capitalises the first word (first letter upper case, the rest lower case), lowercases every other word, and joins the words with single spaces. \`"  leistus   FERRUGINEUS "\` becomes \`"Leistus ferrugineus"\`; a name with no words becomes \`""\`.
+- Lines whose species have the same herbarium name are one species: their counts add up.
+- Every species on a non-blank line is in the result, even when its total is 0. No lines gives \`{}\`.
+
+Requirement: the names must come from \`canonical_name\` itself, not from a naming rule of your own, so the tally sheet and the herbarium can't drift apart again.`,
   entry: "notebook/tally.py",
   entrypoint: "species_tally",
   starter: TALLY_STARTER,
@@ -221,45 +231,18 @@ new species: Pterostichus Niger       (have: Pterostichus niger)
     {"Leistus o'brieni":2},
   ],
   hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-  comments: [
-    priya(
-      "The import doesn't care how a name looks on the sheet, only whether it matches the herbarium exactly. names.py is what the herbarium export uses, so that's the one to trust.",
-    ),
-  ],
-  hints: [
-    "Before changing anything, compare what the two clean-up functions return for a name from the import log.",
-    {
-      text: "The tally sheet's job is to agree with the herbarium. Which file in the package already describes how the herbarium writes a name?",
-      when: { behaviour: "failing-pushes", atLeast: 2 },
-    },
-  ],
+  comments: [],
+  hints: [],
   team: [
-    {
-      id: "priya-keep-clean",
-      author: "Priya K",
-      role: "Data",
-      where: "review",
-      severity: "nit",
-      text: [
-        "Nit: could we delete `_clean` rather than keep it around? Two copies of the same rule is how we got here.",
-        "Nit: `_clean` is still in tally.py. If it stays, someone will change it again and the two will drift. Can it go?",
-      ],
-      when: { pattern: "def _clean\\(", present: true, file: "notebook/tally.py" },
-      repeat: "while-true",
-      resolve: "explicit",
-    },
     {
       id: "priya-shared-helper",
       author: "Priya K",
       role: "Data",
       where: "review",
       severity: "blocking",
-      text: [
-        "This writes the rule out again inside tally.py. Can it use `canonical_name` from names.py, so there's one place the herbarium's naming lives?",
-      ],
+      text: ["Species names must come from `canonical_name` in `notebook.names`, not from a naming rule of your own."],
       when: { pattern: "canonical_name", present: false, file: "notebook/tally.py" },
       repeat: "while-true",
-      resolve: "explicit",
     },
   ],
   private: {
@@ -297,10 +280,6 @@ def species_tally(lines):
       },
     ],
     examples: {
-      "priya-keep-clean": {
-        fires: [{ "notebook/tally.py": TALLY_KEEPS_CLEAN }],
-        quiet: [{ "notebook/tally.py": TALLY_REFERENCE }],
-      },
       "priya-shared-helper": {
         fires: [{ "notebook/tally.py": TALLY_OWN_COPY }],
         quiet: [{ "notebook/tally.py": TALLY_REFERENCE }, { "notebook/tally.py": TALLY_KEEPS_CLEAN }],
@@ -310,10 +289,11 @@ def species_tally(lines):
 };
 
 // ---------------------------------------------------------------------------------------------
-// Length report: a bug whose fix spans units.py and report.py.
+// Length report: lengths in more units, and lots nobody measured. The unit conversion lives in
+// the report itself, so the fix is one file.
 
-const UNITS_STARTER = `"""Lengths as written in the notebook, converted to millimetres. The label printer uses
-to_mm too."""
+const REPORT_STARTER = `"""Body lengths per species for the season report."""
+from notebook.labels import parse_line
 
 MM_PER = {"mm": 1, "cm": 10}
 
@@ -322,29 +302,6 @@ def to_mm(text):
     """'14.5 mm' or '1.2 cm' in millimetres."""
     value, unit = text.split()
     return float(value) * MM_PER[unit]
-`;
-
-const UNITS_REFERENCE = String.raw`"""Lengths as written in the notebook, converted to millimetres. The label printer uses
-to_mm too."""
-import re
-
-MM_PER = {"mm": 1, "cm": 10, "in": 25.4}
-
-LENGTH = re.compile(r"(\d+(?:\.\d+)?)\s*([a-z]+)", re.IGNORECASE)
-
-
-def to_mm(text):
-    """'14.5 mm', '1.2 cm', '0.6 in', '12mm' or '1.3 CM' in millimetres."""
-    match = LENGTH.fullmatch(text.strip())
-    if not match:
-        raise ValueError(f"not a length: {text!r}")
-    value, unit = match.groups()
-    return float(value) * MM_PER[unit.lower()]
-`;
-
-const REPORT_STARTER = `"""Body lengths per species for the season report."""
-from notebook.labels import parse_line
-from notebook.units import to_mm
 
 
 def length_report(lines):
@@ -365,13 +322,30 @@ def length_report(lines):
     }
 `;
 
-const REPORT_REFERENCE = `"""Body lengths per species for the season report."""
+/** The reference's reading of a length: any amount of space, any case, inches too. */
+const TO_MM_REFERENCE = String.raw`def to_mm(text):
+    """'14.5 mm', '1.2 cm', '0.6 in', '12mm' or '1.3 CM' in millimetres."""
+    match = LENGTH.fullmatch(text.strip())
+    if not match:
+        raise ValueError(f"not a length: {text!r}")
+    value, unit = match.groups()
+    return float(value) * MM_PER[unit.lower()]
+`;
+
+const REPORT_REFERENCE = String.raw`"""Body lengths per species for the season report."""
+import re
+
 from notebook.labels import parse_line
-from notebook.units import to_mm
+
+MM_PER = {"mm": 1, "cm": 10, "in": 25.4}
+
+LENGTH = re.compile(r"(\d+(?:\.\d+)?)\s*([a-z]+)", re.IGNORECASE)
 
 # Left blank when nothing was measured; a ? when the volunteer wasn't sure.
 UNMEASURED = {"", "?"}
 
+
+` + TO_MM_REFERENCE + `
 
 def length_report(lines):
     """Per species: how many lots were measured, and the shortest, longest and mean length in
@@ -396,39 +370,6 @@ def _summary(values):
     }
 `;
 
-const REPORT_CONVERTS_INCHES = `"""Body lengths per species for the season report."""
-from notebook.labels import parse_line
-from notebook.units import to_mm
-
-UNMEASURED = {"", "?"}
-
-
-def _length(text):
-    if text.lower().endswith("in"):
-        return float(text[:-2]) * 25.4
-    return to_mm(text)
-
-
-def length_report(lines):
-    """Per species: how many lots were measured, and the shortest, longest and mean length in
-    millimetres, each to one decimal. A species with no measured lot still appears."""
-    lengths = {}
-    for line in lines:
-        row = parse_line(line)
-        values = lengths.setdefault(row["species"], [])
-        if row["length"] not in UNMEASURED:
-            values.append(_length(row["length"]))
-    return {
-        species: {
-            "measured": len(values),
-            "min_mm": round(min(values), 1) if values else None,
-            "max_mm": round(max(values), 1) if values else None,
-            "mean_mm": round(sum(values) / len(values), 1) if values else None,
-        }
-        for species, values in lengths.items()
-    }
-`;
-
 const lot = (species: string, length: string, count = 1) =>
   row(D, "Alder Creek", species, length, count);
 const CN = "Carabus nemoralis";
@@ -445,27 +386,25 @@ const lengthReport: SeedIssue = {
   task: `The season report fails as soon as it reaches the sheets from the Oregon volunteers:
 
 \`\`\`text
-  File "notebook/units.py", line 9, in to_mm
+  File "notebook/report.py", line 10, in to_mm
     return float(value) * MM_PER[unit]
 KeyError: 'in'
 \`\`\`
 
-Their sheets differ from ours in three ways:
+Their sheets differ from ours: lengths can be in inches (\`0.6 in\`), sometimes with no space before the unit or with the unit in capitals (\`12mm\`, \`1.3 CM\`, \`0.5in\`), and lots nobody measured have the length left blank, or a \`?\` when the volunteer wasn't sure. We take the sheets the way the volunteers write them.
 
-- lengths in inches (\`0.6 in\`), and sometimes no space or a capital unit (\`12mm\`, \`1.3 CM\`, \`0.5in\`);
-- lots nobody measured have the length left blank, or a \`?\` when the volunteer wasn't sure.
+\`length_report(lines)\` takes the season's notebook lines (a list of strings, one specimen lot each) and returns a dict keyed by species name, exactly as written on the line. For each species:
 
-\`length_report(lines)\` in \`notebook/report.py\` gives, per species, the number of lots measured and the shortest, longest and mean length in millimetres, each rounded to one decimal. An inch is 25.4 mm. Unmeasured lots don't count towards any of those numbers, but their species still appears: with no measured lot it shows \`measured: 0\` and \`None\` for the lengths.
+- \`measured\`: how many of its lots have a length. Each lot counts once, whatever its individual count.
+- \`min_mm\`, \`max_mm\`, \`mean_mm\`: the shortest, longest and mean of those lengths in millimetres, each rounded to one decimal (the mean is taken over the unrounded lengths).
 
-The label printer converts lengths with \`to_mm\` in \`notebook/units.py\` too, and it should print the inch lots as well.`,
+A line reads \`date | site | species | length | count\`, for example \`2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\`. \`parse_line(line)\` from \`notebook.labels\` (already imported) returns it as a dict with the keys \`date\`, \`site\`, \`species\` and \`length\` (strings, stripped of surrounding spaces) and \`count\` (an int).
+
+A length is a number (digits, optionally with a decimal part), then any amount of space or none, then a unit: \`mm\`, \`cm\` (10 mm) or \`in\` (25.4 mm), in any mix of upper and lower case. A blank length or \`?\` means the lot wasn't measured: it doesn't count towards any of the numbers, but its species still appears. A species with no measured lot shows \`measured: 0\` and \`None\` for the three lengths. No lines gives \`{}\`.`,
   entry: "notebook/report.py",
   entrypoint: "length_report",
   starter: REPORT_STARTER,
-  files: [
-    INIT,
-    LABELS,
-    { path: "notebook/units.py", role: "edit", language: "python", text: UNITS_STARTER },
-  ],
+  files: [INIT, LABELS],
   inputs: [
     [lot(CN, "14.6 mm"), lot(CN, "1.7 cm")],
     [lot(CN, "0.6 in"), lot(CN, "0.7 in", 2)],
@@ -505,58 +444,26 @@ The label printer converts lengths with \`to_mm\` in \`notebook/units.py\` too, 
     {"Carabus nemoralis":{"measured":2,"min_mm":15.2,"max_mm":15.2,"mean_mm":15.2}},
   ],
   hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-  comments: [
-    lena(
-      "The Oregon group sent 31 sheets this week and the report has been red since Tuesday. They're volunteers; we take the sheets the way they write them.",
-    ),
-    mateo(
-      "Heads up: the label printer calls `to_mm` directly, so whatever it learns, the labels get for free.",
-    ),
-  ],
-  hints: [
-    "There are two separate questions here: how a written length becomes millimetres, and what the report does with a lot that has no length. Each belongs to a different file.",
-    {
-      text: "Run `12mm` and `0.6 in` through `to_mm` on paper. What does splitting on whitespace give you for each?",
-      when: { behaviour: "failing-pushes", atLeast: 3 },
-    },
-  ],
-  team: [
-    {
-      id: "mateo-units-in-report",
-      author: "Mateo O",
-      role: "Backend",
-      where: "review",
-      severity: "blocking",
-      text: [
-        "The inch conversion is in report.py, so the label printer still can't read `0.6 in`. Can it live in `to_mm` instead?",
-        "Converting inches here only fixes the report; the label printer goes through `to_mm`. Could the conversion move to units.py?",
-      ],
-      when: { pattern: "25\\.4", present: true, file: "notebook/report.py" },
-      repeat: "while-true",
-      resolve: "explicit",
-    },
-  ],
+  comments: [],
+  hints: [],
   private: {
-    reference: { "notebook/report.py": REPORT_REFERENCE, "notebook/units.py": UNITS_REFERENCE },
+    reference: { "notebook/report.py": REPORT_REFERENCE },
     alternatives: [
       // Units read by peeling the letters off the end, and unmeasured lots skipped inline.
       {
-        "notebook/units.py": `"""Lengths as written in the notebook, converted to millimetres. The label printer uses
-to_mm too."""
+        "notebook/report.py": `"""Body lengths per species for the season report."""
+from notebook.labels import parse_line
 
 MM_PER = {"mm": 1, "cm": 10, "in": 25.4}
+LETTERS = "abcdefghijklmnopqrstuvwxyz"
 
 
 def to_mm(text):
     """'14.5 mm', '1.2 cm', '0.6 in', '12mm' or '1.3 CM' in millimetres."""
     text = text.strip().lower()
-    number = text.rstrip("abcdefghijklmnopqrstuvwxyz").strip()
-    unit = text[len(text.rstrip("abcdefghijklmnopqrstuvwxyz")):]
+    number = text.rstrip(LETTERS).strip()
+    unit = text[len(text.rstrip(LETTERS)):]
     return float(number) * MM_PER[unit]
-`,
-        "notebook/report.py": `"""Body lengths per species for the season report."""
-from notebook.labels import parse_line
-from notebook.units import to_mm
 
 
 def length_report(lines):
@@ -584,33 +491,22 @@ def length_report(lines):
     ],
     wrong: [
       // Reads inches as centimetres' cousin: 2.54 instead of 25.4.
-      {
-        "notebook/report.py": REPORT_REFERENCE,
-        "notebook/units.py": UNITS_REFERENCE.replace('"in": 25.4', '"in": 2.54'),
-      },
+      { "notebook/report.py": REPORT_REFERENCE.replace('"in": 25.4', '"in": 2.54') },
       // Unmeasured lots dropped entirely, so their species disappears from the report.
       {
         "notebook/report.py": REPORT_REFERENCE.replace(
           '        values = lengths.setdefault(row["species"], [])\n        if row["length"] not in UNMEASURED:\n            values.append(to_mm(row["length"]))',
           '        if row["length"] not in UNMEASURED:\n            lengths.setdefault(row["species"], []).append(to_mm(row["length"]))',
         ),
-        "notebook/units.py": UNITS_REFERENCE,
       },
       // Inches fixed, but a length without a space still can't be read.
       {
-        "notebook/report.py": REPORT_REFERENCE,
-        "notebook/units.py": UNITS_STARTER.replace('{"mm": 1, "cm": 10}', '{"mm": 1, "cm": 10, "in": 25.4}'),
+        "notebook/report.py": REPORT_REFERENCE.replace(
+          TO_MM_REFERENCE,
+          'def to_mm(text):\n    value, unit = text.split()\n    return float(value) * MM_PER[unit.lower()]\n',
+        ),
       },
     ],
-    examples: {
-      "mateo-units-in-report": {
-        fires: [{ "notebook/report.py": REPORT_CONVERTS_INCHES }],
-        quiet: [
-          { "notebook/report.py": REPORT_REFERENCE, "notebook/units.py": UNITS_REFERENCE },
-          {},
-        ],
-      },
-    },
   },
 };
 
@@ -723,13 +619,22 @@ const siteSummary: SeedIssue = {
   difficulty: "medium",
   language: "python",
   skills: ["debugging", "reading-code", "iteration"],
-  task: `Priya's change last week to \`notebook/sites.py\` took the season summary from 9 s to under a second on the 40,000-line export. Since then the numbers are off. From Lena:
+  task: `Last week's change to \`site_summary\` took the season summary from 9 s to under a second on the 40,000-line export. Since then the numbers are wrong. From Lena:
 
 > Ridge B shows 6 lots. We have 19 on paper, I counted them twice. And Alder Creek's first visit says June 14, but we set the traps there on May 28.
 
-\`site_summary(lines)\` gives, per site: the number of lots, the individuals across them, the number of distinct species, and the earliest (\`first\`) and latest (\`last\`) date the site appears. Dates are written \`YYYY-MM-DD\`.
+\`site_summary(lines)\` takes the season's notebook lines (a list of strings, one specimen lot each) and returns a dict keyed by site name. For each site:
 
-We go back to the same sites all season, and pages are often typed up days late, so the export is in the order lines were typed, not by site or by date. It needs to stay fast: going back to rescanning the notebook for every site is not an option.`,
+- \`lots\`: how many lines are for that site;
+- \`individuals\`: the sum of their counts;
+- \`species\`: how many distinct species names they have, compared exactly as written;
+- \`first\` and \`last\`: the earliest and latest date the site appears, as written. Dates are \`YYYY-MM-DD\`.
+
+A line reads \`date | site | species | length | count\`, for example \`2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\`. \`parse_line(line)\` from \`notebook.labels\` (already imported) returns it as a dict with the keys \`date\`, \`site\`, \`species\` and \`length\` (strings, stripped of surrounding spaces) and \`count\` (an int).
+
+The lines are in the order they were typed up, which is neither grouped by site nor sorted by date: the team goes back to the same sites all season, and pages are often typed up days late. No lines gives \`{}\`.
+
+Requirement: it must stay fast. Don't go over all the lines once for each site.`,
   entry: "notebook/sites.py",
   entrypoint: "site_summary",
   starter: SITES_STARTER,
@@ -801,19 +706,8 @@ We go back to the same sites all season, and pages are often typed up days late,
     {"Ridge B":{"lots":3,"individuals":4,"species":1,"first":"2026-06-05","last":"2026-06-12"}},
   ],
   hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-  comments: [
-    priya(
-      "That's my change, sorry. The export used to be grouped by site and I didn't check whether it still is. Please keep it one pass if you can; the old version was what made the nightly job time out.",
-    ),
-    lena("The funder's mid-season report goes out Friday and it quotes these per-site numbers."),
-  ],
-  hints: [
-    "Read the comment above the loop and check its assumption against Ridge B in the second test case.",
-    {
-      text: "What happens to the summary when the same site turns up in two separate stretches of the notebook? And what does the first line of a site's stretch say about its earliest date?",
-      when: { behaviour: "failing-pushes", atLeast: 3 },
-    },
-  ],
+  comments: [],
+  hints: [],
   team: [
     {
       id: "priya-rescan",
@@ -821,13 +715,9 @@ We go back to the same sites all season, and pages are often typed up days late,
       role: "Data",
       where: "review",
       severity: "blocking",
-      text: [
-        "This goes back to scanning every line once per site, which is what took 9 s on the season export and timed out the nightly job. Can we keep it to one pass?",
-        "Filtering the whole notebook for each site is the version I replaced: fine on a page, 9 s on the season. Could it stay one pass?",
-      ],
+      text: ["Don't go over all the lines once for each site: the summary has to stay fast on a 40,000-line export."],
       when: { pattern: "==\\s*site\\b", present: true, file: "notebook/sites.py" },
       repeat: "while-true",
-      resolve: "explicit",
     },
   ],
   private: {
@@ -967,12 +857,28 @@ const dittoMarks: SeedIssue = {
 
 > We've always written " under the row above when nothing changed. Some of the older volunteers write 〃 or do. Please let them type the page as it looks.
 
-\`read_notebook(text)\` in \`notebook/transcribe.py\` reads a typed-up notebook into rows, in \`parse_line\`'s shape. It should expand ditto marks:
+\`read_notebook(text)\` reads a typed-up notebook (one string, lines separated by newlines) and returns \`{"rows": [...], "unresolved": [...]}\`.
 
-- A field that is exactly \`"\`, \`〃\` or \`do.\` (spaces around it don't matter) means the same field as the nearest specimen row above it on the same page, as that row reads once its own dittos are expanded.
-- Blank lines and notes (lines starting with \`#\`) are skipped, as now, and don't count as the row above.
-- Each notebook page starts with a heading line like \`== p. 14 ==\`. A ditto never reaches back across a heading: on paper, the row above is on another sheet.
-- A row with a ditto that has nothing to copy, or that copies a field which itself had nothing to copy, can't be read. It is left out of \`rows\`, and its line number (from 1, counting every line of the text) goes in \`unresolved\` so the volunteer can fix it.`,
+**Lines.** A specimen row reads \`date | site | species | length | count\`, for example \`2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\`. Three kinds of line are not specimen rows: blank lines (empty or only whitespace), notes (starting with \`#\` once leading spaces are removed), and page headings (starting with \`==\`, for example \`== p. 14 ==\`).
+
+**Rows.** Each specimen row becomes a dict with the keys \`date\`, \`site\`, \`species\` and \`length\` (strings, stripped of surrounding spaces) and \`count\` (an int), in the order the rows appear. \`notebook.labels\` (already used by the starter) provides:
+
+- \`parse_line(line)\`: that dict for one line, with no ditto expansion;
+- \`fields(line)\`: the line's five fields as a list of stripped strings, in that order (raises \`ValueError\` if there aren't five);
+- \`FIELDS\`: the field names, \`("date", "site", "species", "length", "count")\`.
+
+**Ditto marks.**
+
+- A field that is exactly \`"\`, \`〃\` or \`do.\` once stripped is a ditto. A field that only contains one of them among other text is not.
+- A ditto means the same field as the nearest specimen row above it on the same page, as that row reads once its own dittos are expanded. This applies to every field, the count included.
+- Blank lines and notes are skipped and are never the row above.
+- A page heading starts a new sheet of paper: a ditto never reaches back across it. The first row after a heading has no row above.
+- A ditto with nothing to copy (no row above, or the field above was itself a ditto with nothing to copy) can't be resolved. Its row can't be read: it is left out of \`rows\`, and its line number goes in \`unresolved\`. It still counts as the row above for the next row, whose dittos copy the fields it had and can't resolve the ones it didn't.
+- Line numbers start at 1 and count every line of the text, including blank lines, notes and headings, so they match the line numbers in the volunteer's editor. \`unresolved\` lists them in order.
+
+Empty text gives \`{"rows": [], "unresolved": []}\`.
+
+Requirement: the code must not print anything. The transcription job's standard output goes into the volunteers' upload log.`,
   entry: "notebook/transcribe.py",
   entrypoint: "read_notebook",
   starter: TRANSCRIBE_STARTER,
@@ -1016,21 +922,8 @@ const dittoMarks: SeedIssue = {
     {"rows":[{"date":"2026-05-20","site":"Fen Margin","species":"Abax parallelepipedus","length":"21 mm","count":1}],"unresolved":[6]},
   ],
   hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-  comments: [
-    lena(
-      "Marta's group has 38 notebooks left to type up before the herbarium deadline in November. This is what's holding them up.",
-    ),
-    priya(
-      "The unresolved line numbers go straight into the volunteers' to-fix list, so they need to match the line numbers in their editor.",
-    ),
-  ],
-  hints: [
-    "Keep hold of the last specimen row you read, as it reads after its own dittos are filled in, not as it was typed.",
-    {
-      text: "Look at what should count as 'the row above' after a page heading, and after a row that couldn't be read. They are different situations.",
-      when: { behaviour: "failing-pushes", atLeast: 3 },
-    },
-  ],
+  comments: [],
+  hints: [],
   team: [
     {
       id: "priya-transcribe-print",
@@ -1038,23 +931,9 @@ const dittoMarks: SeedIssue = {
       role: "Data",
       where: "review",
       severity: "blocking",
-      text: [
-        "Could you take the `print` out before this goes in? The transcription job's stdout ends up in the volunteers' upload log.",
-        "There's a `print` left in transcribe.py. Anything on stdout lands in the volunteers' upload log, so it needs to go before we merge.",
-      ],
+      text: ["The code must not print anything: the transcription job's standard output goes into the volunteers' upload log."],
       when: { pattern: "^\\s*print\\(", present: true, file: "notebook/transcribe.py" },
       repeat: "while-true",
-      resolve: "explicit",
-    },
-    {
-      id: "priya-transcribe-long",
-      author: "Priya K",
-      role: "Data",
-      where: "review",
-      severity: "nit",
-      text: ["Nit: `read_notebook` is doing a lot in one function. Would expanding one row's dittos read better as its own helper?"],
-      when: { metric: "function-lines", above: 30, file: "notebook/transcribe.py" },
-      resolve: "explicit",
     },
   ],
   private: {

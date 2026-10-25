@@ -57,11 +57,8 @@ test("issues are live metadata over their live revisions, grouped into projects"
     hue: issue.project.hue,
   });
   assert.deepEqual(issue.criteria[1], { input: [], expected: {} });
-  assert.deepEqual(issue.comments[0], {
-    author: "Priya K",
-    role: "Data",
-    body: catalog.revisions[meta.revision].team[0].text[0],
-  });
+  // Live revisions carry no ticket thread: what is required is in the description (ENG-329).
+  assert.deepEqual(issue.comments, []);
   assert.deepEqual(
     merged.projects.map((p) => [p.slug, p.issues.length]),
     [
@@ -90,9 +87,12 @@ test("retired issues leave lists, but every published revision still resolves", 
   );
   // Recorded work names the revision it ran against; it stays readable.
   assert.equal(retired.revision(meta.revision)?.issue, "lru-cache");
-  assert.deepEqual(Object.keys(retired.revisionsOf("lru-cache")), [
-    meta.revision,
-  ]);
+  // Every revision it ever had, the live one and the earlier ones recorded work may name.
+  const own = Object.keys(catalog.revisions).filter(
+    (id) => catalog.revisions[id].issue === "lru-cache",
+  );
+  assert.ok(own.includes(meta.revision) && own.length > 1);
+  assert.deepEqual(Object.keys(retired.revisionsOf("lru-cache")).sort(), own.sort());
 });
 
 test("issues run when their language has an engine; project summaries span their issues", () => {

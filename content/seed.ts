@@ -505,7 +505,6 @@ func ParseDuration(text string) (int, error) {
   },
 };
 
-import { ada, jo, lena, mateo, priya, rui, sam } from "./team";
 import { MORE } from "./more";
 
 const BASE_ISSUES: SeedIssue[] = [
@@ -517,9 +516,11 @@ const BASE_ISSUES: SeedIssue[] = [
     difficulty: "warm-up",
     language: "python",
     skills: ["strings", "edge-cases"],
-    task: `Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.
+    task: `\`count_words(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
 
-\`count_words(text)\` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.`,
+- A word is a run of characters that are not whitespace. Words are separated by any run of whitespace: spaces, tabs, newlines and carriage returns, in any mix and number.
+- Whitespace at the start or end adds no words, so an empty or blank post has 0 words.
+- Punctuation, digits, symbols and non-English letters are part of the word they are in, and a symbol standing on its own between spaces is a word.`,
     inputs: [
       "",
       "hello world",
@@ -543,19 +544,6 @@ const BASE_ISSUES: SeedIssue[] = [
     ],
     expected: [0, 2, 2, 1, 4, 0, 0, 0, 0, 1, 1, 4, 4, 2, 4, 5, 10, 500, 1000],
     hidden: [4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-    comments: [
-      lena("An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."),
-    ],
-    hints: [
-      {
-        text: "What does your function return for an empty post, and where does that number come from?",
-        when: { behaviour: "active-minutes-without-progress", atLeast: 3 },
-      },
-      {
-        text: "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
-        when: { behaviour: "failing-pushes", atLeast: 2 },
-      },
-    ],
     private: {
       reference: { "count_words.py": `def count_words(text):
     """The number of words in a post, as the composer shows it under the text box."""
@@ -595,9 +583,11 @@ def count_words(text):
     difficulty: "warm-up",
     language: "javascript",
     skills: ["strings", "edge-cases"],
-    task: `Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.
+    task: `\`countWords(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
 
-\`countWords(text)\` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.`,
+- A word is a run of characters that are not whitespace. Words are separated by any run of whitespace: spaces, tabs, newlines and carriage returns, in any mix and number.
+- Whitespace at the start or end adds no words, so an empty or blank post has 0 words.
+- Punctuation, digits, symbols and non-English letters are part of the word they are in, and a symbol standing on its own between spaces is a word.`,
     inputs: [
       "",
       "hello world",
@@ -621,19 +611,6 @@ def count_words(text):
     ],
     expected: [0, 2, 2, 1, 4, 0, 0, 0, 0, 1, 1, 4, 4, 2, 4, 5, 10, 500, 1000],
     hidden: [4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-    comments: [
-      lena("An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."),
-    ],
-    hints: [
-      {
-        text: "What does your function return for an empty post, and where does that number come from?",
-        when: { behaviour: "active-minutes-without-progress", atLeast: 3 },
-      },
-      {
-        text: "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
-        when: { behaviour: "failing-pushes", atLeast: 2 },
-      },
-    ],
     private: {
       reference: { "src/count-words.js": `/** The number of words in a post, as the composer shows it under the text box. */
 export function countWords(text) {
@@ -676,9 +653,11 @@ export function countWords(text) {
     difficulty: "warm-up",
     language: "typescript",
     skills: ["strings", "edge-cases"],
-    task: `Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.
+    task: `\`countWords(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
 
-\`countWords(text)\` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.`,
+- A word is a run of characters that are not whitespace. Words are separated by any run of whitespace: spaces, tabs, newlines and carriage returns, in any mix and number.
+- Whitespace at the start or end adds no words, so an empty or blank post has 0 words.
+- Punctuation, digits, symbols and non-English letters are part of the word they are in, and a symbol standing on its own between spaces is a word.`,
     inputs: [
       "",
       "hello world",
@@ -702,19 +681,6 @@ export function countWords(text) {
     ],
     expected: [0, 2, 2, 1, 4, 0, 0, 0, 0, 1, 1, 4, 4, 2, 4, 5, 10, 500, 1000],
     hidden: [4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-    comments: [
-      lena("An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."),
-    ],
-    hints: [
-      {
-        text: "What does your function return for an empty post, and where does that number come from?",
-        when: { behaviour: "active-minutes-without-progress", atLeast: 3 },
-      },
-      {
-        text: "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
-        when: { behaviour: "failing-pushes", atLeast: 2 },
-      },
-    ],
     private: {
       reference: { "src/count-words.ts": `/** The number of words in a post, as the composer shows it under the text box. */
 export function countWords(text: string): number {
@@ -730,9 +696,11 @@ export function countWords(text: string): number {
     difficulty: "warm-up",
     language: "go",
     skills: ["strings", "edge-cases"],
-    task: `Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.
+    task: `\`CountWords(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
 
-\`CountWords(text)\` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.`,
+- A word is a run of characters that are not whitespace. Words are separated by any run of whitespace: spaces, tabs, newlines and carriage returns, in any mix and number.
+- Whitespace at the start or end adds no words, so an empty or blank post has 0 words.
+- Punctuation, digits, symbols and non-English letters are part of the word they are in, and a symbol standing on its own between spaces is a word.`,
     inputs: [
       "",
       "hello world",
@@ -756,19 +724,6 @@ export function countWords(text: string): number {
     ],
     expected: [0, 2, 2, 1, 4, 0, 0, 0, 0, 1, 1, 4, 4, 2, 4, 5, 10, 500, 1000],
     hidden: [4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-    comments: [
-      lena("An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."),
-    ],
-    hints: [
-      {
-        text: "What does your function return for an empty post, and where does that number come from?",
-        when: { behaviour: "active-minutes-without-progress", atLeast: 3 },
-      },
-      {
-        text: "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
-        when: { behaviour: "failing-pushes", atLeast: 2 },
-      },
-    ],
     private: {
       reference: { "count_words.go": `package composer
 
@@ -797,9 +752,11 @@ final class Adapter {
     difficulty: "warm-up",
     language: "java",
     skills: ["strings", "edge-cases"],
-    task: `Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.
+    task: `\`WordCount.count(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
 
-\`WordCount.count(text)\` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.`,
+- A word is a run of characters that are not whitespace. Words are separated by any run of whitespace: spaces, tabs, newlines and carriage returns, in any mix and number.
+- Whitespace at the start or end adds no words, so an empty or blank post has 0 words.
+- Punctuation, digits, symbols and non-English letters are part of the word they are in, and a symbol standing on its own between spaces is a word.`,
     inputs: [
       "",
       "hello world",
@@ -823,19 +780,6 @@ final class Adapter {
     ],
     expected: [0, 2, 2, 1, 4, 0, 0, 0, 0, 1, 1, 4, 4, 2, 4, 5, 10, 500, 1000],
     hidden: [4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-    comments: [
-      lena("An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."),
-    ],
-    hints: [
-      {
-        text: "What does your function return for an empty post, and where does that number come from?",
-        when: { behaviour: "active-minutes-without-progress", atLeast: 3 },
-      },
-      {
-        text: "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
-        when: { behaviour: "failing-pushes", atLeast: 2 },
-      },
-    ],
     private: {
       reference: { "src/main/java/com/acme/composer/WordCount.java": `package com.acme.composer;
 
@@ -859,9 +803,11 @@ public final class WordCount {
     difficulty: "warm-up",
     language: "csharp",
     skills: ["strings", "edge-cases"],
-    task: `Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.
+    task: `\`WordCount.Count(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
 
-\`WordCount.Count(text)\` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.`,
+- A word is a run of characters that are not whitespace. Words are separated by any run of whitespace: spaces, tabs, newlines and carriage returns, in any mix and number.
+- Whitespace at the start or end adds no words, so an empty or blank post has 0 words.
+- Punctuation, digits, symbols and non-English letters are part of the word they are in, and a symbol standing on its own between spaces is a word.`,
     inputs: [
       "",
       "hello world",
@@ -885,19 +831,6 @@ public final class WordCount {
     ],
     expected: [0, 2, 2, 1, 4, 0, 0, 0, 0, 1, 1, 4, 4, 2, 4, 5, 10, 500, 1000],
     hidden: [4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-    comments: [
-      lena("An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."),
-    ],
-    hints: [
-      {
-        text: "What does your function return for an empty post, and where does that number come from?",
-        when: { behaviour: "active-minutes-without-progress", atLeast: 3 },
-      },
-      {
-        text: "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
-        when: { behaviour: "failing-pushes", atLeast: 2 },
-      },
-    ],
     private: {
       reference: { "src/WordCount.cs": `namespace Composer;
 
@@ -920,9 +853,11 @@ public static class WordCount
     difficulty: "warm-up",
     language: "ruby",
     skills: ["strings", "edge-cases"],
-    task: `Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.
+    task: `\`count_words(text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
 
-\`count_words(text)\` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.`,
+- A word is a run of characters that are not whitespace. Words are separated by any run of whitespace: spaces, tabs, newlines and carriage returns, in any mix and number.
+- Whitespace at the start or end adds no words, so an empty or blank post has 0 words.
+- Punctuation, digits, symbols and non-English letters are part of the word they are in, and a symbol standing on its own between spaces is a word.`,
     inputs: [
       "",
       "hello world",
@@ -946,19 +881,6 @@ public static class WordCount
     ],
     expected: [0, 2, 2, 1, 4, 0, 0, 0, 0, 1, 1, 4, 4, 2, 4, 5, 10, 500, 1000],
     hidden: [4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-    comments: [
-      lena("An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."),
-    ],
-    hints: [
-      {
-        text: "What does your function return for an empty post, and where does that number come from?",
-        when: { behaviour: "active-minutes-without-progress", atLeast: 3 },
-      },
-      {
-        text: "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
-        when: { behaviour: "failing-pushes", atLeast: 2 },
-      },
-    ],
     private: {
       reference: { "lib/count_words.rb": `# The number of words in a post, as the composer shows it under the text box.
 def count_words(text)
@@ -974,9 +896,11 @@ end
     difficulty: "warm-up",
     language: "php",
     skills: ["strings", "edge-cases"],
-    task: `Writers keep emailing support: an empty post says **1 word**, and a post with a double space counts an extra one.
+    task: `\`countWords($text)\` returns the word count the composer shows under a post's text box. Today an empty post says **1 word**, and a double space counts an extra word.
 
-\`countWords($text)\` is the count the composer shows under the text box. Words are separated by any run of spaces, tabs or newlines, and an empty or blank post has 0 words.`,
+- A word is a run of characters that are not whitespace. Words are separated by any run of whitespace: spaces, tabs, newlines and carriage returns, in any mix and number.
+- Whitespace at the start or end adds no words, so an empty or blank post has 0 words.
+- Punctuation, digits, symbols and non-English letters are part of the word they are in, and a symbol standing on its own between spaces is a word.`,
     inputs: [
       "",
       "hello world",
@@ -1000,19 +924,6 @@ end
     ],
     expected: [0, 2, 2, 1, 4, 0, 0, 0, 0, 1, 1, 4, 4, 2, 4, 5, 10, 500, 1000],
     hidden: [4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-    comments: [
-      lena("An empty post says 1 word. Writers have noticed, and they're writers, so they've noticed loudly."),
-    ],
-    hints: [
-      {
-        text: "What does your function return for an empty post, and where does that number come from?",
-        when: { behaviour: "active-minutes-without-progress", atLeast: 3 },
-      },
-      {
-        text: "Splitting on one space keeps an empty piece between two spaces. Is there a way to split on any run of whitespace?",
-        when: { behaviour: "failing-pushes", atLeast: 2 },
-      },
-    ],
     private: {
       reference: { "src/countWords.php": `<?php
 
@@ -1034,13 +945,17 @@ function countWords(string $text): int
     difficulty: "warm-up",
     language: "python",
     skills: ["iteration", "maps", "edge-cases"],
-    task: `The vial scanner went in last week. Each night it reads the label on every vial that came back from the field, and the nightly sheet lists how many vials carry each label. The counting step was never finished, so the sheet comes out empty:
+    task: `Each night the vial scanner reads the label on every vial that came back from the field, and the nightly sheet lists how many vials carry each label. The counting step was never finished, so the sheet comes out empty:
 
 \`\`\`text
 nightly sheet 2026-06-04: 212 vials scanned, 0 labels counted
 \`\`\`
 
-\`frequency_map(items)\` gets the night's labels, one string per vial, and returns how many vials carry each label: a dict of label to count. A label counts exactly as the scanner read it: case, spaces and blank labels included, since they tell the team which vials to relabel by hand. No vials gives \`{}\`.`,
+\`frequency_map(items)\` gets the night's labels as a list of strings, one per vial, and returns a dict that maps each distinct label to the number of vials that carry it.
+
+- Count every label exactly as the scanner read it. Labels are case-sensitive (\`A3\` and \`a3\` are different traps), and spaces, blank labels and odd strings read off smudged labels (such as \`__proto__\`) are labels like any other: they tell the team which vials to relabel by hand.
+- No vials gives \`{}\`.
+- Don't print anything: the scanner job ships everything on stdout to the warehouse logs.`,
     inputs: [
       ["a", "b", "a"],
       [],
@@ -1076,18 +991,6 @@ nightly sheet 2026-06-04: 212 vials scanned, 0 labels counted
       { "é": 2, e: 1 },
     ],
     hidden: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
-    hints: [
-      "A dict can hold one counter for each distinct label.",
-      {
-        text: "Try `[\"A\", \"a\", \"A\"]` by hand: how many different labels did the scanner read, and how many vials carry each?",
-        when: { behaviour: "failing-pushes", atLeast: 2 },
-      },
-    ],
-    comments: [
-      priya(
-        "Heads up: trap codes are case-sensitive (`A3` and `a3` are different traps), and the scanner sometimes reads odd strings off smudged labels, `__proto__` and `None` among them. Please count them as they come; the relabelling list depends on it.",
-      ),
-    ],
     team: [
       {
         id: "priya-debug-print",
@@ -1095,25 +998,9 @@ nightly sheet 2026-06-04: 212 vials scanned, 0 labels counted
         role: "Data",
         where: "review",
         severity: "blocking",
-        text: [
-          "Could you take the `print` out before this goes in? The scanner job ships everything on stdout to the warehouse logs.",
-          "There's a `print` left in here. Anything on stdout ends up in the warehouse logs, so it needs to go before we merge.",
-        ],
+        text: ["Don't print anything: the scanner job ships everything on stdout to the warehouse logs."],
         when: { pattern: "^\\s*print\\(", present: true },
         repeat: "while-true",
-        resolve: "explicit",
-      },
-      {
-        id: "priya-long-function",
-        author: "Priya K",
-        role: "Data",
-        where: "review",
-        severity: "nit",
-        text: [
-          "Nit: `frequency_map` has grown quite long for what it does. Could the dict itself do more of the work?",
-        ],
-        when: { metric: "function-lines", above: 12 },
-        resolve: "explicit",
       },
     ],
     private: {
@@ -1194,7 +1081,11 @@ def frequency_map(items):
 
 > My cart says the sofa costs **129900**. Is that dollars?? And my refund line says **-500**.
 
-\`formatPrice(cents)\` in \`src/format-price.js\` is what the drawer, the receipts and the refund lines use to show an amount. Show dollars with two decimals and comma thousands separators: \`123456\` → \`"$1,234.56"\`. Negative amounts are refunds, and the minus goes before the dollar sign, as on the receipts: \`-500\` → \`"-$5.00"\`.`,
+\`formatPrice(cents)\` takes an amount as a whole number of cents and returns the text the drawer, the receipts and the refund lines show.
+
+- Show a dollar sign, then the whole dollars with a comma between every group of three digits, then a dot and exactly two digits of cents: \`123456\` → \`"$1,234.56"\`, \`5\` → \`"$0.05"\`.
+- Negative amounts are refunds. The minus goes before the dollar sign, as on the receipts: \`-500\` → \`"-$5.00"\`.
+- Amounts can run into the billions of cents.`,
     inputs: [
       123456, 5, 0, -500, 100000000, 1, 10, 99, 100, 1050, 99999, 100000, 123456789,
       12345678901, -1, -99, -123456, -100000000,
@@ -1220,11 +1111,6 @@ def frequency_map(items):
       "-$1,000,000.00",
     ],
     hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
-    comments: [
-      ada(
-        "Design wants the minus before the dollar sign for refunds, same as on the receipts.",
-      ),
-    ],
     private: {
       reference: { "src/format-price.js": `/**
  * Formats an amount in cents for the cart: 123456 → "$1,234.56".
@@ -1284,7 +1170,14 @@ export function formatPrice(cents) {
     difficulty: "easy",
     language: "typescript",
     skills: ["strings", "validation"],
-    task: "`applyDiscount(totalCents, code, codes)` returns the total after the matching code's percentage off, rounded down to whole cents. Codes match case-insensitively and ignoring surrounding spaces; an unknown code leaves the total unchanged.",
+    task: `Customers type promo codes the way they read them in the email, and checkout rejects codes typed in lowercase or with stray spaces.
+
+\`applyDiscount(totalCents, code, codes)\` returns an order's total after its promo code's discount.
+
+- \`totalCents\` is the total in whole cents. \`code\` is what the customer typed. \`codes\` maps each configured code to its percent off, from 0 to 100: \`{ SAVE10: 10 }\`.
+- The typed code matches a configured code when the two are equal ignoring letter case and ignoring spaces before and after the typed code. Spaces inside a code still count, and configured codes may be written in any case. Only codes in \`codes\` match.
+- With a match, return the total less that percentage, rounded down to whole cents.
+- Without a match, including an empty or blank code, return the total unchanged.`,
     inputs: [
       [10000, "save10", { SAVE10: 10 }],
       [10000, " SAVE10 ", { SAVE10: 10 }],
@@ -1311,12 +1204,6 @@ export function formatPrice(cents) {
       2999, 10493, 0, 10000,
     ],
     hidden: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-    comments: [
-      jo(
-        "40 tickets this morning. People type codes the way they read them in the email.",
-      ),
-      lena("Black Friday is in two weeks, so this one jumps the queue."),
-    ],
     private: {
       reference: { "src/apply-discount.ts": `/** Percent off per promo code, as configured in the admin: { SAVE10: 10 }. */
 export type Codes = Record<string, number>;
@@ -1339,7 +1226,15 @@ export function applyDiscount(totalCents: number, code: string, codes: Codes): n
     difficulty: "warm-up",
     language: "html",
     skills: ["accessibility", "forms", "semantics"],
-    task: 'The category page\'s filter form has two checkboxes, `in-stock` and `on-sale`, with bare text next to them, so screen readers announce "checkbox" and nothing else. Give each checkbox the id `filter-NAME` and a `<label for="filter-NAME">` with its name as the text. Keep the `name` attributes, and keep everything inside the `<form>`. The checks query the page like the frontend tests do: each one is a CSS selector and what to read from the matches (their count, text, accessible label or an attribute).',
+    task: `The category page's filter form has two checkboxes, \`in-stock\` and \`on-sale\`, with bare text next to them. The accessibility audit flagged them: screen readers announce "checkbox" and nothing else, and clicking the text does not toggle the box.
+
+Tie each checkbox to a label:
+
+- Give each checkbox the id \`filter-NAME\`, where NAME is its \`name\`: \`filter-in-stock\` and \`filter-on-sale\`.
+- Give each checkbox a \`<label for="filter-NAME">\` whose text is exactly its name.
+- Keep both checkboxes, in the same order, with their \`type\` and \`name\` attributes, and keep everything inside the one \`<form>\`. The page has no other checkboxes or labels.
+
+Each check runs a CSS selector against the page and reads something from the matching elements, in document order: their \`count\`, their \`text\`, their accessible \`label\`, or an attribute such as \`name\` or \`id\`.`,
     inputs: [
       ["form input[type=checkbox]", "name"],
       ["form input[type=checkbox]", "id"],
@@ -1377,11 +1272,6 @@ export function applyDiscount(totalCents: number, code: string, codes: Codes): n
       2,
     ],
     hidden: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    comments: [
-      ada(
-        "The accessibility audit flagged every checkbox here. Clicking the text should toggle the box.",
-      ),
-    ],
     private: {
       reference: { "templates/filter-form-labels.html": `<!--
   Product filters on the category page. The accessibility audit flagged these
@@ -1405,7 +1295,13 @@ export function applyDiscount(totalCents: number, code: string, codes: Codes): n
     difficulty: "medium",
     language: "typescript",
     skills: ["timing", "events"],
-    task: "`debounceTimes(keystrokes, waitMs)`: given keystroke times in milliseconds, return the times at which the debounced search fires. It fires `waitMs` after a keystroke unless another keystroke comes first.",
+    task: `The search box sends a request on every keystroke, about eight per query. It should send one request per pause in typing.
+
+\`debounceTimes(keystrokes, waitMs)\` gets the keystroke times in milliseconds, in order (several can share a time), and the wait in milliseconds (0 or more). Return the times at which a search request fires, in order.
+
+- Each keystroke schedules a request \`waitMs\` after it.
+- A keystroke at or before the time the scheduled request would fire cancels it, and schedules its own.
+- No keystrokes, no requests.`,
     inputs: [
       [[0, 100, 200, 1000], 300],
       [[], 300],
@@ -1445,14 +1341,6 @@ export function applyDiscount(totalCents: number, code: string, codes: Codes): n
       [15000],
     ],
     hidden: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    hints: [
-      "Each keystroke cancels the pending request if it arrives before the timer fires.",
-    ],
-    comments: [
-      sam(
-        "Search API gets about eight requests per query. 300 ms after the last keystroke is plenty.",
-      ),
-    ],
     private: {
       reference: { "src/debounce-times.ts": `/**
  * When the search request fires for the given keystroke times (ms): waitMs after
@@ -1485,7 +1373,22 @@ Refund #R-2291
   Rain jacket    1 × $50.00              −$40.50
 \`\`\`
 
-\`refundTotal(refund)\` in \`src/cart/totals.js\` works out what a refund gives back, in cents, as a negative amount. A refund gives back exactly what the customer paid for the lines returned. Checkout totals are not part of this ticket.`,
+\`refundTotal(refund)\` works out what a refund gives back. A refund must give back exactly what the customer paid for the lines returned.
+
+**Input.** All amounts are whole cents, never floats. \`refund\` is \`{ code, lines }\`:
+
+- \`code\` is the order's promo code: \`null\`, a percentage such as \`{ percent: 10 }\`, or a fixed amount in cents such as \`{ amount: 500 }\`.
+- \`lines\` are the returned order lines, each \`{ sku, price, quantity, discount }\`. \`price\` is the unit price. \`discount\` is the part of the order's discount that checkout took off this line: at checkout the code's discount is spread over all the order's lines in proportion to their value and stored on each line.
+
+**Output.** What the customer paid for the returned lines, as a negative number of cents: refunds stay negative all the way to the ledger. When they paid nothing for them, it is \`0\`.
+
+**What the file imports.** These helpers can't be changed:
+
+- \`lineTotal(line)\` from \`./money.js\`: what a line charged, \`price × quantity − discount\` (a missing \`discount\` counts as 0).
+- \`sum(amounts)\` from \`./money.js\`: the sum of a list of amounts, \`0\` for an empty list.
+- \`discountFor(code, subtotal)\` from \`./discounts.js\`: a code's discount on a subtotal: \`0\` without a code, \`Math.round(subtotal × percent / 100)\` for a percentage, \`amount\` for a fixed amount, and never more than \`subtotal\`.
+
+**Leave \`orderTotal\` as it is.** Checkout uses it, and it must keep taking the code's discount (\`discountFor(order.code, …)\`) off the order's subtotal. Keep the change to refunds.`,
     entry: "src/cart/totals.js",
     files: [
       { path: "src/cart/money.js", role: "read", language: "javascript", text: `/** Money is whole cents everywhere: never floats. */
@@ -1581,19 +1484,6 @@ export function allocate(code, lines) {
     ],
     expected: [-5000, -4500, -4000, -2400, 0, 0, -4500, -2400, -283, -966, 0, -9109, -4800, -9000, -2002, -4186, -939],
     hidden: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    comments: [
-      jo("40 tickets about this since Monday. Every one of them used a promo code."),
-    ],
-    hints: [
-      {
-        text: "Where does a returned line's discount come from? Have a look at what `lineTotal` already does with it.",
-        when: { behaviour: "active-minutes-without-progress", atLeast: 12 },
-      },
-      {
-        text: "Try the jacket from the ticket on paper: $50.00, $5.00 off at checkout. How many times does the refund take a discount off?",
-        when: { behaviour: "failing-pushes", atLeast: 3 },
-      },
-    ],
     team: [
       {
         id: "ada-order-total",
@@ -1602,7 +1492,7 @@ export function allocate(code, lines) {
         where: "review",
         severity: "blocking",
         text: [
-          "This changes `orderTotal` too, and checkout uses that. Can we keep this pull request to refunds?",
+          "Leave `orderTotal` as it is: checkout uses it, and it must keep taking the code's discount off the order's subtotal. Keep the change to refunds.",
         ],
         // Checkout's total still takes the code's discount off its subtotal, however it is written.
         when: {
@@ -1611,17 +1501,6 @@ export function allocate(code, lines) {
           file: "src/cart/totals.js",
         },
         repeat: "while-true",
-        resolve: "explicit",
-      },
-      {
-        id: "ada-long-refund",
-        author: "Ada N",
-        role: "Frontend",
-        where: "review",
-        severity: "nit",
-        text: ["Nit: `refundTotal` is getting long. Would a helper for one line's amount read better?"],
-        when: { metric: "function-lines", above: 12, file: "src/cart/totals.js" },
-        resolve: "explicit",
       },
     ],
     private: {
@@ -1796,56 +1675,6 @@ export function refundTotal(refund) {
 }
 ` }],
         },
-        "ada-long-refund": {
-          fires: [{ "src/cart/totals.js": `import { discountFor } from "./discounts.js";
-import { lineTotal, sum } from "./money.js";
-
-/** What an order charges at checkout, in cents: its lines less the promo code's discount. */
-export function orderTotal(order) {
-  const subtotal = sum(order.lines.map((line) => line.price * line.quantity));
-  return subtotal - discountFor(order.code, subtotal);
-}
-
-/**
- * What a refund gives back for the returned lines, in cents, as a negative amount: refunds
- * stay negative all the way to the ledger.
- */
-export function refundTotal(refund) {
-  let total = 0;
-  for (const line of refund.lines) {
-    const gross = line.price * line.quantity;
-    const share = line.discount ?? 0;
-    const paid = gross - share;
-    if (paid === 0) {
-      continue;
-    }
-    total += paid;
-  }
-  if (total === 0) {
-    return 0;
-  }
-  return -total;
-}
-` }],
-          quiet: [{ "src/cart/totals.js": `import { discountFor } from "./discounts.js";
-import { lineTotal, sum } from "./money.js";
-
-/** What an order charges at checkout, in cents: its lines less the promo code's discount. */
-export function orderTotal(order) {
-  const subtotal = sum(order.lines.map((line) => line.price * line.quantity));
-  return subtotal - discountFor(order.code, subtotal);
-}
-
-/**
- * What a refund gives back for the returned lines, in cents, as a negative amount: refunds
- * stay negative all the way to the ledger.
- */
-export function refundTotal(refund) {
-  // Each returned line already carries its share of the discount from checkout.
-  return -sum(refund.lines.map(lineTotal));
-}
-` }],
-        },
       },
     },
   }),
@@ -1857,7 +1686,14 @@ export function refundTotal(refund) {
     difficulty: "easy",
     language: "go",
     skills: ["parsing", "validation", "http"],
-    task: "`ParsePage(query)` reads `page` and `per_page` from a URL query string. Defaults are page 1 and 20 per page, `per_page` is capped at 100, and missing, zero, negative or non-numeric values fall back to the default.",
+    task: `The list endpoints accept any page size, and the mobile app sends \`per_page=500\` to fetch everything in one go. Cap it, don't reject it.
+
+\`ParsePage(query)\` reads \`page\` and \`per_page\` from a URL query string without the leading \`?\`, such as \`page=2&per_page=50\`, and returns them as a \`Page\`.
+
+- \`page\` defaults to 1 and \`per_page\` to 20.
+- Each falls back to its default on its own when it is missing, empty, zero, negative or not a whole number.
+- A \`per_page\` above 100 becomes 100. \`page\` has no upper limit.
+- Parameter names are matched exactly, other parameters are ignored, and the order of parameters doesn't matter.`,
     inputs: [
       "page=2&per_page=50",
       "",
@@ -1899,11 +1735,6 @@ export function refundTotal(refund) {
       { page: 1, perPage: 20 },
     ],
     hidden: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
-    comments: [
-      mateo(
-        "The mobile app sends per_page=500 to fetch everything in one go. Cap it, don't error.",
-      ),
-    ],
     private: {
       reference: {
         "parse_page.go": `package accounts
@@ -1950,7 +1781,11 @@ func positiveOr(text string, fallback int) int {
     difficulty: "easy",
     language: "php",
     skills: ["time", "units"],
-    task: "`isExpired(issuedAt, now, ttlMinutes)` with Unix timestamps in seconds. A link issued at t stays valid until `t + ttlMinutes × 60`, inclusive.",
+    task: `Customers say password reset emails never work. They do, if you click within a minute: links expire far too early.
+
+\`isExpired($issuedAt, $now, $ttlMinutes)\` returns whether a password reset link has expired. \`$issuedAt\` and \`$now\` are Unix timestamps in seconds, and \`$ttlMinutes\` is how long the link lasts, in minutes (0 or more).
+
+- A link stays valid up to and including \`$issuedAt + $ttlMinutes × 60\`. It is expired only at a later time.`,
     inputs: [
       [1000, 1059, 60],
       [1000, 4600, 60],
@@ -1974,11 +1809,6 @@ func positiveOr(text string, fallback int) int {
       false, true, false,
     ],
     hidden: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    comments: [
-      jo(
-        "Customers say reset emails 'never work'. They do, if you click within a minute.",
-      ),
-    ],
     private: {
       reference: {
         "src/isExpired.php": `<?php
@@ -2005,7 +1835,13 @@ function isExpired(int $issuedAt, int $now, int $ttlMinutes): bool
     difficulty: "medium",
     language: "typescript",
     skills: ["sliding-window", "queues"],
-    task: "Write `allow(times, limit, windowMs)`: for each login attempt time, return whether it is allowed when at most `limit` attempts may fall inside any window of `windowMs` milliseconds.",
+    task: `A credential-stuffing bot hit the login endpoint again last night. Limit login attempts with a sliding window.
+
+\`allow(times, limit, windowMs)\` gets the times of login attempts in milliseconds, in order (several can share a time), and returns, for each attempt, whether it is allowed.
+
+- An attempt at time \`t\` is allowed when fewer than \`limit\` allowed attempts fall in the window from just after \`t − windowMs\` up to and including \`t\`. Otherwise it is rejected.
+- Rejected attempts don't count toward the limit.
+- \`limit\` can be 0, which rejects every attempt.`,
     inputs: [
       [[0, 1, 2, 3], 3, 10],
       [[], 1, 10],
@@ -2063,12 +1899,6 @@ export function allow(times: number[], limit: number, windowMs: number): boolean
 `,
       },
     },
-    hints: ["Keep only the timestamps still inside the window."],
-    comments: [
-      sam(
-        "Credential-stuffing bot again last night. A sliding window per IP, nothing fancy.",
-      ),
-    ],
   }),
   challenge("workspace-slugs", {
     title: "Workspace URLs break on names with accents",
@@ -2077,7 +1907,14 @@ export function allow(times: number[], limit: number, windowMs: number): boolean
     difficulty: "easy",
     language: "ruby",
     skills: ["strings", "unicode", "urls"],
-    task: '`slugify(name)` turns a workspace name into its URL slug: lowercase ASCII letters and digits, with every run of anything else between words becoming a single hyphen, and no hyphen at either end. Accented Latin letters lose their accents first, so `"Café Ünïcorn"` becomes `"cafe-unicorn"`.',
+    task: `Workspace URLs are \`/w/<slug>\`. For names with accents, the link we email is percent-encoded and 404s.
+
+\`slugify(name)\` turns a workspace name into its slug:
+
+- The slug has only lowercase ASCII letters \`a\`–\`z\`, digits \`0\`–\`9\` and hyphens. Uppercase letters become lowercase.
+- Accented Latin letters lose their accents and keep their base letter, whether the accent is part of the character or a separate combining mark after it: \`"Café Ünïcorn"\` → \`"cafe-unicorn"\`.
+- Every run of anything else (spaces, punctuation, underscores, hyphens, symbols, emoji, other scripts) between kept characters becomes a single hyphen. There is no hyphen at either end.
+- A name with nothing to keep gives \`""\`.`,
     inputs: [
       "Acme Inc",
       "  Café   Ünïcorn  ",
@@ -2139,14 +1976,6 @@ end
 `,
       },
     },
-    hints: [
-      "Unicode normalization (NFD) splits a letter from its accent, so the accent can be dropped.",
-    ],
-    comments: [
-      mateo(
-        "Support has a customer whose workspace is \"Équipe Été\". The link we email them is /w/%C3%A9quipe-%C3%A9t%C3%A9 and it 404s.",
-      ),
-    ],
   }),
   challenge("password-policy", {
     adapter: `import com.acme.accounts.PasswordPolicy;
@@ -2164,7 +1993,16 @@ final class Adapter {
     difficulty: "easy",
     language: "java",
     skills: ["validation", "strings", "security"],
-    task: '`PasswordPolicy.violations(password)` lists the rules a password breaks, in this order: `"too-short"` (fewer than 12 characters), `"no-digit"`, `"no-letter"` and `"has-whitespace"`. A password that breaks none gets an empty list.',
+    task: `Security raised the minimum password length to 12, and the sign-up form says 12, but the API still checks 8 and reports no other rule.
+
+\`PasswordPolicy.violations(password)\` returns every rule the password breaks, in this order:
+
+1. \`"too-short"\`: fewer than 12 characters. Every character counts, whitespace included.
+2. \`"no-digit"\`: no digit.
+3. \`"no-letter"\`: no letter, in either case.
+4. \`"has-whitespace"\`: a space, tab or other whitespace character anywhere.
+
+A password that breaks none of them gets an empty list.`,
     inputs: [
       "correct horse battery",
       "Tr0ub4dor&3",
@@ -2244,11 +2082,6 @@ public final class PasswordPolicy {
 `,
       },
     },
-    comments: [
-      mateo(
-        "Security moved the minimum to 12 last quarter. The form says 12, the API still checks 8, and nothing reports the other rules.",
-      ),
-    ],
   }),
   challenge("parse-log-line", {
     title: "Access log parser drops fields on 5xx lines",
@@ -2257,7 +2090,14 @@ public final class PasswordPolicy {
     difficulty: "easy",
     language: "go",
     skills: ["parsing", "strings"],
-    task: 'Write `ParseLine(line)` for lines like `GET /cart 200 12ms`, returning method, path, status and duration in milliseconds.',
+    task: `Alerting is blind to the 502s: the access log parser comes back with empty fields.
+
+\`ParseLine(line)\` parses one access log line, such as \`GET /cart 200 12ms\`, into an \`Entry\`. A line has four fields separated by single spaces:
+
+- \`Method\`: the HTTP method, as written.
+- \`Path\`: the request path as written, including any query string. It never contains a space.
+- \`Status\`: the status code, as an integer.
+- \`Ms\`: the duration, as an integer. Durations are always whole milliseconds followed by \`ms\`: \`1300ms\` is \`1300\`.`,
     inputs: [
       "GET /cart 200 12ms",
       "POST /pay 502 1300ms",
@@ -2323,12 +2163,6 @@ func ParseLine(line string) Entry {
 `,
       },
     },
-    comments: [
-      sam(
-        "Alerting is blind to the 502s because duration and status come back empty.",
-      ),
-      priya("Durations are always whole milliseconds, suffixed with ms."),
-    ],
   }),
 
   // Data platform: imports, cleaning and reports
@@ -2346,7 +2180,13 @@ line   "Acme, Inc.",42,"NY"
 loaded name='"Acme'  account=' Inc."'  region='42'
 \`\`\`
 
-\`parse_csv_line(line)\` in \`parse_csv_line.py\` splits one line of a partner export into its fields. Fields are separated by commas, except inside double quotes. The quotes around a field are not part of it, and a doubled quote inside a quoted field is a literal quote: \`"say ""hi"""\` → \`say "hi"\`. A quoted field may contain a line break. Spaces are kept as written, and an empty line is a single empty field, which the import reports as a row with no name.`,
+\`parse_csv_line(line)\` splits one line of a partner export into its fields and returns them as a list of strings.
+
+- Fields are separated by commas, except for commas inside double quotes.
+- The quotes around a quoted field are not part of the field, and a doubled quote inside a quoted field is one literal quote: \`"say ""hi"""\` → \`say "hi"\`.
+- A quoted field may contain a line break.
+- Spaces are kept as written. Empty fields are kept, including at the start or end of the line.
+- An empty line is a single empty field, which the import reports as a row with no name.`,
     inputs: [
       "a,b,c",
       '"Acme, Inc.",42,"NY"',
@@ -2388,11 +2228,6 @@ loaded name='"Acme'  account=' Inc."'  region='42'
       ["Café, Ltd", "€5"],
     ],
     hidden: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
-    comments: [
-      priya(
-        "Every customer with a comma in their company name lands in the wrong column. 'Acme, Inc.' is our biggest account.",
-      ),
-    ],
     private: {
       reference: { "parse_csv_line.py": `def parse_csv_line(line):
     """Split a partner CSV line on commas, except inside double quotes.
@@ -2511,7 +2346,11 @@ id  email
 3   bo@x.io
 \`\`\`
 
-\`dedupe(records)\` in \`dedupe.py\` runs before the newsletter sync. Keep the first record for each email and drop the later ones. Emails match case-insensitively, ignoring spaces around them. Records stay in their original order, and a kept record is passed on unchanged: the sync and the CRM both need the email as it was written.`,
+\`dedupe(records)\` runs before the newsletter sync. It gets a list of customer records, dicts with at least an \`id\` and an \`email\`, and returns the list without duplicates.
+
+- Two records are duplicates when their emails match ignoring letter case (any letter, not only ASCII) and spaces around them. Only the email decides; ids and other fields don't.
+- Keep the first record for each email and drop the later ones. Records stay in their original order.
+- A kept record is passed on unchanged, every field included: the sync and the CRM both need the email as it was written.`,
     inputs: [
       [
         { id: 1, email: "Ann@x.io" },
@@ -2554,11 +2393,6 @@ id  email
       [{ id: 1, email: "ann@x.io" }, { id: 3, email: "bo@x.io" }, { id: 6, email: "cy@x.io" }],
     ],
     hidden: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
-    comments: [
-      lena(
-        "Marketing sent last week's newsletter three times to some people. They were not thrilled.",
-      ),
-    ],
     private: {
       reference: { "dedupe.py": `def dedupe(records):
     """Keep the first record for each email before the newsletter sync.
@@ -2626,7 +2460,13 @@ id  email
     difficulty: "easy",
     language: "csharp",
     skills: ["rounding", "decimals", "finance"],
-    task: "`LateFee(balance, daysLate)` is the fee on an overdue invoice: 0.5% of the balance per day late, capped at 10% of the balance, rounded to cents with halves rounded away from zero. Nothing is charged when the invoice is not late.",
+    task: `Customers keep emailing about a one-cent difference between the invoice and the reminder: the late fee doesn't round the way finance's spreadsheet does.
+
+\`LateFee(balance, daysLate)\` returns the late fee on an overdue invoice. \`balance\` is the amount owed in dollars (0 or more, to the cent), and the fee is in dollars too.
+
+- The fee is 0.5% of the balance for each day late, at most 10% of the balance.
+- That fee is rounded to cents with halves rounded away from zero, as the spreadsheet does: a fee of 0.505 is 0.51.
+- Nothing is charged when \`daysLate\` is 0 or negative.`,
     inputs: [
       [100.0, 1],
       [101.0, 1],
@@ -2651,14 +2491,6 @@ id  email
     ],
     expected: [0.5, 0.51, 0.01, 25, 1.5, 0, 0.03, 0.05, 0.11, 0.17, 0.05, 10, 10, 0.51, 0.51, 0, 0, 43.21, 100000, 0],
     hidden: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
-    hints: [
-      "Math.Round on a decimal rounds halves to the nearest even digit unless told otherwise.",
-    ],
-    comments: [
-      rui(
-        "Customers keep emailing about a one-cent difference between the invoice and the reminder. Finance's spreadsheet rounds 0.505 up.",
-      ),
-    ],
     private: {
       reference: { "src/LateFees.cs": `namespace Billing;
 
@@ -2686,7 +2518,17 @@ public static class LateFees
     difficulty: "easy",
     language: "sql",
     skills: ["aggregation", "sorting"],
-    task: "Given `orders(id, customer, total)`, select each customer and the sum of their totals, highest first.",
+    task: `The monthly report needs revenue by customer. Write the query.
+
+The database (PostgreSQL) has one table, \`orders\`, with one row per order:
+
+| column | type | meaning |
+| --- | --- | --- |
+| \`id\` | \`integer\`, primary key | the order's id |
+| \`customer\` | \`text\`, not null | the customer's name |
+| \`total\` | \`integer\`, not null | the order's total; can be 0, or negative for an adjustment |
+
+Return one row per customer who has orders, with two columns in this order: the customer's name, and the sum of the totals of their orders. Order the rows by that sum, highest first. Column names don't matter. Names match exactly as written, and a sum can be larger than a 32-bit integer holds. No orders gives no rows.`,
     inputs: [
       {
         orders: [
@@ -2729,9 +2571,6 @@ public static class LateFees
       [["a", 11], ["h", 8], ["g", 7], ["f", 6], ["e", 5], ["d", 4], ["c", 3], ["b", 2]],
     ],
     hidden: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-    comments: [
-      rui("Just the totals per customer, biggest first. The chart is my job."),
-    ],
     private: {
       reference: { "queries/top-customers.sql": `-- Monthly report: revenue by customer, biggest first.
 -- orders(id, customer, total)
@@ -2750,7 +2589,20 @@ ORDER BY revenue DESC;
     difficulty: "medium",
     language: "sql",
     skills: ["joins", "reconciliation"],
-    task: "Given `orders(id, customer)` and `payments(order_id, amount)`, select the ids of orders that have no payment, smallest first.",
+    task: `Before the month-end close, finance needs the orders nobody has paid for. Write the query.
+
+The database (PostgreSQL) has two tables:
+
+| table | column | type | meaning |
+| --- | --- | --- | --- |
+| \`orders\` | \`id\` | \`integer\`, primary key | the order's id |
+| \`orders\` | \`customer\` | \`text\`, not null | the customer's name |
+| \`payments\` | \`order_id\` | \`integer\`, not null, references \`orders (id)\` | the order the payment is for |
+| \`payments\` | \`amount\` | \`integer\`, not null | the amount paid |
+
+\`payments\` has one row per payment, and an order can have any number of payments, including none.
+
+Return one column, the order's \`id\`, with one row for each order that has no payment at all, smallest id first. Any payment counts, whatever its amount, and each unpaid order appears once. Column names don't matter. No unpaid orders gives no rows.`,
     inputs: [
       {
         orders: [
@@ -2792,8 +2644,6 @@ ORDER BY revenue DESC;
       [[1], [3], [5], [7], [9]],
     ],
     hidden: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-    hints: ["A LEFT JOIN keeps orders even when no payment matches."],
-    comments: [rui("Month-end close is Friday. I need this list before then.")],
     private: {
       reference: { "queries/unpaid-orders.sql": `-- Month-end close: orders that have no matching payment, smallest id first.
 -- orders(id, customer), payments(order_id, amount)
@@ -2836,7 +2686,13 @@ mm_value *mm_call(const mm_value *args) {
     difficulty: "medium",
     language: "c",
     skills: ["arrays", "modular-arithmetic"],
-    task: "Implement a ring buffer of capacity `n`. Given a sequence of pushes, return the contents oldest first.",
+    task: `The edge proxy keeps the most recent request latencies in memory, in a fixed-size ring buffer that overwrites its oldest entry when it is full.
+
+\`ring_buffer(capacity, values, count, out)\` pushes the \`count\` integers in \`values\`, in order, into an empty buffer that holds \`capacity\` entries. A push into a full buffer overwrites the oldest entry. Then it writes what the buffer holds into \`out\`, oldest first, and returns how many entries it wrote.
+
+- \`out\` has room for at least \`count\` integers.
+- A capacity of 0 holds nothing.
+- This runs on the hot path: don't allocate memory (no \`malloc\`).`,
     inputs: [
       [3, [1, 2, 3, 4]],
       [2, []],
@@ -2916,9 +2772,6 @@ size_t ring_buffer(size_t capacity, const int *values, size_t count, int *out)
 `,
       },
     },
-    comments: [
-      sam("No malloc on the hot path. Fixed-size array, overwrite the oldest."),
-    ],
   }),
   challenge("p99-latency", {
     parameters: ["samples", "p"],
@@ -2928,7 +2781,13 @@ size_t ring_buffer(size_t capacity, const int *values, size_t count, int *out)
     difficulty: "medium",
     language: "go",
     skills: ["sorting", "statistics"],
-    task: "`Percentile(samples, p)` returns the nearest-rank percentile: sort the samples and take the value at rank `ceil(p / 100 × n)`, counting from 1. With no samples, `ok` is false (shown as `null` in the checks).",
+    task: `The p99 latency panel times out in busy hours, when there are two million samples.
+
+\`Percentile(samples, p)\` returns the nearest-rank percentile of the latency samples. \`samples\` are in any order and can repeat; \`p\` is greater than 0 and at most 100.
+
+- The value is the one at rank \`ceil(p / 100 × n)\` among the \`n\` samples in ascending order, counting from 1, and \`ok\` is true.
+- With no samples, \`ok\` is false (the checks show this as \`null\`).
+- It must stay fast with two million samples.`,
     inputs: [
       [[15, 20, 35, 40, 50], 30],
       [[15, 20, 35, 40, 50], 100],
@@ -2982,11 +2841,6 @@ func Percentile(samples []int, p float64) (value int, ok bool) {
 `,
       },
     },
-    comments: [
-      sam(
-        "The current version re-sorts every sample for every percentile. Busy hours have two million samples.",
-      ),
-    ],
   }),
   challenge("lru-cache", {
     adapter: `#include <string>
@@ -3022,7 +2876,13 @@ mm_value *mm_call(const mm_value *args) {
     difficulty: "hard",
     language: "cpp",
     skills: ["caching", "linked-lists", "maps"],
-    task: 'Simulate an LRU cache with the given capacity over operations `["put", key, value]` and `["get", key]`. Return the results of the gets in order, `-1` for a miss. A get counts as a use.',
+    task: `The cache's hit rate dropped to 12% after the last deploy: entries that were just read get evicted.
+
+\`simulate(capacity, ops)\` runs \`ops\` in order against an empty least-recently-used (LRU) cache that holds at most \`capacity\` entries (at least 1), and returns the result of each get, in order.
+
+- \`["put", key, value]\` stores \`value\` under \`key\`. If the key is already cached, its value is replaced. If the key is new and the cache is full, the least recently used entry is evicted first.
+- \`["get", key]\` returns the key's value, or \`-1\` when it isn't cached.
+- A put and a get that finds its key both count as a use, making that key the most recently used. A get that misses changes nothing.`,
     inputs: [
       [
         2,
@@ -3126,12 +2986,6 @@ std::vector<int> simulate(int capacity, const std::vector<Op>& ops) {
 `,
       },
     },
-    hints: ["Pair a hash map with a doubly linked list ordered by last use."],
-    comments: [
-      mateo(
-        "Hit rate dropped to 12% after the last deploy. I think get() stopped refreshing recency.",
-      ),
-    ],
   }),
   challenge("parse-duration", {
     title: "Timeouts in config must be written in seconds",
@@ -3140,7 +2994,13 @@ std::vector<int> simulate(int capacity, const std::vector<Op>& ops) {
     difficulty: "easy",
     language: "go",
     skills: ["parsing", "config"],
-    task: '`ParseDuration(text)` turns strings like `"1h30m"`, `"45s"` or `"2h"` into seconds. Units are `h`, `m` and `s`, each at most once and in that order; anything else returns an error (shown as `null` in the checks).',
+    task: `Timeouts in config must be written in seconds, and somebody set \`idle_timeout = 3600\` meaning minutes. Let people write \`1h\`.
+
+\`ParseDuration(text)\` turns a duration such as \`"1h30m"\`, \`"45s"\` or \`"2h"\` into seconds, or returns an error when the text isn't a valid duration (the checks show an error as \`null\`).
+
+- A valid duration is one or more parts written together, each a whole number in digits followed by a unit: \`h\` (hours), \`m\` (minutes) or \`s\` (seconds).
+- Each unit appears at most once, in the order \`h\`, \`m\`, \`s\`, and any of them can be left out. A number can be 0 and can be larger than the next unit up.
+- Anything else is an error: for example an empty string, a number without a unit, a unit without a number, any other unit or an uppercase one, a sign, a decimal point, spaces, or units repeated or out of order.`,
     inputs: [
       "1h30m",
       "45s",
@@ -3214,11 +3074,6 @@ func ParseDuration(text string) (int, error) {
 `,
       },
     },
-    comments: [
-      sam(
-        "Somebody set idle_timeout = 3600 meaning minutes. Let people write 1h.",
-      ),
-    ],
   }),
 ];
 

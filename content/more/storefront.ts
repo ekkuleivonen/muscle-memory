@@ -1,5 +1,4 @@
 import type { SeedIssue } from "../seed";
-import { ada, jo, lena, mateo, rui } from "../team";
 
 /*
  * The cart's shared modules, as they stand after SHOP-1 and SHOP-5 merged. Later issues open
@@ -323,7 +322,11 @@ const CART_VERSIONED = CART_STARTER.replace("    this.cache = null;\n  }", "    
 
 // SHOP-8: receipt tax that adds up -----------------------------------------------------------
 
-const TYPES_TS = `/** A line at checkout, in cents. \`discount\` is its share of the promo code (see allocate). */
+/*
+ * One file: the checkout types, the tax helpers the finance export also calls, and the receipt.
+ * The fix is in lineTaxes (the export's numbers) and in receipt (gift cards).
+ */
+const RECEIPT_HEAD = `/** A line at checkout, in cents. \`discount\` is its share of the order's promo code. */
 export interface Line {
   sku: string;
   price: number;
@@ -353,54 +356,28 @@ export interface Receipt {
   tax: number;
   total: number;
 }
-`;
 
-const EXPORT_TS = `import { lineTaxes } from "../checkout/tax";
-import type { Order } from "../checkout/types";
-
-/**
- * One CSV row per order line for the monthly sales-tax filing: order, SKU, taxable amount and
- * tax, in cents. Finance sums the tax column and files that number.
- */
-export function taxRows(order: Order): string[] {
-  const taxable = order.lines.map((line) =>
-    line.taxable ? line.price * line.quantity - line.discount : 0,
-  );
-  const taxes = lineTaxes(taxable, order.taxRate);
-  return order.lines.map((line, i) => [order.id, line.sku, taxable[i], taxes[i]].join(","));
-}
-`;
-
-const TAX_STARTER = `/**
- * Sales tax, in whole cents. Rates are basis points: 825 is 8.25%. The receipt and the finance
- * export (src/finance/export.ts) both get line taxes from here.
- */
-
-/** The tax on an amount, rounded half up to the cent. */
+/** The tax on an amount, rounded half up to the cent. Rates are basis points. */
 export function taxOn(amount: number, rate: number): number {
   return Math.round((amount * rate) / 10000);
 }
+`;
 
-/** Each line's tax, in the order given. */
+const LINE_TAXES_STARTER = `
+/**
+ * Each line's tax, in the order given, for amounts in cents. The finance export calls this too,
+ * with each line's taxable amount, and files the sum of what it returns.
+ */
 export function lineTaxes(amounts: number[], rate: number): number[] {
   return amounts.map((amount) => taxOn(amount, rate));
 }
 `;
 
-const TAX_REFERENCE = `/**
- * Sales tax, in whole cents. Rates are basis points: 825 is 8.25%. The receipt and the finance
- * export (src/finance/export.ts) both get line taxes from here.
- */
-
-/** The tax on an amount, rounded half up to the cent. */
-export function taxOn(amount: number, rate: number): number {
-  return Math.round((amount * rate) / 10000);
-}
-
+const LINE_TAXES_REFERENCE = `
 /**
  * Each line's share of the tax on all of them, in the order given; the shares add up to it
  * exactly. A line gets its own tax rounded down, and the cents left over go one each to the
- * largest remainders, the earlier line first on a tie.
+ * largest remainders, the earlier line first on a tie. The finance export calls this too.
  */
 export function lineTaxes(amounts: number[], rate: number): number[] {
   const scaled = amounts.map((amount) => amount * rate);
@@ -419,9 +396,7 @@ export function lineTaxes(amounts: number[], rate: number): number[] {
 }
 `;
 
-const RECEIPT_STARTER = `import { lineTaxes, taxOn } from "./tax";
-import type { Order, Receipt } from "./types";
-
+const RECEIPT_BODY_STARTER = `
 /** The receipt the order confirmation page and email show. */
 export function receipt(order: Order): Receipt {
   const nets = order.lines.map((line) => line.price * line.quantity - line.discount);
@@ -433,9 +408,7 @@ export function receipt(order: Order): Receipt {
 }
 `;
 
-const RECEIPT_REFERENCE = `import { lineTaxes } from "./tax";
-import type { Order, Receipt } from "./types";
-
+const RECEIPT_BODY_REFERENCE = `
 /** The receipt the order confirmation page and email show. */
 export function receipt(order: Order): Receipt {
   const nets = order.lines.map((line) => line.price * line.quantity - line.discount);
@@ -448,6 +421,9 @@ export function receipt(order: Order): Receipt {
   return { lines, net, tax, total: net + tax };
 }
 `;
+
+const RECEIPT_STARTER = RECEIPT_HEAD + LINE_TAXES_STARTER + RECEIPT_BODY_STARTER;
+const RECEIPT_REFERENCE = RECEIPT_HEAD + LINE_TAXES_REFERENCE + RECEIPT_BODY_REFERENCE;
 
 /** Changes `from` to `to` in `text`, failing loudly if `from` is not there. */
 function swap(text: string, from: string, to: string): string {
@@ -465,17 +441,28 @@ export const issues: SeedIssue[] = [
     kind: "feature",
     language: "javascript",
     skills: ["money", "reading-code", "ui-copy"],
-    task: `The free-shipping banner from the old site is coming back, above the checkout button in the cart drawer. From Lena:
+    task: `Write \`shippingBanner(order)\`: the text of the banner above the checkout button in the cart drawer, telling the shopper how far the cart is from free shipping, or \`null\` when there is no banner.
 
-> Marketing ran it for a month last spring and average order value went up 6%. The copy below is final; design has signed off.
+**Input.** An order is \`{ code, lines }\`. Each line is \`{ sku, price, quantity }\`, with \`price\` per unit in whole cents. \`code\` is the promo code: \`null\`, a percentage (\`{ percent: 10 }\`) or a fixed amount in cents (\`{ amount: 500 }\`).
+
+**Output.** Use this copy exactly:
 
 | Cart | Banner |
 |---|---|
-| empty | none |
-| under $50.00 | Spend $12.50 more for free shipping |
-| $50.00 or more | Your order ships free |
+| no lines | \`null\` |
+| total under $50.00 | \`Spend $12.50 more for free shipping\` (the amount still missing) |
+| total of $50.00 or more | \`Your order ships free\` |
 
-Write \`shippingBanner(order)\` in \`src/cart/shipping.js\`: the banner's text, or \`null\` when there is none. "$50.00 or more" is the same amount \`shippingFor\` already charges shipping on, so the banner never promises free shipping that checkout then charges for. Amounts read the way they do everywhere else in the cart.`,
+**Rules.**
+
+- The total is what checkout charges for the lines after the promo code, the same total \`shippingFor(order)\` in the file compares with \`FREE_SHIPPING_FROM\` (5000 cents). The banner must never promise free shipping that checkout then charges for, or ask for more when checkout already ships free.
+- A cart is empty only when it has no lines. A cart with lines whose total is $0.00 still shows how much more to spend.
+- Amounts read as everywhere else in the cart: a dollar sign, whole dollars with commas between thousands, a dot and two digits of cents, as in \`$1,234.56\` and \`$0.05\`.
+
+**Code you can use.**
+
+- \`orderTotal(order)\`, already imported from \`./totals.js\`, returns the total in cents: the sum of \`price × quantity\` over the lines, less the code's discount. A percentage code takes \`Math.round(subtotal × percent / 100)\` off; an amount code takes its amount off; either way the discount is never more than the subtotal, so the total is never below 0.
+- \`formatPrice(cents)\` from \`./format.js\` (\`import { formatPrice } from "./format.js";\`) formats cents as above: \`formatPrice(123456)\` is \`"$1,234.56"\`.`,
     entry: "src/cart/shipping.js",
     entrypoint: "shippingBanner",
     starter: SHIPPING_STARTER,
@@ -534,55 +521,8 @@ Write \`shippingBanner(order)\` in \`src/cart/shipping.js\`: the banner's text, 
       "Spend $0.05 more for free shipping",
     ],
     hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    comments: [
-      lena(
-        "Marketing measured +6% average order value with this banner last spring. Copy is final, please don't reword it.",
-      ),
-      ada(
-        "Money in the drawer all goes through `formatPrice` in format.js, so it reads the same everywhere.",
-      ),
-    ],
-    hints: [
-      {
-        text: "What does `shippingFor` compare with the threshold? The banner should be working from the same number.",
-        when: { behaviour: "active-minutes-without-progress", atLeast: 8 },
-      },
-      {
-        text: "Try the rain jacket with a 10% code on paper: what does the shopper actually pay for it, and how far is that from $50.00?",
-        when: { behaviour: "failing-pushes", atLeast: 2 },
-      },
-    ],
-    team: [
-      {
-        id: "ada-format-price",
-        author: "Ada N",
-        role: "Frontend",
-        where: "review",
-        severity: "nit",
-        text: [
-          "Nit: we format money in one place, `formatPrice` in format.js, so the banner matches the rest of the drawer. Could it go through that instead of `toFixed`?",
-          "Nit: `toFixed` here means the banner formats money its own way. Could it go through `formatPrice` like the rest of the drawer?",
-        ],
-        when: { pattern: "\\.toFixed\\(", present: true, file: "src/cart/shipping.js" },
-        resolve: "explicit",
-      },
-      {
-        id: "ada-threshold",
-        author: "Ada N",
-        role: "Frontend",
-        where: "review",
-        severity: "nit",
-        text: [
-          "Nit: `FREE_SHIPPING_FROM` is right there. If marketing moves the threshold, a second 5000 in the banner would drift.",
-        ],
-        when: {
-          pattern: "^(?!export const FREE_SHIPPING_FROM)[^\\n]*\\b5000\\b",
-          present: true,
-          file: "src/cart/shipping.js",
-        },
-        resolve: "explicit",
-      },
-    ],
+    hints: [],
+    comments: [],
     private: {
       reference: { "src/cart/shipping.js": SHIPPING_REFERENCE },
       alternatives: [
@@ -625,32 +565,6 @@ Write \`shippingBanner(order)\` in \`src/cart/shipping.js\`: the banner's text, 
           ),
         },
       ],
-      examples: {
-        "ada-format-price": {
-          fires: [
-            {
-              "src/cart/shipping.js": swap(
-                SHIPPING_REFERENCE,
-                'formatPrice(FREE_SHIPPING_FROM - total) + " more',
-                '"$" + ((FREE_SHIPPING_FROM - total) / 100).toFixed(2) + " more',
-              ),
-            },
-          ],
-          quiet: [{ "src/cart/shipping.js": SHIPPING_REFERENCE }],
-        },
-        "ada-threshold": {
-          fires: [
-            {
-              "src/cart/shipping.js": swap(
-                SHIPPING_REFERENCE,
-                "total >= FREE_SHIPPING_FROM)",
-                "total >= 5000)",
-              ),
-            },
-          ],
-          quiet: [{ "src/cart/shipping.js": SHIPPING_REFERENCE }],
-        },
-      },
     },
   },
   {
@@ -661,13 +575,26 @@ Write \`shippingBanner(order)\` in \`src/cart/shipping.js\`: the banner's text, 
     kind: "bug",
     language: "javascript",
     skills: ["caching", "debugging", "code-review"],
-    task: `Ada's PR #812 memoised \`Cart.summary()\` last Thursday. The cart drawer calls it on every render, and on a 60-line cart that was costing 38 ms a frame; now it's about 2. Since the release, support has a stack of tickets like this one:
+    task: `The cart drawer and the header badge show whatever \`Cart.summary()\` returns. To keep the drawer fast, \`summary()\` was memoised: the drawer calls it on every render, and repricing a 60-line cart each time cost 38 ms a frame (now about 2). Since then the drawer sometimes shows an old total. A shopper's report:
 
 > I changed the jeans from 1 to 2 in my cart and it still said $59.00. Then checkout charged me $118.00.
 
-Checkout prices the order on the server, so nobody was overcharged, but the drawer and the header badge show whatever \`summary()\` in \`src/cart/cart.js\` returns. Find what the memo broke and fix it. Keep the memo.
+Removing an item shows the right total; changing a quantity doesn't. Make every \`summary()\` reflect the cart as it is at that moment, and keep the memo.
 
-\`replay(actions)\` at the bottom of the file is what the cart's tests use: it plays a session on a new cart and returns what \`summary()\` showed each time it was asked.`,
+**What \`summary()\` returns.** \`{ items, subtotal, discount, total }\`, amounts in whole cents: \`items\` is the sum of the lines' quantities, \`subtotal\` the sum of \`price × quantity\`, \`discount\` the promo code's discount on the subtotal, and \`total\` is \`subtotal − discount\`.
+
+**The cart.**
+
+- \`add(sku, price, quantity = 1)\` adds that quantity to the line with that SKU, or adds a new line \`{ sku, price, quantity }\` if there is none. Adding to an existing line keeps the line's price.
+- \`setQuantity(sku, quantity)\` sets a line's quantity; 0 or less removes the line. It does nothing for a SKU not in the cart.
+- \`remove(sku)\` removes the line.
+- \`applyCode(code)\` sets the promo code: \`{ name, percent }\`, \`{ name, amount }\` (in cents), or \`null\` to remove it. Two codes can share a name and differ in what they take off.
+
+**Discounts.** \`discountFor(code, subtotal)\`, imported from \`./discounts.js\`, is 0 without a code; a percent code takes \`Math.round(subtotal × percent / 100)\`, an amount code takes its amount, and the discount is never more than the subtotal. \`sum(amounts)\`, imported from \`./money.js\`, adds up an array of numbers.
+
+**The memo stays.** \`summary()\` must not reprice the cart when nothing changed since the last call. Keep the result cached in a field on the cart named for what it does (the starter's \`this.cache\`, or for example a version number or a dirty flag) rather than taking the memo out.
+
+**Tests.** \`replay(actions)\` plays a session on a new cart and returns what \`summary()\` showed each time it was asked. Actions are \`["add", sku, price, quantity?]\`, \`["quantity", sku, quantity]\`, \`["remove", sku]\`, \`["code", code]\` and \`["summary"]\`.`,
     entry: "src/cart/cart.js",
     entrypoint: "replay",
     starter: CART_STARTER,
@@ -834,24 +761,8 @@ Checkout prices the order on the server, so nobody was overcharged, but the draw
       ],
     ],
     hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    comments: [
-      jo(
-        '23 tickets since Thursday, all "the cart shows the wrong total". Removing an item fixes it for them, changing the quantity doesn\'t.',
-      ),
-      ada(
-        "That's my memo, sorry. Please keep it though: the drawer went from 38 ms to 2 ms a frame on big carts.",
-      ),
-    ],
-    hints: [
-      {
-        text: "Which changes to the cart does the memo's key notice? Try adding the same item twice and asking for the summary after each.",
-        when: { behaviour: "active-minutes-without-progress", atLeast: 10 },
-      },
-      {
-        text: "Describing the whole cart in a key means remembering everything that could change. The cart already knows each moment it changes.",
-        when: { behaviour: "failing-pushes", atLeast: 2 },
-      },
-    ],
+    hints: [],
+    comments: [],
     team: [
       {
         id: "ada-keep-memo",
@@ -860,8 +771,7 @@ Checkout prices the order on the server, so nobody was overcharged, but the draw
         where: "review",
         severity: "blocking",
         text: [
-          "This takes the memo out, so the drawer goes back to repricing the cart on every frame. Can we keep it and have it notice changes instead?",
-          "Without the memo we're back to 38 ms a frame on big carts. Can the fix keep `summary()` cached?",
+          "Keep `summary()` memoised: cache its result in a field of the cart (such as `this.cache`, a version number or a dirty flag) instead of repricing on every call.",
         ],
         // Any field that remembers a summary or that the cart changed counts as keeping the memo.
         when: {
@@ -871,19 +781,6 @@ Checkout prices the order on the server, so nobody was overcharged, but the draw
           file: "src/cart/cart.js",
         },
         repeat: "while-true",
-        resolve: "explicit",
-      },
-      {
-        id: "ada-stringify",
-        author: "Ada N",
-        role: "Frontend",
-        where: "review",
-        severity: "nit",
-        text: [
-          "Nit: stringifying every line on each call is most of what pricing the cart cost in the first place. Could the cart note when it changes instead?",
-        ],
-        when: { pattern: "JSON\\.stringify\\(", present: true, file: "src/cart/cart.js" },
-        resolve: "explicit",
       },
     ],
     private: {
@@ -952,18 +849,6 @@ Checkout prices the order on the server, so nobody was overcharged, but the draw
             },
           ],
         },
-        "ada-stringify": {
-          fires: [
-            {
-              "src/cart/cart.js": swap(
-                CART_STARTER,
-                'this.lines.map((l) => l.sku).join(",")',
-                "JSON.stringify(this.lines)",
-              ),
-            },
-          ],
-          quiet: [{ "src/cart/cart.js": CART_REFERENCE }],
-        },
       },
     },
   },
@@ -976,11 +861,9 @@ Checkout prices the order on the server, so nobody was overcharged, but the draw
     kind: "bug",
     language: "typescript",
     skills: ["money", "rounding", "debugging", "reading-code"],
-    task: `From Rui in Finance:
+    task: `Finance's September sales-tax filing came out $310.22 under the tax customers were actually charged. The filing is the sum of what \`lineTaxes\` returns for every order, and those line taxes don't add up to the order's tax. A receipt also charged tax on a gift card.
 
-> September's sales-tax filing came out $310.22 under what we actually charged. The export's tax column doesn't add up to the tax on the receipts. And a customer forwarded a receipt that charges tax on a gift card.
-
-One of the orders from Rui's sample, at 8.25%:
+One order, at 8.25%, as the receipt shows it today:
 
 \`\`\`text
 Order #20417                      net      tax
@@ -990,17 +873,25 @@ Order #20417                      net      tax
   Tax                                    $8.32   ← the lines add up to $8.31
 \`\`\`
 
-Finance's rule: an order is taxed once, on its taxable amount times the rate, rounded half up to the cent. Each line shows its share, and the shares add up to exactly that: every line gets its own amount times the rate, rounded down, and the cents left over go one each to the lines with the largest remainders (the earlier line on a tie). Gift cards (\`taxable: false\`) carry no tax.
+Fix \`receipt(order)\` and \`lineTaxes(amounts, rate)\` so they follow Finance's rules. All amounts are whole cents; rates are basis points (825 is 8.25%).
 
-\`receipt(order)\` in \`src/checkout/receipt.ts\` builds the receipt. Line taxes come from \`src/checkout/tax.ts\`, which the finance export (\`src/finance/export.ts\`) uses too. Rates are basis points: 825 is 8.25%.`,
+**Input.** An \`Order\` is \`{ id, taxRate, lines }\`. Each line is \`{ sku, price, quantity, discount, taxable }\`: \`price\` is per unit, \`discount\` is the line's share of the order's promo code, and \`taxable\` is \`false\` for gift cards and donations.
+
+**Output.** A \`Receipt\` is \`{ lines, net, tax, total }\`, where \`lines\` has one \`{ sku, net, tax }\` per order line, in order.
+
+**Rules.**
+
+- A line's \`net\` is \`price × quantity − discount\`. The receipt's \`net\` is the sum of every line's net, gift cards included.
+- A line's taxable amount is its net when \`taxable\` is \`true\`, and 0 when it is \`false\`. A non-taxable line's tax is 0.
+- The order is taxed once: the sum of the taxable amounts times the rate, divided by 10,000 and rounded half up to the cent. That is the receipt's \`tax\`, and \`total\` is \`net + tax\`.
+- The line taxes add up to exactly the order's tax. Each line first gets its taxable amount times the rate, divided by 10,000 and rounded down. The cents still missing go one each to the lines with the largest remainders from that division; on a tie, the earlier line gets the cent first.
+- \`lineTaxes(amounts, rate)\` takes the lines' taxable amounts in order and returns each line's tax by the rule above. Keep it exported with that signature (the finance export calls it with the taxable amounts) and take the receipt's line taxes from it.
+- Keep money in whole cents: no \`toFixed\` or \`parseFloat\`.
+
+\`taxOn(amount, rate)\` in the file is the tax on one amount, rounded half up to the cent.`,
     entry: "src/checkout/receipt.ts",
     entrypoint: "receipt",
     starter: RECEIPT_STARTER,
-    files: [
-      { path: "src/checkout/tax.ts", role: "edit", language: "typescript", text: TAX_STARTER },
-      { path: "src/checkout/types.ts", role: "read", language: "typescript", text: TYPES_TS },
-      { path: "src/finance/export.ts", role: "read", language: "typescript", text: EXPORT_TS },
-    ],
     inputs: [
       {
         id: "20417",
@@ -1267,28 +1158,8 @@ Finance's rule: an order is taxed once, on its taxable amount times the rate, ro
       },
     ],
     hidden: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    comments: [
-      rui(
-        "September's filing is $310.22 under what we charged, across about 9,000 orders. I'd like to refile before the 20th, so the export has to be right, not just the receipts.",
-      ),
-      mateo(
-        "The export only reads `lineTaxes`, so whatever the receipt shows needs to come from there too.",
-      ),
-    ],
-    hints: [
-      {
-        text: "Rounding each line on its own can never promise the lines add up. Start from the order's tax, then decide which lines get the cents left over.",
-        when: { behaviour: "active-minutes-without-progress", atLeast: 15 },
-      },
-      {
-        text: "Compare how the finance export decides what each line's taxable amount is with what the receipt does.",
-        when: { behaviour: "failing-pushes", atLeast: 2 },
-      },
-      {
-        text: "A remainder is easiest to compare while the amounts are still whole numbers, before anything is divided.",
-        when: { behaviour: "failing-pushes", atLeast: 4 },
-      },
-    ],
+    hints: [],
+    comments: [],
     team: [
       {
         id: "mateo-line-taxes",
@@ -1297,10 +1168,10 @@ Finance's rule: an order is taxed once, on its taxable amount times the rate, ro
         where: "review",
         severity: "blocking",
         text: [
-          "The receipt doesn't call `lineTaxes` any more, but the finance export still does. Then the export keeps the old numbers and the filing stays off. Can the fix live in tax.ts so both get it?",
-          "If the receipt works out line taxes on its own, src/finance/export.ts and the receipts disagree again. Can this go through `lineTaxes`?",
+          "Keep the exported `lineTaxes(amounts, rate)`, returning each line's share of the order's tax, and take the receipt's line taxes from it: the finance export calls it too.",
         ],
-        when: { pattern: "lineTaxes\\(", present: false, file: "src/checkout/receipt.ts" },
+        // A call, not the definition: in one file the function is defined right there.
+        when: { pattern: "(?<!function )\\blineTaxes\\(", present: false, file: "src/checkout/receipt.ts" },
         repeat: "while-true",
       },
       {
@@ -1309,73 +1180,79 @@ Finance's rule: an order is taxed once, on its taxable amount times the rate, ro
         role: "Backend",
         where: "review",
         severity: "blocking",
-        text: [
-          "`toFixed` rounds through a float and a string. Money stays in whole cents here; can we keep this in integers?",
-        ],
+        text: ["Keep money in whole cents: no `toFixed` or `parseFloat`."],
         when: { pattern: "\\.toFixed\\(|parseFloat\\(", present: true },
         repeat: "while-true",
       },
-      {
-        id: "ada-long-line-taxes",
-        author: "Ada N",
-        role: "Frontend",
-        where: "review",
-        severity: "nit",
-        text: [
-          "Nit: `lineTaxes` is getting long. Would a helper for handing out the leftover cents read better?",
-        ],
-        when: { metric: "function-lines", above: 20, file: "src/checkout/tax.ts" },
-      },
-      {
-        id: "rui-20417",
-        author: "Rui F",
-        role: "Finance",
-        where: "review",
-        severity: "info",
-        text: ["That's #20417 to the cent. I'll rerun September's export once this is merged."],
-        when: { check: "case-1", is: "passing" },
-      },
     ],
     private: {
-      reference: {
-        "src/checkout/receipt.ts": RECEIPT_REFERENCE,
-        "src/checkout/tax.ts": TAX_REFERENCE,
-      },
+      reference: { "src/checkout/receipt.ts": RECEIPT_REFERENCE },
+      alternatives: [
+        // Hands out the leftover cents by picking the largest remaining remainder each time.
+        {
+          "src/checkout/receipt.ts": swap(
+            RECEIPT_REFERENCE,
+            `  const order = scaled
+    .map((value, index) => ({ index, remainder: value % 10000 }))
+    .sort((a, b) => b.remainder - a.remainder || a.index - b.index);
+  for (const { index } of order) {
+    if (left <= 0) break;
+    shares[index] += 1;
+    left -= 1;
+  }`,
+            `  const remainders = scaled.map((value, index) => value - shares[index] * 10000);
+  for (; left > 0; left--) {
+    let best = 0;
+    for (let i = 1; i < remainders.length; i++) if (remainders[i] > remainders[best]) best = i;
+    shares[best] += 1;
+    remainders[best] = -1;
+  }`,
+          ),
+        },
+      ],
+      wrong: [
+        // Shares that add up, but gift cards are still taxed.
+        { "src/checkout/receipt.ts": RECEIPT_HEAD + LINE_TAXES_REFERENCE + RECEIPT_BODY_STARTER },
+        // Gift cards left out, but each line still rounded on its own.
+        { "src/checkout/receipt.ts": RECEIPT_HEAD + LINE_TAXES_STARTER + RECEIPT_BODY_REFERENCE },
+        // The leftover cents go to the later line on a tie.
+        {
+          "src/checkout/receipt.ts": swap(
+            RECEIPT_REFERENCE,
+            "b.remainder - a.remainder || a.index - b.index",
+            "b.remainder - a.remainder || b.index - a.index",
+          ),
+        },
+      ],
       examples: {
         "mateo-line-taxes": {
           fires: [
             {
-              "src/checkout/receipt.ts": swap(
-                RECEIPT_REFERENCE,
-                "const taxes = lineTaxes(taxable, order.taxRate);",
-                "const taxes = taxable.map((amount) => Math.floor((amount * order.taxRate) / 10000));",
-              ),
+              "src/checkout/receipt.ts":
+                RECEIPT_HEAD +
+                swap(
+                  RECEIPT_BODY_REFERENCE,
+                  "const taxes = lineTaxes(taxable, order.taxRate);",
+                  "const taxes = taxable.map((amount) => Math.floor((amount * order.taxRate) / 10000));",
+                ),
             },
           ],
           quiet: [
-            {
-              "src/checkout/receipt.ts": RECEIPT_REFERENCE,
-              "src/checkout/tax.ts": TAX_REFERENCE,
-            },
+            { "src/checkout/receipt.ts": RECEIPT_REFERENCE },
             { "src/checkout/receipt.ts": RECEIPT_STARTER },
           ],
         },
         "mateo-to-fixed": {
           fires: [
             {
-              "src/checkout/tax.ts": swap(
-                TAX_STARTER,
+              "src/checkout/receipt.ts": swap(
+                RECEIPT_REFERENCE,
                 "return Math.round((amount * rate) / 10000);",
                 "return Number(((amount * rate) / 10000).toFixed(0));",
               ),
             },
           ],
-          quiet: [
-            {
-              "src/checkout/receipt.ts": RECEIPT_REFERENCE,
-              "src/checkout/tax.ts": TAX_REFERENCE,
-            },
-          ],
+          quiet: [{ "src/checkout/receipt.ts": RECEIPT_REFERENCE }],
         },
       },
     },
