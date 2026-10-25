@@ -10,6 +10,7 @@ import {
   boardProfile,
   boardShare,
   boardReply,
+  boardClose,
   boardView,
   REPLY_LIMIT_BYTES,
 } from "./board";
@@ -152,6 +153,20 @@ test("a reply to a review comment is recorded on the board, its text bounded", (
     { issueKey: "API-2", pullRequest: 3, comment: "ada-abs", text: "  " },
   ])
     assert.throws(() => boardReply({ ...base, data }));
+});
+
+test("closing a pull request without merging names it and how", () => {
+  const closed = boardClose({
+    ...base,
+    data: { issueKey: "API-2", pullRequest: 1, via: "pointer", nudged: true },
+  });
+  assert.equal(closed.type, "observation.board.closed");
+  assert.deepEqual(closed.data, { issueKey: "API-2", pullRequest: 1, via: "pointer", nudged: true });
+  for (const data of [
+    { issueKey: "API-2", pullRequest: 0, via: "pointer" as const, nudged: false },
+    { issueKey: "api-2", pullRequest: 1, via: "pointer" as const, nudged: false },
+  ])
+    assert.throws(() => boardClose({ ...base, data }));
 });
 
 test("page views, page state and profile answers; only views may name an issue", () => {

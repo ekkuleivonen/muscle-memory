@@ -40,7 +40,7 @@ import {
   type PullRequestRecord,
 } from "../../lib/activity";
 import { statusOf } from "../../lib/board";
-import { mergedPullRequests } from "../../lib/pulls";
+import { closedPullRequests, mergedPullRequests } from "../../lib/pulls";
 import {
   due,
   feedbackOf,
@@ -159,6 +159,8 @@ export function Ide({
   const [pulls, setPulls] = useState<PullRequestRecord[]>([]);
   /** Which of them the person has merged (on the pull request's page). */
   const [merged, setMerged] = useState<ReadonlySet<number>>(new Set());
+  /** Which of them the person closed without merging. */
+  const [closed, setClosed] = useState<ReadonlySet<number>>(new Set());
   const [opening, setOpening] = useState<Opening>({ state: "opening" });
   const [message, setMessage] = useState("");
   const mobileSide = useRef<HTMLDialogElement>(null);
@@ -187,12 +189,13 @@ export function Ide({
   const board = useBoard();
   // The session's callbacks outlive renders; they read the latest board through this.
   const done = statusOf(board.items, issue.key) === "done";
-  /** The pull request new work is pushed to: the latest one, unless it was merged. */
+  /** The pull request new work is pushed to: the latest one, unless it was merged or closed. */
   const openPull =
     pulls[0] &&
     !done &&
     pulls[0].result !== "merged" &&
-    !merged.has(pulls[0].number)
+    !merged.has(pulls[0].number) &&
+    !closed.has(pulls[0].number)
       ? pulls[0]
       : null;
   const openPullRef = useRef(openPull);
@@ -351,12 +354,14 @@ export function Ide({
       );
       const history = pullRequestHistory(records, participantId, issue.slug);
       const mergedNumbers = mergedPullRequests(records, issue.slug);
+      const closedNumbers = closedPullRequests(records, issue.slug);
       const homeHost = hosts.current.get(home);
       // A superseded open must not create a session or record anything.
       if (!homeHost || !current()) return;
       if (recovered) setMessage(recoveryMessage(recovered));
       setPulls(history);
       setMerged(mergedNumbers);
+      setClosed(closedNumbers);
       setFeedback(feedbackOf(records, issue.slug));
       session.current = new WorkspaceSession({
         participantId,
@@ -956,6 +961,7 @@ export function Ide({
               <PullRequests
                 pulls={pulls}
                 merged={merged}
+                closed={closed}
                 blocking={blocking}
                 threads={feedback.threads}
                 revisions={revisions}
@@ -1336,10 +1342,12 @@ const PR_RESULTS: Record<
   cancelled: { mark: "–", label: "Open · checks cancelled", tone: "faint" },
 };
 const MERGED = { mark: "⇢", label: "Merged", tone: "merged" };
+const CLOSED = { mark: "×", label: "Closed", tone: "faint" };
 
 function PullRequests({
   pulls,
   merged,
+  closed,
   blocking,
   threads,
   revisions,
@@ -1349,6 +1357,7 @@ function PullRequests({
 }: {
   pulls: PullRequestRecord[];
   merged: ReadonlySet<number>;
+  closed: ReadonlySet<number>;
   /** Open blocking review threads by pull request number. */
   blocking: ReadonlyMap<number, number>;
   /** Every review thread on this issue's pull requests. */
@@ -1365,9 +1374,16 @@ function PullRequests({
   const latest = pulls[0];
   return (
     <div>
+      {latest && !done && closed.has(latest.number) && (
+        <p className="ide-review">
+          Pull request #{latest.number} is closed. When your code is ready, open
+          a new one (<Shortcut shift />).
+        </p>
+      )}
       {latest &&
         !done &&
         !isMerged(latest) &&
+        !closed.has(latest.number) &&
         latest.result !== "running" &&
         (latest.result === "checks-passed" && blocking.get(latest.number) ? (
           <div className="ide-review">
@@ -1446,7 +1462,9 @@ function PullRequests({
           {pulls.map((pr) => {
             const shown = isMerged(pr)
               ? MERGED
-              : (PR_RESULTS[pr.result] ?? PR_RESULTS["checks-errored"]);
+              : closed.has(pr.number)
+                ? CLOSED
+                : (PR_RESULTS[pr.result] ?? PR_RESULTS["checks-errored"]);
             return (
               <li key={pr.number} className={shown.tone}>
                 <span className="ide-pr-mark">{shown.mark}</span>
@@ -1463,7 +1481,7 @@ function PullRequests({
                     ? `${pr.total} checks`
                     : `${pr.passed}/${pr.total} checks`}
                   {pr.pushes > 1 && ` · ${pr.pushes} pushes`}
-                  {!isMerged(pr) && blocking.get(pr.number) && (
+                  {!isMerged(pr) && !closed.has(pr.number) && blocking.get(pr.number) && (
                     <span className="ide-pr-blocking">
                       {" · "}
                       {comments(blocking.get(pr.number)!)}

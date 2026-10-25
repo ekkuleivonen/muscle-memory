@@ -4,6 +4,7 @@ import type { WorkspaceRecord } from "../../../packages/domain/workspace";
 import { diffLines, diffStats, hunks } from "./diff";
 import {
   allPullRequests,
+  closedPullRequests,
   duration,
   mergedPullRequests,
   pullRequestDetail,
@@ -196,6 +197,31 @@ test("pull requests are listed newest first, open until the person merges one", 
     (r) => !r.payload.includes("observation.board.moved"),
   );
   assert.equal(allPullRequests(unmerged)[0].state, "open");
+});
+
+test("a pull request closed without merging is closed, and merging wins over closing", () => {
+  const close = (number: number) =>
+    observation("observation.board.closed", 25, {
+      issueKey: "FN-1",
+      pullRequest: number,
+      via: "pointer",
+      nudged: true,
+    });
+  const withClose = [...records, close(1), close(2)];
+  const pulls = allPullRequests(withClose);
+  assert.deepEqual(
+    pulls.map((p) => [p.number, p.state]),
+    [
+      [2, "merged"],
+      [1, "closed"],
+    ],
+  );
+  assert.equal(pulls[1].closedAt, new Date(Date.UTC(2026, 9, 24, 9, 25)).toISOString());
+  assert.deepEqual([...closedPullRequests(withClose, "frequency-map")], [1, 2]);
+  const detail = pullRequestDetail(withClose, "frequency-map", 1, (id) =>
+    id === fixture.id ? fixture.revision : undefined,
+  )!;
+  assert.equal(detail.timeline.at(-1)?.kind, "closed");
 });
 
 test("a pull request's timeline starts after the previous one and folds edits together", () => {

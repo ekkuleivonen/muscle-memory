@@ -12,6 +12,9 @@ import { canonical, type Json } from "./json";
 import type { WorkspaceRecord } from "./workspace";
 
 /**
+ * 6.1.0: closing. `observation.board.closed` records the person closing one of their open
+ * pull requests without merging it. A closed pull request takes no more pushes and cannot be
+ * merged; the next push opens a new one. Nothing else changed.
  * 6.0.0: no onboarding. Profile questions are asked one at a time where the app needs them, so
  * `profile` comes `from` the place that asked: "result" (a merged pull request's card),
  * "dashboard", "issue" (an issue page, before opening the IDE), "settings" or "play" (the
@@ -38,7 +41,7 @@ import type { WorkspaceRecord } from "./workspace";
  * issue to Done (`trigger: "pull-request-merged"`, by pointer or keyboard). Earlier versions
  * were never released.
  */
-export const BOARD_CAPTURE_VERSION = "board-capture-6.0.0";
+export const BOARD_CAPTURE_VERSION = "board-capture-6.1.0";
 /** What this capture does not record. Absence is a gap, not evidence of no activity. */
 export const BOARD_CAPTURE_GAPS = [
   "visits-before-accepting-the-terms",
@@ -82,6 +85,15 @@ export interface BoardReplyData {
   readonly text: string;
   readonly textBytes: number;
   readonly truncated: boolean;
+}
+
+/** The person closed one of their open pull requests without merging it. */
+export interface BoardCloseData {
+  readonly issueKey: string;
+  readonly pullRequest: number;
+  readonly via: BoardMoveVia;
+  /** Whether the page was nudging to close it (another of the issue's pull requests was merged). */
+  readonly nudged: boolean;
 }
 
 /** A page of the app was shown: its path, its query string, and the app page before it. */
@@ -138,6 +150,7 @@ export interface BoardShareData {
 interface BoardData {
   "observation.board.moved": BoardMoveData;
   "observation.board.replied": BoardReplyData;
+  "observation.board.closed": BoardCloseData;
   "observation.board.viewed": BoardViewData;
   "observation.board.page": BoardPageData;
   "observation.board.profile": BoardProfileData;
@@ -267,6 +280,30 @@ export function boardReply(input: {
     text: cut.text,
     textBytes: cut.originalBytes,
     truncated: cut.truncated,
+  });
+}
+
+export function boardClose(input: {
+  participantId: string;
+  sourceId: string;
+  sequence: number;
+  occurredAt: string;
+  elapsedMs: number;
+  termsVersion: string;
+  issue: { id: string; revision: string };
+  data: BoardCloseData;
+}): BoardObservation<"observation.board.closed"> {
+  const { data } = input;
+  if (!ISSUE_KEY.test(data.issueKey)) throw new Error("Unknown issue key.");
+  if (!Number.isSafeInteger(data.pullRequest) || data.pullRequest < 1)
+    throw new Error("Closing names its pull request.");
+  if (!VIAS.includes(data.via)) throw new Error("Unknown way of closing.");
+  if (typeof data.nudged !== "boolean") throw new Error("nudged is true or false.");
+  return envelope("observation.board.closed", input, {
+    issueKey: data.issueKey,
+    pullRequest: data.pullRequest,
+    via: data.via,
+    nudged: data.nudged,
   });
 }
 

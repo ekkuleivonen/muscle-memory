@@ -4,7 +4,7 @@
  * between the previous pull request and this one. Raw facts only; nothing here grades.
  *
  * A pull request stays open, whatever its checks say, until the person merges it (recorded as
- * the board move to Done). Work continues on an open one: each push is recorded under the same
+ * the board move to Done) or closes it without merging (`observation.board.closed`). Work continues on an open one: each push is recorded under the same
  * number, and the pull request shows its latest push.
  */
 import { casesRun, type Revision } from "../../../packages/content/model";
@@ -33,9 +33,11 @@ export interface PullSummary {
   openedAt: string;
   /** Opened, then each push: how many times CI checked it. */
   pushes: number;
-  state: "open" | "merged";
+  state: "open" | "merged" | "closed";
   /** When the person merged it. */
   mergedAt?: string;
+  /** When the person closed it without merging. */
+  closedAt?: string;
   /** Another of this issue's pull requests that was merged, which put the issue in Done. */
   otherMerged?: number;
 }
@@ -94,6 +96,41 @@ function merges(all: readonly Observation[]): Map<string, string> {
   return merged;
 }
 
+/** Close times by issue and pull request number, like merges. */
+function closes(all: readonly Observation[]): Map<string, string> {
+  const closed = new Map<string, string>();
+  for (const o of all)
+    if (o.type === "observation.board.closed" && o.issue) {
+      const key = `${o.issue}#${Number(o.data.pullRequest)}`;
+      if (!closed.has(key)) closed.set(key, o.occurredAt);
+    }
+  return closed;
+}
+
+/** How pull requests ended: merged or closed, by "issue#number". */
+interface Ends {
+  merged: Map<string, string>;
+  closed: Map<string, string>;
+}
+
+const ends = (all: readonly Observation[]): Ends => ({
+  merged: merges(all),
+  closed: closes(all),
+});
+
+/** Numbers of this issue's pull requests closed without merging. */
+export function closedPullRequests(
+  records: readonly WorkspaceRecord[],
+  issue: string,
+): Set<number> {
+  const numbers = new Set<number>();
+  for (const key of closes(observations(records)).keys()) {
+    const [id, number] = key.split("#");
+    if (id === issue) numbers.add(Number(number));
+  }
+  return numbers;
+}
+
 /** Numbers of this issue's merged pull requests. */
 export function mergedPullRequests(
   records: readonly WorkspaceRecord[],
@@ -110,10 +147,14 @@ export function mergedPullRequests(
 /** A pull request as of its latest push; `pushes` are its observations, oldest first. */
 function summary(
   pushes: readonly Observation[],
-  merged: Map<string, string>,
+  { merged, closed }: Ends,
 ): PullSummary {
   const o = pushes[pushes.length - 1];
   const mergedAt = merged.get(`${o.issue}#${Number(o.data.number)}`);
+  // Merging wins: a merged pull request was never closed unmerged.
+  const closedAt = mergedAt
+    ? undefined
+    : closed.get(`${o.issue}#${Number(o.data.number)}`);
   const other = [...merged.keys()]
     .map((key) => key.split("#"))
     .find(
@@ -132,8 +173,9 @@ function summary(
     at: o.occurredAt,
     openedAt: pushes[0].occurredAt,
     pushes: pushes.length,
-    state: mergedAt ? "merged" : "open",
+    state: mergedAt ? "merged" : closedAt ? "closed" : "open",
     ...(mergedAt ? { mergedAt } : {}),
+    ...(closedAt ? { closedAt } : {}),
     ...(other ? { otherMerged: Number(other) } : {}),
   };
 }
@@ -154,7 +196,7 @@ export function allPullRequests(
   records: readonly WorkspaceRecord[],
 ): PullSummary[] {
   const all = observations(records);
-  const merged = merges(all);
+  const merged = ends(all);
   return grouped(all)
     .map((pushes) => summary(pushes, merged))
     .sort((a, b) => b.at.localeCompare(a.at));
@@ -183,6 +225,7 @@ export type TimelineEntry =
       total: number;
     }
   | { kind: "merged"; at: string }
+  | { kind: "closed"; at: string }
   /** A teammate's review comment on this pull request; its thread is read from feedback. */
   | { kind: "review"; at: string; comment: string; push: number }
   | {
@@ -242,7 +285,7 @@ export function pullRequestDetail(
   revisionFor: (id: string) => Revision | undefined,
 ): PullDetail | null {
   const all = observations(records).filter((o) => o.issue === issue);
-  const merged = merges(all);
+  const merged = ends(all);
   const groups = grouped(all);
   const own = groups.find((g) => Number(g[0].data.number) === number);
   if (!own) return null;
@@ -414,6 +457,7 @@ export function pullRequestDetail(
       });
   }
   if (pull.mergedAt) timeline.push({ kind: "merged", at: pull.mergedAt });
+  if (pull.closedAt) timeline.push({ kind: "closed", at: pull.closedAt });
   // In time order; entries at the same moment keep the order they were added in.
   timeline.sort((a, b) => a.at.localeCompare(b.at));
 
