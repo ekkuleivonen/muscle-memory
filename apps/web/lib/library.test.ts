@@ -16,21 +16,21 @@ const merged = library(catalog);
 
 test("unlisted exercises remain addressable in personal history but not discovery", () => {
   assert.equal(
-    merged.issues.some((i) => i.key === "QUICK-2"),
+    merged.issues.some((i) => i.key === "JS-002"),
     false,
   );
   assert.equal(
-    merged.allIssues.find((i) => i.key === "QUICK-2")?.language,
+    merged.allIssues.find((i) => i.key === "JS-002")?.language,
     "javascript",
   );
   assert.equal(
-    merged.allIssues.find((i) => i.key === "QUICK-2")?.slug,
-    merged.findIssue("QUICK-2")?.slug,
+    merged.allIssues.find((i) => i.key === "JS-002")?.slug,
+    merged.findIssue("JS-002")?.slug,
   );
 });
 
 test("issues are live metadata over their live revisions, grouped into projects", () => {
-  const issue = merged.findIssue("FN-1")!;
+  const issue = merged.findIssue("PY-002")!;
   const meta = catalog.issues.find((i) => i.id === "frequency-map")!;
   assert.deepEqual(
     [issue.slug, issue.revision, issue.runnable, issue.kind, issue.estimate],
@@ -67,10 +67,10 @@ test("retired issues leave lists, but every published revision still resolves", 
       i.id === "lru-cache" ? { ...i, state: "retired" as const } : i,
     ),
   });
-  assert.equal(retired.findIssue("EDGE-3"), undefined);
+  assert.equal(retired.findIssue("CPP-001"), undefined);
   assert.deepEqual(
     retired.findProject("EDGE")!.issues.map((i) => i.key),
-    ["EDGE-1", "EDGE-2", "EDGE-4", "EDGE-5", "EDGE-6", "EDGE-7"],
+    ["C-002", "GO-006", "GO-004", "C-001", "GO-007", "CPP-002"],
   );
   // Recorded work names the revision it ran against; it stays readable.
   assert.equal(retired.revision(meta.revision)?.issue, "lru-cache");
@@ -91,11 +91,11 @@ test("issues run when their language has an engine", () => {
   assert.ok(merged.issues.every((i) => i.runnable));
 });
 
-test("issue keys come from the project key and the issue's number", () => {
+test("issue keys are the catalog's: the language's code and a number", () => {
   const keys = Object.fromEntries(merged.issues.map((i) => [i.slug, i.key]));
-  assert.equal(keys["frequency-map"], "FN-1");
-  assert.equal(keys["parse-log-line"], "API-4");
-  assert.equal(keys["lru-cache"], "EDGE-3");
+  assert.equal(keys["frequency-map"], "PY-002");
+  assert.equal(keys["parse-log-line"], "GO-003");
+  assert.equal(keys["lru-cache"], "CPP-001");
   assert.deepEqual(
     merged.projects.map((c) => c.key),
     ["INC", "FN", "SHOP", "API", "DATA", "EDGE"],
@@ -126,66 +126,66 @@ test("filters combine across qualifiers and match any value within one", () => {
   const keys = (q: string) =>
     filterIssues(merged.issues, parseIssueQuery(q)).map((i) => i.key);
   assert.deepEqual(keys("kind:bug"), [
-    "API-1",
-    "API-2",
-    "API-4",
-    "API-5",
-    "API-6",
-    "API-7",
-    "API-9",
-    "DATA-1",
-    "DATA-5",
-    "DATA-6",
-    "DATA-7",
-    "DATA-8",
-    "EDGE-3",
-    "EDGE-5",
-    "EDGE-7",
-    "FN-3",
-    "FN-4",
-    "INC-1",
-    "SHOP-1",
-    "SHOP-2",
-    "SHOP-5",
-    "SHOP-7",
-    "SHOP-8",
+    "C-001",
+    "CPP-001",
+    "CPP-002",
+    "CS-002",
+    "GO-002",
+    "GO-003",
+    "JAVA-002",
+    "JS-001",
+    "JS-003",
+    "JS-005",
+    "JS-006",
+    "PHP-002",
+    "PHP-003",
+    "PY-004",
+    "PY-005",
+    "PY-006",
+    "PY-008",
+    "PY-010",
+    "RB-002",
+    "SQL-002",
+    "TS-002",
+    "TS-005",
+    "TS-006",
   ]);
-  assert.deepEqual(keys("kind:bug lang:go"), ["API-1", "API-4"]);
+  assert.deepEqual(keys("kind:bug lang:go"), ["GO-002", "GO-003"]);
   assert.deepEqual(keys("lang:rust,go"), [
-    "API-1",
-    "API-4",
-    "API-8",
-    "EDGE-2",
-    "EDGE-4",
-    "EDGE-6",
+    "GO-002",
+    "GO-003",
+    "GO-004",
+    "GO-005",
+    "GO-006",
+    "GO-007",
   ]);
   // Every issue runs, and an old is:runnable link still shows them all.
   assert.equal(keys("is:runnable").length, merged.issues.length);
   assert.deepEqual(keys("label:strings"), [
-    "API-4",
-    "API-5",
-    "API-6",
-    "API-8",
-    "DATA-1",
-    "EDGE-5",
-    "FN-2",
-    "SHOP-1",
-    "SHOP-2",
+    "C-001",
+    "GO-003",
+    "GO-005",
+    "JAVA-002",
+    "JS-003",
+    "PY-003",
+    "PY-004",
+    "RB-002",
+    "TS-002",
   ]);
-  assert.deepEqual(keys("API-4"), ["API-4"]);
-  assert.deepEqual(keys("parser"), ["API-4"]);
+  assert.deepEqual(keys("GO-003"), ["GO-003"]);
+  assert.deepEqual(keys("parser"), ["GO-003"]);
   assert.deepEqual(keys("rust hard"), []);
   // Natural key order by default; difficulty and title on request.
   assert.deepEqual(keys("lang:go"), [
-    "API-1",
-    "API-4",
-    "API-8",
-    "EDGE-2",
-    "EDGE-4",
-    "EDGE-6",
+    "GO-002",
+    "GO-003",
+    "GO-004",
+    "GO-005",
+    "GO-006",
+    "GO-007",
   ]);
-  assert.equal(keys("sort:difficulty")[0], "API-1");
-  assert.equal(keys("sort:difficulty").at(-1), "SHOP-8");
+  assert.equal(keys("sort:difficulty")[0], "C-001");
+  assert.equal(keys("sort:difficulty").at(-1), "TS-006");
 });
 
 test("toggles switch one value and round-trip through the search line", () => {
@@ -197,11 +197,11 @@ test("toggles switch one value and round-trip through the search line", () => {
 });
 
 test("issues are found by permanent key, in any case, or by their id", () => {
-  const lru = merged.findIssue("EDGE-3")!;
+  const lru = merged.findIssue("CPP-001")!;
   assert.equal(lru.slug, "lru-cache");
-  assert.equal(merged.findIssue("edge-3"), lru);
+  assert.equal(merged.findIssue("cpp-001"), lru);
   assert.equal(merged.findIssue("lru-cache"), lru);
-  assert.equal(merged.findIssue("EDGE-99"), undefined);
+  assert.equal(merged.findIssue("CPP-099"), undefined);
 });
 
 test("projects are found by unique key, in any case, or by their id", () => {
@@ -214,7 +214,7 @@ test("projects are found by unique key, in any case, or by their id", () => {
   assert.equal(new Set(keys).size, keys.length);
 });
 
-test("keys come from issue numbers, not from list position", () => {
+test("keys are stored, not derived from list position", () => {
   // Reordering a project must not renumber its issues.
   const reordered = library({
     ...catalog,
@@ -222,14 +222,14 @@ test("keys come from issue numbers, not from list position", () => {
       p.id === "accounts-api" ? { ...p, issues: [...p.issues].reverse() } : p,
     ),
   });
-  assert.equal(reordered.findIssue("API-1")?.slug, "pagination-params");
-  assert.equal(reordered.findIssue("API-4")?.slug, "parse-log-line");
-  assert.equal(reordered.findProject("API")!.issues[0].key, "API-9");
+  assert.equal(reordered.findIssue("GO-002")?.slug, "pagination-params");
+  assert.equal(reordered.findIssue("GO-003")?.slug, "parse-log-line");
+  assert.equal(reordered.findProject("API")!.issues[0].key, "TS-006");
 });
 
 test("summaries for client components leave out fixtures and long text", () => {
-  const summary = summarize(merged.findIssue("FN-1")!);
-  assert.equal(summary.key, "FN-1");
+  const summary = summarize(merged.findIssue("PY-002")!);
+  assert.equal(summary.key, "PY-002");
   for (const field of ["criteria", "task", "comments"])
     assert.equal(field in summary, false, field);
   // Nothing left that React's serializer would mangle.
@@ -243,16 +243,16 @@ test("marks parse as is: qualifiers and filter wherever marks are known", () => 
   assert.deepEqual(query.marks, ["starred", "completed"]);
   assert.equal(formatQuery(query), "is:starred,completed lang:python");
   assert.deepEqual(parseIssueQuery("is:nonsense").marks, []);
-  const starred = new Set(["API-2", "FN-1"]);
-  const completed = new Set(["FN-1"]);
+  const starred = new Set(["PHP-002", "PY-002"]);
+  const completed = new Set(["PY-002"]);
   const has = (key: string, mark: "starred" | "completed") =>
     (mark === "starred" ? starred : completed).has(key);
   const keys = (q: string) =>
     filterByMarks(merged.issues, parseIssueQuery(q).marks, has)
       .map((i) => i.key)
       .sort();
-  assert.deepEqual(keys("is:starred"), ["API-2", "FN-1"]);
-  assert.deepEqual(keys("is:starred,completed"), ["FN-1"]);
+  assert.deepEqual(keys("is:starred"), ["PHP-002", "PY-002"]);
+  assert.deepEqual(keys("is:starred,completed"), ["PY-002"]);
   assert.equal(keys("").length, merged.issues.length);
 });
 test("content revisions stay published and never strand work in progress", () => {
@@ -266,7 +266,7 @@ test("content revisions stay published and never strand work in progress", () =>
     ),
   ) as Record<string, string>;
   assert.equal(Object.keys(before).length, 45);
-  // INC-1 as it was played while it was the incident, with its chat.
+  // JS-001 as it was played while it was the incident, with its chat.
   before["checkout-guest-shipping"] =
     "sha256:ea2bec9e27fb47b645b7cef8c00448c735415c9bda6f93b61a44bedea479b104";
   for (const [id, revision] of Object.entries(before)) {

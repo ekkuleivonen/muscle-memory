@@ -2,6 +2,7 @@
  * Structural checks for a catalog, shared by authoring and serving. Pure: no hashing, so the
  * content-hash check lives in ./revision.
  */
+import { keyProblem } from "./keys";
 import type {
   Catalog,
   Difficulty,
@@ -138,7 +139,7 @@ export function validateRevision(revision: Revision, where: string): void {
 /** Throws with the first problem found; returns the catalog typed. */
 export function validateCatalog(value: unknown): Catalog {
   const catalog = value as Catalog;
-  if (!catalog || catalog.schemaVersion !== "2.0.0") fail("catalog", "unsupported schema");
+  if (!catalog || catalog.schemaVersion !== "3.0.0") fail("catalog", "unsupported schema");
   const revisions = catalog.revisions ?? {};
   for (const [id, revision] of Object.entries(revisions)) {
     if (!REVISION.test(id)) fail(id, "is not a revision id");
@@ -155,23 +156,24 @@ export function validateCatalog(value: unknown): Catalog {
     if (typeof project.listed !== "boolean") fail(project.id, "needs listed true or false");
     unique(project.issues, `${project.id} issues`);
   }
-  const numbers = new Set<string>();
+  const keys = new Set<string>();
   for (const issue of catalog.issues) {
     const where = `issue ${issue.id}`;
     if (!ID.test(issue.id)) fail(where, "id is not a slug");
     const project = projects.get(issue.project);
     if (!project) fail(where, `unknown project ${issue.project}`);
     if (!project.issues.includes(issue.id)) fail(where, "is not in its project's order");
-    if (!Number.isInteger(issue.number) || issue.number < 1) fail(where, "needs a number");
-    const key = `${project.key}-${issue.number}`;
-    if (numbers.has(key)) fail(where, `${key} is taken`);
-    numbers.add(key);
+    if (typeof issue.key !== "string") fail(where, "needs a key");
+    if (keys.has(issue.key)) fail(where, `${issue.key} is taken`);
+    keys.add(issue.key);
     text(issue.title, `${where} title`);
     if (!DIFFICULTIES.includes(issue.difficulty)) fail(where, "unknown difficulty");
     if (!STATES.includes(issue.state)) fail(where, "unknown state");
     const revision = revisions[issue.revision];
     if (!revision) fail(where, `live revision ${issue.revision} is missing`);
     if (revision.issue !== issue.id) fail(where, "live revision belongs to another issue");
+    const problem = keyProblem(issue.key, revision.workspace.language);
+    if (problem) fail(where, problem);
   }
   for (const project of catalog.projects)
     for (const id of project.issues)

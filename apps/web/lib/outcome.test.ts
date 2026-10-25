@@ -162,7 +162,7 @@ const pass = (minute: number, runId = "r-3") =>
 const completion: RecordedCompletion = {
   issue: "collected-by-partner",
   revision: REV,
-  key: "DATA-6",
+  key: "SQL-002",
   at: "2026-10-25T10:05:00.000Z",
   runId: "r-3",
   automatic: true,
@@ -189,7 +189,7 @@ const of = (
   });
 const card: Outcome = {
   v: 3,
-  k: "DATA-6",
+  k: "SQL-002",
   l: "sql",
   rv: HEX,
   o: { passed: 15, total: 15 },
@@ -399,7 +399,7 @@ test("a v3 link carries exactly the allowlisted facts and reads back exactly", (
   // Optional fields may be absent.
   const core = {
     v: 3,
-    k: "DATA-6",
+    k: "SQL-002",
     l: "sql",
     rv: HEX,
     o: { passed: 15, total: 15 },
@@ -416,7 +416,7 @@ test("a v3 link we would not have made is refused, never shown in part", () => {
   const raw = (value: unknown) =>
     Buffer.from(JSON.stringify(value)).toString("base64url");
   // Bounded before decoding: an oversized or non-base64url segment is never parsed.
-  const padded = raw({ ...card, k: "DATA-6", pad: "x".repeat(2000) });
+  const padded = raw({ ...card, k: "SQL-002", pad: "x".repeat(2000) });
   assert.equal(decodeOutcome(padded), null);
   assert.equal(decodeOutcome(encodeOutcome(card) + "!"), null);
   for (const bad of [
@@ -444,7 +444,7 @@ test("a v3 link we would not have made is refused, never shown in part", () => {
 test("legacy v2 cards still decode as results, and no card attests how anyone worked", () => {
   const v2: Result = {
     v: 2,
-    k: "QUICK-4",
+    k: "GO-001",
     l: "go",
     c: "ab12cd34ef56",
     t: 252,
@@ -466,11 +466,11 @@ test("legacy v2 cards still decode as results, and no card attests how anyone wo
   const title = "Collected-by-partner report overstates split payments";
   assert.equal(
     outcomeSentence(card, "SQL", title),
-    `Completed “${title}” (DATA-6) in SQL. All 15 checks passed.`,
+    `Completed “${title}” (SQL-002) in SQL. All 15 checks passed.`,
   );
   assert.equal(
     outcomeSentence(card, "SQL", undefined, "first"),
-    "I completed DATA-6 in SQL. All 15 checks passed.",
+    "I completed SQL-002 in SQL. All 15 checks passed.",
   );
   assert.deepEqual(outcomeLines(card), [
     ["checks passed", "15/15", true],

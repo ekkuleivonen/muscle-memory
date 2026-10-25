@@ -162,8 +162,8 @@ export interface IssueMetadata {
   /** Permanent: "refund-totals". */
   readonly id: string;
   readonly project: string;
-  /** Permanent: SHOP-7 is project key + number. */
-  readonly number: number;
+  /** Permanent: PY-003, the language's code and a number (packages/content/keys.ts). */
+  readonly key: string;
   readonly title: string;
   readonly summary: string;
   readonly difficulty: Difficulty;
@@ -177,7 +177,7 @@ export interface IssueMetadata {
 export interface Project {
   /** Permanent: "storefront". */
   readonly id: string;
-  /** Issue keys start with it: SHOP-1. */
+  /** Issue keys start with it: JS-003. */
   readonly key: string;
   readonly title: string;
   readonly summary: string;
@@ -198,7 +198,7 @@ export interface Project {
  * object storage; locally they are one file.
  */
 export interface Catalog {
-  readonly schemaVersion: "2.0.0";
+  readonly schemaVersion: "3.0.0";
   readonly projects: readonly Project[];
   readonly issues: readonly IssueMetadata[];
   readonly revisions: Readonly<Record<string, Revision>>;

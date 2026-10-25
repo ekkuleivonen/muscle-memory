@@ -123,7 +123,7 @@ const records: WorkspaceRecord[] = [
     total,
   }),
   observation("observation.board.moved", 20, {
-    issueKey: "FN-1",
+    issueKey: "PY-002",
     from: "in-progress",
     to: "done",
     via: "pointer",
@@ -202,7 +202,7 @@ test("pull requests are listed newest first, open until the person merges one", 
 test("a pull request closed without merging is closed, and merging wins over closing", () => {
   const close = (number: number) =>
     observation("observation.board.closed", 25, {
-      issueKey: "FN-1",
+      issueKey: "PY-002",
       pullRequest: number,
       via: "pointer",
       nudged: true,

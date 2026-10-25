@@ -24,7 +24,7 @@ const records: WorkspaceRecord[] = [
     type: "observation.board.moved",
     occurredAt: "2026-10-24T09:00:00.000Z",
     issue: "reset-link-expiry",
-    data: { issueKey: "API-2", from: "backlog", to: "todo" },
+    data: { issueKey: "PHP-002", from: "backlog", to: "todo" },
   }),
   record({
     type: "observation.workspace.opened",
@@ -62,7 +62,7 @@ test("the feed lists moves, opens and finished runs, newest first", () => {
   assert.deepEqual(recentActivity(records)[0], {
     kind: "moved",
     at: "2026-10-24T09:00:00.000Z",
-    key: "API-2",
+    key: "PHP-002",
     from: "backlog",
     to: "todo",
   });

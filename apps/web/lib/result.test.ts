@@ -11,7 +11,7 @@ import {
 } from "./result";
 
 const card: Result = {
-  v: 2, k: "QUICK-4", l: "go", c: "ab12cd34ef56",
+  v: 2, k: "GO-001", l: "go", c: "ab12cd34ef56",
   t: 252, rd: 48, ks: 214, ty: 9, w: 71, r: 1, g: 1, p: 1, h: 0, ps: 0, lt: 0,
 };
 
@@ -29,7 +29,7 @@ test("a card survives its link, and anything we would not have made is refused",
   ])
     assert.equal(decodeResult(encodeResult(bad as unknown as Result)), null);
   assert.equal(decodeResult("not base64 json"), null);
-  assert.equal(sentence(card, "Go"), "Completed QUICK-4 in Go.");
+  assert.equal(sentence(card, "Go"), "Completed GO-001 in Go.");
   assert.equal(duration(252), "4 min 12 s");
   assert.equal(duration(48), "48 s");
 });
@@ -125,17 +125,17 @@ test("the share sentence names the challenge and claims only what the card's che
   const title = "The composer says 1 word when the post is empty";
   assert.equal(
     sentence({ ...card, ev }, "Go", title),
-    `Completed “${title}” (QUICK-4) in Go. All 15 checks passed.`,
+    `Completed “${title}” (GO-001) in Go. All 15 checks passed.`,
   );
   const partial = { ...ev, checks: { passed: 12, total: 15, result: "checks-failed" as const } };
   assert.equal(
     sentence({ ...card, ev: partial }, "Go"),
-    "Completed QUICK-4 in Go. 12/15 checks passed.",
+    "Completed GO-001 in Go. 12/15 checks passed.",
   );
   // A card says it was merged, or it is not described as completed at all.
   assert.equal(
     sentence({ ...card, ev: { ...ev, state: "open" } }, "Go"),
-    "Worked on QUICK-4 in Go. Not completed.",
+    "Worked on GO-001 in Go. Not completed.",
   );
   for (const text of [sentence(card, "Go"), sentence({ ...card, ev }, "Go", title)])
     assert.doesNotMatch(text, /merge|pull request|fix for|bug|without AI|faster|%/i);

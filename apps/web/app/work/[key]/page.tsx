@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * The IDE for one issue, `/work/FN-1`, on its live revision. `?revision=sha256:…` opens one of
+ * The IDE for one issue, `/work/PY-002`, on its live revision. `?revision=sha256:…` opens one of
  * the issue's published revisions exactly, so a link can name the version it was made on; a
  * revision that is not published (another issue's, or one pruned since) opens the live one
  * at the plain URL instead. The issue's revisions travel to the browser as a JSON string,

@@ -35,7 +35,7 @@ const common = () => ({
 });
 const v3: Outcome = {
   v: 3,
-  k: "DATA-6",
+  k: "SQL-002",
   l: "sql",
   rv: "d".repeat(64),
   o: { passed: 15, total: 15 },
@@ -45,7 +45,7 @@ const v3: Outcome = {
 };
 const v2 = {
   v: 2,
-  k: "DATA-6",
+  k: "SQL-002",
   l: "sql",
   c: "ab12cd34ef56",
   t: 252,
@@ -65,7 +65,7 @@ const share = (card: unknown) =>
     ...common(),
     issue: { id: "collected-by-partner", revision: REV },
     data: {
-      issueKey: "DATA-6",
+      issueKey: "SQL-002",
       channel: "copy",
       ref: "ab12cd34ef56",
       card: card as never,
@@ -156,7 +156,7 @@ test(
           ...common(),
           issue: { id: "collected-by-partner", revision: REV },
           data: {
-            issueKey: "DATA-6",
+            issueKey: "SQL-002",
             from: "in-progress",
             to: "done",
             onBoardBefore: 1,

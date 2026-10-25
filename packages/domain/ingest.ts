@@ -7,7 +7,12 @@
  * verbatim as the raw record.
  */
 import { safeIdentifier } from "./capture";
-import { BOARD_CAPTURE_VERSION, validateBoardMoveData, type BoardMoveData } from "./board";
+import {
+  BOARD_CAPTURE_VERSION,
+  CHECKS_PASSED_CAPTURE,
+  validateBoardMoveData,
+  type BoardMoveData,
+} from "./board";
 import { WORKSPACE_CAPTURE_VERSION, type WorkspaceRecord } from "./workspace";
 
 export const INGEST_PROTOCOL = "ingest-1";
@@ -16,12 +21,14 @@ export const BATCH_MAX_RECORDS = 500;
 export const BATCH_MAX_BYTES = 1_000_000;
 /**
  * Capture versions the server accepts. Earlier board versions were live and browsers may
- * still hold queued records of them: 6.0.0, 6.1.0 (closing), 7.0.0 (replays, deploys). Each
+ * still hold queued records of them: 6.0.0, 6.1.0 (closing), 7.0.0 (replays, deploys), 7.1.0
+ * (resolving), 7.2.0 (automatic completion; project-based keys). Each
  * record keeps the meaning of its own version; older versions were never released.
  */
 export const ACCEPTED_CAPTURE = [
   WORKSPACE_CAPTURE_VERSION,
   BOARD_CAPTURE_VERSION,
+  "board-capture-7.2.0",
   "board-capture-7.1.0",
   "board-capture-7.0.0",
   "board-capture-6.1.0",
@@ -136,8 +143,8 @@ export function checkRecord(
     return refuse("unknown capture version");
   const moved = value.data as BoardMoveData | undefined;
   if (type === "observation.board.moved" && moved?.trigger === "checks-passed") {
-    if (capture !== "board-capture-7.2.0")
-      return refuse("checks-passed requires board capture 7.2.0");
+    if (!CHECKS_PASSED_CAPTURE.includes(capture))
+      return refuse("checks-passed requires board capture 7.2.0 or later");
     if (
       typeof value.issue !== "string" ||
       !value.issue ||

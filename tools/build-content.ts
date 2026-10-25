@@ -128,12 +128,26 @@ function revisionOf(seed: SeedIssue, key: string, project: (typeof SEED_PROJECTS
   };
 }
 
-// Only earlier revisions are kept from the old catalog, so only they are verified: its live
-// metadata (difficulty, labels, state) is rebuilt from the seed and may predate today's rules.
+// From the old catalog: its revisions, verified against their hashes and kept, and, for each
+// issue, its live revision and key (continuity and key permanence below). The rest of its live
+// metadata is rebuilt from the seed, so it is not validated: it may predate today's rules.
 const previous = await readFile(destination, "utf8").then(
   (text) => {
-    const old = JSON.parse(text) as Partial<Catalog>;
-    return verifyCatalog({ ...old, projects: [], issues: [] });
+    const old = JSON.parse(text) as { revisions?: unknown; issues?: unknown };
+    const { revisions } = verifyCatalog({
+      schemaVersion: "3.0.0",
+      projects: [],
+      issues: [],
+      revisions: old.revisions ?? {},
+    });
+    const issues = (Array.isArray(old.issues) ? old.issues : []).map(
+      (issue: { id?: unknown; revision?: unknown; key?: unknown }) => ({
+        id: String(issue.id),
+        revision: String(issue.revision),
+        key: typeof issue.key === "string" ? issue.key : undefined,
+      }),
+    );
+    return { revisions, issues };
   },
   () => null,
 );
@@ -143,11 +157,10 @@ const issues: IssueMetadata[] = [];
 // Every issue's problems, so one run lists them all.
 const blocked: string[] = [];
 for (const project of SEED_PROJECTS)
-  project.issues.forEach((id, index) => {
+  project.issues.forEach((id) => {
     const seed = seeds.get(id);
     if (!seed) throw new Error(`${project.id} lists unknown issue ${id}.`);
-    const number = index + 1;
-    const revision = revisionOf(seed, `${project.key}-${number}`, project);
+    const revision = revisionOf(seed, seed.key, project);
     if (seed.private) {
       const problems = publishProblems(revision, seed.private);
       if (problems.length)
@@ -161,10 +174,16 @@ for (const project of SEED_PROJECTS)
       blocked.push(`${seed.id} would lose saved work:\n  ${stranded.join("\n  ")}`);
     const rid = revisionId(revision);
     revisions[rid] = revision;
+    // Keys are permanent: a published issue keeps its key, and no key ever moves to another.
+    const before_ = previous?.issues.find((i) => i.id === id);
+    if (before_?.key && before_.key !== seed.key)
+      blocked.push(`${seed.id} was published as ${before_.key}; keys never change.`);
+    const holder = previous?.issues.find((i) => i.key === seed.key && i.id !== id);
+    if (holder) blocked.push(`${seed.key} belongs to ${holder.id}; keys are never reused.`);
     issues.push({
       id,
       project: project.id,
-      number,
+      key: seed.key,
       title: seed.title,
       summary: seed.summary,
       difficulty: seed.difficulty,
@@ -179,7 +198,7 @@ for (const id of seeds.keys())
   if (!issues.some((i) => i.id === id)) throw new Error(`${id} is in no project.`);
 
 const catalog: Catalog = verifyCatalog({
-  schemaVersion: "2.0.0",
+  schemaVersion: "3.0.0",
   projects: SEED_PROJECTS.map(({ id, key, title, summary, story, issues, listed }) => ({
     id,
     key,

@@ -25,7 +25,7 @@ const base = {
   termsVersion: "2026-10-24",
   issue: { id: "reset-link-expiry", revision: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
   data: {
-    issueKey: "API-2",
+    issueKey: "PHP-002",
     from: "backlog" as const,
     to: "in-progress" as const,
     via: "keyboard" as const,
@@ -146,12 +146,12 @@ test("only a replay takes a done issue back, to In progress, without a pull requ
 test("a reply to a review comment is recorded on the board, its text bounded", () => {
   const reply = boardReply({
     ...base,
-    data: { issueKey: "API-2", pullRequest: 3, comment: "ada-abs", text: "Refunds stay negative." },
+    data: { issueKey: "PHP-002", pullRequest: 3, comment: "ada-abs", text: "Refunds stay negative." },
   });
   assert.equal(reply.type, "observation.board.replied");
   assert.equal(reply.captureVersion, BOARD_CAPTURE_VERSION);
   assert.deepEqual(reply.data, {
-    issueKey: "API-2",
+    issueKey: "PHP-002",
     pullRequest: 3,
     comment: "ada-abs",
     text: "Refunds stay negative.",
@@ -160,15 +160,15 @@ test("a reply to a review comment is recorded on the board, its text bounded", (
   });
   const long = boardReply({
     ...base,
-    data: { issueKey: "API-2", pullRequest: 3, comment: "ada-abs", text: "é".repeat(REPLY_LIMIT_BYTES) },
+    data: { issueKey: "PHP-002", pullRequest: 3, comment: "ada-abs", text: "é".repeat(REPLY_LIMIT_BYTES) },
   });
   assert.equal(long.data.truncated, true);
   assert.equal(long.data.textBytes, REPLY_LIMIT_BYTES * 2);
   assert.ok(new TextEncoder().encode(long.data.text).length <= REPLY_LIMIT_BYTES);
   assert.deepEqual(boardPayloads([boardRecord(reply)]).length, 1);
   for (const data of [
-    { issueKey: "API-2", pullRequest: 0, comment: "ada-abs", text: "x" },
-    { issueKey: "API-2", pullRequest: 3, comment: "ada-abs", text: "  " },
+    { issueKey: "PHP-002", pullRequest: 0, comment: "ada-abs", text: "x" },
+    { issueKey: "PHP-002", pullRequest: 3, comment: "ada-abs", text: "  " },
   ])
     assert.throws(() => boardReply({ ...base, data }));
 });
@@ -176,12 +176,12 @@ test("a reply to a review comment is recorded on the board, its text bounded", (
 test("closing a pull request without merging names it and how", () => {
   const closed = boardClose({
     ...base,
-    data: { issueKey: "API-2", pullRequest: 1, via: "pointer", nudged: true },
+    data: { issueKey: "PHP-002", pullRequest: 1, via: "pointer", nudged: true },
   });
   assert.equal(closed.type, "observation.board.closed");
-  assert.deepEqual(closed.data, { issueKey: "API-2", pullRequest: 1, via: "pointer", nudged: true });
+  assert.deepEqual(closed.data, { issueKey: "PHP-002", pullRequest: 1, via: "pointer", nudged: true });
   for (const data of [
-    { issueKey: "API-2", pullRequest: 0, via: "pointer" as const, nudged: false },
+    { issueKey: "PHP-002", pullRequest: 0, via: "pointer" as const, nudged: false },
     { issueKey: "api-2", pullRequest: 1, via: "pointer" as const, nudged: false },
   ])
     assert.throws(() => boardClose({ ...base, data }));
@@ -201,7 +201,7 @@ test("page views, page state and profile answers; only views may name an issue",
   const onIssue = boardView({
     ...common,
     issue: base.issue,
-    data: { path: "/issues/API-2", query: "", previous: "/issues?q=kind%3Abug" },
+    data: { path: "/issues/PHP-002", query: "", previous: "/issues?q=kind%3Abug" },
   });
   assert.equal(onIssue.issue, "reset-link-expiry");
   assert.throws(
@@ -244,7 +244,7 @@ test("arrivals and shares carry a referral code, never anything that names a per
   const shared = boardShare({
     ...common,
     issue: base.issue,
-    data: { issueKey: "API-2", channel: "x", ref: "ab12cd34ef56", card: { m: 6 } },
+    data: { issueKey: "PHP-002", channel: "x", ref: "ab12cd34ef56", card: { m: 6 } },
   });
   assert.equal(shared.type, "observation.board.shared");
   assert.equal(shared.issue, base.issue.id);
@@ -263,12 +263,12 @@ test("resolving a review finding names the pull request and the finding, nothing
   const resolved = boardResolve({
     ...base,
     issue,
-    data: { issueKey: "INC-1", pullRequest: 2, comment: "catch-hides-guests", via: "pointer" },
+    data: { issueKey: "JS-001", pullRequest: 2, comment: "catch-hides-guests", via: "pointer" },
   });
   assert.equal(resolved.type, "observation.board.resolved");
   assert.equal(resolved.captureVersion, BOARD_CAPTURE_VERSION);
   assert.deepEqual(resolved.data, {
-    issueKey: "INC-1",
+    issueKey: "JS-001",
     pullRequest: 2,
     comment: "catch-hides-guests",
     via: "pointer",
@@ -277,7 +277,7 @@ test("resolving a review finding names the pull request and the finding, nothing
     boardResolve({
       ...base,
       issue,
-      data: { issueKey: "INC-1", pullRequest: 2, comment: "catch-hides-guests", via: "pointer", ...data },
+      data: { issueKey: "JS-001", pullRequest: 2, comment: "catch-hides-guests", via: "pointer", ...data },
     });
   assert.throws(bad({ pullRequest: 0 }), /pull request/);
   assert.throws(bad({ comment: "not a slug!" }), /identifier/);
@@ -309,7 +309,7 @@ test("automatic completion records the Submit cause and exact internal submissio
     nudged: false,
   };
   const completed = boardMove({ ...base, data });
-  assert.equal(completed.captureVersion, "board-capture-7.2.0");
+  assert.equal(completed.captureVersion, "board-capture-7.3.0");
   assert.deepEqual(completed.data, data);
   for (const change of [
     { runId: undefined },

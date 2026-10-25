@@ -2,7 +2,7 @@
 
 What an issue is, how it is managed and where it is stored.
 
-**Built so far:** the model itself. Issue metadata, revisions and the catalog are in `packages/content` (types, validation, revision hashing). The seed (`content/seed.ts`) is built into `content/catalog.json` by `tools/build-content.ts`, and the app reads every page and the IDE from it. Recorded data names the issue and revision. The IDE takes several editable and read-only files, recorded per file (JavaScript, TypeScript and Python run them; other runners still load one source file). Teammate comments, review threads and hints are released by their triggers (`packages/content/triggers.ts`, read from records by `apps/web/lib/feedback.ts`), recorded, and blocking threads hold the merge. Cases can be CI-only (`hidden` in the seed): Run tests runs the repo's test file, CI on a pull request runs every case and shows every result, CI-only ones included, as a CI log would. A seed issue's private part (reference solution, trigger examples) feeds the publish checks: the content build checks the examples, the reference against blocking comments and the hints (`packages/content/publish.ts`), and `npm run check:publish` runs the reference and the starter in the browser sandbox (`tools/browser/content-check.ts`). SHOP-5 is the first multi-file issue with all of it. **Not built yet:** static rules and scaling checks in CI, author notes, the database, R2 and the admin UI. Until then, the seed and its build stand in for authoring.
+**Built so far:** the model itself. Issue metadata, revisions and the catalog are in `packages/content` (types, validation, revision hashing). The seed (`content/seed.ts`) is built into `content/catalog.json` by `tools/build-content.ts`, and the app reads every page and the IDE from it. Recorded data names the issue and revision. The IDE takes several editable and read-only files, recorded per file (JavaScript, TypeScript and Python run them; other runners still load one source file). Teammate comments, review threads and hints are released by their triggers (`packages/content/triggers.ts`, read from records by `apps/web/lib/feedback.ts`), recorded, and blocking threads hold the merge. Cases can be CI-only (`hidden` in the seed): Run tests runs the repo's test file, CI on a pull request runs every case and shows every result, CI-only ones included, as a CI log would. A seed issue's private part (reference solution, trigger examples) feeds the publish checks: the content build checks the examples, the reference against blocking comments and the hints (`packages/content/publish.ts`), and `npm run check:publish` runs the reference and the starter in the browser sandbox (`tools/browser/content-check.ts`). JS-005 is the first multi-file issue with all of it. **Not built yet:** static rules and scaling checks in CI, author notes, the database, R2 and the admin UI. Until then, the seed and its build stand in for authoring.
 
 ## Single file (current contract)
 
@@ -61,7 +61,7 @@ Two parts: **metadata** (live) and **revision content** (immutable). Published r
 ```ts
 interface IssueMetadata {
   id: string; // "refund-totals": permanent
-  number: number; // SHOP-5: project key + number, permanent
+  key: string; // "PY-003": the language's code and a number, permanent (see Keys)
   project: string; // the project that lists it
   title: string;
   summary: string;
@@ -120,7 +120,7 @@ interface Checks {
 
 The **private** part holds what a player must never receive: the **reference solution**, optional **alternatives** (other correct designs, which must pass every case) and **wrong fixes** (plausible mistakes, which must fail at least one), **trigger examples** (code that must and must not fire each comment), and **author notes**.
 
-A revision may also carry a **chat**: lines of team atmosphere, never clues, each released by a recorded action (the attempt starting, a file opened, a local run's case, a pull request, a CI case, the merge). What has been said is a pure function of the attempt's records, so it is shown, not recorded. Only INC-1's earlier revisions, from the retired incident, have one. The app no longer shows a chat anywhere, so the lines are kept only as part of those revisions' content. It lives in the database next to each revision. Publication checks use it; it is never written to a bundle.
+A revision may also carry a **chat**: lines of team atmosphere, never clues, each released by a recorded action (the attempt starting, a file opened, a local run's case, a pull request, a CI case, the merge). What has been said is a pure function of the attempt's records, so it is shown, not recorded. Only JS-001's earlier revisions, from the retired incident, have one. The app no longer shows a chat anywhere, so the lines are kept only as part of those revisions' content. It lives in the database next to each revision. Publication checks use it; it is never written to a bundle.
 
 ### Bundles: a whole mini repo in one object
 
@@ -147,7 +147,7 @@ interface TeamComment {
 - **The ticket's own thread** is the issue comments on the `opened` event: they are part of the ticket, shown on the issue page and in the IDE from the start, and not recorded as feedback.
 - **Other issue comments** are checked whenever feedback is (opening the IDE, after every run and push, and every 30 seconds) against the current code and the latest push's checks, and posted to the ticket's thread at most once.
 - **Review comments** are checked only when a push's checks finish, against the code pushed and that push's results, at most once per pull request. They appear on the pull request's page as threads, with the push they reviewed.
-- A revision may make CI failures findings (`ciFindings: "explicit"`, used by INC-1): a failing push opens one on its pull request, cleared only by Resolve; passing checks are still required to merge.
+- A revision may make CI failures findings (`ciFindings: "explicit"`, used by JS-001): a failing push opens one on its pull request, cleared only by Resolve; passing checks are still required to merge.
 - A review comment may require an explicit **Resolve** (`resolve: "explicit"`): then only the person's Resolve clears it, never a fixing push or a reply. Every blocking and nit review comment in the JavaScript and Python issues needs one; informational notes never do.
 - A **blocking** review comment must be resolved before merging: either a later push no longer triggers it (recorded as resolved by code), or the player replies (resolved by reply). A reply needs no approval; its text is recorded. With `repeat: "while-true"` a resolved thread opens again on a later push that triggers it. A **nit** or **info** comment never blocks. Merge needs green CI _and_ every blocking thread resolved. Only review comments may block.
 
@@ -198,7 +198,7 @@ From these, every attempt can say when it stopped being unaided, which feedback 
 
 ## A worked example
 
-**SHOP-5 · Refunds give back less than the customer paid** (bug, medium, JavaScript), in `content/seed.ts`:
+**JS-005 · Refunds give back less than the customer paid** (bug, medium, JavaScript), in `content/seed.ts`:
 
 - **Ticket:** support escalated a refund on an order with a promo code that gave back less than the customer paid, with the receipt in the body. The title names the symptom, not the cause, and no failing test is given.
 - **Workspace:**
@@ -219,6 +219,10 @@ From these, every attempt can say when it stopped being unaided, which feedback 
   - three other correct designs (a hand-written loop, `-Math.abs(…)`, a reworded `orderTotal`), which must pass every case and fire no blocking comment;
   - three plausible wrong fixes, which must each fail a case: recomputing the code's discount on just the returned lines (right for the ticket's jacket, wrong for a fixed-amount code on part of an order), ignoring the discount, and the wrong sign;
   - for each review comment that reads code, an example that must fire it and one that must not.
+
+## Keys
+
+A challenge's key is its language's file-extension code and a three-digit number: `PY-003`, `JS-012`, `CPP-001` (the codes are in `packages/content/keys.ts`). It is written into the seed (`key`), checked by the catalog build against the issue's language, and permanent: a published issue keeps its key, no key ever moves to another issue, and a new challenge takes the next free number in its language. Keys were first numbered easiest first within each language. They appear in URLs (`/work/PY-003`), on the board, in shared cards and, as `issueKey`, in board observations from capture 7.3.0; records and cards made earlier carry the project keys of the time (`FN-1`), and the permanent `id` joins the two.
 
 ## Managing issues
 

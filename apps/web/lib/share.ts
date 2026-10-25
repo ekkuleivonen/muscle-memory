@@ -9,6 +9,7 @@
  * challenge has one file to edit, so a link normally carries one; the format takes up to
  * `MAX_FILES`, so links made when challenges had several still read back whole.
  */
+import { ISSUE_KEY } from "../../../packages/domain/board";
 import { decodeOutcome, type Outcome } from "./outcome";
 import { decodeResult, type Result } from "./result";
 
@@ -24,8 +25,6 @@ export type CardLink =
   /** It decodes, but from a card version we no longer show; the issue it names, if any. */
   | { readonly kind: "older"; readonly key: string | null }
   | { readonly kind: "malformed" };
-
-const KEY = /^[A-Z][A-Z0-9]{1,4}-[1-9]\d{0,3}$/;
 
 /** Reads a result link's path segment. Never invents a result for one that does not decode. */
 export function inspectCard(segment: string): CardLink {
@@ -45,7 +44,10 @@ export function inspectCard(segment: string): CardLink {
     )
       return {
         kind: "older",
-        key: typeof value.k === "string" && KEY.test(value.k) ? value.k : null,
+        key:
+          typeof value.k === "string" && ISSUE_KEY.test(value.k)
+            ? value.k
+            : null,
       };
   } catch {
     // Not base64url JSON at all.

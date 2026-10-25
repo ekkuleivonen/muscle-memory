@@ -17,35 +17,35 @@ import { catalog } from "./test-fixtures";
 const issues = library(catalog).issues.map(summarize);
 
 test("statuses set by hand round-trip through storage; Done is refused", () => {
-  let items = setStatus([], "API-2", "todo", "2026-10-24T10:00:00Z");
-  items = setStatus(items, "EDGE-3", "in-progress", "2026-10-24T11:00:00Z");
-  items = setStatus(items, "API-2", "in-progress", "2026-10-24T12:00:00Z");
+  let items = setStatus([], "PHP-002", "todo", "2026-10-24T10:00:00Z");
+  items = setStatus(items, "CPP-001", "in-progress", "2026-10-24T11:00:00Z");
+  items = setStatus(items, "PHP-002", "in-progress", "2026-10-24T12:00:00Z");
   assert.deepEqual(
     items.map((i) => [i.key, i.status, i.addedAt]),
     [
-      ["API-2", "in-progress", "2026-10-24T10:00:00Z"],
-      ["EDGE-3", "in-progress", "2026-10-24T11:00:00Z"],
+      ["PHP-002", "in-progress", "2026-10-24T10:00:00Z"],
+      ["CPP-001", "in-progress", "2026-10-24T11:00:00Z"],
     ],
   );
   assert.deepEqual(parseBoard(serializeBoard(items)), items);
   assert.deepEqual(
-    setStatus(items, "API-2", "backlog", "t").map((i) => i.key),
-    ["EDGE-3"],
+    setStatus(items, "PHP-002", "backlog", "t").map((i) => i.key),
+    ["CPP-001"],
   );
-  assert.equal(statusOf(items, "EDGE-3"), "in-progress");
-  assert.equal(statusOf(items, "SHOP-1"), "backlog");
-  assert.throws(() => setStatus(items, "API-2", "done" as never, "t"), /Done/);
+  assert.equal(statusOf(items, "CPP-001"), "in-progress");
+  assert.equal(statusOf(items, "JS-003"), "backlog");
+  assert.throws(() => setStatus(items, "PHP-002", "done" as never, "t"), /Done/);
 });
 
 test("boards saved before statuses existed read as Todo", () => {
   assert.deepEqual(
-    parseBoard(JSON.stringify({ items: [{ key: "API-2", addedAt: "x" }] })),
-    [{ key: "API-2", addedAt: "x", status: "todo" }],
+    parseBoard(JSON.stringify({ items: [{ key: "PHP-002", addedAt: "x" }] })),
+    [{ key: "PHP-002", addedAt: "x", status: "todo" }],
   );
   assert.deepEqual(
     parseBoard(
       JSON.stringify({
-        items: [{ key: "API-2", addedAt: "x", status: "done" }],
+        items: [{ key: "PHP-002", addedAt: "x", status: "done" }],
       }),
     ),
     [],
@@ -59,63 +59,63 @@ test("malformed or tampered storage is ignored, not trusted", () => {
     parseBoard(
       JSON.stringify({
         items: [
-          { key: "API-2", addedAt: "x" },
-          { key: "API-2", addedAt: "y" },
+          { key: "PHP-002", addedAt: "x" },
+          { key: "PHP-002", addedAt: "y" },
           { key: "<script>", addedAt: "x" },
-          { key: "API-3" },
+          { key: "TS-004" },
           null,
         ],
       }),
     ),
-    [{ key: "API-2", addedAt: "x", status: "todo" }],
+    [{ key: "PHP-002", addedAt: "x", status: "todo" }],
   );
 });
 
 test("the soft limit starts at three on the board", () => {
-  const two = ["API-1", "API-2"].reduce<BoardItem[]>(
+  const two = ["GO-002", "PHP-002"].reduce<BoardItem[]>(
     (all, key) => setStatus(all, key, "todo", "t"),
     [],
   );
   assert.equal(boardFull(two), false);
-  assert.equal(boardFull(setStatus(two, "API-3", "in-progress", "t")), true);
+  assert.equal(boardFull(setStatus(two, "TS-004", "in-progress", "t")), true);
 });
 
 test("the board keeps the order issues were added and skips ones that no longer exist", () => {
   const items: BoardItem[] = [
-    { key: "EDGE-3", addedAt: "a", status: "in-progress" },
+    { key: "CPP-001", addedAt: "a", status: "in-progress" },
     { key: "GONE-1", addedAt: "b", status: "todo" },
-    { key: "FN-1", addedAt: "c", status: "todo" },
+    { key: "PY-002", addedAt: "c", status: "todo" },
   ];
   assert.deepEqual(
     boardIssues(items, issues).map(({ issue, status }) => [issue.key, status]),
     [
-      ["EDGE-3", "in-progress"],
-      ["FN-1", "todo"],
+      ["CPP-001", "in-progress"],
+      ["PY-002", "todo"],
     ],
   );
 });
 
 test("a run passing every check moves an issue to Done, for good", () => {
-  const items = setStatus([], "FN-1", "in-progress", "t1");
-  const done = complete(items, "FN-1", "t2");
+  const items = setStatus([], "PY-002", "in-progress", "t1");
+  const done = complete(items, "PY-002", "t2");
   assert.deepEqual(done, [
-    { key: "FN-1", addedAt: "t1", status: "done", doneAt: "t2" },
+    { key: "PY-002", addedAt: "t1", status: "done", doneAt: "t2" },
   ]);
   // Done straight from the backlog joins the board as done.
-  assert.deepEqual(complete([], "API-2", "t3"), [
-    { key: "API-2", addedAt: "t3", status: "done", doneAt: "t3" },
+  assert.deepEqual(complete([], "PHP-002", "t3"), [
+    { key: "PHP-002", addedAt: "t3", status: "done", doneAt: "t3" },
   ]);
   // It stays done: passing again, or choosing a status by hand, changes nothing.
-  assert.deepEqual(complete(done, "FN-1", "t9"), done);
-  assert.deepEqual(setStatus(done, "FN-1", "todo", "t9"), done);
-  assert.deepEqual(setStatus(done, "FN-1", "backlog", "t9"), done);
-  assert.equal(statusOf(done, "FN-1"), "done");
+  assert.deepEqual(complete(done, "PY-002", "t9"), done);
+  assert.deepEqual(setStatus(done, "PY-002", "todo", "t9"), done);
+  assert.deepEqual(setStatus(done, "PY-002", "backlog", "t9"), done);
+  assert.equal(statusOf(done, "PY-002"), "done");
   // Stored and read back, including when it was done.
   assert.deepEqual(parseBoard(serializeBoard(done)), done);
   assert.deepEqual(
     parseBoard(
       JSON.stringify({
-        items: [{ key: "FN-1", addedAt: "t", status: "done" }],
+        items: [{ key: "PY-002", addedAt: "t", status: "done" }],
       }),
     ),
     [],
@@ -123,12 +123,12 @@ test("a run passing every check moves an issue to Done, for good", () => {
 });
 
 test("done issues leave the queue: they never count toward the soft limit", () => {
-  let items = ["SHOP-1", "SHOP-2", "SHOP-3"].reduce(
+  let items = ["JS-003", "TS-002", "HTML-001"].reduce(
     (acc, key) => setStatus(acc, key, "todo", "t"),
     [] as ReturnType<typeof setStatus>,
   );
   assert.equal(boardFull(items), true);
-  items = complete(items, "SHOP-1", "t2");
+  items = complete(items, "JS-003", "t2");
   assert.equal(activeCount(items), 2);
   assert.equal(boardFull(items), false);
 });

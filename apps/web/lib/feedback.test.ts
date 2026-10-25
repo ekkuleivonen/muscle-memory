@@ -6,7 +6,7 @@ import { historical } from "./test-fixtures";
 
 // Hints and teammate comments live on in the revisions before ENG-329; they are tested there.
 const published = historical("frequency-map");
-// The default rules, where a fixing push or a reply resolves a thread. FN-1's own findings need an
+// The default rules, where a fixing push or a reply resolves a thread. PY-002's own findings need an
 // explicit Resolve (see the incident tests), so these tests read its comments without it.
 const fixture = {
   ...published,
@@ -20,7 +20,7 @@ const revisionFor = (id: string) => (id === fixture.id ? fixture.revision : unde
 const CLEAN = "def frequency_map(items):\n    counts = {}\n    for item in items:\n        counts[item] = counts.get(item, 0) + 1\n    return counts\n";
 const DEBUG = CLEAN.replace("    return counts", "    print(counts)\n    return counts");
 
-/** A recorded history for FN-1, built one step at a time. */
+/** A recorded history for PY-002, built one step at a time. */
 function history() {
   const records: WorkspaceRecord[] = [];
   let sequence = 0;
@@ -113,7 +113,7 @@ function history() {
           });
     },
     reply(number: number, comment: string, text: string) {
-      observe("observation.board.replied", { issueKey: "FN-1", pullRequest: number, comment, text });
+      observe("observation.board.replied", { issueKey: "PY-002", pullRequest: number, comment, text });
     },
     due(files: string, push?: { number: number; push: number }) {
       return due({

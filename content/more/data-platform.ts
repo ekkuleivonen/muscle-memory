@@ -205,6 +205,7 @@ ORDER BY collected DESC, o.partner;
 export const issues: SeedIssue[] = [
   {
     id: "collected-by-partner",
+    key: "SQL-002",
     title: "Collected-by-partner report overstates split payments",
     summary: "Sum what was actually paid, and list partners who paid nothing.",
     difficulty: "easy",
@@ -319,6 +320,7 @@ Requirement: every payment counts. Two payments of the same amount are two payme
   },
   {
     id: "dedupe-phone-customers",
+    key: "PY-008",
     title: "Active customers report is short 212 customers",
     summary: "Monday's report lost 212 customers, all phone orders from the Leeds store.",
     difficulty: "medium",
@@ -489,6 +491,7 @@ def dedupe_customers(rows):
   },
   {
     id: "bracketed-refunds",
+    key: "PY-010",
     title: "Bluefin settlements don't match their statements",
     summary: "Bluefin's new export writes refunds and fees in brackets; the report loses or misreads them.",
     difficulty: "hard",

@@ -11,6 +11,7 @@
  * by ENG-328) and the full checks recorded before it in the same attempt. Nothing is
  * recomputed or inferred. Like v2, a link is a brag, not a record: anyone could edit one.
  */
+import { ISSUE_KEY } from "../../../packages/domain/board";
 import type { WorkspaceRecord } from "../../../packages/domain/workspace";
 import { attemptRecords } from "./attempts";
 
@@ -21,7 +22,7 @@ export interface Checks {
 
 export interface Outcome {
   readonly v: 3;
-  /** Challenge key, e.g. DATA-6. */
+  /** Challenge key, e.g. SQL-002. */
   readonly k: string;
   /** Language id. */
   readonly l: string;
@@ -47,7 +48,6 @@ export interface RecordedCompletion {
   readonly automatic: boolean;
 }
 
-const KEY = /^[A-Z][A-Z0-9]{1,4}-[1-9]\d{0,3}$/;
 const LANGUAGE = /^[a-z+#]{1,16}$/;
 const REFERRAL = /^[a-z0-9]{6,32}$/;
 const HEX = /^[0-9a-f]{64}$/;
@@ -306,7 +306,7 @@ export function decodeOutcome(segment: string): Outcome | null {
       value.v === 3 &&
       Object.keys(value).every((k) => FIELDS.has(k)) &&
       typeof value.k === "string" &&
-      KEY.test(value.k) &&
+      ISSUE_KEY.test(value.k) &&
       typeof value.l === "string" &&
       LANGUAGE.test(value.l) &&
       typeof value.rv === "string" &&

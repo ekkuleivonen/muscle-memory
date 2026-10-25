@@ -7,6 +7,7 @@
  * and nobody should trust it more than a screenshot. It carries the device's referral code,
  * never the participant ID.
  */
+import { ISSUE_KEY } from "../../../packages/domain/board";
 import { parsePublicEvidence, type PublicEvidence } from "./evidence";
 import type { Revision } from "../../../packages/content/model";
 import { casesRun } from "../../../packages/content/model";
@@ -48,7 +49,7 @@ export interface Result extends Metrics {
   readonly fp?: number;
   /** How many people the comparison is with, or that this is one of the first of. */
   readonly fn?: number;
-  /** Issue key, e.g. QUICK-4. */
+  /** Issue key, e.g. GO-001. */
   readonly k: string;
   /** Language id. */
   readonly l: string;
@@ -317,7 +318,7 @@ export function decodeResult(segment: string): Result | null {
     const ok =
       value?.v === 2 &&
       typeof value.k === "string" &&
-      /^[A-Z][A-Z0-9]{1,4}-[1-9]\d{0,3}$/.test(value.k) &&
+      ISSUE_KEY.test(value.k) &&
       typeof value.l === "string" &&
       /^[a-z+#]{1,16}$/.test(value.l) &&
       typeof value.c === "string" &&

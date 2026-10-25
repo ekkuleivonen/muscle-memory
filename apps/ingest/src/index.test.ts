@@ -185,10 +185,10 @@ test("aggregates are served from the control bucket, or empty before the first r
   const { env, objects } = fakes();
   const get = () => handle(new Request("https://musclememory.run/ingest/v1/aggregates"), env);
   assert.deepEqual(await (await get()).json(), { version: 1, issues: {} });
-  objects.set("aggregates/v1.json", JSON.stringify({ version: 1, issues: { "QUICK-1": { n: 3 } } }));
+  objects.set("aggregates/v1.json", JSON.stringify({ version: 1, issues: { "PY-001": { n: 3 } } }));
   const response = await get();
   assert.equal(response.headers.get("cache-control"), "public, max-age=3600");
-  assert.equal((await response.json()).issues["QUICK-1"].n, 3);
+  assert.equal((await response.json()).issues["PY-001"].n, 3);
 });
 
 test("board records from 6.0.0, 6.1.0, 7.0.0 and 7.1.0 are accepted, older ones are not", async () => {
@@ -200,7 +200,7 @@ test("board records from 6.0.0, 6.1.0, 7.0.0 and 7.1.0 are accepted, older ones 
       observationId: `board-a.${sequence}`,
       source: { id: "board-a", sequence },
       captureVersion,
-      data: { issueKey: "INC-1", from: "todo", to: "in-progress", via: "pointer", trigger: "start-work", onBoardBefore: 0, nudged: false },
+      data: { issueKey: "JS-001", from: "todo", to: "in-progress", via: "pointer", trigger: "start-work", onBoardBefore: 0, nudged: false },
       ...extra,
     });
   const records = [
@@ -210,12 +210,12 @@ test("board records from 6.0.0, 6.1.0, 7.0.0 and 7.1.0 are accepted, older ones 
     board(5, "board-capture-7.1.0", {
       consentVersion: "terms-2026-10-25.1",
       type: "observation.board.resolved",
-      data: { issueKey: "INC-1", pullRequest: 1, comment: "catch-hides-guests", via: "pointer" },
+      data: { issueKey: "JS-001", pullRequest: 1, comment: "catch-hides-guests", via: "pointer" },
     }),
     board(2, "board-capture-7.0.0", {
       consentVersion: "terms-2026-10-25.1",
       type: "observation.board.deployed",
-      data: { issueKey: "INC-1", pullRequest: 1, runId: "run-1", via: "pointer" },
+      data: { issueKey: "JS-001", pullRequest: 1, runId: "run-1", via: "pointer" },
     }),
     board(3, "board-capture-5.0.0"),
   ].map((r) => ({ ...r, recordId: JSON.parse(r.payload).observationId }));
@@ -245,7 +245,7 @@ test("7.2 checked completion uses the real constructor/validator and preserves o
   const make = (sequence: number, trigger: "checks-passed" | "pull-request-merged") => boardRecord(boardMove({
     participantId: me.participantId, sourceId: "completion-test", sequence, occurredAt: "2026-10-25T10:00:00Z", elapsedMs: sequence,
     termsVersion: "2026-10-25.1", issue: { id: "frequency-map", revision: "sha256:" + "a".repeat(64) }, data: {
-      issueKey: "FN-1", from: "in-progress", to: "done", via: "keyboard", trigger, onBoardBefore: 1, nudged: false,
+      issueKey: "PY-002", from: "in-progress", to: "done", via: "keyboard", trigger, onBoardBefore: 1, nudged: false,
       pullRequest: 1, runId: "run-submitted",
     },
   }));
@@ -261,5 +261,5 @@ test("7.2 checked completion uses the real constructor/validator and preserves o
   const body = await response.json();
   assert.equal(body.accepted, 2);
   assert.deepEqual(sent.map((row) => row.payload), [checked.payload, legacy.payload]);
-  assert.deepEqual(sent.map((row) => row.capture_version), ["board-capture-7.2.0", "board-capture-7.1.0"]);
+  assert.deepEqual(sent.map((row) => row.capture_version), ["board-capture-7.3.0", "board-capture-7.1.0"]);
 });

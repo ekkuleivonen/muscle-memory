@@ -225,7 +225,7 @@ test("real atomic completion writer records once, preserves Submit cause, queues
       participantId: "participant-test",
       termsVersion: "2026-10-25.1",
       issue: {
-        key: "FN-1",
+        key: "PY-002",
         slug: issue,
         revision: fixture.id,
         language: "python",
@@ -270,7 +270,7 @@ test("real atomic completion writer records once, preserves Submit cause, queues
     const completion = all
       .map((r) => JSON.parse(r.payload))
       .find((v) => v.type === "observation.board.moved");
-    assert.equal(completion.captureVersion, "board-capture-7.2.0");
+    assert.equal(completion.captureVersion, "board-capture-7.3.0");
     assert.equal(completion.data.trigger, "checks-passed");
     assert.equal(completion.data.via, "keyboard");
     assert.equal(completion.data.runId, "verified-run");

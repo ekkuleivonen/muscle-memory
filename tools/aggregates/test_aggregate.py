@@ -8,7 +8,7 @@ def row(participant, type_, when, data):
     return {"participant_id": participant, "type": type_, "occurred_at": when, "payload": json.dumps({"data": data})}
 
 
-def result(participant, when, t, w=40, issue="QUICK-1"):
+def result(participant, when, t, w=40, issue="PY-001"):
     return row(participant, "observation.board.result", when,
                {"issueKey": issue, "language": "python", "metrics": 2, "values": {"t": t, "w": w}})
 
@@ -27,7 +27,7 @@ class AggregateTest(unittest.TestCase):
             row("c", "observation.board.profile", "2026-10-25T09:30:00Z", {"answers": {"stealth": False}}),
         ]
         issues = aggregate.summarize(rows, excluded={"gone"})
-        quick = issues["QUICK-1"]
+        quick = issues["PY-001"]
         self.assertEqual(quick["n"], 3)
         self.assertEqual(quick["t"][0], 100)
         self.assertEqual(quick["t"][50], 200)
@@ -44,11 +44,11 @@ class AggregateTest(unittest.TestCase):
         payload["data"]["pullRequest"] = 1
         new["payload"] = json.dumps(payload)
         checked = row("new", "observation.board.moved", "2026-10-25T10:01:00Z", {
-            "issueKey": "QUICK-1", "trigger": "checks-passed", "to": "done",
+            "issueKey": "PY-001", "trigger": "checks-passed", "to": "done",
             "via": "keyboard", "pullRequest": 1, "runId": "checked-run"})
         values = aggregate.summarize([old, checked, new, result("new", "2026-10-25T11:00:00Z", 1)], set())
-        self.assertEqual(values["QUICK-1"]["n"], 2)
-        self.assertEqual(values["QUICK-1"]["t"][50], 150)
+        self.assertEqual(values["PY-001"]["n"], 2)
+        self.assertEqual(values["PY-001"]["t"][50], 150)
 
 
 if __name__ == "__main__":

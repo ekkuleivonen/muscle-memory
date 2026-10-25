@@ -49,7 +49,7 @@ export interface IssueComment {
 export interface Issue {
   /** The issue's permanent id, used in URLs before keys existed and in recorded data. */
   slug: string;
-  /** Permanent identifier such as NS-2: project key and issue number. */
+  /** Permanent identifier such as PY-003: the language's code and a number. */
   key: string;
   /** The live revision: sha256:… of its content. */
   revision: string;
@@ -115,7 +115,7 @@ function toIssue(
 ): Issue {
   return {
     slug: meta.id,
-    key: `${project.key}-${meta.number}`,
+    key: meta.key,
     revision: meta.revision,
     title: meta.title,
     summary: meta.summary,

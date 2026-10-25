@@ -1,7 +1,7 @@
 import type { SeedIssue } from "../seed";
 
 /*
- * The cart's shared modules, as they stand after SHOP-1 and SHOP-5 merged. Later issues open
+ * The cart's shared modules, as they stand after JS-003 and JS-005 merged. Later issues open
  * them read-only next to the file they change.
  */
 
@@ -101,7 +101,7 @@ const cartFiles = [
   },
 ];
 
-// SHOP-6: free-shipping banner -------------------------------------------------------------
+// JS-004: free-shipping banner -------------------------------------------------------------
 
 const SHIPPING_STARTER = `import { orderTotal } from "./totals.js";
 
@@ -150,7 +150,7 @@ export function shippingBanner(order) {
 }
 `;
 
-// SHOP-7: Ada's memoised cart summary --------------------------------------------------------
+// JS-006: Ada's memoised cart summary --------------------------------------------------------
 
 const CART_STARTER = `import { discountFor } from "./discounts.js";
 import { sum } from "./money.js";
@@ -320,7 +320,7 @@ const CART_VERSIONED = CART_STARTER.replace("    this.cache = null;\n  }", "    
     "    const key = this.version;\n",
   );
 
-// SHOP-8: receipt tax that adds up -----------------------------------------------------------
+// TS-005: receipt tax that adds up -----------------------------------------------------------
 
 /*
  * One file: the checkout types, the tax helpers the finance export also calls, and the receipt.
@@ -435,6 +435,7 @@ function swap(text: string, from: string, to: string): string {
 export const issues: SeedIssue[] = [
   {
     id: "free-shipping-banner",
+    key: "JS-004",
     title: "Show how far the cart is from free shipping",
     summary: "A banner in the cart drawer telling shoppers what's left to spend for free shipping.",
     difficulty: "easy",
@@ -569,6 +570,7 @@ export const issues: SeedIssue[] = [
   },
   {
     id: "stale-cart-summary",
+    key: "JS-006",
     title: "Cart drawer shows the old total after changing quantity",
     summary: "Since the cart summary was memoised, some changes don't show up in the drawer.",
     difficulty: "medium",
@@ -854,6 +856,7 @@ Removing an item shows the right total; changing a quantity doesn't. Make every 
   },
   {
     id: "receipt-tax-split",
+    key: "TS-005",
     title: "Receipt tax lines don't add up to the tax charged",
     summary:
       "Line taxes on receipts and in the finance export don't sum to the order's tax, and gift cards get taxed.",

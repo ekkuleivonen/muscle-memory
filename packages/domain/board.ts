@@ -12,6 +12,11 @@ import { canonical, type Json } from "./json";
 import type { WorkspaceRecord } from "./workspace";
 
 /**
+ * 7.3.0: issue keys are language-based. `issueKey` (and the keys inside shared cards) is the
+ * challenge's permanent key as the catalog now names it: its language's code and a number,
+ * PY-003, instead of a project key and number (FN-1). What the field records is unchanged; the
+ * permanent `issue` id is the same before and after, and joins records across the switch.
+ * Nothing else changed: 7.2.0 records keep their meaning, including their FN-1 style keys.
  * 7.2.0: `moved.trigger: "checks-passed"` marks automatic completion after a Submit's
  * full-suite verification of the exact saved code and pinned revision, with required
  * correctness/safety rules clear. `via` is the original Submit gesture that caused the
@@ -62,7 +67,12 @@ import type { WorkspaceRecord } from "./workspace";
  * issue to Done (`trigger: "pull-request-merged"`, by pointer or keyboard). Earlier versions
  * were never released.
  */
-export const BOARD_CAPTURE_VERSION = "board-capture-7.2.0";
+export const BOARD_CAPTURE_VERSION = "board-capture-7.3.0";
+/** Versions in which `checks-passed` (automatic completion) exists: 7.2.0 introduced it. */
+export const CHECKS_PASSED_CAPTURE: readonly string[] = [
+  "board-capture-7.2.0",
+  "board-capture-7.3.0",
+];
 /** What this capture does not record. Absence is a gap, not evidence of no activity. */
 export const BOARD_CAPTURE_GAPS = [
   "visits-before-accepting-the-terms",
@@ -223,7 +233,11 @@ export interface BoardObservation<
   readonly data: BoardData[T];
 }
 
-const ISSUE_KEY = /^[A-Z][A-Z0-9]{1,4}-[1-9]\d{0,3}$/;
+/**
+ * A challenge key as records and links carry it: today's language keys (PY-003, C-001) and,
+ * in records and cards made before board capture 7.3.0, project keys (FN-1, SHOP-12).
+ */
+export const ISSUE_KEY = /^[A-Z][A-Z0-9]{0,4}-(?:\d{3}|[1-9]\d{0,3})$/;
 const REVISION = /^sha256:[0-9a-f]{64}$/;
 const COLUMNS: readonly BoardColumn[] = [
   "backlog",

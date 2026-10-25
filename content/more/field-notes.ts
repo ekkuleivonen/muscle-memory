@@ -157,6 +157,7 @@ const tallyRow = (species: string, count = 1) => row(D, "Ridge B", species, "14.
 
 const speciesTally: SeedIssue = {
   id: "species-tally-shared-names",
+  key: "PY-003",
   title: "Herbarium import creates duplicate species from the tally sheet",
   summary: "Monday's import added 14 \"new\" species the herbarium already had.",
   kind: "refactor",
@@ -377,6 +378,7 @@ const PN = "Pterostichus niger";
 
 const lengthReport: SeedIssue = {
   id: "length-report-inches",
+  key: "PY-005",
   title: "Length report crashes on the Oregon volunteers' sheets",
   summary: "Read lengths in inches and without a space, and leave unmeasured lots out of the numbers.",
   kind: "bug",
@@ -613,6 +615,7 @@ const AP = "Abax parallelepipedus";
 
 const siteSummary: SeedIssue = {
   id: "site-summary-groupby",
+  key: "PY-006",
   title: "Site summary undercounts since last week's speed-up",
   summary: "Since the season summary got faster, its per-site lots and first visits are wrong.",
   kind: "bug",
@@ -847,6 +850,7 @@ const p15 = "== p. 15 ==";
 
 const dittoMarks: SeedIssue = {
   id: "notebook-ditto-marks",
+  key: "PY-009",
   title: "Volunteers have to expand ditto marks by hand",
   summary: "Expand ditto marks the way the paper notebook means them, and list the rows that can't be expanded.",
   kind: "feature",

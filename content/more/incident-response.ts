@@ -1,5 +1,5 @@
 /**
- * Guest checkout (INC-1): a fictional shop's checkout fails guest orders after a routine change.
+ * Guest checkout (JS-001): a fictional shop's checkout fails guest orders after a routine change.
  * quote.js is the one editable file; shipping.js and money.js are support code it imports. It
  * began as the playable incident; its id and key stay, because recorded work names them.
  */
@@ -78,6 +78,7 @@ const quote = (subtotal: number, shipping: number) => ({
 export const issues: SeedIssue[] = [
   {
     id: "checkout-guest-shipping",
+    key: "JS-001",
     title: "Guest checkout fails with a server error",
     summary:
       "Since Thursday's release, guests get an error instead of a quote at checkout. Members are fine.",

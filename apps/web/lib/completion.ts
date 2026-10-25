@@ -5,7 +5,10 @@ import {
   runFeedback,
   type WorkspaceRecord,
 } from "../../../packages/domain/workspace";
-import { validateBoardMoveData } from "../../../packages/domain/board";
+import {
+  CHECKS_PASSED_CAPTURE,
+  validateBoardMoveData,
+} from "../../../packages/domain/board";
 import { attemptRecords } from "./attempts";
 import { behaviourOf, investigationOf } from "./feedback";
 import { mergeEligibility, type MergeEligibility } from "./merge";
@@ -30,7 +33,7 @@ export function completions(
           return [];
         if (
           v.data.trigger === "checks-passed" &&
-          v.captureVersion !== "board-capture-7.2.0"
+          !CHECKS_PASSED_CAPTURE.includes(v.captureVersion)
         )
           return [];
         if (v.data.trigger === "checks-passed") {

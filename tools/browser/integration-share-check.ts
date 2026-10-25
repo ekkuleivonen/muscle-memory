@@ -185,11 +185,11 @@ try {
   );
   await fresh
     .getByRole("link")
-    .filter({ hasText: /QUICK-2/ })
+    .filter({ hasText: /JS-002/ })
     .last()
     .click();
   await fresh
-    .getByRole("button", { name: "Start QUICK-2 yourself", exact: false })
+    .getByRole("button", { name: "Start JS-002 yourself", exact: false })
     .click();
   const freshEditor = fresh.locator(
     '.practice-editor .cm-content[contenteditable="true"]',
@@ -205,7 +205,7 @@ try {
   passed(
     "fresh recipients see only opted-in solution and start their own independent attempt",
   );
-  await page.goto(`${origin}/work/DATA-6`);
+  await page.goto(`${origin}/work/SQL-002`);
   await editor().waitFor();
   const table = page.locator(".practice-challenge table").first();
   assert.deepEqual(await table.locator("thead th").allTextContents(), [
@@ -232,7 +232,7 @@ try {
     ),
   );
   passed(
-    "DATA-6 has real headers/cells and one editor on desktop/mobile without page overflow",
+    "SQL-002 has real headers/cells and one editor on desktop/mobile without page overflow",
   );
 } finally {
   await writeFile(`${shots}/results.json`, JSON.stringify(results, null, 2));

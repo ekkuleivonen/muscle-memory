@@ -182,7 +182,7 @@ test("collapsing to the single editable entry keeps saved entry code; nothing el
       "utf8",
     ),
   ) as Record<string, string>;
-  // FN-3 had two editable files; its live revision keeps only the entry, same path and function.
+  // PY-005 had two editable files; its live revision keeps only the entry, same path and function.
   const previous = catalog.revisions[before["length-report-inches"]];
   const live = revisionOf("length-report-inches");
   assert.ok(previous.workspace.files["notebook/units.py"]?.role === "edit");

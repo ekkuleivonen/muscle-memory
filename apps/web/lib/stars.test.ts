@@ -5,12 +5,12 @@ import { parseStars, toggleStar } from "./stars";
 test("stars toggle by key and survive malformed storage", () => {
   assert.deepEqual(parseStars(null), []);
   assert.deepEqual(parseStars("not json"), []);
-  assert.deepEqual(parseStars('{"FN-1":true}'), []);
-  assert.deepEqual(parseStars('["FN-1", 3, "FN-1", "API-2"]'), [
-    "FN-1",
-    "API-2",
+  assert.deepEqual(parseStars('{"PY-002":true}'), []);
+  assert.deepEqual(parseStars('["PY-002", 3, "PY-002", "PHP-002"]'), [
+    "PY-002",
+    "PHP-002",
   ]);
-  const on = toggleStar([], "FN-1");
-  assert.deepEqual(on, ["FN-1"]);
-  assert.deepEqual(toggleStar(on, "FN-1"), []);
+  const on = toggleStar([], "PY-002");
+  assert.deepEqual(on, ["PY-002"]);
+  assert.deepEqual(toggleStar(on, "PY-002"), []);
 });

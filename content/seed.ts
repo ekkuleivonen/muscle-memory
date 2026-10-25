@@ -32,6 +32,11 @@ export type SeedHint = string | { text: string; when: Trigger };
 
 export interface SeedIssue {
   id: string;
+  /**
+   * Permanent once published: the language's code and a number, PY-003 (packages/content/keys).
+   * A new challenge takes the next free number in its language; none is ever renumbered.
+   */
+  key: string;
   title: string;
   summary: string;
   difficulty: "easy" | "medium" | "hard";
@@ -510,6 +515,7 @@ import { MORE } from "./more";
 const BASE_ISSUES: SeedIssue[] = [
   // Quick fixes: five-minute bugs, one per language, for /play
   challenge("word-count-python", {
+    key: "PY-001",
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
     kind: "bug",
@@ -577,6 +583,7 @@ def count_words(text):
     },
   }),
   challenge("word-count-javascript", {
+    key: "JS-002",
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
     kind: "bug",
@@ -647,6 +654,7 @@ export function countWords(text) {
     },
   }),
   challenge("word-count-typescript", {
+    key: "TS-001",
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
     kind: "bug",
@@ -690,6 +698,7 @@ export function countWords(text: string): number {
     },
   }),
   challenge("word-count-go", {
+    key: "GO-001",
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
     kind: "bug",
@@ -737,6 +746,7 @@ func CountWords(text string) int {
     },
   }),
   challenge("word-count-java", {
+    key: "JAVA-001",
     adapter: `import com.acme.composer.WordCount;
 
 /** [text] → its word count. */
@@ -797,6 +807,7 @@ public final class WordCount {
     },
   }),
   challenge("word-count-csharp", {
+    key: "CS-001",
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
     kind: "bug",
@@ -847,6 +858,7 @@ public static class WordCount
     },
   }),
   challenge("word-count-ruby", {
+    key: "RB-001",
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
     kind: "bug",
@@ -890,6 +902,7 @@ end
     },
   }),
   challenge("word-count-php", {
+    key: "PHP-001",
     title: "The composer says 1 word when the post is empty",
     summary: "A five-minute bug: the word count under the text box is off.",
     kind: "bug",
@@ -939,6 +952,7 @@ function countWords(string $text): int
   }),
   // Field notes: a warm-up
   challenge("frequency-map", {
+    key: "PY-002",
     title: "Nightly vial tally is empty",
     summary: "The vial scanner's labels need counting for the nightly sheet; the counter returns nothing.",
     kind: "feature",
@@ -1071,6 +1085,7 @@ def frequency_map(items):
   }),
   // Storefront: frontend
   challenge("format-price", {
+    key: "JS-003",
     title: "Cart shows prices as raw cents",
     summary: "Format amounts as dollars with separators, including refunds.",
     kind: "bug",
@@ -1163,6 +1178,7 @@ export function formatPrice(cents) {
     },
   }),
   challenge("discount-codes", {
+    key: "TS-002",
     parameters: ["totalCents", "code", "codes"],
     title: "Discount codes fail when typed in lowercase",
     summary: "Match promo codes case-insensitively and ignore stray spaces.",
@@ -1219,6 +1235,7 @@ export function applyDiscount(totalCents: number, code: string, codes: Codes): n
     },
   }),
   challenge("filter-form-labels", {
+    key: "HTML-001",
     parameters: ["selector", "read"],
     title: "Product filter checkboxes have no labels",
     summary: "Tie every filter checkbox to a label so it is accessible.",
@@ -1287,6 +1304,7 @@ Each check runs a CSS selector against the page and reads something from the mat
     },
   }),
   challenge("debounce-search", {
+    key: "TS-003",
     parameters: ["keystrokes", "waitMs"],
     title: "Search box sends a request on every keystroke",
     summary:
@@ -1356,6 +1374,7 @@ export function debounceTimes(keystrokes: number[], waitMs: number): number[] {
   }),
 
   challenge("refund-totals", {
+    key: "JS-005",
     title: "Refunds give back less than the customer paid",
     summary: "Refunds on orders with a promo code give back less than the customer paid.",
     kind: "bug",
@@ -1680,6 +1699,7 @@ export function refundTotal(refund) {
   }),
   // Accounts API: backend
   challenge("pagination-params", {
+    key: "GO-002",
     title: "List endpoints accept any page size",
     summary: "Parse page and per_page with defaults and a hard cap.",
     kind: "bug",
@@ -1774,6 +1794,7 @@ func positiveOr(text string, fallback int) int {
     },
   }),
   challenge("reset-link-expiry", {
+    key: "PHP-002",
     parameters: ["issuedAt", "now", "ttlMinutes"],
     title: "Password reset links expire after a minute",
     summary: "The TTL is in minutes but the check compares seconds.",
@@ -1828,6 +1849,7 @@ function isExpired(int $issuedAt, int $now, int $ttlMinutes): bool
     },
   }),
   challenge("rate-limiter", {
+    key: "TS-004",
     parameters: ["times", "limit", "windowMs"],
     title: "Rate-limit login attempts",
     summary: "Allow at most n attempts in any sliding window.",
@@ -1901,6 +1923,7 @@ export function allow(times: number[], limit: number, windowMs: number): boolean
     },
   }),
   challenge("workspace-slugs", {
+    key: "RB-002",
     title: "Workspace URLs break on names with accents",
     summary: "Make URL slugs from workspace names, accents and all.",
     kind: "bug",
@@ -1978,6 +2001,7 @@ end
     },
   }),
   challenge("password-policy", {
+    key: "JAVA-002",
     adapter: `import com.acme.accounts.PasswordPolicy;
 
 /** [password] → the rules it breaks. */
@@ -2084,6 +2108,7 @@ public final class PasswordPolicy {
     },
   }),
   challenge("parse-log-line", {
+    key: "GO-003",
     title: "Access log parser drops fields on 5xx lines",
     summary: "Turn an access log line into a structured record.",
     kind: "bug",
@@ -2167,6 +2192,7 @@ func ParseLine(line string) Entry {
 
   // Data platform: imports, cleaning and reports
   challenge("csv-quoted-fields", {
+    key: "PY-004",
     title: "CSV import splits company names on commas",
     summary: "Respect quoted fields when parsing partner exports.",
     kind: "bug",
@@ -2331,6 +2357,7 @@ def parse_csv_line(line):
     },
   }),
   challenge("dedupe-customers", {
+    key: "PY-007",
     title: "Deduplicate customer records by email",
     summary: "Keep the first record per email before the newsletter sync.",
     kind: "feature",
@@ -2453,6 +2480,7 @@ id  email
     },
   }),
   challenge("late-fee-rounding", {
+    key: "CS-002",
     parameters: ["balance", "daysLate"],
     title: "Late fees are a cent off on some invoices",
     summary: "Round late fees the way finance does: halves away from zero.",
@@ -2511,6 +2539,7 @@ public static class LateFees
     },
   }),
   challenge("top-customers", {
+    key: "SQL-001",
     schema: "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  customer text NOT NULL,\n  total integer NOT NULL\n);",
     title: "Revenue by customer for the monthly report",
     summary: "Total each customer's orders, biggest first.",
@@ -2582,6 +2611,7 @@ ORDER BY revenue DESC;
     },
   }),
   challenge("unpaid-orders", {
+    key: "SQL-003",
     schema: "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  customer text NOT NULL\n);\n\nCREATE TABLE payments (\n  order_id integer NOT NULL REFERENCES orders (id),\n  amount integer NOT NULL\n);",
     title: "Find orders with no matching payment",
     summary: "Reconcile orders against payments before month-end close.",
@@ -2658,6 +2688,7 @@ ORDER BY o.id;
 
   // Edge proxy: systems and performance
   challenge("ring-buffer", {
+    key: "C-002",
     adapter: `#include <stdlib.h>
 #include "mm_json.h"
 
@@ -2773,6 +2804,7 @@ size_t ring_buffer(size_t capacity, const int *values, size_t count, int *out)
     },
   }),
   challenge("p99-latency", {
+    key: "GO-006",
     parameters: ["samples", "p"],
     title: "Compute nearest-rank percentiles for the latency panel",
     summary: "Compute nearest-rank percentiles for the metrics endpoint.",
@@ -2841,6 +2873,7 @@ func Percentile(samples []int, p float64) (value int, ok bool) {
     },
   }),
   challenge("lru-cache", {
+    key: "CPP-001",
     adapter: `#include <string>
 #include <vector>
 #include "mm_json.h"
@@ -2986,6 +3019,7 @@ std::vector<int> simulate(int capacity, const std::vector<Op>& ops) {
     },
   }),
   challenge("parse-duration", {
+    key: "GO-004",
     title: "Timeouts in config must be written in seconds",
     summary: "Accept durations like 1h30m in config files.",
     kind: "feature",
@@ -3077,7 +3111,7 @@ func ParseDuration(text string) (int, error) {
 
 const BASE_PROJECTS: SeedProject[] = [
   {
-    // The id and key stay from when this was the incident: recorded work names INC-1.
+    // The id and key stay from when this was the incident: recorded work names JS-001.
     id: "incident-response",
     key: "INC",
     title: "Checkout",

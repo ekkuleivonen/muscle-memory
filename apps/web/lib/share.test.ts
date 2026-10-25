@@ -19,7 +19,7 @@ import {
 
 const card: Result = {
   v: 2,
-  k: "QUICK-4",
+  k: "GO-001",
   l: "go",
   c: "ab12cd34ef56",
   t: 252,
@@ -60,17 +60,17 @@ test("a result link is a result, an older version, or malformed; never a guess",
     kind: "result",
     result: card,
   });
-  assert.deepEqual(inspectCard(segment({ v: 1, k: "QUICK-4", t: 1 })), {
+  assert.deepEqual(inspectCard(segment({ v: 1, k: "GO-001", t: 1 })), {
     kind: "older",
-    key: "QUICK-4",
+    key: "GO-001",
   });
   // Version 3 is current: one that doesn't decode is malformed, not "older".
   assert.deepEqual(inspectCard(segment({ v: 3, k: "<b>" })), {
     kind: "malformed",
   });
   assert.deepEqual(
-    inspectCard(segment({ ...card, k: "INC-1", iv: "0a1b2c3d", a: 1 })),
-    { kind: "older", key: "INC-1" },
+    inspectCard(segment({ ...card, k: "JS-001", iv: "0a1b2c3d", a: 1 })),
+    { kind: "older", key: "JS-001" },
   );
   // A current card with a field out of range is not "older": it is not one we made.
   assert.deepEqual(inspectCard(encodeResult({ ...card, t: -1 })), {
@@ -356,15 +356,15 @@ test("the solution offered is the checked artifact's editable file, exactly, or 
 });
 
 test("only a card on the live revision claims the sender's starting code", () => {
-  const same = startCopy("DATA-6", true);
+  const same = startCopy("SQL-002", true);
   assert.match(same.lede, /same starting code they did/);
-  assert.equal(same.cta, "Try DATA-6 yourself →");
+  assert.equal(same.cta, "Try SQL-002 yourself →");
   // An earlier revision, or a v2 card with no revision identity: the current challenge.
-  const current = startCopy("DATA-6", false);
+  const current = startCopy("SQL-002", false);
   assert.equal(
     current.lede,
     "Start from the current challenge’s code in your own attempt: nothing of theirs comes with it.",
   );
-  assert.equal(current.cta, "Try the current version of DATA-6 →");
+  assert.equal(current.cta, "Try the current version of SQL-002 →");
   assert.doesNotMatch(current.lede, /same|they did/);
 });

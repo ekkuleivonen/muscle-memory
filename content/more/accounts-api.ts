@@ -45,6 +45,7 @@ function retryMessage(int $secondsLeft): string
 
 const lockoutRetryMessage: SeedIssue = {
   id: "lockout-retry-message",
+  key: "PHP-003",
   title: "Lockout message tells people to try again in 0 minutes",
   summary: "The lockout message rounds the time left down, so people retry too early and lock themselves out again.",
   kind: "bug",
@@ -167,6 +168,7 @@ func CanonicalEmail(raw string) (string, bool) {
 
 const canonicalSignupEmail: SeedIssue = {
   id: "canonical-signup-email",
+  key: "GO-005",
   title: "Sign-up creates a second account for the same email",
   summary: "Look accounts up by a canonical form of the address, so case, spaces and Gmail dots don't make a new account.",
   kind: "feature",
@@ -395,6 +397,7 @@ const reauth = (reason: string, revokeFamily = false) => ({ status: "reauth", re
 
 const refreshTokenReuse: SeedIssue = {
   id: "refresh-token-reuse",
+  key: "TS-006",
   title: "Old refresh tokens work again since the grace window",
   summary: "A stolen refresh token kept a session alive for three days, and the reuse alert has gone quiet.",
   kind: "bug",

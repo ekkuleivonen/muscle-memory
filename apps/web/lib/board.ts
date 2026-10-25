@@ -3,6 +3,7 @@
  * progress from an issue's Status menu; Done is never set by hand: a run that passes every
  * acceptance check puts the issue there, for good. Stored on this device only.
  */
+import { ISSUE_KEY } from "../../../packages/domain/board";
 import type { IssueSummary as Issue } from "./library";
 
 export const BOARD_KEY = "muscle-memory.board";
@@ -21,7 +22,7 @@ export const MANUAL_STATUSES: readonly ManualStatus[] = [
 ];
 
 export interface BoardItem {
-  /** Permanent issue key such as API-2. */
+  /** Permanent issue key such as PHP-002. */
   key: string;
   /** When it left the backlog. */
   addedAt: string;
@@ -38,8 +39,6 @@ export const STATUS_LABELS: Record<Status, string> = {
   done: "Done",
 };
 
-const KEY = /^[A-Z][A-Z0-9]{1,4}-[1-9]\d{0,3}$/;
-
 /** Reads the stored board, dropping anything malformed rather than failing. */
 export function parseBoard(raw: string | null): BoardItem[] {
   try {
@@ -51,7 +50,7 @@ export function parseBoard(raw: string | null): BoardItem[] {
         const ok =
           !!item &&
           typeof item.key === "string" &&
-          KEY.test(item.key) &&
+          ISSUE_KEY.test(item.key) &&
           typeof item.addedAt === "string" &&
           (item.status === undefined ||
             item.status === "todo" ||

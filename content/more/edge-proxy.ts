@@ -2,7 +2,7 @@ import type { SeedIssue } from "../seed";
 import { mateo, priya, sam } from "../team";
 
 // ---------------------------------------------------------------------------------------------
-// EDGE-5: IPv6 Host headers (C)
+// C-001: IPv6 Host headers (C)
 
 const HOST_FILE = "src/normalize_host.c";
 
@@ -127,6 +127,7 @@ const HOST_ONE_FUNCTION = HOST_STARTER.replace(
 
 const ipv6HostHeader: SeedIssue = {
   id: "ipv6-host-header",
+  key: "C-001",
   title: "IPv6 requests get 421 Misdirected Request",
   summary: "Host headers with an IPv6 literal lose everything after the first colon.",
   kind: "bug",
@@ -253,7 +254,7 @@ mm_value *mm_call(const mm_value *args) {
 };
 
 // ---------------------------------------------------------------------------------------------
-// EDGE-6: weighted upstreams (Go)
+// GO-007: weighted upstreams (Go)
 
 const BALANCER_FILE = "pick_order.go";
 
@@ -412,6 +413,7 @@ const BALANCER_LONG = BALANCER_REFERENCE.replace(
 
 const weightedUpstreams: SeedIssue = {
   id: "weighted-upstreams",
+  key: "GO-007",
   title: "Upstream weights are ignored",
   summary: "The balancer round-robins evenly, so the 10% canary would get half the traffic.",
   kind: "feature",
@@ -547,7 +549,7 @@ Worked example with weights a=5, b=1, c=1 (total 7):
 };
 
 // ---------------------------------------------------------------------------------------------
-// EDGE-7: the cache index after #412 (C++), a teammate's change to judge
+// CPP-002: the cache index after #412 (C++), a teammate's change to judge
 
 const INDEX_FILE = "src/cache_index.cpp";
 
@@ -762,6 +764,7 @@ const INDEX_TWO_PASS = INDEX_REFERENCE.replace(
 
 const cacheIndexPurge: SeedIssue = {
   id: "cache-index-purge",
+  key: "CPP-002",
   title: "Cache hit ratio fell to 71% after the index change",
   summary: "Since #412, keys stored past a purged slot are reported as misses.",
   kind: "bug",

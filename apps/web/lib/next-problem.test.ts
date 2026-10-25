@@ -25,7 +25,7 @@ test("after a Python issue comes another Python issue, never the JavaScript one 
 
 test("the same project comes first, at about the same difficulty", () => {
   const current = bySlug("frequency-map");
-  // FN-2 is easy like FN-1, in the same project.
+  // PY-003 is easy like PY-002, in the same project.
   assert.equal(nextProblem(current, issues, [done("frequency-map")])?.slug, "species-tally-shared-names");
   // With the rest of field-notes done, data-platform's Python comes before any other language.
   const fieldNotes = issues.filter((i) => i.project.slug === "field-notes");

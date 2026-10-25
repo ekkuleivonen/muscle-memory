@@ -1,5 +1,5 @@
 /**
- * Pull request findings, exercised on INC-1, the one revision whose review comments need an
+ * Pull request findings, exercised on JS-001, the one revision whose review comments need an
  * explicit Resolve and whose CI failures are findings: Resolve never stands in for CI, findings
  * recur, and every attempt (replays included) is read on its own records.
  */
@@ -24,7 +24,7 @@ import {
 import { catalog, historical } from "./test-fixtures";
 
 const ISSUE = "checkout-guest-shipping";
-// INC-1 as it was before the single-file normalization: a log, hints, Resolve. Those revisions
+// JS-001 as it was before the single-file normalization: a log, hints, Resolve. Those revisions
 // stay published, so their behaviour is still tested on them.
 const fixture = historical(ISSUE);
 const cases = fixture.revision.checks.cases;
@@ -35,7 +35,7 @@ const FIX = fixture.starter.replace(
   `const member = (order.customer.loyalty?.tier ?? "none") !== "none";`,
 );
 
-/** A recorded attempt at INC-1, one step at a time, a minute apart. */
+/** A recorded attempt at JS-001, one step at a time, a minute apart. */
 function incident() {
   const records: WorkspaceRecord[] = [];
   // The IDE and the tracker record in streams of their own, each numbered without gaps.
@@ -92,7 +92,7 @@ function incident() {
       return observe(
         "observation.board.moved",
         {
-          issueKey: "INC-1",
+          issueKey: "JS-001",
           from: "todo",
           to: "in-progress",
           trigger: "start-work",
@@ -104,7 +104,7 @@ function incident() {
       return observe(
         "observation.board.moved",
         {
-          issueKey: "INC-1",
+          issueKey: "JS-001",
           from: "done",
           to: "in-progress",
           trigger: "replay",
@@ -224,7 +224,7 @@ function incident() {
     },
     merge(number: number, runId: string) {
       return observe("observation.board.moved", {
-        issueKey: "INC-1",
+        issueKey: "JS-001",
         from: "in-progress",
         to: "done",
         trigger: "pull-request-merged",
@@ -235,7 +235,7 @@ function incident() {
     /** The person resolving a review finding themselves (Resolve). */
     resolve(number: number, comment: string) {
       return observe("observation.board.resolved", {
-        issueKey: "INC-1",
+        issueKey: "JS-001",
         pullRequest: number,
         comment,
         via: "pointer",
@@ -243,7 +243,7 @@ function incident() {
     },
     close(number: number) {
       return observe("observation.board.closed", {
-        issueKey: "INC-1",
+        issueKey: "JS-001",
         pullRequest: number,
         via: "pointer",
         nudged: false,
@@ -490,7 +490,7 @@ test("a CI failure is a finding only Resolve clears; Resolve never makes failing
   );
 });
 
-test("INC-1's nit stays open on green CI and needs Resolve; other exercises keep severity rules", () => {
+test("JS-001's nit stays open on green CI and needs Resolve; other exercises keep severity rules", () => {
   const play = incident();
   play.start();
   const HARD_CODED = FIX.replace("shippingFor(subtotal, member)", "subtotal >= (member ? 3000 : 5000) ? 0 : 495");

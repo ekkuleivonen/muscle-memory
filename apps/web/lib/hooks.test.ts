@@ -4,10 +4,10 @@ import { HOOKS, hookFor } from "./hooks";
 
 test("a hook shows only on the exact revision it was checked against", () => {
   assert.deepEqual(Object.keys(HOOKS).sort(), [
-    "API-8",
-    "DATA-6",
-    "QUICK-2",
-    "SHOP-5",
+    "GO-005",
+    "JS-002",
+    "JS-005",
+    "SQL-002",
   ]);
   for (const [key, hook] of Object.entries(HOOKS)) {
     assert.match(hook.revision, /^sha256:[0-9a-f]{64}$/);
@@ -16,7 +16,7 @@ test("a hook shows only on the exact revision it was checked against", () => {
     assert.equal(hookFor({ key, revision: "sha256:" + "0".repeat(64) }), null);
   }
   assert.equal(
-    hookFor({ key: "FN-5", revision: "sha256:" + "1".repeat(64) }),
+    hookFor({ key: "PY-009", revision: "sha256:" + "1".repeat(64) }),
     null,
   );
 });
