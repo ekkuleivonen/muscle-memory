@@ -127,8 +127,20 @@ export interface EvidenceFacts {
   };
   /** Capture gaps in this attempt: stretches whose activity is not known. */
   gaps: number;
-  /** Open pull requests only: what makes its checks out of date. */
-  stale: { codeChanged: boolean; ticketChanged: boolean };
+  /**
+   * Open pull requests only, from the merge gate's verdict (EvidenceInput.blocker): what keeps its
+   * checks from counting now. Null when the gate's verdict wasn't given, so nothing is guessed.
+   */
+  stale: {
+    /** A newer push hasn't reported its checks yet. */
+    pending: boolean;
+    /** The code changed after the latest push. */
+    codeChanged: boolean;
+    /** The saved code couldn't be compared with the push. */
+    codeUnconfirmed: boolean;
+    /** The checks ran against a version of the ticket this attempt is no longer on. */
+    revision: boolean;
+  } | null;
   /** Open findings that must be resolved before merging. */
   openRequired: number;
 }
@@ -158,8 +170,15 @@ export interface EvidenceSection {
 
 /** Something to do before merging; `where` is the place to do it. */
 export interface EvidenceAction {
-  id: "checks" | "code-changed" | "ticket-changed" | "review";
-  where: "ide" | "findings";
+  id:
+    | "checks"
+    | "checks-pending"
+    | "code-changed"
+    | "code-unconfirmed"
+    | "revision"
+    | "review";
+  /** `wait`: nothing to do but let CI finish. */
+  where: "ide" | "findings" | "wait";
   text: string;
 }
 
@@ -169,6 +188,21 @@ export interface Evidence {
   actions: EvidenceAction[];
 }
 
+/**
+ * Why a pull request can't be merged now, as the one merge gate decides it (ENG-322's
+ * `mergeEligibility` in lib/merge.ts); null when it can. Mirrored here so this module stands
+ * alone; keep the two in step.
+ */
+export type MergeBlocker =
+  | "not-open"
+  | "other-merged"
+  | "checks-pending"
+  | "checks"
+  | "revision"
+  | "code-changed"
+  | "code-unconfirmed"
+  | "review";
+
 export interface EvidenceInput {
   /** The pull request's attempt (./attempts): its records only. */
   records: readonly WorkspaceRecord[];
@@ -176,8 +210,11 @@ export interface EvidenceInput {
   issue: string;
   number: number;
   revisionFor: (id: string) => Revision | undefined;
-  /** The issue's live revision, to tell when the ticket changed after the checks ran. */
-  liveRevision?: string;
+  /**
+   * The merge gate's verdict for an open pull request. Stale checks and what to do before
+   * merging come from it alone; undefined when not known, and then no staleness is claimed.
+   */
+  blocker?: MergeBlocker | null;
   /**
    * When the outcome is read: the merge, or now for an open pull request. Nothing this issue
    * records after it counts, so later work never changes an earlier outcome.
@@ -283,7 +320,7 @@ function beforePush(detail: PullDetail): BeforePush {
 
 /** The facts behind one pull request's outcome, or null when there is no such pull request. */
 export function evidenceFacts(input: EvidenceInput): EvidenceFacts | null {
-  const { issue, number, revisionFor, liveRevision, until } = input;
+  const { issue, number, revisionFor, blocker, until } = input;
   const records = bounded(input.records, issue, until);
   const detail = pullRequestDetail(records, issue, number, revisionFor);
   if (!detail) return null;
@@ -366,6 +403,10 @@ export function evidenceFacts(input: EvidenceInput): EvidenceFacts | null {
       }
     : null;
   const latestPush = Math.max(0, ...pushes.map((o) => Number(o.data.push)));
+  // The latest is the highest push number, as the merge gate reads it, so a late result from an
+  // older push never stands for the latest.
+  const last = pushes.findLast((o) => Number(o.data.push) === latestPush);
+  const lastResult = last ? String(last.data.result) : pull.result;
   const beforeLatest = {
     failedChecks: pushes.filter(
       (o) =>
@@ -398,13 +439,21 @@ export function evidenceFacts(input: EvidenceInput): EvidenceFacts | null {
     pushes: Math.max(pull.pushes, latestPush),
     changed,
     checks: {
-      result: pull.result === "merged" ? "checks-passed" : pull.result,
-      passed: pull.passed,
-      total: pull.total,
-      legacy: pull.result === "merged",
+      result: lastResult === "merged" ? "checks-passed" : lastResult,
+      passed: last ? Number(last.data.passed) : pull.passed,
+      total: last ? Number(last.data.total) : pull.total,
+      legacy: lastResult === "merged",
     },
-    visible: split(detail.outcome, revision, (visible) => visible),
-    hidden: split(detail.outcome, revision, (visible) => !visible),
+    visible: split(
+      last ? outcomes.get(String(last.data.runId)) : detail.outcome,
+      revisionFor(last?.issueRevision ?? pull.issueRevision),
+      (visible) => visible,
+    ),
+    hidden: split(
+      last ? outcomes.get(String(last.data.runId)) : detail.outcome,
+      revisionFor(last?.issueRevision ?? pull.issueRevision),
+      (visible) => !visible,
+    ),
     first,
     beforeLatest,
     verification: {
@@ -454,18 +503,16 @@ export function evidenceFacts(input: EvidenceInput): EvidenceFacts | null {
     gaps: observations.filter(
       (o) => o.type === "observation.workspace.capture-gap",
     ).length,
-    stale: {
-      codeChanged:
-        pull.state === "open" &&
-        observations.some(
-          (o) =>
-            o.type === "observation.workspace.edit" && o.occurredAt > pull.at,
-        ),
-      ticketChanged:
-        pull.state === "open" &&
-        !!liveRevision &&
-        liveRevision !== pull.issueRevision,
-    },
+    stale:
+      blocker === undefined
+        ? null
+        : {
+            pending: pull.state === "open" && blocker === "checks-pending",
+            codeChanged: pull.state === "open" && blocker === "code-changed",
+            codeUnconfirmed:
+              pull.state === "open" && blocker === "code-unconfirmed",
+            revision: pull.state === "open" && blocker === "revision",
+          },
     openRequired: openRequired(feedback, number, revisionFor).length,
   };
 }
@@ -800,30 +847,52 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
   ];
 }
 
-/** What to do before merging an open pull request, in order. */
-export function actionsOf(facts: EvidenceFacts): EvidenceAction[] {
+/**
+ * What to do before merging an open pull request. With the merge gate's verdict, what stops the
+ * merge comes first, then open findings, which are a separate requirement. Without it, only what
+ * the facts show: failing checks and open findings.
+ */
+export function actionsOf(
+  facts: EvidenceFacts,
+  blocker?: MergeBlocker | null,
+): EvidenceAction[] {
   if (facts.state !== "open") return [];
   const out: EvidenceAction[] = [];
-  if (facts.checks.result !== "checks-passed")
+  const push = facts.pushes;
+  const checks = (): EvidenceAction => ({
+    id: "checks",
+    where: "ide",
+    text:
+      facts.checks.result === "checks-failed"
+        ? `${facts.checks.total - facts.checks.passed} of ${facts.checks.total} checks fail on push ${push}. Fix them in the IDE and push again.`
+        : `CI didn't reach the tests on push ${push}. Fix the error in the IDE and push again.`,
+  });
+  if (blocker === undefined) {
+    if (facts.checks.result !== "checks-passed") out.push(checks());
+  } else if (blocker === "checks") out.push(checks());
+  else if (blocker === "checks-pending")
     out.push({
-      id: "checks",
-      where: "ide",
-      text:
-        facts.checks.result === "checks-failed"
-          ? `${facts.checks.total - facts.checks.passed} of ${facts.checks.total} checks fail. Fix them in the IDE and push again.`
-          : "CI didn't reach the tests. Fix the error in the IDE and push again.",
+      id: "checks-pending",
+      where: "wait",
+      text: "CI hasn't finished on the latest push. Its result decides whether this can merge.",
     });
-  if (facts.stale.codeChanged)
+  else if (blocker === "code-changed")
     out.push({
       id: "code-changed",
       where: "ide",
-      text: `You've changed the code since push ${facts.pushes}. Push again so CI checks what you have.`,
+      text: `You've changed the code since push ${push}. Push again so CI checks what you have.`,
     });
-  if (facts.stale.ticketChanged)
+  else if (blocker === "code-unconfirmed")
     out.push({
-      id: "ticket-changed",
+      id: "code-unconfirmed",
       where: "ide",
-      text: "The ticket was updated after these checks ran. Push again to check against it.",
+      text: `The code you have now can't be matched to push ${push}. Push again so CI checks what you have.`,
+    });
+  else if (blocker === "revision")
+    out.push({
+      id: "revision",
+      where: "ide",
+      text: `Push ${push} was checked against a different version of the ticket from the one you're working on. Push again to check against it.`,
     });
   if (facts.openRequired)
     out.push({
@@ -837,7 +906,11 @@ export function actionsOf(facts: EvidenceFacts): EvidenceAction[] {
 export function evidenceOf(input: EvidenceInput): Evidence | null {
   const facts = evidenceFacts(input);
   return (
-    facts && { facts, sections: describe(facts), actions: actionsOf(facts) }
+    facts && {
+      facts,
+      sections: describe(facts),
+      actions: actionsOf(facts, input.blocker),
+    }
   );
 }
 

@@ -7,6 +7,7 @@ import {
   parsePublicEvidence,
   publicEvidence,
   type Evidence,
+  type MergeBlocker,
 } from "./evidence";
 import { live } from "./test-fixtures";
 
@@ -176,7 +177,6 @@ test("a clean success: observed correctness, verification before push, no recove
     issue: "frequency-map",
     number: 1,
     revisionFor,
-    liveRevision: fixture.id,
     until: a.at(5),
   })!;
   const { facts } = evidence;
@@ -255,29 +255,65 @@ test("failure and recovery: failed runs, a failing push, a review finding fixed 
   );
 });
 
-test("before merging: failing checks, code changed since the push and an open finding are actionable", () => {
+test("before merging: actions come from the merge gate's verdict, findings alongside", () => {
   const a = attempt();
   a.opened(0);
   a.edit(1, 1);
   a.push(2, 1, 1, 1, 3);
   a.review(3, 1, 1);
   a.edit(4, 2);
-  const evidence = evidenceOf({
+  const read = (blocker?: MergeBlocker | null) =>
+    evidenceOf({
+      records: a.records,
+      issue: "frequency-map",
+      number: 1,
+      revisionFor,
+      blocker,
+      until: a.at(5),
+    })!;
+  const ids = (blocker?: MergeBlocker | null) =>
+    read(blocker).actions.map((x) => x.id);
+  assert.equal(read("checks").facts.verification.beforePush, "none");
+  assert.deepEqual(ids("checks"), ["checks", "review"]);
+  assert.deepEqual(ids("checks-pending"), ["checks-pending", "review"]);
+  assert.deepEqual(ids("code-changed"), ["code-changed", "review"]);
+  assert.deepEqual(ids("code-unconfirmed"), ["code-unconfirmed", "review"]);
+  assert.deepEqual(ids("revision"), ["revision", "review"]);
+  assert.deepEqual(ids("review"), ["review"]);
+  assert.deepEqual(read("code-changed").facts.stale, {
+    pending: false,
+    codeChanged: true,
+    codeUnconfirmed: false,
+    revision: false,
+  });
+  assert.equal(read("checks-pending").actions[0].where, "wait");
+  // Without the gate's verdict nothing is guessed: an edit after the push is not called stale.
+  assert.equal(read().facts.stale, null);
+  assert.deepEqual(ids(), ["checks", "review"]);
+  // Merged pull requests have nothing left to do.
+  assert.deepEqual(
+    actionsOf({ ...read("checks").facts, state: "merged" }, "not-open"),
+    [],
+  );
+});
+
+test("the latest result is the highest push number, even when an older push reports later", () => {
+  const a = attempt();
+  a.opened(0);
+  a.push(1, 1, 2, 2, cases.length);
+  // Push 1's result is recorded after push 2's.
+  a.push(2, 1, 1, 1, 3);
+  const { facts } = evidenceOf({
     records: a.records,
     issue: "frequency-map",
     number: 1,
     revisionFor,
-    liveRevision: "a-newer-revision",
-    until: a.at(5),
+    until: a.at(3),
   })!;
-  assert.equal(evidence.facts.state, "open");
-  assert.equal(evidence.facts.verification.beforePush, "none");
-  assert.deepEqual(
-    evidence.actions.map((x) => x.id),
-    ["checks", "code-changed", "ticket-changed", "review"],
-  );
-  // Merged pull requests have nothing left to do.
-  assert.deepEqual(actionsOf({ ...evidence.facts, state: "merged" }), []);
+  assert.equal(facts.checks.result, "checks-passed");
+  assert.equal(facts.checks.passed, cases.length);
+  assert.equal(facts.pushes, 2);
+  assert.equal(facts.first?.passed, 3);
 });
 
 test("unavailable measurements are reported as missing, not as zero", () => {
@@ -575,7 +611,6 @@ test("activity after the merge never changes the merged outcome", () => {
       issue: "frequency-map",
       number: 1,
       revisionFor,
-      liveRevision: fixture.id,
       until: a.at(4),
     })!;
   const before = read();

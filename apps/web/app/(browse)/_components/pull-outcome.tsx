@@ -7,6 +7,7 @@ import {
   evidenceOf,
   type Evidence,
   type EvidenceItem,
+  type MergeBlocker,
 } from "../../../lib/evidence";
 
 const STATUS: Record<EvidenceItem["status"], string> = {
@@ -25,16 +26,21 @@ export function PullOutcome({
   number,
   revisions,
   mergedAt,
+  blocker,
   ideHref,
 }: {
   /** The pull request's attempt (lib/attempts), or null while loading. */
   records: readonly WorkspaceRecord[] | null;
-  /** `revision` is the issue's live revision, to tell when the ticket changed after the checks. */
-  issue: { slug: string; revision?: string };
+  issue: { slug: string };
   number: number;
   revisions: Record<string, Revision>;
   /** When it was merged, including a moment ago on this page before the records catch up. */
   mergedAt?: string | null;
+  /**
+   * The merge gate's verdict (`eligibility.blocker`, lib/merge.ts): what Before merging lists.
+   * Leave it out when not known; then stale checks are never claimed.
+   */
+  blocker?: MergeBlocker | null;
   ideHref: string;
 }) {
   const evidence = useMemo(() => {
@@ -44,7 +50,7 @@ export function PullOutcome({
       issue: issue.slug,
       number,
       revisionFor: (id) => revisions[id],
-      liveRevision: issue.revision,
+      blocker,
       until: mergedAt ?? new Date().toISOString(),
     });
     // Merged on this page a moment ago, before the stored records are read again.
@@ -55,7 +61,7 @@ export function PullOutcome({
           actions: [],
         }
       : read;
-  }, [records, issue.slug, issue.revision, number, revisions, mergedAt]);
+  }, [records, issue.slug, number, revisions, mergedAt, blocker]);
   return evidence && <OutcomeView evidence={evidence} ideHref={ideHref} />;
 }
 
@@ -87,9 +93,9 @@ export function OutcomeView({
               {action.text}{" "}
               {action.where === "ide" ? (
                 <Link href={ideHref}>Open the IDE →</Link>
-              ) : (
+              ) : action.where === "findings" ? (
                 <a href="#pull-findings-title">Go to Findings ↓</a>
-              )}
+              ) : null}
             </li>
           ))}
         </ul>
