@@ -10,6 +10,7 @@ import {
 import { checkRecord } from "../../../packages/domain/ingest";
 import { completionEligibility, completions } from "./completion";
 import { completePractice } from "./complete-practice";
+import { shareCompletionProof } from "./share-completion";
 import { catalog, live } from "./test-fixtures";
 import { allPullRequests } from "./pulls";
 import { attemptAt } from "./attempts";
@@ -306,6 +307,64 @@ test("real atomic completion writer records once, preserves Submit cause, queues
       currentFiles: { [fixture.path]: clean },
     });
     assert.equal(current.completedAt, completion.occurredAt);
+    const shareInput = {
+      records: all,
+      issue,
+      revision: fixture.id,
+      revisionFor,
+      currentFiles: { [fixture.path]: clean },
+      ready: true,
+    };
+    assert.equal(
+      shareCompletionProof(shareInput)?.completion.runId,
+      "verified-run",
+    );
+    assert.equal(shareCompletionProof({ ...shareInput, ready: false }), null);
+    assert.equal(
+      shareCompletionProof({
+        ...shareInput,
+        currentFiles: { [fixture.path]: "edited" },
+      }),
+      null,
+    );
+    // A later fully passing run is not the run named by the immutable completion.
+    const laterPass = all.map((r) => {
+      const value = JSON.parse(r.payload);
+      return [
+        "observation.workspace.run",
+        "observation.workspace.pull-request",
+      ].includes(value.type)
+        ? {
+            ...r,
+            payload: JSON.stringify({
+              ...value,
+              data: { ...value.data, runId: "later-pass" },
+            }),
+          }
+        : r;
+    });
+    const laterGate = completionEligibility({
+      ...shareInput,
+      records: laterPass,
+    });
+    assert.equal(laterGate.blocker, null);
+    assert.deepEqual(laterGate.required, []);
+    assert.equal(
+      shareCompletionProof({ ...shareInput, records: laterPass }),
+      null,
+    );
+    const incomplete = all.filter((r) => {
+      const value = JSON.parse(r.payload);
+      return value.type !== "observation.workspace.run" || !value.data.outcome;
+    });
+    assert.deepEqual(
+      completionEligibility({ ...shareInput, records: incomplete }).required,
+      [],
+    );
+    assert.equal(
+      shareCompletionProof({ ...shareInput, records: incomplete }),
+      null,
+    );
     const other = all.map((r) => {
       const v = JSON.parse(r.payload);
       return v.type === "observation.board.moved"
