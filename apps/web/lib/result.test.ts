@@ -77,7 +77,7 @@ test("the numbers come from keystrokes, edits, runs and the page, up to the merg
   ];
   const m = metricsOf(records, "word-count-python", at(60), (id) => (id === fixture.id ? fixture.revision : undefined));
   assert.deepEqual(m, {
-    t: 31, // 9 s + 4 + 1 + 16 + 10 of activity gaps (page and pull-request events are not activity)
+    t: 26, // 9 s + 4 + 1 + 11 + 10 of activity gaps: the 5 s the page was hidden do not count
     rd: 9,
     ks: 23,
     ty: 1,

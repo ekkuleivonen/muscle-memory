@@ -33,6 +33,7 @@ import {
   type RunOutcome,
 } from "../../../../packages/runner/runner";
 import type { Release } from "../../lib/feedback";
+import { fileViewOf, restoreFileView, type FileView } from "./continuity";
 import type { FileLanguage } from "../../lib/repo";
 import {
   createEditor,
@@ -254,6 +255,24 @@ export class WorkspaceSession {
     );
     this.views.set(path, view);
     view.focus();
+  }
+
+  /** Each mounted editable file's cursor, selection and scroll, to come back to later. */
+  places(): Record<string, FileView> {
+    return Object.fromEntries(
+      [...this.views].map(([path, view]) => [path, fileViewOf(view)]),
+    );
+  }
+
+  /**
+   * Puts an editable file's editor back where it was when the person left (recorded as a
+   * `select.restore` selection), and focuses it when asked.
+   */
+  restorePlace(path: string, place: FileView | undefined, focus: boolean): void {
+    const view = this.views.get(path);
+    if (!view || this.closed) return;
+    if (place) restoreFileView(view, place);
+    if (focus) view.focus();
   }
 
   /** Editable files changed in this session. */
