@@ -42,7 +42,10 @@ export function IssueResults({
           {visible.length} of {issues.length} match your board status filter.
         </p>
       )}
-      <IssueGroups groups={groupIssues(visible, group, projects, of)} />
+      <IssueGroups
+        groups={groupIssues(visible, group, projects, of)}
+        showStatus={false}
+      />
     </>
   );
 }

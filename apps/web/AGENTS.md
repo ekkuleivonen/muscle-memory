@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # The web app
 
-The product is a 9-to-5 job before AI: issues on a board, a VS Code-style IDE, tests, pull requests. Repo-wide rules are in the root `AGENTS.md`; this file covers `apps/web`.
+The product centers on solving coding challenges independently: challenge, code, immediate feedback, next challenge. Do not force workplace stories or copy tracker/editor ceremony. Repo-wide rules are in the root `AGENTS.md`; this file covers `apps/web`.
 
 ## Map
 
@@ -26,8 +26,8 @@ The product is a 9-to-5 job before AI: issues on a board, a VS Code-style IDE, t
 - Anything read from localStorage or IndexedDB is read after mount, never during render, or hydration breaks.
 - Revision JSON goes to client components as a string and is parsed there: the RSC serializer drops a `"__proto__"` key, and fixtures use one on purpose.
 - The editor owns its document; typing must never re-render React.
-- UI copy is plain and specific, in the voice of a workplace tool. Errors say what happened and whether it is the person's code ("this wasn't your code" for runner crashes).
-- Stay in the fiction. Inside the app (dashboard, board, issues, pull requests, the IDE) nothing mentions browsers, devices, storage, uploads, recording, revisions, sandboxes or runtimes: it is a company's tracker and editor. A runner is "the test runner", a missing one "no test runner set up for this repo", loading a runtime "installing Python 3.14". Technical detail goes to the console and the records. The consent page, the legal pages and the settings terminal are outside the fiction and say plainly what is recorded and where it is kept.
+- UI copy is plain and specific. Goals, examples and constraints should be immediately understandable. Meaningful requirement clarity is not a solution leak. Errors say what happened and whether it is the person's code ("this wasn't your code" for runner crashes).
+- Use real-world framing only when it naturally clarifies the task. Do not invent company context or require all challenges to resemble professional work. Keep implementation machinery out of the player journey unless it helps explain an actionable problem. Existing PR, board and merge records retain their historical meanings until an explicit compatibility contract changes how new challenge verification is represented. No telemetry, consent or legal change is implied by presentation work.
 
 ## Checking a change
 

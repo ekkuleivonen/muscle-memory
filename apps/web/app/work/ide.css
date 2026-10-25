@@ -1019,3 +1019,20 @@ dialog::backdrop {
   color: var(--accent-fg);
   border-color: transparent;
 }
+
+.ide-ticket .challenge-examples h2 {
+  font-size: 12px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+.ide-ticket .challenge-examples h3 {
+  font-size: 12px;
+  margin: 0 0 8px;
+}
+.ide-ticket .challenge-examples li {
+  padding: 10px;
+  background: var(--panel);
+}
+.ide-ticket .challenge-examples pre {
+  font-size: 11.5px;
+}

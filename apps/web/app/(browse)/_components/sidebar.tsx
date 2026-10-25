@@ -48,7 +48,7 @@ export function Sidebar({
           width={22}
           height={22}
         />
-        <span className="company-name">Muscle Memory Inc.</span>
+        <span className="company-name">Muscle Memory</span>
       </Link>
       <button
         ref={toggle}
@@ -83,7 +83,7 @@ export function Sidebar({
           href="/issues"
           aria-current={current("/issues")}
         >
-          <IssuesIcon /> Issues <span className="count">{issueCount}</span>
+          <IssuesIcon /> Challenges <span className="count">{issueCount}</span>
         </Link>
         <Link
           className="side-link"
