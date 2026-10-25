@@ -40,7 +40,9 @@ A merged pull request's Details list what happened, next to the facts already th
 
 The fix itself is never shown, so a friend still gets a fair go. The same numbers are recorded at the merge as a `result` event, so aggregates use exactly the definitions people see. After the outcome, at the foot of the page, the experience and AI-use questions are asked while open, one tap each and skippable with Not now, recorded as `profile` with `from: "result"`.
 
-**Share result** in the merge box opens a preview of exactly what a post or chat will show (the shared link's image and text), then copy link, X, LinkedIn or the system share sheet. The link is `/r/<card>`: the numbers, base64url-encoded in the path, plus this device's **referral code**, a random code separate from the participant ID. The link is a brag, not a record: anyone could edit it, so nothing trusts it.
+**Share result** in the merge box opens a preview of exactly what a post or chat will show (the shared link's image and text), then copy link, X, LinkedIn or the system share sheet. The link is `/r/<card>`: the numbers, base64url-encoded in the path, plus this device's **referral code**, a random code separate from the participant ID. Only allowlisted fields are ever encoded (`publicResult` in `apps/web/lib/result.ts`): a field added to the metrics stays out of links until it is listed there. The link is a brag, not a record: anyone could edit it, so nothing trusts it.
+
+**Code is left out unless the person ticks "Include my code"**, which starts unticked every time the dialog opens and says who can read it. Ticked, the files the pull request changed go into the link itself, deflated in its fragment (`/r/<card>#code=…`, `apps/web/lib/share.ts`): browsers never send a fragment to the server, so nothing stores the code, and copying a link without the box ticked never includes it. It is all the changed files or none: more than eight files, a name that can't go in a link, a file kept only in part, or code over the size limits (inflated UTF-8 JSON bytes, `MAX_JSON_BYTES`, the same budget the reader enforces, and `MAX_CODE_FRAGMENT` characters of link) is refused with a message saying why, never cut or partly shared. A link is only offered once it has been read back as exactly those files. The `shared` event records the card only, not whether code was included.
 
 ## Comparing with everyone else
 
@@ -48,9 +50,15 @@ A player against anonymous aggregates, never a list of people. `tools/aggregates
 
 The card compares in the browser: "Faster than 72% of people who fixed it in Python", once at least 50 people have finished that issue (`COMPARE_FROM`); before that, "One of the first 50 people to fix it in Python". The shared link carries the comparison, so the shared page and preview show it. Stealth players see no comparison, as the Privacy Notice says. "People who fixed it", not "developers": the players chose to be here.
 
+## Sharing an issue (`/try/<KEY>`)
+
+Every issue has a public page at `/try/<KEY>` (the permanent key; a lowercase key or the issue's id redirect to it): the ticket, its acceptance criteria and **Start <KEY> yourself**, with the same Terms line as `/play` for someone new. Starting opens the visitor's own work on the issue: from the starting code, or where they left it if they had started it in that browser. The link names only the issue, so it never carries anyone's code, attempt, board or records. **Copy issue link** on the issue page and in a pull request's details copies it. A key that is not in the catalog gets a page saying so.
+
+A pull request lives in the browser that opened it, so `/pulls/<KEY>/<n>` opened anywhere else says there is no such pull request there and offers the issue; it never shows that browser's own work in its place. The result link is how a pull request is shared.
+
 ## The shared page (`/r/<card>`)
 
-Public. It shows the receipt, a preview image (the headline sentence and keystrokes, typos, speed and pastes) for posts and chats (`opengraph-image.tsx`, 1200×630), and "Your turn", which leads to `/play?ref=<code>&lang=<language>`. A link that does not decode to a card we would have made goes to `/play`.
+Public. It shows the receipt, a preview image (the headline sentence and keystrokes, typos, speed and pastes) for posts and chats (`opengraph-image.tsx`, 1200×630), and "Your turn", which leads to `/try/<KEY>` for the same issue. Code included by choice is read from the fragment in the page, shown collapsed below as plain text ("opening it shows their fix"); a fragment that does not decode says so and shows nothing. A link that cannot be shown gets a page that says why and invents nothing: **incomplete** (does not decode to a card we would have made), **older version** (an earlier card version, or one from the retired incident; offers the issue it named if it still exists), or **issue retired**.
 
 ## Measuring the loop
 

@@ -1,8 +1,7 @@
 "use client";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { openPracticeStore } from "../../../../../packages/browser/practice-store";
 import type { Revision } from "../../../../../packages/content/model";
-import type { Json } from "../../../../../packages/domain/json";
 import type { WorkspaceRecord } from "../../../../../packages/domain/workspace";
 import { readProfile } from "../../../lib/account";
 import { LANGUAGES } from "../../../lib/languages";
@@ -11,16 +10,11 @@ import {
   compare,
   comparisonLine,
   duration,
-  encodeResult,
   metricsOf,
-  sentence,
   type Aggregate,
   type Metrics,
   type Result,
 } from "../../../lib/result";
-import { logShare } from "./board-log";
-
-type Channel = "copy" | "x" | "linkedin" | "native";
 
 /** The receipt's lines, shared by the card here and the shared page. */
 export function receiptLines(m: Metrics): [string, string, boolean?][] {
@@ -215,115 +209,4 @@ export async function copyText(text: string): Promise<boolean> {
   } finally {
     area.remove();
   }
-}
-
-/**
- * Share, with a preview of exactly what a post or chat will show (the shared link's image),
- * then copy, X, LinkedIn or the system share sheet. The fix itself is never shared.
- */
-export function ShareResult({
-  state,
-  issue,
-}: {
-  state: ResultState;
-  issue: ResultInput["issue"];
-}) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const [copied, setCopied] = useState(false);
-  const { result } = state;
-  if (!result) return null;
-  const segment = encodeResult(result);
-  const url = `${location.origin}/r/${segment}`;
-  const text = `${sentence(result, state.label)} Keep your coding skills in practice.`;
-  const share = async (channel: Channel) => {
-    void logShare(
-      { id: issue.slug, revision: issue.revision },
-      {
-        issueKey: issue.key,
-        channel,
-        ref: result.c,
-        card: result as unknown as Json,
-      },
-    );
-    if (channel === "copy") setCopied(await copyText(`${text} ${url}`));
-    else if (channel === "x")
-      window.open(
-        `https://x.com/intent/post?${new URLSearchParams({ text, url })}`,
-        "_blank",
-        "noopener",
-      );
-    else if (channel === "linkedin")
-      window.open(
-        `https://www.linkedin.com/sharing/share-offsite/?${new URLSearchParams({ url })}`,
-        "_blank",
-        "noopener",
-      );
-    else await navigator.share?.({ text, url }).catch(() => undefined);
-  };
-  return (
-    <>
-      <button
-        type="button"
-        className="share-open"
-        onClick={() => dialog.current?.showModal()}
-      >
-        Share result
-      </button>
-      <dialog
-        ref={dialog}
-        className="share-dialog"
-        aria-label="Share your result"
-        onClick={(event) =>
-          event.target === dialog.current && dialog.current?.close()
-        }
-        onClose={() => setCopied(false)}
-      >
-        <div className="share-body">
-          <div className="share-head">
-            <b>Share your result</b>
-            <button
-              type="button"
-              className="share-close"
-              aria-label="Close"
-              onClick={() => dialog.current?.close()}
-            >
-              ×
-            </button>
-          </div>
-          {/* eslint-disable-next-line @next/next/no-img-element -- the generated preview, as posted */}
-          <img
-            className="share-preview"
-            src={`/r/${segment}/opengraph-image`}
-            alt={text}
-            width={1200}
-            height={630}
-          />
-          <p className="share-text">{text}</p>
-          <p className="faint share-note">
-            Your numbers and a link to try the same bug. Never your code.
-          </p>
-          <div className="share-actions">
-            <button
-              type="button"
-              className="primary"
-              onClick={() => void share("copy")}
-            >
-              {copied ? "Copied" : "Copy link"}
-            </button>
-            <button type="button" onClick={() => void share("x")}>
-              Post on X
-            </button>
-            <button type="button" onClick={() => void share("linkedin")}>
-              LinkedIn
-            </button>
-            {"share" in navigator && (
-              <button type="button" onClick={() => void share("native")}>
-                Share…
-              </button>
-            )}
-          </div>
-        </div>
-      </dialog>
-    </>
-  );
 }

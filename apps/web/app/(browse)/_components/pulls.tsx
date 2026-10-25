@@ -36,7 +36,9 @@ import {
 import { metricsOf } from "../../../lib/result";
 import { Markdown } from "./markdown";
 import { Ask } from "./ask";
-import { ResultFacts, ShareResult, useResult } from "./result-card";
+import { ResultFacts, useResult } from "./result-card";
+import { CopyIssueLink, ShareResult } from "./share";
+import { tryHref } from "../../../lib/share";
 import { useNow, useRecords } from "./records";
 import {
   feedbackOf,
@@ -390,7 +392,10 @@ export function PullView({
   if (!detail)
     return (
       <p className="empty">
-        There&apos;s no pull request #{number} for {issue.key}.
+        There&apos;s no pull request #{number} for {issue.key} here. Pull
+        requests open only where they were made: if someone sent you this link,
+        ask them for their result link, or{" "}
+        <Link href={tryHref(issue.key)}>try {issue.key} yourself</Link>.
       </p>
     );
   const pull: PullSummary = mergedNow
@@ -602,7 +607,19 @@ export function PullView({
           share={
             result &&
             resultInput && (
-              <ShareResult state={result} issue={resultInput.issue} />
+              <ShareResult
+                state={result}
+                issue={resultInput.issue}
+                // Offered, never included by default: every file this pull request changed.
+                // A file kept only in part is passed as such, so sharing is refused, not partial.
+                code={changes
+                  .filter((c) => c.stats.added + c.stats.removed > 0)
+                  .map((c) => ({
+                    path: c.path,
+                    text: detail.code![c.path]?.text ?? "",
+                    truncated: c.truncated,
+                  }))}
+              />
             )
           }
         />
@@ -664,6 +681,7 @@ export function PullView({
             Continue in the IDE →
           </Link>
         )}
+        <CopyIssueLink issueKey={issue.key} />
       </aside>
     </div>
   );
