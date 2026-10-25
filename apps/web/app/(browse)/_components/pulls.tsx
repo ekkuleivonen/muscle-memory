@@ -211,6 +211,33 @@ export function PullList({
   );
 }
 
+/** The issue's pull requests, newest first, in its properties like a linked branch. */
+export function IssuePulls({ issue }: { issue: { key: string; slug: string } }) {
+  const records = useRecords();
+  const pulls = useMemo(
+    () => (records ? allPullRequests(records).filter((p) => p.issue === issue.slug) : []),
+    [records, issue.slug],
+  );
+  return (
+    <>
+      <dt>Pull requests</dt>
+      <dd className="issue-pulls">
+        {pulls.length === 0
+          ? "None yet"
+          : pulls.map((pull) => (
+              <Link key={pull.number} href={pullHref(issue.key, pull.number)}>
+                <PullIcon state={pull.state} size={14} />
+                <span className="mono">#{pull.number}</span>{" "}
+                <span className="dim">
+                  {STATE_LABELS[pull.state]} · {checksText(pull)}
+                </span>
+              </Link>
+            ))}
+      </dd>
+    </>
+  );
+}
+
 const clock = (at: string) =>
   new Date(at).toLocaleTimeString(undefined, {
     hour: "2-digit",
