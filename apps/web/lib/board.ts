@@ -87,20 +87,6 @@ export function setStatus(
     : [...items, { key, addedAt: at, status }];
 }
 
-/**
- * Takes a done issue again, on purpose: back to In progress for a new attempt. Only a done
- * issue can be replayed; anything else is left as it is.
- */
-export function replay(items: readonly BoardItem[], key: string): BoardItem[] {
-  const existing = items.find((i) => i.key === key);
-  if (existing?.status !== "done") return [...items];
-  return items.map((i) => {
-    if (i.key !== key) return i;
-    const { doneAt: _doneAt, ...rest } = i;
-    return { ...rest, status: "in-progress" as const };
-  });
-}
-
 /** Every check passed: the issue moves to Done, wherever it was. Done stays done. */
 export function complete(
   items: readonly BoardItem[],

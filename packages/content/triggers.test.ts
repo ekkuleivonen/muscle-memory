@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { evaluate, metric, wordingFor, type Facts } from "./triggers";
+import { evaluate, metric, type Facts } from "./triggers";
 
 const idle = { activeMinutesWithoutProgress: 0, runsWithoutProgress: 0, failingPushes: 0 };
 const facts = (files: Record<string, string>, more: Partial<Facts> = {}): Facts => ({
@@ -84,16 +84,6 @@ test("metrics read code as text: lines, the longest function, the deepest block"
     evaluate({ metric: "function-lines", above: 8 }, facts({ "a.js": js })),
     true,
   );
-});
-
-test("each person sees one stable wording of a comment", () => {
-  const a = wordingFor("person-1", "ada-1", 3);
-  assert.equal(wordingFor("person-1", "ada-1", 3), a);
-  assert.ok(a >= 0 && a < 3);
-  const seen = new Set(
-    Array.from({ length: 50 }, (_, i) => wordingFor(`person-${i}`, "ada-1", 3)),
-  );
-  assert.equal(seen.size, 3);
 });
 
 test("investigation triggers read files opened and the latest local run, nothing else", () => {

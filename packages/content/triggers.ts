@@ -137,13 +137,3 @@ function byIndent(name: "function-lines" | "nesting", lines: string[]): number {
   });
   return longest;
 }
-
-/** Which wording of a comment a person sees: stable per person and comment. */
-export function wordingFor(participantId: string, commentId: string, count: number): number {
-  let hash = 2166136261;
-  for (const char of `${participantId}:${commentId}`) {
-    hash ^= char.charCodeAt(0);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0) % Math.max(1, count);
-}

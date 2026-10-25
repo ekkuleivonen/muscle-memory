@@ -87,35 +87,6 @@ export interface Push {
   files: Record<string, string> | null;
 }
 
-/** Every push to this issue's pull requests, oldest first. */
-export function pushesOf(
-  records: readonly WorkspaceRecord[],
-  issue: string,
-  revisionFor: (id: string) => Revision | undefined,
-): Push[] {
-  const { observations, artifacts } = read(records, issue);
-  const runs = new Map<string, Observation>();
-  for (const o of observations)
-    if (o.type === "observation.workspace.run" && TERMINAL.has(String(o.data.status)))
-      runs.set(String(o.data.runId), o);
-  return observations
-    .filter((o) => o.type === "observation.workspace.pull-request")
-    .map((o) => {
-      const artifact = artifacts.get(String(o.data.codeArtifactId));
-      const files = artifact?.files as Record<string, { text: string }> | undefined;
-      return {
-        number: Number(o.data.number),
-        push: Number(o.data.push),
-        at: o.occurredAt,
-        passed: o.data.result === "checks-passed",
-        cases: casesOf(runs.get(String(o.data.runId)), revisionFor),
-        files: files
-          ? Object.fromEntries(Object.entries(files).map(([p, f]) => [p, f.text]))
-          : null,
-      };
-    });
-}
-
 /**
  * Behaviour since the last progress: a run or push that passed a larger share of the cases it
  * ran than any before (a local run runs fewer cases than CI). Active minutes are distinct
