@@ -10,7 +10,7 @@ The ways in, and how a result or a challenge gets shared. Every way in leads to 
 - **A challenge's URL (`/challenges/<KEY>`)** opens practice on it directly: its attempt if there is one, otherwise a new one started `direct`. **Copy challenge link** in practice copies it; it never carries anyone's code or attempt.
 - **A shared result (`/r/<card>`)**, public: below.
 
-Accepting the current Terms is the only thing any page requires (`requireConsent`). Someone who has not (a deep link, or the Terms changed since) is sent to `/consent`: the Terms in four points, one button, then on to the page they were heading for. `/start` does the same inline. There is no onboarding: the profile questions are in settings, and nothing insists on them.
+Accepting the current Terms is the only thing any page requires (`requireConsent`). Someone who has not (a deep link, or the Terms changed since) is sent to `/consent`: the Terms in four points and one choice (Enter, `y` or a click), then on to the page they were heading for. `/start` does the same inline. There is no onboarding: the profile questions are in settings, and nothing insists on them.
 
 ## Sharing a result
 
