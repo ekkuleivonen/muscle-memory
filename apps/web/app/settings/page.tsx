@@ -4,7 +4,7 @@ import { NOT_INDEXED } from "../../lib/site";
 import { TermFooter } from "../_terminal/footer";
 import { KeyMenu } from "../_terminal/key-menu";
 import "../_terminal/terminal.css";
-import { COMMANDS, GROUPS } from "./commands";
+import { COMMANDS, DESTRUCTIVE, GROUPS } from "./commands";
 
 export const metadata: Metadata = { title: "Settings", robots: NOT_INDEXED };
 
@@ -25,6 +25,7 @@ export default async function SettingsPage() {
                 name,
                 hint: COMMANDS[name],
                 group: group.label,
+                danger: DESTRUCTIVE.includes(name),
               })),
             )}
           />

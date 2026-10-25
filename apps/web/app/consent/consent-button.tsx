@@ -64,25 +64,21 @@ export function ConsentButton({ next }: { next: string }) {
           {error}
         </p>
       )}
+      <p className="t-line t-dim">{note}</p>
       <KeyActions
         id="consent"
         message={returning ? "Sign back in?" : "Go in?"}
         autoFocus
         actions={[
           {
-            label: busy
-              ? "opening…"
-              : returning
-                ? "sign back in"
-                : "I'm 16 or older and accept",
+            label: returning ? "sign back in" : "I'm 16 or older and accept",
             kind: "primary",
             key: "y",
-            disabled: busy && "opening",
+            disabled: busy && "opening…",
             run: () => void accept(),
           },
         ]}
       />
-      <p className="t-line t-dim">{note}</p>
     </div>
   );
 }

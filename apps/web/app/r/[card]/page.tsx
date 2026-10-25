@@ -11,8 +11,12 @@ import { NOT_INDEXED, SITE_NAME } from "../../../lib/site";
 import { YourTurn } from "./your-turn";
 import { Arrived } from "./arrived";
 import { SharedCode } from "./shared-code";
-import { SharedHeader, Unavailable } from "./unavailable";
+import { Unavailable } from "./unavailable";
 import { Receipt } from "../../_components/result-card";
+import { Banner } from "../../_terminal/banner";
+import { TermFooter } from "../../_terminal/footer";
+import "../../_terminal/terminal.css";
+import "../../share.css";
 
 type Props = { params: Promise<{ card: string }> };
 
@@ -86,39 +90,38 @@ export default async function SharedResult(props: Props) {
       />
     );
   return (
-    <div className="legal home">
-      <SharedHeader />
-      <Arrived referral={shown.referral} />
-      <main className="legal-body home-body">
-        <section className="result-card shared">
+    <>
+      <div className="term">
+        <Banner description="Practice without AI." heading={false} />
+        <Arrived referral={shown.referral} />
+        <main className="t-prose home-fold t-shared">
           <Receipt
-            top={`muscle memory · ${challenge.key} · shared result`}
+            top={`${challenge.key} · shared result`}
             headline={shown.headline}
             detail={`${shown.earlier ? "Completed on an earlier version of this challenge; you start from the current one. " : ""}The editor offers no AI completion, chat or generated code: a practice condition, not proof about other tools. As they shared it; not a verified record.`}
             lines={shown.lines}
             completed={shown.completed}
           />
-        </section>
-        <section className="home-hero">
-          <h1>
-            Same challenge.
+          <h1 className="t-line home-headline">
+            <strong>Same challenge.</strong>
             <br />
-            <span className="home-punch">Your turn.</span>
+            <strong className="t-brand">Your turn.</strong>
           </h1>
-          <p className="home-lede">
+          <p className="t-line">
             {challenge.hook ?? (challenge.summary || challenge.title)}{" "}
             {startCopy(challenge.key, shown.sameVersion).lede}
           </p>
-          <div className="home-actions">
+          <div className="home-start">
             <YourTurn
               challengeKey={challenge.key}
               label={startCopy(challenge.key, shown.sameVersion).cta}
             />
-            <span className="home-note">No email needed.</span>
+            <span className="t-dim">No email needed.</span>
           </div>
-        </section>
-        <SharedCode />
-      </main>
-    </div>
+          <SharedCode />
+        </main>
+      </div>
+      <TermFooter trail={[{ label: "shared result", href: "" }]} />
+    </>
   );
 }

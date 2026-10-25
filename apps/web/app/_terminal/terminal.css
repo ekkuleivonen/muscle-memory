@@ -1,4 +1,8 @@
-/* Terminal: settings and the pages moving to its look. Dark only. */
+/*
+ * Terminal: the site's pages in a terminal's look. Dark only. One size of text (15px), with
+ * 13px for the status bar, filters and examples; hierarchy comes from weight, colour and
+ * markers (##, #, ❯) as in a terminal, and vertical space in half lines (0.8em).
+ */
 .term,
 .t-footer {
   --t-bg: #0f1012;
@@ -7,8 +11,10 @@
   --t-accent: #7d86f1;
   --t-ok: #3dbb7f;
   --t-err: #f2555a;
+  --t-warn: #f0b03c;
   --t-select: #7d86f155;
   --t-current: #ffffff0d;
+  --t-line: #35373d;
   --t-bar: #1a1b1f;
   color-scheme: dark;
 }
@@ -19,9 +25,8 @@
   padding: 24px clamp(16px, 4vw, 48px);
   background: var(--t-bg);
   color: var(--t-fg);
-  font-family:
-    ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
-  font-size: 15px;
+  font-family: var(--mono);
+  font-size: var(--text-lg);
   line-height: 1.6;
 }
 .term ::selection {
@@ -35,6 +40,7 @@
 .term strong {
   font-weight: 600;
 }
+/* Colour roles: the accent is the brand and what is selected; green is links and success. */
 .t-brand {
   color: var(--t-accent);
   font-weight: 700;
@@ -42,7 +48,9 @@
 .t-dim {
   color: var(--t-dim);
 }
-.t-accent,
+.t-accent {
+  color: var(--t-accent);
+}
 .t-ok {
   color: var(--t-ok);
 }
@@ -58,9 +66,10 @@
 }
 .term .t-cmd:focus-visible {
   outline: 1px solid var(--t-accent);
+  outline-offset: 2px;
 }
 .t-banner {
-  margin-bottom: 8px;
+  margin-bottom: 0.8em;
 }
 .t-art {
   white-space: pre;
@@ -68,7 +77,7 @@
   color: var(--t-accent);
 }
 .t-art-wide {
-  /* Block letters: tight lines so the shading joins up. */
+  /* A drawing, not text: block letters at a size where the whole wordmark fits. */
   font-size: 11px;
   line-height: 1.05;
 }
@@ -85,7 +94,7 @@
   }
 }
 .t-banner-text {
-  margin-top: 12px;
+  margin-top: 0.8em;
 }
 .t-on {
   color: var(--t-ok);
@@ -114,9 +123,8 @@
   height: 32px;
   background: var(--t-bar);
   color: var(--t-dim);
-  font-family:
-    ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
-  font-size: 13px;
+  font-family: var(--mono);
+  font-size: var(--text-sm);
 }
 .term:has(~ .t-footer) {
   bottom: 32px;
@@ -139,6 +147,22 @@
 .t-footer-link:hover {
   color: var(--t-fg);
   background: var(--t-current);
+}
+/* Home's segment: the name, or ~ where the bar is short of room. */
+.t-home-short {
+  display: none;
+}
+@media (max-width: 600px) {
+  .t-home-long {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .t-home-short {
+    display: inline;
+  }
 }
 /*
  * The trail as powerline segments: filled blocks with an arrow point on the right and a notch
@@ -189,7 +213,7 @@
   );
 }
 .t-trail li .t-footer-link[aria-current="page"] {
-  --seg: #f0b03c;
+  --seg: var(--t-warn);
   color: var(--t-bg);
   font-weight: 700;
 }
@@ -213,7 +237,7 @@
 /* The home page: everything in one screen, the start action on its own line. */
 .home-fold > p,
 .home-fold > h1 {
-  margin: 0 0 1.2em;
+  margin: 0 0 1.6em;
 }
 .home-headline {
   font-size: inherit;
@@ -223,7 +247,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 1ch 3ch;
+  gap: 0.8em 3ch;
   margin-bottom: 2.4em;
 }
 .term .home-start .t-btn {
@@ -232,7 +256,7 @@
 }
 .term .t-btn {
   display: block;
-  padding: 6px 1ch;
+  padding: 4px 1ch;
   color: var(--t-fg);
   text-decoration: none;
   border: 1px solid var(--t-dim);
@@ -259,8 +283,8 @@
 .t-note {
   margin: 0 0 1.6em;
   padding: 4px 1ch;
-  border-left: 2px solid #f0b03c;
-  color: #f0b03c;
+  border-left: 2px solid var(--t-warn);
+  color: var(--t-warn);
 }
 .t-note strong {
   color: inherit;
@@ -328,6 +352,21 @@
   background: var(--t-current);
   font: inherit;
 }
+.t-md pre {
+  margin: 0 0 1.6em;
+  padding: 0.8em 2ch;
+  border: 0;
+  border-left: 2px solid var(--t-line);
+  border-radius: 0;
+  background: var(--t-current);
+  overflow-x: auto;
+  font: inherit;
+  font-size: var(--text-sm);
+}
+.t-md pre code {
+  padding: 0;
+  background: none;
+}
 .t-md blockquote {
   margin: 0 0 1.6em;
   padding-left: 2ch;
@@ -341,7 +380,7 @@
 .t-md th,
 .t-md td {
   padding: 2px 2ch 2px 0;
-  border-bottom: 1px solid var(--t-current);
+  border-bottom: 1px solid var(--t-line);
   text-align: left;
   vertical-align: top;
 }
@@ -352,10 +391,10 @@
 /* Settings: pages read and clicked, in the terminal's look. */
 .t-settings > p,
 .t-settings > section > p {
-  margin: 1.2em 0 0;
+  margin: 1.6em 0 0;
 }
 .t-group {
-  margin: 2em 0 0.4em;
+  margin: 1.6em 0 0;
   color: var(--t-dim);
   font-size: inherit;
   font-weight: 400;
@@ -363,7 +402,9 @@
 .t-group::before {
   content: "# " / "";
 }
-.t-keymenu {
+/* The ❯ shows where focus is; the list itself draws no ring. */
+.t-keymenu,
+.t-keymenu:focus-visible {
   outline: none;
 }
 .t-keymenu:focus-visible {
@@ -405,22 +446,29 @@
     white-space: normal;
   }
 }
-.t-current-row .t-row-name {
+/* The row the ❯ is on, and the action a prompt suggests, read in the accent. */
+.t-current-row .t-row-name,
+.t-primary .t-row-name {
   color: var(--t-accent);
 }
+/* What can't be undone reads in red, in the menu and in the prompt alike. */
+.t-danger .t-row-name,
+.t-danger.t-current-row .t-row-name {
+  color: var(--t-err);
+}
 .t-keys {
-  margin-top: 1em;
+  margin-top: 0.8em;
 }
 .t-state {
   padding: 4px 1ch;
   border-left: 2px solid var(--t-accent);
 }
 .t-result {
-  margin-top: 1.2em;
+  margin-top: 1.6em;
 }
 .t-field {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   margin-top: 1.6em;
   max-width: 40ch;
 }
@@ -439,13 +487,13 @@
 }
 /* The profile form: each question a fieldset, options as (•) and [x] rows to click. */
 .t-question {
-  margin: 2em 0 0;
+  margin: 2.4em 0 0;
   padding: 0;
   border: 0;
 }
 .t-question legend {
   padding: 0;
-  margin-bottom: 0.4em;
+  margin-bottom: 0.8em;
   font-weight: 700;
 }
 .t-option {
@@ -494,16 +542,19 @@
 .term button.t-action.t-current-row {
   background: var(--t-current);
 }
-.t-action.t-danger .t-row-name,
-.t-action.t-danger.t-current-row .t-row-name {
-  color: var(--t-err);
-}
 .t-action.t-disabled {
   cursor: default;
 }
 .t-action.t-disabled .t-row-name,
 .t-action.t-disabled.t-current-row .t-row-name {
   color: var(--t-dim);
+}
+/* Key hints only help with a keyboard; touch screens go without them. */
+@media (hover: none) and (pointer: coarse) {
+  .t-keys,
+  .picker-keys {
+    display: none;
+  }
 }
 
 /* Examples as rows: `input → expected` on one line, or stacked when either is long. */
@@ -515,12 +566,12 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 12.5px;
+  font-size: var(--text-sm);
 }
 .challenge-examples.compact li {
   display: grid;
   grid-template-columns: 3ch minmax(0, 1fr);
-  padding: 6px 0;
+  padding: 4px 0;
   margin: 0;
   border: 0;
   border-top: 1px solid var(--line);
@@ -542,12 +593,12 @@
   padding: 0;
   background: none;
   border: 0;
-  font-size: 12.5px;
+  font-size: inherit;
 }
 /*
  * The challenge picker, like fzf: the search line and filter toggles on top, the list and a
  * preview of the highlighted challenge side by side, keys underneath. Only the list and the
- * preview scroll.
+ * preview scroll. Narrow windows stack the list over the preview, as a tmux split.
  */
 .term.picker {
   display: grid;
@@ -557,7 +608,7 @@
 }
 .picker-search {
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--t-bar);
+  border-bottom: 1px solid var(--t-line);
 }
 .picker-line {
   display: flex;
@@ -578,19 +629,26 @@
 }
 .picker-line input::placeholder {
   color: var(--t-dim);
-  opacity: 0.6;
+  opacity: 1;
 }
+/* A filter row: its name in a column of its own, the toggles wrapping beside it. */
 .picker-facet {
+  display: grid;
+  grid-template-columns: 6ch minmax(0, 1fr);
+  gap: 0 1ch;
+  align-items: baseline;
+  font-size: var(--text-sm);
+}
+.picker-facet-values {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 1.5ch;
-  font-size: 13.5px;
-}
-.picker-facet > .t-dim {
-  width: 6ch;
+  /* The toggles' own padding hangs into the gap, so their text lines up on every row. */
+  margin-left: -0.75ch;
 }
 .picker-facet button {
-  padding: 0;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0 0.75ch;
   border: 0;
   background: none;
   color: var(--t-fg);
@@ -599,6 +657,7 @@
 }
 .picker-facet button:hover {
   color: var(--t-accent);
+  background: var(--t-current);
 }
 .picker-facet button.on {
   color: var(--t-accent);
@@ -606,6 +665,7 @@
 }
 .picker-facet button:focus-visible {
   outline: 1px solid var(--t-accent);
+  outline-offset: -1px;
 }
 .picker-main {
   display: grid;
@@ -645,7 +705,7 @@
   color: var(--t-ok);
 }
 .picker-mark.starred {
-  color: #f0b03c;
+  color: var(--t-warn);
 }
 .term button.picker-star {
   margin: 0;
@@ -660,8 +720,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Language and level, padded to one width so every title gets the same room. */
 .picker-meta {
   flex: none;
+  white-space: pre;
 }
 .picker-empty {
   padding-left: 2ch !important;
@@ -671,25 +733,44 @@
   min-height: 0;
   overflow-y: auto;
   padding: 8px 0 8px 2ch;
-  border-left: 1px solid var(--t-bar);
+  border-left: 1px solid var(--t-line);
 }
 .picker-preview .t-doc-title {
   margin: 0;
 }
 .picker-preview > .t-dim {
-  margin: 0.2em 0 0;
+  margin: 0;
 }
 .term button.picker-start {
-  margin: 1em 0 0;
+  margin: 0.8em 0 0;
 }
 .picker-preview .challenge-examples {
-  margin: 0 0 1em;
+  margin: 0 0 0.8em;
 }
 .picker-preview .challenge-examples h2 {
   font-size: inherit;
 }
 .picker-keys {
   margin: 8px 0 0;
+}
+@media (max-width: 760px) {
+  .term.picker {
+    padding-top: 16px;
+  }
+  .picker-main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .picker-preview {
+    padding: 12px 0 8px;
+    border-left: 0;
+    border-top: 1px solid var(--t-line);
+  }
+  /* The preview says the language and level; the list keeps the room for titles. */
+  .picker-meta,
+  .picker-key {
+    display: none;
+  }
 }
 /*
  * Text fields use a terminal's cursor, as the editor does: a steady block. Browsers without
@@ -707,10 +788,10 @@
   margin: 0;
 }
 .t-oops-code {
-  margin: 1.2em 0;
+  margin: 1.6em 0;
   color: var(--t-err);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--text-xs);
   line-height: 1.1;
   white-space: pre;
   overflow-x: auto;
@@ -720,8 +801,12 @@
   max-width: 80ch;
 }
 .t-consent .t-md li + li {
-  margin-top: 0.6em;
+  margin-top: 0.8em;
 }
 .t-consent-actions {
   margin-top: 1.6em;
+}
+/* A shared result (/r): the receipt, then the same challenge to try. */
+.t-shared {
+  max-width: 80ch;
 }

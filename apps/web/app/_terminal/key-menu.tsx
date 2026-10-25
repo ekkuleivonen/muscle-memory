@@ -16,6 +16,8 @@ export interface KeyMenuItem {
   hint: string;
   /** Printed above the first item of each group. */
   group?: string;
+  /** Opens something that can't be undone: the name reads in red. */
+  danger?: boolean;
 }
 
 /**
@@ -36,6 +38,16 @@ export function KeyMenu({
   const [state, setState] = useState(initialList);
   const list = useRef<HTMLDivElement>(null);
   const width = Math.max(...items.map((item) => item.name.length));
+  // Runs of items under one heading, keeping each item's place in the whole list.
+  const groups: {
+    label?: string;
+    rows: { item: KeyMenuItem; index: number }[];
+  }[] = [];
+  items.forEach((item, index) => {
+    const last = groups.at(-1);
+    if (last && last.label === item.group) last.rows.push({ item, index });
+    else groups.push({ label: item.group, rows: [{ item, index }] });
+  });
   const prompt: Extract<Prompt, { kind: "select" }> = {
     kind: "select",
     id,
@@ -46,7 +58,9 @@ export function KeyMenu({
   useEffect(() => list.current?.focus({ preventScroll: true }), []);
   useEffect(() => {
     if (document.activeElement === list.current)
-      document.getElementById(`${id}-${state.cursor}`)?.scrollIntoView({ block: "nearest" });
+      document
+        .getElementById(`${id}-${state.cursor}`)
+        ?.scrollIntoView({ block: "nearest" });
   }, [id, state.cursor]);
 
   function onKeyDown(event: KeyboardEvent) {
@@ -69,24 +83,18 @@ export function KeyMenu({
         tabIndex={0}
         onKeyDown={onKeyDown}
       >
-        {items.map((item, index) => {
-          const current = index === state.cursor;
-          const heading =
-            item.group && item.group !== items[index - 1]?.group ? (
-              <div className="t-group" aria-hidden>
-                {item.group}
-              </div>
-            ) : null;
-          return (
-            <Fragment key={item.href}>
-              {heading}
+        {groups.map(({ label: group, rows }) => {
+          const options = rows.map(({ item, index }) => {
+            const current = index === state.cursor;
+            return (
               <Link
+                key={item.href}
                 id={`${id}-${index}`}
                 role="option"
                 aria-selected={current}
                 href={item.href}
                 tabIndex={-1}
-                className={`t-row${current ? " t-current-row" : ""}`}
+                className={`t-row${current ? " t-current-row" : ""}${item.danger ? " t-danger" : ""}`}
                 onFocus={() => setState({ ...state, cursor: index })}
               >
                 <span className="t-accent">{current ? "❯" : " "}</span>
@@ -94,7 +102,18 @@ export function KeyMenu({
                 <span className="t-row-name">{item.name.padEnd(width)}</span>
                 <span className="t-dim">{item.hint}</span>
               </Link>
-            </Fragment>
+            );
+          });
+          if (!group) return <Fragment key={rows[0].index}>{options}</Fragment>;
+          // The heading is the group's name for screen readers too, not only a printed line.
+          const headingId = `${id}-group-${rows[0].index}`;
+          return (
+            <div key={rows[0].index} role="group" aria-labelledby={headingId}>
+              <div className="t-group" id={headingId} role="presentation">
+                {group}
+              </div>
+              {options}
+            </div>
           );
         })}
       </div>

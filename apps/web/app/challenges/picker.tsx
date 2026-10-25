@@ -68,6 +68,17 @@ export function Picker({
       : { ...query, sort: "difficulty" as const };
     return filterByMarks(filterChallenges(all, ordered), query.marks, has);
   }, [all, query, text, progress, stars]);
+  // The list's language and level columns, as wide as their longest entries.
+  const metaWidth = useMemo(
+    () => ({
+      language: Math.max(
+        0,
+        ...all.map((i) => languageLabel(i.language).length),
+      ),
+      difficulty: Math.max(0, ...all.map((i) => i.difficulty.length)),
+    }),
+    [all],
+  );
   const at = Math.min(cursor, Math.max(0, results.length - 1));
   const current = results[at];
 
@@ -251,22 +262,24 @@ export function Picker({
         {facets.map((facet) => (
           <div key={facet.name} className="picker-facet">
             <span className="t-dim">{facet.name}</span>
-            {facet.values.map(({ value, label }) => {
-              const on = (query as unknown as Record<ListKey, string[]>)[
-                facet.key
-              ].includes(value);
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  aria-pressed={on}
-                  className={on ? "on" : undefined}
-                  onClick={() => flip(facet.key, value)}
-                >
-                  {on ? `[${label}]` : label}
-                </button>
-              );
-            })}
+            <span className="picker-facet-values">
+              {facet.values.map(({ value, label }) => {
+                const on = (query as unknown as Record<ListKey, string[]>)[
+                  facet.key
+                ].includes(value);
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={on}
+                    className={on ? "on" : undefined}
+                    onClick={() => flip(facet.key, value)}
+                  >
+                    {on ? `[${label}]` : label}
+                  </button>
+                );
+              })}
+            </span>
           </div>
         ))}
       </div>
@@ -314,8 +327,10 @@ export function Picker({
                 <span className="picker-key t-dim">{challenge.key}</span>
                 <span className="picker-title">{challenge.title}</span>
                 <span className="t-dim picker-meta">
-                  {languageLabel(challenge.language).toLowerCase()} ·{" "}
-                  {challenge.difficulty}
+                  {languageLabel(challenge.language)
+                    .toLowerCase()
+                    .padEnd(metaWidth.language)}{" "}
+                  · {challenge.difficulty.padEnd(metaWidth.difficulty)}
                 </span>
               </li>
             );

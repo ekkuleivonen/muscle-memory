@@ -170,7 +170,7 @@ export function ShareResult({
     <>
       <button
         type="button"
-        className="share-open"
+        className="btn primary"
         onClick={() => {
           setWithCode(false);
           setPacked(undefined);

@@ -1,7 +1,13 @@
 /*
- * Base styles: the palette (greys plus one indigo accent, dark only), type, buttons, markdown,
- * the pages a shared link lands on, sharing, and practice's feedback. The terminal look lives
- * in _terminal/terminal.css; practice's panes in practice/practice.css.
+ * Base styles: the palette (greys plus one indigo accent, dark only), the type scale, buttons,
+ * markdown, sharing, and practice's feedback. The terminal look lives in
+ * _terminal/terminal.css; practice's panes in practice/practice.css.
+ *
+ * Colour roles: indigo (--accent) is the brand, what is selected and titles; green is links and
+ * what passed; red is errors and what can't be undone; amber is warnings and where you are.
+ * Type: four sizes, 12 for hints and status, 13 for practice's text, 14 for code, 15 for the
+ * terminal pages; titles are 16 and bold. Spacing comes in steps of 4px, or in half lines
+ * (0.8em) on the terminal pages.
  */
 :root {
   color-scheme: dark;
@@ -12,6 +18,11 @@
     ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas,
     monospace;
   --radius: 6px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 14px;
+  --text-lg: 15px;
+  --text-title: 16px;
 
   --bg: #0f1012;
   --bg-subtle: #141518;
@@ -21,8 +32,9 @@
   --line: #26272c;
   --line-strong: #35373d;
   --fg: #e5e6e9;
+  /* Secondary text (7.1:1 on --bg), then the quietest text that still keeps AA (5.1:1). */
   --dim: #9b9ea6;
-  --faint: #969aa5;
+  --faint: #80848e;
   --accent: #7d86f1;
   --accent-fg: #0f1012;
   --accent-soft: #7d86f122;
@@ -41,7 +53,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
-  font: 14px/1.5 var(--font);
+  font: var(--text-md) / 1.5 var(--font);
   -webkit-font-smoothing: antialiased;
 }
 a {
@@ -51,7 +63,7 @@ a {
 code,
 kbd {
   font-family: var(--mono);
-  font-size: 0.88em;
+  font-size: 0.92em;
 }
 code {
   background: var(--hover);
@@ -65,11 +77,11 @@ kbd {
   border-radius: 4px;
   padding: 0 4px;
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 :focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 .dim {
   color: var(--dim);
@@ -81,32 +93,18 @@ kbd {
   font-family: var(--mono);
 }
 
-/* The wordmark in a page header. */
-.site-name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px 12px;
-  font-weight: 600;
-}
-.logo-mark {
-  width: 22px;
-  height: 22px;
-  flex: none;
-}
-
 /* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   height: 28px;
-  padding: 0 10px;
+  padding: 0 12px;
   border-radius: var(--radius);
   border: 1px solid var(--line-strong);
   background: var(--panel);
   color: var(--fg);
-  font: 500 13px var(--font);
+  font: 500 var(--text-sm) var(--font);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -125,13 +123,23 @@ kbd {
   background: var(--accent-soft);
   border-color: var(--accent);
 }
+/* Off reads as off: an outline in the quiet grey, never a faded copy of the button. */
+.btn:disabled,
+.btn[aria-disabled="true"],
+.btn.primary:disabled {
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--faint);
+  filter: none;
+  cursor: default;
+}
 
-/* Markdown: tasks and rule messages. */
+/* Markdown: tasks and rule messages. Headings as a terminal reader marks them. */
 .markdown > * {
   margin: 0;
 }
 .markdown > :not(:first-child) {
-  margin-top: 10px;
+  margin-top: 8px;
 }
 .markdown p,
 .markdown li {
@@ -139,36 +147,40 @@ kbd {
 }
 .markdown h3,
 .markdown h4 {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: inherit;
+  font-weight: 700;
 }
-.markdown h4 {
-  font-size: 13px;
-  color: var(--dim);
+.markdown h3::before {
+  content: "## " / "";
+  color: var(--accent);
+}
+.markdown h4::before {
+  content: "### " / "";
+  color: var(--accent);
 }
 .markdown > h3:not(:first-child),
 .markdown > h4:not(:first-child) {
-  margin-top: 18px;
+  margin-top: 20px;
 }
 .markdown ul,
 .markdown ol {
-  padding-left: 22px;
+  padding-left: 20px;
 }
 .markdown li + li {
-  margin-top: 3px;
+  margin-top: 4px;
 }
 .markdown blockquote {
-  border-left: 3px solid var(--line-strong);
-  padding: 2px 0 2px 12px;
+  border-left: 2px solid var(--line-strong);
+  padding: 4px 0 4px 12px;
   color: var(--dim);
 }
 .markdown pre {
   background: var(--bg-subtle);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 10px 12px;
+  padding: 8px 12px;
   overflow-x: auto;
-  font: 12.5px/1.55 var(--mono);
+  font: var(--text-xs) / 1.55 var(--mono);
 }
 .markdown pre code {
   background: none;
@@ -177,7 +189,9 @@ kbd {
   font-size: inherit;
 }
 .markdown a {
-  color: var(--accent);
+  color: var(--green);
+  text-decoration: underline dotted;
+  text-underline-offset: 4px;
 }
 .markdown-table {
   max-width: 100%;
@@ -186,12 +200,12 @@ kbd {
 .markdown-table table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .markdown-table th,
 .markdown-table td {
   border: 1px solid var(--line);
-  padding: 7px 9px;
+  padding: 4px 8px;
   text-align: left;
   vertical-align: top;
 }
@@ -199,205 +213,62 @@ kbd {
   background: var(--bg-subtle);
 }
 
-@media (max-width: 860px) {
-  .site-name {
-    padding: 4px 8px;
-    margin: 0;
-    border: 0;
-  }
-}
-
-/* Pages a shared link lands on, outside the terminal: consent and the shared result. */
-.legal {
-  min-height: 100vh;
-}
-.legal-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 16px 20px 0;
-}
-.legal-head .site-name {
-  padding: 6px 0;
-}
-.legal-head nav {
-  display: flex;
-  gap: 16px;
-  font-size: 13.5px;
-}
-.legal-head nav a {
-  color: var(--dim);
-}
-.legal-head nav a:hover {
-  color: var(--fg);
-}
-.legal-body {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 24px 20px 96px;
-}
-.legal-body h1 {
-  font-size: 30px;
-  letter-spacing: -0.4px;
-  margin: 8px 0 4px;
-}
-/* Public home page. Text below the headline uses --dim, never --faint, to keep AA contrast. */
-.home-body {
-  padding-top: 72px;
-}
-.home-hero h1 {
-  font-size: 44px;
-  text-wrap: balance;
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
-  margin: 0 0 20px;
-}
-.home-punch {
-  color: var(--accent);
-}
-.home-lede {
-  font-size: 19px;
-  line-height: 1.6;
-  color: var(--dim);
-  max-width: 34em;
-  margin: 0;
-}
-.home-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px 20px;
-  margin-top: 32px;
-}
-.home-cta {
-  display: inline-block;
-  background: var(--accent);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 600;
-  padding: 12px 22px;
-  border-radius: 8px;
-}
-.home-cta:hover {
-  color: #fff;
-  filter: brightness(1.08);
-}
-/* The accent is too pale behind white text; deepen it to keep AA. */
-.home-cta {
-  background: color-mix(in srgb, var(--accent), #000 25%);
-}
-.home-cta:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
-}
-.home-note {
-  color: var(--dim);
-  font-size: 14px;
-}
-@media (max-width: 600px) {
-  .home-body {
-    padding-top: 40px;
-  }
-  .home-hero h1 {
-    font-size: 34px;
-  }
-  .home-lede {
-    font-size: 17px;
-  }
-}
-/* The receipt on a shared result's page (/r). */
+/* The receipt on a shared result's page (/r), drawn as terminal output. */
 .receipt {
-  background: #0f1117;
-  color: #e7e9ee;
-  border-radius: var(--radius);
-  padding: 24px 26px;
-  font-family: var(--mono);
+  margin: 1.6em 0;
+  padding: 0.8em 2ch;
+  border: 1px solid var(--line-strong);
 }
 .receipt-top {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-  color: #8b90a0;
-  margin-bottom: 16px;
+  gap: 0 2ch;
+  color: var(--dim);
+  font-size: var(--text-sm);
 }
 .receipt-status {
-  color: #b69cff;
-  border: 1px solid #6e56cf;
-  border-radius: 999px;
-  padding: 2px 10px;
+  color: var(--green);
 }
 .receipt-head {
-  font-family: var(--font);
-  font-size: 22px;
+  margin: 0.8em 0 0;
   font-weight: 700;
-  margin: 0 0 4px;
-  color: #fff;
 }
 .receipt-sub {
-  font-family: var(--font);
-  font-size: 13.5px;
-  color: #9aa0b1;
-  margin: 0 0 18px;
+  margin: 0 0 0.8em;
+  color: var(--dim);
+  font-size: var(--text-sm);
 }
 .receipt-rows {
   margin: 0;
-  border-top: 1px dashed #2c3140;
-  border-bottom: 1px dashed #2c3140;
-  padding: 12px 0;
-  display: grid;
-  gap: 5px;
-  font-size: 14px;
+  padding: 0.8em 0 0;
+  border-top: 1px dashed var(--line-strong);
 }
 .receipt-row {
   display: flex;
-  gap: 8px;
+  gap: 1ch;
 }
 .receipt-row dt {
-  color: #9aa0b1;
+  color: var(--dim);
 }
 .receipt-dots {
   flex: 1;
-  border-bottom: 1px dotted #39404f;
-  transform: translateY(-4px);
+  border-bottom: 1px dotted var(--line-strong);
+  transform: translateY(-0.5em);
 }
 .receipt-row dd {
   margin: 0;
-  color: #fff;
 }
 .receipt-row dd.good {
-  color: #4ade80;
+  color: var(--green);
 }
 
-/* The result card on its page. */
-.result-card.shared {
-  margin: 8px 0 48px;
-}
-
-/* Sharing a result: the button, then a preview of the post. */
-.share-open {
-  flex: none;
-  font: inherit;
-  font-weight: 600;
-  color: #fff;
-  background: #8250df;
-  border: 0;
-  border-radius: var(--radius);
-  padding: 8px 14px;
-  cursor: pointer;
-}
-.share-open:hover {
-  filter: brightness(1.08);
-}
+/* Sharing a result: the dialog with a preview of the post. */
 .share-dialog {
   width: min(560px, calc(100vw - 32px));
   padding: 0;
   border: 1px solid var(--line-strong);
-  border-radius: 10px;
+  border-radius: var(--radius);
   background: var(--panel);
   color: var(--fg);
   box-shadow: var(--shadow);
@@ -408,7 +279,7 @@ kbd {
 .share-body {
   display: grid;
   gap: 12px;
-  padding: 16px 18px 18px;
+  padding: 16px;
 }
 .share-head {
   display: flex;
@@ -419,27 +290,31 @@ kbd {
   font: inherit;
   font-size: 20px;
   line-height: 1;
-  padding: 2px 6px;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
   border: 0;
   background: none;
   color: var(--dim);
   cursor: pointer;
 }
+.share-close:hover {
+  color: var(--fg);
+}
 .share-preview {
   width: 100%;
   height: auto;
   aspect-ratio: 1200 / 630;
-  border-radius: 8px;
+  border-radius: var(--radius);
   border: 1px solid var(--line);
   background: #0f1117;
 }
 .share-text {
   margin: 0;
-  font-size: 14px;
 }
 .share-note {
-  margin: -6px 0 0;
-  font-size: 12.5px;
+  margin: -4px 0 0;
+  font-size: var(--text-xs);
 }
 .share-actions {
   display: flex;
@@ -448,8 +323,9 @@ kbd {
 }
 .share-actions button {
   font: inherit;
-  font-size: 13px;
-  padding: 7px 12px;
+  font-size: var(--text-sm);
+  padding: 4px 12px;
+  min-height: 28px;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   background: var(--bg);
@@ -467,35 +343,21 @@ kbd {
 
 /* After completing: the next challenge, practising again, the questions and sharing. */
 .practice-next {
-  padding: 20px;
   margin: 20px 0;
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  background: var(--bg-subtle);
-}
-.practice-next h2 {
-  margin-top: 0;
-}
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
-}
-
-.recovery-state .btn + .btn {
-  margin-left: 8px;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--line-strong);
 }
 
 /* A failing submission (review.tsx): each failing case, and errors. */
 .ci-failing {
-  margin: 4px 0 10px;
+  margin: 4px 0 12px;
   padding: 0;
   list-style: none;
-  font-size: 13px;
 }
 .ci-failing li {
   display: flex;
   gap: 8px;
-  padding: 2px 0;
+  padding: 4px 0;
 }
 .ci-failing .mark {
   flex: none;
@@ -503,15 +365,16 @@ kbd {
   font-weight: 700;
 }
 .ci-error {
+  margin: 0 0 12px;
   color: var(--dim);
 }
 /* A failing case: input, expected and what the code gave, aligned. */
 .case-diff {
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: 1px 10px;
+  gap: 0 12px;
   margin: 4px 0 0;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
 }
 .case-diff dt {
   color: var(--dim);
@@ -524,33 +387,33 @@ kbd {
 }
 .case-diff code,
 .ci-error code {
-  font: 12.5px var(--mono);
+  font: var(--text-xs) var(--mono);
   overflow-wrap: anywhere;
   color: var(--fg);
 }
-.ci-error {
-  margin: 0 0 10px;
-}
 .case-failure {
-  margin: 2px 0 0;
-  font-size: 12.5px;
+  margin: 4px 0 0;
+  font-size: var(--text-xs);
   color: var(--dim);
 }
 .ci-only {
-  margin-left: 6px;
-  padding: 0 5px;
-  border: 1px solid var(--line-strong);
-  border-radius: 3px;
-  font-size: 11px;
+  margin-left: 1ch;
   color: var(--dim);
+  font-size: var(--text-xs);
 }
-/* The latest submission in practice (review.tsx CheckFeedbackView). */
+.ci-only::before {
+  content: "[";
+}
+.ci-only::after {
+  content: "]";
+}
+/*
+ * The latest submission in practice (review.tsx CheckFeedbackView): a bar down the left in
+ * the verdict's colour, as a terminal notice; nothing boxed inside the pane's own border.
+ */
 .check-feedback {
-  padding: 10px 12px;
-  border: 1px solid var(--line-strong);
-  border-left-width: 3px;
-  border-radius: var(--radius);
-  font-size: 13px;
+  padding: 4px 0 4px 1.5ch;
+  border-left: 2px solid var(--line-strong);
 }
 .check-feedback.fail {
   border-left-color: var(--red);
@@ -562,8 +425,8 @@ kbd {
   border-left-color: var(--amber);
 }
 .check-headline {
-  margin: 0 0 6px;
-  font-weight: 600;
+  margin: 0 0 4px;
+  font-weight: 700;
 }
 .check-required {
   margin: 4px 0 8px;
@@ -571,13 +434,10 @@ kbd {
   list-style: none;
 }
 .check-required li + li {
-  margin-top: 6px;
+  margin-top: 8px;
 }
 .check-next {
-  margin: 6px 0 0;
-}
-.practice-next h2 {
-  font-size: 17px;
+  margin: 4px 0 0;
 }
 
 /* The examples, with the task: input and expected value, nothing hidden. */
@@ -585,8 +445,8 @@ kbd {
   margin: 20px 0;
 }
 .challenge-examples h2 {
-  font-size: 15px;
-  margin: 0 0 10px;
+  font-size: inherit;
+  margin: 0 0 8px;
 }
 .challenge-examples ol {
   list-style: none;
@@ -602,31 +462,23 @@ kbd {
   min-width: 0;
 }
 .challenge-examples h3 {
-  margin: 0 0 10px;
-  font-size: 13px;
+  margin: 0 0 8px;
+  font-size: inherit;
 }
 .challenge-examples dl {
   margin: 0;
 }
 .challenge-examples dt {
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--dim);
-  margin: 8px 0 3px;
+  margin: 8px 0 4px;
 }
 .challenge-examples dd {
   margin: 0;
 }
 .challenge-examples pre {
   margin: 0;
-  font: 12px/1.5 var(--mono);
+  font: var(--text-xs) / 1.5 var(--mono);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-}
-
-/* Busy actions stay focusable while their own check runs. */
-.btn[aria-disabled="true"] {
-  background: transparent;
-  border-color: var(--line-strong);
-  color: var(--faint);
-  cursor: default;
 }

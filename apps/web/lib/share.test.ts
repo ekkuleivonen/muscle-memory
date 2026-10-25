@@ -155,13 +155,13 @@ test("the solution offered is the checked artifact's file, exactly, or nothing",
 test("only a card on the live revision claims the sender's starting code", () => {
   const same = startCopy("SQL-002", true);
   assert.match(same.lede, /same starting code they did/);
-  assert.equal(same.cta, "Try SQL-002 yourself →");
+  assert.equal(same.cta, "try SQL-002 yourself →");
   // A card checked on an earlier revision: the current challenge.
   const current = startCopy("SQL-002", false);
   assert.equal(
     current.lede,
     "Start from the current challenge’s code in your own attempt: nothing of theirs comes with it.",
   );
-  assert.equal(current.cta, "Try the current version of SQL-002 →");
+  assert.equal(current.cta, "try the current version of SQL-002 →");
   assert.doesNotMatch(current.lede, /same|they did/);
 });

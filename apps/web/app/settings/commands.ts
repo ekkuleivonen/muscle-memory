@@ -19,6 +19,9 @@ export const GROUPS: { label: string; commands: CommandName[] }[] = [
   { label: "account", commands: ["logout", "reset", "delete"] },
 ];
 
+/** The commands that can't be undone: they read in red in the list. */
+export const DESTRUCTIVE: readonly CommandName[] = ["reset", "delete"];
+
 export function isCommand(name: string): name is CommandName {
   return Object.hasOwn(COMMANDS, name);
 }

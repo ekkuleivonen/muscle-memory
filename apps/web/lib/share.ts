@@ -211,10 +211,10 @@ export function startCopy(
   return sameVersion
     ? {
         lede: "You start from the same starting code they did, in your own attempt: nothing of theirs comes with it.",
-        cta: `Try ${key} yourself →`,
+        cta: `try ${key} yourself →`,
       }
     : {
         lede: "Start from the current challenge’s code in your own attempt: nothing of theirs comes with it.",
-        cta: `Try the current version of ${key} →`,
+        cta: `try the current version of ${key} →`,
       };
 }

@@ -10,7 +10,7 @@ import { noteStart } from "../../../lib/start";
 export function YourTurn({ challengeKey, label }: { challengeKey: string; label: string }) {
   return (
     <Link
-      className="home-cta"
+      className="t-btn t-btn-primary"
       href={practiceHref(challengeKey)}
       onClick={() => noteStart({ key: challengeKey, from: "link", query: null, position: null })}
     >
