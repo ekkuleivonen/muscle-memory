@@ -12,6 +12,7 @@ import {
   MAX_JSON_BYTES,
   REFUSALS,
   solutionOf,
+  startCopy,
   tryHref,
   type SharedFile,
 } from "./share";
@@ -352,4 +353,18 @@ test("the solution offered is the checked artifact's editable file, exactly, or 
     null,
   );
   assert.equal(solutionOf(records, "r-2", ["other.sql"]), null);
+});
+
+test("only a card on the live revision claims the sender's starting code", () => {
+  const same = startCopy("DATA-6", true);
+  assert.match(same.lede, /same starting code they did/);
+  assert.equal(same.cta, "Try DATA-6 yourself →");
+  // An earlier revision, or a v2 card with no revision identity: the current challenge.
+  const current = startCopy("DATA-6", false);
+  assert.equal(
+    current.lede,
+    "Start from the current challenge’s code in your own attempt: nothing of theirs comes with it.",
+  );
+  assert.equal(current.cta, "Try the current version of DATA-6 →");
+  assert.doesNotMatch(current.lede, /same|they did/);
 });

@@ -259,3 +259,24 @@ export function solutionOf(
     return null;
   }
 }
+
+/**
+ * How a shared outcome invites the visitor in. `/try/<KEY>` always serves the challenge's live
+ * revision, so "the same starting code they did" is said only when the card names that exact
+ * revision (a v3 card checked on it). An older v3 card, and every v2 card (no revision
+ * identity), get the current challenge, said as such.
+ */
+export function startCopy(
+  key: string,
+  sameVersion: boolean,
+): { lede: string; cta: string } {
+  return sameVersion
+    ? {
+        lede: "You start from the same starting code they did, in your own attempt: nothing of theirs comes with it.",
+        cta: `Try ${key} yourself →`,
+      }
+    : {
+        lede: "Start from the current challenge’s code in your own attempt: nothing of theirs comes with it.",
+        cta: `Try the current version of ${key} →`,
+      };
+}

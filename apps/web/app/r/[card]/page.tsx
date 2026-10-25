@@ -5,7 +5,12 @@ import { LANGUAGES } from "../../../lib/languages";
 import { getLibrary } from "../../../lib/load";
 import { outcomeLines, outcomeSentence } from "../../../lib/outcome";
 import { receiptLines, sentence } from "../../../lib/result";
-import { inspectCard, tryHref, type CardLink } from "../../../lib/share";
+import {
+  inspectCard,
+  startCopy,
+  tryHref,
+  type CardLink,
+} from "../../../lib/share";
 import { Arrived } from "./arrived";
 import { SharedCode } from "./shared-code";
 import { SharedHeader, Unavailable } from "./unavailable";
@@ -133,17 +138,12 @@ export default async function SharedResult(props: Props) {
           </h1>
           <p className="home-lede">
             {hookFor(issue) ?? (issue.summary || issue.title)}{" "}
-            {shown.sameVersion
-              ? "You start from the same starting code they did"
-              : "You start from the challenge's current starting code"}
-            , in your own attempt: nothing of theirs comes with it.
+            {startCopy(issue.key, shown.sameVersion).lede}
           </p>
           <div className="home-actions">
             <Link className="home-cta" href={tryHref(issue.key)}>
               {/* Same version only when the card names the live revision; a v2 card names none. */}
-              {shown.sameVersion
-                ? `Try ${issue.key} yourself →`
-                : `Try the current version of ${issue.key} →`}
+              {startCopy(issue.key, shown.sameVersion).cta}
             </Link>
             <span className="home-note">No email needed.</span>
           </div>
