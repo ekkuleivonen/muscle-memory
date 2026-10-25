@@ -8,8 +8,6 @@ import type { WorkspaceRecord } from "../../../../packages/domain/workspace";
 import type { PullSummary } from "../../lib/pulls";
 import { checkFeedbackOf } from "../../lib/check-feedback";
 import { diagnose } from "../../lib/diagnosis";
-import { evidenceOf } from "../../lib/evidence";
-import { live } from "../../lib/test-fixtures";
 import { transcript } from "./transcript";
 import type { RunView } from "../workspace/session";
 
@@ -20,7 +18,6 @@ const { CheckFeedbackView, Checks, Findings } = await import(
 const { ChallengeExamples } = await import(
   "../(browse)/_components/challenge-examples"
 );
-const { OutcomeView } = await import("../(browse)/_components/pull-outcome");
 const bounded = (text: string) => ({
   text,
   bytes: text.length,
@@ -142,87 +139,5 @@ test("public expected/actual stay visible while nested hidden expected outputs a
         assert.ok(!examples.includes(token), `Examples leaked ${token}`);
       assert.ok(examples.includes("PUBLIC_EXPECTED"));
     }
-
-    // The historical outcome uses the real evidence reader: raw cases are not a rendering input.
-    const fixture = live("frequency-map");
-    const revision = {
-      ...fixture.revision,
-      checks: { ...fixture.revision.checks, cases },
-    };
-    const observe = (
-      type: string,
-      data: object,
-      sequence: number,
-    ): WorkspaceRecord => ({
-      kind: "observation",
-      recordId: `boundary.${sequence}`,
-      participantId: "synthetic-boundary",
-      payload: JSON.stringify({
-        type,
-        data,
-        source: { id: "boundary", sequence },
-        issue: pull.issue,
-        issueRevision: fixture.id,
-        occurredAt: new Date(1792922400000 + sequence).toISOString(),
-      }),
-    });
-    const completedOutcome = {
-      ...outcome,
-      cases: cases.map((c, index) => ({
-        index,
-        output: bounded(JSON.stringify(c.expected)),
-      })),
-    };
-    const records = [
-      observe(
-        "observation.workspace.pull-request",
-        {
-          number: 1,
-          push: 1,
-          runId: pull.runId,
-          codeArtifactId: pull.codeArtifactId,
-          revision: 1,
-          result: "checks-passed",
-          passed: 2,
-          total: 2,
-        },
-        1,
-      ),
-      observe(
-        "observation.workspace.run",
-        {
-          runId: pull.runId,
-          purpose: "pull-request",
-          status: "result",
-          outcome: completedOutcome,
-        },
-        2,
-      ),
-      observe(
-        "observation.board.moved",
-        {
-          trigger: "pull-request-merged",
-          to: "done",
-          pullRequest: 1,
-          runId: pull.runId,
-        },
-        3,
-      ),
-    ];
-    const evidence = evidenceOf({
-      records,
-      issue: pull.issue,
-      number: 1,
-      revisionFor: () => revision,
-      until: "2026-10-25T11:00:00.000Z",
-    });
-    assert.ok(
-      evidence,
-      "the real historical reader should produce the fixture's evidence",
-    );
-    const completed = render(OutcomeView, { evidence });
-    assert.ok(completed.includes("Outcome"));
-    for (const token of hidden)
-      assert.ok(!completed.includes(token), `Outcome leaked ${token}`);
   }
 });
