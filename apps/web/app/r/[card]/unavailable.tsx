@@ -41,7 +41,7 @@ export function Unavailable({
         <div className="home-actions">
           {issue ? (
             <Link className="home-cta" href={tryHref(issue.key)}>
-              Try {issue.key}: {issue.title} →
+              Try the current version of {issue.key}: {issue.title} →
             </Link>
           ) : (
             <Link className="home-cta" href="/play">

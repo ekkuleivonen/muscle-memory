@@ -28,8 +28,10 @@ function view(
       headline: outcomeSentence(card, label, title),
       lines: outcomeLines(card),
       completed: true,
-      // The card names the revision it was checked on; say so when the challenge has moved on.
+      // The card names the full revision it was checked on; say so when the challenge has
+      // moved on, and never present today's starter as the version they completed.
       earlier: `sha256:${card.rv}` !== live,
+      sameVersion: `sha256:${card.rv}` === live,
     };
   }
   const card = link.result;
@@ -40,6 +42,8 @@ function view(
     lines: receiptLines(card),
     completed: !card.ev || card.ev.state === "merged",
     earlier: false,
+    // A v2 card carries no revision, so it can't be called the same version.
+    sameVersion: false,
   };
 }
 
@@ -128,12 +132,18 @@ export default async function SharedResult(props: Props) {
             <span className="home-punch">Your turn.</span>
           </h1>
           <p className="home-lede">
-            {hookFor(issue) ?? (issue.summary || issue.title)} You start from the same code they
-            did, in your own attempt: nothing of theirs comes with it.
+            {hookFor(issue) ?? (issue.summary || issue.title)}{" "}
+            {shown.sameVersion
+              ? "You start from the same starting code they did"
+              : "You start from the challenge's current starting code"}
+            , in your own attempt: nothing of theirs comes with it.
           </p>
           <div className="home-actions">
             <Link className="home-cta" href={tryHref(issue.key)}>
-              Try {issue.key} yourself →
+              {/* Same version only when the card names the live revision; a v2 card names none. */}
+              {shown.sameVersion
+                ? `Try ${issue.key} yourself →`
+                : `Try the current version of ${issue.key} →`}
             </Link>
             <span className="home-note">No email needed.</span>
           </div>
