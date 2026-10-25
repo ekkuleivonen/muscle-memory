@@ -54,10 +54,10 @@ export function CopyLink({
 export function CopyIssueLink({ issueKey }: { issueKey: string }) {
   return (
     <div className="share-issue">
-      <CopyLink href={tryHref(issueKey)} label="Copy issue link" />
+      <CopyLink href={tryHref(issueKey)} label="Copy challenge link" />
       <p className="faint">
         Opens {issueKey} from its starting code for whoever you send it to.
-        Never your work.
+        Never your code or your attempt.
       </p>
     </div>
   );

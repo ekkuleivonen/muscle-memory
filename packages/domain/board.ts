@@ -271,7 +271,7 @@ export function validateBoardMoveData(data: BoardMoveData): BoardMoveData {
         !Number.isSafeInteger(data.pullRequest) ||
         data.pullRequest! < 1))
   )
-    throw new Error("Only a merged pull request moves an issue to Done.");
+    throw new Error("Only verified completion moves an issue to Done.");
   if (merged) safeIdentifier(data.runId!);
   if (!Number.isSafeInteger(data.onBoardBefore) || data.onBoardBefore < 0)
     throw new Error("Board count must be a whole number.");

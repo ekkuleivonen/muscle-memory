@@ -257,6 +257,9 @@ export function Ide({
         }
       } catch (error) {
         console.warn("Practice verification could not be saved.", error);
+        setVerification((current) =>
+          current ? { ...current, blocker: "code-unconfirmed" } : null,
+        );
         setMessage("Your result could not be saved. Submit again to retry.");
       }
     });
@@ -624,12 +627,23 @@ export function Ide({
       : verification?.latest
         ? verification.blocker
         : undefined,
+    completed:
+      !running &&
+      !stale &&
+      run?.purpose !== "local" &&
+      verification?.blocker === null &&
+      !!verification.completedAt,
     running: !!running,
     latest: verification?.latest ?? null,
     diagnosis: diagnose(lastOutcome, challenge.cases),
     required: verification?.required ?? [],
   });
-  const verified = !running && !stale && verification?.blocker === null;
+  const verified =
+    !running &&
+    !stale &&
+    run?.purpose !== "local" &&
+    verification?.blocker === null &&
+    verification.completedInAttempt;
   return (
     <div className="practice" onClickCapture={persistView}>
       <header className="practice-header">
@@ -654,6 +668,31 @@ export function Ide({
                   <Markdown key={r.id} source={r.text[0]} />
                 ))}
             </section>
+          )}
+          {issue.comments.length > 0 && (
+            <section className="practice-requirements">
+              <h2>Notes and constraints</h2>
+              {issue.comments.map((note, index) => (
+                <Markdown key={index} source={note.body} />
+              ))}
+            </section>
+          )}
+          {repo.files.some(
+            (f) => f.role === "read" && !/readme\.md$/i.test(f.path),
+          ) && (
+            <details className="practice-context" open>
+              <summary>Supporting material</summary>
+              {repo.files
+                .filter(
+                  (f) => f.role === "read" && !/readme\.md$/i.test(f.path),
+                )
+                .map((file) => (
+                  <section key={file.path}>
+                    <h3>{file.path}</h3>
+                    <pre>{file.text}</pre>
+                  </section>
+                ))}
+            </details>
           )}
           {challenge.schema && (
             <details open>
@@ -779,7 +818,7 @@ export function Ide({
               <section className="practice-next" aria-label="Next challenge">
                 <h2>
                   {verification.completedAt
-                    ? "Challenge completed"
+                    ? "Next challenge"
                     : "Current code verified"}
                 </h2>
                 {next ? (

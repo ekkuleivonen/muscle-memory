@@ -5,6 +5,7 @@ import {
   runFeedback,
   type WorkspaceRecord,
 } from "../../../packages/domain/workspace";
+import { validateBoardMoveData } from "../../../packages/domain/board";
 import { attemptRecords } from "./attempts";
 import { behaviourOf, investigationOf } from "./feedback";
 import { mergeEligibility, type MergeEligibility } from "./merge";
@@ -32,6 +33,15 @@ export function completions(
           v.captureVersion !== "board-capture-7.2.0"
         )
           return [];
+        if (v.data.trigger === "checks-passed") {
+          validateBoardMoveData(v.data);
+          if (
+            typeof v.issue !== "string" ||
+            !v.issue ||
+            !/^sha256:[0-9a-f]{64}$/.test(v.issueRevision)
+          )
+            return [];
+        }
         return [
           {
             issue: String(v.issue),
@@ -55,6 +65,8 @@ export interface CompletionGate extends MergeEligibility {
   /** Submit gesture taken from the recorded full run, never an automatic click. */
   via: "pointer" | "keyboard" | null;
   completedAt: string | null;
+  /** A real completion exists in this attempt; current verification is checked separately. */
+  completedInAttempt: boolean;
 }
 
 export function completionEligibility(input: {
@@ -71,6 +83,7 @@ export function completionEligibility(input: {
     required: [] as RequiredRule[],
     via: null,
     completedAt: prior?.at ?? null,
+    completedInAttempt: !!prior,
   };
   if (!pull) return { ...base, latest: null, blocker: "checks-pending" };
   // Actual legacy merge history stays in its own reader; verification can still be checked.
@@ -88,6 +101,11 @@ export function completionEligibility(input: {
     blocker,
   });
   if (!gate.latest) return fail(gate.blocker);
+  // A past completion remains history, not evidence that this different run/revision completed.
+  base.completedAt =
+    prior?.revision === input.revision && prior.runId === gate.latest.runId
+      ? prior.at
+      : null;
   if (gate.latest.issueRevision !== input.revision) return fail("revision");
   const revision = input.revisionFor(input.revision);
   if (!revision) return fail("revision");
@@ -219,7 +237,6 @@ export function completionEligibility(input: {
     )
     .map((rule) => ({
       id: rule.id,
-      author: rule.author.name,
       text: rule.text[0],
     }));
   return {
