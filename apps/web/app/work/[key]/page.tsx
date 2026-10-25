@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { requireConsent } from "../../../lib/gate";
 import Link from "next/link";
 import { supportsOneFilePractice } from "../../../lib/practice-contract";
-import { issueHref, projectHref, summarize } from "../../../lib/library";
+import { summarize } from "../../../lib/library";
 import { getLibrary } from "../../../lib/load";
 import "../../_terminal/terminal.css";
 import "../ide.css";
@@ -37,7 +37,7 @@ export default async function WorkPage({ params, searchParams }: Props) {
   await requireConsent(
     `/work/${key}${wanted ? `?revision=${encodeURIComponent(wanted)}` : ""}`,
   );
-  const { findIssue, revisionsOf, issues, projects } = await getLibrary();
+  const { findIssue, revisionsOf, issues } = await getLibrary();
   const issue = findIssue(decodeURIComponent(key));
   if (!issue) notFound();
   if (key !== issue.key) redirect(`/work/${issue.key}`);
@@ -70,13 +70,8 @@ export default async function WorkPage({ params, searchParams }: Props) {
       key={`${issue.slug}:${revision}`}
       revisionsJson={JSON.stringify(published)}
       trail={[
-        // Unlisted projects (the five-minute test) are not reached through explore.
-        ...(projects.some((p) => p.key === issue.project.key)
-          ? [{ label: "explore", href: "/issues" }]
-          : []),
-        { label: issue.project.title, href: projectHref(issue.project) },
-        { label: issue.key, href: issueHref(issue) },
-        { label: "practice", href: `/work/${issue.key}` },
+        { label: "challenges", href: "/challenges" },
+        { label: issue.key, href: `/work/${issue.key}` },
       ]}
       candidates={[
         summarize(issue),

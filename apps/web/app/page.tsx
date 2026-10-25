@@ -144,7 +144,7 @@ export default async function Home() {
             <Link className="t-btn t-btn-primary" href={startHref}>
               {startLabel} →
             </Link>
-            <Link className="t-btn" href="/issues">
+            <Link className="t-btn" href="/challenges">
               explore every challenge
             </Link>
           </aside>

@@ -12,7 +12,7 @@ export interface Crumb {
  */
 const LINKS = [
   { href: "/", label: "home" },
-  { href: "/issues", label: "challenges" },
+  { href: "/challenges", label: "challenges" },
   { href: "/settings", label: "settings" },
   { href: "/terms", label: "terms" },
   { href: "/privacy", label: "privacy" },

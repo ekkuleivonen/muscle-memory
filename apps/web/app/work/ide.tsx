@@ -934,7 +934,7 @@ export function Ide({
                         </p>
                       </>
                     ) : (
-                      <Link className="btn primary" href="/issues">
+                      <Link className="btn primary" href="/challenges">
                         Explore challenges
                       </Link>
                     )}
