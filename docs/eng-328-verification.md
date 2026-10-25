@@ -8,7 +8,7 @@ Correcting hidden-output commit: `d3f85fb`. Completion writer/schema: `b1cb41b`;
 
 Run heavy suites serially with `flock /tmp/muscle-memory-heavy-check.lock <command>`.
 
-- `npm test`: **240 passed, 0 failed**. Includes real constructor/ingest HTTP handling of old/new fixtures, exact-code/revision/full-outcome gate tests, required-rule recovery independent of old Resolve, same-millisecond pending runs, transaction rollback/concurrent completion/outbox, and sentinel rendering across hidden error/output surfaces.
+- `npm test`: **241 passed, 0 failed**. Includes real constructor/ingest HTTP handling of old/new fixtures, exact-code/revision/full-outcome gate tests, required-rule recovery independent of old Resolve, same-millisecond pending runs, transaction rollback/concurrent completion/outbox, and sentinel rendering across hidden error/output surfaces.
 - `npm run typecheck`: web and ingest pass.
 - `python3 -m unittest discover -s tools/aggregates`: **2 passed**; old/new metrics-2 fixtures coexist, the checked move itself is not a metric, first-finish deduplication remains unchanged.
 - `npm run build` under Node 22: passes; pinned runtime/content checks included. Runner/worker code and challenge content were not modified by this stream; a full content publish check is not claimed here.
@@ -42,3 +42,9 @@ Reproduce with `PRACTICE_SCREENSHOTS=docs/eng-328-evidence LOOP_ORIGIN=http://lo
 ## Integration and remaining work
 
 Draft PR #40 is stacked on ENG-329 #38. Dot owns normalized-catalog composition, review of all streams, selected share artifacts/outcome-card integration and one combined release. The app must not ship before ingest accepts board capture 7.2. Old records, old result cards and replay boundaries remain intact; legacy submission URLs are read-only. No merge or deployment was performed.
+
+## Final ownership clarification regression
+
+No collected-event meaning or runtime behavior changed. Internal full-suite `pull-request`, visible-only `local`, workspace capture 6.0.0 and the approved board 7.2 checked-completion contract remain as documented. No writer/reader competition or catalog edits.
+
+Added `apps/web/app/work/feedback-boundary.test.ts`: real shared components plus the shell Output projection, visible examples and historical outcome reader/rendering. Nested hidden expected outputs/solution text remain absent for passing and failing hidden checks; detailed public expected/actual feedback stays present. The focused six-file regression run passes **38 tests**. The full suite passes **241 tests**, and web/ingest typechecks pass. This clarification changes tests/docs only; the previously recorded production build/browser results still apply to the unchanged application code.

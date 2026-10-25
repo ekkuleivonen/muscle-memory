@@ -10,6 +10,8 @@ Practice shows the published goal, visible Input/Expected output examples, appli
 
 ## Ownership
 
+Dot's final clarification is applied: ENG-328 owns route composition/state writer/approved schema-ingest compatibility; ENG-329 finishes separable read-only feedback, diagnosis and outcome components. The run-purpose and workspace-capture contract below stays unchanged. A label change does not justify a workspace capture bump; no further collected-event meaning change is proposed by this update. Genuine deterministic correctness/safety requirements remain enforced even when originally authored as review, while style nits do not block. No catalog edits are introduced by this clarification.
+
 ENG-328 owns route composition, catalog/arrival wiring, the completion writer, narrow schema/ingest changes and this compatibility contract. ENG-329 owns diagnosis and feedback components: `checkFeedbackOf`, `CheckFeedbackView`, `diagnose`, fixed hidden failure categories and required-rule presentation. Its `df06ebf` is the pinned stack dependency, including the later run-level hidden-error fixes (`a15796b`, `2a6d6c0`, `df06ebf`). The subsequent `7c09d35` catalog normalization is deliberately not included; the shell keeps current multi-file and pinned historical content compatible. No competing completion writer is consumed. ENG-332 owns share artifacts/serialization; the narrow `CopyIssueLink` wording hunk from PR #42 (`13f8d07`) is composed as a secondary control and does not include code. No other share serialization/outcome changes from that PR are included. Its solution-outcome sharing integration remains for the combined release. ENG-330 owns homepage/story copy; ENG-331 owns selected hooks. No content, telemetry/consent/legal, identity, export/reset or model-comparison redesign is part of this stream.
 
 ## Exact-code completion gate
@@ -40,6 +42,7 @@ ENG-329's unconditional hidden expected-value exposure in `91f1521` is explicitl
 
 ## Verification paths
 
+- `apps/web/app/work/feedback-boundary.test.ts`: shell integration over the real read-only components, both passing/failing hidden cases with nested expected-output/solution sentinels; public expected/actual stay visible in Findings, Checks, practice feedback and Output. Visible examples and historical outcome rendering also keep hidden data private.
 - `completion.test.ts`: exact live/saved/pinned code, complete outcomes, stale/local/pending/failed/malformed runs, same-millisecond ordering, blocking-rule correction independent of Resolve, real transaction rollback/concurrency/outbox, ingest validator and literal legacy reader semantics.
 - Domain constructor tests and `apps/ingest/src/index.test.ts`: real new constructor/validator/HTTP ingest, mixed old/new fixtures, wrong version/missing run rejection, payload preservation; old version acceptance remains tested.
 - `tools/aggregates/test_aggregate.py`: old/new metrics-2 result fixtures aggregate together, checked move ignored as a metric, first-finish deduplication unchanged.
