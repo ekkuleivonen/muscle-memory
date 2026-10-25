@@ -19,7 +19,8 @@ import {
 import type { LanguageId } from "../../../lib/languages";
 import { emptyIssueQuery, href } from "../../../lib/queries";
 import { LanguageDot } from "./bits";
-import { useBoard } from "./board";
+import { Ask } from "./ask";
+import { StartWork, useBoard } from "./board";
 import { Suggestions } from "./board-view";
 import { StatusIcon } from "./icons";
 import { IssueRows } from "./issue-list";
@@ -31,9 +32,15 @@ import { useNow, useRecords } from "./records";
  * Home: a greeting, where you stand, what to pick up next, and what you have been doing.
  * Only things this browser actually knows; no invented numbers.
  */
-export function Dashboard({ issues }: { issues: Issue[] }) {
+export function Dashboard({
+  issues,
+  discoverable,
+}: {
+  issues: Issue[];
+  discoverable: Issue[];
+}) {
   const account = useAccount();
-  const { items } = useBoard();
+  const { items, hydrated } = useBoard();
   const records = useRecords();
   const now = useNow();
   const onBoard = boardIssues(items, issues);
@@ -52,6 +59,13 @@ export function Dashboard({ issues }: { issues: Issue[] }) {
   );
   const handle = account?.handle;
 
+  if (!hydrated || !account || !records)
+    return (
+      <p role="status" className="loading-state">
+        Reading your practice history…
+      </p>
+    );
+  const resume = inProgress[0] ?? todo[0];
   return (
     <div className="dashboard">
       <header className="dash-head">
@@ -78,64 +92,104 @@ export function Dashboard({ issues }: { issues: Issue[] }) {
         </p>
       </header>
 
-      <div className="stats">
-        <Stat
-          label="In progress"
-          value={inProgress.length}
-          status="in-progress"
-        />
-        <Stat label="Todo" value={todo.length} status="todo" />
-        <Stat
-          label="Done"
-          value={doneCount}
-          status="done"
-          hint={
-            doneCount ? "merged by you" : "lands when you merge a pull request"
-          }
-        />
-        <Stat label="Points on your board" value={points} />
-        <Stat
-          label="Active days"
-          value={records && now ? activeDays(counts, now) : "…"}
-          hint="in the last 30"
-        />
-      </div>
+      <section className="practice-next">
+        <h2>
+          {resume
+            ? "Pick up where you left off"
+            : doneCount
+              ? "Ready for another issue?"
+              : "Your first practice session"}
+        </h2>
+        {resume ? (
+          <>
+            <p>
+              {resume.key} · {resume.title}
+            </p>
+            <StartWork issue={resume} href={`/work/${resume.key}`} />
+          </>
+        ) : (
+          <>
+            <p>
+              Read a ticket, change the code, run tests and merge your fix.
+              Start with one small bug; there is no timer.
+            </p>
+            <Link className="btn start" href="/play">
+              Try the five-minute test →
+            </Link>{" "}
+            <Link href="/issues">Browse all issues</Link>
+          </>
+        )}
+        <p className="dim">
+          Saved in this browser. Keep using this browser and device to return to
+          your code. Uploads are not a backup.
+        </p>
+      </section>
+      {onBoard.length > 0 && (
+        <div className="stats">
+          <Stat
+            label="In progress"
+            value={inProgress.length}
+            status="in-progress"
+          />
+          <Stat label="Todo" value={todo.length} status="todo" />
+          <Stat
+            label="Done"
+            value={doneCount}
+            status="done"
+            hint={
+              doneCount
+                ? "merged by you"
+                : "lands when you merge a pull request"
+            }
+          />
+          <Stat label="Points on your board" value={points} />
+          <Stat
+            label="Days using the app"
+            value={records && now ? activeDays(counts, now) : "…"}
+            hint="includes browsing · last 30 days"
+          />
+        </div>
+      )}
 
       <div className="dash-grid">
         <div className="dash-main">
-          <section className="section">
-            <h2>
-              Continue <span className="count">{inProgress.length}</span>
-            </h2>
-            {inProgress.length ? (
-              <IssueRows issues={inProgress} standalone />
-            ) : (
-              <p className="dim">
-                Nothing in progress.{" "}
-                {todo.length
-                  ? "Open one from Up next and set it to In progress (s)."
-                  : "Move something to Todo first."}
-              </p>
-            )}
-          </section>
-          <section className="section">
-            <h2>
-              Up next <span className="count">{todo.length}</span>
-              {onBoard.length > 0 && (
-                <Link className="see-all" href="/board">
-                  Open board →
-                </Link>
+          {inProgress.length > 0 && (
+            <section className="section">
+              <h2>
+                Continue <span className="count">{inProgress.length}</span>
+              </h2>
+              {inProgress.length ? (
+                <IssueRows issues={inProgress} standalone />
+              ) : (
+                <p className="dim">
+                  Nothing in progress.{" "}
+                  {todo.length
+                    ? "Open one from Up next and set it to In progress (s)."
+                    : "Move something to Todo first."}
+                </p>
               )}
-            </h2>
-            {todo.length ? (
-              <IssueRows issues={todo} standalone />
-            ) : (
-              <p className="dim">
-                Nothing in Todo. Open an issue and set its status with{" "}
-                <kbd>s</kbd>.
-              </p>
-            )}
-          </section>
+            </section>
+          )}
+          {todo.length > 0 && (
+            <section className="section">
+              <h2>
+                Up next <span className="count">{todo.length}</span>
+                {onBoard.length > 0 && (
+                  <Link className="see-all" href="/board">
+                    Open board →
+                  </Link>
+                )}
+              </h2>
+              {todo.length ? (
+                <IssueRows issues={todo} standalone />
+              ) : (
+                <p className="dim">
+                  Nothing in Todo. Open an issue and set its status with{" "}
+                  <kbd>s</kbd>.
+                </p>
+              )}
+            </section>
+          )}
           <section className="section">
             <h2>
               Suggested for you
@@ -143,36 +197,47 @@ export function Dashboard({ issues }: { issues: Issue[] }) {
                 All issues →
               </Link>
             </h2>
-            <Suggestions issues={issues} />
+            <p className="dim">
+              Unstarted issues, prioritising runnable issues and easier
+              difficulty
+              {account.profile.languages?.length
+                ? ", prioritising your languages"
+                : " across languages"}
+              . Points indicate relative complexity, not minutes.
+            </p>
+            <Ask ids={["languages"]} from="dashboard" />
+            <Suggestions issues={discoverable} />
           </section>
         </div>
 
-        <aside className="dash-side">
-          <section className="section">
-            <h2>Activity</h2>
-            {now && <Heatmap counts={counts} now={now} />}
-          </section>
-          <section className="section">
-            <h2>Recent</h2>
-            <Feed
-              entries={records ? recentActivity(records) : null}
-              issues={issues}
-              now={now}
-            />
-          </section>
-          <section className="section">
-            <h2>
-              Your stack
-              <Link className="see-all" href="/settings">
-                Change →
-              </Link>
-            </h2>
-            <Stack
-              languages={account?.profile.languages ?? []}
-              issues={issues}
-            />
-          </section>
-        </aside>
+        {onBoard.length > 0 && (
+          <aside className="dash-side">
+            <section className="section">
+              <h2>Activity</h2>
+              {now && <Heatmap counts={counts} now={now} />}
+            </section>
+            <section className="section">
+              <h2>Recent</h2>
+              <Feed
+                entries={records ? recentActivity(records) : null}
+                issues={issues}
+                now={now}
+              />
+            </section>
+            <section className="section">
+              <h2>
+                Your stack
+                <Link className="see-all" href="/settings#languages">
+                  Change →
+                </Link>
+              </h2>
+              <Stack
+                languages={account?.profile.languages ?? []}
+                issues={discoverable}
+              />
+            </section>
+          </aside>
+        )}
       </div>
     </div>
   );
@@ -316,9 +381,9 @@ function Feed({
               {entry.kind === "opened" && <>Opened {ref} in the IDE</>}
               {entry.kind === "pull-request" && (
                 <>
-                  Opened <PullLink entry={entry} issue={issue} /> for {ref}:{" "}
-                  {entry.result === "checks-passed" ||
-                  entry.result === "merged"
+                  {entry.push > 1 ? "Pushed to" : "Opened"}{" "}
+                  <PullLink entry={entry} issue={issue} /> for {ref}:{" "}
+                  {entry.result === "checks-passed" || entry.result === "merged"
                     ? `checks passed (${entry.passed}/${entry.total})`
                     : entry.result === "checks-failed"
                       ? `checks failed (${entry.passed}/${entry.total})`
@@ -355,8 +420,9 @@ function Stack({
   if (!languages.length)
     return (
       <p className="dim">
-        No languages picked. Add some in <Link href="/settings">settings</Link>{" "}
-        to get suggestions that fit.
+        No languages picked. Add some in{" "}
+        <Link href="/settings#languages">settings</Link> to get suggestions that
+        fit.
       </p>
     );
   return (
@@ -389,5 +455,9 @@ function PullLink({
   issue?: Issue;
 }) {
   const text = `pull request #${entry.number}`;
-  return issue ? <Link href={pullHref(issue.key, entry.number)}>{text}</Link> : <>{text}</>;
+  return issue ? (
+    <Link href={pullHref(issue.key, entry.number)}>{text}</Link>
+  ) : (
+    <>{text}</>
+  );
 }

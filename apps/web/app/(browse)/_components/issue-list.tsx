@@ -18,6 +18,7 @@ function IssueRow({ issue, href }: { issue: Issue; href: string }) {
             <LabelPill key={label} label={label} />
           ))}
           <LanguageTag language={issue.language} />
+          <span className="difficulty">{issue.difficulty}</span>
           <Estimate points={issue.estimate} />
         </span>
       </Link>
@@ -35,11 +36,7 @@ export function IssueRows({
   return (
     <ul className={standalone ? "rows standalone" : "rows"}>
       {issues.map((issue) => (
-        <IssueRow
-          key={issue.slug}
-          issue={issue}
-          href={issueHref(issue)}
-        />
+        <IssueRow key={issue.slug} issue={issue} href={issueHref(issue)} />
       ))}
     </ul>
   );
@@ -53,7 +50,8 @@ export function IssueGroups({
   if (!groups.length)
     return (
       <p className="empty">
-        No issues match this search. Remove a filter or try fewer words.
+        No issues match this search.{" "}
+        <Link href="/issues">Clear search and filters</Link> to see all issues.
       </p>
     );
   return groups.map((group) => (

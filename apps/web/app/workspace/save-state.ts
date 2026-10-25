@@ -25,6 +25,10 @@ export function recoveryMessage(recovered: RecoveredCode): string {
   const from = recovered.fromEarlierSession ? " from an earlier session" : "";
   if (recovered.complete)
     return `Restored your latest saved code${from} (revision ${recovered.revision}).`;
+  if (recovered.fromEarlierSession)
+    return `Restored revision ${recovered.revision} from an earlier session. The latest session could not be recovered: ${recovered.reason}. Review your saved code before continuing.`;
+  if (recovered.latestRevision <= recovered.revision)
+    return `Restored saved code at revision ${recovered.revision}${from}. Some later activity could not be verified: ${recovered.reason}. No newer code revision was found. Review your code before continuing.`;
   return `Restored revision ${recovered.revision}${from}, the latest code that could be recovered exactly. Later saved changes (up to revision ${recovered.latestRevision}) were not recovered: ${recovered.reason}.`;
 }
 

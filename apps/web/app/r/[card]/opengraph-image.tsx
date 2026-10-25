@@ -7,9 +7,15 @@ export const contentType = "image/png";
 export const alt = "A result from the five-minute test";
 
 /** The picture a shared link shows in posts and chats: the result as a headline and numbers. */
-export default async function Image({ params }: { params: Promise<{ card: string }> }) {
+export default async function Image({
+  params,
+}: {
+  params: Promise<{ card: string }>;
+}) {
   const result = decodeResult((await params).card);
-  const label = result ? (LANGUAGES.find((l) => l.id === result.l)?.label ?? result.l) : "";
+  const label = result
+    ? (LANGUAGES.find((l) => l.id === result.l)?.label ?? result.l)
+    : "";
   const stat = (value: string, text: string) => (
     <div style={{ display: "flex", flexDirection: "column", marginRight: 72 }}>
       <div style={{ fontSize: 76, color: "#ffffff" }}>{value}</div>
@@ -35,7 +41,9 @@ export default async function Image({ params }: { params: Promise<{ card: string
           MUSCLE MEMORY · SHIPPED WITHOUT AI
         </div>
         <div style={{ fontSize: 52, lineHeight: 1.2 }}>
-          {result ? sentence({ ...result, fp: undefined }, label) : "One bug. No AI. Can you still fix it?"}
+          {result
+            ? sentence({ ...result, fp: undefined }, label)
+            : "One bug. No AI. Try a small fix at your own pace."}
         </div>
         {result?.fp !== undefined && (
           <div style={{ fontSize: 38, color: "#4ade80" }}>
@@ -51,7 +59,8 @@ export default async function Image({ params }: { params: Promise<{ card: string
           </div>
         )}
         <div style={{ fontSize: 30, color: "#cfd2db" }}>
-          You use AI every day. Can you still code without it? → musclememory.run
+          You use AI every day. Keep your coding skills in practice. →
+          musclememory.run
         </div>
       </div>
     ),

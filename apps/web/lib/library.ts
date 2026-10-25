@@ -130,9 +130,11 @@ function toIssue(
       .filter((c) => c.visible)
       .map(({ input, expected }) => ({ input, expected })),
     // Notes posted when the issue is opened read as the ticket's thread.
-    comments: revision.team
-      .filter(inTicket)
-      .map((c) => ({ author: c.author.name, role: c.author.role, body: c.text[0] })),
+    comments: revision.team.filter(inTicket).map((c) => ({
+      author: c.author.name,
+      role: c.author.role,
+      body: c.text[0],
+    })),
     runnable: runnable(revision),
     project,
   };
@@ -141,6 +143,8 @@ function toIssue(
 export interface Library {
   /** Every live issue in a listed project, by project and board order. */
   issues: Issue[];
+  /** Live metadata for personal history, including unlisted exercises. Never use for discovery. */
+  allIssues: Issue[];
   projects: Project[];
   /** An issue by key (any case) or its permanent id. */
   findIssue(ref: string): Issue | undefined;
@@ -180,24 +184,27 @@ export function library(catalog: Catalog): Library {
       .filter((meta) => meta.state === "live")
       .map((meta) => [
         meta.id,
-        toIssue(meta, catalog.revisions[meta.revision], refs.get(meta.project)!),
+        toIssue(
+          meta,
+          catalog.revisions[meta.revision],
+          refs.get(meta.project)!,
+        ),
       ]),
   );
-  const all = catalog.projects.map(
-    (p): Project & { listed: boolean } => ({
-      ...refs.get(p.id)!,
-      summary: p.summary,
-      story: p.story,
-      issues: p.issues.flatMap((id) => byId.get(id) ?? []),
-      listed: p.listed,
-    }),
-  );
+  const all = catalog.projects.map((p): Project & { listed: boolean } => ({
+    ...refs.get(p.id)!,
+    summary: p.summary,
+    story: p.story,
+    issues: p.issues.flatMap((id) => byId.get(id) ?? []),
+    listed: p.listed,
+  }));
   // Lists and suggestions show listed projects only; any issue or project opens by its key.
   const projects = all.filter((p) => p.listed).map(({ listed: _, ...p }) => p);
   const issues = projects.flatMap((p) => p.issues);
   const everyIssue = all.flatMap((p) => p.issues);
   return {
     issues,
+    allIssues: everyIssue,
     projects,
     findIssue: (ref) =>
       everyIssue.find((i) => i.key === ref.toUpperCase()) ??

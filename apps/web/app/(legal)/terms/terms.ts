@@ -11,7 +11,7 @@ export const TERMS = `## The short version
 - **Solve issues yourself.** No AI assistants in your runs: comparing people with LLMs only works if the people are people.
 - It's an early product, provided as is. Things will change, and occasionally break.
 
-These Terms are an agreement between you and **[Company name]** ("we", "us"). By accepting them (before your first page, or when you start the five-minute test), you agree to them.
+These Terms are an agreement between you and **rowandreason.com** ("we", "us"). By accepting them (before your first page, or when you start the five-minute test), you agree to them.
 
 ## Your account
 
@@ -26,7 +26,7 @@ You agree not to:
 
 - **use AI assistants, bots or someone else to solve issues** while presenting the result as your own run. If you want to see what an LLM would do, that's what the LLM comparison is for;
 - automate accounts, scrape the catalog, or hammer the service;
-- attack, probe or reverse-engineer the service, except through responsible disclosure to **[security@example.com]** (thank you in advance);
+- attack, probe or reverse-engineer the service, except through responsible disclosure to **support@rowandreason.com** (thank you in advance);
 - **try to re-identify anyone** in published datasets, or combine them with other data to do so;
 - submit anything illegal, malicious, or that you don't have the right to share. **Don't paste your employer's code.** Their lawyers are much less fun than this page.
 
@@ -69,9 +69,9 @@ You can stop using Muscle Memory and delete your account at any time. We can end
 
 ## Law and disputes
 
-These Terms are governed by the laws of **[country]**, and disputes go to the courts of **[city]**. If you're a consumer, you also keep the protection of the mandatory laws where you live.
+These Terms are governed by the laws of **Japan**, and disputes go to the courts of **Otsu**. If you're a consumer, you also keep the protection of the mandatory laws where you live.
 
 ## Contact
 
-**[hello@example.com]**, or by post to **[address]**.
+**support@rowandreason.com**, or by post to **Otsu, Shiga, Japan 520-0801**.
 `;

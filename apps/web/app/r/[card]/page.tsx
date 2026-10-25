@@ -23,7 +23,8 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const title = found
     ? sentence(found.result, found.label)
     : "The five-minute test · Muscle Memory";
-  const description = "One bug, no AI. Can you still fix it? The five-minute test.";
+  const description =
+    "One bug, no AI. Try a small fix at your own pace. The five-minute test.";
   return {
     title,
     description,
@@ -45,7 +46,13 @@ export default async function SharedResult(props: Props) {
     <div className="legal home play">
       <header className="legal-head">
         <Link href="/" className="workspace-name">
-          <img className="logo-mark" src="/logo.svg" alt="" width={22} height={22} />
+          <img
+            className="logo-mark"
+            src="/logo.svg"
+            alt=""
+            width={22}
+            height={22}
+          />
           muscle memory
         </Link>
       </header>
@@ -64,17 +71,21 @@ export default async function SharedResult(props: Props) {
           <h1>
             You use AI every day.
             <br />
-            <span className="home-punch">Can you still code without it?</span>
+            <span className="home-punch">
+              Keep your coding skills in practice.
+            </span>
           </h1>
           <p className="home-lede">
-            One small bug in a real codebase, in your language. No completion, no chat, no
-            generated code. About five minutes.
+            One small bug in a real codebase, in your language. No completion,
+            no chat, no generated code. About five minutes.
           </p>
           <div className="home-actions">
             <Link className="home-cta" href={play}>
               Your turn →
             </Link>
-            <span className="home-note">No account, no email.</span>
+            <span className="home-note">
+              No email needed. Progress stays in this browser.
+            </span>
           </div>
         </section>
       </main>

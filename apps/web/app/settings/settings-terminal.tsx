@@ -43,7 +43,10 @@ const COMMANDS: Record<
   { hint: string; run: (t: TerminalApi) => Promise<Outcome> }
 > = {
   theme: { hint: "light, dark, or follow your system", run: theme },
-  profile: { hint: "your answers: experience, AI use, languages, goal, editor", run: profile },
+  profile: {
+    hint: "your answers: experience, AI use, languages, goal, editor",
+    run: profile,
+  },
   privacy: {
     hint: "go stealth, Terms and Privacy Notice",
     run: privacy,
@@ -177,7 +180,7 @@ async function privacy(t: TerminalApi): Promise<Outcome> {
   const stored = readProfile();
   const stealth = stored?.stealth === true;
   t.print(
-    "What you do here is recorded to run the product: picking your next issues, comparing you with other people and LLMs, and making better issues.",
+    "What you do here is recorded to run the product: keeping your practice history and making better issues. Community comparisons require published aggregate data; model benchmarks are planned.",
     <span>
       The{" "}
       <TermLink href="/terms" newTab>
@@ -194,12 +197,12 @@ async function privacy(t: TerminalApi): Promise<Outcome> {
     </span>,
     "",
     <span>
-      Your anonymised runs go into the stats we publish and the comparisons
-      everyone sees. Or go stealth: you&apos;re left out of both, and in return
-      you don&apos;t see anyone else&apos;s stats. Fair&apos;s fair.
+      Your runs may be included in future anonymised publications and community
+      comparisons. Go stealth to be excluded from both. Recording and uploads
+      continue in stealth.
     </span>,
     <span className="t-dim">
-      Right now you&apos;re {stealth ? "in stealth" : "in the stats"}.
+      Right now you&apos;re {stealth ? "in stealth" : "eligible for inclusion"}.
     </span>,
     "",
   );
@@ -208,7 +211,7 @@ async function privacy(t: TerminalApi): Promise<Outcome> {
       kind: "confirm",
       id: "share",
       message: "Share your anonymised data in stats and comparisons?",
-      initial: true,
+      initial: !stealth,
       escape: "keeps current",
     },
     { skipped: "unchanged" },
@@ -219,7 +222,7 @@ async function privacy(t: TerminalApi): Promise<Outcome> {
   t.print(
     <span className="t-dim">
       {share
-        ? "You're in the stats. Thanks: your runs make the comparisons (and the issues) better."
+        ? "Your runs are eligible for future anonymised publications and community comparisons."
         : "Done, you've gone stealth. We won't include you in our stats or comparisons from now on, including what you've already done, and you won't see other people's stats either."}
     </span>,
   );
@@ -389,7 +392,9 @@ async function remove(t: TerminalApi): Promise<Outcome> {
   } catch (cause) {
     t.print(
       <span className="t-err">
-        {cause instanceof Error ? cause.message : "Nothing was deleted. Try again later."}
+        {cause instanceof Error
+          ? cause.message
+          : "Nothing was deleted. Try again later."}
       </span>,
     );
     return "menu";

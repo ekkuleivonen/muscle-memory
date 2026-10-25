@@ -10,19 +10,19 @@ import { CONSENT_COOKIE, hasConsent } from "../lib/profile";
 
 /** The first day, as it actually goes: Terms, the desk, the first ticket. */
 const SCHEDULE = [
-  ["9:00", "Paperwork", "Short, plain Terms and a Privacy Notice."],
+  ["01", "Paperwork", "Short, plain Terms and a Privacy Notice."],
   [
-    "9:05",
+    "02",
     "Your desk",
     "A board, a backlog and a team. No forms: questions about you come up where they matter, and you can always say not now.",
   ],
   [
-    "9:10",
+    "03",
     "Your first ticket",
     "A feature, a bug, a slow query, or the refactor nobody wanted.",
   ],
   [
-    "4:55",
+    "04",
     "Review and merge",
     "CI has run every check. Read your own diff, merge it, and the ticket moves to Done.",
   ],
@@ -70,29 +70,44 @@ export default async function Home() {
           <h1>
             You use AI every day.
             <br />
-            <span className="home-punch">Can you still code without it?</span>
+            <span className="home-punch">
+              Keep your coding skills in practice.
+            </span>
           </h1>
           <p className="home-lede">
             A developer job from before AI: tickets, tests, a pull request, and
-            nobody writing it for you. Find out what your hands still remember.
+            nobody writing it for you. Start with a small bug in about five
+            minutes, or work at your own pace. There is no timer.
           </p>
           <div className="home-actions">
             {start}
             {!signedIn && (
               <span className="home-note">
-                No account, no email, no AI. Or{" "}
+                No email needed. Progress stays in this browser. Or{" "}
                 <Link href="/dashboard">start your first day</Link>.
               </span>
             )}
           </div>
         </section>
 
+        <figure className="home-workspace-preview">
+          <img
+            src="/workspace-preview.png"
+            width={1120}
+            height={650}
+            alt="Muscle Memory workspace: a bug ticket beside its starter Python file, with Tests, Output and Pull requests tabs below."
+          />
+          <figcaption>
+            The actual workspace, before any edits: ticket, starter code and
+            tests together. Your solution is yours to write.
+          </figcaption>
+        </figure>
         <section className="home-section">
-          <h2>Your first day</h2>
+          <h2>A short practice session</h2>
           <ol className="home-schedule">
             {SCHEDULE.map(([time, title, detail]) => (
               <li key={time}>
-                <time>{time}</time>
+                <span className="mono">{time}</span>
                 <span>
                   <strong>{title}.</strong> {detail}
                 </span>
@@ -116,8 +131,9 @@ export default async function Home() {
               back.
             </li>
             <li>
-              <strong>Progress only you see.</strong> Compare yourself with
-              yourself and with anonymous aggregates. No leaderboards, and
+              <strong>Progress only you see.</strong> Review your runs, code
+              changes and merged fixes. Community comparisons need published
+              aggregate data; model benchmarks are planned. No leaderboards, and
               nothing here is a hiring signal.
             </li>
           </ul>
@@ -127,16 +143,16 @@ export default async function Home() {
           <h2>Why it matters</h2>
           <p>
             Everyone has a take on what AI is doing to developers&apos; skills.
-            Nobody has data. Your practice helps change that: unaided work is
-            what we measure, not a moral stance, so use all the AI you like at
-            your day job.
+            We want to add evidence. Your practice helps change that: unaided
+            work is what we measure, not a moral stance, so use all the AI you
+            like at your day job.
           </p>
           <ul className="home-promises">
             <li>
               <strong>Raw data and interpretation are kept apart.</strong> We
               record what happened (keystrokes, runs, results) and version every
-              assessment we draw from it. Methods and null results get published
-              too.
+              assessment we draw from it. We plan to publish research methods
+              and null results too.
             </li>
             <li>
               <strong>Signals are footnotes, not accusations.</strong> Where we
@@ -144,9 +160,9 @@ export default async function Home() {
               how much salt to apply to the data. Nobody polices you.
             </li>
             <li>
-              <strong>Anonymous, with a way out.</strong> Published data is
-              anonymised. Go stealth to keep your results out of published
-              stats, or delete everything, any time. See the{" "}
+              <strong>Anonymous, with a way out.</strong> Future published data
+              will be anonymised. Go stealth to keep your results out of
+              published stats, or delete everything, any time. See the{" "}
               <Link href="/terms">Terms</Link> and{" "}
               <Link href="/privacy">Privacy Notice</Link>.
             </li>

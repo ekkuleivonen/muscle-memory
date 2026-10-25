@@ -1,4 +1,5 @@
 "use client";
+import { tabKeys } from "../../lib/tab-keys";
 import Link from "next/link";
 import {
   useEffect,
@@ -57,10 +58,17 @@ import {
 } from "../../lib/repo";
 import { LanguageDot } from "../(browse)/_components/bits";
 import { StatusMenu, useBoard } from "../(browse)/_components/board";
-import { PREVIOUS_PATH_KEY, setIssueContext } from "../(browse)/_components/board-log";
+import {
+  PREVIOUS_PATH_KEY,
+  setIssueContext,
+} from "../(browse)/_components/board-log";
 import { Markdown } from "../(browse)/_components/markdown";
 import { pullHref } from "../(browse)/_components/pulls";
-import { createViewer, type ActivityHooks, type Keymap } from "../workspace/editor";
+import {
+  createViewer,
+  type ActivityHooks,
+  type Keymap,
+} from "../workspace/editor";
 import { checksTypes, TypeChecker } from "../workspace/type-checker";
 import { PANEL, panelMax, SIDE, Splitter, useIdeLayout } from "./splitter";
 import { caseLabel, transcript, type Executable } from "./transcript";
@@ -152,6 +160,7 @@ export function Ide({
   const [merged, setMerged] = useState<ReadonlySet<number>>(new Set());
   const [opening, setOpening] = useState<Opening>({ state: "opening" });
   const [message, setMessage] = useState("");
+  const mobileSide = useRef<HTMLDialogElement>(null);
   const [runtime, setRuntime] = useState<Runtime>(
     issue.runnable ? { state: "loading" } : { state: "none" },
   );
@@ -165,7 +174,10 @@ export function Ide({
   /** The boot screen can be dismissed while only the runtime is still loading. */
   const [booted, setBooted] = useState(false);
   /** Teammate comments, hints and review threads released so far. */
-  const [feedback, setFeedback] = useState<Feedback>({ released: [], threads: [] });
+  const [feedback, setFeedback] = useState<Feedback>({
+    released: [],
+    threads: [],
+  });
   /** Something new arrived in the ticket's thread while another view was showing. */
   const [unread, setUnread] = useState(false);
 
@@ -187,13 +199,23 @@ export function Ide({
   /** The ticket's thread: its own comments, then released comments and hints. */
   const thread = useMemo(
     () => [
-      ...issue.comments.map((c) => ({ ...c, at: undefined as string | undefined })),
+      ...issue.comments.map((c) => ({
+        ...c,
+        at: undefined as string | undefined,
+      })),
       ...feedback.released.flatMap((r) => {
         const from = revisions[r.issueRevision];
         if (r.kind === "hint") {
           const hint = from?.hints.find((h) => h.id === r.hint);
           return hint
-            ? [{ author: hint.author.name, role: hint.author.role, body: hint.text, at: r.at }]
+            ? [
+                {
+                  author: hint.author.name,
+                  role: hint.author.role,
+                  body: hint.text,
+                  at: r.at,
+                },
+              ]
             : [];
         }
         const comment = from?.team.find((c) => c.id === r.comment);
@@ -264,12 +286,16 @@ export function Ide({
           records = await opened.workspaceRecords();
           setMessage(announcement(releases));
           if (
-            releases.some((r) => r.kind !== "resolved" && !("pullRequest" in r && r.pullRequest)) &&
+            releases.some(
+              (r) =>
+                r.kind !== "resolved" && !("pullRequest" in r && r.pullRequest),
+            ) &&
             viewRef.current !== "ticket"
           )
             setUnread(true);
         }
-        if (session.current === current) setFeedback(feedbackOf(records, issue.slug));
+        if (session.current === current)
+          setFeedback(feedbackOf(records, issue.slug));
       } catch (cause) {
         console.warn("Teammate feedback could not be checked.", cause);
       }
@@ -343,7 +369,9 @@ export function Ide({
           ]),
         ),
         sources: Object.fromEntries(
-          repo.files.filter((f) => f.role === "read").map((f) => [f.path, f.text]),
+          repo.files
+            .filter((f) => f.role === "read")
+            .map((f) => [f.path, f.text]),
         ),
         restoredFrom: recovered?.revision,
         language: issue.language,
@@ -448,9 +476,13 @@ export function Ide({
   }, []);
 
   /** The last input, so a navigation can say whether a person or the app made it. */
-  const input = useRef<{ kind: "pointer" | "keyboard"; at: number } | null>(null);
+  const input = useRef<{ kind: "pointer" | "keyboard"; at: number } | null>(
+    null,
+  );
   const via = (): "pointer" | "keyboard" | "app" =>
-    input.current && performance.now() - input.current.at < 1000 ? input.current.kind : "app";
+    input.current && performance.now() - input.current.at < 1000
+      ? input.current.kind
+      : "app";
   /** Activity hooks that reach whichever session is open when the event happens. */
   function forward(path: string): ActivityHooks {
     const to = () => session.current?.activity(path);
@@ -514,7 +546,8 @@ export function Ide({
     if (!isOpen || !current) return;
     const before = shownTabs.current;
     for (const path of tabs)
-      if (!before.includes(path)) current.navigated("file", "open", path, via());
+      if (!before.includes(path))
+        current.navigated("file", "open", path, via());
     for (const path of before)
       if (!tabs.includes(path)) current.navigated("file", "close", path, via());
     shownTabs.current = tabs;
@@ -539,8 +572,7 @@ export function Ide({
   // Read-only files get a viewer the first time they are shown.
   useEffect(() => {
     const file = repo.files.find((f) => f.path === active);
-    if (!file || file.role === "edit" || viewers.current.has(file.path))
-      return;
+    if (!file || file.role === "edit" || viewers.current.has(file.path)) return;
     const host = hosts.current.get(file.path);
     if (host)
       viewers.current.set(
@@ -554,6 +586,7 @@ export function Ide({
   }, [active, tabs, repo]);
 
   function openFile(path: string) {
+    mobileSide.current?.close();
     setTabs((current) =>
       current.includes(path) ? current : [...current, path],
     );
@@ -562,11 +595,13 @@ export function Ide({
 
   function closeTab(path: string) {
     if (editable.some((f) => f.path === path)) return;
-    setTabs((current) => {
-      const next = current.filter((p) => p !== path);
-      if (active === path) setActive(next[next.length - 1] ?? home);
-      return next;
-    });
+    const next = tabs.filter((p) => p !== path);
+    const selected = active === path ? (next[next.length - 1] ?? home) : active;
+    setTabs(next);
+    setActive(selected);
+    requestAnimationFrame(() =>
+      document.getElementById(`file-tab-${selected}`)?.focus(),
+    );
   }
 
   const running = run?.status === "queued" || run?.status === "running";
@@ -576,6 +611,27 @@ export function Ide({
     (opening.state === "opening" ||
       (opening.state === "open" && runtime.state === "loading"));
 
+  const sideContent = (
+    <>
+      {view === "explorer" ? (
+        <Explorer
+          root={repo.root}
+          files={repo.files}
+          active={active}
+          edited={edited}
+          onOpen={openFile}
+        />
+      ) : (
+        <Ticket
+          issue={issue}
+          cases={casesRun(challenge.cases, "local").length}
+          testsPath={testsFile.path}
+          thread={thread}
+          onOpenTests={() => openFile(testsFile.path)}
+        />
+      )}
+    </>
+  );
   return (
     <div
       className="ide"
@@ -598,9 +654,33 @@ export function Ide({
           {issue.title}
           <span className="faint"> — {repo.root}</span>
         </span>
+        <div className="ide-mobile-tools">
+          <button
+            onClick={() => {
+              setView("ticket");
+              setUnread(false);
+              mobileSide.current?.showModal();
+            }}
+          >
+            Ticket{unread ? " •" : ""}
+          </button>
+          <button
+            onClick={() => {
+              setView("explorer");
+              mobileSide.current?.showModal();
+            }}
+          >
+            Files
+          </button>
+        </div>
+        <KeyboardHelp />
         <span className="ide-actions">
           <StatusMenu
-            issue={{ key: issue.key, slug: issue.slug, revision: issue.revision }}
+            issue={{
+              key: issue.key,
+              slug: issue.slug,
+              revision: issue.revision,
+            }}
           />
           {issue.runnable ? (
             running ? (
@@ -618,18 +698,23 @@ export function Ide({
                   className="ide-run secondary"
                   disabled={!ready}
                   onClick={(event) =>
-                    void session.current?.run("local", event.detail === 0 ? "keyboard" : "pointer")
+                    void session.current?.run(
+                      "local",
+                      event.detail === 0 ? "keyboard" : "pointer",
+                    )
                   }
                   title="Run the tests on your code (Ctrl/⌘-Enter). Nothing else happens."
                 >
-                  ▶ Run tests <kbd>⌘⏎</kbd>
+                  ▶ Run tests <Shortcut />
                 </button>
                 <button
                   type="button"
                   className="ide-run"
                   disabled={!ready}
                   onClick={(event) =>
-                    void session.current?.pullRequest(event.detail === 0 ? "keyboard" : "pointer")
+                    void session.current?.pullRequest(
+                      event.detail === 0 ? "keyboard" : "pointer",
+                    )
                   }
                   title={
                     openPull
@@ -643,7 +728,7 @@ export function Ide({
                     : done
                       ? "Open another PR"
                       : "Open pull request"}{" "}
-                  <kbd>⌘⇧⏎</kbd>
+                  <Shortcut shift />
                 </button>
               </>
             )
@@ -658,6 +743,19 @@ export function Ide({
         </span>
       </header>
 
+      <dialog
+        className="ide-mobile-dialog"
+        ref={mobileSide}
+        aria-label={view === "ticket" ? "Ticket" : "Files"}
+      >
+        <button
+          className="dialog-close"
+          onClick={() => mobileSide.current?.close()}
+        >
+          Back to editor ×
+        </button>
+        {sideContent}
+      </dialog>
       <nav className="ide-activity" aria-label="Views">
         <ActivityButton
           label={unread ? "Ticket (new comments)" : "Ticket"}
@@ -679,25 +777,7 @@ export function Ide({
         </ActivityButton>
       </nav>
 
-      <aside className="ide-side">
-        {view === "explorer" ? (
-          <Explorer
-            root={repo.root}
-            files={repo.files}
-            active={active}
-            edited={edited}
-            onOpen={openFile}
-          />
-        ) : (
-          <Ticket
-            issue={issue}
-            cases={casesRun(challenge.cases, "local").length}
-            testsPath={testsFile.path}
-            thread={thread}
-            onOpenTests={() => openFile(testsFile.path)}
-          />
-        )}
-      </aside>
+      <aside className="ide-side">{sideContent}</aside>
 
       <Splitter
         axis="x"
@@ -719,21 +799,33 @@ export function Ide({
             {...progressValue(runtime.progress)}
           />
         )}
-        <div className="ide-tabs" role="tablist" aria-label="Open files">
+        <div
+          className="ide-tabs"
+          role="tablist"
+          aria-label="Open files"
+          onKeyDown={tabKeys}
+        >
           {tabs.map((path) => {
             const file = repo.files.find((f) => f.path === path)!;
             return (
-              <div
-                key={path}
-                role="tab"
-                aria-selected={path === active}
-                className="ide-tab"
-                onClick={() => setActive(path)}
-              >
-                <LanguageDot language={file.language} />
-                {path.split("/").pop()}
+              <div key={path} className="ide-tab-wrap">
+                <button
+                  type="button"
+                  role="tab"
+                  id={`file-tab-${file.path}`}
+                  aria-controls={`file-panel-${file.path}`}
+                  aria-selected={path === active}
+                  tabIndex={path === active ? 0 : -1}
+                  className="ide-tab"
+                  onClick={() => setActive(path)}
+                >
+                  <LanguageDot language={file.language} />
+                  {path.split("/").pop()}
+                </button>
                 {file.role === "edit" ? (
-                  edited.has(path) && <span className="ide-dot" title="Modified" />
+                  edited.has(path) && (
+                    <span className="ide-dot" title="Modified" />
+                  )
                 ) : (
                   <button
                     type="button"
@@ -762,6 +854,9 @@ export function Ide({
             <div
               key={file.path}
               className="ide-editor"
+              role="tabpanel"
+              id={`file-panel-${file.path}`}
+              aria-labelledby={`file-tab-${file.path}`}
               hidden={!tabs.includes(file.path) || file.path !== active}
               ref={(node) => {
                 if (node) hosts.current.set(file.path, node);
@@ -786,11 +881,19 @@ export function Ide({
             initial={PANEL.initial}
             onChange={layout.setPanel}
           />
-          <div className="ide-panel-tabs" role="tablist">
+          <div
+            className="ide-panel-tabs"
+            role="tablist"
+            aria-label="Results"
+            onKeyDown={tabKeys}
+          >
             <button
               type="button"
               role="tab"
               aria-selected={panel === "tests"}
+              tabIndex={panel === "tests" ? 0 : -1}
+              id="result-tab-tests"
+              aria-controls="result-panel-tests"
               onClick={() => setPanel("tests")}
             >
               Tests
@@ -799,6 +902,9 @@ export function Ide({
               type="button"
               role="tab"
               aria-selected={panel === "output"}
+              tabIndex={panel === "output" ? 0 : -1}
+              id="result-tab-output"
+              aria-controls="result-panel-output"
               onClick={() => setPanel("output")}
             >
               Output
@@ -807,6 +913,9 @@ export function Ide({
               type="button"
               role="tab"
               aria-selected={panel === "pulls"}
+              tabIndex={panel === "pulls" ? 0 : -1}
+              id="result-tab-pulls"
+              aria-controls="result-panel-pulls"
               onClick={() => setPanel("pulls")}
             >
               Pull requests{" "}
@@ -814,9 +923,19 @@ export function Ide({
                 <span className="ide-count">{pulls.length}</span>
               )}
             </button>
-            {message && <span className="ide-message faint">{message}</span>}
           </div>
-          <div className="ide-panel-body">
+          <div
+            className="ide-panel-body"
+            role="tabpanel"
+            id={`result-panel-${panel}`}
+            aria-labelledby={`result-tab-${panel}`}
+            tabIndex={0}
+          >
+            {message && (
+              <p className="ide-message" role="status">
+                {message}
+              </p>
+            )}
             {panel === "pulls" ? (
               <PullRequests
                 pulls={pulls}
@@ -1062,8 +1181,8 @@ function Tests({
     return (
       <p className="faint">
         Running {languageLabel(issue.language)} in the browser isn&apos;t
-        available yet. Your edits are saved as you go; the{" "}
-        {visible} cases are in {testsPath}.
+        available yet. Your edits are saved as you go; the {visible} cases are
+        in {testsPath}.
       </p>
     );
   if (runtime.state === "unavailable")
@@ -1078,10 +1197,9 @@ function Tests({
   if (!run)
     return (
       <p className="faint">
-        Run the tests (<kbd>⌘⏎</kbd>) to check your code against the {visible}{" "}
+        Run the tests (<Shortcut />) to check your code against the {visible}{" "}
         cases in {testsPath}.
-        {visible < challenge.cases.length &&
-          " CI runs more on a pull request."}
+        {visible < challenge.cases.length && " CI runs more on a pull request."}
       </p>
     );
   const o = run.outcome;
@@ -1133,7 +1251,11 @@ function Tests({
             key={index}
             index={index}
             // CI's hidden cases keep their input and output to themselves.
-            label={check.visible ? caseLabel(challenge, check.input) : `hidden case ${check.id}`}
+            label={
+              check.visible
+                ? caseLabel(challenge, check.input)
+                : `hidden case ${check.id}`
+            }
             expected={check.expected}
             hidden={!check.visible}
             passed={feedback.passed[index]}
@@ -1237,8 +1359,12 @@ function PullRequests({
             Pull request #{latest.number}&apos;s checks pass, but{" "}
             {comments(blocking.get(latest.number)!)} in its review{" "}
             {blocking.get(latest.number) === 1 ? "blocks" : "block"} merging.
-            Change the code and push (<kbd>⌘⇧⏎</kbd>), or{" "}
-            <Link href={pullHref(issue.key, latest.number)}>reply on #{latest.number}</Link>.
+            Change the code and push (<Shortcut shift />
+            ), or{" "}
+            <Link href={pullHref(issue.key, latest.number)}>
+              reply on #{latest.number}
+            </Link>
+            .
           </p>
         ) : latest.result === "checks-passed" ? (
           <p className="ide-review">
@@ -1252,8 +1378,11 @@ function PullRequests({
           <p className="ide-review">
             Pull request #{latest.number} is open, but its checks don&apos;t
             pass yet, so it can&apos;t be merged. Keep working and push to it (
-            <kbd>⌘⇧⏎</kbd>); CI runs again on the new code.{" "}
-            <Link href={pullHref(issue.key, latest.number)}>View #{latest.number}</Link>
+            <Shortcut shift />
+            ); CI runs again on the new code.{" "}
+            <Link href={pullHref(issue.key, latest.number)}>
+              View #{latest.number}
+            </Link>
           </p>
         ))}
       {done && mergedPull && (
@@ -1267,10 +1396,10 @@ function PullRequests({
         <p className="faint">
           {runnable ? (
             <>
-              When your code is ready, open a pull request (<kbd>⌘⇧⏎</kbd>). CI
-              runs every check on that exact code; then you review it and merge
-              it, which moves {issue.key} to Done. Run the tests (<kbd>⌘⏎</kbd>)
-              as often as you like before that.
+              When your code is ready, open a pull request (<Shortcut shift />
+              ). CI runs every check on that exact code; then you review it and
+              merge it, which moves {issue.key} to Done. Run the tests (
+              <Shortcut />) as often as you like before that.
             </>
           ) : (
             <>
@@ -1346,8 +1475,10 @@ function comments(count: number): string {
 function announcement(releases: readonly Release[]): string {
   return releases
     .map((r) => {
-      if (r.kind === "hint") return `${r.hint.author.name} commented on the ticket.`;
-      if (r.kind === "resolved") return `Review comment on #${r.pullRequest} resolved by your push.`;
+      if (r.kind === "hint")
+        return `${r.hint.author.name} commented on the ticket.`;
+      if (r.kind === "resolved")
+        return `Review comment on #${r.pullRequest} resolved by your push.`;
       const who = r.comment.author.name;
       if (!r.pullRequest) return `${who} commented on the ticket.`;
       return r.comment.severity === "blocking"
@@ -1521,5 +1652,59 @@ function BootStep({
       </span>
       <span>{children}</span>
     </li>
+  );
+}
+
+function Shortcut({ shift = false }: { shift?: boolean }) {
+  const [mac, setMac] = useState(false);
+  useEffect(() => setMac(/Mac|iPhone|iPad/.test(navigator.platform)), []);
+  return (
+    <kbd>
+      {mac ? "⌘" : "Ctrl+"}
+      {shift ? (mac ? "⇧" : "Shift+") : ""}
+      {mac ? "↵" : "Enter"}
+    </kbd>
+  );
+}
+
+function KeyboardHelp() {
+  const dialog = useRef<HTMLDialogElement>(null);
+  return (
+    <>
+      <button
+        className="ide-help"
+        onClick={() => dialog.current?.showModal()}
+        aria-label="Keyboard shortcuts"
+      >
+        ?
+      </button>
+      <dialog
+        className="keyboard-help"
+        ref={dialog}
+        aria-labelledby="keyboard-help-title"
+      >
+        <button
+          className="dialog-close"
+          onClick={() => dialog.current?.close()}
+        >
+          Close ×
+        </button>
+        <h2 id="keyboard-help-title">Keyboard shortcuts</h2>
+        <p>
+          <Shortcut /> Run tests
+        </p>
+        <p>
+          <Shortcut shift /> Open or push a pull request
+        </p>
+        <p>Press Escape, then Tab to move focus out of the editor.</p>
+        <p>
+          Use arrow keys, Home and End within tab bars. Escape closes dialogs.
+        </p>
+        <p>
+          Editor keybindings can be changed in{" "}
+          <Link href="/settings#editor">Settings</Link>.
+        </p>
+      </dialog>
+    </>
   );
 }

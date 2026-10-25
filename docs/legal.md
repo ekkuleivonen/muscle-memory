@@ -21,7 +21,9 @@ The Terms also grant a licence to submitted code (needed to publish solutions), 
 
 ## Before launch
 
-- Lawyer review of both pages; fill in the [bracketed] placeholders (company, contact, retention periods, processors, region, governing law); set `LEGAL_DRAFT` to false.
+- Lawyer review of both pages; fill in the [bracketed] placeholders (full legal operator identity/address, retention periods, processors, hosting region, liability cap and jurisdiction review); set `LEGAL_DRAFT` to false.
 - Anonymisation review before the first record-level release: new random IDs per dataset, coarsened times, no free text, small groups suppressed.
 - Honour `stealth` in every export pipeline and in comparisons, including for data collected before going stealth, and hide other people's stats from stealth accounts. Stealth is reciprocal by design; have the lawyer confirm that trade-off, since it comes attached to an objection right.
 - Once data syncs to servers: access, portability and deletion requests (by email at first), and server-side deletion on `delete` in Settings.
+
+Operator-supplied draft details (25 October 2026): rowandreason.com, support@rowandreason.com, Otsu, Shiga, Japan 520-0801; Japan/Otsu used for the draft governing-law locality. This is an operator label and locality, not a verified registered company name or complete street address. Hosting region is not yet supplied. Version 2026-10-25.1 adds these details and distinguishes planned comparison features from current capture and uploads; it requires renewed acceptance. Keep `LEGAL_DRAFT` true pending the remaining details and legal review.

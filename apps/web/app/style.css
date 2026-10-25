@@ -23,13 +23,13 @@
   --line-strong: #d1d3d9;
   --fg: #1d1f24;
   --dim: #5f636d;
-  --faint: #8b8f99;
+  --faint: #646975;
   --accent: #5e6ad2;
   --accent-fg: #ffffff;
   --accent-soft: #5e6ad21a;
   --red: #d93f44;
-  --green: #2e9d66;
-  --amber: #c98a0a;
+  --green: #217c50;
+  --amber: #8c6007;
   --blue: #2f7fe0;
   --label-l: 38%;
   --shadow: 0 4px 16px #0000001a, 0 0 0 1px var(--line);
@@ -45,7 +45,7 @@
     --line-strong: #35373d;
     --fg: #e5e6e9;
     --dim: #9b9ea6;
-    --faint: #6c6f78;
+    --faint: #969aa5;
     --accent: #7d86f1;
     --accent-fg: #0f1012;
     --accent-soft: #7d86f122;
@@ -71,7 +71,7 @@
   --line-strong: #35373d;
   --fg: #e5e6e9;
   --dim: #9b9ea6;
-  --faint: #6c6f78;
+  --faint: #969aa5;
   --accent: #7d86f1;
   --accent-fg: #0f1012;
   --accent-soft: #7d86f122;
@@ -2388,4 +2388,203 @@ button.home-cta:disabled {
 .result-compare {
   color: var(--green);
   font-weight: 500;
+}
+
+/* Practice entry, navigation and direct settings controls. */
+.side-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-height: 0;
+}
+.nav-toggle,
+.mobile-start {
+  display: none;
+}
+.loading-state {
+  padding: 24px;
+  color: var(--dim);
+}
+.practice-next {
+  padding: 20px;
+  margin: 20px 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--bg-subtle);
+}
+.practice-next h2 {
+  margin-top: 0;
+}
+.practice-next .btn.start {
+  display: inline-flex;
+  margin-right: 16px;
+}
+.settings-form {
+  max-width: 760px;
+  padding: 24px;
+  margin: 0 auto;
+}
+.settings-form nav,
+.settings-terminal-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+.settings-form section {
+  border-top: 1px solid var(--line);
+  padding: 20px 0;
+  scroll-margin-top: 24px;
+}
+.settings-form fieldset {
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  scroll-margin-top: 24px;
+}
+.settings-form fieldset label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px 8px 0;
+}
+.settings-form select {
+  font: inherit;
+  padding: 8px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--fg);
+  max-width: 100%;
+}
+.settings-form input {
+  accent-color: var(--accent);
+}
+.settings-terminal-nav {
+  padding: 16px 24px;
+  background: var(--bg);
+}
+.settings-data {
+  margin-top: 24px;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+@media (max-width: 860px) {
+  .app {
+    grid-template-rows: auto 1fr;
+  }
+  .sidebar {
+    align-content: start;
+    gap: 8px;
+  }
+  .sidebar .workspace-name {
+    flex: 1;
+  }
+  .nav-toggle {
+    display: block;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    padding: 8px 12px;
+    background: var(--bg);
+    color: var(--fg);
+    font: inherit;
+  }
+  .side-nav {
+    display: none;
+    flex: 1 0 100%;
+  }
+  .side-nav.expanded {
+    display: flex;
+  }
+  .sidebar .side-heading,
+  .sidebar .project-link {
+    display: flex;
+  }
+  .side-link {
+    min-height: 40px;
+  }
+  .row {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  .row .title {
+    flex: 1 0 100%;
+    white-space: normal;
+    overflow: visible;
+    order: 1;
+  }
+  .row .meta {
+    flex: 1 0 100%;
+    order: 2;
+    justify-content: flex-start;
+  }
+  .row .meta .tag {
+    display: inline-flex;
+  }
+  .mobile-start {
+    display: block;
+    margin: 16px 0;
+  }
+  .dashboard .dash-grid {
+    grid-template-columns: 1fr;
+  }
+  .profile-menu {
+    position: relative;
+  }
+}
+
+.settings-terminal-nav {
+  position: fixed;
+  inset: 0 0 auto;
+  height: 60px;
+  z-index: 2;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+}
+.settings-terminal-nav + .term {
+  top: 60px;
+}
+
+.home-workspace-preview {
+  margin: 32px 0;
+}
+.home-workspace-preview img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+}
+.home-workspace-preview figcaption {
+  color: var(--dim);
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+.play-langs {
+  margin-top: 16px;
+}
+.row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+@media (max-width: 600px) {
+  .play .home-body {
+    padding-top: 24px;
+  }
+}
+
+.settings-form nav {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  padding: 12px 0;
+  z-index: 2;
+}
+.recovery-state .btn + .btn {
+  margin-left: 8px;
 }

@@ -55,6 +55,7 @@ export function latestSavedCode(
       artifacts.set(value.artifactId, value);
     else if (
       value.observationId &&
+      value.type?.startsWith("observation.workspace.") &&
       value.issue === issue
     ) {
       const stream = streams.get(value.source.id) ?? [];
@@ -131,7 +132,10 @@ function replay(
         // A complete snapshot is exact: a new safe starting point after any earlier loss.
         current = {
           docs: new Map(
-            Object.entries(artifact.files).map(([path, f]) => [path, toText(f.text)]),
+            Object.entries(artifact.files).map(([path, f]) => [
+              path,
+              toText(f.text),
+            ]),
           ),
           revision: artifact.revision,
         };
@@ -174,7 +178,11 @@ function apply(
   data: Record<string, unknown>,
 ): Replayed | null {
   const before = current.docs.get(String(data.file));
-  if (!before || data.revision !== current.revision + 1 || data.changes === null)
+  if (
+    !before ||
+    data.revision !== current.revision + 1 ||
+    data.changes === null
+  )
     return null;
   try {
     const changes = ChangeSet.fromJSON(data.changes);

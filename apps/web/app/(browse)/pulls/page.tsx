@@ -43,7 +43,7 @@ export default async function PullsPage({
   const params = await searchParams;
   await requireConsent(pathWithQuery("/pulls", params));
   const query = parsePullQuery(queryParam(params));
-  const { issues, projects } = await getLibrary();
+  const { issues, allIssues, projects } = await getLibrary();
   return (
     <>
       <Topbar>Pull requests</Topbar>
@@ -57,14 +57,25 @@ export default async function PullsPage({
               key: "state",
               label: "State",
               options: [
-                { value: "open", label: "Open", icon: <PullIcon state="open" size={14} /> },
-                { value: "merged", label: "Merged", icon: <PullIcon state="merged" size={14} /> },
+                {
+                  value: "open",
+                  label: "Open",
+                  icon: <PullIcon state="open" size={14} />,
+                },
+                {
+                  value: "merged",
+                  label: "Merged",
+                  icon: <PullIcon state="merged" size={14} />,
+                },
               ],
             },
             {
               key: "checks",
               label: "Checks",
-              options: PULL_CHECKS.map((c) => ({ value: c, label: CHECKS_LABELS[c] })),
+              options: PULL_CHECKS.map((c) => ({
+                value: c,
+                label: CHECKS_LABELS[c],
+              })),
             },
             {
               key: "kind",
@@ -100,7 +111,7 @@ export default async function PullsPage({
             },
           ]}
         />
-        <PullList issues={issues.map(summarize)} query={query} />
+        <PullList issues={allIssues.map(summarize)} query={query} />
         <p className="hint">
           <kbd>/</kbd> search · <kbd>j</kbd> <kbd>k</kbd> move · <kbd>↵</kbd>{" "}
           open
