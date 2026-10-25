@@ -30,9 +30,21 @@ import {
   type TerminalApi,
 } from "../_terminal/terminal";
 
-/** Settings as terminal commands: pick one, it runs, and the menu comes back. */
-export function SettingsTerminal() {
-  return <Terminal run={settings} />;
+/**
+ * Settings as terminal commands: pick one, it runs, and the menu comes back. `start` runs one
+ * first, for links from elsewhere in the app: a command name, or a profile question's id
+ * (`languages`, `editor`) to ask just that question.
+ */
+export function SettingsTerminal({ start }: { start?: string }) {
+  return <Terminal run={(t) => settings(t, start)} />;
+}
+
+/** What `?run=` may open: a command, or one profile question. */
+function startCommand(start: string | undefined): ((t: TerminalApi) => Promise<Outcome>) | null {
+  if (!start) return null;
+  if (Object.hasOwn(COMMANDS, start) && start !== "exit") return COMMANDS[start].run;
+  if (QUESTIONS.some((q) => q.id === start)) return (t) => profile(t, [start]);
+  return null;
 }
 
 /** What a command leaves behind: the menu again, or nothing because it navigated away. */
@@ -73,7 +85,7 @@ const MENU: Prompt = {
   escape: "closes settings",
 };
 
-async function settings(t: TerminalApi) {
+async function settings(t: TerminalApi, start?: string) {
   const handle = ensureHandle();
   if (!handle) {
     t.print("", "No account on this device yet.");
@@ -91,6 +103,11 @@ async function settings(t: TerminalApi) {
     />,
     "",
   );
+  const first = startCommand(start);
+  if (first) {
+    if ((await first(t)) === "left") return;
+    t.print("");
+  }
   for (;;) {
     const command = await t.ask(MENU, {
       skipped: "closed",
@@ -108,8 +125,8 @@ async function settings(t: TerminalApi) {
   }
 }
 
-/** The setup questions again, starting from the current answers. */
-async function profile(t: TerminalApi): Promise<Outcome> {
+/** The profile questions again (or just `only`), starting from the current answers. */
+async function profile(t: TerminalApi, only?: string[]): Promise<Outcome> {
   const current = readProfile()?.profile ?? {};
   t.print(
     <span className="t-dim">Your answers now:</span>,
@@ -120,7 +137,7 @@ async function profile(t: TerminalApi): Promise<Outcome> {
     "",
   );
   const answers: Record<string, Answer> = { ...current };
-  for (const question of QUESTIONS) {
+  for (const question of QUESTIONS.filter((q) => !only || only.includes(q.id))) {
     const value = current[question.id as keyof Profile];
     const index = (v: unknown) =>
       question.choices.findIndex((choice) => choice.value === v);

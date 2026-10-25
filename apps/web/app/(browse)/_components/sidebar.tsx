@@ -12,7 +12,7 @@ import {
   ProjectsIcon,
   PullsIcon,
 } from "./icons";
-import { ProfileMenu } from "./profile-menu";
+import { SettingsLink } from "./profile-menu";
 
 export function Sidebar({
   projects,
@@ -112,7 +112,7 @@ export function Sidebar({
           </Link>
         ))}
         <div className="spacer" />
-        <ProfileMenu />
+        <SettingsLink />
       </nav>
     </aside>
   );
