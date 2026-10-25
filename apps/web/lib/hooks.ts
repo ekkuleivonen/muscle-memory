@@ -1,12 +1,13 @@
 /**
- * Dot's selected share hooks (ENG-331 inventory, selection of 2026-10-25): one line that opens a
- * shared challenge link, written from the challenge's own stated problem. No approach, root
- * cause or hidden case is in a hook.
+ * Dot's selected share hooks: plain, short challenge prompts, worded as in ENG-331's register
+ * (PR #41 at `790fd6f`). B / SHOP-5, C / DATA-6 and D / API-8 are the primaries; A / QUICK-2 is
+ * the low-friction starter. A hook describes the challenge, never a person: no first-person
+ * identity, craft or debate lines (those are optional campaign drafts for a real person to
+ * adopt), no approach, root cause or hidden case.
  *
- * Each hook was checked against one exact revision: ENG-329's single-file normalization
- * (`7c09d35`). It is shown only while that revision is the live one. Any other revision (the
- * earlier multi-file one, or a later edit) gets the challenge's plain title and summary, so a
- * hook never describes a problem the visitor won't get.
+ * Each hook is pinned to the exact revision it was checked against: ENG-329's normalized
+ * catalog at `3719e60` (unchanged for these four since `7c09d35`). It shows only while that
+ * revision is live; any other revision gets the challenge's plain title and summary.
  */
 export interface Hook {
   /** The revision the hook was checked against. */
@@ -29,12 +30,12 @@ export const HOOKS: Readonly<Record<string, Hook>> = {
   "DATA-6": {
     revision:
       "sha256:de8621e616e78cb42b58d2d189a0b9738171c3345ef3193d1af425130e4ba130",
-    text: "The payment report overcounts one partner and leaves out the one who paid nothing. Fix the SQL.",
+    text: "The payment report overcounts one partner—and leaves out the one who paid nothing. Fix the SQL.",
   },
   "API-8": {
     revision:
       "sha256:a7d434b1858edc7bc26cd2fbf95f53959221cd9cf5e7ea33afff7cdecd0a2c59",
-    text: "Two sign-ups, one email address, or two different people? Build the lookup key using the stated rules.",
+    text: "Fix duplicate sign-ups without treating every email provider like Gmail.",
   },
 };
 

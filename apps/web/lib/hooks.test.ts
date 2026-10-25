@@ -28,3 +28,14 @@ test("hooks name the problem, never an approach", () => {
       /\b(regex|split|trim|join|left join|distinct|group by|lowercase|twice|double[- ]count|discount applied|hint|AI)\b/i,
     );
 });
+
+test("hooks describe the challenge, never a person", () => {
+  // First-person identity, craft or debate lines are campaign drafts, not share copy.
+  for (const { text } of Object.values(HOOKS)) {
+    assert.doesNotMatch(
+      text,
+      /\b(I|I'm|I've|me|my|we|our|you lost|still got it)\b/i,
+    );
+    assert.ok(text.length <= 120, text);
+  }
+});
