@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { permanentRedirect } from "next/navigation";
+import { hookFor } from "../../../lib/hooks";
 import { languageLabel } from "../../../lib/library";
 import { getLibrary } from "../../../lib/load";
 import { CONSENT_COOKIE, hasConsent } from "../../../lib/profile";
@@ -24,7 +25,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   if (!issue)
     return { title: "Challenge not available · Muscle Memory", robots: { index: false } };
   const title = `${issue.key}: ${issue.title}`;
-  const description = `${issue.summary} A ${languageLabel(issue.language)} challenge to solve without AI.`;
+  const description = `${hookFor(issue) ?? issue.summary} A ${languageLabel(issue.language)} challenge to solve without AI.`;
   return {
     title: `${title} · Muscle Memory`,
     description,
@@ -65,7 +66,9 @@ export default async function TryIssue(props: Props) {
           {issue.difficulty ? ` · ${issue.difficulty}` : ""}
         </p>
         <h1 className="try-title">{issue.title}</h1>
-        {issue.summary && <p className="home-lede">{issue.summary}</p>}
+        {(hookFor(issue) ?? issue.summary) && (
+          <p className="home-lede">{hookFor(issue) ?? issue.summary}</p>
+        )}
         <section className="play-ticket try-ticket" aria-label="The challenge">
           <h2>Goal and requirements</h2>
           <Markdown source={issue.task} />

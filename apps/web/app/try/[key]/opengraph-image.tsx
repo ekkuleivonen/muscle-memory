@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { hookFor } from "../../../lib/hooks";
 import { languageLabel } from "../../../lib/library";
 import { getLibrary } from "../../../lib/load";
 
@@ -8,7 +9,7 @@ export const alt = "A coding challenge to solve without AI";
 
 /**
  * The picture a shared challenge link shows in posts and chats: which challenge it is, in
- * which language, and its one-line goal. Nothing of the sender: the link names only the
+ * which language, and its selected hook or else its one-line goal. Nothing of the sender: the link names only the
  * challenge.
  */
 export default async function Image({
@@ -18,6 +19,7 @@ export default async function Image({
 }) {
   const { key } = await params;
   const issue = (await getLibrary()).findIssue(decodeURIComponent(key));
+  const line = issue ? (hookFor(issue) ?? issue.summary) : "";
   return new ImageResponse(
     (
       <div
@@ -42,7 +44,7 @@ export default async function Image({
           <div style={{ fontSize: 56, lineHeight: 1.15 }}>
             {issue ? issue.title : "One challenge. No AI."}
           </div>
-          {issue?.summary && (
+          {line && (
             <div
               style={{
                 fontSize: 30,
@@ -51,7 +53,7 @@ export default async function Image({
                 marginTop: 24,
               }}
             >
-              {issue.summary}
+              {line}
             </div>
           )}
         </div>

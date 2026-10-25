@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { hookFor } from "../../../lib/hooks";
 import { LANGUAGES } from "../../../lib/languages";
 import { getLibrary } from "../../../lib/load";
 import { comparisonLine, sentence } from "../../../lib/result";
@@ -87,7 +88,7 @@ export default async function SharedResult(props: Props) {
             <span className="home-punch">Your turn.</span>
           </h1>
           <p className="home-lede">
-            {issue.summary || issue.title} You start from the same code they
+            {hookFor(issue) ?? (issue.summary || issue.title)} You start from the same code they
             did, in your own attempt: nothing of theirs comes with it.
           </p>
           <div className="home-actions">
