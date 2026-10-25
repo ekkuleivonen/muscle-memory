@@ -6,14 +6,14 @@ import Link from "next/link";
  */
 export function ConsentPoints() {
   return (
-    <>
-      <ul className="home-promises consent-points">
+    <div className="markdown t-md">
+      <ul>
         <li>
           <strong>We record what you do here, keystroke by keystroke:</strong>{" "}
           every key you press in the editor and when, your edits and pastes, the
           pages you open, your runs and their results, and when you switch away
-          (never to what). It&apos;s sent to our servers without
-          your name. That&apos;s the product.
+          (never to what). It&apos;s sent to our servers without your name.
+          That&apos;s the product.
         </li>
         <li>
           <strong>We may publish anonymised stats and datasets.</strong> Rather
@@ -28,16 +28,13 @@ export function ConsentPoints() {
           use and publish it.
         </li>
       </ul>
-      <p className="home-fine">
+      <p className="t-dim">
         The full <Link href="/terms">Terms</Link> and{" "}
         <Link href="/privacy">Privacy Notice</Link> are short and written for
-        humans.
+        humans. Your code and progress are saved in this browser: there is no
+        device sync or recovery from uploads, and clearing browser storage
+        clears them.
       </p>
-      <p className="home-fine">
-        Your code and progress are saved in this browser. There
-        is no device sync or recovery from uploads. Logging out keeps your local
-        data; clearing browser storage does not.
-      </p>
-    </>
+    </div>
   );
 }

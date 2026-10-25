@@ -688,3 +688,13 @@
   white-space: pre;
   overflow-x: auto;
 }
+/* /consent: the points, then one keyboard-first choice. */
+.t-consent {
+  max-width: 80ch;
+}
+.t-consent .t-md li + li {
+  margin-top: 0.6em;
+}
+.t-consent-actions {
+  margin-top: 1.6em;
+}
