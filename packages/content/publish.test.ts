@@ -30,12 +30,14 @@ test("a rule needs examples both ways, and must not fire on a correct solution",
   );
 });
 
-test("JavaScript and Python challenges show their checks accept other designs and catch mistakes", () => {
-  const { revision, private: secret } = of("PY-002");
-  assert.deepEqual(publishProblems(revision, { ...secret, alternatives: [], wrong: [] }), [
-    "no alternative: name another correct design the checks accept",
-    "fewer than two wrong solutions: name plausible mistakes the checks must catch",
-  ]);
+test("every challenge shows its checks accept other designs and catch mistakes", () => {
+  for (const key of ["PY-002", "CPP-002", "SQL-003"]) {
+    const { revision, private: secret } = of(key);
+    assert.deepEqual(publishProblems(revision, { ...secret, alternatives: [], wrong: [] }), [
+      "no alternative: name another correct design the checks accept",
+      "fewer than two wrong solutions: name plausible mistakes the checks must catch",
+    ], key);
+  }
 });
 
 test("the solution must change the starter", () => {
