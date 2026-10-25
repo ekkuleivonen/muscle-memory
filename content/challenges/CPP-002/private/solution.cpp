@@ -2,8 +2,8 @@
 // its response in the arena.
 //
 // Open addressing with linear probing over a fixed array of slots, sized once at startup from
-// cache.index_slots. This replaced the std::unordered_map index on Thursday (#412): that
-// allocated a node on every insert, about 9% of CPU on the edge flame graphs at peak.
+// cache.index_slots. It replaced a std::unordered_map index, which allocated a node on every
+// insert.
 #include <cstddef>
 #include <string>
 #include <vector>
