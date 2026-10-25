@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { CONSENT_COOKIE, hasConsent } from "../lib/profile";
+import { Banner } from "./_terminal/banner";
+import { LinkMenu, type MenuItem } from "./_terminal/link-menu";
+import "./_terminal/terminal.css";
 
 /**
  * The public front door: why someone who builds with AI might write one challenge themselves,
@@ -27,64 +30,52 @@ export default async function Home() {
   const store = await cookies();
   // Anyone who accepted the Terms has challenges to come back to.
   const signedIn = hasConsent(store.get(CONSENT_COOKIE)?.value);
-  const start = signedIn ? (
-    <Link className="home-cta" href="/dashboard">
-      Continue where you left off →
-    </Link>
-  ) : (
-    <Link className="home-cta" href="/play">
-      Try a challenge →
+  const startItem: MenuItem = signedIn
+    ? { href: "/dashboard", label: "continue", hint: "where you left off" }
+    : { href: "/play", label: "try", hint: "a five-minute bug, in your language" };
+  const start = (
+    <Link className="home-cta" href={startItem.href}>
+      {signedIn ? "Continue where you left off →" : "Try a challenge →"}
     </Link>
   );
 
   return (
-    <div className="legal home">
-      <header className="legal-head">
-        <Link href="/" className="workspace-name">
-          <img
-            className="logo-mark"
-            src="/logo.svg"
-            alt=""
-            width={22}
-            height={22}
-          />
-          muscle memory
-        </Link>
-        <nav>
-          <Link href="/terms">Terms</Link>
-          <Link href="/privacy">Privacy</Link>
-          <Link href="/issues">Explore</Link>
-        </nav>
-      </header>
-
-      <main className="legal-body home-body">
-        <section className="home-hero">
-          <p className="home-kicker">Practice without AI</p>
-          <h1>
-            Use AI at work.
-            <br />
-            <span className="home-punch">Write this one yourself.</span>
-          </h1>
-          <p className="home-lede">
-            AI can help you build more than you could alone. You may also have
-            noticed moments where the code works and you&apos;re not quite sure
-            why. Here you pick a challenge, write the code yourself and get
-            direct feedback. Then the next one.
-          </p>
-          <div className="home-actions">
-            {start}
-            <span className="home-note">
-              No email needed. Progress stays in this browser.{" "}
-              {signedIn ? (
-                <Link href="/issues">Explore challenges</Link>
-              ) : (
-                <>
-                  Or <Link href="/issues">explore every challenge</Link>.
-                </>
-              )}
-            </span>
-          </div>
-        </section>
+    <div className="term home">
+      <Banner
+        description="Practice without AI."
+        status={
+          signedIn ? (
+            <>
+              <span className="t-on">●</span> signed in on this browser
+            </>
+          ) : (
+            <>○ no account needed · progress stays in this browser</>
+          )
+        }
+      />
+      <main className="t-prose">
+        <p className="t-line home-headline">
+          <strong>Use AI at work.</strong>
+          <br />
+          <strong className="t-brand">Write this one yourself.</strong>
+        </p>
+        <p className="t-line">
+          AI can help you build more than you could alone. You may also have
+          noticed moments where the code works and you&apos;re not quite sure
+          why. Here you pick a challenge, write the code yourself and get direct
+          feedback. Then the next one.
+        </p>
+        <LinkMenu
+          id="home"
+          message="Where to?"
+          autoFocus
+          items={[
+            startItem,
+            { href: "/issues", label: "explore", hint: "every challenge" },
+            { href: "/terms", label: "terms" },
+            { href: "/privacy", label: "privacy" },
+          ]}
+        />
 
         <section className="home-section">
           <h2>Challenge, code, feedback</h2>

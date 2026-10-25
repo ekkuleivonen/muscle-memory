@@ -171,3 +171,19 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+/* Pages that are read, like the home page: prose at a readable measure, menus of links. */
+.t-prose {
+  max-width: 80ch;
+  margin-top: 1.6em;
+}
+.t-prose > p {
+  margin: 0 0 1.6em;
+}
+.term .t-menu-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+.t-list:focus-visible {
+  outline: none;
+}

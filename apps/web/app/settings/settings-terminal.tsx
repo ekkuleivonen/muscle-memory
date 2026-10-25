@@ -22,8 +22,8 @@ import type { Profile } from "../../lib/profile";
 import { logProfile } from "../(browse)/_components/board-log";
 import type { Answer, Prompt } from "../_terminal/prompts";
 import { QUESTIONS, toProfile } from "../../lib/questions";
+import { Banner } from "../_terminal/banner";
 import {
-  Banner,
   profileLines,
   TermLink,
   Terminal,
