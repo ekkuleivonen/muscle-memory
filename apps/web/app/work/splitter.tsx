@@ -7,85 +7,87 @@ import {
   type PointerEvent,
 } from "react";
 
-const LAYOUT_KEY = "muscle-memory.ide-layout";
+const LAYOUT_KEY = "muscle-memory.practice-layout";
 
-export const SIDE = { initial: 280, min: 180, max: 560 };
-export const PANEL = { initial: 260, min: 90 };
-/** The editor keeps at least this much height when the panel grows. */
-const EDITOR_MIN = 120;
-/** The tab strip and breadcrumbs above the editor. */
-const EDITOR_CHROME = 60;
+/** The challenge pane's width and the feedback pane's height, in px. */
+export const CHALLENGE = { min: 240 };
+export const FEEDBACK = { min: 80 };
+/** What the code pane keeps when the others grow. */
+export const CODE_MIN = { width: 360, height: 140 };
+
+/** Pane sizes as last dragged; null keeps the stylesheet's proportional default. */
+export interface PracticeLayout {
+  challenge: number | null;
+  feedback: number | null;
+}
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, Math.round(value)));
 }
 
-/** Sidebar width and panel height, remembered on this device like VS Code does. */
-export function useIdeLayout() {
-  const [side, setSide] = useState(SIDE.initial);
-  const [panel, setPanel] = useState(PANEL.initial);
+/** Pane sizes, remembered on this device; never recorded (a declared capture gap). */
+export function usePracticeLayout() {
+  const [layout, setLayout] = useState<PracticeLayout>({
+    challenge: null,
+    feedback: null,
+  });
   // Read after mount, so the server render and hydration agree.
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? "null") as {
-        side?: number;
-        panel?: number;
-      } | null;
-      if (typeof saved?.side === "number")
-        setSide(clamp(saved.side, SIDE.min, SIDE.max));
-      if (typeof saved?.panel === "number")
-        setPanel(Math.max(PANEL.min, Math.round(saved.panel)));
+      const saved = JSON.parse(
+        localStorage.getItem(LAYOUT_KEY) ?? "null",
+      ) as Partial<PracticeLayout> | null;
+      setLayout({
+        challenge:
+          typeof saved?.challenge === "number" ? saved.challenge : null,
+        feedback: typeof saved?.feedback === "number" ? saved.feedback : null,
+      });
     } catch {
       // A broken saved layout just means the defaults.
     }
   }, []);
-  const save = (next: { side: number; panel: number }) =>
-    localStorage.setItem(LAYOUT_KEY, JSON.stringify(next));
-  return {
-    side,
-    panel,
-    setSide: (value: number) => {
-      setSide(value);
-      save({ side: value, panel });
-    },
-    setPanel: (value: number) => {
-      setPanel(value);
-      save({ side, panel: value });
-    },
-  };
-}
-
-/** The panel's largest height inside a main area of `height` px. */
-export function panelMax(height: number): number {
-  return Math.max(PANEL.min, height - EDITOR_CHROME - EDITOR_MIN);
+  const update = (change: Partial<PracticeLayout>) =>
+    setLayout((current) => {
+      const next = { ...current, ...change };
+      try {
+        localStorage.setItem(LAYOUT_KEY, JSON.stringify(next));
+      } catch {
+        // Unsaved sizes still apply for this visit.
+      }
+      return next;
+    });
+  return { layout, update };
 }
 
 /**
- * A drag handle between two areas. `axis` x resizes a width (dragging right grows it), y a
- * height measured from below (dragging up grows it). Arrow keys nudge it; double-click resets.
+ * A drag handle between two panes. `axis` x resizes a width (dragging right grows it), y a
+ * height measured from below (dragging up grows it). Arrow keys nudge it (Shift for more),
+ * Home and End go to the limits, double-click resets to the default.
  */
 export function Splitter({
   axis,
   value,
   min,
   max,
-  initial,
   label,
   onChange,
+  onReset,
   className = "",
 }: {
   axis: "x" | "y";
-  value: number;
+  /** The size now, measured: the pane may still be at its stylesheet default. */
+  value(): number;
   min: number;
-  max: () => number;
-  initial: number;
+  max(): number;
   label: string;
   onChange(value: number): void;
+  onReset(): void;
   className?: string;
 }) {
   const drag = useRef<{ start: number; value: number } | null>(null);
   const [dragging, setDragging] = useState(false);
-  const set = (next: number) => onChange(clamp(next, min, max()));
+  const set = (next: number) =>
+    onChange(clamp(next, min, Math.max(min, max())));
 
   function onPointerDown(event: PointerEvent<HTMLDivElement>) {
     if (event.button !== 0) return;
@@ -95,7 +97,7 @@ export function Splitter({
     event.currentTarget.setPointerCapture(event.pointerId);
     drag.current = {
       start: axis === "x" ? event.clientX : event.clientY,
-      value,
+      value: value(),
     };
     setDragging(true);
   }
@@ -113,8 +115,8 @@ export function Splitter({
     const step = event.shiftKey ? 64 : 16;
     const grow = axis === "x" ? "ArrowRight" : "ArrowUp";
     const shrink = axis === "x" ? "ArrowLeft" : "ArrowDown";
-    if (event.key === grow) set(value + step);
-    else if (event.key === shrink) set(value - step);
+    if (event.key === grow) set(value() + step);
+    else if (event.key === shrink) set(value() - step);
     else if (event.key === "Home") set(min);
     else if (event.key === "End") set(max());
     else return;
@@ -126,16 +128,14 @@ export function Splitter({
       role="separator"
       aria-orientation={axis === "x" ? "vertical" : "horizontal"}
       aria-label={label}
-      aria-valuenow={value}
-      aria-valuemin={min}
       tabIndex={0}
-      title={`Drag to resize · double-click to reset`}
-      className={`ide-splitter ${axis} ${dragging ? "dragging" : ""} ${className}`}
+      title="Drag to resize · double-click to reset"
+      className={`pane-splitter ${axis} ${dragging ? "dragging" : ""} ${className}`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      onDoubleClick={() => set(initial)}
+      onDoubleClick={onReset}
       onKeyDown={onKeyDown}
     />
   );

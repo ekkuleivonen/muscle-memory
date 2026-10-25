@@ -1,6 +1,13 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import {
   openPracticeStore,
   type PracticeStore,
@@ -62,6 +69,13 @@ import {
 
 import { ChallengeExamples } from "../(browse)/_components/challenge-examples";
 import { TermFooter, type Crumb } from "../_terminal/footer";
+import {
+  CHALLENGE,
+  CODE_MIN,
+  FEEDBACK,
+  Splitter,
+  usePracticeLayout,
+} from "./splitter";
 import { privateCheckFailure } from "./check-feedback";
 import {
   completionEligibility,
@@ -280,6 +294,9 @@ export function Ide({
   }
 
   const mainRef = useRef<HTMLElement>(null);
+  const challengePane = useRef<HTMLElement>(null);
+  const resultsPane = useRef<HTMLElement>(null);
+  const { layout, update: resize } = usePracticeLayout();
   const board = useBoard();
   const currentProblem = candidates.find((i) => i.key === issue.key);
   const next = currentProblem
@@ -653,8 +670,25 @@ export function Ide({
     verification.completedInAttempt;
   return (
     <div className="practice tui" onClickCapture={persistView}>
-      <main className="tui-panes" ref={mainRef}>
-        <section className="pane practice-challenge" aria-label="Challenge">
+      <main
+        className="tui-panes"
+        ref={mainRef}
+        style={
+          {
+            ...(layout.challenge !== null && {
+              "--challenge-w": `${layout.challenge}px`,
+            }),
+            ...(layout.feedback !== null && {
+              "--feedback-h": `${layout.feedback}px`,
+            }),
+          } as CSSProperties
+        }
+      >
+        <section
+          className="pane practice-challenge"
+          aria-label="Challenge"
+          ref={challengePane}
+        >
           <h2 className="pane-title">
             challenge <span className="faint">· {issue.key}</span>
           </h2>
@@ -672,6 +706,15 @@ export function Ide({
             <CopyIssueLink issueKey={issue.key} />
           </div>
         </section>
+        <Splitter
+          axis="x"
+          label="Resize the challenge pane"
+          value={() => challengePane.current?.offsetWidth ?? 0}
+          min={CHALLENGE.min}
+          max={() => (mainRef.current?.clientWidth ?? 0) - CODE_MIN.width}
+          onChange={(width) => resize({ challenge: width })}
+          onReset={() => resize({ challenge: null })}
+        />
         <section className="pane practice-work" aria-label="Your code">
           <h2 className="pane-title">
             code{" "}
@@ -791,7 +834,20 @@ export function Ide({
             </div>
           )}
         </section>
-        <section className="pane practice-results" aria-label="Feedback">
+        <Splitter
+          axis="y"
+          label="Resize the feedback pane"
+          value={() => resultsPane.current?.offsetHeight ?? 0}
+          min={FEEDBACK.min}
+          max={() => (mainRef.current?.clientHeight ?? 0) - CODE_MIN.height}
+          onChange={(height) => resize({ feedback: height })}
+          onReset={() => resize({ feedback: null })}
+        />
+        <section
+          className="pane practice-results"
+          aria-label="Feedback"
+          ref={resultsPane}
+        >
           <h2 className="pane-title">feedback</h2>
           <div className="pane-body">
             {message && (
