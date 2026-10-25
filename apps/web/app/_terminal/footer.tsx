@@ -6,10 +6,14 @@ export interface Crumb {
   href: string;
 }
 
-/** Always reachable, on the right: the way home, every challenge, and the legal pages. */
+/**
+ * Always reachable, on the right: the way home, every challenge, settings and the legal
+ * pages. Settings asks for the Terms first, like any page behind the consent gate.
+ */
 const LINKS = [
   { href: "/", label: "home" },
   { href: "/issues", label: "challenges" },
+  { href: "/settings", label: "settings" },
   { href: "/terms", label: "terms" },
   { href: "/privacy", label: "privacy" },
 ] as const;
