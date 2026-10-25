@@ -1,0 +1,9 @@
+{
+  "title": "Shift ASCII letters",
+  "summary": "Shift each ASCII letter around its alphabet by offset positions, preserving case.",
+  "difficulty": "easy",
+  "tags": ["strings", "modular-arithmetic"],
+  "file": "Solution.java",
+  "entrypoint": "shift",
+  "parameters": ["text", "offset"]
+}

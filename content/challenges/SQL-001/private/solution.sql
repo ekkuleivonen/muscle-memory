@@ -3,4 +3,4 @@
 SELECT customer, SUM(total) AS revenue
 FROM orders
 GROUP BY customer
-ORDER BY revenue DESC;
+ORDER BY revenue DESC, customer;

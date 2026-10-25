@@ -1,0 +1,108 @@
+[
+  {
+    "input": [
+      "ol",
+      "start"
+    ],
+    "expected": [
+      "3"
+    ]
+  },
+  {
+    "input": [
+      "ol > li a",
+      "text"
+    ],
+    "expected": [
+      "Arrays",
+      "Maps"
+    ]
+  },
+  {
+    "input": [
+      "ol > li a",
+      "href"
+    ],
+    "expected": [
+      "/guides/arrays",
+      "/guides/maps"
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      "ol",
+      "count"
+    ],
+    "expected": 1,
+    "hidden": true
+  },
+  {
+    "input": [
+      "ol > li",
+      "count"
+    ],
+    "expected": 2,
+    "hidden": true
+  },
+  {
+    "input": [
+      "li",
+      "count"
+    ],
+    "expected": 2,
+    "hidden": true
+  },
+  {
+    "input": [
+      "a",
+      "count"
+    ],
+    "expected": 2,
+    "hidden": true
+  },
+  {
+    "input": [
+      "a[target]",
+      "count"
+    ],
+    "expected": 0,
+    "hidden": true
+  },
+  {
+    "input": [
+      "ul",
+      "count"
+    ],
+    "expected": 0,
+    "hidden": true
+  },
+  {
+    "input": [
+      "ol ol",
+      "count"
+    ],
+    "expected": 0,
+    "hidden": true
+  },
+  {
+    "input": [
+      "ol > li:nth-child(1) a",
+      "href"
+    ],
+    "expected": [
+      "/guides/arrays"
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      "ol > li:nth-child(2) a",
+      "href"
+    ],
+    "expected": [
+      "/guides/maps"
+    ],
+    "hidden": true
+  }
+]

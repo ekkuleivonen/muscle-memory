@@ -1,0 +1,214 @@
+{
+  "challenge": "SQL-005",
+  "task": "Return each transaction with its account balance immediately after that transaction.\n\nTable: `transactions(id integer PRIMARY KEY, account_id integer NOT NULL, sequence integer NOT NULL, amount integer NOT NULL)`. Start every account at zero. Within an account, process by sequence ascending, breaking ties by id ascending; input row order is irrelevant. Negative amounts subtract, and zero amounts still produce a row. Output columns: account_id, id, balance, sorted by account_id, sequence, id (all ascending). Empty input returns no rows. At most 100 rows; amounts are in -10000..10000. Write one PostgreSQL query; the harness creates and populates the table for every case.\n\n## Examples\n\nInput: `{\"transactions\": [[1, 1, 1, 10], [2, 1, 2, -3], [3, 2, 1, 5]]}` → output: `[[1, 1, 10], [1, 2, 7], [2, 3, 5]]`.\nInput: `{\"transactions\": []}` → output: `[]`.\n",
+  "language": "sql",
+  "file": "balances.sql",
+  "starter": "SELECT account_id, id, amount AS balance FROM transactions ORDER BY account_id, sequence, id;\n",
+  "entrypoint": "query",
+  "schema": "CREATE TABLE transactions (id integer PRIMARY KEY, account_id integer NOT NULL, sequence integer NOT NULL, amount integer NOT NULL);\n",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": {
+        "transactions": [
+          [
+            1,
+            1,
+            1,
+            10
+          ],
+          [
+            2,
+            1,
+            2,
+            -3
+          ],
+          [
+            3,
+            2,
+            1,
+            5
+          ]
+        ]
+      },
+      "expected": [
+        [
+          1,
+          1,
+          10
+        ],
+        [
+          1,
+          2,
+          7
+        ],
+        [
+          2,
+          3,
+          5
+        ]
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": {
+        "transactions": []
+      },
+      "expected": [],
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": {
+        "transactions": [
+          [
+            4,
+            1,
+            2,
+            5
+          ],
+          [
+            2,
+            1,
+            1,
+            10
+          ],
+          [
+            3,
+            1,
+            2,
+            -4
+          ],
+          [
+            1,
+            2,
+            1,
+            0
+          ]
+        ]
+      },
+      "expected": [
+        [
+          1,
+          2,
+          10
+        ],
+        [
+          1,
+          3,
+          6
+        ],
+        [
+          1,
+          4,
+          11
+        ],
+        [
+          2,
+          1,
+          0
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-4",
+      "input": {
+        "transactions": [
+          [
+            1,
+            1,
+            1,
+            -10
+          ],
+          [
+            2,
+            1,
+            2,
+            0
+          ],
+          [
+            3,
+            1,
+            3,
+            3
+          ]
+        ]
+      },
+      "expected": [
+        [
+          1,
+          1,
+          -10
+        ],
+        [
+          1,
+          2,
+          -10
+        ],
+        [
+          1,
+          3,
+          -7
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-5",
+      "input": {
+        "transactions": [
+          [
+            9,
+            2,
+            1,
+            8
+          ],
+          [
+            5,
+            1,
+            1,
+            2
+          ],
+          [
+            2,
+            2,
+            1,
+            -1
+          ],
+          [
+            7,
+            1,
+            0,
+            4
+          ]
+        ]
+      },
+      "expected": [
+        [
+          1,
+          7,
+          4
+        ],
+        [
+          1,
+          5,
+          6
+        ],
+        [
+          2,
+          2,
+          -1
+        ],
+        [
+          2,
+          9,
+          7
+        ]
+      ],
+      "hidden": true
+    }
+  ],
+  "rules": []
+}

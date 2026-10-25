@@ -7,4 +7,6 @@ Security raised the minimum password length to 12, and the sign-up form says 12,
 3. `"no-letter"`: no letter, in either case.
 4. `"has-whitespace"`: a space, tab or other whitespace character anywhere.
 
+Length means Java UTF-16 code units (`String.length()`). For each code unit, use Java’s `Character.isDigit`, `Character.isLetter` and `Character.isWhitespace` definitions; letters and digits are not limited to ASCII.
+
 A password that breaks none of them gets an empty list.

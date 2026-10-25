@@ -1,0 +1,9 @@
+{
+  "title": "Describe an image with a caption",
+  "summary": "Create one figure containing an image followed by its visible caption.",
+  "difficulty": "easy",
+  "tags": ["accessibility", "images", "semantics"],
+  "file": "page.html",
+  "entrypoint": "page",
+  "parameters": ["selector", "read"]
+}

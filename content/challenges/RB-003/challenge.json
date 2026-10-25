@@ -1,0 +1,8 @@
+{
+  "title": "Group consecutive integers",
+  "summary": "Group an ascending list of distinct integers into maximal consecutive runs.",
+  "difficulty": "medium",
+  "tags": ["arrays", "grouping"],
+  "file": "group_runs.rb",
+  "entrypoint": "group_runs"
+}

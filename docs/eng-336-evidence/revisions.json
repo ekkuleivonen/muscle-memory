@@ -1,0 +1,163 @@
+[
+  {
+    "key": "C-003",
+    "revision": "sha256:fc49a2573a90a5450a5281c039315685f129c3d670615bc6abaa5c63e886fb42",
+    "cases": 15,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "C-004",
+    "revision": "sha256:0935afcb9a890ea280e72a546da4e928d86b58f35df2c67b3903090ef0f32d7e",
+    "cases": 31,
+    "alternatives": 1,
+    "wrong": 3
+  },
+  {
+    "key": "C-005",
+    "revision": "sha256:cde78a35b25418677471ff6911c4a89792e744996396c7712b9346b121a0e53e",
+    "cases": 19,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "CPP-003",
+    "revision": "sha256:93bfa0b61e35a93c49ccae694223646dc68856855e1c2114936214611fac52ea",
+    "cases": 9,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "CPP-004",
+    "revision": "sha256:7d583fad9b86a7f92104bc7abf7bc1b91fd4b43c12b977fe36e22ac16ba36143",
+    "cases": 31,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "CPP-005",
+    "revision": "sha256:66e7aed0a6be2a82415a3cde0bd43b8c267387f37aeb81df0ae585296125ab06",
+    "cases": 7,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "CS-003",
+    "revision": "sha256:528bb5a08300f125a51e8ab0d3c6d79e070eb1fd92bc594b3b3755a248ac58da",
+    "cases": 15,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "CS-004",
+    "revision": "sha256:6c14f033784ce4714c264a1f25cca13e0708d534eef38e840280abb23452a436",
+    "cases": 6,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "CS-005",
+    "revision": "sha256:9050e23ee2641c3fdcdb84632210fbfaf4d73b2ba6e7d1e3b19cad89e4a40d01",
+    "cases": 11,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "HTML-002",
+    "revision": "sha256:5083edcff0065f9c07142b0f573ddd0e49d9428284c9d0b7f04aae376f0e7d8c",
+    "cases": 16,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "HTML-003",
+    "revision": "sha256:c552d26e087693857289d1f490c0584144f34be0619095c60aecbad9792be715",
+    "cases": 10,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "HTML-004",
+    "revision": "sha256:06166dcb2efbabf16d17b8d91ee57a781881920b64f16924d59eb7f6f457d542",
+    "cases": 10,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "HTML-005",
+    "revision": "sha256:a938133ac083162a29b7fd8d0091ba710a11a5125e497f0bd0b8d9f8dd85669a",
+    "cases": 10,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "JAVA-003",
+    "revision": "sha256:faa01f0f122e610cef0279979605f7bea84c8ce033b322d9ae6a7250621133df",
+    "cases": 32,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "JAVA-004",
+    "revision": "sha256:ec7de97a2f1029310028e237a35c8be08f7aa1168bad3923dd0b03a023b2a4f0",
+    "cases": 5,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "JAVA-005",
+    "revision": "sha256:3ce284ce819534d3560b32ba560afab936ec6c79859c74dc9de98f85ddd7a790",
+    "cases": 19,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "PHP-004",
+    "revision": "sha256:3b183d6cb847b893fbf2e00ede2f1c9fbbe4bdf10d990db2dbf6471ca7b8b4c4",
+    "cases": 14,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "PHP-005",
+    "revision": "sha256:2d5c560a396e1394e03216a9a6443754706a9545649060e69b732143349e3638",
+    "cases": 10,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "RB-003",
+    "revision": "sha256:d62765131db83c04a32b80eddb1942678b3a402bb586c6adcee86f680910f073",
+    "cases": 6,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "RB-004",
+    "revision": "sha256:7b75bd74a6c5dd5fcb5f7fb30baccc5ac2690cb2212762d561883a5f663f06c4",
+    "cases": 6,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "RB-005",
+    "revision": "sha256:24ea37d6e5454810290af61db7adbdf28095322099193a5b3e0e091b377ba56c",
+    "cases": 7,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "SQL-004",
+    "revision": "sha256:2a1c63fa67d12f5ca4784022b71d2dae3ede00c13f48896d8799b8966ce86401",
+    "cases": 5,
+    "alternatives": 1,
+    "wrong": 2
+  },
+  {
+    "key": "SQL-005",
+    "revision": "sha256:50aa91bff2feac02486115dffb17a0204676fecb22258178abcc71529692bd0a",
+    "cases": 5,
+    "alternatives": 1,
+    "wrong": 2
+  }
+]

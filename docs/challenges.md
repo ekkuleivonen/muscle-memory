@@ -18,6 +18,7 @@ interface ChallengeMetadata {
   key: string; // "JS-005": the language's code and a number, permanent (see Keys)
   title: string;
   summary: string;
+  hook?: string; // optional one-line pitch for link previews, instead of the summary
   difficulty: "easy" | "medium" | "hard";
   tags: string[]; // lowercase slugs: strings, edge-cases, money, …
   revision: string; // the live revision's id
@@ -94,13 +95,13 @@ Saving a change to revision content makes a new revision under its own hash; the
 
 - the solution is not the starter;
 - every rule has examples both ways, and fires on neither the solution nor any alternative (a rule may not insist on one correct design);
-- a JavaScript or Python challenge names at least one alternative and two wrong solutions.
+- every challenge names at least one alternative and two wrong solutions.
 
-`npm run check:publish` (`tools/browser/content-check.ts`) then runs, in the browser sandbox, the solution (twice, which must agree), the starter (which must fail), the alternatives and the wrong solutions. Run it after changing a challenge's code or cases.
+`npm run check:publish` (`tools/browser/content-check.ts`) then runs, in the browser sandbox, the solution (twice, which must agree), the starter (which must fail), the alternatives and the wrong solutions. Run it after changing a challenge's code or cases; `npm run check:publish -- PY-003 GO-005` checks only those challenges.
 
 ## Adding a challenge
 
-Make `content/challenges/<KEY>/` with the next free key in its language: a clear task, difficulty and tags, the file's name and entry point, a starter, cases with their edge cases (mark the hidden ones), any rules with examples, and `private/`. `npm run build:content` checks it (`--dry-run` checks without writing), and `npm run check:publish` runs it.
+Make `content/challenges/<KEY>/` with the next free key in its language: a clear task, difficulty and tags, the file's name and entry point, a starter, cases with their edge cases (mark the hidden ones), any rules with examples, and `private/`. `npm run build:content` checks it (`--dry-run` checks without writing), and `npm run check:publish` runs it. [The catalog audit](catalog-audit.md) lists what exists and what is missing.
 
 ## Where it will be stored
 

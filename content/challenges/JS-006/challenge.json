@@ -5,7 +5,7 @@
   "tags": [
     "caching",
     "debugging",
-    "code-review"
+    "reading-code"
   ],
   "file": "cart.js",
   "entrypoint": "replay"

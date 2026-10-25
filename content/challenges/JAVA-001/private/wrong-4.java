@@ -1,0 +1,13 @@
+// Splits on spaces, tabs and newlines only, so a lone carriage return joins two words.
+package com.acme.composer;
+
+/** The word count the composer shows under the text box. */
+public final class WordCount {
+    private WordCount() {}
+
+    /** The number of words in a post. */
+    public static int count(String text) {
+        String trimmed = text.strip();
+        return trimmed.isEmpty() ? 0 : trimmed.split("[ \t\n]+").length;
+    }
+}

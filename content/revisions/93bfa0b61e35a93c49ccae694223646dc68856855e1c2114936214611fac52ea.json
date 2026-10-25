@@ -1,0 +1,66 @@
+{
+  "challenge": "CPP-003",
+  "task": "Return whether every opening bracket has a matching closing bracket in the correct nesting order.\n\nImplement `bool balanced(const std::string& text)`. Only `()`, `[]` and `{}` are brackets; ignore all other characters. An empty string is balanced. Input contains at most 200 ASCII characters.\n\n## Examples\n\nInput: `\"a{b[c](d)}\"` → output: `true`.\nInput: `\"([)]\"` → output: `false`.\n",
+  "language": "cpp",
+  "file": "brackets.cpp",
+  "starter": "// TODO: implement the task.\n#include <string>\nbool balanced(const std::string &text) { return false; }\n",
+  "entrypoint": "balanced",
+  "adapter": "#include \"mm_json.h\"\n#include <string>\n#include <vector>\nbool balanced(const std::string &);\nmm_value *mm_call(const mm_value *args) { return mm_new_bool(balanced(mm_string(mm_at(args, 0)))); }\n",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": "a{b[c](d)}",
+      "expected": true,
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": "([)]",
+      "expected": false,
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": "",
+      "expected": true,
+      "hidden": true
+    },
+    {
+      "id": "case-4",
+      "input": "hello",
+      "expected": true,
+      "hidden": true
+    },
+    {
+      "id": "case-5",
+      "input": "]",
+      "expected": false,
+      "hidden": true
+    },
+    {
+      "id": "case-6",
+      "input": "(()",
+      "expected": false,
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": "()[]{}",
+      "expected": true,
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": "{[()]}",
+      "expected": true,
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": "}{",
+      "expected": false,
+      "hidden": true
+    }
+  ],
+  "rules": []
+}

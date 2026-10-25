@@ -1,6 +1,6 @@
-Last week's change to session refresh (#412) added a grace window so the mobile app stops logging people out when two screens refresh at the same moment. The logouts stopped, but the `refresh_reuse` alert, about 40 a day before, has not fired since, and a pentest exchanged a refresh token captured on Oct 20 for a fresh one on Oct 23 while the victim's session stayed alive.
+A recent change to session refresh added a grace window, so a mobile app that refreshes from two screens at once isn't logged out. It also broke token-reuse detection: an old refresh token captured days ago can still be exchanged for a fresh one, and the family is never revoked.
 
-`refresh(family, presented, now)` decides one refresh. Find everything #412 broke against the rules below and fix it. Keep the grace window: the mobile fix has to stay. `refresh` is pure: the caller stores whatever it decides. Times are Unix milliseconds.
+`refresh(family, presented, now)` decides one refresh. Find everything that change broke against the rules below and fix it. Keep the grace window: the mobile fix has to stay. `refresh` is pure: the caller stores whatever it decides. Times are Unix milliseconds.
 
 **Sessions.** A login starts a session family. A client refreshes with the family's current refresh token and gets the next one; each refresh token works once.
 

@@ -304,5 +304,22 @@
       true
     ],
     "hidden": true
+  },
+  {
+    "input": [
+      [
+        0,
+        5,
+        10
+      ],
+      1,
+      10
+    ],
+    "expected": [
+      true,
+      false,
+      true
+    ],
+    "hidden": true
   }
 ]

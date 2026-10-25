@@ -133,5 +133,22 @@
     "input": "ALLCAPSLETTERS9",
     "expected": [],
     "hidden": true
+  },
+  {
+    "input": "ééééééééééé١",
+    "expected": [],
+    "hidden": true
+  },
+  {
+    "input": "😀😀😀😀😀A1",
+    "expected": [],
+    "hidden": true
+  },
+  {
+    "input": "abcdefghij1 ",
+    "expected": [
+      "has-whitespace"
+    ],
+    "hidden": true
   }
 ]

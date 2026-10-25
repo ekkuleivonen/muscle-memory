@@ -1,0 +1,223 @@
+{
+  "challenge": "C-001",
+  "task": "`normalize_host` turns a request's Host header into the key a proxy routes and caches on, so two spellings of one host share a key. Plain hostnames already work. IPv6 literals do not, because the current code treats the first `:` as the start of the port:\n\n```text\n[2001:db8::1]:8080   →  \"[2001\"   (should be \"[2001:db8::1]\")\n[2001:db8::1]        →  \"[\"       (should be \"[2001:db8::1]\")\n```\n\n## What to write\n\n`int normalize_host(const char *host, char *out, size_t size)`\n\n- `host` is the raw Host header value, a NUL-terminated string.\n- Write the normalized host into `out`, NUL-terminated, and return its length (not counting the terminator).\n- `size` is the size of `out` in bytes, terminator included. If the result plus its terminator does not fit, return `-1`. Cases supply `[host, size]`; the harness supplies the output buffer. A size of 0 is possible.\n- Return `-1` when the value is not a host. The examples show `-1` as `null`, and a string for a host.\n\n## Normalizing rules\n\n- **Port:** remove the port. For a hostname, the port is everything from the first `:` on (`example.com:8443` becomes `example.com`).\n- **IPv6 literals:** a value starting with `[` is an IPv6 literal. It keeps its brackets and loses only a port after the closing `]` (`[2001:db8::1]:8080` becomes `[2001:db8::1]`). A literal that is never closed with `]`, or whose `]` is followed by anything other than nothing or a `:` port, is not a host.\n- **Trailing dot:** after the port is removed, a single trailing `.` is removed (`cdn.example.com.` becomes `cdn.example.com`).\n- **Case:** ASCII letters are lowercased, in hostnames and IPv6 literals alike (`Example.COM` becomes `example.com`).\n- **Empty:** a value with nothing left after these steps is not a host.\n\nPlain hostnames must keep normalizing exactly as they do now.\n\n## Constraints\n\n- No heap allocation: `out` is the buffer to write into. Do not call `malloc`, `calloc`, `realloc`, `strdup` or `strndup`.\n",
+  "language": "c",
+  "file": "src/normalize_host.c",
+  "starter": "/*\n * normalize_host.c: the Host header as vhost routing and the cache key see it.\n *\n * Called once per request, before routing, on the raw header value. It writes into the\n * caller's buffer (the connection's scratch arena), so it never allocates.\n */\n#include <stddef.h>\n#include <string.h>\n\nstatic char lower(char c)\n{\n    return (c >= 'A' && c <= 'Z') ? (char)(c - 'A' + 'a') : c;\n}\n\n/*\n * Writes the normalized host into out (size bytes, terminator included) and returns its\n * length, or -1 when the value is not a host.\n */\nint normalize_host(const char *host, char *out, size_t size)\n{\n    size_t len = strlen(host);\n    const char *colon = strchr(host, ':');\n    if (colon)\n        len = (size_t)(colon - host);\n    if (len > 0 && host[len - 1] == '.')\n        len--;\n    if (len == 0 || len + 1 > size)\n        return -1;\n    for (size_t i = 0; i < len; i++)\n        out[i] = lower(host[i]);\n    out[len] = '\\0';\n    return (int)len;\n}\n",
+  "entrypoint": "normalize_host",
+  "parameters": [
+    "host",
+    "size"
+  ],
+  "adapter": "#include <stdlib.h>\n#include <string.h>\n#include \"mm_json.h\"\n\nint normalize_host(const char *host, char *out, size_t size);\n\n/* [host, size] → the normalized host, or null for failure.\n * Backing storage remains large enough even for a mistaken write; size is the\n * logical caller capacity passed to the function, not a truncated result. */\nmm_value *mm_call(const mm_value *args) {\n    const char *host = mm_string(mm_at(args, 0));\n    size_t backing = strlen(host) + 1;\n    size_t size = (size_t)mm_integer(mm_at(args, 1));\n    char *out = calloc(backing, 1);\n    int len = normalize_host(host, out, size);\n    mm_value *result = len < 0 ? mm_new_null() : mm_new_string(out);\n    free(out);\n    return result;\n}\n",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": [
+        "Example.COM",
+        12
+      ],
+      "expected": "example.com",
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": [
+        "example.com:8443",
+        17
+      ],
+      "expected": "example.com",
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": [
+        "[2001:db8::1]:8080",
+        19
+      ],
+      "expected": "[2001:db8::1]",
+      "hidden": false
+    },
+    {
+      "id": "case-4",
+      "input": [
+        "cdn.example.com.",
+        17
+      ],
+      "expected": "cdn.example.com",
+      "hidden": false
+    },
+    {
+      "id": "case-5",
+      "input": [
+        "[::1]",
+        6
+      ],
+      "expected": "[::1]",
+      "hidden": false
+    },
+    {
+      "id": "case-6",
+      "input": [
+        "",
+        1
+      ],
+      "expected": null,
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": [
+        ":8080",
+        6
+      ],
+      "expected": null,
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": [
+        "[2001:DB8::A]:443",
+        18
+      ],
+      "expected": "[2001:db8::a]",
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": [
+        "[::1",
+        5
+      ],
+      "expected": null,
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": [
+        "[::1]x",
+        7
+      ],
+      "expected": null,
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": [
+        "EXAMPLE.com.:443",
+        17
+      ],
+      "expected": "example.com",
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": [
+        "localhost",
+        10
+      ],
+      "expected": "localhost",
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": [
+        "[::ffff:192.0.2.1]",
+        19
+      ],
+      "expected": "[::ffff:192.0.2.1]",
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": [
+        ".",
+        2
+      ],
+      "expected": null,
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": [
+        "[::ffff:192.0.2.1]:443",
+        23
+      ],
+      "expected": "[::ffff:192.0.2.1]",
+      "hidden": true
+    },
+    {
+      "id": "case-16",
+      "input": [
+        "Shop.Example.com:80",
+        20
+      ],
+      "expected": "shop.example.com",
+      "hidden": true
+    },
+    {
+      "id": "case-17",
+      "input": [
+        "example.com:80:443",
+        19
+      ],
+      "expected": "example.com",
+      "hidden": true
+    },
+    {
+      "id": "case-18",
+      "input": [
+        "Example.COM",
+        12
+      ],
+      "expected": "example.com",
+      "hidden": true
+    },
+    {
+      "id": "case-19",
+      "input": [
+        "Example.COM",
+        11
+      ],
+      "expected": null,
+      "hidden": true
+    },
+    {
+      "id": "case-20",
+      "input": [
+        "a",
+        0
+      ],
+      "expected": null,
+      "hidden": true
+    },
+    {
+      "id": "case-21",
+      "input": [
+        "a",
+        1
+      ],
+      "expected": null,
+      "hidden": true
+    },
+    {
+      "id": "case-22",
+      "input": [
+        "Example.COM.",
+        12
+      ],
+      "expected": "example.com",
+      "hidden": true
+    }
+  ],
+  "rules": [
+    {
+      "id": "no-malloc",
+      "message": "normalize_host must not allocate on the heap (no malloc, calloc, realloc, strdup or strndup): write the result into out.",
+      "when": {
+        "pattern": "\\b(malloc|calloc|realloc|strdup|strndup)\\s*\\(",
+        "present": true
+      }
+    }
+  ]
+}

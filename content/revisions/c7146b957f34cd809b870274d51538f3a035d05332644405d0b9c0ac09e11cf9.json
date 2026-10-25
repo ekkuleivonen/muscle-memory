@@ -1,0 +1,568 @@
+{
+  "challenge": "SQL-001",
+  "task": "The monthly report needs revenue by customer. Write the query.\n\nThe database (PostgreSQL) has one table, `orders`, with one row per order:\n\n| column | type | meaning |\n| --- | --- | --- |\n| `id` | `integer`, primary key | the order's id |\n| `customer` | `text`, not null | the customer's name |\n| `total` | `integer`, not null | the order's total; can be 0, or negative for an adjustment |\n\nReturn one row per customer who has orders, with two columns in this order: the customer's name, and the sum of the totals of their orders. Order the rows by that sum, highest first, then by customer name ascending when sums tie (PostgreSQL’s default text ordering). Column names don't matter. Names match exactly as written, and a sum can be larger than a 32-bit integer holds. No orders gives no rows.\n",
+  "language": "sql",
+  "file": "queries/top-customers.sql",
+  "starter": "-- Monthly report: revenue by customer, biggest first.\n-- orders(id, customer, total)\nSELECT customer, total\nFROM orders;\n",
+  "entrypoint": "query",
+  "schema": "CREATE TABLE orders (\n  id integer PRIMARY KEY,\n  customer text NOT NULL,\n  total integer NOT NULL\n);\n",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": {
+        "orders": [
+          [
+            1,
+            "ana",
+            30
+          ],
+          [
+            2,
+            "bo",
+            10
+          ],
+          [
+            3,
+            "ana",
+            5
+          ]
+        ]
+      },
+      "expected": [
+        [
+          "ana",
+          35
+        ],
+        [
+          "bo",
+          10
+        ]
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": {
+        "orders": []
+      },
+      "expected": [],
+      "hidden": true
+    },
+    {
+      "id": "case-3",
+      "input": {
+        "orders": [
+          [
+            1,
+            "ana",
+            30
+          ]
+        ]
+      },
+      "expected": [
+        [
+          "ana",
+          30
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-4",
+      "input": {
+        "orders": [
+          [
+            1,
+            "ana",
+            10
+          ],
+          [
+            2,
+            "ana",
+            20
+          ],
+          [
+            3,
+            "ana",
+            5
+          ]
+        ]
+      },
+      "expected": [
+        [
+          "ana",
+          35
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-5",
+      "input": {
+        "orders": [
+          [
+            1,
+            "ana",
+            40
+          ],
+          [
+            2,
+            "bo",
+            15
+          ],
+          [
+            3,
+            "bo",
+            15
+          ],
+          [
+            4,
+            "bo",
+            15
+          ]
+        ]
+      },
+      "expected": [
+        [
+          "bo",
+          45
+        ],
+        [
+          "ana",
+          40
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-6",
+      "input": {
+        "orders": [
+          [
+            1,
+            "ana",
+            5
+          ],
+          [
+            2,
+            "bo",
+            20
+          ],
+          [
+            3,
+            "cy",
+            12
+          ],
+          [
+            4,
+            "dee",
+            30
+          ]
+        ]
+      },
+      "expected": [
+        [
+          "dee",
+          30
+        ],
+        [
+          "bo",
+          20
+        ],
+        [
+          "cy",
+          12
+        ],
+        [
+          "ana",
+          5
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": {
+        "orders": [
+          [
+            1,
+            "cy",
+            7
+          ],
+          [
+            2,
+            "ana",
+            3
+          ],
+          [
+            3,
+            "bo",
+            9
+          ],
+          [
+            4,
+            "cy",
+            1
+          ],
+          [
+            5,
+            "ana",
+            10
+          ],
+          [
+            6,
+            "bo",
+            1
+          ]
+        ]
+      },
+      "expected": [
+        [
+          "ana",
+          13
+        ],
+        [
+          "bo",
+          10
+        ],
+        [
+          "cy",
+          8
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": {
+        "orders": [
+          [
+            1,
+            "ana",
+            25
+          ],
+          [
+            2,
+            "bo",
+            0
+          ]
+        ]
+      },
+      "expected": [
+        [
+          "ana",
+          25
+        ],
+        [
+          "bo",
+          0
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": {
+        "orders": [
+          [
+            1,
+            "ana",
+            50
+          ],
+          [
+            2,
+            "bo",
+            20
+          ],
+          [
+            3,
+            "bo",
+            -30
+          ]
+        ]
+      },
+      "expected": [
+        [
+          "ana",
+          50
+        ],
+        [
+          "bo",
+          -10
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": {
+        "orders": [
+          [
+            1,
+            "a",
+            9
+          ],
+          [
+            2,
+            "b",
+            100
+          ],
+          [
+            3,
+            "c",
+            10
+          ]
+        ]
+      },
+      "expected": [
+        [
+          "b",
+          100
+        ],
+        [
+          "c",
+          10
+        ],
+        [
+          "a",
+          9
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": {
+        "orders": [
+          [
+            1,
+            "ana",
+            100
+          ],
+          [
+            2,
+            "bo",
+            1
+          ],
+          [
+            3,
+            "bo",
+            1
+          ],
+          [
+            4,
+            "bo",
+            1
+          ]
+        ]
+      },
+      "expected": [
+        [
+          "ana",
+          100
+        ],
+        [
+          "bo",
+          3
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": {
+        "orders": [
+          [
+            1,
+            "o'brien",
+            12
+          ],
+          [
+            2,
+            "Acme, Inc.",
+            30
+          ],
+          [
+            3,
+            "o'brien",
+            20
+          ]
+        ]
+      },
+      "expected": [
+        [
+          "o'brien",
+          32
+        ],
+        [
+          "Acme, Inc.",
+          30
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": {
+        "orders": [
+          [
+            1,
+            "ana",
+            1500000000
+          ],
+          [
+            2,
+            "ana",
+            1500000000
+          ],
+          [
+            3,
+            "bo",
+            2000000000
+          ]
+        ]
+      },
+      "expected": [
+        [
+          "ana",
+          3000000000
+        ],
+        [
+          "bo",
+          2000000000
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": {
+        "orders": [
+          [
+            1,
+            "f",
+            6
+          ],
+          [
+            2,
+            "b",
+            2
+          ],
+          [
+            3,
+            "h",
+            8
+          ],
+          [
+            4,
+            "d",
+            4
+          ],
+          [
+            5,
+            "a",
+            1
+          ],
+          [
+            6,
+            "g",
+            7
+          ],
+          [
+            7,
+            "c",
+            3
+          ],
+          [
+            8,
+            "e",
+            5
+          ],
+          [
+            9,
+            "a",
+            10
+          ]
+        ]
+      },
+      "expected": [
+        [
+          "a",
+          11
+        ],
+        [
+          "h",
+          8
+        ],
+        [
+          "g",
+          7
+        ],
+        [
+          "f",
+          6
+        ],
+        [
+          "e",
+          5
+        ],
+        [
+          "d",
+          4
+        ],
+        [
+          "c",
+          3
+        ],
+        [
+          "b",
+          2
+        ]
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": {
+        "orders": [
+          [
+            3,
+            "zoe",
+            10
+          ],
+          [
+            1,
+            "ana",
+            10
+          ],
+          [
+            2,
+            "bo",
+            5
+          ],
+          [
+            4,
+            "bo",
+            5
+          ]
+        ]
+      },
+      "expected": [
+        [
+          "ana",
+          10
+        ],
+        [
+          "bo",
+          10
+        ],
+        [
+          "zoe",
+          10
+        ]
+      ],
+      "hidden": true
+    }
+  ],
+  "rules": []
+}

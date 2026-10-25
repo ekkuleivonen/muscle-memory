@@ -1,0 +1,8 @@
+{
+  "title": "Running balances per account",
+  "summary": "Return each transaction with its account balance immediately after that transaction.",
+  "difficulty": "medium",
+  "tags": ["sql", "window-functions", "aggregation"],
+  "file": "balances.sql",
+  "entrypoint": "query"
+}

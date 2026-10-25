@@ -1,0 +1,9 @@
+{
+  "title": "Offer a native disclosure",
+  "summary": "Build a native HTML disclosure for a short answer.",
+  "difficulty": "easy",
+  "tags": ["semantics", "disclosure"],
+  "file": "page.html",
+  "entrypoint": "page",
+  "parameters": ["selector", "read"]
+}

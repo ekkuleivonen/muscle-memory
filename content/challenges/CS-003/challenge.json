@@ -1,0 +1,8 @@
+{
+  "title": "Longest strictly increasing stretch",
+  "summary": "Return the length of the longest contiguous strictly increasing stretch.",
+  "difficulty": "easy",
+  "tags": ["arrays", "comparisons"],
+  "file": "Solution.cs",
+  "entrypoint": "Longest"
+}

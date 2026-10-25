@@ -1,11 +1,9 @@
-Each night the vial scanner reads the label on every vial that came back from the field, and the nightly sheet lists how many vials carry each label. The counting step was never finished, so the sheet comes out empty:
+`frequency_map(items)` gets a list of strings and returns a dict that maps each distinct string to how many times it appears. The starter returns an empty dict.
 
-```text
-nightly sheet 2026-06-04: 212 vials scanned, 0 labels counted
+```python
+frequency_map(["A3", "b7", "A3", "a3"])  # {"A3": 2, "b7": 1, "a3": 1}
 ```
 
-`frequency_map(items)` gets the night's labels as a list of strings, one per vial, and returns a dict that maps each distinct label to the number of vials that carry it.
-
-- Count every label exactly as the scanner read it. Labels are case-sensitive (`A3` and `a3` are different traps), and spaces, blank labels and odd strings read off smudged labels (such as `__proto__`) are labels like any other: they tell the team which vials to relabel by hand.
-- No vials gives `{}`.
-- Don't print anything: the scanner job ships everything on stdout to the warehouse logs.
+- Count every string exactly as written: matching is case-sensitive (`A3` and `a3` are different), and spaces, empty strings and odd strings (such as `__proto__`) are counted like any other.
+- An empty list gives `{}`.
+- Don't print anything.

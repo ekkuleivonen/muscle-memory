@@ -1,0 +1,9 @@
+{
+  "title": "Rotate a sequence to the right",
+  "summary": "Return a new sequence rotated to the right by k positions.",
+  "difficulty": "easy",
+  "tags": ["arrays", "modular-arithmetic"],
+  "file": "rotate.cpp",
+  "entrypoint": "rotate_right",
+  "parameters": ["values", "k"]
+}

@@ -22,7 +22,7 @@ export function refresh(family: SessionFamily, presented: string, now: number): 
 // ---- policy: helpers this code uses. You shouldn't need to change them. ----
 
 /**
- * Session rules for the login gateway, as signed off by security (SEC-118).
+ * Session rules for the login gateway.
  *
  * A login starts a session family. A client refreshes with the family's current refresh token
  * and gets the next one; each refresh token works once. A refresh is decided in this order:

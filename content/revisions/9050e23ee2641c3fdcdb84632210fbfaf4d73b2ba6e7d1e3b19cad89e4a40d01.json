@@ -1,0 +1,77 @@
+{
+  "challenge": "CS-005",
+  "task": "Encode each consecutive run as its character followed by its decimal length.\n\nImplement `Solution.Encode(string text)`. Input contains only ASCII letters A-Z and a-z, at most 200 characters. Case matters. Always write a count, including 1; an empty string returns an empty string. Runs longer than 9 use all digits of the count.\n\n## Examples\n\nInput: `\"aaabbA\"` → output: `\"a3b2A1\"`.\nInput: `\"\"` → output: `\"\"`.\n",
+  "language": "csharp",
+  "file": "Solution.cs",
+  "starter": "// TODO: implement the task.\npublic static class Solution {\n    public static string Encode(string text) { return text; }\n}\n",
+  "entrypoint": "Encode",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": "aaabbA",
+      "expected": "a3b2A1",
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": "",
+      "expected": "",
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": "x",
+      "expected": "x1",
+      "hidden": true
+    },
+    {
+      "id": "case-4",
+      "input": "abca",
+      "expected": "a1b1c1a1",
+      "hidden": true
+    },
+    {
+      "id": "case-5",
+      "input": "aAa",
+      "expected": "a1A1a1",
+      "hidden": true
+    },
+    {
+      "id": "case-6",
+      "input": "zzzzzzzzzzzz",
+      "expected": "z12",
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": "BBccc",
+      "expected": "B2c3",
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expected": "A200",
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": "abcABC",
+      "expected": "a1b1c1A1B1C1",
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": "aaAAaa",
+      "expected": "a2A2a2",
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": "ZZZZZZZZZZyyyyyyyyyyy",
+      "expected": "Z10y11",
+      "hidden": true
+    }
+  ],
+  "rules": []
+}

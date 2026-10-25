@@ -1,0 +1,8 @@
+{
+  "title": "Top scores with ties",
+  "summary": "Return every player with one of the two highest distinct scores in their group.",
+  "difficulty": "medium",
+  "tags": ["sql", "ranking"],
+  "file": "top_scores.sql",
+  "entrypoint": "query"
+}

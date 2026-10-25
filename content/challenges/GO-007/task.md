@@ -1,4 +1,4 @@
-We want to start the origin-v2 canary on Monday at 10% of traffic. The upstream block already says so:
+This upstream should send 10% of its requests to origin-v2:
 
 ```text
 upstream origin {
@@ -7,7 +7,7 @@ upstream origin {
 }
 ```
 
-but the balancer never looks at weights. In staging last night origin-v2 got **10,041 of 20,000** requests (50.2%).
+but the balancer never looks at weights: over 20,000 requests, origin-v2 got **10,041** (50.2%).
 
 Each `server <name> weight=<n>;` line is already parsed into a `Backend` (`Name`, `Weight`). The proxy calls `RoundRobin.Next` once per request; `PickOrder(backends, n)` returns where the next `n` requests go on a freshly loaded upstream (a new `RoundRobin` over `backends`), for previews before a rollout. Make the balancer honour weights.
 

@@ -1,0 +1,9 @@
+{
+  "title": "Find the insertion index",
+  "summary": "Return the first index whose value is at least target, or the array length if no such value exists.",
+  "difficulty": "medium",
+  "tags": ["search", "arrays"],
+  "file": "Solution.java",
+  "entrypoint": "lowerBound",
+  "parameters": ["values", "target"]
+}

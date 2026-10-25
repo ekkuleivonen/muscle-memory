@@ -1,0 +1,190 @@
+{
+  "challenge": "CS-003",
+  "task": "Return the length of the longest contiguous strictly increasing stretch.\n\nImplement `Solution.Longest(int[] values)`. Equal neighbors break a stretch. Empty input returns 0. There are at most 200 integers in -10000..10000; the input must stay unchanged.\n\n## Examples\n\nInput: `[1, 3, 2, 4, 6]` → output: `3`.\nInput: `[2, 2, 2]` → output: `1`.\n",
+  "language": "csharp",
+  "file": "Solution.cs",
+  "starter": "// TODO: implement the task.\npublic static class Solution {\n    public static int Longest(int[] values) { return 0; }\n}\n",
+  "entrypoint": "Longest",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": [
+        1,
+        3,
+        2,
+        4,
+        6
+      ],
+      "expected": 3,
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": [
+        2,
+        2,
+        2
+      ],
+      "expected": 1,
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": [],
+      "expected": 0,
+      "hidden": true
+    },
+    {
+      "id": "case-4",
+      "input": [
+        9
+      ],
+      "expected": 1,
+      "hidden": true
+    },
+    {
+      "id": "case-5",
+      "input": [
+        5,
+        4,
+        3
+      ],
+      "expected": 1,
+      "hidden": true
+    },
+    {
+      "id": "case-6",
+      "input": [
+        -3,
+        -2,
+        0,
+        1
+      ],
+      "expected": 4,
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": [
+        1,
+        2,
+        3,
+        0
+      ],
+      "expected": 3,
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": [
+        0,
+        1,
+        1,
+        2
+      ],
+      "expected": 2,
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": [
+        0
+      ],
+      "expected": 1,
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": [
+        -1
+      ],
+      "expected": 1,
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": [
+        1,
+        1,
+        2,
+        2,
+        2,
+        0
+      ],
+      "expected": 2,
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": [
+        3,
+        2,
+        1
+      ],
+      "expected": 1,
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "expected": 1,
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": [
+        -5,
+        -4,
+        -3,
+        -2,
+        -1,
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "expected": 11,
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": [
+        9,
+        9,
+        8,
+        8,
+        8,
+        9,
+        9,
+        9,
+        9
+      ],
+      "expected": 2,
+      "hidden": true
+    }
+  ],
+  "rules": []
+}

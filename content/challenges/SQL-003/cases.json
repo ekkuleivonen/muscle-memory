@@ -432,5 +432,61 @@
       ]
     ],
     "hidden": true
+  },
+  {
+    "input": {
+      "orders": [
+        [
+          1,
+          "ana"
+        ],
+        [
+          2,
+          "bo"
+        ]
+      ],
+      "payments": [
+        [
+          1,
+          0
+        ]
+      ]
+    },
+    "expected": [
+      [
+        2
+      ]
+    ],
+    "hidden": true
+  },
+  {
+    "input": {
+      "orders": [
+        [
+          1,
+          "ana"
+        ],
+        [
+          2,
+          "bo"
+        ]
+      ],
+      "payments": [
+        [
+          1,
+          10
+        ],
+        [
+          1,
+          -10
+        ]
+      ]
+    },
+    "expected": [
+      [
+        2
+      ]
+    ],
+    "hidden": true
   }
 ]

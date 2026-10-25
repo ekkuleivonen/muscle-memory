@@ -1,0 +1,95 @@
+[
+  {
+    "input": [18, 24, 30],
+    "expected": 6
+  },
+  {
+    "input": [0, -12, 18],
+    "expected": 6
+  },
+  {
+    "input": [],
+    "expected": 0,
+    "hidden": true
+  },
+  {
+    "input": [0, 0],
+    "expected": 0,
+    "hidden": true
+  },
+  {
+    "input": [-7],
+    "expected": 7,
+    "hidden": true
+  },
+  {
+    "input": [8, 9],
+    "expected": 1,
+    "hidden": true
+  },
+  {
+    "input": [24, 0, 16],
+    "expected": 8,
+    "hidden": true
+  },
+  {
+    "input": [10000, -5000, 2500],
+    "expected": 2500,
+    "hidden": true
+  },
+  {
+    "input": [0],
+    "expected": 0,
+    "hidden": true
+  },
+  {
+    "input": [-1],
+    "expected": 1,
+    "hidden": true
+  },
+  {
+    "input": [1, 1, 2, 2, 2, 0],
+    "expected": 1,
+    "hidden": true
+  },
+  {
+    "input": [3, 2, 1],
+    "expected": 1,
+    "hidden": true
+  },
+  {
+    "input": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "expected": 0,
+    "hidden": true
+  },
+  {
+    "input": [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
+    "expected": 1,
+    "hidden": true
+  },
+  {
+    "input": [9, 9, 8, 8, 8, 9, 9, 9, 9],
+    "expected": 1,
+    "hidden": true
+  },
+  {
+    "input": [12, 18, 25],
+    "expected": 1,
+    "hidden": true
+  },
+  {
+    "input": [-10000, 0, 5000],
+    "expected": 5000,
+    "hidden": true
+  },
+  {
+    "input": [36, -48, 60],
+    "expected": 12,
+    "hidden": true
+  },
+  {
+    "input": [0, 0, -8],
+    "expected": 8,
+    "hidden": true
+  }
+]

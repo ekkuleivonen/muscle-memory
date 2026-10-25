@@ -1,0 +1,9 @@
+{
+  "title": "Build a table with headers",
+  "summary": "Create a semantic table of two mountains.",
+  "difficulty": "easy",
+  "tags": ["semantics", "tables"],
+  "file": "page.html",
+  "entrypoint": "page",
+  "parameters": ["selector", "read"]
+}

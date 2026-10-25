@@ -1,13 +1,11 @@
-On Thursday (#412) the response cache's index, a `std::unordered_map<int, int>`, was replaced with an open-addressing table. The map allocated one heap node per insert, about 9% of CPU at peak; the table allocates nothing per request. CPU at peak is down 9%, but since the deploy:
-
-- the cache hit ratio went from **94.1%** to **71.3%**, worst on the PoPs that purge the most;
-- origin requests are up **3.2×**;
-- `edgectl cache get` reports misses for keys whose responses are visibly in the arena.
+A response cache's index, from a key to its cached value, is a flat open-addressing table instead of a `std::unordered_map`, so it allocates nothing per request. But it loses entries: after a purge, keys stored further along the probe chain are reported as misses.
 
 ```text
-14:02:11 purge key=3                        ok
-14:02:19 get   key=11  miss                 (arena slot 4: key=11, age 41s)
-14:02:19 get   key=19  miss                 (arena slot 5: key=19, age 38s)
+slots=8
+put   key=3   ok
+put   key=11  ok     (home slot taken by 3, stored one slot further)
+erase key=3   ok
+get   key=11  miss   ← it is still in the table
 ```
 
 Fix the index without giving up the flat table.
@@ -15,7 +13,7 @@ Fix the index without giving up the flat table.
 ## The table
 
 - A flat array of `slots` slots, allocated once when the index is created. `slots` is 0 or more.
-- A key's home slot is `key % slots` (keys are already hashes, used as unsigned); on a collision, the next slot, wrapping around at the end (linear probing).
+- Keys are already hashes, so any `int`, negative ones included. A key's home slot is `static_cast<unsigned>(key) % slots`: a negative key is converted to `unsigned` first, as the starter's `home` does. On a collision, the next slot, wrapping around at the end (linear probing).
 - A lookup walks from the home slot until it finds the key or reaches an empty slot.
 
 ## What to write

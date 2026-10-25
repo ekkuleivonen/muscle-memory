@@ -1,0 +1,8 @@
+{
+  "title": "Sum the two matrix diagonals",
+  "summary": "Return the sum of both diagonals of a square matrix, counting the center only once.",
+  "difficulty": "easy",
+  "tags": ["matrices", "arithmetic"],
+  "file": "Solution.java",
+  "entrypoint": "diagonalSum"
+}

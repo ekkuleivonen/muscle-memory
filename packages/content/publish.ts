@@ -8,12 +8,6 @@ import type { Revision } from "./model";
 import { fires } from "./rules";
 import type { Private } from "./source";
 
-/**
- * Languages whose challenges must show their checks are fair: at least one other correct design
- * that passes and plausible wrong solutions that fail (the browser check runs both).
- */
-const AUDITED = new Set(["javascript", "python"]);
-
 /** Problems that keep a revision from being published; empty when it may go live. */
 export function publishProblems(revision: Revision, secret: Private): string[] {
   const problems: string[] = [];
@@ -42,11 +36,11 @@ export function publishProblems(revision: Revision, secret: Private): string[] {
       if (ruleFires(rule.id, code)) problems.push(`rule ${rule.id} fires on alternative ${i + 1}`);
     });
   }
-  if (AUDITED.has(revision.language)) {
-    if (!secret.alternatives.length)
-      problems.push("no alternative: name another correct design the checks accept");
-    if (secret.wrong.length < 2)
-      problems.push("fewer than two wrong solutions: name plausible mistakes the checks must catch");
-  }
+  // Every challenge shows its checks are fair: another correct design that passes and plausible
+  // wrong solutions that fail (the browser check runs both).
+  if (!secret.alternatives.length)
+    problems.push("no alternative: name another correct design the checks accept");
+  if (secret.wrong.length < 2)
+    problems.push("fewer than two wrong solutions: name plausible mistakes the checks must catch");
   return problems;
 }
