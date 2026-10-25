@@ -68,3 +68,5 @@ No broad migration, new collection, capture purpose/version or completion persis
 Presentation checks: `LOOP_ORIGIN=http://localhost:3128 node --import tsx tools/browser/challenge-presentation-check.ts` verifies keyboard explore search/filtering, literal public input/output examples, removal of detail status/PR controls, legacy status URLs, editor focus/save/resume, and the mobile challenge view. Transcript regression tests use sentinel hidden values to check that every output channel stays redacted.
 
 Stale workplace/PR screenshots are removed. There is no screenshot of the future lean practice UI yet; none is fabricated. Existing working-area chrome/completion is preserved and superseded, not presented as a finished lean-loop release.
+
+Hidden-feedback integration pins ENG-329 `bf94f27`, including its sentinel surface tests and fixed category helpers. Practice consumes those helpers; dynamic error names are not a safe category. No completion writer, BoardMoveTrigger, capture version or ingest schema change is included. Other schema proposals remain proposals under this stream’s current direct instruction.

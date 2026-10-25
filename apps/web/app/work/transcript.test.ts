@@ -169,5 +169,5 @@ test("additional checks reveal categories, never hidden names, values, traces or
     .map((line) => line.text)
     .join("\n");
   assert.doesNotMatch(wrong, /PRIVATE_SENTINEL/);
-  assert.match(wrong, /Returned an incorrect result/);
+  assert.match(wrong, /Returned a different value/);
 });
