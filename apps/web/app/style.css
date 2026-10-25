@@ -2409,15 +2409,6 @@ button.home-cta:disabled {
   display: inline-flex;
   margin-right: 16px;
 }
-.settings-terminal-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-}
-.settings-terminal-nav {
-  padding: 16px 24px;
-  background: var(--bg);
-}
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
@@ -2485,17 +2476,6 @@ button.home-cta:disabled {
   }
 }
 
-.settings-terminal-nav {
-  position: fixed;
-  inset: 0 0 auto;
-  height: 60px;
-  z-index: 2;
-  align-items: center;
-  border-bottom: 1px solid var(--line);
-}
-.settings-terminal-nav + .term {
-  top: 60px;
-}
 
 .play-langs {
   margin-top: 16px;

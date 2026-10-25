@@ -1,6 +1,6 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import { requireConsent } from "../../lib/gate";
+import { TermFooter } from "../_terminal/footer";
 import "../_terminal/terminal.css";
 import { SettingsTerminal } from "./settings-terminal";
 
@@ -13,13 +13,13 @@ export default async function SettingsPage({
   searchParams: Promise<{ run?: string }>;
 }) {
   const { run } = await searchParams;
-  await requireConsent(run ? `/settings?run=${encodeURIComponent(run)}` : "/settings");
+  await requireConsent(
+    run ? `/settings?run=${encodeURIComponent(run)}` : "/settings",
+  );
   return (
     <>
-      <nav className="settings-terminal-nav">
-        <Link href="/dashboard">← Back to your desk</Link>
-      </nav>
       <SettingsTerminal start={run} />
+      <TermFooter current="/settings" signedIn />
     </>
   );
 }
