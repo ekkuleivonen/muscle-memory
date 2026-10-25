@@ -148,21 +148,13 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
-/* Pages that are read, like the home page: prose at a readable measure, menus of links. */
+/* Pages that are read, like the home page: prose at a readable measure. */
 .t-prose {
   max-width: 80ch;
   margin-top: 1.6em;
 }
 .t-prose > p {
   margin: 0 0 1.6em;
-}
-.term .t-menu-link {
-  display: block;
-  color: inherit;
-  text-decoration: none;
-}
-.t-list:focus-visible {
-  outline: none;
 }
 /* The status bar: top-level navigation, pinned under the terminal it belongs to. */
 .t-footer {
@@ -220,4 +212,55 @@
 }
 .t-footer-fill {
   flex: 1;
+}
+/* An island: a page's few actions, beside the prose and staying in view while it scrolls. */
+.t-with-island {
+  display: grid;
+  grid-template-columns: minmax(0, 80ch) minmax(240px, 300px);
+  gap: clamp(24px, 5vw, 72px);
+  align-items: start;
+}
+.t-island {
+  position: sticky;
+  top: 0;
+  margin-top: 1.6em;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--t-bar);
+  background: color-mix(in srgb, var(--t-bar) 50%, transparent);
+}
+@media (max-width: 900px) {
+  .t-with-island {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .t-island {
+    position: static;
+    order: -1;
+  }
+}
+.term .t-btn {
+  display: block;
+  padding: 6px 1ch;
+  color: var(--t-fg);
+  text-decoration: none;
+  border: 1px solid var(--t-dim);
+}
+.term .t-btn:hover {
+  background: var(--t-current);
+  border-color: var(--t-fg);
+}
+.term .t-btn-primary {
+  color: var(--t-bg);
+  background: var(--t-accent);
+  border-color: var(--t-accent);
+  font-weight: 700;
+}
+.term .t-btn-primary:hover {
+  background: color-mix(in srgb, var(--t-accent), #fff 12%);
+  border-color: transparent;
+}
+.term .t-btn:focus-visible {
+  outline: 1px solid var(--t-accent);
+  outline-offset: 2px;
 }
