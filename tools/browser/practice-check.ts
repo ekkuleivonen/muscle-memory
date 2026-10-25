@@ -130,13 +130,14 @@ try {
   assert.equal((await finished()).length, 0, "public examples cannot complete");
   await submit();
   await page
-    .getByRole("heading", { name: "Challenge completed", exact: true })
+    .getByRole("heading", { name: "Next challenge", exact: true })
     .waitFor();
   assert.equal(
     await editor().evaluate((el) => el === document.activeElement),
     true,
     "feedback retains editing focus",
   );
+  await page.getByText("Done.", { exact: true }).waitFor();
   const done = await finished();
   assert.equal(done.length, 1);
   assert.equal(done[0].captureVersion, "board-capture-7.2.0");
@@ -201,11 +202,13 @@ try {
   await editor().fill(solution);
   await submit();
   await page
-    .getByRole("heading", { name: "Challenge completed", exact: true })
+    .getByRole("heading", { name: "Next challenge", exact: true })
     .waitFor();
   assert.equal((await finished()).length, 2);
   // Existing multi-file content stays editable without a file explorer.
-  await page.goto(`${origin}/work/SHOP-8`);
+  await page.goto(
+    `${origin}/work/SHOP-8?revision=sha256:675596eb25cb85f7ed035b3f24ad21a489ffc4b37bb5214aa3ef196ba9b0c068`,
+  );
   await ready();
   const source = page.getByRole("combobox", {
     name: "Editable source",
@@ -229,7 +232,10 @@ try {
   await editor().waitFor();
   await page.getByText("Data schema", { exact: true }).waitFor();
   assert.match(
-    await page.locator(".practice-challenge details").innerText(),
+    await page
+      .locator(".practice-challenge details")
+      .filter({ has: page.getByText("Data schema", { exact: true }) })
+      .innerText(),
     /CREATE TABLE/i,
   );
   // Mobile keeps the public requirements, examples and code accessible without an overlay.

@@ -297,6 +297,37 @@ test("real atomic completion writer records once, preserves Submit cause, queues
       (await store.pending(100, 1_000_000)).records.length,
       all.length,
     );
+    // A recorded completion cannot be attached to a different pinned revision/run.
+    const current = completionEligibility({
+      records: all,
+      issue,
+      revision: fixture.id,
+      revisionFor,
+      currentFiles: { [fixture.path]: clean },
+    });
+    assert.equal(current.completedAt, completion.occurredAt);
+    const other = all.map((r) => {
+      const v = JSON.parse(r.payload);
+      return v.type === "observation.board.moved"
+        ? {
+            ...r,
+            payload: JSON.stringify({
+              ...v,
+              data: { ...v.data, runId: "another-run" },
+            }),
+          }
+        : r;
+    });
+    assert.equal(
+      completionEligibility({
+        records: other,
+        issue,
+        revision: fixture.id,
+        revisionFor,
+        currentFiles: { [fixture.path]: clean },
+      }).completedAt,
+      null,
+    );
     const before = await store.workspaceRecords();
     assert.equal(
       await completePractice(store, { ...input, ready: () => false }),
