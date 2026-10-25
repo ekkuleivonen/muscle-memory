@@ -36,7 +36,7 @@ import {
 } from "../../../../packages/runner/runner";
 import { readProfile } from "../../lib/account";
 import { languageLabel } from "../../lib/challenges";
-import type { LanguageId } from "../../lib/languages";
+import type { FileLanguage, LanguageId } from "../../lib/languages";
 import { environmentOf } from "../../lib/environment";
 import {
   attemptFor,
@@ -53,7 +53,7 @@ import {
   setChallengeContext,
 } from "../../lib/site-log";
 import { Markdown } from "../_components/markdown";
-import { type Keymap } from "./editor";
+import { loadEditorModes, type Keymap } from "./editor";
 import { checksTypes, TypeChecker } from "./type-checker";
 import { caseLabel, transcript } from "./transcript";
 import { recoveryMessage, saveBadge } from "./save-state";
@@ -185,7 +185,10 @@ export function Practice({
   /** The latest submission in this page, with its verdict. */
   const [submission, setSubmission] = useState<RunView | null>(null);
   const [stale, setStale] = useState(false);
-  const [capture, setCapture] = useState<SaveStatus | null>(null);
+  // Only the badge's words, so the once-a-second refresh re-renders nothing when they hold.
+  const [saveLabel, setSaveLabel] = useState<string | null>(null);
+  const showSaveStatus = (status: SaveStatus | null | undefined) =>
+    setSaveLabel(status ? saveBadge(status).label : null);
   const [keymap, setKeymap] = useState<Keymap>("standard");
   const [vimMode, setVimMode] = useState("normal");
   /** The attempt under way, and whether it is completed. */
@@ -335,6 +338,8 @@ export function Practice({
       const keys: Keymap =
         account?.profile.editor === "vim" ? "vim" : "standard";
       setKeymap(keys);
+      // Starts the editor's language and keymap downloading while the store opens.
+      void loadEditorModes(challenge.language as FileLanguage, keys).catch(() => {});
       store.current ??= await openPracticeStore();
       const participantId = await store.current.participantId();
       const environment = await environmentOf();
@@ -422,7 +427,7 @@ export function Practice({
           if (next.purpose === "submit" && next.verdict) setSubmission(next);
         },
         onEditedAfterRun: () => setStale(true),
-        onSaveStatus: setCapture,
+        onSaveStatus: showSaveStatus,
         onVimMode: setVimMode,
         entry: entryPath(),
         profile: account?.profile ? ({ ...account.profile } as Json) : null,
@@ -430,7 +435,8 @@ export function Practice({
         environment,
       });
       session.current = opened;
-      opened.mount(host);
+      await opened.mount(host);
+      if (!current()) return;
       opened.page({
         visible: document.visibilityState === "visible",
         focused: document.hasFocus(),
@@ -459,8 +465,8 @@ export function Practice({
     window.addEventListener("pagehide", saveView);
     const timer = setInterval(() => {
       persistView();
-      // Counts refresh each second; state changes arrive at once through onSaveStatus.
-      setCapture(session.current?.saveStatus() ?? null);
+      // Refreshed each second; state changes arrive at once through onSaveStatus.
+      showSaveStatus(session.current?.saveStatus());
     }, 1000);
     return () => {
       window.removeEventListener("pagehide", saveView);
@@ -642,7 +648,7 @@ export function Practice({
           {
             <div className="practice-controls">
               <span role="status">
-                {capture ? saveBadge(capture).label : "Opening…"}
+                {saveLabel ?? "Opening…"}
                 {offline ? " · Offline" : ""}
               </span>
               {runtime.state === "loading" && (
