@@ -137,13 +137,7 @@ export interface BoardPageData {
 }
 
 /** Where a profile answer was given. */
-export const PROFILE_SOURCES = [
-  "result",
-  "dashboard",
-  "issue",
-  "settings",
-  "play",
-] as const;
+export const PROFILE_SOURCES = ["result", "dashboard", "issue", "settings", "play"] as const;
 
 /** The profile as saved after an answer, and the place that asked. */
 export interface BoardProfileData {
@@ -203,7 +197,9 @@ interface BoardData {
   "observation.board.resolved": BoardResolveData;
 }
 
-export interface BoardObservation<T extends keyof BoardData = keyof BoardData> {
+export interface BoardObservation<
+  T extends keyof BoardData = keyof BoardData,
+> {
   readonly schemaVersion: "1.0.0";
   readonly type: T;
   readonly observationId: string;
@@ -255,11 +251,7 @@ export function boardMove(input: {
   issue: { id: string; revision: string };
   data: BoardMoveData;
 }): BoardObservation<"observation.board.moved"> {
-  return envelope(
-    "observation.board.moved",
-    input,
-    validateBoardMoveData(input.data),
-  );
+  return envelope("observation.board.moved", input, validateBoardMoveData(input.data));
 }
 
 /** Shared writer/ingest validation; earlier trigger meanings remain unchanged. */
@@ -267,25 +259,13 @@ export function validateBoardMoveData(data: BoardMoveData): BoardMoveData {
   if (!ISSUE_KEY.test(data.issueKey)) throw new Error("Unknown issue key.");
   // Only a replay leaves Done, and it goes back to In progress.
   const replay = data.trigger === "replay";
-  if (
-    replay !== (data.from === "done") ||
-    (replay && data.to !== "in-progress")
-  )
+  if (replay !== (data.from === "done") || (replay && data.to !== "in-progress"))
     throw new Error("Only a replay takes a done issue back to In progress.");
-  if (
-    !COLUMNS.includes(data.from) ||
-    !COLUMNS.includes(data.to) ||
-    data.from === data.to
-  )
-    throw new Error(
-      "A move goes between Backlog, Todo and In progress, or on to Done.",
-    );
-  if (!VIAS.includes(data.via))
-    throw new Error("Unknown way of moving an issue.");
-  if (!TRIGGERS.includes(data.trigger))
-    throw new Error("Unknown trigger for a move.");
-  const merged =
-    data.trigger === "pull-request-merged" || data.trigger === "checks-passed";
+  if (!COLUMNS.includes(data.from) || !COLUMNS.includes(data.to) || data.from === data.to)
+    throw new Error("A move goes between Backlog, Todo and In progress, or on to Done.");
+  if (!VIAS.includes(data.via)) throw new Error("Unknown way of moving an issue.");
+  if (!TRIGGERS.includes(data.trigger)) throw new Error("Unknown trigger for a move.");
+  const merged = data.trigger === "pull-request-merged" || data.trigger === "checks-passed";
   if (
     (data.to === "done") !== merged ||
     (merged &&
@@ -297,8 +277,7 @@ export function validateBoardMoveData(data: BoardMoveData): BoardMoveData {
   if (merged) safeIdentifier(data.runId!);
   if (!Number.isSafeInteger(data.onBoardBefore) || data.onBoardBefore < 0)
     throw new Error("Board count must be a whole number.");
-  if (typeof data.nudged !== "boolean")
-    throw new Error("nudged is true or false.");
+  if (typeof data.nudged !== "boolean") throw new Error("nudged is true or false.");
   return {
     issueKey: data.issueKey,
     from: data.from,
@@ -322,12 +301,7 @@ export function boardReply(input: {
   elapsedMs: number;
   termsVersion: string;
   issue: { id: string; revision: string };
-  data: {
-    issueKey: string;
-    pullRequest: number;
-    comment: string;
-    text: string;
-  };
+  data: { issueKey: string; pullRequest: number; comment: string; text: string };
 }): BoardObservation<"observation.board.replied"> {
   const { data } = input;
   if (!ISSUE_KEY.test(data.issueKey)) throw new Error("Unknown issue key.");
@@ -361,8 +335,7 @@ export function boardClose(input: {
   if (!Number.isSafeInteger(data.pullRequest) || data.pullRequest < 1)
     throw new Error("Closing names its pull request.");
   if (!VIAS.includes(data.via)) throw new Error("Unknown way of closing.");
-  if (typeof data.nudged !== "boolean")
-    throw new Error("nudged is true or false.");
+  if (typeof data.nudged !== "boolean") throw new Error("nudged is true or false.");
   return envelope("observation.board.closed", input, {
     issueKey: data.issueKey,
     pullRequest: data.pullRequest,
@@ -384,15 +357,8 @@ function envelope<T extends keyof BoardData>(
   },
   data: BoardData[T],
 ): BoardObservation<T> {
-  const {
-    participantId,
-    sourceId,
-    sequence,
-    occurredAt,
-    elapsedMs,
-    termsVersion,
-    issue,
-  } = input;
+  const { participantId, sourceId, sequence, occurredAt, elapsedMs, termsVersion, issue } =
+    input;
   safeIdentifier(participantId);
   safeIdentifier(sourceId);
   if (issue) safeIdentifier(issue.id);
@@ -441,16 +407,10 @@ export interface BoardBase {
 const PAGE_PATH = /^\/[\w\-./%~]*$/;
 
 export function boardView(
-  input: BoardBase & {
-    issue: { id: string; revision: string } | null;
-    data: BoardViewData;
-  },
+  input: BoardBase & { issue: { id: string; revision: string } | null; data: BoardViewData },
 ): BoardObservation<"observation.board.viewed"> {
   const { path, query, previous } = input.data;
-  if (
-    !PAGE_PATH.test(path) ||
-    (previous !== null && !PAGE_PATH.test(previous.split("?")[0]))
-  )
+  if (!PAGE_PATH.test(path) || (previous !== null && !PAGE_PATH.test(previous.split("?")[0])))
     throw new Error("A page view names app paths.");
   return envelope("observation.board.viewed", input, {
     path,
@@ -463,16 +423,12 @@ export function boardPage(
   input: BoardBase & { data: BoardPageData },
 ): BoardObservation<"observation.board.page"> {
   const { visible, focused, width, height } = input.data;
-  return envelope(
-    "observation.board.page",
-    { ...input, issue: null },
-    {
-      visible: Boolean(visible),
-      focused: Boolean(focused),
-      width: Math.round(width),
-      height: Math.round(height),
-    },
-  );
+  return envelope("observation.board.page", { ...input, issue: null }, {
+    visible: Boolean(visible),
+    focused: Boolean(focused),
+    width: Math.round(width),
+    height: Math.round(height),
+  });
 }
 
 export function boardProfile(
@@ -480,11 +436,7 @@ export function boardProfile(
 ): BoardObservation<"observation.board.profile"> {
   if (!(PROFILE_SOURCES as readonly string[]).includes(input.data.from))
     throw new Error(`Profile answers come from ${PROFILE_SOURCES.join(", ")}.`);
-  return envelope(
-    "observation.board.profile",
-    { ...input, issue: null },
-    input.data,
-  );
+  return envelope("observation.board.profile", { ...input, issue: null }, input.data);
 }
 
 /** Stored like workspace observations: one canonical payload per stable ID. */
@@ -514,47 +466,28 @@ export function boardArrival(
   input: BoardBase & { data: BoardArrivalData },
 ): BoardObservation<"observation.board.arrived"> {
   const { ref, landing, landedAt } = input.data;
-  if (ref !== null && !REFERRAL.test(ref))
-    throw new Error("Unknown referral code.");
-  if (!PAGE_PATH.test(landing.split("?")[0]))
-    throw new Error("A landing page is an app path.");
-  if (Number.isNaN(Date.parse(landedAt)))
-    throw new Error("An arrival needs its time.");
-  return envelope(
-    "observation.board.arrived",
-    { ...input, issue: null },
-    {
-      ref,
-      landing: boundText(landing, 2048).text,
-      landedAt,
-    },
-  );
-}
-
-export function boardShare(
-  input: BoardBase & {
-    issue: { id: string; revision: string };
-    data: BoardShareData;
-  },
-): BoardObservation<"observation.board.shared"> {
-  const { issueKey, channel, ref, card } = input.data;
-  if (!ISSUE_KEY.test(issueKey)) throw new Error("Unknown issue key.");
-  if (!["copy", "x", "linkedin", "native"].includes(channel))
-    throw new Error("Unknown channel.");
-  if (!REFERRAL.test(ref)) throw new Error("Unknown referral code.");
-  return envelope("observation.board.shared", input, {
-    issueKey,
-    channel,
+  if (ref !== null && !REFERRAL.test(ref)) throw new Error("Unknown referral code.");
+  if (!PAGE_PATH.test(landing.split("?")[0])) throw new Error("A landing page is an app path.");
+  if (Number.isNaN(Date.parse(landedAt))) throw new Error("An arrival needs its time.");
+  return envelope("observation.board.arrived", { ...input, issue: null }, {
     ref,
-    card,
+    landing: boundText(landing, 2048).text,
+    landedAt,
   });
 }
 
+export function boardShare(
+  input: BoardBase & { issue: { id: string; revision: string }; data: BoardShareData },
+): BoardObservation<"observation.board.shared"> {
+  const { issueKey, channel, ref, card } = input.data;
+  if (!ISSUE_KEY.test(issueKey)) throw new Error("Unknown issue key.");
+  if (!["copy", "x", "linkedin", "native"].includes(channel)) throw new Error("Unknown channel.");
+  if (!REFERRAL.test(ref)) throw new Error("Unknown referral code.");
+  return envelope("observation.board.shared", input, { issueKey, channel, ref, card });
+}
+
 export function boardResult(
-  input: BoardBase & {
-    issue: { id: string; revision: string };
-    data: BoardResultData;
-  },
+  input: BoardBase & { issue: { id: string; revision: string }; data: BoardResultData },
 ): BoardObservation<"observation.board.result"> {
   const { issueKey, pullRequest, language, metrics, values } = input.data;
   if (!ISSUE_KEY.test(issueKey)) throw new Error("Unknown issue key.");
@@ -562,20 +495,11 @@ export function boardResult(
     throw new Error("A result names its pull request.");
   if (metrics !== 2) throw new Error("Unknown metrics version.");
   if (!/^[a-z+#]{1,16}$/.test(language)) throw new Error("Unknown language.");
-  return envelope("observation.board.result", input, {
-    issueKey,
-    pullRequest,
-    language,
-    metrics,
-    values,
-  });
+  return envelope("observation.board.result", input, { issueKey, pullRequest, language, metrics, values });
 }
 
 export function boardResolve(
-  input: BoardBase & {
-    issue: { id: string; revision: string };
-    data: BoardResolveData;
-  },
+  input: BoardBase & { issue: { id: string; revision: string }; data: BoardResolveData },
 ): BoardObservation<"observation.board.resolved"> {
   const { issueKey, pullRequest, comment, via } = input.data;
   if (!ISSUE_KEY.test(issueKey)) throw new Error("Unknown issue key.");
@@ -583,10 +507,5 @@ export function boardResolve(
     throw new Error("A resolution names its pull request.");
   safeIdentifier(comment);
   if (!VIAS.includes(via)) throw new Error("Unknown way of resolving.");
-  return envelope("observation.board.resolved", input, {
-    issueKey,
-    pullRequest,
-    comment,
-    via,
-  });
+  return envelope("observation.board.resolved", input, { issueKey, pullRequest, comment, via });
 }
