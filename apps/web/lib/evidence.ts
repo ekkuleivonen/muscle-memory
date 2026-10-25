@@ -40,6 +40,21 @@ export type BeforePush =
   | "none";
 
 /** The numbers the outcome is described from: all observed, or null where not known. */
+/** One push's CI result, as recorded when its checks finished. */
+export interface Submission {
+  /** 1 for the first submission (opening the pull request), then 2, 3, … */
+  push: number;
+  result: string;
+  passed: number;
+  total: number;
+  /** Recorded as `merged` (before capture 1.4.0): passing, without the breakdown. */
+  legacy: boolean;
+  /** The cases in the repo's test file; null if unknown. */
+  visible: { passed: number; total: number } | null;
+  /** The cases only CI runs; null if unknown, total 0 when the issue has none. */
+  hidden: { passed: number; total: number } | null;
+}
+
 export interface EvidenceFacts {
   number: number;
   state: "open" | "merged" | "closed";
@@ -58,6 +73,16 @@ export interface EvidenceFacts {
   visible: { passed: number; total: number } | null;
   /** The cases only CI runs; null if unknown, total 0 when the issue has none. */
   hidden: { passed: number; total: number } | null;
+  /**
+   * The first submitted push's checks, apart from the latest's (the same push when it was opened
+   * once); null when that push's record isn't available.
+   */
+  first: Submission | null;
+  /**
+   * What came back on this pull request before its latest push, by recorded push order: earlier
+   * pushes whose checks did not pass, and review comments on earlier pushes. Zero when opened once.
+   */
+  beforeLatest: { failedChecks: number; reviews: number };
   verification: {
     /** Local test runs since the previous pull request. */
     runs: number;
@@ -153,14 +178,39 @@ export interface EvidenceInput {
   revisionFor: (id: string) => Revision | undefined;
   /** The issue's live revision, to tell when the ticket changed after the checks ran. */
   liveRevision?: string;
-  /** When the outcome is read: the merge, or now for an open pull request. */
+  /**
+   * When the outcome is read: the merge, or now for an open pull request. Nothing this issue
+   * records after it counts, so later work never changes an earlier outcome.
+   */
   until: string;
+}
+
+/** The records with this issue's observations after `until` left out; the rest is kept. */
+function bounded(
+  records: readonly WorkspaceRecord[],
+  issue: string,
+  until: string,
+): WorkspaceRecord[] {
+  return records.filter((record) => {
+    if (record.kind !== "observation") return true;
+    try {
+      const value = JSON.parse(record.payload);
+      return (
+        value?.issue !== issue ||
+        typeof value.occurredAt !== "string" ||
+        value.occurredAt <= until
+      );
+    } catch {
+      return true;
+    }
+  });
 }
 
 interface Raw {
   type: string;
   occurredAt: string;
   issue: string | null;
+  issueRevision: string | null;
   data: Record<string, unknown>;
 }
 
@@ -176,6 +226,10 @@ function raw(records: readonly WorkspaceRecord[], issue: string): Raw[] {
           type: String(value.type),
           occurredAt: value.occurredAt,
           issue: value.issue,
+          issueRevision:
+            typeof value.issueRevision === "string"
+              ? value.issueRevision
+              : null,
           data: value.data ?? {},
         },
       ];
@@ -185,13 +239,13 @@ function raw(records: readonly WorkspaceRecord[], issue: string): Raw[] {
   });
 }
 
-/** Passed out of total for the cases matching `keep`, from the checks' raw outcome. */
+/** Passed out of total for the cases matching `keep`, from a checks run's raw outcome. */
 function split(
-  detail: PullDetail,
+  raw: unknown,
   revision: Revision | undefined,
   keep: (visible: boolean) => boolean,
 ): { passed: number; total: number } | null {
-  const outcome = detail.outcome as {
+  const outcome = raw as {
     phase?: string;
     cases?: { output?: { text: string; truncated: boolean } }[];
   } | null;
@@ -229,7 +283,8 @@ function beforePush(detail: PullDetail): BeforePush {
 
 /** The facts behind one pull request's outcome, or null when there is no such pull request. */
 export function evidenceFacts(input: EvidenceInput): EvidenceFacts | null {
-  const { records, issue, number, revisionFor, liveRevision, until } = input;
+  const { issue, number, revisionFor, liveRevision, until } = input;
+  const records = bounded(input.records, issue, until);
   const detail = pullRequestDetail(records, issue, number, revisionFor);
   if (!detail) return null;
   const { pull } = detail;
@@ -267,10 +322,65 @@ export function evidenceFacts(input: EvidenceInput): EvidenceFacts | null {
         ? [editor.features.map(String)]
         : [];
     });
-  const first = observations.reduce<string | null>(
+  const started = observations.reduce<string | null>(
     (min, o) => (min === null || o.occurredAt < min ? o.occurredAt : min),
     null,
   );
+  // Each push of this pull request as recorded, and its checks run's raw outcome.
+  const pushes = observations.filter(
+    (o) =>
+      o.type === "observation.workspace.pull-request" &&
+      Number(o.data.number) === number,
+  );
+  const outcomes = new Map(
+    observations
+      .filter(
+        (o) =>
+          o.type === "observation.workspace.run" &&
+          o.data.purpose === "pull-request" &&
+          o.data.outcome !== undefined,
+      )
+      .map((o) => [String(o.data.runId), o.data.outcome]),
+  );
+  const opening = pushes.find((o) => Number(o.data.push) === 1);
+  const first: Submission | null = opening
+    ? {
+        push: 1,
+        result:
+          opening.data.result === "merged"
+            ? "checks-passed"
+            : String(opening.data.result),
+        passed: Number(opening.data.passed),
+        total: Number(opening.data.total),
+        legacy: opening.data.result === "merged",
+        visible: split(
+          outcomes.get(String(opening.data.runId)),
+          revisionFor(opening.issueRevision ?? ""),
+          (visible) => visible,
+        ),
+        hidden: split(
+          outcomes.get(String(opening.data.runId)),
+          revisionFor(opening.issueRevision ?? ""),
+          (visible) => !visible,
+        ),
+      }
+    : null;
+  const latestPush = Math.max(0, ...pushes.map((o) => Number(o.data.push)));
+  const beforeLatest = {
+    failedChecks: pushes.filter(
+      (o) =>
+        Number(o.data.push) < latestPush &&
+        o.data.result !== "checks-passed" &&
+        o.data.result !== "merged",
+    ).length,
+    reviews: observations.filter(
+      (o) =>
+        o.type === "observation.workspace.comment" &&
+        o.data.where === "review" &&
+        Number(o.data.pullRequest) === number &&
+        Number(o.data.push) < latestPush,
+    ).length,
+  };
   const closedBefore = new Set(
     observations
       .filter(
@@ -284,7 +394,8 @@ export function evidenceFacts(input: EvidenceInput): EvidenceFacts | null {
   return {
     number,
     state: pull.state,
-    pushes: pull.pushes,
+    // Recorded push numbers, so a lost record never makes a later push look like the first.
+    pushes: Math.max(pull.pushes, latestPush),
     changed,
     checks: {
       result: pull.result === "merged" ? "checks-passed" : pull.result,
@@ -292,8 +403,10 @@ export function evidenceFacts(input: EvidenceInput): EvidenceFacts | null {
       total: pull.total,
       legacy: pull.result === "merged",
     },
-    visible: split(detail, revision, (visible) => visible),
-    hidden: split(detail, revision, (visible) => !visible),
+    visible: split(detail.outcome, revision, (visible) => visible),
+    hidden: split(detail.outcome, revision, (visible) => !visible),
+    first,
+    beforeLatest,
     verification: {
       runs: runs.length,
       green: runs.filter((r) => r.tested && r.passed === r.total).length,
@@ -319,24 +432,21 @@ export function evidenceFacts(input: EvidenceInput): EvidenceFacts | null {
     },
     assistance: {
       hints: metrics.h,
-      comments: feedback.released.filter(
-        (r) => r.kind === "comment" && r.at <= until,
-      ).length,
+      comments: feedback.released.filter((r) => r.kind === "comment").length,
       editorFeatures: features.length
         ? [...new Set(features.flat())].sort()
         : null,
       typeHelp: observations.filter(
-        (o) =>
-          o.type === "observation.workspace.assist" && o.occurredAt <= until,
+        (o) => o.type === "observation.workspace.assist",
       ).length,
       pastes: metrics.ps,
     },
     timing: {
       active: metrics.t,
-      elapsed: first
+      elapsed: started
         ? Math.max(
             0,
-            Math.round((Date.parse(until) - Date.parse(first)) / 1000),
+            Math.round((Date.parse(until) - Date.parse(started)) / 1000),
           )
         : 0,
       hidden: metrics.lt,
@@ -444,32 +554,55 @@ export function describe(facts: EvidenceFacts): EvidenceSection[] {
   );
 
   const correctness: EvidenceItem[] = [];
-  if (checks.legacy)
+  const { first, beforeLatest } = facts;
+  /** "CI: 11 of 15 checks passed", or what happened instead. */
+  const ciText = (c: {
+    result: string;
+    passed: number;
+    total: number;
+    legacy: boolean;
+  }) =>
+    c.legacy
+      ? "CI passed (the per-check breakdown isn't available)"
+      : c.result === "checks-errored"
+        ? "CI errored before reaching the tests"
+        : c.result === "cancelled"
+          ? "CI was cancelled"
+          : `CI: ${c.passed} of ${c.total} checks passed`;
+  const tone = (result: string): EvidenceItem["tone"] =>
+    result === "checks-passed" ? "pass" : "fail";
+  if (facts.pushes > 1) {
+    correctness.push(
+      first
+        ? observed(
+            "first",
+            `First submitted (push 1): ${ciText(first)}.`,
+            tone(first.result),
+          )
+        : missing(
+            "first",
+            "What CI said on the first submission (push 1) isn't available.",
+          ),
+    );
+    const after = [
+      beforeLatest.failedChecks &&
+        `failing CI on ${plural(beforeLatest.failedChecks, "earlier push", "earlier pushes")}`,
+      beforeLatest.reviews &&
+        `${plural(beforeLatest.reviews, "review comment")} on earlier pushes`,
+    ].filter(Boolean);
     correctness.push(
       observed(
         "ci",
-        "CI passed. The per-check breakdown isn't available for this pull request.",
-        "pass",
+        `Latest (push ${facts.pushes}${after.length ? `, pushed after ${after.join(" and ")}` : ""}): ${ciText(checks)}.`,
+        tone(checks.result),
       ),
     );
-  else if (checks.result === "checks-errored")
+  } else
     correctness.push(
       observed(
         "ci",
-        "CI errored before reaching the tests on the latest push.",
-        "fail",
-      ),
-    );
-  else if (checks.result === "cancelled")
-    correctness.push(
-      observed("ci", "CI was cancelled on the latest push.", "fail"),
-    );
-  else
-    correctness.push(
-      observed(
-        "ci",
-        `CI: ${checks.passed} of ${checks.total} checks passed on push ${facts.pushes}.`,
-        passing ? "pass" : "fail",
+        `First submitted (push 1), with no later pushes: ${ciText(checks)}.`,
+        tone(checks.result),
       ),
     );
   if (visible && visible.total)
@@ -717,11 +850,9 @@ export interface PublicEvidence {
   readonly v: 1;
   readonly state: "open" | "merged" | "closed";
   /** CI on the latest push. */
-  readonly checks: {
-    readonly passed: number;
-    readonly total: number;
-    readonly result: PublicResult;
-  };
+  readonly checks: PublicChecks;
+  /** CI on the first submitted push (push 1); null when not available. */
+  readonly first: PublicChecks | null;
   /** Checks only CI runs; null when unknown. */
   readonly hidden: { readonly passed: number; readonly total: number } | null;
   readonly changed: {
@@ -737,6 +868,12 @@ export interface PublicEvidence {
   readonly hints: number;
   /** Activity is missing for part of the work. */
   readonly gaps: boolean;
+}
+
+interface PublicChecks {
+  readonly passed: number;
+  readonly total: number;
+  readonly result: PublicResult;
 }
 
 type PublicResult =
@@ -757,18 +894,25 @@ const BEFORE: readonly BeforePush[] = [
   "none",
 ];
 
+const publicChecks = (c: {
+  passed: number;
+  total: number;
+  result: string;
+}): PublicChecks => ({
+  passed: c.passed,
+  total: c.total,
+  result: RESULTS.includes(c.result as PublicResult)
+    ? (c.result as PublicResult)
+    : "checks-errored",
+});
+
 export function publicEvidence(facts: EvidenceFacts): PublicEvidence {
   const touched = facts.changed?.filter((f) => f.added || f.removed);
   return {
     v: 1,
     state: facts.state,
-    checks: {
-      passed: facts.checks.passed,
-      total: facts.checks.total,
-      result: RESULTS.includes(facts.checks.result as PublicResult)
-        ? (facts.checks.result as PublicResult)
-        : "checks-errored",
-    },
+    checks: publicChecks(facts.checks),
+    first: facts.first && publicChecks(facts.first),
     hidden: facts.hidden && {
       passed: facts.hidden.passed,
       total: facts.hidden.total,
@@ -804,6 +948,9 @@ const pair = (
   count((v as { total: unknown }).total) &&
   (v as { passed: number }).passed <= (v as { total: number }).total;
 
+const checksOk = (v: unknown): v is PublicChecks =>
+  pair(v) && RESULTS.includes(v.result as PublicResult);
+
 /**
  * Public evidence from untrusted input (a link, a stored share), or null when it is not one
  * `publicEvidence` would have made. Unknown keys are dropped.
@@ -816,8 +963,8 @@ export function parsePublicEvidence(value: unknown): PublicEvidence | null {
   const ok =
     v.v === 1 &&
     (v.state === "open" || v.state === "merged" || v.state === "closed") &&
-    pair(v.checks) &&
-    RESULTS.includes(v.checks.result as PublicResult) &&
+    checksOk(v.checks) &&
+    (v.first === null || checksOk(v.first)) &&
     (v.hidden === null || pair(v.hidden)) &&
     (changed === null ||
       (typeof changed === "object" &&
@@ -835,7 +982,8 @@ export function parsePublicEvidence(value: unknown): PublicEvidence | null {
     count(v.hints) &&
     typeof v.gaps === "boolean";
   if (!ok) return null;
-  const c = v.checks as { passed: number; total: number; result: PublicResult };
+  const c = v.checks as PublicChecks;
+  const f = v.first as PublicChecks | null;
   const h = v.hidden as { passed: number; total: number } | null;
   const ch = changed as {
     files: number;
@@ -847,6 +995,7 @@ export function parsePublicEvidence(value: unknown): PublicEvidence | null {
     v: 1,
     state: v.state as PublicEvidence["state"],
     checks: { passed: c.passed, total: c.total, result: c.result },
+    first: f && { passed: f.passed, total: f.total, result: f.result },
     hidden: h && { passed: h.passed, total: h.total },
     changed: ch && { files: ch.files, added: ch.added, removed: ch.removed },
     pushes: v.pushes as number,

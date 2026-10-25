@@ -67,6 +67,7 @@ function attempt() {
   return {
     records,
     at,
+    add,
     opened: (
       minute: number,
       features = ["python-syntax-highlighting", "standard-keybindings"],
@@ -450,4 +451,160 @@ test("public evidence carries counts only and round-trips through the validator"
     "code" in parsePublicEvidence({ ...shared, code: "secret" })!,
     false,
   );
+});
+
+test("first submission and latest result are kept apart, in recorded push order", () => {
+  const a = attempt();
+  a.opened(0);
+  a.edit(1, 1);
+  a.push(2, 1, 1, 1, 5);
+  a.review(3, 1, 1);
+  a.edit(4, 2);
+  a.run(5, 2, visible.length);
+  a.push(6, 1, 2, 2, cases.length);
+  a.merged(7, 1);
+  const evidence = evidenceOf({
+    records: a.records,
+    issue: "frequency-map",
+    number: 1,
+    revisionFor,
+    until: a.at(7),
+  })!;
+  const { facts } = evidence;
+  assert.deepEqual(
+    {
+      push: facts.first?.push,
+      result: facts.first?.result,
+      passed: facts.first?.passed,
+      total: facts.first?.total,
+    },
+    { push: 1, result: "checks-failed", passed: 5, total: cases.length },
+  );
+  // Of the first five cases, the visible ones pass; one hidden case does.
+  assert.deepEqual(facts.first?.visible, {
+    passed: visible.length,
+    total: visible.length,
+  });
+  assert.deepEqual(facts.first?.hidden, {
+    passed: 5 - visible.length,
+    total: cases.length - visible.length,
+  });
+  assert.deepEqual(facts.checks, {
+    result: "checks-passed",
+    passed: cases.length,
+    total: cases.length,
+    legacy: false,
+  });
+  assert.deepEqual(facts.beforeLatest, { failedChecks: 1, reviews: 1 });
+  const first = item(evidence, "correctness", "first")!;
+  assert.equal(first.status, "observed");
+  assert.equal(first.tone, "fail");
+  assert.match(
+    first.text,
+    /^First submitted \(push 1\): CI: 5 of 15 checks passed\.$/,
+  );
+  const latest = item(evidence, "correctness", "ci")!;
+  assert.equal(latest.tone, "pass");
+  assert.match(
+    latest.text,
+    /^Latest \(push 2, pushed after failing CI on 1 earlier push and 1 review comment on earlier pushes\): CI: 15 of 15 checks passed\.$/,
+  );
+  // Order only: nothing says why it changed.
+  assert.doesNotMatch(first.text + latest.text, /because|learn|improv|phase/i);
+  const shared = publicEvidence(facts);
+  assert.deepEqual(shared.first, {
+    passed: 5,
+    total: cases.length,
+    result: "checks-failed",
+  });
+  assert.deepEqual(
+    parsePublicEvidence(JSON.parse(JSON.stringify(shared)))?.first,
+    shared.first,
+  );
+});
+
+test("a single submission is both first and latest; a missing first push is not known", () => {
+  const a = attempt();
+  a.opened(0);
+  a.push(1, 1, 1, 1, cases.length);
+  a.merged(2, 1);
+  const once = evidenceOf({
+    records: a.records,
+    issue: "frequency-map",
+    number: 1,
+    revisionFor,
+    until: a.at(2),
+  })!;
+  assert.equal(once.facts.first?.result, "checks-passed");
+  assert.deepEqual(once.facts.beforeLatest, { failedChecks: 0, reviews: 0 });
+  assert.match(
+    item(once, "correctness", "ci")!.text,
+    /^First submitted \(push 1\), with no later pushes/,
+  );
+
+  // Push 1's record is gone: its result is not known, never guessed from the latest.
+  const b = attempt();
+  b.opened(0);
+  b.push(1, 1, 1, 1, 3);
+  b.push(2, 1, 2, 2, cases.length);
+  b.merged(3, 1);
+  const index = b.records.findIndex((r) => r.payload.includes('"push":1'));
+  b.records.splice(index, 1);
+  const lost = evidenceOf({
+    records: b.records,
+    issue: "frequency-map",
+    number: 1,
+    revisionFor,
+    until: b.at(3),
+  })!;
+  assert.equal(lost.facts.first, null);
+  assert.equal(item(lost, "correctness", "first")?.status, "missing");
+  assert.equal(publicEvidence(lost.facts).first, null);
+});
+
+test("activity after the merge never changes the merged outcome", () => {
+  const a = attempt();
+  a.opened(0);
+  a.edit(1, 1);
+  a.run(2, 1, visible.length);
+  a.push(3, 1, 1, 1, cases.length);
+  a.merged(4, 1);
+  const read = () =>
+    evidenceOf({
+      records: a.records,
+      issue: "frequency-map",
+      number: 1,
+      revisionFor,
+      liveRevision: fixture.id,
+      until: a.at(4),
+    })!;
+  const before = read();
+  // A later session on the same issue in the same attempt.
+  a.opened(10, [
+    "python-syntax-highlighting",
+    "type-diagnostics",
+    "hover-types",
+    "vim-keybindings",
+  ]);
+  a.gap(11);
+  a.edit(12, 2, "input.paste");
+  a.assist(13);
+  a.hint(14);
+  a.run(15, 2, 1);
+  a.review(16, 1, 1);
+  a.add("observation.workspace.comment", 17, {
+    comment: "priya-1",
+    where: "issue",
+    severity: "info",
+    wording: 0,
+  });
+  a.add("observation.workspace.page", 18, {
+    visible: false,
+    focused: false,
+    width: 1,
+    height: 1,
+  });
+  const after = read();
+  assert.deepEqual(after.facts, before.facts);
+  assert.deepEqual(after.sections, before.sections);
 });
