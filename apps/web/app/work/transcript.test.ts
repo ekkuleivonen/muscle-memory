@@ -171,3 +171,41 @@ test("additional checks reveal categories, never hidden names, values, traces or
   assert.doesNotMatch(wrong, /PRIVATE_SENTINEL/);
   assert.match(wrong, /Returned a different value/);
 });
+
+test("full Submit never reveals run-level compile/load error text with hidden cases", () => {
+  const hidden: Executable = {
+    ...challenge,
+    cases: [
+      ...challenge.cases,
+      {
+        id: "secret",
+        input: "SECRET_INPUT",
+        expected: "SECRET_EXPECTED",
+        visible: false,
+      },
+    ],
+  };
+  for (const phase of ["compile", "execute"] as const) {
+    const view: RunView = {
+      ...run({
+        status: "user-error",
+        phase,
+        error: {
+          type: "SECRET_TYPE",
+          message: "SECRET_MESSAGE",
+          traceback: bounded("SECRET_INPUT"),
+        },
+        stdout: bounded("SECRET_PRINT"),
+        stderr: bounded("SECRET_STDERR"),
+        cases: [],
+        durationMs: 2,
+      }),
+      purpose: "pull-request",
+    };
+    const rendered = transcript(view, hidden, "JavaScript")
+      .map((l) => l.text)
+      .join("\n");
+    assert.doesNotMatch(rendered, /SECRET_/);
+    assert.match(rendered, /Run examples/);
+  }
+});
