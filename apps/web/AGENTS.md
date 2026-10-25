@@ -17,7 +17,7 @@ The product centers on solving coding challenges independently: challenge, code,
 - `app/page.tsx`: the public home page. `app/(browse)`: dashboard, issues, projects, board and pull requests. Pages read the catalog (`content/catalog.json`) through `lib/library.ts` and `lib/queries.ts` (pure, tested).
 - `app/work/[key]`: the IDE (`ide.tsx`) on the issue's live revision. Practice shows only its one editable entry; support/test files remain internal. SQL's schema is public. `lib/practice-contract.ts` guards unsupported historical bundles and lossy restoration. No explorer, file tabs, hint/comment surface or visible test source.
 - `app/workspace`: the editor (`editor.ts`, CodeMirror 6), the session that records edits and runs (`session.ts`), save state, and the TypeScript type checker (`type-checker.ts`, its own worker).
-- `app/_terminal`, `app/settings`: settings, as a terminal: `/settings` lists the commands, each its own page (`/settings/<command>`, `/settings/profile/<question>`). Profile questions are asked in place by `app/(browse)/_components/ask.tsx` ([docs/profile.md](../../docs/profile.md)).
+- `app/_terminal` (the terminal look: banner, status bar, styles), `app/settings`: settings, pages to click: `/settings` lists the commands, each its own page (`/settings/<command>`, `/settings/profile/<question>`). Profile questions are asked in place by `app/(browse)/_components/ask.tsx` ([docs/profile.md](../../docs/profile.md)).
 - Runners live outside the app, in `packages/runner` (see the root `AGENTS.md`).
 
 ## Conventions

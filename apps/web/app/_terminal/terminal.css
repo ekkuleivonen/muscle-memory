@@ -27,23 +27,10 @@
 .term ::selection {
   background: var(--t-select);
 }
-.t-line,
-.t-list li {
+.t-line {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   min-height: 1.6em;
-}
-.t-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  outline: none;
-}
-.t-list li {
-  cursor: pointer;
-}
-.t-list li.t-current {
-  background: var(--t-current);
 }
 .term strong {
   font-weight: 600;
@@ -71,44 +58,6 @@
 }
 .term .t-cmd:focus-visible {
   outline: 1px solid var(--t-accent);
-}
-.term [data-focus]:focus-visible {
-  outline: none;
-}
-.t-caret {
-  display: inline-block;
-  width: 1ch;
-  height: 1.1em;
-  vertical-align: text-bottom;
-  background: var(--t-accent);
-  animation: t-blink 1s steps(1) infinite;
-}
-@keyframes t-blink {
-  50% {
-    opacity: 0;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .t-caret {
-    animation: none;
-  }
-}
-.t-text {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5ch;
-  font-weight: inherit;
-}
-.t-text input {
-  flex: 1;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  outline: none;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  caret-color: var(--t-accent);
 }
 .t-banner {
   margin-bottom: 8px;
@@ -512,4 +461,41 @@
 }
 .t-back {
   margin-top: 3em !important;
+}
+/* The profile form: each question a fieldset, options as (•) and [x] rows to click. */
+.t-question {
+  margin: 2em 0 0;
+  padding: 0;
+  border: 0;
+}
+.t-question legend {
+  padding: 0;
+  margin-bottom: 0.4em;
+  font-weight: 700;
+}
+.t-option {
+  display: flex;
+  gap: 1ch;
+  padding: 2px 1ch;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+}
+.t-option:hover {
+  background: var(--t-current);
+}
+.t-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.t-option:has(input:focus-visible) {
+  background: var(--t-current);
+  border-left-color: var(--t-accent);
+}
+.t-mark {
+  color: var(--t-dim);
+  white-space: pre;
+}
+.t-on-option .t-mark {
+  color: var(--t-accent);
 }

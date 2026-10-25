@@ -5,7 +5,6 @@ import { TermFooter, type Crumb } from "../../_terminal/footer";
 import "../../_terminal/terminal.css";
 import { isCommand, isQuestion } from "../commands";
 import { SettingsCommand } from "../settings-pages";
-import { SettingsTerminal } from "../settings-terminal";
 
 type Props = { params: Promise<{ path: string[] }> };
 
@@ -36,14 +35,10 @@ export default async function SettingsCommandPage({ params }: Props) {
   ];
   return (
     <>
-      {/* Fresh state per page: client navigation between commands reuses this route. */}
-      {command === "profile" ? (
-        <SettingsTerminal key={here} question={question} />
-      ) : (
-        <div className="term">
-          <SettingsCommand key={here} command={command} />
-        </div>
-      )}
+      <div className="term">
+        {/* Fresh state per page: client navigation between commands reuses this route. */}
+        <SettingsCommand key={here} command={command} question={question} />
+      </div>
       <TermFooter trail={trail} />
     </>
   );

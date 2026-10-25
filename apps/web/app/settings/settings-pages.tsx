@@ -8,6 +8,7 @@ import {
   logOut,
   readProfile,
   resetProgress,
+  saveProfile,
   setStealth,
 } from "../../lib/account";
 import type { StoredProfile } from "../../lib/profile";
@@ -22,6 +23,9 @@ import {
   type BackupSummary,
 } from "../../lib/backup";
 import { LEGAL_UPDATED } from "../../lib/legal";
+import type { Profile } from "../../lib/profile";
+import { QUESTIONS, toProfile } from "../../lib/questions";
+import type { Answer } from "../_terminal/prompts";
 import { logProfile } from "../(browse)/_components/board-log";
 import type { CommandName } from "./commands";
 
@@ -31,9 +35,18 @@ import type { CommandName } from "./commands";
  */
 export function SettingsCommand({
   command,
+  question,
 }: {
-  command: Exclude<CommandName, "profile">;
+  command: CommandName;
+  /** Profile only: ask just this question (/settings/profile/languages). */
+  question?: string;
 }) {
+  if (command === "profile")
+    return (
+      <Account>
+        <ProfileForm only={question} />
+      </Account>
+    );
   const Page = PAGES[command];
   return (
     <Account>
@@ -502,6 +515,114 @@ function Delete() {
         >
           delete everything
         </Button>
+      </div>
+      <Result result={result} />
+    </SettingsFrame>
+  );
+}
+
+/**
+ * The profile questions as one form, current answers ticked; `only` shows just one. Saving
+ * stores every answer shown, as the questions asked one at a time did. A question never
+ * answered stays unanswered unless something is picked.
+ */
+function ProfileForm({ only }: { only?: string }) {
+  const [answers, setAnswers] = useState<Record<string, Answer> | null>(null);
+  const [saved, setSaved] = useState<Profile>({});
+  const [result, setResult] = useState<{ tone: Tone; text: ReactNode } | null>(
+    null,
+  );
+  useEffect(() => {
+    const current = readProfile()?.profile ?? {};
+    setSaved(current);
+    setAnswers({ ...current } as Record<string, Answer>);
+  }, []);
+  if (!answers) return null;
+  const shown = QUESTIONS.filter((q) => !only || q.id === only);
+  const pick = (id: string, value: string, multi: boolean) => {
+    setResult(null);
+    setAnswers((current) => {
+      const next = { ...current };
+      if (!multi) next[id] = value;
+      else {
+        const list = (next[id] as string[] | undefined) ?? [];
+        next[id] = list.includes(value)
+          ? list.filter((v) => v !== value)
+          : [...list, value];
+      }
+      return next;
+    });
+  };
+  const save = () => {
+    const next = { ...answers };
+    for (const question of shown) {
+      if (question.kind !== "multiselect") continue;
+      const list = (next[question.id] as string[] | undefined) ?? [];
+      if (list.length >= question.min) continue;
+      // Never answered and still nothing picked: leave it unanswered.
+      if (saved[question.id as keyof Profile] === undefined && !list.length) {
+        delete next[question.id];
+        continue;
+      }
+      setResult({
+        tone: "err",
+        text: `Pick at least ${question.min}: ${question.message}`,
+      });
+      return;
+    }
+    saveProfile(toProfile(next));
+    void logProfile("settings");
+    setSaved(toProfile(next));
+    setResult({ tone: "ok", text: "Saved." });
+  };
+  return (
+    <SettingsFrame title={only ? "Profile question" : "Profile"}>
+      <p className="t-dim">Change any answer, then save.</p>
+      {shown.map((question) => {
+        const multi = question.kind === "multiselect";
+        const value = answers[question.id];
+        return (
+          <fieldset key={question.id} className="t-question">
+            <legend>{question.message}</legend>
+            {question.choices.map((choice) => {
+              const on = multi
+                ? ((value as string[] | undefined) ?? []).includes(choice.value)
+                : value === choice.value;
+              return (
+                <label
+                  key={choice.value}
+                  className={`t-option${on ? " t-on-option" : ""}`}
+                >
+                  <input
+                    type={multi ? "checkbox" : "radio"}
+                    name={question.id}
+                    checked={on}
+                    onChange={() => pick(question.id, choice.value, multi)}
+                  />
+                  <span className="t-mark" aria-hidden>
+                    {multi ? (on ? "[x]" : "[ ]") : on ? "(•)" : "( )"}
+                  </span>
+                  <span>
+                    {choice.label}
+                    {"hint" in choice && choice.hint && (
+                      <span className="t-dim"> — {choice.hint}</span>
+                    )}
+                  </span>
+                </label>
+              );
+            })}
+          </fieldset>
+        );
+      })}
+      <div className="t-actions">
+        <Button kind="primary" onClick={save}>
+          save
+        </Button>
+        {only && (
+          <Link href="/settings/profile" className="t-cmd">
+            all questions
+          </Link>
+        )}
       </div>
       <Result result={result} />
     </SettingsFrame>
