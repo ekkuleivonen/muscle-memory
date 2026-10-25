@@ -5,9 +5,9 @@ import type { BoardMoveVia } from "../../../../../packages/domain/board";
 import type { Json } from "../../../../../packages/domain/json";
 import {
   diagnose,
+  failureText,
   type CheckRow,
   type Diagnosis,
-  type FailureCategory,
 } from "../../../lib/diagnosis";
 import type { CheckFeedback } from "../../../lib/check-feedback";
 import { isCiFinding, type Thread } from "../../../lib/feedback";
@@ -160,21 +160,6 @@ const HiddenCase = () => (
     hidden case
   </span>
 );
-
-const FAILURE: Record<FailureCategory, string> = {
-  "wrong-value": "Returned a different value from the one expected.",
-  raised: "Raised an error.",
-  "not-json": "Returned a value that can't be compared.",
-  "cut-short": "Returned output too long to compare.",
-  "no-result": "Returned nothing.",
-};
-
-/** How a failing case failed, in words: all a hidden case shows. */
-function failureText(failure: NonNullable<CheckRow["failure"]>): string {
-  return failure.category === "raised" && failure.errorType
-    ? `Raised ${failure.errorType}.`
-    : FAILURE[failure.category];
-}
 
 /**
  * A public case's input, the value it should give and, when it failed, what the code gave

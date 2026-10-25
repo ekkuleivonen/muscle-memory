@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Case } from "../../../packages/content/model";
-import { diagnose } from "./diagnosis";
+import { diagnose, failureOf, failureText, hiddenLabel } from "./diagnosis";
 
 const cases: Case[] = [
   {
@@ -155,4 +155,32 @@ test("a passing run has no failures", () => {
     cases,
   );
   assert.deepEqual(d?.kind === "tests" && d.failed, []);
+});
+
+test("the practice area's live results get the same categories, with no values or messages", () => {
+  const raised = failureOf({ error: { type: "KeyError" } });
+  assert.deepEqual(raised, { category: "raised", errorType: "KeyError" });
+  assert.equal(failureText(raised), "Raised KeyError.");
+  assert.equal(failureOf({ repr: { text: "3" } }).category, "wrong-value");
+  assert.equal(failureOf({ conversionError: {} }).category, "not-json");
+  assert.equal(failureOf(undefined).category, "no-result");
+  assert.equal(
+    failureText({ category: "wrong-value", errorType: null }),
+    "Returned a different value from the one expected.",
+  );
+});
+
+test("an unnamed hidden case is labelled by position, never by its call", () => {
+  assert.equal(hiddenLabel({}, 6), "hidden case 7");
+  assert.equal(hiddenLabel({ name: "ignores case" }, 2), "ignores case");
+  const d = diagnose({ status: "completed", phase: "tests", cases: [{}, {}] }, [
+    { id: "x", input: [1], expected: 1, visible: true },
+    { id: "y", input: ["secret"], expected: 2, visible: false },
+  ]);
+  if (d?.kind !== "tests") return assert.fail("expected per-case results");
+  assert.deepEqual(
+    d.rows.map((r) => r.name),
+    ["case 1", "hidden case 2"],
+  );
+  assert.ok(!JSON.stringify(d.rows[1]).includes("secret"));
 });

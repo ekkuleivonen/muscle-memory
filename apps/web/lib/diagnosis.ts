@@ -67,14 +67,53 @@ interface RawOutcome {
 
 type CaseResult = NonNullable<RawOutcome["cases"]>[number] | undefined;
 
-function category(result: CaseResult): NonNullable<CheckRow["failure"]> {
+/**
+ * How a case failed, from a stored outcome's case or a live runner result (which may also have
+ * `repr` and `conversionError`). Safe for hidden cases: it carries no value and no message.
+ */
+export function failureOf(
+  result:
+    | {
+        output?: { truncated: boolean };
+        repr?: unknown;
+        error?: { type: string };
+        conversionError?: unknown;
+        unserializable?: string;
+      }
+    | undefined,
+): NonNullable<CheckRow["failure"]> {
   if (result?.error)
     return { category: "raised", errorType: result.error.type };
+  if (result?.conversionError || result?.unserializable)
+    return { category: "not-json", errorType: null };
   if (result?.output?.truncated)
     return { category: "cut-short", errorType: null };
-  if (result?.output) return { category: "wrong-value", errorType: null };
-  if (result?.unserializable) return { category: "not-json", errorType: null };
+  if (result?.output || result?.repr)
+    return { category: "wrong-value", errorType: null };
   return { category: "no-result", errorType: null };
+}
+
+const FAILURE: Record<FailureCategory, string> = {
+  "wrong-value": "Returned a different value from the one expected.",
+  raised: "Raised an error.",
+  "not-json": "Returned a value that can't be compared.",
+  "cut-short": "Returned output too long to compare.",
+  "no-result": "Returned nothing.",
+};
+
+/** How a case failed, in words: all a hidden case shows. */
+export function failureText(failure: NonNullable<CheckRow["failure"]>): string {
+  return failure.category === "raised" && failure.errorType
+    ? `Raised ${failure.errorType}.`
+    : FAILURE[failure.category];
+}
+
+/**
+ * A case's label where its input must not show: its name, or "hidden case 3". Never the call
+ * with its arguments, which would reveal a hidden input.
+ */
+export function hiddenLabel(c: { name?: string }, index: number): string {
+  return c.name ?? `hidden case ${index + 1}`;
 }
 
 function got(
@@ -129,10 +168,10 @@ export function diagnose(
   const rows = cases.map((c, i): CheckRow => {
     const result = outcome.cases![i];
     return {
-      name: c.name ?? `case ${i + 1}`,
+      name: c.visible ? (c.name ?? `case ${i + 1}`) : hiddenLabel(c, i),
       visible: c.visible,
       passed: passed[i],
-      failure: passed[i] ? null : category(result),
+      failure: passed[i] ? null : failureOf(result),
       detail: c.visible
         ? {
             input: c.input,

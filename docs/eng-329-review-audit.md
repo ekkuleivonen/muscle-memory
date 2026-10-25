@@ -61,9 +61,51 @@ export function FailedChecks(props: { diagnosis: Diagnosis | null }); // optiona
 
 Then delete pulls.tsx's local `Outcome`, `show`, `Checks`, `Findings`, `CiFinding` and `ReviewThread` (baseline lines 959–974 and 976–1069, then 1156–1433). Drop imports that become unused (`runFeedback`, `Case`, `isCiFinding` if the MergeBox `explicit` check no longer uses it, `Markdown` if only ReviewThread used it). The call sites `<Findings … />` and `<Checks … />` need no change. Pass `onReply={pull.state === "open" ? reply : undefined}` to Findings if replies should work: at baseline `reply` is defined but not passed, so replying isn't reachable on the page. That is a bounded correctness fix, and your call.
 
-### ide.tsx / practice area: hidden cases
+### Practice area hunks (ENG-328 applies): hidden cases are no oracle
 
-Any view of a full check's results must follow `lib/diagnosis.ts`: for a case with `visible: false`, show its name and `failure` only. No input, expected value, output, traceback or error message, and no printed output from a run that includes hidden cases. ENG-328's earlier hunk that hid expected values covers part of this; per-case tracebacks and the Output panel for full checks need the same treatment.
+Import from `lib/diagnosis.ts`: `failureOf`, `failureText`, `hiddenLabel`. For a case with `visible: false`, show its name (or "hidden case N") and how it failed. Never show its input, the call with its arguments, the expected value, what it returned, a traceback or an error message.
+
+`app/work/ide.tsx`, in `Tests`:
+
+```diff
+           <Case
+             key={index}
+             index={index}
+-            label={check.name ?? caseLabel(challenge, check.input)}
+-            expected={check.expected}
++            label={check.visible ? (check.name ?? caseLabel(challenge, check.input)) : hiddenLabel(check, index)}
++            expected={check.visible ? check.expected : undefined}
++            hidden={!check.visible}
+             passed={feedback.passed[index]}
+             result={o.cases[index]}
+           />
+```
+
+In `Case`, before the expected/trace/got block:
+
+```diff
+-        {!passed && (
++        {!passed && hidden && (
++          <span className="ide-case-detail faint">{failureText(failureOf(result))}</span>
++        )}
++        {!passed && !hidden && (
+```
+
+`app/work/transcript.ts` (the Output panel). Pass `index` to `caseLines`, then:
+
+```diff
+ function caseLines(challenge, check, passed, result, index) {
+-  const label = check.name ?? caseLabel(challenge, check.input);
++  if (!check.visible) {
++    const label = hiddenLabel(check, index);
++    return passed
++      ? [{ text: `✔ ${label}`, tone: "pass" }]
++      : [{ text: `✘ ${label}`, tone: "fail" }, { text: `    ${failureText(failureOf(result))}`, tone: "dim" }];
++  }
++  const label = check.name ?? caseLabel(challenge, check.input);
+```
+
+Also, for a run whose cases include hidden ones (`casesRun(cases, purpose).some((c) => !c.visible)`), replace its printed output with one dim line: "Printed output isn't shown for the full check, which includes hidden cases. Run the tests to see what your code prints." Printing an argument would reveal a hidden input. Load and compile errors, which happen before any case runs, stay as they are.
 
 ## Limitations
 
