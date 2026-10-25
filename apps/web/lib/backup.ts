@@ -29,7 +29,6 @@ export interface Backup {
 
 /** What a backup holds, for the confirmation before it replaces anything. */
 export interface BackupSummary {
-  readonly handle: string | null;
   readonly participantId: string | null;
   readonly records: number;
   readonly exportedAt: string;
@@ -77,9 +76,7 @@ export function parseBackup(text: string): Backup | Error {
 }
 
 export function summarize(backup: Backup): BackupSummary {
-  const profile = parseStoredProfile(backup.local[PROFILE_KEY] ?? null);
   return {
-    handle: profile?.handle ?? null,
     participantId: backup.store.settings.participantId ?? null,
     records: backup.store.records.length,
     exportedAt: backup.exportedAt,
@@ -139,6 +136,6 @@ export async function restoreBackup(backup: Backup): Promise<void> {
 }
 
 /** The file name a backup downloads as. */
-export function backupName(handle: string | null, at: Date): string {
-  return `muscle-memory-${(handle ?? "backup").toLowerCase()}-${at.toISOString().slice(0, 10)}.json`;
+export function backupName(at: Date): string {
+  return `muscle-memory-backup-${at.toISOString().slice(0, 10)}.json`;
 }

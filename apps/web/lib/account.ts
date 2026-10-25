@@ -1,11 +1,10 @@
 /**
- * The account as it exists so far: a profile and handle in this browser's storage, and a
+ * The account as it exists so far: a profile in this browser's storage, and a
  * cookie that stands in for a session. Browser-only; the server sees just the cookie.
  */
 import { openPracticeStore } from "../../../packages/browser/practice-store";
 import { eraseUploaded } from "./ingest";
 import { PROGRESS_CHANGE, PROGRESS_KEY } from "./progress";
-import { HANDLE_PATTERN, randomHandle } from "./handle";
 import type { LanguageId } from "./languages";
 import { LEGAL_VERSION, type Acceptance } from "./legal";
 import { STARS_KEY } from "./stars";
@@ -47,7 +46,7 @@ export function acceptance(): Acceptance {
 
 /**
  * The whole profile from settings, every question in it answered by the person. Keeps the
- * handle, the acceptance and everything else on file.
+ * acceptance and everything else on file.
  */
 export function saveProfile(profile: Profile): StoredProfile | null {
   const stored = readProfile();
@@ -60,26 +59,9 @@ export function saveProfile(profile: Profile): StoredProfile | null {
   return next;
 }
 
-function validHandle(handle: unknown): string | undefined {
-  return typeof handle === "string" && HANDLE_PATTERN.test(handle)
-    ? handle
-    : undefined;
-}
-
-/** Profiles saved before handles existed get one the first time they are read. */
-export function ensureHandle(): string | null {
-  const stored = readProfile();
-  if (!stored) return null;
-  const handle = validHandle(stored.handle);
-  if (handle) return handle;
-  const next = { ...stored, handle: randomHandle() };
-  write(next);
-  return next.handle;
-}
-
 /**
  * Accept the current Terms (/consent, /start): the only thing any page needs. Keeps whatever
- * this browser already has and signs it back in; a newcomer gets a handle and an empty profile,
+ * this browser already has and signs it back in; a newcomer gets an empty profile,
  * which the app's questions fill in as they go. Opens every page.
  */
 export function acceptConsent(): StoredProfile {
@@ -90,7 +72,6 @@ export function acceptConsent(): StoredProfile {
     : {
         version: PROFILE_VERSION,
         createdAt: new Date().toISOString(),
-        handle: randomHandle(),
         accepted: acceptance(),
         profile: {},
       };
@@ -129,7 +110,7 @@ export function logOut() {
 }
 
 /**
- * Progress, saved practice and recorded activity on this device. Profile, handle, settings and
+ * Progress, saved practice and recorded activity on this device. Profile, settings and
  * the device identity stay, so anything already uploaded can still be deleted later.
  */
 export async function resetProgress(identity = false) {

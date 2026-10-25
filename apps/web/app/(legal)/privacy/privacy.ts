@@ -5,8 +5,8 @@
 export const PRIVACY = `## The short version
 
 - Muscle Memory is coding practice without AI, and **recording how you work is the product**: we study how people write code. Your progress and results are yours now; community comparisons, model benchmarks and research publications are planned.
-- You get a random handle like \`Quiet-Compiler-4821\`. We don't ask for your name or email.
-- Other people never see your results next to your handle. Future community comparisons will use aggregates, such as percentiles and averages.
+- You're a random ID in your browser. We don't ask for your name or email.
+- Other people never see your results. Future community comparisons will use aggregates, such as percentiles and averages.
 - We may publish **anonymised** stats and datasets. Don't want to be in them? **Go stealth** in Settings, no questions asked. (Fair warning: stealth works both ways, so you won't see other people's stats either.)
 - We don't sell your personal data, and there are no ads.
 - **What you do here is sent to our servers as you go**, and your browser keeps what practice needs (your latest attempt at each challenge). Delete your account in Settings and it's deleted on both.
@@ -21,7 +21,6 @@ That's the gist. The rest is the detail, which the law (reasonably) wants writte
 
 **Your account**
 
-- Your handle. It's random, so it says nothing about you.
 - Your profile answers, all optional: experience, what you do, how you learned to code, where you code, languages, how often and for what you use AI, roughly how much of your shipped code an AI wrote, your goal, whether you touch type, an age band, and editor keybindings, and where you gave them.
 - Which version of these documents you accepted, and when.
 - Your privacy choices, like whether you've gone stealth.
@@ -68,7 +67,7 @@ Comparing you with LLMs doesn't involve sending your data to them. The models so
 
 Before anything goes public, we strip it of anything that points back to you:
 
-- No handles. IDs are replaced with new random ones per dataset.
+- IDs are replaced with new random ones per dataset.
 - Times are coarsened, and free text you typed is removed.
 - Groups too small to hide in are dropped.
 - Record-level releases get an extra review before they go out.

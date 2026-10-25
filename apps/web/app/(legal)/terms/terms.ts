@@ -15,7 +15,7 @@ These Terms are an agreement between you and **rowandreason.com** ("we", "us"). 
 
 ## Your account
 
-- You get a random handle. It's yours, and you can't pick another one (that's rather the point).
+- Your account is a random ID in your browser. No name, no email, no password.
 - One person per account, please.
 - **Right now your account lives in your browser.** Clear your storage or switch devices and it's gone. We're working on that.
 - You can delete your account any time with \`delete\` in **Settings**.

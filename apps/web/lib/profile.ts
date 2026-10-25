@@ -52,8 +52,6 @@ export interface StoredProfile {
   version: string;
   /** When this browser first accepted the Terms. */
   createdAt: string;
-  /** Anonymous, handed out rather than chosen: Quiet-Compiler-4821. */
-  handle?: string;
   /** The Terms and Privacy Notice version accepted, and when. */
   accepted?: Acceptance;
   /**

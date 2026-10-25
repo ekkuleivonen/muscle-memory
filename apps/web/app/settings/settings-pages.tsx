@@ -11,7 +11,6 @@ import {
 } from "react";
 import {
   deleteAccount,
-  ensureHandle,
   logOut,
   readProfile,
   resetProgress,
@@ -92,7 +91,7 @@ export function SettingsFrame({
 /** Commands need an account on this device; read after mount, like all browser storage. */
 export function Account({ children }: { children: ReactNode }) {
   const [state, setState] = useState<"reading" | "none" | "ok">("reading");
-  useEffect(() => setState(ensureHandle() ? "ok" : "none"), []);
+  useEffect(() => setState(readProfile() ? "ok" : "none"), []);
   if (state === "reading") return null;
   if (state === "none")
     return (
@@ -232,7 +231,7 @@ function Export() {
     setBusy(true);
     try {
       const backup = await makeBackup();
-      const name = backupName(ensureHandle(), new Date());
+      const name = backupName(new Date());
       const url = URL.createObjectURL(
         new Blob([JSON.stringify(backup)], { type: "application/json" }),
       );
