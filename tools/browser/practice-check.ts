@@ -88,7 +88,7 @@ const shot = async (name: string) => {
   if (screenshots) await page.screenshot({ path: `${screenshots}/${name}.png` });
 };
 const seed = SEED_ISSUES.find((i) => i.id === "word-count-javascript")!;
-const solution = Object.values(seed.private.reference)[0] as string;
+const solution = Object.values(seed.private!.reference)[0] as string;
 
 try {
   // A start from the picker: its search and the position of the pick.

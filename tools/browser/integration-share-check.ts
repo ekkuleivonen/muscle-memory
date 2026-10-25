@@ -12,7 +12,7 @@ const shots =
   process.env.INTEGRATION_SCREENSHOTS ?? "/tmp/mm-round2-integrated";
 await mkdir(shots, { recursive: true });
 const browser = await chromium.launch();
-const contexts = [];
+const contexts: import("playwright").BrowserContext[] = [];
 const results: string[] = [];
 async function context(consented = true) {
   const ctx = await browser.newContext({
@@ -109,7 +109,7 @@ try {
     0,
   );
   const seed = SEED_ISSUES.find((i) => i.id === "word-count-javascript")!;
-  const [path, solution] = Object.entries(seed.private.reference)[0] as [string, string];
+  const [path, solution] = Object.entries(seed.private!.reference)[0] as [string, string];
   await editor().fill(solution);
   await editor().press(
     process.platform === "darwin" ? "Meta+Enter" : "Control+Enter",

@@ -26,13 +26,13 @@ export interface SeedIssue {
   title: string;
   summary: string;
   difficulty: "easy" | "medium" | "hard";
-  kind: "feature" | "bug" | "performance" | "refactor";
   language: string;
-  skills: string[];
+  /** Lowercase slugs to find it by: strings, edge-cases, money, … */
+  tags: string[];
   task: string;
   inputs: unknown[];
   expected: unknown[];
-  /** What each case is about, by index: the repo's tests use them as test names. */
+  /** What each case is about, by index: feedback names the case by it. */
   names?: string[];
   /** Checks on the code itself, beyond the cases: no float money, keep the memo, … */
   rules?: SeedRule[];
