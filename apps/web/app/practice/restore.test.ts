@@ -14,11 +14,11 @@ import { PracticeSession } from "./session";
 
 const base = live("PY-002");
 const fixture = { ...base, path: base.revision.file, starter: base.revision.starter };
-const ISSUE = "PY-002";
+const KEY = "PY-002";
 const P = "synthetic-participant";
 const ATTEMPT = "attempt-1";
 const challenge = {
-  key: ISSUE,
+  key: KEY,
   revision: fixture.revision,
   revisionId: fixture.id,
 };
@@ -74,7 +74,7 @@ function workspace(
 }
 
 const restore = (sink: MemorySink, participantId = P) =>
-  latestSavedCode([...sink.records.values()], participantId, ISSUE, ATTEMPT);
+  latestSavedCode([...sink.records.values()], participantId, KEY, ATTEMPT);
 
 test("site activity about the challenge is not a newer practice session", async () => {
   const sink = new MemorySink();
@@ -88,7 +88,7 @@ test("site activity about the challenge is not a newer practice session", async 
     payload: JSON.stringify({
       observationId: "site.1",
       type: "site.viewed",
-      challenge: ISSUE,
+      challenge: KEY,
       attemptId: null,
       source: { id: "site", sequence: 1 },
       occurredAt: "2099-01-01T00:00:00.000Z",
@@ -98,7 +98,7 @@ test("site activity about the challenge is not a newer practice session", async 
   const recovered = latestSavedCode(
     [...sink.records.values(), view],
     P,
-    ISSUE,
+    KEY,
     ATTEMPT,
   )!;
   assert.equal(recovered.complete, true);
@@ -117,10 +117,10 @@ test("only the given attempt's code is restored; a new attempt opens on the star
   await second.session.recorder.flush();
   const all = [...sink.records.values()];
   // Each attempt restores its own code, though the second one is newer.
-  assert.equal(latestSavedCode(all, P, ISSUE, ATTEMPT)!.files[fixture.path], first.text());
-  assert.equal(latestSavedCode(all, P, ISSUE, "attempt-2")!.files[fixture.path], second.text());
+  assert.equal(latestSavedCode(all, P, KEY, ATTEMPT)!.files[fixture.path], first.text());
+  assert.equal(latestSavedCode(all, P, KEY, "attempt-2")!.files[fixture.path], second.text());
   // An attempt with nothing of its own yet: practice opens on the starter.
-  assert.equal(latestSavedCode(all, P, ISSUE, "attempt-3"), null);
+  assert.equal(latestSavedCode(all, P, KEY, "attempt-3"), null);
 });
 
 test("1 to 24 ordinary edits since opening restore exactly", async () => {
@@ -218,7 +218,7 @@ test("a missing position stops replay at the last exact document and says so", a
       ? null
       : undefined,
   );
-  const recovered = latestSavedCode(records, P, ISSUE, ATTEMPT)!;
+  const recovered = latestSavedCode(records, P, KEY, ATTEMPT)!;
   assert.equal(recovered.files[fixture.path], "one two");
   assert.equal(recovered.revision, 2);
   assert.equal(recovered.complete, false);
@@ -239,14 +239,14 @@ test("an invalid change is not applied; a later complete snapshot is a new safe 
       ? { ...value, data: { ...value.data, changes: [999, [0, "zzz"]] } }
       : undefined,
   );
-  const recovered = latestSavedCode(corrupt, P, ISSUE, ATTEMPT)!;
+  const recovered = latestSavedCode(corrupt, P, KEY, ATTEMPT)!;
   assert.equal(recovered.files[fixture.path], "abcdefghi");
   assert.equal(recovered.complete, true);
   // Without the snapshot, replay stops before the bad change.
   const noSnapshot = corrupt.filter(
     (record) => !JSON.parse(record.payload).data?.reason?.startsWith?.("run"),
   );
-  const fallback = latestSavedCode(noSnapshot, P, ISSUE, ATTEMPT)!;
+  const fallback = latestSavedCode(noSnapshot, P, KEY, ATTEMPT)!;
   assert.equal(fallback.files[fixture.path], "");
   assert.equal(fallback.complete, false);
 });
@@ -311,7 +311,7 @@ test("when the latest session has nothing recoverable, an earlier one is used an
       ? null
       : undefined,
   );
-  const recovered = latestSavedCode(records, P, ISSUE, ATTEMPT)!;
+  const recovered = latestSavedCode(records, P, KEY, ATTEMPT)!;
   assert.equal(recovered.files[fixture.path], "kept");
   assert.equal(recovered.fromEarlierSession, true);
   assert.equal(recovered.complete, false);

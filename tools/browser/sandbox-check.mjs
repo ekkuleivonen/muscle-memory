@@ -1186,7 +1186,7 @@ async function csharpCheck(browserType) {
   const outputs = (outcome) => outcome.cases?.map((c) => c.output?.text);
   const expected = report.expected.map((e) => JSON.stringify(e));
   return {
-    // The ticket's six visible cases hold two midpoints; CI's hidden cases add more.
+    // The challenge's six examples hold two midpoints; its hidden cases add more.
     "csharp: the starter's banker's rounding fails just the midpoint cases":
       report.starter.status === "completed" &&
       outputs(report.starter)

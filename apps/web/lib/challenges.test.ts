@@ -10,10 +10,10 @@ import {
 } from "./queries";
 import { catalog } from "./test-fixtures";
 
-const merged = indexChallenges(catalog);
+const index = indexChallenges(catalog);
 
 test("challenges are live metadata over their revisions", () => {
-  const challenge = merged.findChallenge("PY-002")!;
+  const challenge = index.findChallenge("PY-002")!;
   const meta = catalog.challenges.find((c) => c.key === "PY-002")!;
   assert.deepEqual(
     [challenge.key, challenge.revision, challenge.runnable, challenge.difficulty],
@@ -23,13 +23,13 @@ test("challenges are live metadata over their revisions", () => {
   assert.deepEqual(challenge.tags, ["iteration", "maps", "edge-cases"]);
   // The examples are the visible cases, as they are shown.
   assert.deepEqual(challenge.criteria[1], { input: [], expected: {} });
-  assert.equal(merged.revision(meta.revision)?.challenge, "PY-002");
+  assert.equal(index.revision(meta.revision)?.challenge, "PY-002");
 });
 
 test("every challenge is listed, by key, and runs in the browser", () => {
-  assert.equal(merged.challenges.length, 46);
-  assert.ok(merged.challenges.every((i) => i.runnable));
-  const keys = merged.challenges.map((i) => i.key);
+  assert.equal(index.challenges.length, 46);
+  assert.ok(index.challenges.every((i) => i.runnable));
+  const keys = index.challenges.map((i) => i.key);
   assert.deepEqual(
     keys,
     [...keys].sort((a, b) => a.localeCompare(b, "en", { numeric: true })),
@@ -37,11 +37,11 @@ test("every challenge is listed, by key, and runs in the browser", () => {
 });
 
 test("challenges are found by key, in any case", () => {
-  const lru = merged.findChallenge("CPP-001")!;
+  const lru = index.findChallenge("CPP-001")!;
   assert.equal(lru.language, "cpp");
-  assert.equal(merged.findChallenge("cpp-001"), lru);
-  assert.equal(merged.findChallenge("lru-cache"), undefined);
-  assert.equal(merged.findChallenge("CPP-099"), undefined);
+  assert.equal(index.findChallenge("cpp-001"), lru);
+  assert.equal(index.findChallenge("lru-cache"), undefined);
+  assert.equal(index.findChallenge("CPP-099"), undefined);
 });
 
 test("qualifiers parse into filters; unknown ones stay as text", () => {
@@ -57,16 +57,13 @@ test("qualifiers parse into filters; unknown ones stay as text", () => {
     'lang:python tag:maps sort:title "log parser" colour:red',
   );
   assert.equal(parseChallengeQuery("x".repeat(500)).text[0].length, 200);
-  // Kinds and projects are not search terms: they read as plain text.
-  assert.deepEqual(parseChallengeQuery("kind:bug project:shop").text, [
-    "kind:bug",
-    "project:shop",
-  ]);
+  // Unknown qualifiers are not search terms: they read as plain text.
+  assert.deepEqual(parseChallengeQuery("colour:red").text, ["colour:red"]);
 });
 
 test("filters combine across qualifiers and match any value within one", () => {
   const keys = (q: string) =>
-    filterChallenges(merged.challenges, parseChallengeQuery(q)).map((i) => i.key);
+    filterChallenges(index.challenges, parseChallengeQuery(q)).map((i) => i.key);
   assert.deepEqual(keys("lang:go"), [
     "GO-001",
     "GO-002",
@@ -86,7 +83,7 @@ test("filters combine across qualifiers and match any value within one", () => {
     "TS-006",
   ]);
   assert.equal(keys("lang:rust,go").length, 7);
-  assert.equal(keys("is:runnable").length, merged.challenges.length);
+  assert.equal(keys("is:runnable").length, index.challenges.length);
   assert.deepEqual(keys("GO-003"), ["GO-003"]);
   assert.deepEqual(keys("parser"), ["GO-003"]);
   assert.deepEqual(keys("rust hard"), []);
@@ -104,7 +101,7 @@ test("toggles switch one value and round-trip through the search line", () => {
 });
 
 test("summaries for client components leave out the task and examples", () => {
-  const summary = summarize(merged.findChallenge("PY-002")!);
+  const summary = summarize(index.findChallenge("PY-002")!);
   assert.equal(summary.key, "PY-002");
   for (const field of ["criteria", "task"])
     assert.equal(field in summary, false, field);
@@ -122,10 +119,10 @@ test("marks parse as is: qualifiers and filter wherever marks are known", () => 
   const has = (key: string, mark: "starred" | "completed") =>
     (mark === "starred" ? starred : completed).has(key);
   const keys = (q: string) =>
-    filterByMarks(merged.challenges, parseChallengeQuery(q).marks, has)
+    filterByMarks(index.challenges, parseChallengeQuery(q).marks, has)
       .map((i) => i.key)
       .sort();
   assert.deepEqual(keys("is:starred"), ["PHP-002", "PY-002"]);
   assert.deepEqual(keys("is:starred,completed"), ["PY-002"]);
-  assert.equal(keys("").length, merged.challenges.length);
+  assert.equal(keys("").length, index.challenges.length);
 });

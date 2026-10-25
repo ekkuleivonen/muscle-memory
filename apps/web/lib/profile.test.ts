@@ -20,7 +20,7 @@ test("next only ever leads to a path on this site, never back to /consent", () =
     safeNext("/challenges?q=lang%3Apython", fallback),
     "/challenges?q=lang%3Apython",
   );
-  assert.equal(safeNext("/projects#top", fallback), "/projects#top");
+  assert.equal(safeNext("/challenges#top", fallback), "/challenges#top");
   for (const bad of [
     undefined,
     42,
