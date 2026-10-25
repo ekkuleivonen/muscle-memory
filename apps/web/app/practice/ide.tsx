@@ -89,6 +89,7 @@ import { CopyIssueLink, ShareOutcome } from "../(browse)/_components/share";
 import { shareCompletionProof } from "../../lib/share-completion";
 import { incompatibleSavedPaths } from "../../lib/practice-contract";
 import { nextProblem } from "../../lib/next-problem";
+import { isPracticePath, practiceHref } from "../../lib/paths";
 import type { IssueSummary } from "../../lib/library";
 
 export interface IdeIssue {
@@ -925,7 +926,7 @@ export function Ide({
                         <p>Next: {next.title}</p>
                         <StartWork
                           issue={next}
-                          href={`/work/${next.key}`}
+                          href={practiceHref(next.key)}
                           label="Next challenge"
                         />
                         <p className="faint">
@@ -1136,7 +1137,7 @@ function entryPath(): string | null {
   // the page before this one.
   try {
     const previous = sessionStorage.getItem(PREVIOUS_PATH_KEY);
-    if (previous && !previous.startsWith("/work/")) return previous;
+    if (previous && !isPracticePath(previous)) return previous;
   } catch {
     // Fall back to the referrer.
   }

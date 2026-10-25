@@ -6,7 +6,7 @@ How people arrive from a shared link, and how a result gets shared. The goal is 
 
 - One small bug, the same in eight languages: the quick fixes project (`PY-001` to `PHP-001`, "The composer says 1 word when the post is empty"), in Python, JavaScript, TypeScript, Go, Java, C#, Ruby and PHP. The project is **unlisted** (`listed: false` on the project, live metadata): it stays out of the platform's issue lists, suggestions and project index, and its issues open by key. Personal board, progress and pull-request metadata use the full catalog, so QUICK practice still counts.
 - `/play` is public. It shows the ticket and a language picker; the language a shared link names (`?lang=go`) comes first.
-- **No setup questions.** Picking a language accepts the current Terms (the line above the buttons says so, including that every keystroke is recorded) and opens `/work/QUICK-n`, recording the same start-work board move as the standard entry.
+- **No setup questions.** Picking a language accepts the current Terms (the line above the buttons says so, including that every keystroke is recorded) and opens the language's five-minute challenge at `/challenges/<KEY>`, recording the same start-work board move as the standard entry.
 - **The language picked is a first guess at the languages answer.** It is saved into the profile when the profile has none, so every IDE session's profile snapshot carries it, and recorded as a `profile` event with `from: "play"`. The languages question stays open until the person answers it ([profile](profile.md)).
 
 ## Getting in, everywhere
@@ -78,7 +78,7 @@ Entry pages explain browser-local identity and saved work: uploads do not provid
 Every way in leads to the same loop: challenge, code, feedback, next challenge. There is no incident wrapper, team chat or completion ceremony around it.
 
 - `/` says what the practice is and offers the five-minute test (or `/challenges`, once the Terms are accepted).
-- `/challenges` lists every listed challenge; Enter (or **start practice** in the preview) opens `/work/<KEY>` on its live revision. `/work/<KEY>?revision=sha256:…` opens one of that issue's published revisions exactly; a revision that is not published opens the live one at the plain URL.
+- `/challenges` lists every listed challenge; Enter (or **start practice** in the preview) opens `/challenges/<KEY>` on its live revision. `/challenges/<KEY>?revision=sha256:…` opens one of that issue's published revisions exactly; a revision that is not published opens the live one at the plain URL.
 
 The incident (JS-001, "Production is down. AI is down.") was retired as a wrapper, and its `/incident` links are gone. JS-001 stays an ordinary issue under the same key and id, so attempts already made keep their pull requests, findings and records. Revisions that carry the retired chat lines are still in the catalog; nothing shows them.
 

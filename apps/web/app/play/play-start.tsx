@@ -1,4 +1,5 @@
 "use client";
+import { practiceHref } from "../../lib/paths";
 import Link from "next/link";
 import { useBoard } from "../(browse)/_components/board";
 import { useRouter } from "next/navigation";
@@ -56,7 +57,7 @@ export function PlayStart({
       playLanguage(choice.language as LanguageId);
       await logProfile("play").catch(() => undefined);
       move(choice, "in-progress", via, { trigger: "start-work" });
-      router.push(`/work/${choice.key}`);
+      router.push(practiceHref(choice.key));
     } catch {
       setStarting(null);
       setError(

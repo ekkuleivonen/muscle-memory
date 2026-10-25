@@ -33,6 +33,7 @@ import {
   toggleStar,
   writeStars,
 } from "../../lib/stars";
+import { practiceHref } from "../../lib/paths";
 import { useBoard } from "../(browse)/_components/board";
 import { ChallengeExamples } from "../(browse)/_components/challenge-examples";
 import { Markdown } from "../(browse)/_components/markdown";
@@ -197,7 +198,7 @@ export function Picker({
   /** Starting is a board move to In progress, recorded as before, then practice. */
   const start = (issue: PickerChallenge, via: "keyboard" | "pointer") => {
     board.move(issue, "in-progress", via, { trigger: "start-work" });
-    router.push(`/work/${issue.key}`);
+    router.push(practiceHref(issue.key));
   };
   const star = (issue: PickerChallenge) =>
     writeStars(toggleStar(stars, issue.key));

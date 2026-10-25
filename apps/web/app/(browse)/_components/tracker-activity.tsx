@@ -1,4 +1,5 @@
 "use client";
+import { isPracticePath } from "../../../lib/paths";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
@@ -40,7 +41,7 @@ export function TrackerActivity() {
     void logView(issueContext(path), { path, query, previous });
   }, [path, query]);
 
-  const inIde = path.startsWith("/work/");
+  const inIde = isPracticePath(path);
   useEffect(() => {
     if (inIde) return;
     let resize: ReturnType<typeof setTimeout> | undefined;

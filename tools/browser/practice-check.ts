@@ -200,7 +200,7 @@ try {
   assert.match(await editor().innerText(), /countWords/);
   assert.equal((await finished()).length, 1);
   // An authored correctness/safety blocker persists despite all cases passing.
-  await page.goto(`${origin}/work/PY-002`);
+  await page.goto(`${origin}/challenges/PY-002`);
   await ready();
   const fn = SEED_ISSUES.find((i) => i.id === "frequency-map")!;
   const solution = Object.values(fn.private.reference)[0];
@@ -218,7 +218,7 @@ try {
     .waitFor();
   assert.equal((await finished()).length, 2);
   // The normalized TypeScript challenge is really one editable source and still runs.
-  await page.goto(`${origin}/work/TS-005`);
+  await page.goto(`${origin}/challenges/TS-005`);
   await ready();
   assert.equal(await page.locator(".practice-editor").count(), 1);
   assert.equal(
@@ -246,7 +246,7 @@ try {
   const beforeHistorical = (await records()).filter(
     (v) => v.type === "observation.workspace.opened",
   ).length;
-  await page.goto(`${origin}/work/TS-005?revision=${legacyRevision}`);
+  await page.goto(`${origin}/challenges/TS-005?revision=${legacyRevision}`);
   await page
     .getByRole("heading", {
       name: "This older version is not supported in one-file practice",
@@ -326,7 +326,7 @@ try {
       v.type.startsWith("observation.workspace.") ||
       v.type === "artifact.code-revision",
   ).length;
-  await page.goto(`${origin}/work/TS-005`);
+  await page.goto(`${origin}/challenges/TS-005`);
   await page.getByRole("region", { name: "Saved version recovery" }).waitFor();
   assert.equal(await editor().count(), 0);
   assert.equal(
@@ -354,7 +354,7 @@ try {
   // Explicit starter choice appends a new source without rewriting old entry/helper artifacts.
   await page.goto(`${origin}/challenges`);
   const retainedStarter = await seedLegacy("starter");
-  await page.goto(`${origin}/work/TS-005`);
+  await page.goto(`${origin}/challenges/TS-005`);
   await page.getByRole("region", { name: "Saved version recovery" }).waitFor();
   await shot("practice-version-recovery");
   await activate(
@@ -368,7 +368,7 @@ try {
   );
 
   // SQL is a first-class one-file challenge: schema is public; harness and test code stay internal.
-  await page.goto(`${origin}/work/SQL-001`);
+  await page.goto(`${origin}/challenges/SQL-001`);
   await ready();
   await page.getByText("Data schema", { exact: true }).waitFor();
   assert.match(

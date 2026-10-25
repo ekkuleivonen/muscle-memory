@@ -221,7 +221,7 @@ From these, every attempt can say when it stopped being unaided, which feedback 
 
 ## Keys
 
-A challenge's key is its language's file-extension code and a three-digit number: `PY-003`, `JS-012`, `CPP-001` (the codes are in `packages/content/keys.ts`). It is written into the seed (`key`), checked by the catalog build against the issue's language, and permanent: a published issue keeps its key, no key ever moves to another issue, and a new challenge takes the next free number in its language. Keys were first numbered easiest first within each language. They appear in URLs (`/work/PY-003`), on the board, in shared cards and, as `issueKey`, in board observations from capture 7.3.0; records and cards made earlier carry the project keys of the time (`FN-1`), and the permanent `id` joins the two.
+A challenge's key is its language's file-extension code and a three-digit number: `PY-003`, `JS-012`, `CPP-001` (the codes are in `packages/content/keys.ts`). It is written into the seed (`key`), checked by the catalog build against the issue's language, and permanent: a published issue keeps its key, no key ever moves to another issue, and a new challenge takes the next free number in its language. Keys were first numbered easiest first within each language. They appear in URLs (`/challenges/PY-003`), on the board, in shared cards and, as `issueKey`, in board observations from capture 7.3.0; records and cards made earlier carry the project keys of the time (`FN-1`), and the permanent `id` joins the two.
 
 ## Managing issues
 
@@ -247,7 +247,7 @@ AI draft ─▶ human edit ─▶ checks ─▶ approved ─▶ published (live)
   Today the content build runs the checks that read code as text, and `npm run check:publish` runs the reference (twice), the starter, the alternatives and the wrong fixes in the browser sandbox; issues without a reference yet are listed as unchecked. The [content audit](audits/content-2026-10-25.md) says which issues were last reviewed against these rules.
 
 - **Approved** by a person who did not draft it.
-- **Published.** The revision is frozen, written as a bundle, and becomes the issue's live revision. Ordinary issue links open the current live revision. A published revision can be opened explicitly with `/work/<KEY>?revision=<hash>`; saved work is restored by editable file path. The workspace explains a changed ticket before continuing.
+- **Published.** The revision is frozen, written as a bundle, and becomes the issue's live revision. Ordinary issue links open the current live revision. A published revision can be opened explicitly with `/challenges/<KEY>?revision=<hash>`; saved work is restored by editable file path. The workspace explains a changed ticket before continuing.
 - **Retired.** Out of lists and no new starts; recorded work stays valid. This is how issues rotate to keep the board fresh.
 - **Disabled.** For problems that must stop now (a leaked answer, a broken check), with a reason.
 

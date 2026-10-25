@@ -205,7 +205,7 @@ test("page views, page state and profile answers; only views may name an issue",
   const onIssue = boardView({
     ...common,
     issue: base.issue,
-    data: { path: "/work/PHP-002", query: "", previous: "/challenges" },
+    data: { path: "/challenges/PHP-002", query: "", previous: "/challenges" },
   });
   assert.equal(onIssue.issue, "reset-link-expiry");
   assert.throws(

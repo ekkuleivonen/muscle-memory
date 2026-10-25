@@ -15,7 +15,7 @@ The product centers on solving coding challenges independently: challenge, code,
 ## Map
 
 - `app/page.tsx`: the public home page. `app/challenges`: the challenge picker (search, filters, preview; Enter starts practice). Pages read the catalog (`content/catalog.json`) through `lib/library.ts` and `lib/queries.ts` (pure, tested). `app/(browse)/_components` holds the pieces practice and the share pages still use (board moves, markdown, examples, feedback, sharing, uploads).
-- `app/work/[key]`: the IDE (`ide.tsx`) on the issue's live revision. Practice shows only its one editable entry; support/test files remain internal. SQL's schema is public. `lib/practice-contract.ts` guards unsupported historical bundles and lossy restoration. No explorer, file tabs, hint/comment surface or visible test source.
+- `app/challenges/[key]` (the page) and `app/practice`: the IDE (`ide.tsx`) on the issue's live revision. Practice shows only its one editable entry; support/test files remain internal. SQL's schema is public. `lib/practice-contract.ts` guards unsupported historical bundles and lossy restoration. No explorer, file tabs, hint/comment surface or visible test source.
 - `app/workspace`: the editor (`editor.ts`, CodeMirror 6), the session that records edits and runs (`session.ts`), save state, and the TypeScript type checker (`type-checker.ts`, its own worker).
 - `app/_terminal` (the terminal look: banner, status bar, styles), `app/settings`: settings, pages to click: `/settings` lists the commands, each its own page (`/settings/<command>`, `/settings/profile/<question>`). Profile questions are answered there ([docs/profile.md](../../docs/profile.md)).
 - Runners live outside the app, in `packages/runner` (see the root `AGENTS.md`).
@@ -32,5 +32,5 @@ The product centers on solving coding challenges independently: challenge, code,
 ## Checking a change
 
 - `npm test` at the root and `npx tsc --noEmit -p apps/web`.
-- Look at UI changes in the running app (`npm run dev`, then `/work/<KEY>`). Runtime files are built by `predev`; the first run builds the Go and C# runners in Docker.
+- Look at UI changes in the running app (`npm run dev`, then `/challenges/<KEY>`). Runtime files are built by `predev`; the first run builds the Go and C# runners in Docker.
 - After route renames, `rm -rf apps/web/.next` and restart the dev server.

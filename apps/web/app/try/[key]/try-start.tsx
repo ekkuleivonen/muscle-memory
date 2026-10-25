@@ -1,4 +1,5 @@
 "use client";
+import { practiceHref } from "../../../lib/paths";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -34,7 +35,7 @@ export function TryStart({
       if (!consented) acceptConsent();
       await logArrival().catch(() => undefined);
       move(issue, "in-progress", via, { trigger: "start-work" });
-      router.push(`/work/${issue.key}`);
+      router.push(practiceHref(issue.key));
     } catch {
       setStarting(false);
       setError("Could not save your session. Allow browser storage and try again.");

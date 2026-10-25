@@ -4,10 +4,11 @@ import { requireConsent } from "../../../lib/gate";
 import Link from "next/link";
 import { supportsOneFilePractice } from "../../../lib/practice-contract";
 import { summarize } from "../../../lib/library";
+import { practiceHref } from "../../../lib/paths";
 import { getLibrary } from "../../../lib/load";
 import "../../_terminal/terminal.css";
-import "../ide.css";
-import { Ide } from "../ide";
+import "../../practice/ide.css";
+import { Ide } from "../../practice/ide";
 
 type Props = {
   params: Promise<{ key: string }>;
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * The IDE for one issue, `/work/PY-002`, on its live revision. `?revision=sha256:…` opens one of
+ * Practice on one challenge, `/challenges/PY-002`, on its live revision. `?revision=sha256:…` opens one of
  * the issue's published revisions exactly, so a link can name the version it was made on; a
  * revision that is not published (another issue's, or one pruned since) opens the live one
  * at the plain URL instead. The issue's revisions travel to the browser as a JSON string,
@@ -35,14 +36,14 @@ export default async function WorkPage({ params, searchParams }: Props) {
   const { key } = await params;
   const wanted = (await searchParams)?.revision;
   await requireConsent(
-    `/work/${key}${wanted ? `?revision=${encodeURIComponent(wanted)}` : ""}`,
+    `${practiceHref(key)}${wanted ? `?revision=${encodeURIComponent(wanted)}` : ""}`,
   );
   const { findIssue, revisionsOf, issues } = await getLibrary();
   const issue = findIssue(decodeURIComponent(key));
   if (!issue) notFound();
-  if (key !== issue.key) redirect(`/work/${issue.key}`);
+  if (key !== issue.key) redirect(practiceHref(issue.key));
   const published = revisionsOf(issue.slug);
-  if (wanted && !published[wanted]) redirect(`/work/${issue.key}`);
+  if (wanted && !published[wanted]) redirect(practiceHref(issue.key));
   const revision = wanted ?? issue.revision;
   // The ticket as that revision has it.
   const content = published[revision];
@@ -60,7 +61,7 @@ export default async function WorkPage({ params, searchParams }: Props) {
           requirements. You can choose how to restore saved code before anything
           is replaced.
         </p>
-        <Link className="btn primary" href={`/work/${issue.key}`}>
+        <Link className="btn primary" href={practiceHref(issue.key)}>
           Open current version
         </Link>
       </main>
@@ -71,7 +72,7 @@ export default async function WorkPage({ params, searchParams }: Props) {
       revisionsJson={JSON.stringify(published)}
       trail={[
         { label: "challenges", href: "/challenges" },
-        { label: issue.key, href: `/work/${issue.key}` },
+        { label: issue.key, href: practiceHref(issue.key) },
       ]}
       candidates={[
         summarize(issue),

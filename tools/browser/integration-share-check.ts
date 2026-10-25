@@ -205,7 +205,7 @@ try {
   passed(
     "fresh recipients see only opted-in solution and start their own independent attempt",
   );
-  await page.goto(`${origin}/work/SQL-002`);
+  await page.goto(`${origin}/challenges/SQL-002`);
   await editor().waitFor();
   const table = page.locator(".practice-challenge table").first();
   assert.deepEqual(await table.locator("thead th").allTextContents(), [
