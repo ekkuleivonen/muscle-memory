@@ -3,7 +3,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LANGUAGES } from "../../../lib/languages";
 import { getLibrary } from "../../../lib/load";
-import { comparisonLine, decodeResult, sentence } from "../../../lib/result";
+import { isIncident } from "../../../lib/incident";
+import {
+  comparisonLine,
+  decodeResult,
+  incidentSentence,
+  incidentTime,
+  sentence,
+} from "../../../lib/result";
 import { Arrived } from "./arrived";
 import { Receipt } from "../../(browse)/_components/result-card";
 
@@ -20,11 +27,15 @@ async function read(props: Props) {
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const found = await read(props);
+  const incident = found && isIncident(found.result.k);
   const title = found
-    ? sentence(found.result, found.label)
+    ? incident
+      ? incidentSentence(found.result)
+      : sentence(found.result, found.label)
     : "The five-minute test · Muscle Memory";
-  const description =
-    "One bug, no AI. Try a small fix at your own pace. The five-minute test.";
+  const description = incident
+    ? "Production is down. AI is down. You're on call. Take the same incident."
+    : "One bug, no AI. Try a small fix at your own pace. The five-minute test.";
   return {
     title,
     description,
@@ -41,6 +52,7 @@ export default async function SharedResult(props: Props) {
   const found = await read(props);
   if (!found) redirect("/play");
   const { result, issue, label } = found;
+  if (isIncident(result.k)) return <SharedIncident result={result} />;
   const play = `/play?${new URLSearchParams({ ref: result.c, lang: result.l })}`;
   return (
     <div className="legal home play">
@@ -85,6 +97,66 @@ export default async function SharedResult(props: Props) {
             </Link>
             <span className="home-note">
               No email needed.
+            </span>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+/** A shared incident report: the same incident, at the same version, for whoever opens it. */
+function SharedIncident({
+  result,
+}: {
+  result: NonNullable<ReturnType<typeof decodeResult>>;
+}) {
+  const take = `/incident?${new URLSearchParams({
+    ref: result.c,
+    ...(result.iv ? { v: result.iv } : {}),
+  })}`;
+  return (
+    <div className="legal home play">
+      <header className="legal-head">
+        <Link href="/" className="workspace-name">
+          <img
+            className="logo-mark"
+            src="/logo.svg"
+            alt=""
+            width={22}
+            height={22}
+          />
+          muscle memory
+        </Link>
+      </header>
+      <Arrived referral={result.c} />
+      <main className="legal-body home-body">
+        <section className="result-card shared">
+          <Receipt
+            top={`incident INC-1${result.iv ? ` · version ${result.iv}` : ""} · resolved`}
+            headline={`Someone restored checkout in ${incidentTime(result)}.`}
+            detail={`${result.a && result.a > 1 ? "A replay" : "Their first response"}${result.iv ? ` on version ${result.iv}` : ""}. A report is filed only once a fix whose checks all pass is merged. This card is theirs to share, not a verified record.`}
+            metrics={result}
+          />
+        </section>
+        <section className="home-hero">
+          <h1>
+            Production is down. AI is down.
+            <br />
+            <span className="home-punch">You&apos;re on call.</span>
+          </h1>
+          <p className="home-lede">
+            The same incident{result.iv ? `, version ${result.iv}` : ""}: the
+            same broken checkout, the same log, the same failing test and the
+            same team that can&apos;t ask its assistant. Their numbers are
+            above; yours stay private unless you share them. No timer.
+          </p>
+          <div className="home-actions">
+            <Link className="home-cta" href={take}>
+              Take the same incident →
+            </Link>
+            <span className="home-note">
+              No email needed. Progress stays in this browser.
             </span>
           </div>
         </section>

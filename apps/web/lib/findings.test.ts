@@ -16,6 +16,13 @@ import {
   type Release,
 } from "./feedback";
 import { allPullRequests } from "./pulls";
+import {
+  decodeResult,
+  encodeResult,
+  incidentSentence,
+  incidentTime,
+  type Result,
+} from "./result";
 import { catalog, live } from "./test-fixtures";
 
 const ISSUE = "checkout-guest-shipping";
@@ -482,4 +489,38 @@ test("closed pull requests and replays: only the attempt's own merge puts it in 
   play.merge(4, replayRun);
   assert.equal(attemptAt(play.records, ISSUE).number, 2);
   assert.equal(pulls().find((p) => p.number === 4)?.state, "merged");
+});
+
+test("a shared INC-1 card still carries its version and attempt; bad ones are dropped", () => {
+  // The /r/<card> route (ENG-324) still reads these fields until it drops its incident branch.
+  const card: Result = {
+    v: 2,
+    k: "INC-1",
+    l: "javascript",
+    c: "abc123def456",
+    t: 412,
+    rd: 40,
+    ks: 300,
+    ty: 4,
+    w: 50,
+    r: 3,
+    g: 2,
+    p: 1,
+    h: 0,
+    ps: 0,
+    lt: 0,
+    iv: fixture.id.replace(/^sha256:/, "").slice(0, 8),
+    a: 2,
+    e: 257,
+  };
+  assert.deepEqual(decodeResult(encodeResult(card)), card);
+  const decoded = decodeResult(encodeResult({ ...card, iv: "nothex!!", a: 0 }))!;
+  assert.equal(decoded.iv, undefined);
+  assert.equal(decoded.a, undefined);
+  assert.equal(decoded.e, undefined);
+  assert.equal(
+    incidentSentence(card),
+    "Production was down. AI was down. In a no-AI incident sim I restored checkout in 4 min 17 s (6 min 52 s active), on a replay.",
+  );
+  assert.equal(incidentTime({ ...card, e: undefined }), "6 min 52 s active");
 });
