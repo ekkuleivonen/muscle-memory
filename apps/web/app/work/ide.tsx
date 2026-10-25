@@ -29,9 +29,9 @@ import { pullRequestHistory, type PullRequestRecord } from "../../lib/activity";
 import { attemptAt, attemptRecords } from "../../lib/attempts";
 import { statusOf } from "../../lib/board";
 import { closedPullRequests, mergedPullRequests } from "../../lib/pulls";
-import { languageLabel, type IssueComment } from "../../lib/library";
+import { languageLabel } from "../../lib/library";
 import type { LanguageId } from "../../lib/languages";
-import { mediaTypeOf, repoOf } from "../../lib/repo";
+import { mediaTypeOf, type FileLanguage } from "../../lib/repo";
 import { StartWork, useBoard } from "../(browse)/_components/board";
 import {
   PREVIOUS_PATH_KEY,
@@ -68,6 +68,7 @@ import { checkFeedbackOf } from "../../lib/check-feedback";
 import { diagnose } from "../../lib/diagnosis";
 import { CheckFeedbackView } from "../(browse)/_components/review";
 import { CopyIssueLink } from "../(browse)/_components/share";
+import { incompatibleSavedPaths } from "../../lib/practice-contract";
 import { nextProblem } from "../../lib/next-problem";
 import type { IssueSummary } from "../../lib/library";
 
@@ -82,7 +83,6 @@ export interface IdeIssue {
   difficulty?: Difficulty;
   estimate?: number;
   labels: string[];
-  comments: IssueComment[];
   language: LanguageId;
   runnable: boolean;
 }
@@ -94,20 +94,19 @@ type Runtime =
   | { state: "unavailable"; message: string };
 
 type Opening =
+  | { state: "recovery"; paths: string[] }
   | { state: "opening" }
   | { state: "open" }
   | { state: "failed"; message: string };
 
 /**
- * One issue as a small repo in a VS Code-like IDE. The issue decides which files are editable;
- * their edits and runs are recorded on this device under the accepted Terms. Everything else
- * opens read-only.
+ * One editable challenge entry, immediate feedback and continuation. Support/test files
+ * stay internal; recorded work remains pinned to its published revision.
  */
 export function Ide({
   revisionsJson,
   candidates,
   issue,
-  root,
 }: {
   /**
    * Every published revision of the issue by id, as a JSON string: React's serializer would
@@ -117,8 +116,6 @@ export function Ide({
   revisionsJson: string;
   candidates: IssueSummary[];
   issue: IdeIssue;
-  /** The repo's folder: the project's key, as in project:shop. */
-  root: string;
 }) {
   const revisions = useMemo(
     () => JSON.parse(revisionsJson) as Record<string, Revision>,
@@ -126,29 +123,12 @@ export function Ide({
   );
   const revision = revisions[issue.revision];
   const challenge = useMemo(() => executableOf(revision), [revision]);
-  const repo = useMemo(
-    () => repoOf(revision.workspace, issue, root),
-    [revision, issue, root],
-  );
-  const editable = useMemo(
-    () => repo.files.filter((f) => f.role === "edit"),
-    [repo],
-  );
-  /** Where the IDE opens: the entry file when it is editable, else the first editable one. */
-  const home =
-    editable.find((f) => f.path === challenge.entry)?.path ?? editable[0].path;
-
-  const view = "ticket" as const; // Existing navigation value: the challenge is visible.
-  const [tabs, setTabs] = useState<string[]>([
-    home,
-    ...editable.map((f) => f.path).filter((path) => path !== home),
-  ]);
-  const [active, setActiveState] = useState(home);
-  const setActive = (path: string) => {
-    // Capture the old file while it still has a layout box.
-    session.current?.places();
-    setActiveState(path);
-  };
+  const home = revision.workspace.entry;
+  const source = revision.workspace.files[home];
+  const editable = [{ path: home, ...source }];
+  const view = "ticket" as const; // Existing observation value for the visible challenge.
+  const tabs = useMemo(() => [home], [home]); // View continuity metadata only; there is no project navigation UI.
+  const active = home;
   const [panel, setPanel] = useState<"tests" | "output" | "pulls">("tests");
   const savedScope = useRef<string | null>(null);
   const pendingPlaces = useRef<Record<string, FileView>>({});
@@ -324,7 +304,10 @@ export function Ide({
   }
 
   /** Opens the session on the editable files, restoring the latest saved code. */
-  async function open(current: () => boolean) {
+  async function open(
+    current: () => boolean,
+    recoveryChoice?: "entry" | "starter",
+  ) {
     try {
       const account = readProfile();
       const keys: Keymap =
@@ -336,11 +319,19 @@ export function Ide({
       const all = await store.current.workspaceRecords();
       // Only the attempt under way (a replay starts a new one); earlier ones stay recorded.
       const records = attemptRecords(all, issue.slug);
-      const recovered: RecoveredCode | null = latestSavedCode(
+      const savedCode: RecoveredCode | null = latestSavedCode(
         records,
         participantId,
         issue.slug,
       );
+      const dropped = savedCode
+        ? incompatibleSavedPaths(revision, savedCode.files)
+        : [];
+      if (dropped.length && !recoveryChoice) {
+        if (current()) setOpening({ state: "recovery", paths: dropped });
+        return;
+      }
+      const recovered = recoveryChoice === "starter" ? null : savedCode;
       const history = pullRequestHistory(records, participantId, issue.slug);
       // Numbers continue across attempts, so they come from every pull request.
       const numbered = pullRequestHistory(all, participantId, issue.slug);
@@ -350,9 +341,6 @@ export function Ide({
       // A superseded open must not create a session or record anything.
       if (!homeHost || !current()) return;
       if (recovered) {
-        const dropped = Object.keys(recovered.files).filter(
-          (path) => !editable.some((f) => f.path === path),
-        );
         setMessage(
           [
             recoveryMessage(recovered),
@@ -368,7 +356,7 @@ export function Ide({
                 return false;
               }
             })
-              ? `The challenge changed since your last visit. Your matching files were restored.${dropped.length ? ` Files no longer present: ${dropped.join(", ")}.` : " Review the current requirements before checking again."}`
+              ? `The challenge changed since your last visit. Your matching files were restored.${dropped.length ? ` You chose not to restore ${dropped.join(", ")}; those files remain in history.` : " Review the current requirements before checking again."}`
               : "",
           ]
             .filter(Boolean)
@@ -388,12 +376,6 @@ export function Ide({
             ]),
           ),
         });
-        setTabs([...fitted.tabs]);
-        setActive(
-          editable.some((file) => file.path === fitted.active)
-            ? fitted.active
-            : home,
-        );
         setPanel(fitted.panel === "output" ? "output" : "tests");
         pendingPlaces.current = { ...fitted.files };
       }
@@ -412,15 +394,15 @@ export function Ide({
             f.path,
             {
               text: recovered?.files[f.path] ?? f.text,
-              language: f.language,
+              language: f.language as FileLanguage,
               mediaType: mediaTypeOf(f.language as LanguageId),
             },
           ]),
         ),
         sources: Object.fromEntries(
-          repo.files
-            .filter((f) => f.role === "read")
-            .map((f) => [f.path, f.text]),
+          Object.entries(revision.workspace.files)
+            .filter(([, file]) => file.role === "read")
+            .map(([path, file]) => [path, file.text]),
         ),
         restoredFrom: recovered?.revision,
         language: issue.language,
@@ -470,10 +452,6 @@ export function Ide({
         profile: account?.profile ? ({ ...account.profile } as Json) : null,
         viewport: { width: window.innerWidth, height: window.innerHeight },
       });
-      // The home file mounts last, so it has the focus.
-      for (const file of editable)
-        if (file.path !== home)
-          session.current.mount(file.path, hosts.current.get(file.path)!);
       session.current.mount(home, homeHost);
       session.current.page({
         visible: document.visibilityState === "visible",
@@ -659,41 +637,6 @@ export function Ide({
           <h1>{issue.title}</h1>
           <h2>Goal and requirements</h2>
           <Markdown source={issue.task} />
-          {revision.team.some((r) => r.severity === "blocking") && (
-            <section className="practice-requirements">
-              <h2>Required checks</h2>
-              {revision.team
-                .filter((r) => r.severity === "blocking")
-                .map((r) => (
-                  <Markdown key={r.id} source={r.text[0]} />
-                ))}
-            </section>
-          )}
-          {issue.comments.length > 0 && (
-            <section className="practice-requirements">
-              <h2>Notes and constraints</h2>
-              {issue.comments.map((note, index) => (
-                <Markdown key={index} source={note.body} />
-              ))}
-            </section>
-          )}
-          {repo.files.some(
-            (f) => f.role === "read" && !/readme\.md$/i.test(f.path),
-          ) && (
-            <details className="practice-context" open>
-              <summary>Supporting material</summary>
-              {repo.files
-                .filter(
-                  (f) => f.role === "read" && !/readme\.md$/i.test(f.path),
-                )
-                .map((file) => (
-                  <section key={file.path}>
-                    <h3>{file.path}</h3>
-                    <pre>{file.text}</pre>
-                  </section>
-                ))}
-            </details>
-          )}
           {challenge.schema && (
             <details open>
               <summary>Data schema</summary>
@@ -706,37 +649,58 @@ export function Ide({
         <section className="practice-work" aria-label="Your code">
           <div className="practice-code-head">
             <h2>Your code</h2>
-            {editable.length > 1 && (
-              <label>
-                Source{" "}
-                <select
-                  aria-label="Editable source"
-                  value={active}
-                  onChange={(event) => setActive(event.target.value)}
-                >
-                  {editable.map((f) => (
-                    <option key={f.path} value={f.path}>
-                      {f.path}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
             <span className="faint">
               {keymap === "vim" ? `Vim · ${vimMode}` : "Standard keys"}
             </span>
           </div>
           <div className="practice-editors">
-            {editable.map((file) => (
-              <div
-                key={file.path}
-                className="practice-editor"
-                hidden={file.path !== active}
-                ref={(node) => {
-                  if (node) hosts.current.set(file.path, node);
-                }}
-              />
-            ))}
+            <div
+              className="practice-editor"
+              hidden={
+                opening.state === "recovery" || opening.state === "failed"
+              }
+              ref={(node) => {
+                if (node) hosts.current.set(home, node);
+              }}
+            />
+            {opening.state === "recovery" && (
+              <section
+                className="practice-recovery"
+                aria-label="Saved version recovery"
+              >
+                <h2>Your saved version used more than one file</h2>
+                <p>
+                  The current version is a single-file challenge. These saved
+                  files remain in history but cannot be restored here:{" "}
+                  {opening.paths.join(", ")}.
+                </p>
+                <p>
+                  Use the current starter, or explicitly restore only your
+                  matching entry code. Earlier records and files remain
+                  unchanged.
+                </p>
+                <button
+                  className="btn primary"
+                  onClick={() => {
+                    const attempt = generation.current;
+                    setOpening({ state: "opening" });
+                    void open(() => attempt === generation.current, "starter");
+                  }}
+                >
+                  Use current starter
+                </button>
+                <button
+                  className="btn"
+                  onClick={() => {
+                    const attempt = generation.current;
+                    setOpening({ state: "opening" });
+                    void open(() => attempt === generation.current, "entry");
+                  }}
+                >
+                  Restore saved entry only
+                </button>
+              </section>
+            )}
             {opening.state === "opening" && (
               <p role="status">Restoring your code…</p>
             )}
@@ -746,117 +710,126 @@ export function Ide({
               </p>
             )}
           </div>
-          <div className="practice-controls">
-            <span role="status">
-              {capture ? saveBadge(capture).label : "Opening…"}
-              {offline ? " · Offline" : ""}
-            </span>
-            {runtime.state === "loading" && (
-              <span role="status">Preparing checks… You can keep editing.</span>
-            )}
-            {runtime.state === "unavailable" ? (
-              <button
-                type="button"
-                className="btn primary"
-                onClick={startRuntime}
-              >
-                Retry checks
-              </button>
-            ) : running ? (
-              <button className="btn" onClick={() => session.current?.cancel()}>
-                Cancel check
-              </button>
-            ) : (
-              <>
+          {opening.state !== "recovery" && (
+            <div className="practice-controls">
+              <span role="status">
+                {capture ? saveBadge(capture).label : "Opening…"}
+                {offline ? " · Offline" : ""}
+              </span>
+              {runtime.state === "loading" && (
+                <span role="status">
+                  Preparing checks… You can keep editing.
+                </span>
+              )}
+              {runtime.state === "unavailable" ? (
+                <button
+                  type="button"
+                  className="btn primary"
+                  onClick={startRuntime}
+                >
+                  Retry checks
+                </button>
+              ) : running ? (
                 <button
                   className="btn"
-                  disabled={!ready}
-                  onClick={(event) =>
-                    void session.current?.run(
-                      "local",
-                      event.detail === 0 ? "keyboard" : "pointer",
-                    )
-                  }
+                  onClick={() => session.current?.cancel()}
                 >
-                  Run examples
+                  Cancel check
                 </button>
-                <button
-                  className={`btn${verified ? "" : " primary"}`}
-                  disabled={!ready}
-                  onClick={(event) =>
-                    submit(event.detail === 0 ? "keyboard" : "pointer")
-                  }
-                >
-                  Submit <Shortcut />
-                </button>
-              </>
-            )}
-          </div>
+              ) : (
+                <>
+                  <button
+                    className="btn"
+                    disabled={!ready}
+                    onClick={(event) =>
+                      void session.current?.run(
+                        "local",
+                        event.detail === 0 ? "keyboard" : "pointer",
+                      )
+                    }
+                  >
+                    Run examples
+                  </button>
+                  <button
+                    className={`btn${verified ? "" : " primary"}`}
+                    disabled={!ready}
+                    onClick={(event) =>
+                      submit(event.detail === 0 ? "keyboard" : "pointer")
+                    }
+                  >
+                    Submit <Shortcut />
+                  </button>
+                </>
+              )}
+            </div>
+          )}
           {message && (
             <p className="practice-notice" role="status">
               {message}
             </p>
           )}
-          <div className="practice-feedback">
-            {run?.purpose === "local" ? (
-              <>
-                <h2>Example feedback</h2>
-                <Tests
-                  challenge={challenge}
-                  run={run}
-                  stale={stale}
-                  issue={issue}
-                  testsPath="the public examples"
-                  runtime={runtime}
-                  onRetry={startRuntime}
-                />
-              </>
-            ) : (
-              <CheckFeedbackView feedback={check} />
-            )}
-            {verified && (
-              <section className="practice-next" aria-label="Next challenge">
-                <h2>
-                  {verification.completedAt
-                    ? "Next challenge"
-                    : "Current code verified"}
-                </h2>
-                {next ? (
-                  <>
-                    <p>Next: {next.title}</p>
-                    <StartWork
-                      issue={next}
-                      href={`/work/${next.key}`}
-                      label="Next challenge"
-                    />
-                    <p className="faint">
-                      Suggested by language, project and difficulty.
-                    </p>
-                  </>
-                ) : (
-                  <Link className="btn primary" href="/issues">
-                    Explore challenges
-                  </Link>
-                )}
-                <Link href="/profile">View your evidence</Link>
-              </section>
-            )}
-            {run && (
-              <details
-                open={panel === "output"}
-                onToggle={(event) =>
-                  setPanel(event.currentTarget.open ? "output" : "tests")
-                }
-              >
-                <summary>Output</summary>
-                <Output
-                  run={run}
-                  challenge={challenge}
-                  runtime={engine?.label ?? issue.language}
-                />
-              </details>
-            )}
-          </div>
+          {opening.state === "open" && (
+            <div className="practice-feedback">
+              {run?.purpose === "local" ? (
+                <>
+                  <h2>Example feedback</h2>
+                  <Tests
+                    challenge={challenge}
+                    run={run}
+                    stale={stale}
+                    issue={issue}
+                    testsPath="the public examples"
+                    runtime={runtime}
+                    onRetry={startRuntime}
+                  />
+                </>
+              ) : (
+                <CheckFeedbackView feedback={check} />
+              )}
+              {verified && (
+                <section className="practice-next" aria-label="Next challenge">
+                  <h2>
+                    {verification.completedAt
+                      ? "Next challenge"
+                      : "Current code verified"}
+                  </h2>
+                  {next ? (
+                    <>
+                      <p>Next: {next.title}</p>
+                      <StartWork
+                        issue={next}
+                        href={`/work/${next.key}`}
+                        label="Next challenge"
+                      />
+                      <p className="faint">
+                        Suggested by language, project and difficulty.
+                      </p>
+                    </>
+                  ) : (
+                    <Link className="btn primary" href="/issues">
+                      Explore challenges
+                    </Link>
+                  )}
+                  <Link href="/profile">View your evidence</Link>
+                </section>
+              )}
+              {run && (
+                <details
+                  open={panel === "output"}
+                  onToggle={(event) =>
+                    setPanel(event.currentTarget.open ? "output" : "tests")
+                  }
+                >
+                  <summary>Output</summary>
+                  <Output
+                    run={run}
+                    challenge={challenge}
+                    runtime={engine?.label ?? issue.language}
+                  />
+                </details>
+              )}
+            </div>
+          )}
           <p className="practice-keys faint">
             <Shortcut /> submits · Escape, then Tab leaves the editor.{" "}
             <Link href="/settings?run=editor">Editor keys</Link>

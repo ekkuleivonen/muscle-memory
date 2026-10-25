@@ -63,8 +63,8 @@ try {
   assert.equal(await page.locator(".status-trigger").count(), 0);
   assert.equal(await page.locator(".issue-pulls").count(), 0);
   assert.equal(
-    await page.locator(".challenge-context").getAttribute("open"),
-    "",
+    await page.locator(".challenge-context, .timeline, .issue-thread").count(),
+    0,
   );
   const start = page
     .getByRole("link", { name: "Practice", exact: true })
@@ -98,7 +98,10 @@ try {
   assert.match(await editor.innerText(), /return 123/);
   await page.setViewportSize({ width: 390, height: 844 });
   assert.equal(await page.getByRole("dialog").count(), 0);
-  assert.equal(await page.locator(".practice-challenge .challenge-examples li").count(), issue.criteria.length);
+  assert.equal(
+    await page.locator(".practice-challenge .challenge-examples li").count(),
+    issue.criteria.length,
+  );
   assert.equal(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -107,6 +110,11 @@ try {
   );
   await page.keyboard.press("Escape");
   assert.equal(await page.getByRole("dialog").count(), 0);
+  await page.goto(`${origin}/issues?q=lang:sql`);
+  await page.getByRole("searchbox", { name: "Search", exact: true }).waitFor();
+  assert.equal(await page.locator("a[data-row]").count(), 3);
+  for (const row of await page.locator("a[data-row]").all())
+    assert.match(await row.innerText(), /SQL/);
   console.log(
     "PASS: catalog keyboard search/filter, legacy status URLs, exact visible examples, no detail status/PR controls, editor focus/resume and mobile challenge view",
   );

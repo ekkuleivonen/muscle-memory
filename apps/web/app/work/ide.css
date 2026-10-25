@@ -1074,3 +1074,11 @@ dialog::backdrop {
   .practice-header { padding: 14px 20px; gap: 16px; }
   .practice-code-head { flex-wrap: wrap; }
 }
+
+.practice-recovery { padding: 20px; font-size: 13px; line-height: 1.6; }
+.practice-recovery .btn { margin: 8px 12px 0 0; }
+.practice-version { max-width: 680px; margin: 64px auto; padding: 24px; line-height: 1.6; }
+
+.practice-editors { position: relative; }
+.practice-editors > p { position: absolute; inset: 20px; }
+.practice-recovery { max-height: 100%; overflow: auto; }

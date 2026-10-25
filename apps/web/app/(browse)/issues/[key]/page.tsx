@@ -7,14 +7,12 @@ import { issueHref, projectHref, type Issue } from "../../../../lib/library";
 import { getLibrary } from "../../../../lib/load";
 import { formatQuery, emptyIssueQuery } from "../../../../lib/queries";
 import {
-  Avatar,
   ProjectSquare,
   Estimate,
   LabelPill,
   LanguageTag,
 } from "../../_components/bits";
 import { KIND_LABELS, KindIcon } from "../../_components/icons";
-import { IssueThread } from "../../_components/issue-thread";
 import { IssueContext } from "../../_components/tracker-activity";
 import { Sep, Topbar } from "../../_components/topbar";
 import { Ask } from "../../_components/ask";
@@ -49,7 +47,6 @@ export default async function IssuePage(props: Props) {
   await requireConsent(`/issues/${key}`);
   const issue = await find(props);
   if (!issue) notFound();
-  const { revisionsOf } = await getLibrary();
   // One canonical URL per issue: /issues/RG-4. A lowercase key or the issue's id land here.
   if (key !== issue.key) permanentRedirect(issueHref(issue));
   const { project } = issue;
@@ -84,32 +81,6 @@ export default async function IssuePage(props: Props) {
             <Markdown source={issue.task} />
           </section>
           <ChallengeExamples examples={issue.criteria} />
-          <details className="section challenge-context" open>
-            <summary>Notes and constraints</summary>
-            <div className="timeline">
-              {issue.comments.map((comment, i) => (
-                <div className="comment" key={i}>
-                  <Avatar name={comment.author} />
-                  <div className="comment-box">
-                    <div className="comment-head">
-                      <b>{comment.author}</b>
-                      {comment.role && (
-                        <span className="role">{comment.role}</span>
-                      )}
-                    </div>
-                    <Markdown className="comment-body" source={comment.body} />
-                  </div>
-                </div>
-              ))}
-              <IssueThread
-                issue={issue.slug}
-                revisionsJson={JSON.stringify(revisionsOf(issue.slug))}
-              />
-              {!issue.comments.length && (
-                <p className="dim">No comments yet.</p>
-              )}
-            </div>
-          </details>
         </article>
         <Properties issue={issue} />
       </main>
