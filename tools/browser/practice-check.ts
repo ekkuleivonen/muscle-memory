@@ -115,8 +115,6 @@ try {
   const [opened] = await until("practice.opened");
   assert.equal(opened.attemptId, started.attemptId);
   assert.ok(opened.data.environment?.browser);
-  // Playwright drives this browser, and the record says so.
-  assert.equal(opened.data.environment.automated, true);
 
   // Copying from the challenge records what was copied.
   await page.locator(".practice-challenge h1").selectText();

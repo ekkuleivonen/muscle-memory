@@ -54,7 +54,7 @@ Everything inside a challenge at `/challenges/<KEY>` (`packages/domain/practice.
 | `practice.page`, `practice.runtime`, `practice.closed` | the page visible or hidden, focused, resized; the runtime loading, ready or failing; practice left, or the page hidden as it unloads |
 | `practice.capture-gap` | an explicit lost range of positions (`buffer-full` or `write-conflict`) |
 
-**The environment** in `opened` is coarse and comparable, never identifying (`apps/web/lib/environment.ts`): browser and OS family, the primary pointer (fine, coarse, none), the browser language, the IANA time zone and UTC offset, what a few physical keys type where Chromium says (enough to tell QWERTY, QWERTZ, AZERTY and Nordic layouts apart), and `automated`: the browser reports it is driven by automation (`navigator.webdriver`, set by Playwright, Selenium and Puppeteer). Automated sessions are kept but belong outside analysis; the browser checks in `tools/browser` produce them. Cloudflare's bot score would add a server-side signal, but it needs Enterprise Bot Management; the zone is on the Free plan.
+**The environment** in `opened` is coarse and comparable, never identifying (`apps/web/lib/environment.ts`): browser and OS family, the primary pointer (fine, coarse, none), the browser language, the IANA time zone and UTC offset, what a few physical keys type where Chromium says (enough to tell QWERTY, QWERTZ, AZERTY and Nordic layouts apart).
 
 Keys are heard only on the editor, in the capture phase so keys an editor command consumes are heard too. The clipboard is never read; a paste is the edit it makes.
 
