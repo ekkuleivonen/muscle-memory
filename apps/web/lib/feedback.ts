@@ -163,6 +163,36 @@ export function behaviourOf(
   };
 }
 
+/**
+ * What the person has looked into: the repo files they opened themselves (navigated by pointer
+ * or keyboard, not the IDE opening its default tabs), and the cases of their latest local run.
+ */
+export function investigationOf(
+  records: readonly WorkspaceRecord[],
+  issue: string,
+  revisionFor: (id: string) => Revision | undefined,
+): { opened: string[]; ran: Record<string, boolean> | null } {
+  const { observations } = read(records, issue);
+  const opened = new Set<string>();
+  let ran: Record<string, boolean> | null = null;
+  for (const o of observations) {
+    if (
+      o.type === "observation.workspace.navigated" &&
+      o.data.target === "file" &&
+      o.data.via !== "app" &&
+      (o.data.action === "open" || o.data.action === "show")
+    )
+      opened.add(String(o.data.value));
+    if (
+      o.type === "observation.workspace.run" &&
+      o.data.purpose !== "pull-request" &&
+      TERMINAL.has(String(o.data.status))
+    )
+      ran = casesOf(o, revisionFor);
+  }
+  return { opened: [...opened], ran };
+}
+
 /** A review comment on a pull request, and what happened to it since. */
 export interface Thread {
   comment: string;
@@ -286,10 +316,13 @@ export function due(input: {
   const behaviour = behaviourOf(records, issue, revisionFor);
   const pushes = pushesOf(records, issue, revisionFor);
   const last = pushes.at(-1);
+  const { opened, ran } = investigationOf(records, issue, revisionFor);
   const event = push ? (push.push === 1 ? "pull-request" : "push") : undefined;
   const current: Facts = {
     files,
     behaviour,
+    opened,
+    ...(ran ? { ran } : {}),
     ...(last?.cases ? { cases: last.cases } : {}),
     ...(event ? { event } : {}),
   };
@@ -313,6 +346,8 @@ export function due(input: {
     const facts: Facts = {
       files: pushed.files,
       behaviour,
+      opened,
+      ...(ran ? { ran } : {}),
       ...(pushed.cases ? { cases: pushed.cases } : {}),
       event: event!,
     };

@@ -37,6 +37,8 @@ const HINT_MINUTES = 10;
 function revisionOf(seed: SeedIssue, key: string, project: (typeof SEED_PROJECTS)[number]): Revision {
   const cases = seed.inputs.map((input, index) => ({
     id: `case-${index + 1}`,
+    // Only named cases carry a name, so unnamed issues keep their revision ids.
+    ...(seed.names?.[index] ? { name: seed.names[index] } : {}),
     input: input as Json,
     expected: seed.expected[index] as Json,
     // Hidden cases only run in CI; the repo's test file shows the rest.

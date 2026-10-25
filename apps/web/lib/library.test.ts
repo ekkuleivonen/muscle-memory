@@ -364,3 +364,28 @@ test("pull requests search like issues, plus their own state and checks", () => 
   assert.deepEqual(numbers("project:shop label:money #2"), [2]);
   assert.deepEqual(numbers("project:api"), []);
 });
+
+test("adding the incident left every other issue's live revision as it was", async () => {
+  // The live revision ids before the incident and named cases were added (2f95c99).
+  const { readFileSync } = await import("node:fs");
+  const { execFileSync } = await import("node:child_process");
+  let before: { issues: { id: string; revision: string }[] };
+  try {
+    before = JSON.parse(
+      execFileSync("git", ["show", "2f95c99:content/catalog.json"], {
+        encoding: "utf8",
+        maxBuffer: 64 * 1024 * 1024,
+      }),
+    );
+  } catch {
+    return; // Not a checkout with that history (a source archive): nothing to compare.
+  }
+  const now = JSON.parse(
+    readFileSync(new URL("../../../content/catalog.json", import.meta.url), "utf8"),
+  ) as { issues: { id: string; revision: string }[]; revisions: Record<string, unknown> };
+  for (const issue of before.issues) {
+    const current = now.issues.find((i) => i.id === issue.id);
+    assert.equal(current?.revision, issue.revision, issue.id);
+    assert.ok(now.revisions[issue.revision], `${issue.id} revision kept`);
+  }
+});

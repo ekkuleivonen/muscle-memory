@@ -54,7 +54,7 @@ function caseLines(
         ? { text: `✔ hidden case ${check.id}`, tone: "pass" }
         : { text: `✘ hidden case ${check.id}`, tone: "fail" },
     ];
-  const label = caseLabel(challenge, check.input);
+  const label = check.name ?? caseLabel(challenge, check.input);
   if (passed) return [{ text: `✔ ${label}`, tone: "pass" }];
   const out: Line[] = [{ text: `✘ ${label}`, tone: "fail" }];
   if (result?.error) return [...out, ...errorLines(result.error, "    ")];

@@ -95,3 +95,16 @@ test("each person sees one stable wording of a comment", () => {
   );
   assert.equal(seen.size, 3);
 });
+
+test("investigation triggers read files opened and the latest local run, nothing else", () => {
+  assert.equal(evaluate({ opened: "logs/app.log" }, facts({})), false);
+  assert.equal(evaluate({ opened: "logs/app.log" }, facts({}, { opened: ["README.md"] })), false);
+  assert.equal(evaluate({ opened: "logs/app.log" }, facts({}, { opened: ["logs/app.log"] })), true);
+  assert.equal(evaluate({ ran: "case-2", is: "failing" }, facts({})), false);
+  const ran = facts({}, { ran: { "case-2": false } });
+  assert.equal(evaluate({ ran: "case-2", is: "failing" }, ran), true);
+  assert.equal(evaluate({ ran: "case-2", is: "passing" }, ran), false);
+  // A local run is not a pull request's checks, and the other way round.
+  assert.equal(evaluate({ check: "case-2", is: "failing" }, ran), false);
+  assert.equal(evaluate({ ran: "case-2", is: "failing" }, facts({}, { cases: { "case-2": false } })), false);
+});

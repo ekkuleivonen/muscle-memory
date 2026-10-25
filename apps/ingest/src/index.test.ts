@@ -190,3 +190,42 @@ test("aggregates are served from the control bucket, or empty before the first r
   assert.equal(response.headers.get("cache-control"), "public, max-age=3600");
   assert.equal((await response.json()).issues["QUICK-1"].n, 3);
 });
+
+test("board records from 6.0.0 and 7.0.0 are both accepted, older ones are not", async () => {
+  const { env, sent } = fakes();
+  const me = await device();
+  const board = (sequence: number, captureVersion: string, extra: Record<string, unknown> = {}) =>
+    observation(me.participantId, sequence, {
+      type: "observation.board.moved",
+      observationId: `board-a.${sequence}`,
+      source: { id: "board-a", sequence },
+      captureVersion,
+      data: { issueKey: "INC-1", from: "todo", to: "in-progress", via: "pointer", trigger: "start-work", onBoardBefore: 0, nudged: false },
+      ...extra,
+    });
+  const records = [
+    // Still in an outbox from before the replay release.
+    board(1, "board-capture-6.0.0", { consentVersion: "terms-2026-10-24" }),
+    board(2, "board-capture-7.0.0", {
+      consentVersion: "terms-2026-10-25.1",
+      type: "observation.board.deployed",
+      data: { issueKey: "INC-1", pullRequest: 1, runId: "run-1", via: "pointer" },
+    }),
+    board(3, "board-capture-5.0.0"),
+  ].map((r) => ({ ...r, recordId: JSON.parse(r.payload).observationId }));
+  const response = await handle(
+    post("/ingest/v1/batches", { protocol: INGEST_PROTOCOL, participantId: me.participantId, proof: me.proof, records }),
+    env,
+  );
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.accepted, 2);
+  // Each row keeps the exact consent version its device recorded.
+  assert.deepEqual(
+    sent.map((row) => [row.type, row.capture_version, row.consent_version]),
+    [
+      ["observation.board.moved", "board-capture-6.0.0", "terms-2026-10-24"],
+      ["observation.board.deployed", "board-capture-7.0.0", "terms-2026-10-25.1"],
+    ],
+  );
+});

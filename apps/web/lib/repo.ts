@@ -7,7 +7,8 @@
 import type { FileRole, Workspace } from "../../../packages/content/model";
 import type { LanguageId } from "./languages";
 
-export type FileLanguage = LanguageId | "markdown";
+/** "text": plain text without highlighting, such as a log file. */
+export type FileLanguage = LanguageId | "markdown" | "text";
 
 export interface RepoFile {
   path: string;
@@ -39,7 +40,7 @@ export interface RepoSource {
   schema?: string;
   /** C and C++: the adapter from JSON arguments to the function's types. */
   adapter?: string;
-  criteria: readonly { input: unknown; expected: unknown }[];
+  criteria: readonly { input: unknown; expected: unknown; name?: string }[];
   project?: { slug: string; title: string; story?: string };
   /** JavaScript and TypeScript: where the entry file lives, when not src/<entry point>. */
   entry?: string;
@@ -131,20 +132,27 @@ def test_${snake(src.entrypoint)}(given, expected):
 }
 
 function jsTests(src: RepoSource, module: string, typed: boolean): string {
+  // Named cases read as named tests; unnamed ones keep the numbered form.
+  const named = src.criteria.some((c) => c.name);
   const cases = src.criteria
-    .map((c) => `  [${json(c.input)}, ${json(c.expected)}],`)
+    .map((c) =>
+      named
+        ? `  [${json(c.name ?? "")}, ${json(c.input)}, ${json(c.expected)}],`
+        : `  [${json(c.input)}, ${json(c.expected)}],`,
+    )
     .join("\n");
   const fn = src.entrypoint;
+  const row = named ? "[string, unknown, unknown][]" : "[unknown, unknown][]";
   return `${header("//", src)}
 import { describe, expect, it } from "vitest";
 import { ${fn} } from "./${module}";
 
-const cases${typed ? ": [unknown, unknown][]" : ""} = [
+const cases${typed ? `: ${row}` : ""} = [
 ${cases}
 ];
 
 describe("${fn}", () => {
-  it.each(cases)("case %#", (input, expected) => {
+  it.each(cases)(${named ? `"%s", (_name, input, expected)` : `"case %#", (input, expected)`} => {
 ${
   src.parameters
     ? `    expect(${fn}(...${typed ? `(input as Parameters<typeof ${fn}>)` : "input"})).toEqual(expected);`

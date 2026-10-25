@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   BOARD_CAPTURE_VERSION,
+  boardDeploy,
   boardMove,
   boardPayloads,
   boardRecord,
@@ -118,9 +119,26 @@ test("only merging a pull request moves an issue to Done", () => {
   assert.throws(bad({ trigger: "status-menu" }), /Done/);
   assert.throws(bad({ runId: undefined }), /Done/);
   assert.throws(bad({ pullRequest: 0 }), /Done/);
-  assert.throws(bad({ from: "done", to: "todo" }), /on to Done/);
+  assert.throws(bad({ from: "done", to: "todo" }), /replay/);
   // Nothing is automatic, Done included.
   assert.throws(bad({ via: "automatic" }), /Unknown way/);
+});
+
+test("only a replay takes a done issue back, to In progress, without a pull request", () => {
+  const replay = {
+    ...base.data,
+    from: "done" as const,
+    to: "in-progress" as const,
+    trigger: "replay" as const,
+  };
+  const move = boardMove({ ...base, data: replay });
+  assert.equal(move.data.trigger, "replay");
+  assert.equal("pullRequest" in move.data, false);
+  const bad = (change: object) => () =>
+    boardMove({ ...base, data: { ...replay, ...change } });
+  assert.throws(bad({ to: "todo" }), /replay/);
+  assert.throws(bad({ trigger: "status-menu" }), /replay/);
+  assert.throws(bad({ from: "todo" }), /replay/);
 });
 
 test("a reply to a review comment is recorded on the board, its text bounded", () => {
@@ -222,4 +240,35 @@ test("arrivals and shares carry a referral code, never anything that names a per
     boardProfile({ ...common, data: { from: "play", answers: { languages: ["go"] } } }).data.from,
     "play",
   );
+});
+
+test("a simulated deploy names the merged pull request and its run", () => {
+  const deploy = boardDeploy({
+    ...base,
+    issue: { id: "checkout-guest-shipping", revision: "sha256:" + "b".repeat(64) },
+    data: { issueKey: "INC-1", pullRequest: 2, runId: "run-7", via: "keyboard" },
+  });
+  assert.equal(deploy.type, "observation.board.deployed");
+  assert.equal(deploy.captureVersion, "board-capture-7.0.0");
+  assert.deepEqual(deploy.data, { issueKey: "INC-1", pullRequest: 2, runId: "run-7", via: "keyboard" });
+  const bad = (data: object) => () =>
+    boardDeploy({
+      ...base,
+      issue: { id: "checkout-guest-shipping", revision: "sha256:" + "b".repeat(64) },
+      data: { issueKey: "INC-1", pullRequest: 2, runId: "run-7", via: "pointer", ...data },
+    });
+  assert.throws(bad({ pullRequest: 0 }), /pull request/);
+  assert.throws(bad({ via: "automatic" }), /Unknown way/);
+});
+
+test("board observations keep the exact Terms version accepted, dated or dated with a revision", async () => {
+  const { LEGAL_VERSION } = await import("../../apps/web/lib/legal");
+  // What the app ships today, stored exactly as accepted: never mapped to its date.
+  assert.equal(LEGAL_VERSION, "2026-10-25.1");
+  assert.equal(boardMove({ ...base, termsVersion: LEGAL_VERSION }).consentVersion, "terms-2026-10-25.1");
+  // Versions accepted before revisions existed stay valid and unchanged.
+  assert.equal(boardMove({ ...base, termsVersion: "2026-10-24" }).consentVersion, "terms-2026-10-24");
+  assert.equal(boardMove({ ...base, termsVersion: "2026-10-25.12" }).consentVersion, "terms-2026-10-25.12");
+  for (const bad of ["latest", "", "2026-10-25.", "2026-10-25.x", "2026-10-25.1.2", " 2026-10-25", "2026-10-25 ", "2026-1-25", "2026-10-25-1", "terms-2026-10-25"])
+    assert.throws(() => boardMove({ ...base, termsVersion: bad }), /Terms version/, JSON.stringify(bad));
 });

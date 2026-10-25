@@ -1,6 +1,7 @@
 "use client";
 import { tabKeys } from "../../lib/tab-keys";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useEffect,
   useMemo,
@@ -39,7 +40,9 @@ import {
   timeAgo,
   type PullRequestRecord,
 } from "../../lib/activity";
+import { attemptRecords } from "../../lib/attempts";
 import { statusOf } from "../../lib/board";
+import { incidentState, isIncident } from "../../lib/incident";
 import { mergedPullRequests } from "../../lib/pulls";
 import {
   due,
@@ -180,7 +183,10 @@ export function Ide({
   });
   /** Something new arrived in the ticket's thread while another view was showing. */
   const [unread, setUnread] = useState(false);
+  /** What teammates just said, shown where the person is working: the latest release only. */
+  const [notes, setNotes] = useState<TeamNote[]>([]);
 
+  const router = useRouter();
   const layout = useIdeLayout();
   const mainRef = useRef<HTMLElement>(null);
   const board = useBoard();
@@ -270,7 +276,8 @@ export function Ide({
       if (!current || !opened) return;
       try {
         await current.recorder.flush();
-        let records = await opened.workspaceRecords();
+        // Feedback belongs to the attempt under way: a replay hears it all again.
+        let records = attemptRecords(await opened.workspaceRecords(), issue.slug);
         const releases = due({
           revision,
           records,
@@ -283,8 +290,11 @@ export function Ide({
         if (releases.length) {
           current.release(releases);
           await current.recorder.flush();
-          records = await opened.workspaceRecords();
-          setMessage(announcement(releases));
+          records = attemptRecords(await opened.workspaceRecords(), issue.slug);
+          const said = teamNotes(releases);
+          setNotes(said);
+          // The words themselves are shown as notes; the status line keeps the rest.
+          setMessage(announcement(releases.filter((r) => r.kind === "resolved")));
           if (
             releases.some(
               (r) =>
@@ -336,14 +346,29 @@ export function Ide({
       store.current ??= await openPracticeStore();
       const participantId = await store.current.participantId();
       participant.current = participantId;
-      const records = await store.current.workspaceRecords();
+      const all = await store.current.workspaceRecords();
+      // An incident attempt stays on the revision it started on, whatever the URL says.
+      if (isIncident(issue.key)) {
+        const pinned = incidentState(all).revision;
+        if (pinned && pinned !== issue.revision && revisions[pinned]) {
+          if (current())
+            router.replace(
+              `/work/${issue.key}?revision=${encodeURIComponent(pinned)}`,
+            );
+          return;
+        }
+      }
+      // Only the attempt under way (a replay starts a new one); earlier ones stay recorded.
+      const records = attemptRecords(all, issue.slug);
       const recovered: RecoveredCode | null = latestSavedCode(
         records,
         participantId,
         issue.slug,
       );
       const history = pullRequestHistory(records, participantId, issue.slug);
-      const mergedNumbers = mergedPullRequests(records, issue.slug);
+      // Numbers continue across attempts, so they come from every pull request.
+      const numbered = pullRequestHistory(all, participantId, issue.slug);
+      const mergedNumbers = mergedPullRequests(all, issue.slug);
       const homeHost = hosts.current.get(home);
       // A superseded open must not create a session or record anything.
       if (!homeHost || !current()) return;
@@ -378,7 +403,7 @@ export function Ide({
         keymap: keys,
         types: types.current ?? undefined,
         runtime: issue.runnable && engine ? engine.runtime : null,
-        pullRequestsBefore: history[0]?.number ?? 0,
+        pullRequestsBefore: numbered[0]?.number ?? 0,
         openPullRequest: () => {
           const open = openPullRef.current;
           return open ? { number: open.number, pushes: open.pushes } : null;
@@ -553,7 +578,11 @@ export function Ide({
     shownTabs.current = tabs;
   }, [tabs, isOpen]);
   useEffect(() => {
-    if (isOpen) session.current?.navigated("file", "show", active, via());
+    if (!isOpen) return;
+    const how = via();
+    session.current?.navigated("file", "show", active, how);
+    // Opening a file is investigation, which teammates may respond to.
+    if (how !== "app") review();
   }, [active, isOpen]);
   useEffect(() => {
     if (isOpen) session.current?.navigated("side", "show", view, via());
@@ -931,6 +960,37 @@ export function Ide({
             aria-labelledby={`result-tab-${panel}`}
             tabIndex={0}
           >
+            {notes.length > 0 && (
+              <div className="ide-team-notes" role="status">
+                {notes.map((note, index) => (
+                  <p key={index} className="ide-team-note">
+                    <span className="ide-team-text">
+                      <b>{note.author}</b>{" "}
+                      <span className="faint">· {note.role}</span>{" "}
+                      {note.text}
+                    </span>{" "}
+                    {note.pullRequest ? (
+                      <Link href={pullHref(issue.key, note.pullRequest)}>
+                        View #{note.pullRequest}
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        className="ide-link"
+                        onClick={() => {
+                          setView("ticket");
+                          setUnread(false);
+                          if (window.matchMedia("(max-width: 860px)").matches)
+                            mobileSide.current?.showModal();
+                        }}
+                      >
+                        Open ticket
+                      </button>
+                    )}
+                  </p>
+                ))}
+              </div>
+            )}
             {message && (
               <p className="ide-message" role="status">
                 {message}
@@ -1253,7 +1313,7 @@ function Tests({
             // CI's hidden cases keep their input and output to themselves.
             label={
               check.visible
-                ? caseLabel(challenge, check.input)
+                ? (check.name ?? caseLabel(challenge, check.input))
                 : `hidden case ${check.id}`
             }
             expected={check.expected}
@@ -1385,7 +1445,17 @@ function PullRequests({
             </Link>
           </p>
         ))}
-      {done && mergedPull && (
+      {done && mergedPull && isIncident(issue.key) && (
+        <p className="ide-done">
+          Pull request #{mergedPull.number} is merged, but checkout is still
+          down until it ships.{" "}
+          <Link href={pullHref(issue.key, mergedPull.number)}>
+            Deploy it from the pull request
+          </Link>
+          .
+        </p>
+      )}
+      {done && mergedPull && !isIncident(issue.key) && (
         <p className="ide-done">
           Pull request #{mergedPull.number} merged. {issue.key} is <b>Done</b>.{" "}
           <Link href="/dashboard">Back to your dashboard</Link> or{" "}
@@ -1472,6 +1542,32 @@ function comments(count: number): string {
 }
 
 /** One line in the panel saying what teammates just did. */
+interface TeamNote {
+  author: string;
+  role: string;
+  text: string;
+  /** A review comment's pull request; absent for the ticket's thread. */
+  pullRequest?: number;
+}
+
+/** The words teammates just released, for showing in place: comments and hints. */
+function teamNotes(releases: readonly Release[]): TeamNote[] {
+  return releases.flatMap((r): TeamNote[] => {
+    if (r.kind === "resolved") return [];
+    const plain = (text: string) => text.replace(/`/g, "");
+    if (r.kind === "hint")
+      return [{ author: r.hint.author.name, role: r.hint.author.role, text: plain(r.hint.text) }];
+    return [
+      {
+        author: r.comment.author.name,
+        role: r.comment.author.role,
+        text: plain(r.comment.text[r.wording] ?? r.comment.text[0]),
+        ...(r.pullRequest ? { pullRequest: r.pullRequest } : {}),
+      },
+    ];
+  });
+}
+
 function announcement(releases: readonly Release[]): string {
   return releases
     .map((r) => {

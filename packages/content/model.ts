@@ -22,7 +22,9 @@ export interface Persona {
  * When a teammate comment or hint is released. Every trigger is a pure function of recorded
  * facts, so it can be re-evaluated later and gives the same answer (./triggers). Events:
  * opened is the issue's thread as the ticket shows it; pull-request is opening one (push 1);
- * push is every later push to it.
+ * push is every later push to it. Investigation: `opened` fires once the person has opened a
+ * file of the repo themselves; `ran` reads the latest local run (Run tests), as `check` reads
+ * the latest pull request's checks.
  */
 export type Trigger =
   | { readonly event: "opened" | "pull-request" | "push" }
@@ -38,6 +40,8 @@ export type Trigger =
       readonly file?: string;
     }
   | { readonly check: string; readonly is: "failing" | "passing" }
+  | { readonly ran: string; readonly is: "failing" | "passing" }
+  | { readonly opened: string }
   | {
       readonly behaviour:
         | "active-minutes-without-progress"
@@ -111,6 +115,8 @@ export interface Workspace {
 
 export interface Case {
   readonly id: string;
+  /** What the case is about, as the repo's test names it; unnamed cases are numbered. */
+  readonly name?: string;
   readonly input: Json;
   readonly expected: Json;
   /** Shown in the repo's test file; hidden cases only run in CI. */

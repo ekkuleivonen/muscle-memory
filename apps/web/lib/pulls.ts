@@ -9,6 +9,7 @@
  */
 import { casesRun, type Revision } from "../../../packages/content/model";
 import type { Json } from "../../../packages/domain/json";
+import { attemptIndex } from "./attempts";
 import {
   pullRequestResult,
   type WorkspaceRecord,
@@ -36,7 +37,10 @@ export interface PullSummary {
   state: "open" | "merged";
   /** When the person merged it. */
   mergedAt?: string;
-  /** Another of this issue's pull requests that was merged, which put the issue in Done. */
+  /**
+   * Another of this issue's pull requests merged in the same attempt, which put the issue in
+   * Done. A replay starts a new attempt (./attempts), whose pull requests can be merged again.
+   */
   otherMerged?: number;
 }
 
@@ -79,6 +83,15 @@ function observations(records: readonly WorkspaceRecord[]): Observation[] {
     );
 }
 
+/** Replay times by issue, oldest first: each starts a new attempt. */
+function replays(all: readonly Observation[]): Map<string, string[]> {
+  const times = new Map<string, string[]>();
+  for (const o of all)
+    if (o.type === "observation.board.moved" && o.data.trigger === "replay" && o.issue)
+      times.set(o.issue, [...(times.get(o.issue) ?? []), o.occurredAt]);
+  return times;
+}
+
 /** Merge times by issue and pull request number: "frequency-map#2" → time. */
 function merges(all: readonly Observation[]): Map<string, string> {
   const merged = new Map<string, string>();
@@ -111,13 +124,19 @@ export function mergedPullRequests(
 function summary(
   pushes: readonly Observation[],
   merged: Map<string, string>,
+  replayed: Map<string, string[]> = new Map(),
 ): PullSummary {
   const o = pushes[pushes.length - 1];
   const mergedAt = merged.get(`${o.issue}#${Number(o.data.number)}`);
-  const other = [...merged.keys()]
-    .map((key) => key.split("#"))
+  const times = replayed.get(o.issue!) ?? [];
+  const attempt = attemptIndex(times, pushes[0].occurredAt);
+  const other = [...merged.entries()]
+    .map(([key, at]) => [...key.split("#"), at])
     .find(
-      ([id, n]) => id === o.issue && Number(n) !== Number(o.data.number),
+      ([id, n, at]) =>
+        id === o.issue &&
+        Number(n) !== Number(o.data.number) &&
+        attemptIndex(times, at) === attempt,
     )?.[1];
   return {
     issue: o.issue!,
@@ -155,8 +174,9 @@ export function allPullRequests(
 ): PullSummary[] {
   const all = observations(records);
   const merged = merges(all);
+  const replayed = replays(all);
   return grouped(all)
-    .map((pushes) => summary(pushes, merged))
+    .map((pushes) => summary(pushes, merged, replayed))
     .sort((a, b) => b.at.localeCompare(a.at));
 }
 
@@ -243,13 +263,14 @@ export function pullRequestDetail(
 ): PullDetail | null {
   const all = observations(records).filter((o) => o.issue === issue);
   const merged = merges(all);
+  const replayed = replays(all);
   const groups = grouped(all);
   const own = groups.find((g) => Number(g[0].data.number) === number);
   if (!own) return null;
-  const pull = summary(own, merged);
+  const pull = summary(own, merged, replayed);
   const before = groups
     .filter((g) => Number(g[0].data.number) < number)
-    .map((g) => summary(g, merged))
+    .map((g) => summary(g, merged, replayed))
     .sort((a, b) => b.number - a.number)[0];
   // Its pushes' runs, and which push each one was.
   const pushOf = new Map(

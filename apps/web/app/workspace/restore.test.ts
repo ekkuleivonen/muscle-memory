@@ -9,6 +9,7 @@ import {
 import { latestSavedCode } from "../../../../packages/capture/restore";
 import type { WorkspaceRecord } from "../../../../packages/domain/workspace";
 import type { Runner } from "../../../../packages/runner/runner";
+import { attemptRecords } from "../../lib/attempts";
 import { live } from "../../lib/test-fixtures";
 import { WorkspaceSession } from "./session";
 
@@ -104,6 +105,37 @@ test("viewing or merging the issue in the tracker is not a newer workspace sessi
   assert.equal(recovered.complete, true);
   assert.equal(recovered.fromEarlierSession, false);
   assert.equal(recovered.files[fixture.path], editor.text());
+});
+
+test("a replay opens on the starter, and the earlier attempt's code stays recoverable", async () => {
+  const sink = new MemorySink();
+  const first = workspace(sink);
+  first.type("# my fix");
+  await first.session.recorder.flush();
+  const replay: WorkspaceRecord = {
+    recordId: "board.replay",
+    kind: "observation",
+    participantId: P,
+    payload: JSON.stringify({
+      observationId: "board.replay",
+      type: "observation.board.moved",
+      issue: ISSUE,
+      source: { id: "board", sequence: 1 },
+      occurredAt: new Date(Date.now() + 60_000).toISOString(),
+      data: { from: "done", to: "in-progress", trigger: "replay" },
+    }),
+  };
+  const all = [...sink.records.values(), replay];
+  // The replay has nothing of its own yet: the IDE opens on the starter.
+  assert.equal(latestSavedCode(attemptRecords(all, ISSUE), P, ISSUE), null);
+  // Nothing was deleted: the first attempt still restores exactly.
+  const before = latestSavedCode(
+    attemptRecords(all, ISSUE, new Date().toISOString()),
+    P,
+    ISSUE,
+  )!;
+  assert.equal(before.files[fixture.path], first.text());
+  assert.equal(all.length, sink.records.size + 1);
 });
 
 test("1 to 24 ordinary edits since opening restore exactly", async () => {

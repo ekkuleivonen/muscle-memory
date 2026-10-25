@@ -945,3 +945,47 @@ dialog::backdrop {
     min-height: 36px;
   }
 }
+
+/* What a teammate just said, in the panel where the person is working. */
+.ide-team-notes {
+  margin: 8px 0 12px;
+}
+.ide-team-note {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  margin: 0 0 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg-subtle);
+  font-size: 13px;
+}
+.ide-team-text {
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.ide-team-note > a,
+.ide-team-note > button {
+  flex: none;
+  white-space: nowrap;
+}
+.ide-team-note .ide-link {
+  font-family: inherit;
+  font-size: inherit;
+  text-decoration: underline;
+}
+@media (max-width: 860px) {
+  .ide-team-note {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .ide-team-text {
+    -webkit-line-clamp: 5;
+  }
+}

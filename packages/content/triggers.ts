@@ -22,6 +22,10 @@ export interface Facts {
   readonly files: Readonly<Record<string, string>>;
   /** Case id → passed, from the latest pull request checks; absent before the first. */
   readonly cases?: Readonly<Record<string, boolean>>;
+  /** Case id → passed, from the latest local run (Run tests); absent before the first. */
+  readonly ran?: Readonly<Record<string, boolean>>;
+  /** Repo files the person opened themselves (not the IDE opening them), by path. */
+  readonly opened?: readonly string[];
   readonly behaviour: Behaviour;
 }
 
@@ -43,6 +47,11 @@ export function evaluate(trigger: Trigger, facts: Facts): boolean {
     const passed = facts.cases?.[trigger.check];
     return passed !== undefined && passed === (trigger.is === "passing");
   }
+  if ("ran" in trigger) {
+    const passed = facts.ran?.[trigger.ran];
+    return passed !== undefined && passed === (trigger.is === "passing");
+  }
+  if ("opened" in trigger) return facts.opened?.includes(trigger.opened) ?? false;
   const value = {
     "active-minutes-without-progress": facts.behaviour.activeMinutesWithoutProgress,
     "runs-without-progress": facts.behaviour.runsWithoutProgress,

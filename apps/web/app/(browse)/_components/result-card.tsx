@@ -26,7 +26,7 @@ type Channel = "copy" | "x" | "linkedin" | "native";
 export function receiptLines(m: Metrics): [string, string, boolean?][] {
   return [
     ["active time", duration(m.t)],
-    ["read before typing", duration(m.rd)],
+    ["opened to first edit", duration(m.rd)],
     ["keystrokes", String(m.ks)],
     ["typos fixed (est.)", String(m.ty)],
     ["peak speed", m.w ? `${m.w} wpm` : "–"],
@@ -191,7 +191,7 @@ export function ResultFacts({ state }: { state: ResultState }) {
  * Copies text: the Clipboard API where the page is a secure context (HTTPS, localhost), else
  * the older select-and-copy, which also works over plain HTTP (a LAN address in development).
  */
-async function copyText(text: string): Promise<boolean> {
+export async function copyText(text: string): Promise<boolean> {
   try {
     if (navigator.clipboard) {
       await navigator.clipboard.writeText(text);
