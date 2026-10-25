@@ -13,9 +13,16 @@ mm_value *mm_call(const mm_value *args) {
     size_t size = (size_t)mm_integer(mm_at(args, 1));
     char *out = calloc(backing, 1);
     int len = normalize_host(host, out, size);
-    /* The return length is part of the contract, not just a success flag. */
-    int invalid = len < 0 || (size_t)len >= size || (size_t)len != strlen(out);
-    mm_value *result = invalid ? mm_new_null() : mm_new_string(out);
+    /* Only the specified -1 return is a legitimate failure. An invalid
+     * nonnegative success must fail the case, not masquerade as null. No
+     * challenge case expects a boolean, so false is a contract-error sentinel. */
+    mm_value *result;
+    if (len == -1)
+        result = mm_new_null();
+    else if (len < 0 || (size_t)len >= size || (size_t)len != strlen(out))
+        result = mm_new_bool(0);
+    else
+        result = mm_new_string(out);
     free(out);
     return result;
 }

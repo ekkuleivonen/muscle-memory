@@ -35,7 +35,7 @@ Revision is the live revision after this audit and the final integration correct
 
 | Key | Revision | Title | Difficulty | Tags | Runtime | Cases | Rules | Private |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| C-001 | `d8bdde681277` | Normalize Host headers, IPv6 literals included | easy | strings, parsing, http | Clang | 5+17 | 1 | 1/6 |
+| C-001 | `35464d4a9a60` | Normalize Host headers, IPv6 literals included | easy | strings, parsing, http | Clang | 5+17 | 1 | 1/7 |
 | C-002 | `4899b029c3c8` | Keep the last N request latencies in memory | medium | arrays, modular-arithmetic | Clang | 2+14 | 0 | 1/3 |
 | CPP-001 | `63cd99a0b96a` | Cache evicts entries that were just used | hard | caching, linked-lists, maps | Clang | 2+13 | 0 | 1/3 |
 | CPP-002 | `b60f7273efa7` | Open-addressing index loses keys after a purge | hard | hash-tables, caching, reading-code | Clang | 5+13 | 1 | 1/3 |
@@ -182,7 +182,7 @@ None of these needs replacing. New challenges shouldn't add to them.
 - JAVA-002 now states Java UTF-16 length and Character classification explicitly. Unicode digit/letter, supplementary-character length and Unicode whitespace cases distinguish the interpretations, with wrong variants retained.
 - SQL-001 now specifies customer-name ordering when revenue ties. Both SQL-001 and SQL-002 have explicit tied-total cases and descending-name wrong variants; no SQL-text pattern is required.
 - TS-002 now states that configured names are nonempty, unpadded and unique ignoring case; conflicting configuration is outside the stated input domain.
-- C-001 now supplies the logical output capacity as a second case argument. Zero-size, undersized, exact-fit and trailing-dot exact-fit cases exercise the existing buffer contract. Backing storage stays large enough to evaluate an incorrect write safely; the returned length must match the result and fit the logical capacity. Returned content is not truncated to fake success. Its alternative was corrected to measure the normalized result before checking capacity.
+- C-001 now supplies the logical output capacity as a second case argument. Zero-size, undersized, exact-fit and trailing-dot exact-fit cases exercise the existing buffer contract. Backing storage stays large enough to evaluate an incorrect write safely; the returned length must match the result and fit the logical capacity. Only the specified -1 return becomes null; invalid success lengths use a distinct failing value. Returned content is not truncated to fake success. Its alternative was corrected to measure the normalized result before checking capacity.
 - PHP-003 says lockouts run from one minute, while cases and the task use 30 seconds left; that is time left, not the lock's length, so it is consistent, just easy to misread.
 - Generated output (`content/catalog.json`) is not committed. Revisions in the matrix are what `npm run build:content` produced for this change.
 
