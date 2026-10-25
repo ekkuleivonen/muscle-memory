@@ -6,6 +6,7 @@ import { PRACTICE_CAPTURE_VERSION } from "../../../packages/domain/practice";
 import { SITE_CAPTURE_VERSION } from "../../../packages/domain/site";
 import { INGEST_PROTOCOL, sha256Hex, type EventRow } from "../../../packages/domain/ingest";
 import { handle, type Env } from "./index";
+import { countryOf } from "../../../packages/domain/ingest";
 
 function fakes() {
   const objects = new Map<string, string>();
@@ -99,6 +100,24 @@ test("a batch becomes one row per record, the payload kept verbatim", async () =
   );
   assert.equal(sent[0].payload, records[0].payload);
   assert.ok(Date.parse(sent[0].received_at) > 0);
+  // No country known (a request outside Cloudflare): null, never guessed.
+  assert.equal(sent[0].country, null);
+});
+
+test("rows carry the country Cloudflare places the upload in, and never the IP address", async () => {
+  const { env, sent } = fakes();
+  const me = await device();
+  const request = post(
+    "/ingest/v1/batches",
+    { protocol: INGEST_PROTOCOL, participantId: me.participantId, proof: me.proof, records: [observation(me.participantId, 1)] },
+    { "cf-connecting-ip": "203.0.113.7" },
+  );
+  Object.defineProperty(request, "cf", { value: { country: "FI", city: "Helsinki" } });
+  assert.equal((await handle(request, env)).status, 200);
+  assert.equal(sent[0].country, "FI");
+  assert.ok(!JSON.stringify(sent).includes("203.0.113.7"));
+  assert.ok(!JSON.stringify(sent).includes("Helsinki"));
+  assert.deepEqual(["FI", "XX", "T1", "fi", 7].map(countryOf), ["FI", null, null, null, null]);
 });
 
 test("gzipped bodies are read; a participant ID belongs to the device that first used it", async () => {

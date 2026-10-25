@@ -21,6 +21,11 @@
       "required": true
     },
     {
+      "name": "country",
+      "type": "string",
+      "required": false
+    },
+    {
       "name": "type",
       "type": "string",
       "required": true

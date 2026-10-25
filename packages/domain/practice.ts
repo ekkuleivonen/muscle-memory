@@ -80,6 +80,11 @@ export interface Environment {
    * QWERTZ, AZERTY and Nordic layouts apart. Null when unknown.
    */
   readonly layout: Readonly<Record<string, string>> | null;
+  /**
+   * The browser says it is driven by automation (navigator.webdriver: Playwright, Selenium,
+   * Puppeteer). Such practice is not a person's: kept, but left out of analysis.
+   */
+  readonly automated: boolean;
 }
 
 export interface PracticeData {

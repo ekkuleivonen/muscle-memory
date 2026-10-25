@@ -11,6 +11,7 @@
 import {
   checkBatch,
   checkRecord,
+  countryOf,
   sha256Hex,
   type EventRow,
 } from "../../../packages/domain/ingest";
@@ -123,10 +124,12 @@ async function batches(
   await claim(env, participantId, proof);
 
   const receivedAt = new Date().toISOString();
+  // Where Cloudflare places the connection, as a country only; the IP address is not kept.
+  const country = countryOf((request as { cf?: { country?: unknown } }).cf?.country);
   const rows: EventRow[] = [];
   const rejected: { recordId: string; reason: string }[] = [];
   for (const record of batch.records) {
-    const verdict = checkRecord(record, participantId, receivedAt);
+    const verdict = checkRecord(record, participantId, receivedAt, country);
     if (verdict.ok) rows.push(verdict.row);
     else rejected.push({ recordId: verdict.recordId, reason: verdict.reason });
   }

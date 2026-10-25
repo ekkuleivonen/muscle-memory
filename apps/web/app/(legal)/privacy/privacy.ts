@@ -30,7 +30,7 @@ That's the gist. The rest is the detail, which the law (reasonably) wants writte
 - **Starting a challenge**: which one, where you started it from (the list, quick start, a link, a suggestion), and for a pick from the list, your search and its place in the list. Stars too.
 - **Pages you view**: which page, its search and filters, the page before it, and when the page is visible, hidden, focused or resized. We can tell you switched away, never to what.
 - **How you work on challenges, keystroke by keystroke**: every key you press in the editor with its exact timing and which physical key it was (arrows and shortcuts too), every edit, pastes as the text they add, cursor moves, scrolling, copies and cuts (where in the code, never your clipboard), text you copy from the challenge itself, the type errors and type hints the editor showed you, every run with its output and results, each submission's result and the rules it broke, completing, and your answers to the questions after completing.
-- **Your setup, coarsely**: browser and operating system family, mouse or touch, language, time zone, and what a few keys on your keyboard type (its layout). Never your exact browser version or anything that singles out your device.
+- **Your setup, coarsely**: browser and operating system family, mouse or touch, language, time zone, what a few keys on your keyboard type (its layout), and whether the browser says it is being driven by automation rather than a person. Never your exact browser version or anything that singles out your device.
 - **Your profile answers**, each time you give one.
 
 Keys are heard only inside the editor, never anywhere else on the page or outside it, and we never read your clipboard. Typing rhythm can tell people apart, the way handwriting can. We record it to study how people work, not to identify anyone, and we won't use it for that.
@@ -39,9 +39,10 @@ Keys are heard only inside the editor, never anywhere else on the page or outsid
 **When it reaches our servers**
 
 - Your browser sends what's above every few seconds, plus the time it arrived. Nothing is sent before you've accepted these terms.
+- **The country your connection comes from**, as our hosting provider places it (Finland, say), stored with your records so we can compare how practice differs between countries. Only the country: never your city, and never your IP address. A VPN or travel can make it wrong, and that's fine.
 - The usual server logs: IP address, browser and timestamps. These are for keeping the lights on and the bots out, and we keep them for **[30]** days. Your records don't carry your IP address.
 
-We don't collect your name, email, location or contacts, and we don't run third-party trackers. If that changes, this page changes first.
+We don't collect your name, email, precise location or contacts, and we don't run third-party trackers. If that changes, this page changes first.
 
 ## Why we use it
 
@@ -69,7 +70,7 @@ Before anything goes public, we strip it of anything that points back to you:
 
 - IDs are replaced with new random ones per dataset.
 - Times are coarsened, and free text you typed is removed.
-- Groups too small to hide in are dropped.
+- Groups too small to hide in are dropped, for example a country with only a few people in it.
 - Record-level releases get an extra review before they go out.
 
 Data that's genuinely anonymous isn't personal data any more, and once published it can't be recalled. That's exactly why you can opt out beforehand: **go stealth** with \`privacy\` in Settings. It covers future releases, including anything built from what you've already done.

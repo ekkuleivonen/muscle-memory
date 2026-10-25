@@ -32,6 +32,11 @@ export interface EventRow {
   readonly participant_id: string;
   /** Server receipt, ISO time: the time to partition and trust. */
   readonly received_at: string;
+  /**
+   * The country the upload came from, as Cloudflare places the connection (ISO 3166-1 alpha-2),
+   * or null when unknown. Never the IP address, which is not stored.
+   */
+  readonly country: string | null;
   readonly type: string;
   readonly capture_version: string | null;
   readonly session_id: string | null;
@@ -71,11 +76,17 @@ export function checkBatch(value: unknown): Batch {
   return batch;
 }
 
+/** A country code as Cloudflare gives it, or null for unknown (XX) and Tor (T1). */
+export function countryOf(value: unknown): string | null {
+  return typeof value === "string" && /^[A-Z]{2}$/.test(value) && value !== "XX" ? value : null;
+}
+
 /** Validates one record against its batch and turns it into a row. Never throws. */
 export function checkRecord(
   record: StoredRecord,
   participantId: string,
   receivedAt: string,
+  country: string | null = null,
 ): Verdict {
   const recordId = typeof record?.recordId === "string" ? record.recordId : "";
   const refuse = (reason: string): Verdict => ({ ok: false, recordId, reason });
@@ -107,6 +118,7 @@ export function checkRecord(
         kind: "artifact",
         participant_id: participantId,
         received_at: receivedAt,
+        country,
         type,
         capture_version: capture,
         session_id: null,
@@ -143,6 +155,7 @@ export function checkRecord(
       kind: "observation",
       participant_id: participantId,
       received_at: receivedAt,
+      country,
       type,
       capture_version: capture,
       session_id: text(value.sessionId),

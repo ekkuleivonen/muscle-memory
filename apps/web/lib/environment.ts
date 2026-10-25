@@ -1,8 +1,8 @@
 /**
  * Coarse facts about where practice runs, recorded with `practice.opened` so behaviour can be
  * compared across comparable groups: browser and OS family, the primary pointer, language, time
- * zone, and what a few physical keys type. Never a user-agent string or anything that could
- * single out a device.
+ * zone, what a few physical keys type, and whether automation drives the browser. Never a
+ * user-agent string or anything that could single out a device.
  */
 import type { Environment } from "../../../packages/domain/practice";
 
@@ -56,5 +56,6 @@ export async function environmentOf(): Promise<Environment> {
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     utcOffsetMinutes: -new Date().getTimezoneOffset(),
     layout: await layoutOf(),
+    automated: navigator.webdriver === true,
   };
 }
