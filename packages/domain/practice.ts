@@ -51,6 +51,17 @@ export type SubmitResult = "passed" | "failed" | "errored" | "cancelled";
  */
 export type StartedFrom = "picker" | "quick-start" | "link" | "next" | "again" | "direct";
 
+/**
+ * Asked after completing a challenge, every one optional: how hard it felt, how sure they were
+ * before submitting, and whether they would have used AI for it at work.
+ */
+export const AFTER_QUESTIONS = {
+  difficulty: ["too-easy", "right", "hard", "too-hard"],
+  confidence: ["sure", "fairly", "unsure", "guessing"],
+  "would-use-ai": ["yes", "maybe", "no"],
+} as const;
+export type AfterQuestion = keyof typeof AFTER_QUESTIONS;
+
 /** Coarse facts about where practice runs: comparable groups, never an identifier. */
 export interface Environment {
   /** Browser family: chrome, safari, firefox, edge, other. */
@@ -189,6 +200,14 @@ export interface PracticeData {
     readonly codeArtifactId: string;
     /** The challenge suggested next, by key, or null when none was. */
     readonly suggested: string | null;
+  };
+  /**
+   * An answer to one of the questions asked after completing (AFTER_QUESTIONS). Answering
+   * again records again; the latest answer for the attempt stands.
+   */
+  "practice.answered": {
+    readonly question: AfterQuestion;
+    readonly answer: string;
   };
   /** The page became visible or hidden, gained or lost focus, or was resized. */
   "practice.page": {

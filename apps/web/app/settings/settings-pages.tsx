@@ -641,9 +641,12 @@ function ProfileForm({ only }: { only?: string }) {
       if (!multi) next[id] = value;
       else {
         const list = (next[id] as string[] | undefined) ?? [];
+        // "none" excludes the rest, and the rest exclude it.
         next[id] = list.includes(value)
           ? list.filter((v) => v !== value)
-          : [...list, value];
+          : value === "none"
+            ? ["none"]
+            : [...list.filter((v) => v !== "none"), value];
       }
       return next;
     });
@@ -672,7 +675,10 @@ function ProfileForm({ only }: { only?: string }) {
   };
   return (
     <SettingsFrame title={only ? "Profile question" : "Profile"}>
-      <p className="t-dim">Change any answer, then save.</p>
+      <p className="t-dim">
+        Every question is optional. Your answers let us compare groups (never
+        people): change any of them, then save.
+      </p>
       <div ref={options} onKeyDown={onKeyDown}>
         {shown.map((question) => {
           const multi = question.kind === "multiselect";

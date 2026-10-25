@@ -4,12 +4,12 @@
  */
 export const PRIVACY = `## The short version
 
-- Muscle Memory is practice that feels like a real job, and **recording how you work is the product**. Your practice history and results are available now. Community comparisons appear only when published aggregate data is available. Model benchmarks and research publications are planned.
+- Muscle Memory is coding practice without AI, and **recording how you work is the product**: we study how people write code. Your progress and results are yours now; community comparisons, model benchmarks and research publications are planned.
 - You get a random handle like \`Quiet-Compiler-4821\`. We don't ask for your name or email.
 - Other people never see your results next to your handle. Future community comparisons will use aggregates, such as percentiles and averages.
 - We may publish **anonymised** stats and datasets. Don't want to be in them? **Go stealth** in Settings, no questions asked. (Fair warning: stealth works both ways, so you won't see other people's stats either.)
 - We don't sell your personal data, and there are no ads.
-- **What you do here is sent to our servers as you go**, and a copy stays in your browser. Delete your account in Settings and it's deleted on both.
+- **What you do here is sent to our servers as you go**, and your browser keeps what practice needs (your latest attempt at each challenge). Delete your account in Settings and it's deleted on both.
 
 That's the gist. The rest is the detail, which the law (reasonably) wants written down.
 
@@ -22,18 +22,19 @@ That's the gist. The rest is the detail, which the law (reasonably) wants writte
 **Your account**
 
 - Your handle. It's random, so it says nothing about you.
-- Your profile answers: experience, how often you code with AI, languages, goal and editor keybindings, and where you gave them. All optional.
+- Your profile answers, all optional: experience, what you do, how you learned to code, where you code, languages, how often and for what you use AI, roughly how much of your shipped code an AI wrote, your goal, whether you touch type, an age band, and editor keybindings, and where you gave them.
 - Which version of these documents you accepted, and when.
 - Your privacy choices, like whether you've gone stealth.
 
 **What you do here**
 
-- **Status changes**: which issue, from and to which status, when, whether you used the mouse or keyboard, how many issues were on your board, and whether we nudged you first.
+- **Starting a challenge**: which one, where you started it from (the list, quick start, a link, a suggestion), and for a pick from the list, your search and its place in the list. Stars too.
 - **Pages you view**: which page, its search and filters, the page before it, and when the page is visible, hidden, focused or resized. We can tell you switched away, never to what.
-- **How you work on issues, keystroke by keystroke**: every key you press in the IDE's editors with its exact timing (arrows and shortcuts too), every edit, pastes as the text they add, cursor moves, scrolling, copies and cuts (where in the code, never your clipboard), which files and panels you open, the type errors and type hints the editor showed you, every run with its output and test results, your pull requests, the teammate comments and hints you received, and your replies.
+- **How you work on challenges, keystroke by keystroke**: every key you press in the editor with its exact timing and which physical key it was (arrows and shortcuts too), every edit, pastes as the text they add, cursor moves, scrolling, copies and cuts (where in the code, never your clipboard), text you copy from the challenge itself, the type errors and type hints the editor showed you, every run with its output and results, each submission's result and the rules it broke, completing, and your answers to the questions after completing.
+- **Your setup, coarsely**: browser and operating system family, mouse or touch, language, time zone, and what a few keys on your keyboard type (its layout). Never your exact browser version or anything that singles out your device.
 - **Your profile answers**, each time you give one.
 
-Keys are heard only inside the IDE's editors, never anywhere else on the page or outside it, and we never read your clipboard. Typing rhythm can tell people apart, the way handwriting can. We record it to study how people work, not to identify anyone, and we won't use it for that.
+Keys are heard only inside the editor, never anywhere else on the page or outside it, and we never read your clipboard. Typing rhythm can tell people apart, the way handwriting can. We record it to study how people work, not to identify anyone, and we won't use it for that.
 - **A random ID** for your browser, so records from the same person stay together without saying who that person is, and a secret only your browser knows, which proves that ID is yours when it sends records or asks us to delete them.
 
 **When it reaches our servers**
@@ -47,21 +48,21 @@ We don't collect your name, email, location or contacts, and we don't run third-
 
 The law asks for a reason (a "legal basis") for everything. Here are ours:
 
-1. **Running the product.** Your board, your progress and suggestions for what to work on next. Community comparisons need published aggregate data; comparisons with LLMs are planned. This is the thing you signed up for. *Basis: performing our contract with you (GDPR Art. 6(1)(b)).*
-2. **Making better issues.** Which issues are too hard or too easy, where people get stuck, and what to write next. *Basis: our legitimate interest in improving Muscle Memory (Art. 6(1)(f)).*
+1. **Running the product.** Your progress, stars, result cards and suggestions for what to work on next. This is the thing you signed up for. *Basis: performing our contract with you (GDPR Art. 6(1)(b)).*
+2. **Making better challenges.** Which challenges are too hard or too easy, where people get stuck, and what to write next. *Basis: our legitimate interest in improving Muscle Memory (Art. 6(1)(f)).*
 3. **Publishing anonymised data.** We think the world could use real data on how people solve engineering problems, and how that compares with LLMs. So we may publish aggregate stats and anonymised, record-level datasets. *Basis: legitimate interest (Art. 6(1)(f)), with an opt-out in Settings (going stealth).* More on how below.
 4. **Security and abuse.** Spotting bots, cheating and attacks. *Basis: legitimate interest (Art. 6(1)(f)).*
 5. **When the law makes us.** If we're legally required to keep or hand over something. *Basis: legal obligation (Art. 6(1)(c)).*
 
 ## Comparisons, and the LLMs
 
-**Community comparisons require published aggregate data. Model benchmarks are planned.** No comparison is shown when data is unavailable.
+**Community comparisons and model benchmarks are planned.** Nothing compares you with anyone yet.
 
-When you compare yourself with other people, they're aggregates: "faster than 70% of people on this issue", never "faster than \`Sunny-Semicolon-7724\`".
+When they come, comparisons with other people will be aggregates: "faster than 70% of people on this challenge", never "faster than \`Sunny-Semicolon-7724\`".
 
 Comparisons are a two-way street. If you go stealth, you're left out of everyone else's comparisons, and you don't see other people's stats in return. Comparisons with LLMs keep working, since those don't need anyone else's data.
 
-Comparing you with LLMs doesn't involve sending your data to them. The models solve the same issues separately, and we compare the results.
+Comparing you with LLMs doesn't involve sending your data to them. The models solve the same challenges separately, and we compare the results.
 
 ## Publishing data, carefully
 
@@ -107,7 +108,7 @@ In your browser, and on Cloudflare (our hosting and storage provider), in **[hos
 
 ## Age
 
-Muscle Memory is for people **16 and older**. If you're younger, please come back in a bit; the issues will still be here.
+Muscle Memory is for people **16 and older**. If you're younger, please come back in a bit; the challenges will still be here.
 
 ## Changes
 

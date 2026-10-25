@@ -21,7 +21,9 @@ import {
 import type { Json } from "../../../../packages/domain/json";
 import {
   EDIT_CHANGES_LIMIT_BYTES,
+  AFTER_QUESTIONS,
   PRACTICE_CAPTURE_GAPS,
+  type AfterQuestion,
   PRACTICE_CAPTURE_VERSION,
   type Environment,
   type KeyEvent,
@@ -337,6 +339,12 @@ export class WorkspaceSession {
       textBytes: cut.originalBytes,
       truncated: cut.truncated,
     });
+  }
+
+  /** An answer to a question asked after completing; unknown answers are not recorded. */
+  answered(question: AfterQuestion, answer: string): void {
+    if (this.closed || !(AFTER_QUESTIONS[question] as readonly string[])?.includes(answer)) return;
+    this.record("practice.answered", { question, answer });
   }
 
   async run(

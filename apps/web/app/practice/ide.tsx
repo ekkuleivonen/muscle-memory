@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import {
+  Fragment,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -19,7 +20,14 @@ import {
   type Difficulty,
   type Revision,
 } from "../../../../packages/content/model";
-import { runFeedback, type StoredRecord } from "../../../../packages/domain/records";
+import {
+  runFeedback,
+  type StoredRecord,
+} from "../../../../packages/domain/records";
+import {
+  AFTER_QUESTIONS,
+  type AfterQuestion,
+} from "../../../../packages/domain/practice";
 import type { Json } from "../../../../packages/domain/json";
 import {
   engineFor,
@@ -32,7 +40,12 @@ import { languageLabel } from "../../lib/library";
 import type { LanguageId } from "../../lib/languages";
 import { mediaTypeOf, type FileLanguage } from "../../lib/entry";
 import { environmentOf } from "../../lib/environment";
-import { attemptFor, complete, readProgress, writeProgress } from "../../lib/progress";
+import {
+  attemptFor,
+  complete,
+  readProgress,
+  writeProgress,
+} from "../../lib/progress";
 import { useProgress, useStars } from "../../lib/progress-hooks";
 import { noteStart, takeStart } from "../../lib/start";
 import { toggleStar, writeStars } from "../../lib/stars";
@@ -106,7 +119,11 @@ type Opening =
 const randomAttempt = () => `attempt-${crypto.randomUUID()}`;
 
 /** Every observation of one attempt at one challenge, parsed. */
-function attemptObservations(records: readonly StoredRecord[], challenge: string, attempt: string) {
+function attemptObservations(
+  records: readonly StoredRecord[],
+  challenge: string,
+  attempt: string,
+) {
   return records.flatMap((r) => {
     if (r.kind !== "observation") return [];
     try {
@@ -191,9 +208,14 @@ export function Ide({
   const [keymap, setKeymap] = useState<Keymap>("standard");
   const [vimMode, setVimMode] = useState("normal");
   /** The attempt under way, and whether it is completed. */
-  const [attempt, setAttempt] = useState<{ id: string; completed: boolean } | null>(null);
+  const [attempt, setAttempt] = useState<{
+    id: string;
+    completed: boolean;
+  } | null>(null);
   /** The store's records once the attempt completed, for the share card. */
-  const [shareRecords, setShareRecords] = useState<readonly StoredRecord[] | null>(null);
+  const [shareRecords, setShareRecords] = useState<
+    readonly StoredRecord[] | null
+  >(null);
 
   function submit(how: "pointer" | "keyboard") {
     if (runner.current?.running || runtimeNow.current.state !== "ready") return;
@@ -245,11 +267,10 @@ export function Ide({
   const starred = stars.includes(issue.key);
   const star = () => {
     writeStars(toggleStar(stars, issue.key));
-    void logStar(
-      { id: issue.slug, revision: issue.revision },
-      !starred,
-      { challengeKey: issue.key, from: "practice" },
-    );
+    void logStar({ id: issue.slug, revision: issue.revision }, !starred, {
+      challengeKey: issue.key,
+      from: "practice",
+    });
   };
   const completedKeys = useMemo(
     () =>
@@ -262,7 +283,12 @@ export function Ide({
   );
   const currentProblem = candidates.find((i) => i.key === issue.key);
   const next = currentProblem
-    ? nextProblem(currentProblem, candidates, completedKeys, readProfileLanguages())
+    ? nextProblem(
+        currentProblem,
+        candidates,
+        completedKeys,
+        readProfileLanguages(),
+      )
     : null;
   // The session's callbacks outlive renders; they read the latest suggestion through this.
   const nextRef = useRef(next);
@@ -302,7 +328,9 @@ export function Ide({
 
   /** The attempt completed: progress says so, and the share card reads the records. */
   async function completed(current: WorkspaceSession, attemptId: string) {
-    writeProgress(complete(readProgress(), issue.slug, attemptId, new Date().toISOString()));
+    writeProgress(
+      complete(readProgress(), issue.slug, attemptId, new Date().toISOString()),
+    );
     if (session.current !== current) return;
     setAttempt({ id: attemptId, completed: true });
     try {
@@ -343,13 +371,20 @@ export function Ide({
       setAttempt({ id: attemptId, completed: done });
       if (done) setShareRecords(records);
       const observed = attemptObservations(records, issue.slug, attemptId);
-      const recovered = latestSavedCode(records, participantId, issue.slug, attemptId);
+      const recovered = latestSavedCode(
+        records,
+        participantId,
+        issue.slug,
+        attemptId,
+      );
       if (recovered)
         setMessage(
           [
             recoveryMessage(recovered),
             observed.some(
-              (o) => o.type === "practice.opened" && o.challengeRevision !== issue.revision,
+              (o) =>
+                o.type === "practice.opened" &&
+                o.challengeRevision !== issue.revision,
             )
               ? "The challenge changed since your last visit. Your code was restored; review the requirements before submitting again."
               : "",
@@ -413,7 +448,9 @@ export function Ide({
         keymap: keys,
         types: types.current ?? undefined,
         runtime: issue.runnable && engine ? engine.runtime : null,
-        hasPreviousChecks: observed.some((o) => o.type === "practice.submitted"),
+        hasPreviousChecks: observed.some(
+          (o) => o.type === "practice.submitted",
+        ),
         // Read at use time, so a runtime reloaded with Retry is the one that runs.
         runner: () => runner.current!,
         onSubmit: (how) => submit(how),
@@ -542,7 +579,9 @@ export function Ide({
     completed: done && !stale && (!verdict || verdict.complete),
     edited: stale && !!verdict,
     verdict,
-    diagnosis: verdict ? diagnose(submission?.outcome ?? null, challenge.cases) : null,
+    diagnosis: verdict
+      ? diagnose(submission?.outcome ?? null, challenge.cases)
+      : null,
   });
   /** Practise this challenge again: a new attempt from the starting code. */
   const again = () => {
@@ -748,7 +787,12 @@ export function Ide({
                           className="btn primary"
                           href={practiceHref(next.key)}
                           onClick={() =>
-                            noteStart({ key: next.key, from: "next", query: null, position: null })
+                            noteStart({
+                              key: next.key,
+                              from: "next",
+                              query: null,
+                              position: null,
+                            })
                           }
                         >
                           Next challenge →
@@ -770,6 +814,12 @@ export function Ide({
                         </button>
                       </>
                     )}
+                    <AfterQuestions
+                      key={attempt.id}
+                      onAnswer={(question, answer) =>
+                        session.current?.answered(question, answer)
+                      }
+                    />
                     {shareRecords && (
                       <ShareOutcome
                         challenge={{ ...issue, id: issue.slug }}
@@ -783,7 +833,9 @@ export function Ide({
                 {run && (
                   <details
                     open={outputOpen}
-                    onToggle={(event) => setOutputOpen(event.currentTarget.open)}
+                    onToggle={(event) =>
+                      setOutputOpen(event.currentTarget.open)
+                    }
                   >
                     <summary>Output</summary>
                     <Output
@@ -806,6 +858,63 @@ export function Ide({
       </p>
       <TermFooter trail={trail} />
       <div ref={sandboxHost} hidden />
+    </div>
+  );
+}
+
+const ASKED: { id: AfterQuestion; message: string; labels: string[] }[] = [
+  {
+    id: "difficulty",
+    message: "How hard was it?",
+    labels: ["too easy", "about right", "hard", "too hard"],
+  },
+  {
+    id: "confidence",
+    message: "Before you submitted, how sure were you it would pass?",
+    labels: ["sure", "fairly sure", "unsure", "guessing"],
+  },
+  {
+    id: "would-use-ai",
+    message: "At work, would you have used AI for this?",
+    labels: ["yes", "maybe", "no"],
+  },
+];
+
+/** Three optional questions after completing, answered with a click each, for this attempt. */
+function AfterQuestions({
+  onAnswer,
+}: {
+  onAnswer(question: AfterQuestion, answer: string): void;
+}) {
+  const [answers, setAnswers] = useState<
+    Partial<Record<AfterQuestion, string>>
+  >({});
+  return (
+    <div className="after-questions" aria-label="A few questions, all optional">
+      {ASKED.map((question) => (
+        <p key={question.id} className="after-question">
+          <span className="after-mark">?</span> {question.message}{" "}
+          {AFTER_QUESTIONS[question.id].map((value, index) => (
+            <Fragment key={value}>
+              {index > 0 && <span className="faint">·</span>}
+              <button
+                type="button"
+                className="after-answer"
+                aria-pressed={answers[question.id] === value}
+                onClick={() => {
+                  setAnswers((current) => ({
+                    ...current,
+                    [question.id]: value,
+                  }));
+                  onAnswer(question.id, value);
+                }}
+              >
+                {question.labels[index]}
+              </button>
+            </Fragment>
+          ))}
+        </p>
+      ))}
     </div>
   );
 }

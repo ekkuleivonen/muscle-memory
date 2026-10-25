@@ -4,11 +4,11 @@
  */
 export const TERMS = `## The short version
 
-- Muscle Memory gives you realistic engineering issues to practice on. Use it to get better, have fun, and don't wreck it for anyone else.
+- Muscle Memory gives you coding challenges to practise on. Use it to get better, have fun, and don't wreck it for anyone else.
 - **You have to be 16 or older.**
 - **We record what you do here**, because that's how the product works. The [Privacy Notice](/privacy) explains what we collect and why.
 - **Your code stays yours.** You give us a licence to use it and to publish it in anonymised datasets.
-- **Solve issues yourself.** No AI assistants in your runs: comparing people with LLMs only works if the people are people.
+- **Solve challenges yourself.** No AI assistants in your runs: comparing people with LLMs only works if the people are people.
 - It's an early product, provided as is. Things will change, and occasionally break.
 
 These Terms are an agreement between you and **rowandreason.com** ("we", "us"). By accepting them (before your first page, or when you start a challenge before that), you agree to them.
@@ -24,7 +24,7 @@ These Terms are an agreement between you and **rowandreason.com** ("we", "us"). 
 
 You agree not to:
 
-- **use AI assistants, bots or someone else to solve issues** while presenting the result as your own run. If you want to see what an LLM would do, that's what the LLM comparison is for;
+- **use AI assistants, bots or someone else to solve challenges** while presenting the result as your own run. If you want to see what an LLM would do, that's what the LLM comparison is for;
 - automate accounts, scrape the catalog, or hammer the service;
 - attack, probe or reverse-engineer the service, except through responsible disclosure to **support@rowandreason.com** (thank you in advance);
 - **try to re-identify anyone** in published datasets, or combine them with other data to do so;
@@ -39,11 +39,11 @@ If you break these rules, we may suspend or close your account. Where we reasona
 - You confirm you have the right to give us that licence (see: your employer's code, above).
 - Going stealth in Settings means we leave you out of future releases and of comparisons, and you don't see other people's stats in return. Releases that already went out stay out there, anonymised.
 
-Why the broad licence? Because "anonymised dataset of how people solve issues" only works if we may actually publish the solutions.
+Why the broad licence? Because "anonymised dataset of how people solve challenges" only works if we may actually publish the solutions.
 
 ## Our stuff
 
-The issues, descriptions, tests, design and code of Muscle Memory belong to us or our licensors. Use them to practise, as much as you like. Don't copy the catalog wholesale or run a clone of it.
+The challenges, descriptions, tests, design and code of Muscle Memory belong to us or our licensors. Use them to practise, as much as you like. Don't copy the catalog wholesale or run a clone of it.
 
 ## Published datasets
 
@@ -51,7 +51,7 @@ When we publish anonymised data, it comes with its own licence. Whatever that li
 
 ## The service, as is
 
-Muscle Memory is provided **"as is" and "as available"**, without warranties of any kind, to the extent the law allows. Features will change, issues will be added and retired, and we may pause or stop the service. If we shut down for good, we'll give reasonable notice where we can.
+Muscle Memory is provided **"as is" and "as available"**, without warranties of any kind, to the extent the law allows. Features will change, challenges will be added and retired, and we may pause or stop the service. If we shut down for good, we'll give reasonable notice where we can.
 
 ## Liability
 

@@ -532,3 +532,33 @@ dialog::backdrop {
   max-height: 100%;
   overflow: auto;
 }
+
+/* Optional questions after completing: a line each, answers as inline choices. */
+.after-questions {
+  margin: 12px 0;
+}
+.after-question {
+  margin: 4px 0;
+}
+.after-mark {
+  color: var(--accent);
+}
+.after-answer {
+  border: 0;
+  background: none;
+  padding: 0 0.5ch;
+  font: inherit;
+  color: var(--dim);
+  cursor: pointer;
+}
+.after-answer:hover,
+.after-answer:focus-visible {
+  color: var(--fg);
+  text-decoration: underline;
+}
+.after-answer[aria-pressed="true"] {
+  color: var(--accent);
+}
+.after-answer[aria-pressed="true"]::before {
+  content: "❯";
+}

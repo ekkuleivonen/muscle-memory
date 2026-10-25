@@ -79,9 +79,16 @@ test("pointer choice submits a select and toggles a multiselect", () => {
 test("answers become a profile; skipped questions are left out", () => {
   const answers = {
     experience: "professional",
-    aiUse: "daily",
+    role: "software",
+    learned: "self-taught",
+    context: "startup",
     languages: ["typescript", "cpp"],
+    aiUse: "daily",
+    aiTools: ["completion", "chat"],
+    aiShare: "half",
     goal: "sharp",
+    touchTyping: "yes",
+    age: "25-34",
     editor: "vim",
   };
   assert.deepEqual(

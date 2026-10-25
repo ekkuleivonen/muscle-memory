@@ -15,12 +15,30 @@ export const PROFILE_KEY = "muscle-memory.profile";
 export const CONSENT_COOKIE = "mm_consent";
 export const CONSENT_VALUE = LEGAL_VERSION;
 
+/**
+ * Self-reported, every answer optional (lib/questions.ts asks them). Categories, never free
+ * text, so groups compare and nobody is singled out.
+ */
 export interface Profile {
   experience?: "new" | "some" | "professional" | "veteran";
+  /** What they do: the kind of code they write most. */
+  role?: "student" | "software" | "data" | "infra" | "qa" | "manager" | "other";
+  /** How they mostly learned to code. */
+  learned?: "degree" | "bootcamp" | "self-taught" | "on-the-job";
+  /** Where they write code most. */
+  context?: "company" | "startup" | "freelance" | "open-source" | "school" | "hobby";
+  languages?: LanguageId[];
   /** How often they code with AI help, in their own words: the context for everything else. */
   aiUse?: "daily" | "weekly" | "rarely" | "never";
-  languages?: LanguageId[];
+  /** What they use AI for when coding; "none" alone when nothing. */
+  aiTools?: ("completion" | "chat" | "agents" | "review" | "none")[];
+  /** About how much of the code they ship an AI wrote. */
+  aiShare?: "none" | "some" | "half" | "most" | "nearly-all";
   goal?: "sharp" | "learn" | "interview" | "fun";
+  /** Whether they type without looking at the keys: keystroke timing depends on it. */
+  touchTyping?: "yes" | "mostly" | "no";
+  /** An age band, never a birth date. */
+  age?: "16-24" | "25-34" | "35-44" | "45-54" | "55+";
   editor?: "standard" | "vim";
 }
 

@@ -147,6 +147,11 @@ try {
     (await ofType("practice.clipboard")).filter((v) => v.data.source === "challenge").length,
     1,
   );
+  // The questions after completing are optional, one click each.
+  await page.getByRole("button", { name: "about right", exact: true }).click();
+  const [answered] = await until("practice.answered");
+  assert.deepEqual(answered.data, { question: "difficulty", answer: "right" });
+  assert.equal(answered.attemptId, started.attemptId);
   await shot("practice-after-completion");
 
   // A reload resumes the completed attempt; no new start.
@@ -187,7 +192,7 @@ try {
     after.data.challengeKey,
   );
   console.log(
-    "PASS: picker start, challenge copy, failing and passing submissions, completion, resume, star, practise again, next challenge",
+    "PASS: picker start, challenge copy, failing and passing submissions, completion, questions after it, resume, star, practise again, next challenge",
   );
 } catch (error) {
   console.error("at", page.url());
