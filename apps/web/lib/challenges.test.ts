@@ -27,7 +27,11 @@ test("challenges are live metadata over their revisions", () => {
 });
 
 test("every challenge is listed, by key, and runs in the browser", () => {
-  assert.equal(index.challenges.length, 46);
+  assert.equal(index.challenges.length, catalog.challenges.length);
+  assert.deepEqual(
+    new Set(index.challenges.map((challenge) => challenge.key)),
+    new Set(catalog.challenges.map((challenge) => challenge.key)),
+  );
   assert.ok(index.challenges.every((i) => i.runnable));
   const keys = index.challenges.map((i) => i.key);
   assert.deepEqual(

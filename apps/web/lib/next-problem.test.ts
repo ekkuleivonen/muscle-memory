@@ -30,9 +30,9 @@ test("the same language comes first, at about the same difficulty", () => {
 
 test("leaves out the current challenge and completed ones", () => {
   const current = byKey("JS-003");
-  const suggested = nextProblems(current, challenges, keys("JS-004"), [], 50).map(
-    (i) => i.key,
-  );
+  const suggested = nextProblems(
+    current, challenges, keys("JS-004"), [], challenges.length,
+  ).map((i) => i.key);
   assert.ok(!suggested.includes(current.key));
   assert.ok(!suggested.includes(byKey("JS-004").key));
   assert.equal(suggested.length, challenges.length - 2);
