@@ -1,15 +1,40 @@
 # ENG-332 sharing contract: challenges, solutions and outcomes
 
-**Status: proposal for dot.** What is implemented on this branch is presentation only: no card format, link format, capture version, event or schema changed. Card version 3 has since been approved and implemented (below).
+**Status: implemented on this branch, for dot's combined review and release (ENG-327).** It covers:
 
-## Implemented here (reversible presentation)
+- challenge links;
+- v3 outcome cards (dot-approved fields);
+- v2 legacy reading;
+- one-file solution sharing;
+- selected hooks pinned to exact revisions;
+- the shared-card capture contract.
 
-- **Challenge link, `/try/<KEY>`.** Plain and specific: goal and requirements, then the published examples labelled Input and Expected output (the same shape as ENG-328's `ChallengeExamples`, which can replace the inline markup when composed). Only `visible` cases are shown; checks beyond them stay hidden, as in practice. No "ticket", "tracker", "repo" or "real bug". It has its own preview image naming the challenge, language and one-line goal (`try/[key]/opengraph-image.tsx`, `summary_large_image`). Starting still records the same `start-work` move; nothing recorded changed. "Copy challenge link" replaces "Copy issue link".
-- **Outcome link, `/r/<card>` (version 2 cards, unchanged format).** Sentences say completed and checks passed, never "without AI" as a fact; the editor's no-AI setting is described as a condition. Legacy `fp`/`fn` still decode but are not displayed. The headline names the challenge by title. A v2 card was made at a merge, the completion of the time, so it reads **completed** with its checks; "not completed" if its evidence says it was not merged. PR-era numbers are read in challenge terms without changing their values: pushes (each ran the full checks) → "full checks run", first submission → "first full check", CI-only checks → "checks beyond the examples", local runs → "example runs". Hints and open findings appear only when a card has some. "Production outcome" is gone; the image says the attempt is as the person shared it.
-- **Solution code.** One file is the normal case: the reader shows it as "their solution", the share dialog names the file. Links from multi-file challenges decode exactly as before, and every file is shown in full. Encoding format v1, the all-or-nothing rule, the size limits and the explicit unticked-by-default opt-in are unchanged. A test pins a three-file link with CRLF and non-ASCII text reading back byte for byte.
+No capture version, event shape, collection, consent or telemetry change. ENG-328 owns the completion writer and capture versions and mounts `ShareOutcome` (see the integration hunks below).
+
+## Challenge links, legacy cards and solution code
+
+- **Challenge link, `/try/<KEY>`.**
+  - The page shows the goal and requirements, then the published examples labelled Input and Expected output. This is the same shape as ENG-328's `ChallengeExamples`, which can replace the inline markup when composed.
+  - Only `visible` cases are shown. The checks beyond them stay hidden, as in practice.
+  - There's no "ticket", "tracker", "repo" or "real bug" wording.
+  - It has its own preview image (`try/[key]/opengraph-image.tsx`) showing the challenge, its language, and its selected hook or one-line goal.
+  - Starting still records the same `start-work` move.
+  - The copy button now says "Copy challenge link".
+- **Legacy outcome link, `/r/<card>` with a version 2 card (unchanged format).**
+  - The headline names the challenge. It says completed and the checks passed, never "without AI" as a fact.
+  - Legacy `fp`/`fn` still decode but are not displayed.
+  - A v2 card was made at a merge, so it reads **completed** with its checks, or "not completed" if its evidence says it wasn't merged.
+  - PR-era numbers keep their values but use challenge terms: pushes become "full checks run", first submission becomes "first full check", CI-only checks become "checks beyond the examples", and local runs become "example runs".
+  - Hints and open findings appear only when a card has some.
+  - A v2 card has no revision identity, so it always offers "Try the current version of <KEY>".
+- **Solution code.**
+  - The encoding format (v1), the all-or-nothing rule, the UTF-8 size limits and the opt-in, unticked by default, are unchanged.
+  - One checked file is the normal case: the share dialog names it, and the reader shows it as "their solution".
+  - Links from multi-file challenges decode exactly as before, and every file is shown in full.
+  - If the checked artifact is missing or truncated, ticking the box shows a refusal. The editor's current code is never shared in its place.
 - **Older, malformed and retired links** keep their honest pages, in challenge wording.
 
-The sender (`ShareResult`) is still mounted only by the merged pull request in `pulls.tsx`. That is ENG-328/329 territory and is not touched here.
+The legacy sender (`ShareResult`, v2) is still mounted by the merged pull request in `pulls.tsx`, which is ENG-328/329 territory and isn't touched here.
 
 ## Outcome card version 3 (approved by dot, implemented)
 
@@ -49,7 +74,7 @@ The sender (`ShareResult`) is still mounted only by the merged pull request in `
 
    It renders nothing unless that completion is `automatic`, names this challenge, is on the open revision, and `required` is `[]`. Please supply `required` from the gate evaluated for the completing run's artifact. Today's `completionEligibility` returns `required: []` on early failures too, so pass `null` unless the gate reached rule evaluation for that `runId`.
 
-2. **Shared event card JSON: no capture version change.** `observation.board.shared.card` is opaque JSON that names its own version (`card.v`: 2 for a merged pull request's card, 3 for a completed challenge). `boardShare` validates only `issueKey`, `channel` and `ref`, and ingest never reads the card. So a v3 card is recorded under whatever board capture version is current (7.2.0 with ENG-328), and ENG-332 asks for **no** board capture bump. A global bump would risk hiding new completions, because `completions()` and ingest pin `checks-passed` to exactly 7.2.0. No reader of `shared.card` exists in `tools/`, `apps/ingest` or the aggregates. Optionally, as documentation only, ENG-328 may note in its 7.2.0 comment: "`shared.card` may be a version 3 outcome card (`apps/web/lib/outcome.ts`); the card carries its own version."
+2. **Shared event card JSON: no capture version change.** `observation.board.shared.card` is opaque JSON that names its own version (`card.v`: 2 for a merged pull request's card, 3 for a completed challenge). `boardShare` validates only `issueKey`, `channel` and `ref`, and ingest never reads the card. So a v3 card is recorded under whatever board capture version is current (7.2.0 with ENG-328), and ENG-332 asks for **no** board capture bump. A global bump would risk hiding new completions, because `completions()` and ingest pin `checks-passed` to exactly 7.2.0. No reader of `shared.card` exists in `tools/`, `apps/ingest` or the aggregates. ENG-328 adds this to the same, not-yet-released 7.2.0 comment in `packages/domain/board.ts` (no new version): "`shared.card` may be a version 3 outcome card (`apps/web/lib/outcome.ts`: v, k, l, rv, o, optional f and n, c), shared after a `checks-passed` completion; the card carries its own version, and version 2 cards keep their meaning." It also keeps the composed reader test below in the integrated tree.
 
    Coverage is in `apps/web/lib/share-capture.test.ts`:
    - A v3 card is recorded under the current board version unchanged, and ingest accepts it.
