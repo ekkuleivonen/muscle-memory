@@ -1,0 +1,173 @@
+{
+  "challenge": "GO-002",
+  "task": "The list endpoints accept any page size, and the mobile app sends `per_page=500` to fetch everything in one go. Cap it, don't reject it.\n\n`ParsePage(query)` reads `page` and `per_page` from a URL query string without the leading `?`, such as `page=2&per_page=50`, and returns them as a `Page`.\n\n- `page` defaults to 1 and `per_page` to 20.\n- Each falls back to its default on its own when it is missing, empty, zero, negative or not a whole number.\n- A `per_page` above 100 becomes 100. `page` has no upper limit.\n- Parameter names are matched exactly, other parameters are ignored, and the order of parameters doesn't matter.\n",
+  "language": "go",
+  "file": "parse_page.go",
+  "starter": "package accounts\n\n// Page is the pagination requested by a list endpoint.\ntype Page struct {\n\tPage    int `json:\"page\"`\n\tPerPage int `json:\"perPage\"`\n}\n\n// ParsePage reads page and per_page from a URL query string, with defaults\n// of page 1 and 20 per page, and per_page capped at 100.\nfunc ParsePage(query string) Page {\n\treturn Page{Page: 1, PerPage: 20}\n}\n",
+  "entrypoint": "ParsePage",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": "page=2&per_page=50",
+      "expected": {
+        "page": 2,
+        "perPage": 50
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": "",
+      "expected": {
+        "page": 1,
+        "perPage": 20
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": "per_page=500",
+      "expected": {
+        "page": 1,
+        "perPage": 100
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-4",
+      "input": "page=-1&per_page=abc",
+      "expected": {
+        "page": 1,
+        "perPage": 20
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-5",
+      "input": "page=3",
+      "expected": {
+        "page": 3,
+        "perPage": 20
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-6",
+      "input": "per_page=100",
+      "expected": {
+        "page": 1,
+        "perPage": 100
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": "per_page=101",
+      "expected": {
+        "page": 1,
+        "perPage": 100
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": "page=0&per_page=0",
+      "expected": {
+        "page": 1,
+        "perPage": 20
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": "per_page=-5",
+      "expected": {
+        "page": 1,
+        "perPage": 20
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": "per_page=-500",
+      "expected": {
+        "page": 1,
+        "perPage": 20
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": "page=abc",
+      "expected": {
+        "page": 1,
+        "perPage": 20
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": "per_page=1",
+      "expected": {
+        "page": 1,
+        "perPage": 1
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": "per_page=50&page=4",
+      "expected": {
+        "page": 4,
+        "perPage": 50
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": "page=7&per_page=20&sort=name",
+      "expected": {
+        "page": 7,
+        "perPage": 20
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": "page=&per_page=",
+      "expected": {
+        "page": 1,
+        "perPage": 20
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-16",
+      "input": "page=5&per_page=abc",
+      "expected": {
+        "page": 5,
+        "perPage": 20
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-17",
+      "input": "page=1000000",
+      "expected": {
+        "page": 1000000,
+        "perPage": 20
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-18",
+      "input": "perPage=50",
+      "expected": {
+        "page": 1,
+        "perPage": 20
+      },
+      "hidden": true
+    }
+  ],
+  "rules": []
+}

@@ -1,0 +1,248 @@
+{
+  "challenge": "JS-001",
+  "task": "Kettlebrook's checkout has been failing since Thursday's release, which shipped CHK-412 (free shipping from $30 for loyalty members). Every customer checking out as a guest gets \"Something went wrong\" on the payment page instead of a quote: `POST /quote` returns 500 with `TypeError: Cannot read properties of undefined (reading 'tier')` thrown in `quoteOrder`. Members' orders still get quotes. For example, guest order #88213 (two stoneware mugs at $18.00 each) failed.\n\nFix `quoteOrder` so that every order gets a correct quote.\n\n## Input and output\n\n`quoteOrder(order)` takes an order and returns `{ subtotal, shipping, total }`, all whole cents (never floats); the payment page charges exactly that.\n\n- `order.items` is a list of `{ sku, price, quantity }`, with `price` in cents. `subtotal` is the sum of `price × quantity` over the items.\n- `order.customer` is either a guest, `{ guest: true }`, which has no loyalty record at all, or a member, `{ id, loyalty: { tier } }`, where `tier` is a string such as `\"silver\"`, `\"gold\"` or `\"none\"`.\n- `total` is `subtotal + shipping`.\n\n## Shipping rules\n\n- Standard shipping is $4.95 (495 cents).\n- Shipping is free for everyone when the subtotal is $50.00 (5000 cents) or more.\n- A loyalty member gets free shipping when the subtotal is $30.00 (3000 cents) or more. A loyalty member is a customer with a loyalty record whose tier is not `\"none\"`.\n- A guest is not a loyalty member. A member whose tier is `\"none\"` has lapsed and is not a loyalty member either: both get the standard $50 threshold.\n\n## Code you can use\n\nThe starter imports these; their code is fixed and you cannot change it:\n\n- `lineTotal(item)` returns `item.price * item.quantity`; `sum(amounts)` adds a list of numbers (0 for an empty list).\n- `shippingFor(subtotal, member)` returns the shipping in cents under the rules above: 0 when `subtotal` is at least 3000 if `member` is `true`, or at least 5000 if it is `false`; 495 otherwise. The module also exports the constants `SHIPPING` (495), `FREE_FROM` (5000) and `MEMBER_FREE_FROM` (3000).\n\n## Constraints\n\n- Handle guests and lapsed members explicitly. Do not use `catch` (no `try`/`catch` and no `.catch(`): catching the error would turn the crash into a silently wrong quote.\n",
+  "language": "javascript",
+  "file": "quote.js",
+  "starter": "/**\n * The quote checkout shows and charges for an order, in cents. order.customer is\n * { guest: true } at guest checkout, or a member with a loyalty record.\n */\nexport function quoteOrder(order) {\n  const subtotal = sum(order.items.map(lineTotal));\n  // CHK-412: loyalty members get free shipping from $30.\n  const member = order.customer.loyalty.tier !== \"none\";\n  const shipping = shippingFor(subtotal, member);\n  return { subtotal, shipping, total: subtotal + shipping };\n}\n\n\n// ---- shipping: helpers this code uses. You shouldn't need to change them. ----\n\n/** Standard shipping, in cents. */\nconst SHIPPING = 495;\n/** Free shipping from these subtotals, in cents: for everyone, and for loyalty members (CHK-412). */\nconst FREE_FROM = 5000;\nconst MEMBER_FREE_FROM = 3000;\n\n/** Shipping for an order's subtotal: free from $50, or from $30 for a loyalty member. */\nfunction shippingFor(subtotal, member) {\n  return subtotal >= (member ? MEMBER_FREE_FROM : FREE_FROM) ? 0 : SHIPPING;\n}\n\n\n// ---- money: helpers this code uses. You shouldn't need to change them. ----\n\n/** Money is whole cents everywhere: never floats. */\n\n/** What one line of an order costs before shipping. */\nfunction lineTotal(item) {\n  return item.price * item.quantity;\n}\n\nfunction sum(amounts) {\n  return amounts.reduce((total, amount) => total + amount, 0);\n}\n",
+  "entrypoint": "quoteOrder",
+  "cases": [
+    {
+      "id": "case-1",
+      "name": "member, $35 order: free shipping from $30 (CHK-412)",
+      "input": {
+        "customer": {
+          "id": "m-41022",
+          "loyalty": {
+            "tier": "silver"
+          }
+        },
+        "items": [
+          {
+            "sku": "wool-throw",
+            "price": 3500,
+            "quantity": 1
+          }
+        ]
+      },
+      "expected": {
+        "subtotal": 3500,
+        "shipping": 0,
+        "total": 3500
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "name": "regression: guest order #88213 from the logs",
+      "input": {
+        "customer": {
+          "guest": true
+        },
+        "items": [
+          {
+            "sku": "stoneware-mug",
+            "price": 1800,
+            "quantity": 2
+          }
+        ]
+      },
+      "expected": {
+        "subtotal": 3600,
+        "shipping": 495,
+        "total": 4095
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "name": "guest, $62 order: free shipping from $50",
+      "input": {
+        "customer": {
+          "guest": true
+        },
+        "items": [
+          {
+            "sku": "linen-sheets",
+            "price": 6200,
+            "quantity": 1
+          }
+        ]
+      },
+      "expected": {
+        "subtotal": 6200,
+        "shipping": 0,
+        "total": 6200
+      },
+      "hidden": false
+    },
+    {
+      "id": "case-4",
+      "input": {
+        "customer": {
+          "id": "m-30418",
+          "loyalty": {
+            "tier": "none"
+          }
+        },
+        "items": [
+          {
+            "sku": "tea-towel",
+            "price": 800,
+            "quantity": 5
+          }
+        ]
+      },
+      "expected": {
+        "subtotal": 4000,
+        "shipping": 495,
+        "total": 4495
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-5",
+      "input": {
+        "customer": {
+          "guest": true
+        },
+        "items": [
+          {
+            "sku": "egg-cup",
+            "price": 600,
+            "quantity": 2
+          }
+        ]
+      },
+      "expected": {
+        "subtotal": 1200,
+        "shipping": 495,
+        "total": 1695
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-6",
+      "input": {
+        "customer": {
+          "id": "m-11873",
+          "loyalty": {
+            "tier": "gold"
+          }
+        },
+        "items": [
+          {
+            "sku": "candle",
+            "price": 1250,
+            "quantity": 2
+          }
+        ]
+      },
+      "expected": {
+        "subtotal": 2500,
+        "shipping": 495,
+        "total": 2995
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": {
+        "customer": {
+          "id": "m-52990",
+          "loyalty": {
+            "tier": "gold"
+          }
+        },
+        "items": [
+          {
+            "sku": "jug",
+            "price": 3000,
+            "quantity": 1
+          }
+        ]
+      },
+      "expected": {
+        "subtotal": 3000,
+        "shipping": 0,
+        "total": 3000
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": {
+        "customer": {
+          "guest": true
+        },
+        "items": [
+          {
+            "sku": "blanket",
+            "price": 5000,
+            "quantity": 1
+          }
+        ]
+      },
+      "expected": {
+        "subtotal": 5000,
+        "shipping": 0,
+        "total": 5000
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": {
+        "customer": {
+          "guest": true
+        },
+        "items": [
+          {
+            "sku": "blanket-small",
+            "price": 4999,
+            "quantity": 1
+          }
+        ]
+      },
+      "expected": {
+        "subtotal": 4999,
+        "shipping": 495,
+        "total": 5494
+      },
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": {
+        "customer": {
+          "id": "m-20077",
+          "loyalty": {
+            "tier": "none"
+          }
+        },
+        "items": [
+          {
+            "sku": "wool-throw",
+            "price": 3500,
+            "quantity": 1
+          }
+        ]
+      },
+      "expected": {
+        "subtotal": 3500,
+        "shipping": 495,
+        "total": 3995
+      },
+      "hidden": true
+    }
+  ],
+  "rules": [
+    {
+      "id": "catch-hides-guests",
+      "message": "Do not use catch: handle guests and lapsed members explicitly, so a missing loyalty record can never turn into a silently wrong quote.",
+      "when": {
+        "pattern": "catch\\s*[({]",
+        "present": true
+      }
+    }
+  ]
+}

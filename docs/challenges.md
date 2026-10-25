@@ -86,7 +86,7 @@ A challenge's key is its language's code and a three-digit number: `PY-003`, `JS
 
 Saving a change to revision content makes a new revision under its own hash; there is no version number to choose. Recorded work names the revision it ran against, so it stays readable after the challenge changes. Retire and replace a challenge, rather than revising it, when the problem itself changes substance.
 
-Before launch, formats and revisions can be reset freely (root `AGENTS.md`): the build keeps only live revisions today.
+**The archive.** The build also writes every revision it makes to `content/revisions/<hex>.json`, once, and those files are committed (CI fails when one is missing). The catalog holds only live revisions; the archive holds every revision ever published, so recorded data that names an older hash can still be read against exactly what was practised. An archived file is never rewritten.
 
 ## The private part
 
@@ -109,7 +109,7 @@ Today the catalog is a file built from the folders. Later:
 | What | Where |
 | --- | --- |
 | Challenges, revisions, private parts, change log | a database (Cloudflare D1) behind an admin UI and Cloudflare Access |
-| Published revisions | R2, one immutable object per revision, cached forever |
+| Published revisions | `content/revisions/` today; R2, one immutable object per revision, later |
 | What is live | a small index object: every live challenge's metadata and revision id |
 | Derived stats (solve rate, measured difficulty) | the analysis store, recomputed from observations, never written into challenges |
 

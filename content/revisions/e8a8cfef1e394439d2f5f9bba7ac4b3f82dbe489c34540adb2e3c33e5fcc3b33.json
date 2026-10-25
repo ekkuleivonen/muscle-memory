@@ -1,0 +1,411 @@
+{
+  "challenge": "PY-007",
+  "task": "Some subscribers got last week's newsletter three times. The sync sends one email per customer record, and the CRM export has several records for the same person:\n\n```text\nid  email\n1   Ann@x.io\n2    ann@x.io\n3   bo@x.io\n```\n\n`dedupe(records)` runs before the newsletter sync. It gets a list of customer records, dicts with at least an `id` and an `email`, and returns the list without duplicates.\n\n- Two records are duplicates when their emails match ignoring letter case (any letter, not only ASCII) and spaces around them. Only the email decides; ids and other fields don't.\n- Keep the first record for each email and drop the later ones. Records stay in their original order.\n- A kept record is passed on unchanged, every field included: the sync and the CRM both need the email as it was written.\n",
+  "language": "python",
+  "file": "dedupe.py",
+  "starter": "def dedupe(records):\n    \"\"\"Keep the first record for each email before the newsletter sync.\n\n    Emails compare case-insensitively, ignoring surrounding spaces. Order is kept.\n    \"\"\"\n    return records\n",
+  "entrypoint": "dedupe",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": [
+        {
+          "id": 1,
+          "email": "Ann@x.io"
+        },
+        {
+          "id": 2,
+          "email": " ann@x.io"
+        },
+        {
+          "id": 3,
+          "email": "bo@x.io"
+        }
+      ],
+      "expected": [
+        {
+          "id": 1,
+          "email": "Ann@x.io"
+        },
+        {
+          "id": 3,
+          "email": "bo@x.io"
+        }
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": [],
+      "expected": [],
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": [
+        {
+          "id": 1,
+          "email": "ann@x.io"
+        }
+      ],
+      "expected": [
+        {
+          "id": 1,
+          "email": "ann@x.io"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-4",
+      "input": [
+        {
+          "id": 1,
+          "email": "ann@x.io"
+        },
+        {
+          "id": 2,
+          "email": "bo@x.io"
+        },
+        {
+          "id": 3,
+          "email": "cy@x.io"
+        }
+      ],
+      "expected": [
+        {
+          "id": 1,
+          "email": "ann@x.io"
+        },
+        {
+          "id": 2,
+          "email": "bo@x.io"
+        },
+        {
+          "id": 3,
+          "email": "cy@x.io"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-5",
+      "input": [
+        {
+          "id": 1,
+          "email": "ANN@X.IO"
+        },
+        {
+          "id": 2,
+          "email": "ann@x.io"
+        },
+        {
+          "id": 3,
+          "email": "Ann@X.io"
+        }
+      ],
+      "expected": [
+        {
+          "id": 1,
+          "email": "ANN@X.IO"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-6",
+      "input": [
+        {
+          "id": 1,
+          "email": "bo@x.io  "
+        },
+        {
+          "id": 2,
+          "email": "  BO@x.io"
+        },
+        {
+          "id": 3,
+          "email": "bo@x.io"
+        }
+      ],
+      "expected": [
+        {
+          "id": 1,
+          "email": "bo@x.io  "
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": [
+        {
+          "id": 1,
+          "email": " Ann@x.io "
+        },
+        {
+          "id": 2,
+          "email": "ann@x.io"
+        }
+      ],
+      "expected": [
+        {
+          "id": 1,
+          "email": " Ann@x.io "
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": [
+        {
+          "id": 1,
+          "email": "a@x.io"
+        },
+        {
+          "id": 2,
+          "email": "b@x.io"
+        },
+        {
+          "id": 3,
+          "email": "A@x.io"
+        },
+        {
+          "id": 4,
+          "email": "c@x.io"
+        },
+        {
+          "id": 5,
+          "email": "B@X.IO"
+        }
+      ],
+      "expected": [
+        {
+          "id": 1,
+          "email": "a@x.io"
+        },
+        {
+          "id": 2,
+          "email": "b@x.io"
+        },
+        {
+          "id": 4,
+          "email": "c@x.io"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": [
+        {
+          "id": 1,
+          "email": "ann@x.io"
+        },
+        {
+          "id": 2,
+          "email": "ann@x.com"
+        },
+        {
+          "id": 3,
+          "email": "ann@y.io"
+        }
+      ],
+      "expected": [
+        {
+          "id": 1,
+          "email": "ann@x.io"
+        },
+        {
+          "id": 2,
+          "email": "ann@x.com"
+        },
+        {
+          "id": 3,
+          "email": "ann@y.io"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": [
+        {
+          "id": 7,
+          "email": "ann@x.io"
+        },
+        {
+          "id": 7,
+          "email": "bo@x.io"
+        }
+      ],
+      "expected": [
+        {
+          "id": 7,
+          "email": "ann@x.io"
+        },
+        {
+          "id": 7,
+          "email": "bo@x.io"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": [
+        {
+          "id": 1,
+          "email": "ann@x.io",
+          "name": "Ann",
+          "plan": "pro"
+        },
+        {
+          "id": 2,
+          "email": "ANN@x.io",
+          "name": "Ann B",
+          "plan": "free"
+        }
+      ],
+      "expected": [
+        {
+          "id": 1,
+          "email": "ann@x.io",
+          "name": "Ann",
+          "plan": "pro"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": [
+        {
+          "id": 1,
+          "email": "bo@x.io"
+        },
+        {
+          "id": 2,
+          "email": "cy@x.io"
+        },
+        {
+          "id": 3,
+          "email": "dee@x.io"
+        },
+        {
+          "id": 4,
+          "email": " DEE@x.io"
+        }
+      ],
+      "expected": [
+        {
+          "id": 1,
+          "email": "bo@x.io"
+        },
+        {
+          "id": 2,
+          "email": "cy@x.io"
+        },
+        {
+          "id": 3,
+          "email": "dee@x.io"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": [
+        {
+          "id": 1,
+          "email": "ÅSA@x.io"
+        },
+        {
+          "id": 2,
+          "email": "åsa@x.io"
+        }
+      ],
+      "expected": [
+        {
+          "id": 1,
+          "email": "ÅSA@x.io"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": [
+        {
+          "id": 3,
+          "email": "cy@x.io"
+        },
+        {
+          "id": 1,
+          "email": "ann@x.io"
+        },
+        {
+          "id": 2,
+          "email": "CY@x.io"
+        }
+      ],
+      "expected": [
+        {
+          "id": 3,
+          "email": "cy@x.io"
+        },
+        {
+          "id": 1,
+          "email": "ann@x.io"
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": [
+        {
+          "id": 1,
+          "email": "ann@x.io"
+        },
+        {
+          "id": 2,
+          "email": "Ann@x.io"
+        },
+        {
+          "id": 3,
+          "email": "bo@x.io"
+        },
+        {
+          "id": 4,
+          "email": "ANN@X.IO "
+        },
+        {
+          "id": 5,
+          "email": " bo@x.io"
+        },
+        {
+          "id": 6,
+          "email": "cy@x.io"
+        }
+      ],
+      "expected": [
+        {
+          "id": 1,
+          "email": "ann@x.io"
+        },
+        {
+          "id": 3,
+          "email": "bo@x.io"
+        },
+        {
+          "id": 6,
+          "email": "cy@x.io"
+        }
+      ],
+      "hidden": true
+    }
+  ],
+  "rules": []
+}

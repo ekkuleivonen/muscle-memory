@@ -1,0 +1,176 @@
+{
+  "challenge": "PHP-002",
+  "task": "Customers say password reset emails never work. They do, if you click within a minute: links expire far too early.\n\n`isExpired($issuedAt, $now, $ttlMinutes)` returns whether a password reset link has expired. `$issuedAt` and `$now` are Unix timestamps in seconds, and `$ttlMinutes` is how long the link lasts, in minutes (0 or more).\n\n- A link stays valid up to and including `$issuedAt + $ttlMinutes × 60`. It is expired only at a later time.\n",
+  "language": "php",
+  "file": "src/isExpired.php",
+  "starter": "<?php\n\ndeclare(strict_types=1);\n\n/**\n * Whether a password reset link has expired. Timestamps are Unix seconds;\n * a link stays valid until $issuedAt + $ttlMinutes * 60, inclusive.\n */\nfunction isExpired(int $issuedAt, int $now, int $ttlMinutes): bool\n{\n    return $now > $issuedAt + $ttlMinutes;\n}\n",
+  "entrypoint": "isExpired",
+  "parameters": [
+    "issuedAt",
+    "now",
+    "ttlMinutes"
+  ],
+  "cases": [
+    {
+      "id": "case-1",
+      "input": [
+        1000,
+        1059,
+        60
+      ],
+      "expected": false,
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": [
+        1000,
+        4600,
+        60
+      ],
+      "expected": false,
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": [
+        1000,
+        4601,
+        60
+      ],
+      "expected": true,
+      "hidden": false
+    },
+    {
+      "id": "case-4",
+      "input": [
+        1000,
+        1000,
+        0
+      ],
+      "expected": false,
+      "hidden": false
+    },
+    {
+      "id": "case-5",
+      "input": [
+        1000,
+        1060,
+        1
+      ],
+      "expected": false,
+      "hidden": true
+    },
+    {
+      "id": "case-6",
+      "input": [
+        1000,
+        1061,
+        1
+      ],
+      "expected": true,
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": [
+        1000,
+        1001,
+        0
+      ],
+      "expected": true,
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": [
+        0,
+        60,
+        1
+      ],
+      "expected": false,
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": [
+        0,
+        61,
+        1
+      ],
+      "expected": true,
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": [
+        1000,
+        1600,
+        10
+      ],
+      "expected": false,
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": [
+        1000,
+        1601,
+        10
+      ],
+      "expected": true,
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": [
+        1700000000,
+        1700000900,
+        15
+      ],
+      "expected": false,
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": [
+        1700000000,
+        1700000901,
+        15
+      ],
+      "expected": true,
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": [
+        1700000000,
+        1700086400,
+        1440
+      ],
+      "expected": false,
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": [
+        1700000000,
+        1700086401,
+        1440
+      ],
+      "expected": true,
+      "hidden": true
+    },
+    {
+      "id": "case-16",
+      "input": [
+        1700000000,
+        1699999990,
+        15
+      ],
+      "expected": false,
+      "hidden": true
+    }
+  ],
+  "rules": []
+}

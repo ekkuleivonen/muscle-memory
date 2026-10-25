@@ -1,0 +1,171 @@
+{
+  "challenge": "PY-004",
+  "task": "Since Northwind started quoting company names, their nightly customer import loads rows into the wrong columns. From last night's load:\n\n```text\nline   \"Acme, Inc.\",42,\"NY\"\nloaded name='\"Acme'  account=' Inc.\"'  region='42'\n```\n\n`parse_csv_line(line)` splits one line of a partner export into its fields and returns them as a list of strings.\n\n- Fields are separated by commas, except for commas inside double quotes.\n- The quotes around a quoted field are not part of the field, and a doubled quote inside a quoted field is one literal quote: `\"say \"\"hi\"\"\"` → `say \"hi\"`.\n- A quoted field may contain a line break.\n- Spaces are kept as written. Empty fields are kept, including at the start or end of the line.\n- An empty line is a single empty field, which the import reports as a row with no name.\n",
+  "language": "python",
+  "file": "parse_csv_line.py",
+  "starter": "def parse_csv_line(line):\n    \"\"\"Split a partner CSV line on commas, except inside double quotes.\n\n    Quotes are removed, and a doubled quote inside a quoted field is a literal quote.\n    \"\"\"\n    return line.split(\",\")\n",
+  "entrypoint": "parse_csv_line",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": "a,b,c",
+      "expected": [
+        "a",
+        "b",
+        "c"
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": "\"Acme, Inc.\",42,\"NY\"",
+      "expected": [
+        "Acme, Inc.",
+        "42",
+        "NY"
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": "\"say \"\"hi\"\"\",x",
+      "expected": [
+        "say \"hi\"",
+        "x"
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-4",
+      "input": "",
+      "expected": [
+        ""
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-5",
+      "input": "a",
+      "expected": [
+        "a"
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-6",
+      "input": "a,,b",
+      "expected": [
+        "a",
+        "",
+        "b"
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": ",",
+      "expected": [
+        "",
+        ""
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": "a,",
+      "expected": [
+        "a",
+        ""
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": ",a",
+      "expected": [
+        "",
+        "a"
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": "\"\"",
+      "expected": [
+        ""
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": "\"\",\"\"",
+      "expected": [
+        "",
+        ""
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": "\"a,b,c\"",
+      "expected": [
+        "a,b,c"
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": "\"\"\"\"",
+      "expected": [
+        "\""
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": "\"x\"\",\"\"y\"",
+      "expected": [
+        "x\",\"y"
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": " a , b ",
+      "expected": [
+        " a ",
+        " b "
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-16",
+      "input": "\"Acme, Inc.\",\"Smith, John\",\"\"",
+      "expected": [
+        "Acme, Inc.",
+        "Smith, John",
+        ""
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-17",
+      "input": "\"line1\nline2\",x",
+      "expected": [
+        "line1\nline2",
+        "x"
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-18",
+      "input": "\"Café, Ltd\",€5",
+      "expected": [
+        "Café, Ltd",
+        "€5"
+      ],
+      "hidden": true
+    }
+  ],
+  "rules": []
+}

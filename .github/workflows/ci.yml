@@ -19,6 +19,8 @@ jobs:
           path: node_modules/.cache/muscle-memory-runtimes
           key: runtimes-${{ hashFiles('tools/build-runtimes.mjs', 'tools/runtimes/**') }}
       - run: npm test
+      # Every revision the build made must be archived in the commit (tools/build-content.ts).
+      - run: test -z "$(git status --porcelain content/revisions)"
       - run: npm run typecheck
       - run: npm run build:cloudflare
         env:

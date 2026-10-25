@@ -1,0 +1,125 @@
+{
+  "challenge": "GO-005",
+  "task": "Sign-up compares email addresses exactly as typed, so someone who signed up as `Jane.Doe@Example.com` and signs up again as `jane.doe@example.com ` gets a second account. Write the key sign-up looks accounts up by, so one person gets one account however they type their address. (The address itself is still stored exactly as typed; this is only the lookup key.)\n\n`CanonicalEmail(raw)` returns the key and `ok` true, or `\"\"` and `ok` false for anything that is not an address we accept:\n\n- Surrounding whitespace is ignored. Whitespace anywhere inside the address (spaces, tabs, any Unicode space) makes it invalid.\n- An address has exactly one `@`, with something on both sides of it.\n- The whole address is lowercased: every provider our users are on treats the local part case-insensitively.\n- For **gmail.com** and **googlemail.com** (those exact domains after lowercasing; not their subdomains or longer domains), dots in the local part are dropped, so is everything from the first `+` on, and the domain becomes `gmail.com`. Other domains keep their dots and `+` tags as they are: plenty of mail servers deliver `+` addresses to different people.\n- If the Gmail rules leave the local part empty, the address is invalid.\n",
+  "language": "go",
+  "file": "canonical_email.go",
+  "starter": "package signup\n\nimport \"strings\"\n\n// CanonicalEmail is the key sign-up looks accounts up by, so one person gets one account\n// however they type their address. ok is false when raw is not an address we accept.\nfunc CanonicalEmail(raw string) (string, bool) {\n\temail := strings.TrimSpace(raw)\n\tif !strings.Contains(email, \"@\") {\n\t\treturn \"\", false\n\t}\n\treturn email, true\n}\n",
+  "entrypoint": "CanonicalEmail",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": "Jane.Doe@Example.com",
+      "expected": "jane.doe@example.com",
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": "  jane.doe@example.com\n",
+      "expected": "jane.doe@example.com",
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": "J.A.N.E+newsletter@Gmail.com",
+      "expected": "jane@gmail.com",
+      "hidden": false
+    },
+    {
+      "id": "case-4",
+      "input": "jane+work@example.com",
+      "expected": "jane+work@example.com",
+      "hidden": false
+    },
+    {
+      "id": "case-5",
+      "input": "not-an-email",
+      "expected": null,
+      "hidden": false
+    },
+    {
+      "id": "case-6",
+      "input": "jane@doe@example.com",
+      "expected": null,
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": "@example.com",
+      "expected": null,
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": "jane@",
+      "expected": null,
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": "jane doe@example.com",
+      "expected": null,
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": "jane.doe@googlemail.com",
+      "expected": "janedoe@gmail.com",
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": "+promo@gmail.com",
+      "expected": null,
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": "...@gmail.com",
+      "expected": null,
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": "Jane.Doe@GMAIL.COM",
+      "expected": "janedoe@gmail.com",
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": "jane.doe+a+b@gmail.com",
+      "expected": "janedoe@gmail.com",
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": "jane.doe@mail.gmail.com",
+      "expected": "jane.doe@mail.gmail.com",
+      "hidden": true
+    },
+    {
+      "id": "case-16",
+      "input": "jane.doe@gmail.com.au",
+      "expected": "jane.doe@gmail.com.au",
+      "hidden": true
+    },
+    {
+      "id": "case-17",
+      "input": "first.last+tag@Example.COM ",
+      "expected": "first.last+tag@example.com",
+      "hidden": true
+    },
+    {
+      "id": "case-18",
+      "input": "",
+      "expected": null,
+      "hidden": true
+    },
+    {
+      "id": "case-19",
+      "input": "jane\t@example.com",
+      "expected": null,
+      "hidden": true
+    }
+  ],
+  "rules": []
+}
