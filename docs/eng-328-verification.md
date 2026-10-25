@@ -1,50 +1,50 @@
-# ENG-328 verification
+# ENG-328 verification — one-file practice
 
-Implementation: lean Practice, searchable/filterable Explore and factual Profile. The [approved contract](eng-328-lean-contract.md) replaces the earlier pending proposal: current code/pinned revision, full suite and deterministic correctness/safety rules gate the additive `checks-passed` completion. Hidden expected outputs and all user-written hidden-error/output channels remain private. No manual Resolve or merge step.
+Implementation commit: `e0eec49`. Explicit ENG-329 dependency: `986772d` (audited normalization and bounded content-alignment fixes). Main remains the authorized baseline `1edfb853356f7ee8cb53d5fef8efe4a5e070bfc8`; the sibling changes are intentionally integrated as a stack dependency, not unrelated main changes. This stream adds no seed content, model migration or catalog expansion.
 
-Correcting hidden-output commit: `d3f85fb`. Completion writer/schema: `b1cb41b`; lean composition: `400394e`; current recorded-run matching/public requirements: `17240c5`. The explicit ENG-329 dependency is `df06ebf`, including its later run-level safeguards. Main still matches `1edfb853356f7ee8cb53d5fef8efe4a5e070bfc8`. The later ENG-329 normalized catalog is not silently included; its current and earlier published revisions can be composed separately by dot. ENG-332's secondary challenge-link wording hunk is consumed; new outcome-card serialization remains with that stream.
+The [active contract](eng-328-lean-contract.md) now supersedes the earlier multi-file UI: one editable entry, self-contained description/examples/requirements, internal harness/tests/support sources, no explorer/tabs/file selector, no hints or comment thread. SQL keeps its public schema. Explore remains searchable/filterable; Profile is factual evidence outside practice.
 
-## Automated results
+## Results
 
-Run heavy suites serially with `flock /tmp/muscle-memory-heavy-check.lock <command>`.
+Heavy checks run serially with `flock /tmp/muscle-memory-heavy-check.lock <command>`.
 
-- `npm test`: **241 passed, 0 failed**. Includes real constructor/ingest HTTP handling of old/new fixtures, exact-code/revision/full-outcome gate tests, required-rule recovery independent of old Resolve, same-millisecond pending runs, transaction rollback/concurrent completion/outbox, and sentinel rendering across hidden error/output surfaces.
+- `npm test`: **246 passed, 0 failed**. Includes the shell contract across every live catalog entry; hidden expected-output/solution sentinels across composed feedback; exact code/revision/full-suite eligibility; genuine required-rule recovery independent of Resolve; stale/pending/malformed outcomes; atomic completion/outbox rollback/concurrency; real old/new constructor/ingest fixtures and literal historical readers.
 - `npm run typecheck`: web and ingest pass.
-- `python3 -m unittest discover -s tools/aggregates`: **2 passed**; old/new metrics-2 fixtures coexist, the checked move itself is not a metric, first-finish deduplication remains unchanged.
-- `npm run build` under Node 22: passes; pinned runtime/content checks included. Runner/worker code and challenge content were not modified by this stream; a full content publish check is not claimed here.
-- Remote CI for `17240c5`: web and erasure checks passed. Final documentation/screenshots commit is separately identifiable in the PR.
-- `LOOP_ORIGIN=http://localhost:3130 node --import tsx tools/browser/practice-check.ts`: **passes** against the production build.
-- `LOOP_ORIGIN=http://localhost:3130 node --import tsx tools/browser/challenge-presentation-check.ts`: **passes** against the production build.
+- `npm run build` under Node 22: passes, including content/runtime integrity checks.
+- `LOOP_ORIGIN=http://localhost:3131 node --import tsx tools/browser/practice-check.ts`: **passes against the production build**. Actual sandbox execution for JavaScript, Python, TypeScript and SQL, plus the keyboard and recovery paths below.
+- `LOOP_ORIGIN=http://localhost:3131 node --import tsx tools/browser/challenge-presentation-check.ts`: **passes against the production build**. Explore keyboard search/filter, SQL catalog results, legacy status URLs, exact public examples, no comment thread/status/PR controls, focus/save/resume and mobile layout.
 
-## Representative keyboard paths
+The all-catalog shell test is **structural**, not a blanket language/runtime validation claim. ENG-329's separate normalization deliverable reports its 46-challenge browser publish check at `986772d`; this stream runs the four representative language paths above. Runner/worker implementations are unchanged.
 
-1. Enter on Start in JavaScript → source already focused. A failed runtime download leaves editing available; Tab/Enter on Retry checks recovers the sandbox.
-2. Ctrl/Cmd+Enter Submit on starter → failed public examples show input/expected/actual; hidden cases show only generic labels/fixed categories. Output withholds streams for a full run containing hidden checks. No completion record is emitted.
-3. Submit an endless loop → Tab/Enter Cancel check → cancelled feedback → edit → Run examples. Public-only green does not complete. Escape then Tab leaves the editor.
-4. Correct code → Ctrl/Cmd+Enter Submit → exact full-suite verification → one atomic recorded completion/result with `via: keyboard`, 7.2 board capture and unchanged 6.0 workspace capture. Focus stays in code; Next challenge becomes the only primary action.
-5. Edit after green → current verification/Next is withdrawn immediately; save and reload retain code and the immutable previous completion without appending another result.
-6. Correct case outputs plus a required debug-print violation → all cases pass but the public requirement blocks completion. Remove the violation and Submit → completion without Resolve.
-7. Existing multi-file revision → select another editable source, edit, switch, save and reload → same file/code restored. SQL keeps its public schema. Mobile shows requirements/examples/code directly without a dialog or horizontal page overflow.
+## Keyboard and recovery paths
 
-## Screenshots
+1. Enter on Start in JavaScript → one source editor already focused. Failed runtime download leaves editing available; Tab/Enter Retry checks recovers the sandbox.
+2. Ctrl/Cmd+Enter Submit on starter → failed public cases show input/expected/actual; hidden cases show only generic labels/fixed categories. Full-run Output withholds hidden-case streams and user-written error details. No completion is emitted.
+3. Submit an endless loop → Cancel check → edit → Run examples. Public-only green cannot complete. Escape then Tab leaves the editor.
+4. Correct code → Ctrl/Cmd+Enter → full-suite and required-rule verification → one atomic completion/result, `via: keyboard`, board capture 7.2.0 and unchanged workspace capture 6.0.0. Focus stays in code; Next challenge is the only primary continuation.
+5. Edit after green → Next/current verification disappear immediately. Save/reload retains code and immutable previous completion without a duplicate result.
+6. Python with correct case outputs but a required debug-print violation → requirement blocks completion. Remove it and Submit → completion without Resolve. The normalized TypeScript receipt challenge and SQL query also complete through their single entry.
+7. Unsupported historical multi-file revision → compatibility notice, no editor and no new workspace opening. It is not made solvable by hiding a required file.
+8. Synthetic saved multi-file work → current version pauses before workspace records are appended. Explicit saved-entry-only choice restores that code; explicit current-starter choice uses the normalized starter. Original entry/helper artifacts remain byte-for-byte unchanged in both paths. Reload preserves the chosen entry.
+9. Keyboard activation of Next challenge uses client navigation and creates a fresh correctly named/revisioned workspace session, rather than reusing the old challenge's recorder.
+10. Mobile displays the description/examples, public SQL schema and editor directly, with no dialog or horizontal page overflow.
 
-Only real screenshots of this implementation are supplied. Before/after means the new practice surface **before Submit** and **after recorded completion**, not a claim that removed workplace screenshots describe the current UI. Historical screenshots were removed; earlier work remains in Git history.
+## Real screenshots
 
-Captured against the production build at `http://localhost:3130`, using synthetic attempts:
+Captured from the production build at `http://localhost:3131`, with synthetic attempts. Before/after means **before Submit** and **after recorded completion** on the new UI. Superseded multi-file/comment screenshots were replaced; no mock UI or human validation is claimed.
 
 - [Before Submit](eng-328-evidence/practice-before-submit.png)
 - [Failure](eng-328-evidence/practice-failure.png)
-- [After recorded completion](eng-328-evidence/practice-after-completion.png)
-- [Mobile challenge](eng-328-evidence/practice-mobile.png)
+- [Recorded completion](eng-328-evidence/practice-after-completion.png)
+- [Mobile SQL challenge](eng-328-evidence/practice-mobile.png)
+- [Explicit historical recovery](eng-328-evidence/practice-version-recovery.png)
 
-Reproduce with `PRACTICE_SCREENSHOTS=docs/eng-328-evidence LOOP_ORIGIN=http://localhost:3130 node --import tsx tools/browser/practice-check.ts` under the same lock. No mock UI, fabricated data, human validation or deployment is claimed.
+Reproduce with `PRACTICE_SCREENSHOTS=docs/eng-328-evidence LOOP_ORIGIN=http://localhost:3131 node --import tsx tools/browser/practice-check.ts` under the same lock.
 
-## Integration and remaining work
+## Collection and limitations
 
-Draft PR #40 is stacked on ENG-329 #38. Dot owns normalized-catalog composition, review of all streams, selected share artifacts/outcome-card integration and one combined release. The app must not ship before ingest accepts board capture 7.2. Old records, old result cards and replay boundaries remain intact; legacy submission URLs are read-only. No merge or deployment was performed.
+Internal full-suite `purpose: pull-request`, public-only `local`, workspace capture 6.0.0 and approved board 7.2 `checks-passed` semantics are unchanged. No new event fields/categories, identity, consent/legal, export/reset or broad persistence changes. No invisible hint/comment releases. Recovery appends the chosen actual opening/snapshot to the existing attempt; it fabricates neither a new attempt nor an automatic gesture.
 
-## Final ownership clarification regression
+Earlier published bundles, helper edits, recorded hint use and result/submission artifacts stay intact. The new shell deliberately cannot resume an unsupported old multi-file/hint-dependent workspace; historical records remain readable, and a player must explicitly choose how to move retained code into the current one-file version.
 
-No collected-event meaning or runtime behavior changed. Internal full-suite `pull-request`, visible-only `local`, workspace capture 6.0.0 and the approved board 7.2 checked-completion contract remain as documented. No writer/reader competition or catalog edits.
-
-Added `apps/web/app/work/feedback-boundary.test.ts`: real shared components plus the shell Output projection, visible examples and historical outcome reader/rendering. Nested hidden expected outputs/solution text remain absent for passing and failing hidden checks; detailed public expected/actual feedback stays present. The focused six-file regression run passes **38 tests**. The full suite passes **241 tests**, and web/ingest typechecks pass. This clarification changes tests/docs only; the previously recorded production build/browser results still apply to the unchanged application code.
+Draft PR #40 remains for dot's integrated review/release. ENG-332 owns the remaining solution-outcome share integration; only its secondary challenge-link wording is composed here. Ingest accepting board 7.2 must precede the app in the combined release. No merge or deployment was performed.
