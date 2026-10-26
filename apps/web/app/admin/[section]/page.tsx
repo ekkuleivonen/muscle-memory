@@ -9,10 +9,6 @@ const sections = {
     "Benchmarks",
     "No benchmark service is connected. No model runs, scores or jobs are available here.",
   ],
-  statistics: [
-    "Aggregate statistics",
-    "Aggregate challenge statistics are not implemented. This area does not query or display player records.",
-  ],
 } as const;
 export default async function Section({
   params,
