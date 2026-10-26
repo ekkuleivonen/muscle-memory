@@ -1,7 +1,8 @@
 # Challenge management — ENG-354
 
 Draft implementation on baseline `8ec608414bcfc4ea8c33f21802e070def7f84821`.
-No live resources, migration, merge or deployment are authorized yet.
+The owner approved the scoped storage/import/binding/merge/deployment rollout on
+2026-10-26. No validator service, new credentials or subscription upgrade is included.
 
 ## Operator workflow and trust
 
@@ -75,7 +76,7 @@ upload attempts are intercepted; operator activity opens no player records and
 produces no player uploads. These are agent/browser fixtures, not human research or
 live Cloudflare proofs. Exact final receipts are linked in PR57.
 
-## Minimal production approval bundle
+## Approved production rollout
 
 1. Create private R2 bucket `muscle-memory-content` with no public access and D1
    database `muscle-memory-catalog`. No hosted validator/Browser Run/DO/queue needed.
@@ -84,8 +85,10 @@ live Cloudflare proofs. Exact final receipts are linked in PR57.
 3. Apply `migrations/catalog/0001_catalog.sql` to the new empty database. Import
    current 69 sources and all 117 hash-verified archives using the reviewed seed
    plan. Seed is non-destructive and reruns do not reset existing managed content.
-   The existing local seed CLI is plan/local-only; production import must use
-   explicitly approved remote resource targets and verify receipts before activation.
+   `tools/seed-catalog-remote.ts` requires explicit approved account, database UUID,
+   bucket and apply/verify mode. It verifies target names, preserves existing objects,
+   never deletes data and stops on uncertain responses. Verify objects, registries,
+   current IDs and exact manifest before activation.
 4. Verify 69 active heads, 117 immutable versions, private source digests and active
    manifest. Then set the app variable `CATALOG_MODE=managed`. No new secrets or
    login providers are required. D1/R2/Workers normal usage charges still apply;
@@ -123,3 +126,16 @@ credential's subscription lookup returned HTTP403 Authentication error; it was n
 retried or bypassed. Exact current plan/headroom remains unverified. Activation
 approval should cover ordinary D1/R2 usage under the existing plan, with any plan
 upgrade or materially different spending requiring a new decision.
+
+The dedicated resources were created with the existing operator authorization.
+Initial import stopped when that access token expired; D1 remained unseeded with
+zero heads and partial immutable R2 objects preserved. Normal Wrangler OAuth renewal
+restored the same scopes, and idempotent import resumed after read-only reconciliation.
+No account permission or credential provisioning was performed. Exact completed
+verification/deployment receipts belong in the release outcome, not an assumed pass.
+
+The approved import completed: 69 heads, 117 immutable versions, 69 blocked intents,
+zero QA receipts and 187 byte-verified objects (1,778,898 bytes). Independent reads
+also verified all 117 historical registry mappings, all 69 private source mappings
+and the exact active manifest pointer. No live app binding was changed before these
+checks. Production import must not be repeated after normal authoring starts.

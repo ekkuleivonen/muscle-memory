@@ -103,6 +103,7 @@ const mf = new Miniflare(
         ],
         bindings: {
           ...base.workerOptions.bindings,
+          CATALOG_MODE: "bundled",
           ADMIN_ACCESS_ISSUER: issuer,
           ADMIN_ACCESS_AUD: aud,
         },
