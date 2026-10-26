@@ -1,0 +1,64 @@
+{
+  "key": "PY-001",
+  "revision": "sha256:1478c6f5aea26bf22940cfb6cd43d29c4405167ed75715684297b4145031e9b5",
+  "language": "python",
+  "runtime": "Pyodide/CPython3.14",
+  "at": "2026-10-26T03:20:58.561Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "0951bd0495f93d3e617d69458818b2f6041dd12dc2b6e68c3258df1c6856a1ee",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "a\tb\nc\rd",
+          "expected": 4,
+          "reason": "Each whitespace type separates words.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 4,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": " é ! 42 ",
+          "expected": 3,
+          "reason": "Letters, standalone symbols and digits count.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 3,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "a4dd0610f22f774737a9e57a17f14e970ccf5064f32472a4c9b4a48fe64ae6fb",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "a\tb\nc\rd",
+          "expected": 4,
+          "reason": "Each whitespace type separates words.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 1,
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": " é ! 42 ",
+          "expected": 3,
+          "reason": "Letters, standalone symbols and digits count.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 3,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

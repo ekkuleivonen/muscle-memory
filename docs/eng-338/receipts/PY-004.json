@@ -1,0 +1,120 @@
+{
+  "key": "PY-004",
+  "revision": "sha256:9ee05a3f865db74c01f872dec5154e0ebba422df819d806051e79b4da20a425a",
+  "language": "python",
+  "runtime": "Pyodide/CPython3.14",
+  "origin": "https://musclememory.run",
+  "partition": "a-python",
+  "review": {
+    "key": "PY-004",
+    "revision": "sha256:9ee05a3f865db74c01f872dec5154e0ebba422df819d806051e79b4da20a425a",
+    "firstCandidate": "attempts/first.py",
+    "wrongCandidate": "attempts/wrong.py",
+    "wrongIntent": "Strip each decoded field, violating preservation of spaces.",
+    "assumptions": [
+      "Inputs use valid CSV quoting; no malformed-quote recovery is specified."
+    ],
+    "ambiguityFindings": [
+      "Behaviour for unmatched quotes, quotes embedded in unquoted fields, or a trailing record terminator is unspecified."
+    ],
+    "verbosityFindings": [
+      "Compact and sufficient for valid single-record CSV."
+    ],
+    "confidence": "high for valid stated CSV, unexecuted",
+    "publicEdgeCases": [
+      {
+        "input": ", a ,",
+        "expected": [
+          "",
+          " a ",
+          ""
+        ],
+        "reason": "Keep spaces and leading/trailing empty fields."
+      },
+      {
+        "input": "\"a\nb\",\"\"",
+        "expected": [
+          "a\nb",
+          ""
+        ],
+        "reason": "A quoted field may contain a newline and may be empty."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:11:28.534Z",
+      "finishedAt": "2026-10-26T03:11:29.968Z",
+      "candidatePath": "a-python/PY-004/attempts/first.py",
+      "candidateSha256": "6c36d2f1b7a948f1f5b8333567eb94bf2ce750ba568b28d139c72594dbdf8ecb",
+      "actualCodeSha256": "6c36d2f1b7a948f1f5b8333567eb94bf2ce750ba568b28d139c72594dbdf8ecb",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:9ee05a3f865db74c01f872dec5154e0ebba422df819d806051e79b4da20a425a",
+      "runId": "872f9b26-3fa4-4c0f-9079-aee92c8de85c",
+      "documentRevision": 1,
+      "artifactId": "practice-7224c586-4c51-469d-b1b0-a6996a7b2d8b.code.1",
+      "result": "passed",
+      "passed": 18,
+      "total": 18,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:11:30.732Z",
+      "finishedAt": "2026-10-26T03:11:32.160Z",
+      "candidatePath": "a-python/PY-004/attempts/wrong.py",
+      "candidateSha256": "38abc98030fc7ee8e0cc19e0d4adc9ba3891a699b3ce1d3a31d8b867c46cd4d4",
+      "actualCodeSha256": "38abc98030fc7ee8e0cc19e0d4adc9ba3891a699b3ce1d3a31d8b867c46cd4d4",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:9ee05a3f865db74c01f872dec5154e0ebba422df819d806051e79b4da20a425a",
+      "runId": "4e257b18-107b-49f3-8ec5-597dc4d4c2ff",
+      "documentRevision": 1,
+      "artifactId": "practice-d9240fce-8605-40c6-8c99-aea13cd43f2f.code.1",
+      "result": "failed",
+      "passed": 17,
+      "total": 18,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "1 of 18 cases failed.\n\n✘\nhidden case 15hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:11:32.593Z",
+      "finishedAt": "2026-10-26T03:11:33.577Z",
+      "candidatePath": "a-python/PY-004/attempts/first.py",
+      "candidateSha256": "6c36d2f1b7a948f1f5b8333567eb94bf2ce750ba568b28d139c72594dbdf8ecb",
+      "actualCodeSha256": "6c36d2f1b7a948f1f5b8333567eb94bf2ce750ba568b28d139c72594dbdf8ecb",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:9ee05a3f865db74c01f872dec5154e0ebba422df819d806051e79b4da20a425a",
+      "runId": "ff308c06-3282-4a5d-8229-803a682e9ffd",
+      "documentRevision": 2,
+      "artifactId": "practice-d9240fce-8605-40c6-8c99-aea13cd43f2f.code.2",
+      "result": "passed",
+      "passed": 18,
+      "total": 18,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

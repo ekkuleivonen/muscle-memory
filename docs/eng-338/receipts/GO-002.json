@@ -1,0 +1,120 @@
+{
+  "key": "GO-002",
+  "revision": "sha256:3c10fd7c2fe8a7b04b4d62426d75f10b156363b1ab6c4971f9ef12e0d81fdc67",
+  "language": "go",
+  "runtime": "Yaegi WASM",
+  "origin": "https://musclememory.run",
+  "partition": "e-go-ruby",
+  "review": {
+    "key": "GO-002",
+    "revision": "sha256:3c10fd7c2fe8a7b04b4d62426d75f10b156363b1ab6c4971f9ef12e0d81fdc67",
+    "firstCandidate": "attempts/first.go",
+    "wrongCandidate": "attempts/wrong.go",
+    "wrongIntent": "Reject oversized per_page by defaulting to 20 instead of capping at 100.",
+    "assumptions": [
+      "Use standard URL decoding and first value for duplicate parameters.",
+      "Values must fit Go int."
+    ],
+    "ambiguityFindings": [
+      "Duplicate parameters, malformed escaping, leading plus signs and overflow are unspecified; page has no upper limit conflicts with int representation."
+    ],
+    "verbosityFindings": [
+      "Clear short independent-default requirements."
+    ],
+    "confidence": "high for ordinary valid queries; unexecuted",
+    "publicEdgeCases": [
+      {
+        "input": "page=0&per_page=101",
+        "expected": {
+          "page": 1,
+          "perPage": 100
+        },
+        "reason": "Default page and cap per_page independently."
+      },
+      {
+        "input": "PAGE=3&per_page=0&page=7",
+        "expected": {
+          "page": 7,
+          "perPage": 20
+        },
+        "reason": "Exact names and independent fallback."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:08:48.904Z",
+      "finishedAt": "2026-10-26T03:08:49.840Z",
+      "candidatePath": "e-go-ruby/GO-002/attempts/first.go",
+      "candidateSha256": "0d8999fbdca6ca3f9e2836b89e4ed00506a18f8e205da726a0890a766f435ec0",
+      "actualCodeSha256": "0d8999fbdca6ca3f9e2836b89e4ed00506a18f8e205da726a0890a766f435ec0",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:3c10fd7c2fe8a7b04b4d62426d75f10b156363b1ab6c4971f9ef12e0d81fdc67",
+      "runId": "849cb572-afac-4644-a6fb-fd13f3206db0",
+      "documentRevision": 1,
+      "artifactId": "practice-5c11f80b-b4aa-4515-8faa-14fa1ff02dfa.code.1",
+      "result": "passed",
+      "passed": 18,
+      "total": 18,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:08:50.681Z",
+      "finishedAt": "2026-10-26T03:08:51.621Z",
+      "candidatePath": "e-go-ruby/GO-002/attempts/wrong.go",
+      "candidateSha256": "ecd224e7dbd420abeecb3883e27da64f331535c2aa8f5c88d0db500ed0699a7d",
+      "actualCodeSha256": "ecd224e7dbd420abeecb3883e27da64f331535c2aa8f5c88d0db500ed0699a7d",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:3c10fd7c2fe8a7b04b4d62426d75f10b156363b1ab6c4971f9ef12e0d81fdc67",
+      "runId": "ffc27c76-f4b7-41b2-9009-925b1e5bf531",
+      "documentRevision": 1,
+      "artifactId": "practice-1a656218-1ce2-4b86-9c1e-4bab01c7753e.code.1",
+      "result": "failed",
+      "passed": 16,
+      "total": 18,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "2 of 18 cases failed.\n\n✘\ncase 3\nInput\n\"per_page=500\"\nExpected\n{\"page\":1,\"perPage\":100}\nGot\n{\"page\":1,\"perPage\":20}\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:08:52.064Z",
+      "finishedAt": "2026-10-26T03:08:52.248Z",
+      "candidatePath": "e-go-ruby/GO-002/attempts/first.go",
+      "candidateSha256": "0d8999fbdca6ca3f9e2836b89e4ed00506a18f8e205da726a0890a766f435ec0",
+      "actualCodeSha256": "0d8999fbdca6ca3f9e2836b89e4ed00506a18f8e205da726a0890a766f435ec0",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:3c10fd7c2fe8a7b04b4d62426d75f10b156363b1ab6c4971f9ef12e0d81fdc67",
+      "runId": "de87f12e-4417-41dd-91cf-c00476f4606b",
+      "documentRevision": 2,
+      "artifactId": "practice-1a656218-1ce2-4b86-9c1e-4bab01c7753e.code.2",
+      "result": "passed",
+      "passed": 18,
+      "total": 18,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

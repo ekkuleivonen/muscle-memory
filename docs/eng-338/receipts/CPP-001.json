@@ -1,0 +1,190 @@
+{
+  "key": "CPP-001",
+  "revision": "sha256:63cd99a0b96aaeff42563a0a2f470f7ce079c6418e9216150f4e3ff1be91e236",
+  "language": "cpp",
+  "runtime": "Clang/YoWASP",
+  "origin": "https://musclememory.run",
+  "partition": "d-c-cpp",
+  "review": {
+    "key": "CPP-001",
+    "revision": "sha256:63cd99a0b96aaeff42563a0a2f470f7ce079c6418e9216150f4e3ff1be91e236",
+    "firstCandidate": "attempts/first.cpp",
+    "wrongCandidate": "attempts/wrong.cpp",
+    "wrongIntent": "Successful get returns the value but fails to refresh recency.",
+    "assumptions": [
+      "Only put/get operations appear and capacity is at least one as stated.",
+      "No complexity requirement is given, so a list with linear key lookup is valid."
+    ],
+    "ambiguityFindings": [
+      "No limits on operation count or required time complexity are stated."
+    ],
+    "verbosityFindings": "Behavior is clear, including updates and misses.",
+    "confidence": "high; not executed",
+    "publicEdgeCases": [
+      {
+        "input": [
+          2,
+          [
+            [
+              "put",
+              1,
+              10
+            ],
+            [
+              "put",
+              2,
+              20
+            ],
+            [
+              "put",
+              1,
+              11
+            ],
+            [
+              "put",
+              3,
+              30
+            ],
+            [
+              "get",
+              2
+            ],
+            [
+              "get",
+              1
+            ]
+          ]
+        ],
+        "expected": [
+          -1,
+          11
+        ],
+        "reason": "Replacing an existing key refreshes recency without consuming another slot."
+      },
+      {
+        "input": [
+          2,
+          [
+            [
+              "put",
+              1,
+              10
+            ],
+            [
+              "put",
+              2,
+              20
+            ],
+            [
+              "get",
+              9
+            ],
+            [
+              "put",
+              3,
+              30
+            ],
+            [
+              "get",
+              1
+            ],
+            [
+              "get",
+              2
+            ]
+          ]
+        ],
+        "expected": [
+          -1,
+          -1,
+          20
+        ],
+        "reason": "A miss changes no entry recency."
+      },
+      {
+        "input": [
+          1,
+          []
+        ],
+        "expected": [],
+        "reason": "No gets produce no outputs."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:07:12.378Z",
+      "finishedAt": "2026-10-26T03:07:16.657Z",
+      "candidatePath": "d-c-cpp/CPP-001/attempts/first.cpp",
+      "candidateSha256": "ca1595fe3354d4da491d24d7d7614fdad37930f6a184a29bf522c516e3d476c2",
+      "actualCodeSha256": "ca1595fe3354d4da491d24d7d7614fdad37930f6a184a29bf522c516e3d476c2",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:63cd99a0b96aaeff42563a0a2f470f7ce079c6418e9216150f4e3ff1be91e236",
+      "runId": "8a5635a1-2ed5-4666-b6d6-66f86d42bd51",
+      "documentRevision": 1,
+      "artifactId": "practice-4f386ce3-e67a-4035-8c04-5469e322e509.code.1",
+      "result": "passed",
+      "passed": 15,
+      "total": 15,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:07:17.200Z",
+      "finishedAt": "2026-10-26T03:07:21.493Z",
+      "candidatePath": "d-c-cpp/CPP-001/attempts/wrong.cpp",
+      "candidateSha256": "6c8cb240a6280b25beb9ee1361f91f17c44e185fe1d020a6f3de0f67ff1fee05",
+      "actualCodeSha256": "6c8cb240a6280b25beb9ee1361f91f17c44e185fe1d020a6f3de0f67ff1fee05",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:63cd99a0b96aaeff42563a0a2f470f7ce079c6418e9216150f4e3ff1be91e236",
+      "runId": "cfdda6b5-cad0-44fd-ab10-ff86759a0fbc",
+      "documentRevision": 1,
+      "artifactId": "practice-af2e8351-4d2b-4d44-ba15-0acbe578392a.code.1",
+      "result": "failed",
+      "passed": 10,
+      "total": 15,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "5 of 15 cases failed.\n\n✘\ncase 1\nInput\n[2,[[\"put\",1,1],[\"put\",2,2],[\"get\",1],[\"put\",3,3],[\"get\",2],[\"get\",1]]]\nExpected\n[1,-1,1]\nGot\n[1,2,-1]\n✘\nhidden case 8hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 12hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 15hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:07:22.167Z",
+      "finishedAt": "2026-10-26T03:07:24.341Z",
+      "candidatePath": "d-c-cpp/CPP-001/attempts/first.cpp",
+      "candidateSha256": "ca1595fe3354d4da491d24d7d7614fdad37930f6a184a29bf522c516e3d476c2",
+      "actualCodeSha256": "ca1595fe3354d4da491d24d7d7614fdad37930f6a184a29bf522c516e3d476c2",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:63cd99a0b96aaeff42563a0a2f470f7ce079c6418e9216150f4e3ff1be91e236",
+      "runId": "f08b86ee-5f09-463d-9fa9-44edb10d874d",
+      "documentRevision": 2,
+      "artifactId": "practice-af2e8351-4d2b-4d44-ba15-0acbe578392a.code.2",
+      "result": "passed",
+      "passed": 15,
+      "total": 15,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

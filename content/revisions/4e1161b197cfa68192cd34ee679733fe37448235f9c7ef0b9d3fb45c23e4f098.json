@@ -1,0 +1,855 @@
+{
+  "challenge": "JS-006",
+  "task": "The cart drawer and the header badge show whatever `Cart.summary()` returns. To keep the drawer fast, `summary()` was memoised: the drawer calls it on every render, and repricing a 60-line cart each time cost 38 ms a frame (now about 2). Since then the drawer sometimes shows an old total. A shopper's report:\n\n> I changed the jeans from 1 to 2 in my cart and it still said $59.00. Then checkout charged me $118.00.\n\nRemoving an item shows the right total; changing a quantity doesn't. Make every `summary()` reflect the cart as it is at that moment, and keep the memo.\n\n**What `summary()` returns.** `{ items, subtotal, discount, total }`, amounts in whole cents: `items` is the sum of the lines' quantities, `subtotal` the sum of `price × quantity`, `discount` the promo code's discount on the subtotal, and `total` is `subtotal − discount`.\n\n**The cart.**\n\n- `add(sku, price, quantity = 1)` adds that quantity to the line with that SKU, or adds a new line `{ sku, price, quantity }` if there is none. Adding to an existing line keeps the line's price.\n- `setQuantity(sku, quantity)` sets a line's quantity; 0 or less removes the line. It does nothing for a SKU not in the cart.\n- `remove(sku)` removes the line.\n- `applyCode(code)` sets the promo code: `{ name, percent }`, `{ name, amount }` (in cents), or `null` to remove it. Two codes can share a name and differ in what they take off.\n\n**Discounts.** `discountFor(code, subtotal)`, further down the file, is 0 without a code; a percent code takes `Math.round(subtotal × percent / 100)`, an amount code takes its amount, and the discount is never more than the subtotal. `sum(amounts)` adds up an array of numbers.\n\n**The memo stays.** `summary()` must not reprice the cart when nothing changed since the last call. Keep the result cached in a field on the cart named for what it does (the starter's `this.cache`, or for example a version number or a dirty flag) rather than taking the memo out.\n\n**Tests.** `replay(actions)` plays a session on a new cart and returns what `summary()` showed each time it was asked. Actions are `[\"add\", sku, price, quantity?]`, `[\"quantity\", sku, quantity]`, `[\"remove\", sku]`, `[\"code\", code]` and `[\"summary\"]`.\n",
+  "language": "javascript",
+  "file": "cart.js",
+  "starter": "/** The shopper's cart in the browser. The header badge and the cart drawer read summary(). */\nexport class Cart {\n  constructor() {\n    this.lines = [];\n    this.code = null;\n    this.cache = null;\n  }\n\n  add(sku, price, quantity = 1) {\n    const line = this.lines.find((l) => l.sku === sku);\n    if (line) line.quantity += quantity;\n    else this.lines.push({ sku, price, quantity });\n  }\n\n  setQuantity(sku, quantity) {\n    const line = this.lines.find((l) => l.sku === sku);\n    if (!line) return;\n    if (quantity <= 0) this.remove(sku);\n    else line.quantity = quantity;\n  }\n\n  remove(sku) {\n    this.lines = this.lines.filter((l) => l.sku !== sku);\n  }\n\n  /** A promo code ({ name, percent } or { name, amount }), or null to take it off. */\n  applyCode(code) {\n    this.code = code;\n  }\n\n  /**\n   * Items, subtotal, discount and total, in cents. Memoised (#812): the drawer calls this on\n   * every render, and pricing a 60-line cart on each one cost 38 ms a frame.\n   */\n  summary() {\n    const key = this.lines.map((l) => l.sku).join(\",\") + \"|\" + (this.code?.name ?? \"\");\n    if (this.cache?.key === key) return this.cache.value;\n    const subtotal = sum(this.lines.map((l) => l.price * l.quantity));\n    const discount = discountFor(this.code, subtotal);\n    const value = {\n      items: sum(this.lines.map((l) => l.quantity)),\n      subtotal,\n      discount,\n      total: subtotal - discount,\n    };\n    this.cache = { key, value };\n    return value;\n  }\n}\n\n/**\n * Plays a session on a new cart, as the cart's tests and stories do: [\"add\", sku, price,\n * quantity], [\"quantity\", sku, quantity], [\"remove\", sku], [\"code\", code] and [\"summary\"].\n * Returns what summary() showed each time it was asked.\n */\nexport function replay(actions) {\n  const cart = new Cart();\n  const shown = [];\n  for (const [action, ...args] of actions) {\n    if (action === \"add\") cart.add(...args);\n    else if (action === \"quantity\") cart.setQuantity(...args);\n    else if (action === \"remove\") cart.remove(...args);\n    else if (action === \"code\") cart.applyCode(...args);\n    else if (action === \"summary\") shown.push(cart.summary());\n  }\n  return shown;\n}\n\n\n// ---- money: helpers this code uses. You shouldn't need to change them. ----\n\n/** Money is whole cents everywhere: never floats. */\n\n/**\n * What a line charges: its price times quantity, less the share of the order's discount that\n * checkout allocated to it (see allocate below).\n */\nfunction lineTotal(line) {\n  return line.price * line.quantity - (line.discount ?? 0);\n}\n\nfunction sum(amounts) {\n  return amounts.reduce((total, amount) => total + amount, 0);\n}\n\n\n// ---- discounts: helpers this code uses. You shouldn't need to change them. ----\n\n/**\n * A promo code's discount on a subtotal, in cents: a percentage ({ percent: 10 }) or a fixed\n * amount ({ amount: 500 }), never more than the subtotal.\n */\nfunction discountFor(code, subtotal) {\n  if (!code) return 0;\n  const off =\n    \"percent\" in code ? Math.round((subtotal * code.percent) / 100) : code.amount;\n  return Math.min(off, subtotal);\n}\n\n/**\n * At checkout the order's discount is spread over its lines in proportion to their value and\n * stored on each line as `discount`, so a partial refund can give back exactly what was paid\n * for the lines returned.\n */\nfunction allocate(code, lines) {\n  const gross = lines.map((line) => line.price * line.quantity);\n  const subtotal = sum(gross);\n  const total = discountFor(code, subtotal);\n  let left = total;\n  return lines.map((line, index) => {\n    const share =\n      index === lines.length - 1 || subtotal === 0\n        ? left\n        : Math.floor((total * gross[index]) / subtotal);\n    left -= share;\n    return { ...line, discount: share };\n  });\n}\n",
+  "entrypoint": "replay",
+  "cases": [
+    {
+      "id": "case-1",
+      "input": [
+        [
+          "add",
+          "jeans",
+          5900,
+          1
+        ],
+        [
+          "summary"
+        ],
+        [
+          "quantity",
+          "jeans",
+          2
+        ],
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 1,
+          "subtotal": 5900,
+          "discount": 0,
+          "total": 5900
+        },
+        {
+          "items": 2,
+          "subtotal": 11800,
+          "discount": 0,
+          "total": 11800
+        }
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-2",
+      "input": [
+        [
+          "add",
+          "rain-jacket",
+          5000,
+          1
+        ],
+        [
+          "code",
+          {
+            "name": "SPRING10",
+            "percent": 10
+          }
+        ],
+        [
+          "summary"
+        ],
+        [
+          "add",
+          "rain-jacket",
+          5000,
+          1
+        ],
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 1,
+          "subtotal": 5000,
+          "discount": 500,
+          "total": 4500
+        },
+        {
+          "items": 2,
+          "subtotal": 10000,
+          "discount": 1000,
+          "total": 9000
+        }
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-3",
+      "input": [
+        [
+          "add",
+          "tee",
+          2500,
+          2
+        ],
+        [
+          "add",
+          "socks",
+          1200,
+          1
+        ],
+        [
+          "summary"
+        ],
+        [
+          "remove",
+          "tee"
+        ],
+        [
+          "summary"
+        ],
+        [
+          "code",
+          {
+            "name": "SPRING10",
+            "percent": 10
+          }
+        ],
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 3,
+          "subtotal": 6200,
+          "discount": 0,
+          "total": 6200
+        },
+        {
+          "items": 1,
+          "subtotal": 1200,
+          "discount": 0,
+          "total": 1200
+        },
+        {
+          "items": 1,
+          "subtotal": 1200,
+          "discount": 120,
+          "total": 1080
+        }
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-4",
+      "input": [
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 0,
+          "subtotal": 0,
+          "discount": 0,
+          "total": 0
+        }
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-5",
+      "input": [
+        [
+          "add",
+          "tee",
+          2500,
+          1
+        ],
+        [
+          "add",
+          "socks",
+          1200,
+          2
+        ],
+        [
+          "summary"
+        ],
+        [
+          "quantity",
+          "tee",
+          2
+        ],
+        [
+          "quantity",
+          "socks",
+          1
+        ],
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 3,
+          "subtotal": 4900,
+          "discount": 0,
+          "total": 4900
+        },
+        {
+          "items": 3,
+          "subtotal": 6200,
+          "discount": 0,
+          "total": 6200
+        }
+      ],
+      "hidden": false
+    },
+    {
+      "id": "case-6",
+      "input": [
+        [
+          "add",
+          "tee",
+          2500,
+          1
+        ],
+        [
+          "summary"
+        ],
+        [
+          "quantity",
+          "tee",
+          0
+        ],
+        [
+          "add",
+          "tee",
+          2500,
+          2
+        ],
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 1,
+          "subtotal": 2500,
+          "discount": 0,
+          "total": 2500
+        },
+        {
+          "items": 2,
+          "subtotal": 5000,
+          "discount": 0,
+          "total": 5000
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-7",
+      "input": [
+        [
+          "add",
+          "mug",
+          1000,
+          1
+        ],
+        [
+          "code",
+          {
+            "name": "WELCOME15",
+            "amount": 1500
+          }
+        ],
+        [
+          "summary"
+        ],
+        [
+          "quantity",
+          "mug",
+          2
+        ],
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 1,
+          "subtotal": 1000,
+          "discount": 1000,
+          "total": 0
+        },
+        {
+          "items": 2,
+          "subtotal": 2000,
+          "discount": 1500,
+          "total": 500
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-8",
+      "input": [
+        [
+          "add",
+          "jeans",
+          5900,
+          3
+        ],
+        [
+          "summary"
+        ],
+        [
+          "quantity",
+          "jeans",
+          1
+        ],
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 3,
+          "subtotal": 17700,
+          "discount": 0,
+          "total": 17700
+        },
+        {
+          "items": 1,
+          "subtotal": 5900,
+          "discount": 0,
+          "total": 5900
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-9",
+      "input": [
+        [
+          "add",
+          "cap",
+          1800
+        ],
+        [
+          "summary"
+        ],
+        [
+          "add",
+          "cap",
+          1800
+        ],
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 1,
+          "subtotal": 1800,
+          "discount": 0,
+          "total": 1800
+        },
+        {
+          "items": 2,
+          "subtotal": 3600,
+          "discount": 0,
+          "total": 3600
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-10",
+      "input": [
+        [
+          "add",
+          "boots",
+          3000,
+          1
+        ],
+        [
+          "code",
+          {
+            "name": "SPRING10",
+            "percent": 10
+          }
+        ],
+        [
+          "summary"
+        ],
+        [
+          "code",
+          {
+            "name": "WELCOME15",
+            "amount": 1500
+          }
+        ],
+        [
+          "summary"
+        ],
+        [
+          "code",
+          null
+        ],
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 1,
+          "subtotal": 3000,
+          "discount": 300,
+          "total": 2700
+        },
+        {
+          "items": 1,
+          "subtotal": 3000,
+          "discount": 1500,
+          "total": 1500
+        },
+        {
+          "items": 1,
+          "subtotal": 3000,
+          "discount": 0,
+          "total": 3000
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-11",
+      "input": [
+        [
+          "add",
+          "tee",
+          2500,
+          1
+        ],
+        [
+          "summary"
+        ],
+        [
+          "quantity",
+          "hat",
+          3
+        ],
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 1,
+          "subtotal": 2500,
+          "discount": 0,
+          "total": 2500
+        },
+        {
+          "items": 1,
+          "subtotal": 2500,
+          "discount": 0,
+          "total": 2500
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-12",
+      "input": [
+        [
+          "add",
+          "tee",
+          2500,
+          1
+        ],
+        [
+          "summary"
+        ],
+        [
+          "summary"
+        ],
+        [
+          "quantity",
+          "tee",
+          4
+        ],
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 1,
+          "subtotal": 2500,
+          "discount": 0,
+          "total": 2500
+        },
+        {
+          "items": 1,
+          "subtotal": 2500,
+          "discount": 0,
+          "total": 2500
+        },
+        {
+          "items": 4,
+          "subtotal": 10000,
+          "discount": 0,
+          "total": 10000
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-13",
+      "input": [
+        [
+          "code",
+          {
+            "name": "SPRING10",
+            "percent": 10
+          }
+        ],
+        [
+          "summary"
+        ],
+        [
+          "add",
+          "boots",
+          3000,
+          1
+        ],
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 0,
+          "subtotal": 0,
+          "discount": 0,
+          "total": 0
+        },
+        {
+          "items": 1,
+          "subtotal": 3000,
+          "discount": 300,
+          "total": 2700
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-14",
+      "input": [
+        [
+          "add",
+          "tee",
+          2500,
+          1
+        ],
+        [
+          "summary"
+        ],
+        [
+          "remove",
+          "tee"
+        ],
+        [
+          "summary"
+        ],
+        [
+          "add",
+          "tee",
+          3000,
+          1
+        ],
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 1,
+          "subtotal": 2500,
+          "discount": 0,
+          "total": 2500
+        },
+        {
+          "items": 0,
+          "subtotal": 0,
+          "discount": 0,
+          "total": 0
+        },
+        {
+          "items": 1,
+          "subtotal": 3000,
+          "discount": 0,
+          "total": 3000
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-15",
+      "input": [
+        [
+          "add",
+          "mug",
+          1000,
+          1
+        ],
+        [
+          "add",
+          "tee",
+          2500,
+          1
+        ],
+        [
+          "code",
+          {
+            "name": "WELCOME15",
+            "amount": 1500
+          }
+        ],
+        [
+          "summary"
+        ],
+        [
+          "quantity",
+          "mug",
+          3
+        ],
+        [
+          "summary"
+        ],
+        [
+          "remove",
+          "tee"
+        ],
+        [
+          "summary"
+        ],
+        [
+          "add",
+          "mug",
+          1000,
+          2
+        ],
+        [
+          "summary"
+        ],
+        [
+          "code",
+          {
+            "name": "SPRING10",
+            "percent": 10
+          }
+        ],
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 2,
+          "subtotal": 3500,
+          "discount": 1500,
+          "total": 2000
+        },
+        {
+          "items": 4,
+          "subtotal": 5500,
+          "discount": 1500,
+          "total": 4000
+        },
+        {
+          "items": 3,
+          "subtotal": 3000,
+          "discount": 1500,
+          "total": 1500
+        },
+        {
+          "items": 5,
+          "subtotal": 5000,
+          "discount": 1500,
+          "total": 3500
+        },
+        {
+          "items": 5,
+          "subtotal": 5000,
+          "discount": 500,
+          "total": 4500
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-16",
+      "input": [
+        [
+          "add",
+          "socks",
+          1200,
+          1
+        ],
+        [
+          "add",
+          "socks",
+          1200,
+          1
+        ],
+        [
+          "add",
+          "socks",
+          1200,
+          1
+        ],
+        [
+          "summary"
+        ],
+        [
+          "quantity",
+          "socks",
+          3
+        ],
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 3,
+          "subtotal": 3600,
+          "discount": 0,
+          "total": 3600
+        },
+        {
+          "items": 3,
+          "subtotal": 3600,
+          "discount": 0,
+          "total": 3600
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-17",
+      "input": [
+        [
+          "add",
+          "x",
+          1000,
+          1
+        ],
+        [
+          "code",
+          {
+            "name": "X",
+            "amount": 100
+          }
+        ],
+        [
+          "summary"
+        ],
+        [
+          "code",
+          {
+            "name": "X",
+            "amount": 200
+          }
+        ],
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 1,
+          "subtotal": 1000,
+          "discount": 100,
+          "total": 900
+        },
+        {
+          "items": 1,
+          "subtotal": 1000,
+          "discount": 200,
+          "total": 800
+        }
+      ],
+      "hidden": true
+    },
+    {
+      "id": "case-18",
+      "input": [
+        [
+          "add",
+          "a",
+          1
+        ],
+        [
+          "add",
+          "b",
+          2
+        ],
+        [
+          "summary"
+        ],
+        [
+          "remove",
+          "a"
+        ],
+        [
+          "remove",
+          "b"
+        ],
+        [
+          "add",
+          "a:1x1,b",
+          2
+        ],
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 2,
+          "subtotal": 3,
+          "discount": 0,
+          "total": 3
+        },
+        {
+          "items": 1,
+          "subtotal": 2,
+          "discount": 0,
+          "total": 2
+        }
+      ],
+      "hidden": true
+    }
+  ],
+  "rules": [
+    {
+      "id": "keep-memo",
+      "message": "Keep `summary()` memoised: cache its result in a field of the cart (such as `this.cache`, a version number or a dirty flag) instead of repricing on every call.",
+      "when": {
+        "pattern": "this\\.#?\\w*([Cc]ache|[Mm]emo|[Dd]irty|[Ss]tale|[Vv]ersion|[Cc]hanged|[Pp]riced|[Ll]ast|[Ss]aved)",
+        "present": false
+      }
+    }
+  ]
+}

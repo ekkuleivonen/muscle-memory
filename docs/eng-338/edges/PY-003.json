@@ -1,0 +1,93 @@
+{
+  "key": "PY-003",
+  "revision": "sha256:f6cad67e20e329daa0b38afe744e617f03e52a51f04de47e40db380f5a5c64c8",
+  "language": "python",
+  "runtime": "Pyodide/CPython3.14",
+  "at": "2026-10-26T03:21:03.378Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "4ddd3e91c3e4964fad1e0b8e01ec0dc44fa87402cccf57f361390a44a0a042dd",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            " \t",
+            "2026-06-03 | X |  | | 0"
+          ],
+          "expected": {
+            "": 0
+          },
+          "reason": "Skip blank lines but retain an empty species and zero total.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "": 0
+          },
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "2026-06-03 | X | carabus SP. | | 2",
+            "2026-06-03 | X | CARABUS   sp. | | 3"
+          ],
+          "expected": {
+            "Carabus sp.": 5
+          },
+          "reason": "Canonicalisation collapses case and repeated whitespace.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "Carabus sp.": 5
+          },
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "a3c17eead2724c6ae3cd976605869320e2a987499377a19ba3683761af626693",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            " \t",
+            "2026-06-03 | X |  | | 0"
+          ],
+          "expected": {
+            "": 0
+          },
+          "reason": "Skip blank lines but retain an empty species and zero total.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "": 0
+          },
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "2026-06-03 | X | carabus SP. | | 2",
+            "2026-06-03 | X | CARABUS   sp. | | 3"
+          ],
+          "expected": {
+            "Carabus sp.": 5
+          },
+          "reason": "Canonicalisation collapses case and repeated whitespace.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "Carabus Sp.": 2,
+            "Carabus   Sp.": 3
+          },
+          "executionError": null,
+          "pass": false
+        }
+      ]
+    }
+  ]
+}

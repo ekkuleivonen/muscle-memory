@@ -1,0 +1,100 @@
+{
+  "key": "CS-002",
+  "revision": "sha256:790005e37baedc0c98656a2bd01150a206a8a02142dedfbc985b9e1e6a2dce6f",
+  "language": "csharp",
+  "runtime": "Roslyn/.NET WASM",
+  "at": "2026-10-26T03:20:08.935Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "1808918dc2812b884c3c231f86fe99ea2dc15286bf6decae54e6d6232c638fee",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            1,
+            1
+          ],
+          "expected": 0.01,
+          "reason": "Half-cent rounds upward.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 0.01,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            100,
+            2147483647
+          ],
+          "expected": 10,
+          "reason": "Days beyond twenty hit ten-percent cap.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 10,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            20,
+            -1
+          ],
+          "expected": 0,
+          "reason": "Negative days charge zero.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 0,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "ad331fea16f5316fbf3aeadb0434672cbc5a92cac3ad8d096d1490e2e26c77cb",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            1,
+            1
+          ],
+          "expected": 0.01,
+          "reason": "Half-cent rounds upward.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 0,
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            100,
+            2147483647
+          ],
+          "expected": 10,
+          "reason": "Days beyond twenty hit ten-percent cap.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 10,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            20,
+            -1
+          ],
+          "expected": 0,
+          "reason": "Negative days charge zero.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 0,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

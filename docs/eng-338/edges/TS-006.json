@@ -1,0 +1,329 @@
+{
+  "key": "TS-006",
+  "revision": "sha256:1939c20f182b3d088697fcfca121c182dabaaff3b33979e5b12965c3be3ab099",
+  "language": "typescript",
+  "runtime": "Sucrase/browser JavaScript",
+  "at": "2026-10-26T03:21:28.985Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "75ec8ebe313b8d737641e5ca399086ae1a6f274f57c3b98a38112234ab240163",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            {
+              "id": "f",
+              "userId": "u",
+              "loginAt": 0,
+              "revoked": false,
+              "tokens": [
+                {
+                  "token": "f.1",
+                  "issuedAt": 0,
+                  "rotatedAt": 1000
+                },
+                {
+                  "token": "f.2",
+                  "issuedAt": 1000,
+                  "rotatedAt": null
+                }
+              ]
+            },
+            "f.1",
+            11000
+          ],
+          "expected": {
+            "status": "ok",
+            "token": "f.2"
+          },
+          "reason": "Grace includes exact 10-second endpoint.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "status": "ok",
+            "token": "f.2"
+          },
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            {
+              "id": "f",
+              "userId": "u",
+              "loginAt": 0,
+              "revoked": false,
+              "tokens": [
+                {
+                  "token": "f.1",
+                  "issuedAt": 0,
+                  "rotatedAt": 1000
+                },
+                {
+                  "token": "f.2",
+                  "issuedAt": 1000,
+                  "rotatedAt": null
+                }
+              ]
+            },
+            "f.1",
+            11001
+          ],
+          "expected": {
+            "status": "reauth",
+            "reason": "reuse",
+            "revokeFamily": true
+          },
+          "reason": "One millisecond beyond grace revokes.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "status": "reauth",
+            "reason": "reuse",
+            "revokeFamily": true
+          },
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            {
+              "id": "f",
+              "userId": "u",
+              "loginAt": 0,
+              "revoked": true,
+              "tokens": [
+                {
+                  "token": "f.1",
+                  "issuedAt": 0,
+                  "rotatedAt": 1000
+                },
+                {
+                  "token": "f.2",
+                  "issuedAt": 1000,
+                  "rotatedAt": null
+                }
+              ]
+            },
+            "f.1",
+            1001
+          ],
+          "expected": {
+            "status": "reauth",
+            "reason": "revoked",
+            "revokeFamily": false
+          },
+          "reason": "Revocation precedes grace.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "status": "reauth",
+            "reason": "revoked",
+            "revokeFamily": false
+          },
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            {
+              "id": "f",
+              "userId": "u",
+              "loginAt": 0,
+              "revoked": true,
+              "tokens": [
+                {
+                  "token": "f.1",
+                  "issuedAt": 0,
+                  "rotatedAt": 1000
+                },
+                {
+                  "token": "f.2",
+                  "issuedAt": 1000,
+                  "rotatedAt": null
+                }
+              ]
+            },
+            "unknown",
+            1001
+          ],
+          "expected": {
+            "status": "reauth",
+            "reason": "unknown",
+            "revokeFamily": false
+          },
+          "reason": "Unknown token has first priority.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "status": "reauth",
+            "reason": "unknown",
+            "revokeFamily": false
+          },
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "7738302c8559db7b3a8ef5d945312a58060ccdd16d024dd8adeafe9f20e588fd",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            {
+              "id": "f",
+              "userId": "u",
+              "loginAt": 0,
+              "revoked": false,
+              "tokens": [
+                {
+                  "token": "f.1",
+                  "issuedAt": 0,
+                  "rotatedAt": 1000
+                },
+                {
+                  "token": "f.2",
+                  "issuedAt": 1000,
+                  "rotatedAt": null
+                }
+              ]
+            },
+            "f.1",
+            11000
+          ],
+          "expected": {
+            "status": "ok",
+            "token": "f.2"
+          },
+          "reason": "Grace includes exact 10-second endpoint.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "status": "reauth",
+            "reason": "reuse",
+            "revokeFamily": true
+          },
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            {
+              "id": "f",
+              "userId": "u",
+              "loginAt": 0,
+              "revoked": false,
+              "tokens": [
+                {
+                  "token": "f.1",
+                  "issuedAt": 0,
+                  "rotatedAt": 1000
+                },
+                {
+                  "token": "f.2",
+                  "issuedAt": 1000,
+                  "rotatedAt": null
+                }
+              ]
+            },
+            "f.1",
+            11001
+          ],
+          "expected": {
+            "status": "reauth",
+            "reason": "reuse",
+            "revokeFamily": true
+          },
+          "reason": "One millisecond beyond grace revokes.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "status": "reauth",
+            "reason": "reuse",
+            "revokeFamily": true
+          },
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            {
+              "id": "f",
+              "userId": "u",
+              "loginAt": 0,
+              "revoked": true,
+              "tokens": [
+                {
+                  "token": "f.1",
+                  "issuedAt": 0,
+                  "rotatedAt": 1000
+                },
+                {
+                  "token": "f.2",
+                  "issuedAt": 1000,
+                  "rotatedAt": null
+                }
+              ]
+            },
+            "f.1",
+            1001
+          ],
+          "expected": {
+            "status": "reauth",
+            "reason": "revoked",
+            "revokeFamily": false
+          },
+          "reason": "Revocation precedes grace.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "status": "reauth",
+            "reason": "revoked",
+            "revokeFamily": false
+          },
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            {
+              "id": "f",
+              "userId": "u",
+              "loginAt": 0,
+              "revoked": true,
+              "tokens": [
+                {
+                  "token": "f.1",
+                  "issuedAt": 0,
+                  "rotatedAt": 1000
+                },
+                {
+                  "token": "f.2",
+                  "issuedAt": 1000,
+                  "rotatedAt": null
+                }
+              ]
+            },
+            "unknown",
+            1001
+          ],
+          "expected": {
+            "status": "reauth",
+            "reason": "unknown",
+            "revokeFamily": false
+          },
+          "reason": "Unknown token has first priority.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "status": "reauth",
+            "reason": "unknown",
+            "revokeFamily": false
+          },
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

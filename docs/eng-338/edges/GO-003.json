@@ -1,0 +1,104 @@
+{
+  "key": "GO-003",
+  "revision": "sha256:23419d0a4b0be060582624f6565db67d433042ffcf4bd46101a67c0eb22e1c62",
+  "language": "go",
+  "runtime": "Yaegi WASM",
+  "at": "2026-10-26T03:20:16.321Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "7b4fb4ff77729744d2b0447ce4c5df24786ee7b0cee2b2654479fb8adab20b09",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "PATCH /items?q=a 503 0ms",
+          "expected": {
+            "method": "PATCH",
+            "path": "/items?q=a",
+            "status": 503,
+            "ms": 0
+          },
+          "reason": "Keep query and method, accept zero duration.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "method": "PATCH",
+            "path": "/items?q=a",
+            "status": 503,
+            "ms": 0
+          },
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "GET / 404 1501ms",
+          "expected": {
+            "method": "GET",
+            "path": "/",
+            "status": 404,
+            "ms": 1501
+          },
+          "reason": "Preserve whole milliseconds.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "method": "GET",
+            "path": "/",
+            "status": 404,
+            "ms": 1501
+          },
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "1aa88bffb8d932172cca83368f6bcf6a37d3bf85066b19411a88779dac72c830",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "PATCH /items?q=a 503 0ms",
+          "expected": {
+            "method": "PATCH",
+            "path": "/items?q=a",
+            "status": 503,
+            "ms": 0
+          },
+          "reason": "Keep query and method, accept zero duration.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "method": "PATCH",
+            "path": "/items?q=a",
+            "status": 503,
+            "ms": 0
+          },
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "GET / 404 1501ms",
+          "expected": {
+            "method": "GET",
+            "path": "/",
+            "status": 404,
+            "ms": 1501
+          },
+          "reason": "Preserve whole milliseconds.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "method": "GET",
+            "path": "/",
+            "status": 404,
+            "ms": 1
+          },
+          "executionError": null,
+          "pass": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,130 @@
+{
+  "key": "PY-005",
+  "revision": "sha256:3b8d9edb5d37413ecd4a2d53dd6f2a400ee8d5427b35a044775a248e0f4c067a",
+  "language": "python",
+  "runtime": "Pyodide/CPython3.14",
+  "at": "2026-10-26T03:21:08.172Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "1a102bd05292a63cb68eb66e7a750a899aaa7a81740d28778d96493e3b24579a",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "2026-06-03 | X | A | 0mm | 4",
+            "2026-06-03 | X | A | 2 CM | 1"
+          ],
+          "expected": {
+            "A": {
+              "measured": 2,
+              "min_mm": 0,
+              "max_mm": 20,
+              "mean_mm": 10
+            }
+          },
+          "reason": "Zero is measured, and each lot contributes once.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "A": {
+              "measured": 2,
+              "min_mm": 0,
+              "max_mm": 20,
+              "mean_mm": 10
+            }
+          },
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "2026-06-03 | X | A | ? | 3"
+          ],
+          "expected": {
+            "A": {
+              "measured": 0,
+              "min_mm": null,
+              "max_mm": null,
+              "mean_mm": null
+            }
+          },
+          "reason": "Unmeasured species still appears.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "A": {
+              "measured": 0,
+              "min_mm": null,
+              "max_mm": null,
+              "mean_mm": null
+            }
+          },
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "b7bdd2cc46d7b383f7122c5cef57cb40ebf3b83dd1f92df83bfea380a7e29de0",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "2026-06-03 | X | A | 0mm | 4",
+            "2026-06-03 | X | A | 2 CM | 1"
+          ],
+          "expected": {
+            "A": {
+              "measured": 2,
+              "min_mm": 0,
+              "max_mm": 20,
+              "mean_mm": 10
+            }
+          },
+          "reason": "Zero is measured, and each lot contributes once.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "A": {
+              "measured": 5,
+              "min_mm": 0,
+              "max_mm": 20,
+              "mean_mm": 4
+            }
+          },
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            "2026-06-03 | X | A | ? | 3"
+          ],
+          "expected": {
+            "A": {
+              "measured": 0,
+              "min_mm": null,
+              "max_mm": null,
+              "mean_mm": null
+            }
+          },
+          "reason": "Unmeasured species still appears.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "A": {
+              "measured": 0,
+              "min_mm": null,
+              "max_mm": null,
+              "mean_mm": null
+            }
+          },
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

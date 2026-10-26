@@ -1,0 +1,148 @@
+{
+  "key": "C-001",
+  "revision": "sha256:35464d4a9a60e22e03b023e944edd4afefcc668dcd5fcc4dd374272584ab32b6",
+  "language": "c",
+  "runtime": "Clang/YoWASP",
+  "at": "2026-10-26T03:18:52.520Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "f6c96e174eca5e9a34a8ccdfc5c8d5b6eb59f636d77ac9a5a2df7a499f476201",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "[AB::1]:",
+            8
+          ],
+          "expected": "[ab::1]",
+          "reason": "Empty port removed, literal lowercased, exact fit.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "[ab::1]",
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "[::1]tail",
+            20
+          ],
+          "expected": null,
+          "reason": "Closing bracket followed by invalid suffix.",
+          "origin": "blind-solver public-derived edge",
+          "actual": null,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "x",
+            0
+          ],
+          "expected": null,
+          "reason": "Zero-size buffer.",
+          "origin": "blind-solver public-derived edge",
+          "actual": null,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            ".",
+            2
+          ],
+          "expected": null,
+          "reason": "Trailing-dot removal leaves empty value.",
+          "origin": "blind-solver public-derived edge",
+          "actual": null,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "a..",
+            4
+          ],
+          "expected": "a.",
+          "reason": "Remove only one trailing dot.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "a.",
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "f949b71e6675780db96a1227d34cb7cccd17bf527b5dfd5c6ee54b79b12fc431",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "[AB::1]:",
+            8
+          ],
+          "expected": "[ab::1]",
+          "reason": "Empty port removed, literal lowercased, exact fit.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "[ab::1]",
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "[::1]tail",
+            20
+          ],
+          "expected": null,
+          "reason": "Closing bracket followed by invalid suffix.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "[::1]",
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            "x",
+            0
+          ],
+          "expected": null,
+          "reason": "Zero-size buffer.",
+          "origin": "blind-solver public-derived edge",
+          "actual": null,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            ".",
+            2
+          ],
+          "expected": null,
+          "reason": "Trailing-dot removal leaves empty value.",
+          "origin": "blind-solver public-derived edge",
+          "actual": null,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "a..",
+            4
+          ],
+          "expected": "a.",
+          "reason": "Remove only one trailing dot.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "a.",
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

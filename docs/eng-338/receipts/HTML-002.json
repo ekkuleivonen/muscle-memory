@@ -1,0 +1,121 @@
+{
+  "key": "HTML-002",
+  "revision": "sha256:5083edcff0065f9c07142b0f573ddd0e49d9428284c9d0b7f04aae376f0e7d8c",
+  "language": "html",
+  "runtime": "linkedom DOM",
+  "origin": "https://musclememory.run",
+  "partition": "c-sql-html",
+  "review": {
+    "key": "HTML-002",
+    "revision": "sha256:5083edcff0065f9c07142b0f573ddd0e49d9428284c9d0b7f04aae376f0e7d8c",
+    "firstCandidate": "HTML-002/attempts/first.html",
+    "wrongCandidate": "HTML-002/attempts/wrong.html",
+    "wrongIntent": "Body headers incorrectly use column scope instead of the specified row scope.",
+    "assumptions": [
+      "The starter table is replaced in place with semantic table sections."
+    ],
+    "ambiguityFindings": "No material ambiguity; required sections, cell types, order, scopes and counts are explicit.",
+    "verbosityFindings": "Example restates the requirements but adds no conflicting constraints.",
+    "confidence": "High; reasoned from visible requirements only, not executed.",
+    "publicEdgeCases": [
+      {
+        "input": [
+          "tbody th",
+          "scope"
+        ],
+        "expected": [
+          "row",
+          "row"
+        ],
+        "reason": "Mountain names identify their body rows."
+      },
+      {
+        "input": [
+          "tbody td",
+          "text"
+        ],
+        "expected": [
+          "3776",
+          "5895"
+        ],
+        "reason": "Heights follow the required mountain order."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:09:22.906Z",
+      "finishedAt": "2026-10-26T03:09:22.964Z",
+      "candidatePath": "c-sql-html/HTML-002/attempts/first.html",
+      "candidateSha256": "d520b764256b7a40c80372aa07b74b67c2fc8ba788cabc688c75bf02fe441ae8",
+      "actualCodeSha256": "d520b764256b7a40c80372aa07b74b67c2fc8ba788cabc688c75bf02fe441ae8",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:5083edcff0065f9c07142b0f573ddd0e49d9428284c9d0b7f04aae376f0e7d8c",
+      "runId": "b5a7423e-a0a7-429d-9a23-bc05e75b588a",
+      "documentRevision": 1,
+      "artifactId": "practice-e79300f0-9eb2-49c4-984b-d431128d8786.code.1",
+      "result": "passed",
+      "passed": 16,
+      "total": 16,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:09:23.760Z",
+      "finishedAt": "2026-10-26T03:09:23.809Z",
+      "candidatePath": "c-sql-html/HTML-002/attempts/wrong.html",
+      "candidateSha256": "e72c8a9262346f1251b3e5d2302cd2591f6f2af3e2c20ddd7bd0fa6ca8c254dc",
+      "actualCodeSha256": "e72c8a9262346f1251b3e5d2302cd2591f6f2af3e2c20ddd7bd0fa6ca8c254dc",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:5083edcff0065f9c07142b0f573ddd0e49d9428284c9d0b7f04aae376f0e7d8c",
+      "runId": "0c6bc7aa-9486-43fa-8e24-aebe86dca57d",
+      "documentRevision": 1,
+      "artifactId": "practice-cbb43e98-1ea0-42ec-b9e5-af99e1757621.code.1",
+      "result": "failed",
+      "passed": 15,
+      "total": 16,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "1 of 16 cases failed.\n\n✘\nhidden case 6hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:09:24.276Z",
+      "finishedAt": "2026-10-26T03:09:24.326Z",
+      "candidatePath": "c-sql-html/HTML-002/attempts/first.html",
+      "candidateSha256": "d520b764256b7a40c80372aa07b74b67c2fc8ba788cabc688c75bf02fe441ae8",
+      "actualCodeSha256": "d520b764256b7a40c80372aa07b74b67c2fc8ba788cabc688c75bf02fe441ae8",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:5083edcff0065f9c07142b0f573ddd0e49d9428284c9d0b7f04aae376f0e7d8c",
+      "runId": "838beaaa-d570-467f-a497-8f41df5f224c",
+      "documentRevision": 2,
+      "artifactId": "practice-cbb43e98-1ea0-42ec-b9e5-af99e1757621.code.2",
+      "result": "passed",
+      "passed": 16,
+      "total": 16,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

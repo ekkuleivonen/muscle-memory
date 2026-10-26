@@ -1,0 +1,118 @@
+{
+  "key": "PHP-001",
+  "revision": "sha256:883834c79dad09356b7fa8a1fd43941b2bffae32264173cb04bbfdb6ccb591f4",
+  "language": "php",
+  "runtime": "php-wasm",
+  "origin": "https://musclememory.run",
+  "partition": "f-java-csharp-php",
+  "review": {
+    "key": "PHP-001",
+    "revision": "sha256:883834c79dad09356b7fa8a1fd43941b2bffae32264173cb04bbfdb6ccb591f4",
+    "firstCandidate": "attempts/first.php",
+    "wrongCandidate": "attempts/wrong.php",
+    "wrongIntent": "Treat only spaces as word separators, failing the explicit tab/newline/carriage-return requirement.",
+    "assumptions": [
+      "Text is valid UTF-8; Unicode property whitespace is accepted; PCRE functions are available."
+    ],
+    "ambiguityFindings": [
+      "Input encoding and exact Unicode whitespace repertoire are unspecified."
+    ],
+    "verbosityFindings": [
+      "Clear concise contract; public examples omit non-space whitespace."
+    ],
+    "confidence": "high for valid UTF-8",
+    "publicEdgeCases": [
+      {
+        "input": "a\tb\nc\rd",
+        "expected": 4,
+        "reason": "Each listed whitespace type separates words."
+      },
+      {
+        "input": "\t\r\n ",
+        "expected": 0,
+        "reason": "Blank text has no words."
+      },
+      {
+        "input": "你好 + 42!",
+        "expected": 3,
+        "reason": "Non-English letters and standalone symbol remain words."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:10:52.255Z",
+      "finishedAt": "2026-10-26T03:10:52.550Z",
+      "candidatePath": "f-java-csharp-php/PHP-001/attempts/first.php",
+      "candidateSha256": "37316ecfe139f71c48e3284185be7223799229f6e0d7bd3b8a016c567441b39a",
+      "actualCodeSha256": "37316ecfe139f71c48e3284185be7223799229f6e0d7bd3b8a016c567441b39a",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:883834c79dad09356b7fa8a1fd43941b2bffae32264173cb04bbfdb6ccb591f4",
+      "runId": "b19ecec4-a53e-4f46-9898-39938a976535",
+      "documentRevision": 1,
+      "artifactId": "practice-383b6c98-f573-4cce-98ac-d9b35dae41a2.code.1",
+      "result": "passed",
+      "passed": 21,
+      "total": 21,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:10:53.259Z",
+      "finishedAt": "2026-10-26T03:10:53.548Z",
+      "candidatePath": "f-java-csharp-php/PHP-001/attempts/wrong.php",
+      "candidateSha256": "8f5361d19c078e4e42acbe27621bd2eb0d60770c19e9b48c844386396de65344",
+      "actualCodeSha256": "8f5361d19c078e4e42acbe27621bd2eb0d60770c19e9b48c844386396de65344",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:883834c79dad09356b7fa8a1fd43941b2bffae32264173cb04bbfdb6ccb591f4",
+      "runId": "d3ec263b-281c-4727-8357-e31595234519",
+      "documentRevision": 1,
+      "artifactId": "practice-8398ba52-3ae4-4b84-b66c-e28b9500ce34.code.1",
+      "result": "failed",
+      "passed": 13,
+      "total": 21,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "8 of 21 cases failed.\n\n✘\nhidden case 5hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 8hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 9hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 13hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 19hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 20hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:10:53.986Z",
+      "finishedAt": "2026-10-26T03:10:54.049Z",
+      "candidatePath": "f-java-csharp-php/PHP-001/attempts/first.php",
+      "candidateSha256": "37316ecfe139f71c48e3284185be7223799229f6e0d7bd3b8a016c567441b39a",
+      "actualCodeSha256": "37316ecfe139f71c48e3284185be7223799229f6e0d7bd3b8a016c567441b39a",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:883834c79dad09356b7fa8a1fd43941b2bffae32264173cb04bbfdb6ccb591f4",
+      "runId": "cb4e4134-0ff1-4c3b-be45-fc1ac625fc17",
+      "documentRevision": 2,
+      "artifactId": "practice-8398ba52-3ae4-4b84-b66c-e28b9500ce34.code.2",
+      "result": "passed",
+      "passed": 21,
+      "total": 21,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

@@ -1,0 +1,126 @@
+{
+  "key": "JS-005",
+  "revision": "sha256:6320a78f51591e7d65e30a36f2d8082d6d2b2ff8db98bdab80ced65af4e48492",
+  "language": "javascript",
+  "runtime": "browser JavaScript",
+  "origin": "https://musclememory.run",
+  "partition": "b-js-ts",
+  "review": {
+    "key": "JS-005",
+    "revision": "sha256:6320a78f51591e7d65e30a36f2d8082d6d2b2ff8db98bdab80ced65af4e48492",
+    "firstCandidate": "attempts/first.js",
+    "wrongCandidate": "attempts/wrong.js",
+    "wrongIntent": "Refund the paid line totals with a positive sign, violating the negative-ledger requirement.",
+    "assumptions": [
+      "Stored line discounts are authoritative; do not recalculate the promo."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": [
+      "Narrative receipt usefully exposes double discount; helpers retained."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": {
+          "code": {
+            "amount": 1000
+          },
+          "lines": [
+            {
+              "sku": "x",
+              "price": 2000,
+              "quantity": 1,
+              "discount": 200
+            }
+          ]
+        },
+        "expected": -1800,
+        "reason": "Partial return uses only its allocated discount."
+      },
+      {
+        "input": {
+          "code": null,
+          "lines": []
+        },
+        "expected": 0,
+        "reason": "Empty refund returns zero."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:10:44.917Z",
+      "finishedAt": "2026-10-26T03:10:44.983Z",
+      "candidatePath": "b-js-ts/JS-005/attempts/first.js",
+      "candidateSha256": "3a5003184d28d08e365367ab45fdba0cb6677db3cabacccc38dd75cf31810299",
+      "actualCodeSha256": "3a5003184d28d08e365367ab45fdba0cb6677db3cabacccc38dd75cf31810299",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:6320a78f51591e7d65e30a36f2d8082d6d2b2ff8db98bdab80ced65af4e48492",
+      "runId": "38051b51-23d9-47dd-9841-9121e3ac1635",
+      "documentRevision": 1,
+      "artifactId": "practice-e5f82e62-45e2-41d6-917b-c6b93739eb8d.code.1",
+      "result": "passed",
+      "passed": 17,
+      "total": 17,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:10:45.741Z",
+      "finishedAt": "2026-10-26T03:10:45.794Z",
+      "candidatePath": "b-js-ts/JS-005/attempts/wrong.js",
+      "candidateSha256": "046f880e4e3562621c45e909476db8f76b3d7376eb699549d34c510d4bb16db4",
+      "actualCodeSha256": "046f880e4e3562621c45e909476db8f76b3d7376eb699549d34c510d4bb16db4",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:6320a78f51591e7d65e30a36f2d8082d6d2b2ff8db98bdab80ced65af4e48492",
+      "runId": "abc9b310-5a03-43dd-a578-46dabf08328c",
+      "documentRevision": 1,
+      "artifactId": "practice-169632f5-6806-4ec1-9281-720ca734252d.code.1",
+      "result": "failed",
+      "passed": 3,
+      "total": 17,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "14 of 17 cases failed.\n\n✘\ncase 1\nInput\n{\"code\":null,\"lines\":[{\"sku\":\"tee\",\"price\":2500,\"quantity\":2,\"discount\":0}]}\nExpected\n-5000\nGot\n5000\n✘\ncase 2\nInput\n{\"code\":{\"percent\":10},\"lines\":[{\"sku\":\"rain-jacket\",\"price\":5000,\"quantity\":1,\"discount\":500}]}\nExpected\n-4500\nGot\n4500\n✘\ncase 3\nInput\n{\"code\":{\"amount\":1000},\"lines\":[{\"sku\":\"boots\",\"price\":3000,\"quantity\":1,\"discount\":600},{\"sku\":\"socks\",\"price\":2000,\"quantity\":1,\"discount\":400}]}\nExpected\n-4000\nGot\n4000\n✘\nhidden case 4hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 8hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 9hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 10hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 12hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 13hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 15hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 16hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 17hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:10:46.298Z",
+      "finishedAt": "2026-10-26T03:10:46.360Z",
+      "candidatePath": "b-js-ts/JS-005/attempts/first.js",
+      "candidateSha256": "3a5003184d28d08e365367ab45fdba0cb6677db3cabacccc38dd75cf31810299",
+      "actualCodeSha256": "3a5003184d28d08e365367ab45fdba0cb6677db3cabacccc38dd75cf31810299",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:6320a78f51591e7d65e30a36f2d8082d6d2b2ff8db98bdab80ced65af4e48492",
+      "runId": "9d6b506c-c9c2-43b4-b571-afc42a0479dc",
+      "documentRevision": 2,
+      "artifactId": "practice-169632f5-6806-4ec1-9281-720ca734252d.code.2",
+      "result": "passed",
+      "passed": 17,
+      "total": 17,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

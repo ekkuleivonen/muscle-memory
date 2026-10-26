@@ -1,0 +1,111 @@
+{
+  "key": "TS-001",
+  "revision": "sha256:87f3834b8d08c2b7bdfc322567c3f437e0ba19d6d8a90aa1dc53d8268a3666a1",
+  "language": "typescript",
+  "runtime": "Sucrase/browser JavaScript",
+  "origin": "https://musclememory.run",
+  "partition": "b-js-ts",
+  "review": {
+    "key": "TS-001",
+    "revision": "sha256:87f3834b8d08c2b7bdfc322567c3f437e0ba19d6d8a90aa1dc53d8268a3666a1",
+    "firstCandidate": "attempts/first.ts",
+    "wrongCandidate": "attempts/wrong.ts",
+    "wrongIntent": "Split only ordinary spaces, missing tabs and line breaks.",
+    "assumptions": [
+      "Whitespace follows JavaScript regular-expression whitespace semantics."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": [
+      "Concise and explicit definition."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": "\tone\r\ntwo\tthree \n",
+        "expected": 3,
+        "reason": "Mixed whitespace separates runs."
+      },
+      {
+        "input": "é ! 123",
+        "expected": 3,
+        "reason": "Symbols and non-English letters are words."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:12:59.836Z",
+      "finishedAt": "2026-10-26T03:12:59.882Z",
+      "candidatePath": "b-js-ts/TS-001/attempts/first.ts",
+      "candidateSha256": "acd6c763cadde305b0e2e4e9bec4afaffa18538a73735093d2c5fc3be0c38bd5",
+      "actualCodeSha256": "acd6c763cadde305b0e2e4e9bec4afaffa18538a73735093d2c5fc3be0c38bd5",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:87f3834b8d08c2b7bdfc322567c3f437e0ba19d6d8a90aa1dc53d8268a3666a1",
+      "runId": "defe6b54-de94-4d29-b232-c1016c44dc06",
+      "documentRevision": 1,
+      "artifactId": "practice-b574fb27-0294-4720-bbbf-67a53a07dba1.code.1",
+      "result": "passed",
+      "passed": 21,
+      "total": 21,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:13:00.727Z",
+      "finishedAt": "2026-10-26T03:13:00.779Z",
+      "candidatePath": "b-js-ts/TS-001/attempts/wrong.ts",
+      "candidateSha256": "7fdad891b4b76cf9b50ec4711faefb8182c7ee1a83ccd4a3a67bf5674b22e31d",
+      "actualCodeSha256": "7fdad891b4b76cf9b50ec4711faefb8182c7ee1a83ccd4a3a67bf5674b22e31d",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:87f3834b8d08c2b7bdfc322567c3f437e0ba19d6d8a90aa1dc53d8268a3666a1",
+      "runId": "47197f80-bc6f-4d67-93ce-228ce5c74fb4",
+      "documentRevision": 1,
+      "artifactId": "practice-9d230fb2-0506-4206-bff3-8a9336fa8607.code.1",
+      "result": "failed",
+      "passed": 13,
+      "total": 21,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "8 of 21 cases failed.\n\n✘\nhidden case 5hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 8hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 9hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 13hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 19hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 20hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:13:01.242Z",
+      "finishedAt": "2026-10-26T03:13:01.298Z",
+      "candidatePath": "b-js-ts/TS-001/attempts/first.ts",
+      "candidateSha256": "acd6c763cadde305b0e2e4e9bec4afaffa18538a73735093d2c5fc3be0c38bd5",
+      "actualCodeSha256": "acd6c763cadde305b0e2e4e9bec4afaffa18538a73735093d2c5fc3be0c38bd5",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:87f3834b8d08c2b7bdfc322567c3f437e0ba19d6d8a90aa1dc53d8268a3666a1",
+      "runId": "ec158b2a-9dc7-4b42-bfb9-04e7524bd68c",
+      "documentRevision": 2,
+      "artifactId": "practice-9d230fb2-0506-4206-bff3-8a9336fa8607.code.2",
+      "result": "passed",
+      "passed": 21,
+      "total": 21,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

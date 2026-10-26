@@ -1,0 +1,125 @@
+{
+  "key": "CS-003",
+  "revision": "sha256:528bb5a08300f125a51e8ab0d3c6d79e070eb1fd92bc594b3b3755a248ac58da",
+  "language": "csharp",
+  "runtime": "Roslyn/.NET WASM",
+  "origin": "https://musclememory.run",
+  "partition": "f-java-csharp-php",
+  "review": {
+    "key": "CS-003",
+    "revision": "sha256:528bb5a08300f125a51e8ab0d3c6d79e070eb1fd92bc594b3b3755a248ac58da",
+    "firstCandidate": "attempts/first.cs",
+    "wrongCandidate": "attempts/wrong.cs",
+    "wrongIntent": "Allow equal neighbors to extend a stretch, computing nondecreasing instead of strictly increasing.",
+    "assumptions": [
+      "Input is non-null and satisfies numeric bounds."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": [
+      "Contiguous and strict requirements are explicit and concise."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": [],
+        "expected": 0,
+        "reason": "Empty input."
+      },
+      {
+        "input": [
+          3,
+          2,
+          1
+        ],
+        "expected": 1,
+        "reason": "Decreasing values each start a stretch."
+      },
+      {
+        "input": [
+          1,
+          2,
+          2,
+          3
+        ],
+        "expected": 2,
+        "reason": "Equality breaks increasing stretches."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:08:25.981Z",
+      "finishedAt": "2026-10-26T03:08:27.005Z",
+      "candidatePath": "f-java-csharp-php/CS-003/attempts/first.cs",
+      "candidateSha256": "b20e2dff64e8849847d209a7f94c6083e5065ea7bbbe47da3c96f3f15e5b3fc6",
+      "actualCodeSha256": "b20e2dff64e8849847d209a7f94c6083e5065ea7bbbe47da3c96f3f15e5b3fc6",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:528bb5a08300f125a51e8ab0d3c6d79e070eb1fd92bc594b3b3755a248ac58da",
+      "runId": "cffd14ef-2ee4-4612-8c8c-b7f9a73453bc",
+      "documentRevision": 1,
+      "artifactId": "practice-813fc8d3-c21a-4ac4-bb7a-36fad5513e02.code.1",
+      "result": "passed",
+      "passed": 15,
+      "total": 15,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:08:27.664Z",
+      "finishedAt": "2026-10-26T03:08:28.688Z",
+      "candidatePath": "f-java-csharp-php/CS-003/attempts/wrong.cs",
+      "candidateSha256": "cfa6e0e36250397abba71997d0055414337c6fe1ab2f8f9e9fc53033280640c5",
+      "actualCodeSha256": "cfa6e0e36250397abba71997d0055414337c6fe1ab2f8f9e9fc53033280640c5",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:528bb5a08300f125a51e8ab0d3c6d79e070eb1fd92bc594b3b3755a248ac58da",
+      "runId": "f5c33cfd-617a-4aca-979d-dcbb463e8159",
+      "documentRevision": 1,
+      "artifactId": "practice-81f367c8-0da1-415d-9cd8-779dcb82165a.code.1",
+      "result": "failed",
+      "passed": 10,
+      "total": 15,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "5 of 15 cases failed.\n\n✘\ncase 2\nInput\n[2,2,2]\nExpected\n1\nGot\n3\n✘\nhidden case 8hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 11hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 13hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 15hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:08:29.002Z",
+      "finishedAt": "2026-10-26T03:08:29.659Z",
+      "candidatePath": "f-java-csharp-php/CS-003/attempts/first.cs",
+      "candidateSha256": "b20e2dff64e8849847d209a7f94c6083e5065ea7bbbe47da3c96f3f15e5b3fc6",
+      "actualCodeSha256": "b20e2dff64e8849847d209a7f94c6083e5065ea7bbbe47da3c96f3f15e5b3fc6",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:528bb5a08300f125a51e8ab0d3c6d79e070eb1fd92bc594b3b3755a248ac58da",
+      "runId": "a3c7729d-1595-413a-83d6-982d78bca820",
+      "documentRevision": 2,
+      "artifactId": "practice-81f367c8-0da1-415d-9cd8-779dcb82165a.code.2",
+      "result": "passed",
+      "passed": 15,
+      "total": 15,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

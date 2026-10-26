@@ -1,0 +1,123 @@
+{
+  "key": "PY-003",
+  "revision": "sha256:f6cad67e20e329daa0b38afe744e617f03e52a51f04de47e40db380f5a5c64c8",
+  "language": "python",
+  "runtime": "Pyodide/CPython3.14",
+  "origin": "https://musclememory.run",
+  "partition": "a-python",
+  "review": {
+    "key": "PY-003",
+    "revision": "sha256:f6cad67e20e329daa0b38afe744e617f03e52a51f04de47e40db380f5a5c64c8",
+    "firstCandidate": "attempts/first.py",
+    "wrongCandidate": "attempts/wrong.py",
+    "wrongIntent": "Retain title-casing helper instead of calling canonical_name, violating canonical names and explicit helper requirement.",
+    "assumptions": [
+      "Nonblank lines have valid five-field syntax and integer counts."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": [
+      "Narrative gives context; explicit requirement clearly identifies authoritative helper."
+    ],
+    "confidence": "high, unexecuted",
+    "publicEdgeCases": [
+      {
+        "input": [
+          " \t",
+          "2026-06-03 | X |  | | 0"
+        ],
+        "expected": {
+          "": 0
+        },
+        "reason": "Skip blank lines but retain an empty species and zero total."
+      },
+      {
+        "input": [
+          "2026-06-03 | X | carabus SP. | | 2",
+          "2026-06-03 | X | CARABUS   sp. | | 3"
+        ],
+        "expected": {
+          "Carabus sp.": 5
+        },
+        "reason": "Canonicalisation collapses case and repeated whitespace."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:11:22.535Z",
+      "finishedAt": "2026-10-26T03:11:23.970Z",
+      "candidatePath": "a-python/PY-003/attempts/first.py",
+      "candidateSha256": "4ddd3e91c3e4964fad1e0b8e01ec0dc44fa87402cccf57f361390a44a0a042dd",
+      "actualCodeSha256": "4ddd3e91c3e4964fad1e0b8e01ec0dc44fa87402cccf57f361390a44a0a042dd",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:f6cad67e20e329daa0b38afe744e617f03e52a51f04de47e40db380f5a5c64c8",
+      "runId": "8823881e-c2df-4634-bfd8-af123749eb39",
+      "documentRevision": 1,
+      "artifactId": "practice-3d2eebab-6104-4230-b832-fc4df075b825.code.1",
+      "result": "passed",
+      "passed": 17,
+      "total": 17,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:11:24.694Z",
+      "finishedAt": "2026-10-26T03:11:26.167Z",
+      "candidatePath": "a-python/PY-003/attempts/wrong.py",
+      "candidateSha256": "a3c17eead2724c6ae3cd976605869320e2a987499377a19ba3683761af626693",
+      "actualCodeSha256": "a3c17eead2724c6ae3cd976605869320e2a987499377a19ba3683761af626693",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:f6cad67e20e329daa0b38afe744e617f03e52a51f04de47e40db380f5a5c64c8",
+      "runId": "f105be7c-0136-419a-a32e-09bfd17c45a1",
+      "documentRevision": 1,
+      "artifactId": "practice-d390aef9-a4ca-4c86-b19b-9bb87dad6997.code.1",
+      "result": "failed",
+      "passed": 2,
+      "total": 17,
+      "rules": [
+        "shared-helper"
+      ],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "15 of 17 cases failed.\n\n✘\ncase 1\nInput\n[\"2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\",\"2026-06-03 | Ridge B | carabus nemoralis | 14.5 mm | 1\"]\nExpected\n{\"Carabus nemoralis\":3}\nGot\n{\"Carabus Nemoralis\": 3}\n✘\ncase 3\nInput\n[\"2026-06-03 | Ridge B | Pterostichus niger | 14.5 mm | 3\",\"2026-06-03 | Ridge B | Pterostichus niger | 14.5 mm | 2\"]\nExpected\n{\"Pterostichus niger\":5}\nGot\n{\"Pterostichus Niger\": 3, \"Pterostichus Niger\": 2}\n✘\ncase 4\nInput\n[\"2026-06-03 | Ridge B | Carabus sp. | 14.5 mm | 4\"]\nExpected\n{\"Carabus sp.\":4}\nGot\n{\"Carabus Sp.\": 4}\n✘\ncase 5\nInput\n[\"2026-06-03 | Ridge B | ABAX PARALLELEPIPEDUS | 14.5 mm | 2\",\"2026-06-03 | Ridge B | Abax parallelepipedus | 14.5 mm | 1\"]\nExpected\n{\"Abax parallelepipedus\":3}\nGot\n{\"Abax Parallelepipedus\": 3}\n✘\nhidden case 6hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 8hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 9hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 10hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 11hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 13hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 15hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 16hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 17hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:11:26.628Z",
+      "finishedAt": "2026-10-26T03:11:27.543Z",
+      "candidatePath": "a-python/PY-003/attempts/first.py",
+      "candidateSha256": "4ddd3e91c3e4964fad1e0b8e01ec0dc44fa87402cccf57f361390a44a0a042dd",
+      "actualCodeSha256": "4ddd3e91c3e4964fad1e0b8e01ec0dc44fa87402cccf57f361390a44a0a042dd",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:f6cad67e20e329daa0b38afe744e617f03e52a51f04de47e40db380f5a5c64c8",
+      "runId": "c37d336a-37c5-40ab-8fb1-d72492b3dab9",
+      "documentRevision": 2,
+      "artifactId": "practice-d390aef9-a4ca-4c86-b19b-9bb87dad6997.code.2",
+      "result": "passed",
+      "passed": 17,
+      "total": 17,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

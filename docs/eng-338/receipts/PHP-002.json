@@ -1,0 +1,139 @@
+{
+  "key": "PHP-002",
+  "revision": "sha256:07b2c479fd24fbccfe96d50e89758d7babf532375d31fc50fb4f075447949fa3",
+  "language": "php",
+  "runtime": "php-wasm",
+  "origin": "https://musclememory.run",
+  "partition": "f-java-csharp-php",
+  "review": {
+    "key": "PHP-002",
+    "revision": "sha256:07b2c479fd24fbccfe96d50e89758d7babf532375d31fc50fb4f075447949fa3",
+    "firstCandidate": "attempts/first.php",
+    "wrongCandidate": "attempts/wrong.php",
+    "wrongIntent": "Expire the link exactly at its deadline, violating inclusive validity.",
+    "assumptions": [
+      "Timestamp and minute values permit exact arithmetic within runtime integer range."
+    ],
+    "ambiguityFindings": [
+      "No maximum timestamps or TTL, integer width, or overflow policy specified."
+    ],
+    "verbosityFindings": [
+      "Units and inclusive boundary are concise and explicit."
+    ],
+    "confidence": "high for ordinary timestamp ranges",
+    "publicEdgeCases": [
+      {
+        "input": [
+          100,
+          160,
+          1
+        ],
+        "expected": false,
+        "reason": "Deadline remains valid."
+      },
+      {
+        "input": [
+          100,
+          161,
+          1
+        ],
+        "expected": true,
+        "reason": "One second past deadline expires."
+      },
+      {
+        "input": [
+          100,
+          101,
+          0
+        ],
+        "expected": true,
+        "reason": "Zero TTL expires after issue instant."
+      },
+      {
+        "input": [
+          100,
+          99,
+          0
+        ],
+        "expected": false,
+        "reason": "Before issue is not later than deadline."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:10:56.072Z",
+      "finishedAt": "2026-10-26T03:10:56.444Z",
+      "candidatePath": "f-java-csharp-php/PHP-002/attempts/first.php",
+      "candidateSha256": "00624114789079524bb1214a4181d128c69a9b339537da8f67b48503ef095ed8",
+      "actualCodeSha256": "00624114789079524bb1214a4181d128c69a9b339537da8f67b48503ef095ed8",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:07b2c479fd24fbccfe96d50e89758d7babf532375d31fc50fb4f075447949fa3",
+      "runId": "f42314d2-9d0c-4ca3-a836-1e0f6f016c75",
+      "documentRevision": 1,
+      "artifactId": "practice-63ad5b23-1062-4a33-ab69-4bc77910f440.code.1",
+      "result": "passed",
+      "passed": 16,
+      "total": 16,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:10:57.222Z",
+      "finishedAt": "2026-10-26T03:10:57.593Z",
+      "candidatePath": "f-java-csharp-php/PHP-002/attempts/wrong.php",
+      "candidateSha256": "1bf96cdebbf57ab08fe62b4f14c96a63f0221227fd6fc0931a9fae56d0138f4d",
+      "actualCodeSha256": "1bf96cdebbf57ab08fe62b4f14c96a63f0221227fd6fc0931a9fae56d0138f4d",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:07b2c479fd24fbccfe96d50e89758d7babf532375d31fc50fb4f075447949fa3",
+      "runId": "04fda85d-6ebe-4acc-b66b-eafa3cd2b317",
+      "documentRevision": 1,
+      "artifactId": "practice-24a9f5bb-5b58-4677-adc6-287161a01317.code.1",
+      "result": "failed",
+      "passed": 9,
+      "total": 16,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "7 of 16 cases failed.\n\n✘\ncase 2\nInput\n[1000,4600,60]\nExpected\nfalse\nGot\ntrue\n✘\ncase 4\nInput\n[1000,1000,0]\nExpected\nfalse\nGot\ntrue\n✘\nhidden case 5hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 8hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 10hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 12hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:10:58.032Z",
+      "finishedAt": "2026-10-26T03:10:58.090Z",
+      "candidatePath": "f-java-csharp-php/PHP-002/attempts/first.php",
+      "candidateSha256": "00624114789079524bb1214a4181d128c69a9b339537da8f67b48503ef095ed8",
+      "actualCodeSha256": "00624114789079524bb1214a4181d128c69a9b339537da8f67b48503ef095ed8",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:07b2c479fd24fbccfe96d50e89758d7babf532375d31fc50fb4f075447949fa3",
+      "runId": "f9c71d44-2bb2-43ec-aaa7-fdabbfcb68ce",
+      "documentRevision": 2,
+      "artifactId": "practice-24a9f5bb-5b58-4677-adc6-287161a01317.code.2",
+      "result": "passed",
+      "passed": 16,
+      "total": 16,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

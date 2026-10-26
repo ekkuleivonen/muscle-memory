@@ -1,0 +1,100 @@
+{
+  "key": "JAVA-005",
+  "revision": "sha256:3ce284ce819534d3560b32ba560afab936ec6c79859c74dc9de98f85ddd7a790",
+  "language": "java",
+  "runtime": "teavm-javac",
+  "at": "2026-10-26T03:20:54.379Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "45936b002bb10e4ac9f8629fbfcbf948a26cbb16eb83e6681ec777a061d47dc9",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "aAzZ",
+            -1
+          ],
+          "expected": "zZyY",
+          "reason": "Backward wrap preserves case.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "zZyY",
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "Hello, 9!",
+            52
+          ],
+          "expected": "Hello, 9!",
+          "reason": "Full alphabet cycles and nonletters remain unchanged.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "Hello, 9!",
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "",
+            10000
+          ],
+          "expected": "",
+          "reason": "Empty input.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "",
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "51730d2f23d8b6fa72626366cd61f42ac3686292dec17613a4531c7d0bd8fffe",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "aAzZ",
+            -1
+          ],
+          "expected": "zZyY",
+          "reason": "Backward wrap preserves case.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "`@yY",
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            "Hello, 9!",
+            52
+          ],
+          "expected": "Hello, 9!",
+          "reason": "Full alphabet cycles and nonletters remain unchanged.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "Hello, 9!",
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "",
+            10000
+          ],
+          "expected": "",
+          "reason": "Empty input.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "",
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

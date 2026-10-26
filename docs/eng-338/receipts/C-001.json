@@ -1,0 +1,143 @@
+{
+  "key": "C-001",
+  "revision": "sha256:35464d4a9a60e22e03b023e944edd4afefcc668dcd5fcc4dd374272584ab32b6",
+  "language": "c",
+  "runtime": "Clang/YoWASP",
+  "origin": "https://musclememory.run",
+  "partition": "d-c-cpp",
+  "review": {
+    "key": "C-001",
+    "revision": "sha256:35464d4a9a60e22e03b023e944edd4afefcc668dcd5fcc4dd374272584ab32b6",
+    "firstCandidate": "attempts/first.c",
+    "wrongCandidate": "attempts/wrong.c",
+    "wrongIntent": "Accept invalid non-port suffix after the closing IPv6 bracket.",
+    "assumptions": [
+      "Only stated structural validation is required; do not validate actual hostname or IPv6 syntax.",
+      "Non-null NUL-terminated host and writable out for positive size; return type assumes normalized length fits int."
+    ],
+    "ambiguityFindings": [
+      "Port content is unrestricted by the rules, including empty ports.",
+      "Literal interior validity and output-buffer contents on error are unspecified."
+    ],
+    "verbosityFindings": "Rules and buffer contract are clear and examples concise.",
+    "confidence": "high; not executed",
+    "publicEdgeCases": [
+      {
+        "input": [
+          "[AB::1]:",
+          8
+        ],
+        "expected": "[ab::1]",
+        "reason": "Empty port removed, literal lowercased, exact fit."
+      },
+      {
+        "input": [
+          "[::1]tail",
+          20
+        ],
+        "expected": null,
+        "reason": "Closing bracket followed by invalid suffix."
+      },
+      {
+        "input": [
+          "x",
+          0
+        ],
+        "expected": null,
+        "reason": "Zero-size buffer."
+      },
+      {
+        "input": [
+          ".",
+          2
+        ],
+        "expected": null,
+        "reason": "Trailing-dot removal leaves empty value."
+      },
+      {
+        "input": [
+          "a..",
+          4
+        ],
+        "expected": "a.",
+        "reason": "Remove only one trailing dot."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:05:42.453Z",
+      "finishedAt": "2026-10-26T03:05:44.332Z",
+      "candidatePath": "d-c-cpp/C-001/attempts/first.c",
+      "candidateSha256": "f6c96e174eca5e9a34a8ccdfc5c8d5b6eb59f636d77ac9a5a2df7a499f476201",
+      "actualCodeSha256": "f6c96e174eca5e9a34a8ccdfc5c8d5b6eb59f636d77ac9a5a2df7a499f476201",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:35464d4a9a60e22e03b023e944edd4afefcc668dcd5fcc4dd374272584ab32b6",
+      "runId": "5352a33b-c1a4-4034-9b0a-ae2eb8da6e6f",
+      "documentRevision": 1,
+      "artifactId": "practice-6b1221ad-8362-45ad-b03d-25b0ac111f55.code.1",
+      "result": "passed",
+      "passed": 22,
+      "total": 22,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:05:45.129Z",
+      "finishedAt": "2026-10-26T03:05:47.087Z",
+      "candidatePath": "d-c-cpp/C-001/attempts/wrong.c",
+      "candidateSha256": "f949b71e6675780db96a1227d34cb7cccd17bf527b5dfd5c6ee54b79b12fc431",
+      "actualCodeSha256": "f949b71e6675780db96a1227d34cb7cccd17bf527b5dfd5c6ee54b79b12fc431",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:35464d4a9a60e22e03b023e944edd4afefcc668dcd5fcc4dd374272584ab32b6",
+      "runId": "58aeb626-e983-45bd-b7be-9d0c99442a6a",
+      "documentRevision": 1,
+      "artifactId": "practice-03e0d01d-649e-41c3-b245-52195363c7aa.code.1",
+      "result": "failed",
+      "passed": 21,
+      "total": 22,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "1 of 22 cases failed.\n\n✘\nhidden case 10hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:05:47.505Z",
+      "finishedAt": "2026-10-26T03:05:47.774Z",
+      "candidatePath": "d-c-cpp/C-001/attempts/first.c",
+      "candidateSha256": "f6c96e174eca5e9a34a8ccdfc5c8d5b6eb59f636d77ac9a5a2df7a499f476201",
+      "actualCodeSha256": "f6c96e174eca5e9a34a8ccdfc5c8d5b6eb59f636d77ac9a5a2df7a499f476201",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:35464d4a9a60e22e03b023e944edd4afefcc668dcd5fcc4dd374272584ab32b6",
+      "runId": "a04b6ec2-f943-4ff1-8b78-7d0d2402dd77",
+      "documentRevision": 2,
+      "artifactId": "practice-03e0d01d-649e-41c3-b245-52195363c7aa.code.2",
+      "result": "passed",
+      "passed": 22,
+      "total": 22,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

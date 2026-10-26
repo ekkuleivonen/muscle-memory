@@ -1,0 +1,135 @@
+{
+  "key": "C-005",
+  "revision": "sha256:cde78a35b25418677471ff6911c4a89792e744996396c7712b9346b121a0e53e",
+  "language": "c",
+  "runtime": "Clang/YoWASP",
+  "origin": "https://musclememory.run",
+  "partition": "d-c-cpp",
+  "review": {
+    "key": "C-005",
+    "revision": "sha256:cde78a35b25418677471ff6911c4a89792e744996396c7712b9346b121a0e53e",
+    "firstCandidate": "attempts/first.c",
+    "wrongCandidate": "attempts/wrong.c",
+    "wrongIntent": "Treat any zero as forcing the total gcd to zero, violating gcd(0,n)=abs(n).",
+    "assumptions": [
+      "Values obey stated range, so negating a negative value is representable."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": "Complete concise edge semantics and range limits.",
+    "confidence": "high; not executed",
+    "publicEdgeCases": [
+      {
+        "input": [],
+        "expected": 0,
+        "reason": "Explicit empty-list identity."
+      },
+      {
+        "input": [
+          0,
+          0
+        ],
+        "expected": 0,
+        "reason": "All zero list."
+      },
+      {
+        "input": [
+          -9,
+          0
+        ],
+        "expected": 9,
+        "reason": "Ignore signs and zero after nonzero."
+      },
+      {
+        "input": [
+          -7
+        ],
+        "expected": 7,
+        "reason": "Nonnegative singleton result."
+      },
+      {
+        "input": [
+          12,
+          25
+        ],
+        "expected": 1,
+        "reason": "Coprime inputs."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:07:05.907Z",
+      "finishedAt": "2026-10-26T03:07:07.867Z",
+      "candidatePath": "d-c-cpp/C-005/attempts/first.c",
+      "candidateSha256": "8f458874f1f04abe502e0fb6b158127f73b17ca5ffd44f2c36c81b8d36313f2f",
+      "actualCodeSha256": "8f458874f1f04abe502e0fb6b158127f73b17ca5ffd44f2c36c81b8d36313f2f",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:cde78a35b25418677471ff6911c4a89792e744996396c7712b9346b121a0e53e",
+      "runId": "d39d336a-8748-4d0f-96fb-5075025310c2",
+      "documentRevision": 1,
+      "artifactId": "practice-bd0f504a-a32a-48b6-9cb1-ced8ce47a01b.code.1",
+      "result": "passed",
+      "passed": 19,
+      "total": 19,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:07:08.455Z",
+      "finishedAt": "2026-10-26T03:07:10.838Z",
+      "candidatePath": "d-c-cpp/C-005/attempts/wrong.c",
+      "candidateSha256": "ea7149e6636afec7788fe4f9531864d88a728b834a2ea3bd096e92e75b8f3ec5",
+      "actualCodeSha256": "ea7149e6636afec7788fe4f9531864d88a728b834a2ea3bd096e92e75b8f3ec5",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:cde78a35b25418677471ff6911c4a89792e744996396c7712b9346b121a0e53e",
+      "runId": "5ae14633-8eeb-4c8d-bdfe-94d88232c75b",
+      "documentRevision": 1,
+      "artifactId": "practice-c3c6fe41-f683-4a34-8865-8af2defd59c9.code.1",
+      "result": "failed",
+      "passed": 13,
+      "total": 19,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "6 of 19 cases failed.\n\n✘\ncase 2\nInput\n[0,-12,18]\nExpected\n6\nGot\n0\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 11hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 17hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 19hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:07:11.234Z",
+      "finishedAt": "2026-10-26T03:07:11.493Z",
+      "candidatePath": "d-c-cpp/C-005/attempts/first.c",
+      "candidateSha256": "8f458874f1f04abe502e0fb6b158127f73b17ca5ffd44f2c36c81b8d36313f2f",
+      "actualCodeSha256": "8f458874f1f04abe502e0fb6b158127f73b17ca5ffd44f2c36c81b8d36313f2f",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:cde78a35b25418677471ff6911c4a89792e744996396c7712b9346b121a0e53e",
+      "runId": "8deabe1c-af07-4532-88fb-ac584ec0cdb2",
+      "documentRevision": 2,
+      "artifactId": "practice-c3c6fe41-f683-4a34-8865-8af2defd59c9.code.2",
+      "result": "passed",
+      "passed": 19,
+      "total": 19,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

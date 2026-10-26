@@ -1,0 +1,92 @@
+{
+  "key": "HTML-004",
+  "revision": "sha256:06166dcb2efbabf16d17b8d91ee57a781881920b64f16924d59eb7f6f457d542",
+  "language": "html",
+  "runtime": "linkedom DOM",
+  "at": "2026-10-26T03:20:19.151Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "b785c92fda5d3a94caa7b54aa7918e760146668531ee462de077e60a805870b8",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "figure img",
+            "width"
+          ],
+          "expected": [
+            "640"
+          ],
+          "reason": "Specified intrinsic width is retained.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "640"
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "figure img",
+            "height"
+          ],
+          "expected": [
+            "480"
+          ],
+          "reason": "Specified intrinsic height is retained.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "480"
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "50bee38d2307964fc41c543db01a9d637cd9aa00f5508df9d522defa12e36075",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "figure img",
+            "width"
+          ],
+          "expected": [
+            "640"
+          ],
+          "reason": "Specified intrinsic width is retained.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "640"
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "figure img",
+            "height"
+          ],
+          "expected": [
+            "480"
+          ],
+          "reason": "Specified intrinsic height is retained.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "480"
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

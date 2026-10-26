@@ -1,0 +1,100 @@
+{
+  "key": "HTML-002",
+  "revision": "sha256:5083edcff0065f9c07142b0f573ddd0e49d9428284c9d0b7f04aae376f0e7d8c",
+  "language": "html",
+  "runtime": "linkedom DOM",
+  "at": "2026-10-26T03:20:19.053Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "d520b764256b7a40c80372aa07b74b67c2fc8ba788cabc688c75bf02fe441ae8",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "tbody th",
+            "scope"
+          ],
+          "expected": [
+            "row",
+            "row"
+          ],
+          "reason": "Mountain names identify their body rows.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "row",
+            "row"
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "tbody td",
+            "text"
+          ],
+          "expected": [
+            "3776",
+            "5895"
+          ],
+          "reason": "Heights follow the required mountain order.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "3776",
+            "5895"
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "e72c8a9262346f1251b3e5d2302cd2591f6f2af3e2c20ddd7bd0fa6ca8c254dc",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "tbody th",
+            "scope"
+          ],
+          "expected": [
+            "row",
+            "row"
+          ],
+          "reason": "Mountain names identify their body rows.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "col",
+            "col"
+          ],
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            "tbody td",
+            "text"
+          ],
+          "expected": [
+            "3776",
+            "5895"
+          ],
+          "reason": "Heights follow the required mountain order.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "3776",
+            "5895"
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

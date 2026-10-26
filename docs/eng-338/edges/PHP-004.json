@@ -1,0 +1,160 @@
+{
+  "key": "PHP-004",
+  "revision": "sha256:3b183d6cb847b893fbf2e00ede2f1c9fbbe4bdf10d990db2dbf6471ca7b8b4c4",
+  "language": "php",
+  "runtime": "php-wasm",
+  "at": "2026-10-26T03:20:55.830Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "cc10cb5800be083f0d7869462e633b880052e52ce0f18087097b21424bcef5ec",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            -3,
+            0,
+            -2,
+            -1,
+            4
+          ],
+          "expected": [
+            0,
+            -2,
+            4,
+            -3,
+            -1
+          ],
+          "reason": "Zero and negative evens are even and order is stable.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            0,
+            -2,
+            4,
+            -3,
+            -1
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            6,
+            2,
+            4,
+            5,
+            1,
+            3
+          ],
+          "expected": [
+            6,
+            2,
+            4,
+            5,
+            1,
+            3
+          ],
+          "reason": "Group order must not be sorted.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            6,
+            2,
+            4,
+            5,
+            1,
+            3
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [],
+          "expected": [],
+          "reason": "Empty output remains a JSON list.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "48f62210e354cdaedd59fb6e547c0a7bd91f54d5df932add48a5f7d02ca4ad4c",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            -3,
+            0,
+            -2,
+            -1,
+            4
+          ],
+          "expected": [
+            0,
+            -2,
+            4,
+            -3,
+            -1
+          ],
+          "reason": "Zero and negative evens are even and order is stable.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            -2,
+            0,
+            4,
+            -3,
+            -1
+          ],
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            6,
+            2,
+            4,
+            5,
+            1,
+            3
+          ],
+          "expected": [
+            6,
+            2,
+            4,
+            5,
+            1,
+            3
+          ],
+          "reason": "Group order must not be sorted.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            2,
+            4,
+            6,
+            1,
+            3,
+            5
+          ],
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [],
+          "expected": [],
+          "reason": "Empty output remains a JSON list.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

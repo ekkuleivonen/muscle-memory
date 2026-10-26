@@ -1,0 +1,82 @@
+{
+  "key": "RB-002",
+  "revision": "sha256:16a31aca47c21134000a4a909854bb9daa57dcbde33c088ae1fe5228a71bf1b9",
+  "language": "ruby",
+  "runtime": "ruby.wasm",
+  "at": "2026-10-26T03:21:16.983Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "e0647d17bd44425838940a3b248062a20d38002c586cc60fb5224458edd86ab2",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "Café & Öps",
+          "expected": "cafe-ops",
+          "reason": "Separate combining accents are removed.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "cafe-ops",
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "a__😀/b--42",
+          "expected": "a-b-42",
+          "reason": "Runs of separators collapse.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "a-b-42",
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "東京😀",
+          "expected": "",
+          "reason": "Nothing ASCII retained.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "",
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "e88d703cc6cf54db9f1888d859560747b8d485d81ea030f2d396708e95385ed3",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "Café & Öps",
+          "expected": "cafe-ops",
+          "reason": "Separate combining accents are removed.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "cafe-o-ps",
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": "a__😀/b--42",
+          "expected": "a-b-42",
+          "reason": "Runs of separators collapse.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "a-b-42",
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "東京😀",
+          "expected": "",
+          "reason": "Nothing ASCII retained.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "",
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

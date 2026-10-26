@@ -1,0 +1,94 @@
+{
+  "key": "JS-005",
+  "revision": "sha256:6320a78f51591e7d65e30a36f2d8082d6d2b2ff8db98bdab80ced65af4e48492",
+  "language": "javascript",
+  "runtime": "browser JavaScript",
+  "at": "2026-10-26T03:20:54.587Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "3a5003184d28d08e365367ab45fdba0cb6677db3cabacccc38dd75cf31810299",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": {
+            "code": {
+              "amount": 1000
+            },
+            "lines": [
+              {
+                "sku": "x",
+                "price": 2000,
+                "quantity": 1,
+                "discount": 200
+              }
+            ]
+          },
+          "expected": -1800,
+          "reason": "Partial return uses only its allocated discount.",
+          "origin": "blind-solver public-derived edge",
+          "actual": -1800,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": {
+            "code": null,
+            "lines": []
+          },
+          "expected": 0,
+          "reason": "Empty refund returns zero.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 0,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "046f880e4e3562621c45e909476db8f76b3d7376eb699549d34c510d4bb16db4",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": {
+            "code": {
+              "amount": 1000
+            },
+            "lines": [
+              {
+                "sku": "x",
+                "price": 2000,
+                "quantity": 1,
+                "discount": 200
+              }
+            ]
+          },
+          "expected": -1800,
+          "reason": "Partial return uses only its allocated discount.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 1800,
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": {
+            "code": null,
+            "lines": []
+          },
+          "expected": 0,
+          "reason": "Empty refund returns zero.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 0,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

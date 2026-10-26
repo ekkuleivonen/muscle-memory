@@ -1,0 +1,108 @@
+{
+  "key": "JAVA-002",
+  "revision": "sha256:e66f307517576c3f72faac06898c651f8f2fd504a07529b6c6a5643ac5a1a057",
+  "language": "java",
+  "runtime": "teavm-javac",
+  "at": "2026-10-26T03:20:33.649Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "fece7ffd65c630acc54a2d9de275d6538db3daa70b90bbef13775ac9fab8a7e8",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": " a1234567890 ",
+          "expected": [
+            "has-whitespace"
+          ],
+          "reason": "Edge spaces count toward the minimum length.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "has-whitespace"
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "α١abcdefghij",
+          "expected": [],
+          "reason": "Non-ASCII letter and digit use Character definitions.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "            ",
+          "expected": [
+            "no-digit",
+            "no-letter",
+            "has-whitespace"
+          ],
+          "reason": "Twelve spaces count toward length but violate other rules.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "no-digit",
+            "no-letter",
+            "has-whitespace"
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "7daa369e5b1bb9bc6ef9e88fc2bc0f5d9af34390df49d4d5d4b41ab96e86eed9",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": " a1234567890 ",
+          "expected": [
+            "has-whitespace"
+          ],
+          "reason": "Edge spaces count toward the minimum length.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "too-short",
+            "has-whitespace"
+          ],
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": "α١abcdefghij",
+          "expected": [],
+          "reason": "Non-ASCII letter and digit use Character definitions.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "            ",
+          "expected": [
+            "no-digit",
+            "no-letter",
+            "has-whitespace"
+          ],
+          "reason": "Twelve spaces count toward length but violate other rules.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "too-short",
+            "no-digit",
+            "no-letter",
+            "has-whitespace"
+          ],
+          "executionError": null,
+          "pass": false
+        }
+      ]
+    }
+  ]
+}

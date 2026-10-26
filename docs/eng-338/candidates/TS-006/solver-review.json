@@ -1,0 +1,136 @@
+{
+  "key": "TS-006",
+  "revision": "sha256:1939c20f182b3d088697fcfca121c182dabaaff3b33979e5b12965c3be3ab099",
+  "firstCandidate": "attempts/first.ts",
+  "wrongCandidate": "attempts/wrong.ts",
+  "wrongIntent": "Use a strict grace comparison, rejecting token reuse exactly 10 seconds after rotation.",
+  "assumptions": [
+    "Family history and request times are chronologically valid as implied by session model."
+  ],
+  "ambiguityFindings": [],
+  "verbosityFindings": [
+    "Ordered rules and explicit inclusive grace boundary make precedence unambiguous."
+  ],
+  "confidence": "high",
+  "publicEdgeCases": [
+    {
+      "input": [
+        {
+          "id": "f",
+          "userId": "u",
+          "loginAt": 0,
+          "revoked": false,
+          "tokens": [
+            {
+              "token": "f.1",
+              "issuedAt": 0,
+              "rotatedAt": 1000
+            },
+            {
+              "token": "f.2",
+              "issuedAt": 1000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "f.1",
+        11000
+      ],
+      "expected": {
+        "status": "ok",
+        "token": "f.2"
+      },
+      "reason": "Grace includes exact 10-second endpoint."
+    },
+    {
+      "input": [
+        {
+          "id": "f",
+          "userId": "u",
+          "loginAt": 0,
+          "revoked": false,
+          "tokens": [
+            {
+              "token": "f.1",
+              "issuedAt": 0,
+              "rotatedAt": 1000
+            },
+            {
+              "token": "f.2",
+              "issuedAt": 1000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "f.1",
+        11001
+      ],
+      "expected": {
+        "status": "reauth",
+        "reason": "reuse",
+        "revokeFamily": true
+      },
+      "reason": "One millisecond beyond grace revokes."
+    },
+    {
+      "input": [
+        {
+          "id": "f",
+          "userId": "u",
+          "loginAt": 0,
+          "revoked": true,
+          "tokens": [
+            {
+              "token": "f.1",
+              "issuedAt": 0,
+              "rotatedAt": 1000
+            },
+            {
+              "token": "f.2",
+              "issuedAt": 1000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "f.1",
+        1001
+      ],
+      "expected": {
+        "status": "reauth",
+        "reason": "revoked",
+        "revokeFamily": false
+      },
+      "reason": "Revocation precedes grace."
+    },
+    {
+      "input": [
+        {
+          "id": "f",
+          "userId": "u",
+          "loginAt": 0,
+          "revoked": true,
+          "tokens": [
+            {
+              "token": "f.1",
+              "issuedAt": 0,
+              "rotatedAt": 1000
+            },
+            {
+              "token": "f.2",
+              "issuedAt": 1000,
+              "rotatedAt": null
+            }
+          ]
+        },
+        "unknown",
+        1001
+      ],
+      "expected": {
+        "status": "reauth",
+        "reason": "unknown",
+        "revokeFamily": false
+      },
+      "reason": "Unknown token has first priority."
+    }
+  ]
+}

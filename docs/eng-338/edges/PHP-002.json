@@ -1,0 +1,132 @@
+{
+  "key": "PHP-002",
+  "revision": "sha256:07b2c479fd24fbccfe96d50e89758d7babf532375d31fc50fb4f075447949fa3",
+  "language": "php",
+  "runtime": "php-wasm",
+  "at": "2026-10-26T03:20:55.210Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "00624114789079524bb1214a4181d128c69a9b339537da8f67b48503ef095ed8",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            100,
+            160,
+            1
+          ],
+          "expected": false,
+          "reason": "Deadline remains valid.",
+          "origin": "blind-solver public-derived edge",
+          "actual": false,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            100,
+            161,
+            1
+          ],
+          "expected": true,
+          "reason": "One second past deadline expires.",
+          "origin": "blind-solver public-derived edge",
+          "actual": true,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            100,
+            101,
+            0
+          ],
+          "expected": true,
+          "reason": "Zero TTL expires after issue instant.",
+          "origin": "blind-solver public-derived edge",
+          "actual": true,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            100,
+            99,
+            0
+          ],
+          "expected": false,
+          "reason": "Before issue is not later than deadline.",
+          "origin": "blind-solver public-derived edge",
+          "actual": false,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "1bf96cdebbf57ab08fe62b4f14c96a63f0221227fd6fc0931a9fae56d0138f4d",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            100,
+            160,
+            1
+          ],
+          "expected": false,
+          "reason": "Deadline remains valid.",
+          "origin": "blind-solver public-derived edge",
+          "actual": true,
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            100,
+            161,
+            1
+          ],
+          "expected": true,
+          "reason": "One second past deadline expires.",
+          "origin": "blind-solver public-derived edge",
+          "actual": true,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            100,
+            101,
+            0
+          ],
+          "expected": true,
+          "reason": "Zero TTL expires after issue instant.",
+          "origin": "blind-solver public-derived edge",
+          "actual": true,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            100,
+            99,
+            0
+          ],
+          "expected": false,
+          "reason": "Before issue is not later than deadline.",
+          "origin": "blind-solver public-derived edge",
+          "actual": false,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

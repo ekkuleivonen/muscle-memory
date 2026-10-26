@@ -1,0 +1,58 @@
+{
+  "observedAt": "2026-10-26T03:43:34.497Z",
+  "method": "Synthetic fresh-agent solves; Playwright normal UI plus separately labelled direct same-runner public edge probes",
+  "browser": "156.0.8078.4",
+  "browserExecutable": "~/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+  "playwright": "1.64.1",
+  "node": "v22.22.2",
+  "platform": "darwin",
+  "arch": "arm64",
+  "runtimeManifestSha256": "94db353f773d501a7884fc22500392b2d38c77e065dd2b4ec427469600e76fee",
+  "runtimePins": {
+    "pyodide": {
+      "version": "314.0.7",
+      "python": "3.14.2",
+      "files": 4
+    },
+    "javascript": {
+      "version": "3.35.1",
+      "files": 1
+    },
+    "pglite": {
+      "version": "0.5.11",
+      "files": 4
+    },
+    "html": {
+      "version": "0.18.14",
+      "files": 1
+    },
+    "php": {
+      "version": "0.2.0",
+      "files": 2
+    },
+    "ruby": {
+      "version": "2.10.1",
+      "files": 2
+    },
+    "typescript": {
+      "version": "5.9.3",
+      "files": 2
+    },
+    "go": {
+      "version": "0.16.1",
+      "files": 2
+    },
+    "clang": {
+      "version": "22.0.0-git20542-10",
+      "files": 6
+    },
+    "csharp": {
+      "version": "4.12.0",
+      "files": 63
+    },
+    "java": {
+      "version": "208d4c9",
+      "files": 4
+    }
+  }
+}

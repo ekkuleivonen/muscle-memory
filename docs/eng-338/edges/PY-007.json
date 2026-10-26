@@ -1,0 +1,154 @@
+{
+  "key": "PY-007",
+  "revision": "sha256:e8a8cfef1e394439d2f5f9bba7ac4b3f82dbe489c34540adb2e3c33e5fcc3b33",
+  "language": "python",
+  "runtime": "Pyodide/CPython3.14",
+  "at": "2026-10-26T03:20:03.446Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "8737163ef6c90c13ab7968aeaca2ac871e949e4e5a4087cb0edffee46c8fe754",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            {
+              "id": 1,
+              "email": " Straße@x.io ",
+              "tag": "keep"
+            },
+            {
+              "id": 2,
+              "email": "STRASSE@x.io"
+            }
+          ],
+          "expected": [
+            {
+              "id": 1,
+              "email": " Straße@x.io ",
+              "tag": "keep"
+            }
+          ],
+          "reason": "Unicode caseless match keeps first record unchanged.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            {
+              "id": 1,
+              "email": " Straße@x.io ",
+              "tag": "keep"
+            }
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            {
+              "id": 1,
+              "email": "Σ@x.io"
+            },
+            {
+              "id": 2,
+              "email": "ς@x.io"
+            }
+          ],
+          "expected": [
+            {
+              "id": 1,
+              "email": "Σ@x.io"
+            }
+          ],
+          "reason": "Two Unicode forms share the same uppercase letter",
+          "origin": "blind solver followup public counterexample",
+          "actual": [
+            {
+              "id": 1,
+              "email": "Σ@x.io"
+            }
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "af84ef3e25d2ae8d4dec3007eca3bf10b424472daea666b56cbc4c9731dd8b52",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            {
+              "id": 1,
+              "email": " Straße@x.io ",
+              "tag": "keep"
+            },
+            {
+              "id": 2,
+              "email": "STRASSE@x.io"
+            }
+          ],
+          "expected": [
+            {
+              "id": 1,
+              "email": " Straße@x.io ",
+              "tag": "keep"
+            }
+          ],
+          "reason": "Unicode caseless match keeps first record unchanged.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            {
+              "id": 1,
+              "email": " Straße@x.io ",
+              "tag": "keep"
+            },
+            {
+              "id": 2,
+              "email": "STRASSE@x.io"
+            }
+          ],
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            {
+              "id": 1,
+              "email": "Σ@x.io"
+            },
+            {
+              "id": 2,
+              "email": "ς@x.io"
+            }
+          ],
+          "expected": [
+            {
+              "id": 1,
+              "email": "Σ@x.io"
+            }
+          ],
+          "reason": "Two Unicode forms share the same uppercase letter",
+          "origin": "blind solver followup public counterexample",
+          "actual": [
+            {
+              "id": 1,
+              "email": "Σ@x.io"
+            },
+            {
+              "id": 2,
+              "email": "ς@x.io"
+            }
+          ],
+          "executionError": null,
+          "pass": false
+        }
+      ]
+    }
+  ]
+}

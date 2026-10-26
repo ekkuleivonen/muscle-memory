@@ -1,0 +1,39 @@
+{
+  "key": "PY-010",
+  "revision": "sha256:fa5027f5253636addb28778d37bc3af17a69ac208c818c8ca8123e16263d8822",
+  "attemptKind": "post-instruction-repair second attempt",
+  "candidate": "attempts/second.py",
+  "publicSources": ["public-update/public.json", "public-update/task.md", "public-update/starter.py"],
+  "preserved": ["attempts/first.py", "attempts/wrong.py"],
+  "changesFromFirst": [
+    "Rebuilt the full candidate using the updated public starter, preserving its regex-based exact integer to_cents helper in full.",
+    "Removed dependency on the original Decimal helper by inheriting the updated csv, io and re imports.",
+    "Retained read_amount wrapper: bracketed values use negative magnitude of the inner plain cents value, and ordinary amounts use to_cents unchanged.",
+    "Retained absolute-value refund subtraction so every refund reduces net by its size."
+  ],
+  "repairAssessment": [
+    "The updated helper rejects exponent notation and more than two fractional digits, including trailing zeros, matching the repaired prose.",
+    "The repaired prose explicitly defines (-3.00) as -300 cents, resolving the earlier signed-bracket ambiguity; the existing negative-magnitude wrapper already implements this."
+  ],
+  "assumptions": [
+    "The updated supplied to_cents helper remains authoritative for plain-amount grammar.",
+    "Structural CSV errors propagate as in the supplied starter; only bad type or amount ValueError is a rejected row."
+  ],
+  "remainingAmbiguityFindings": [
+    "As in the original packet, a structurally incomplete row with a bad type is rejected before missing fields are accessed. The starter's evaluation order is retained."
+  ],
+  "publicEdgeCases": [
+    {
+      "input": "partner,order_id,type,amount,currency\nB,1,sale,1.000,EUR\nB,2,sale,1e2,EUR\nB,3,adjustment,(-3.00),EUR\n",
+      "expected": {"partners": [{"partner": "B", "currency": "EUR", "sales": 0, "refunds": 0, "net": -300}], "rejected": 2},
+      "reason": "Both explicitly forbidden plain forms reject; signed bracket adjustment is negative magnitude."
+    },
+    {
+      "input": "partner,order_id,type,amount,currency\nB,1,sale,10.00,EUR\nB,1,refund,(-3.00),EUR\n",
+      "expected": {"partners": [{"partner": "B", "currency": "EUR", "sales": 1, "refunds": 1, "net": 700}], "rejected": 0},
+      "reason": "A negative-magnitude bracket refund still reduces net."
+    }
+  ],
+  "execution": "No code, tests, compilers or runtime probes were run. No private data or repositories were inspected.",
+  "confidence": "High by static reasoning from the repaired public packet; unexecuted."
+}

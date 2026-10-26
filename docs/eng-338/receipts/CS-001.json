@@ -1,0 +1,118 @@
+{
+  "key": "CS-001",
+  "revision": "sha256:1eb2bc05c4324e1e52f7876a7446eeb81d829fa42d4f4483582f462eae5f1188",
+  "language": "csharp",
+  "runtime": "Roslyn/.NET WASM",
+  "origin": "https://musclememory.run",
+  "partition": "f-java-csharp-php",
+  "review": {
+    "key": "CS-001",
+    "revision": "sha256:1eb2bc05c4324e1e52f7876a7446eeb81d829fa42d4f4483582f462eae5f1188",
+    "firstCandidate": "attempts/first.cs",
+    "wrongCandidate": "attempts/wrong.cs",
+    "wrongIntent": "Treat only literal spaces as separators, failing tabs/newlines/carriage returns.",
+    "assumptions": [
+      "Input is non-null; whitespace follows char.IsWhiteSpace."
+    ],
+    "ambiguityFindings": [
+      "Null behavior and exact Unicode whitespace repertoire are unspecified."
+    ],
+    "verbosityFindings": [
+      "Clear concise contract; public examples omit non-space separators."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": "a\tb\nc\rd",
+        "expected": 4,
+        "reason": "All listed separators split words."
+      },
+      {
+        "input": "\t\r\n ",
+        "expected": 0,
+        "reason": "Blank text has no words."
+      },
+      {
+        "input": "你好 + 42!",
+        "expected": 3,
+        "reason": "Non-English letters and standalone symbols count."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:08:20.394Z",
+      "finishedAt": "2026-10-26T03:08:21.540Z",
+      "candidatePath": "f-java-csharp-php/CS-001/attempts/first.cs",
+      "candidateSha256": "ad024133c5955fc9981e584211c77e13590382e59489ca476215a059c8e62bf0",
+      "actualCodeSha256": "ad024133c5955fc9981e584211c77e13590382e59489ca476215a059c8e62bf0",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:1eb2bc05c4324e1e52f7876a7446eeb81d829fa42d4f4483582f462eae5f1188",
+      "runId": "711959fb-2985-4582-bf29-9fca457da896",
+      "documentRevision": 1,
+      "artifactId": "practice-8567f5db-f81e-46ea-af07-d05d8e1afd0e.code.1",
+      "result": "passed",
+      "passed": 21,
+      "total": 21,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:08:22.867Z",
+      "finishedAt": "2026-10-26T03:08:24.010Z",
+      "candidatePath": "f-java-csharp-php/CS-001/attempts/wrong.cs",
+      "candidateSha256": "13f2641b6d7dcaee709a3c81b6aefb662868e6636982725b1d25165a7a1c845f",
+      "actualCodeSha256": "13f2641b6d7dcaee709a3c81b6aefb662868e6636982725b1d25165a7a1c845f",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:1eb2bc05c4324e1e52f7876a7446eeb81d829fa42d4f4483582f462eae5f1188",
+      "runId": "779df2a1-a1d3-4636-801f-41d93d9fcc46",
+      "documentRevision": 1,
+      "artifactId": "practice-e115a09c-39ef-490d-95c8-d14258bb3a67.code.1",
+      "result": "failed",
+      "passed": 13,
+      "total": 21,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "8 of 21 cases failed.\n\n✘\nhidden case 5hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 8hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 9hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 13hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 19hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 20hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:08:24.620Z",
+      "finishedAt": "2026-10-26T03:08:25.123Z",
+      "candidatePath": "f-java-csharp-php/CS-001/attempts/first.cs",
+      "candidateSha256": "ad024133c5955fc9981e584211c77e13590382e59489ca476215a059c8e62bf0",
+      "actualCodeSha256": "ad024133c5955fc9981e584211c77e13590382e59489ca476215a059c8e62bf0",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:1eb2bc05c4324e1e52f7876a7446eeb81d829fa42d4f4483582f462eae5f1188",
+      "runId": "8f1ebe4e-3598-448d-9eb5-0b0547f771d0",
+      "documentRevision": 2,
+      "artifactId": "practice-e115a09c-39ef-490d-95c8-d14258bb3a67.code.2",
+      "result": "passed",
+      "passed": 21,
+      "total": 21,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

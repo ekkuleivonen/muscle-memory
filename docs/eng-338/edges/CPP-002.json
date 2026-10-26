@@ -1,0 +1,280 @@
+{
+  "key": "CPP-002",
+  "revision": "sha256:b60f7273efa7d21fcf71119f061d5e4bc9f9e27ff2599fe7ee2c3c34883b0f21",
+  "language": "cpp",
+  "runtime": "Clang/YoWASP",
+  "at": "2026-10-26T03:19:15.769Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "3b21106f06b6acf0e4546e89b71e85fe1d5b3768427d26f6cb0c55526b0bb0d9",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            0,
+            [
+              [
+                "put",
+                0,
+                1
+              ],
+              [
+                "get",
+                0
+              ],
+              [
+                "erase",
+                0
+              ]
+            ]
+          ],
+          "expected": [
+            -1
+          ],
+          "reason": "Zero slots is legal and must avoid modulo by zero.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            -1
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            2,
+            [
+              [
+                "put",
+                0,
+                10
+              ],
+              [
+                "put",
+                2,
+                20
+              ],
+              [
+                "erase",
+                0
+              ],
+              [
+                "put",
+                2,
+                21
+              ],
+              [
+                "erase",
+                2
+              ],
+              [
+                "get",
+                2
+              ]
+            ]
+          ],
+          "expected": [
+            -1
+          ],
+          "reason": "Update must search beyond tombstone rather than create a duplicate that survives purge.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            -1
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            1,
+            [
+              [
+                "put",
+                -1,
+                3
+              ],
+              [
+                "put",
+                -1,
+                4
+              ],
+              [
+                "get",
+                -1
+              ],
+              [
+                "erase",
+                -1
+              ],
+              [
+                "put",
+                2,
+                5
+              ],
+              [
+                "get",
+                2
+              ],
+              [
+                "get",
+                -1
+              ]
+            ]
+          ],
+          "expected": [
+            4,
+            5,
+            -1
+          ],
+          "reason": "Full-table update, negative key, and reuse after purge.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            4,
+            5,
+            -1
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "17f3c35eeefd96fe03077ccb3235c80e9cb4ea8ed419b0384bfe8938928d584d",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            0,
+            [
+              [
+                "put",
+                0,
+                1
+              ],
+              [
+                "get",
+                0
+              ],
+              [
+                "erase",
+                0
+              ]
+            ]
+          ],
+          "expected": [
+            -1
+          ],
+          "reason": "Zero slots is legal and must avoid modulo by zero.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            -1
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            2,
+            [
+              [
+                "put",
+                0,
+                10
+              ],
+              [
+                "put",
+                2,
+                20
+              ],
+              [
+                "erase",
+                0
+              ],
+              [
+                "put",
+                2,
+                21
+              ],
+              [
+                "erase",
+                2
+              ],
+              [
+                "get",
+                2
+              ]
+            ]
+          ],
+          "expected": [
+            -1
+          ],
+          "reason": "Update must search beyond tombstone rather than create a duplicate that survives purge.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            21
+          ],
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            1,
+            [
+              [
+                "put",
+                -1,
+                3
+              ],
+              [
+                "put",
+                -1,
+                4
+              ],
+              [
+                "get",
+                -1
+              ],
+              [
+                "erase",
+                -1
+              ],
+              [
+                "put",
+                2,
+                5
+              ],
+              [
+                "get",
+                2
+              ],
+              [
+                "get",
+                -1
+              ]
+            ]
+          ],
+          "expected": [
+            4,
+            5,
+            -1
+          ],
+          "reason": "Full-table update, negative key, and reuse after purge.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            4,
+            5,
+            -1
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

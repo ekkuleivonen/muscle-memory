@@ -1,0 +1,92 @@
+{
+  "key": "PY-004",
+  "revision": "sha256:9ee05a3f865db74c01f872dec5154e0ebba422df819d806051e79b4da20a425a",
+  "language": "python",
+  "runtime": "Pyodide/CPython3.14",
+  "at": "2026-10-26T03:21:05.759Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "6c36d2f1b7a948f1f5b8333567eb94bf2ce750ba568b28d139c72594dbdf8ecb",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": ", a ,",
+          "expected": [
+            "",
+            " a ",
+            ""
+          ],
+          "reason": "Keep spaces and leading/trailing empty fields.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "",
+            " a ",
+            ""
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "\"a\nb\",\"\"",
+          "expected": [
+            "a\nb",
+            ""
+          ],
+          "reason": "A quoted field may contain a newline and may be empty.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "a\nb",
+            ""
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "38abc98030fc7ee8e0cc19e0d4adc9ba3891a699b3ce1d3a31d8b867c46cd4d4",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": ", a ,",
+          "expected": [
+            "",
+            " a ",
+            ""
+          ],
+          "reason": "Keep spaces and leading/trailing empty fields.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "",
+            "a",
+            ""
+          ],
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": "\"a\nb\",\"\"",
+          "expected": [
+            "a\nb",
+            ""
+          ],
+          "reason": "A quoted field may contain a newline and may be empty.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "a\nb",
+            ""
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

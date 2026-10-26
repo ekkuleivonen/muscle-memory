@@ -1,0 +1,220 @@
+{
+  "key": "TS-006",
+  "revision": "sha256:1939c20f182b3d088697fcfca121c182dabaaff3b33979e5b12965c3be3ab099",
+  "language": "typescript",
+  "runtime": "Sucrase/browser JavaScript",
+  "origin": "https://musclememory.run",
+  "partition": "b-js-ts",
+  "review": {
+    "key": "TS-006",
+    "revision": "sha256:1939c20f182b3d088697fcfca121c182dabaaff3b33979e5b12965c3be3ab099",
+    "firstCandidate": "attempts/first.ts",
+    "wrongCandidate": "attempts/wrong.ts",
+    "wrongIntent": "Use a strict grace comparison, rejecting token reuse exactly 10 seconds after rotation.",
+    "assumptions": [
+      "Family history and request times are chronologically valid as implied by session model."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": [
+      "Ordered rules and explicit inclusive grace boundary make precedence unambiguous."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": [
+          {
+            "id": "f",
+            "userId": "u",
+            "loginAt": 0,
+            "revoked": false,
+            "tokens": [
+              {
+                "token": "f.1",
+                "issuedAt": 0,
+                "rotatedAt": 1000
+              },
+              {
+                "token": "f.2",
+                "issuedAt": 1000,
+                "rotatedAt": null
+              }
+            ]
+          },
+          "f.1",
+          11000
+        ],
+        "expected": {
+          "status": "ok",
+          "token": "f.2"
+        },
+        "reason": "Grace includes exact 10-second endpoint."
+      },
+      {
+        "input": [
+          {
+            "id": "f",
+            "userId": "u",
+            "loginAt": 0,
+            "revoked": false,
+            "tokens": [
+              {
+                "token": "f.1",
+                "issuedAt": 0,
+                "rotatedAt": 1000
+              },
+              {
+                "token": "f.2",
+                "issuedAt": 1000,
+                "rotatedAt": null
+              }
+            ]
+          },
+          "f.1",
+          11001
+        ],
+        "expected": {
+          "status": "reauth",
+          "reason": "reuse",
+          "revokeFamily": true
+        },
+        "reason": "One millisecond beyond grace revokes."
+      },
+      {
+        "input": [
+          {
+            "id": "f",
+            "userId": "u",
+            "loginAt": 0,
+            "revoked": true,
+            "tokens": [
+              {
+                "token": "f.1",
+                "issuedAt": 0,
+                "rotatedAt": 1000
+              },
+              {
+                "token": "f.2",
+                "issuedAt": 1000,
+                "rotatedAt": null
+              }
+            ]
+          },
+          "f.1",
+          1001
+        ],
+        "expected": {
+          "status": "reauth",
+          "reason": "revoked",
+          "revokeFamily": false
+        },
+        "reason": "Revocation precedes grace."
+      },
+      {
+        "input": [
+          {
+            "id": "f",
+            "userId": "u",
+            "loginAt": 0,
+            "revoked": true,
+            "tokens": [
+              {
+                "token": "f.1",
+                "issuedAt": 0,
+                "rotatedAt": 1000
+              },
+              {
+                "token": "f.2",
+                "issuedAt": 1000,
+                "rotatedAt": null
+              }
+            ]
+          },
+          "unknown",
+          1001
+        ],
+        "expected": {
+          "status": "reauth",
+          "reason": "unknown",
+          "revokeFamily": false
+        },
+        "reason": "Unknown token has first priority."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:13:11.778Z",
+      "finishedAt": "2026-10-26T03:13:11.858Z",
+      "candidatePath": "b-js-ts/TS-006/attempts/first.ts",
+      "candidateSha256": "75ec8ebe313b8d737641e5ca399086ae1a6f274f57c3b98a38112234ab240163",
+      "actualCodeSha256": "75ec8ebe313b8d737641e5ca399086ae1a6f274f57c3b98a38112234ab240163",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:1939c20f182b3d088697fcfca121c182dabaaff3b33979e5b12965c3be3ab099",
+      "runId": "caa7d5c9-7870-430d-baf7-18bb47a1a603",
+      "documentRevision": 1,
+      "artifactId": "practice-9bd40982-8ddf-4a86-b660-bc3baee87dda.code.1",
+      "result": "passed",
+      "passed": 17,
+      "total": 17,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:13:12.622Z",
+      "finishedAt": "2026-10-26T03:13:12.687Z",
+      "candidatePath": "b-js-ts/TS-006/attempts/wrong.ts",
+      "candidateSha256": "7738302c8559db7b3a8ef5d945312a58060ccdd16d024dd8adeafe9f20e588fd",
+      "actualCodeSha256": "7738302c8559db7b3a8ef5d945312a58060ccdd16d024dd8adeafe9f20e588fd",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:1939c20f182b3d088697fcfca121c182dabaaff3b33979e5b12965c3be3ab099",
+      "runId": "900c0e5b-5579-453d-8cb6-306ceabf0e49",
+      "documentRevision": 1,
+      "artifactId": "practice-f5588252-9541-4f94-b8ba-7d6382559de7.code.1",
+      "result": "failed",
+      "passed": 16,
+      "total": 17,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "1 of 17 cases failed.\n\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:13:13.193Z",
+      "finishedAt": "2026-10-26T03:13:13.253Z",
+      "candidatePath": "b-js-ts/TS-006/attempts/first.ts",
+      "candidateSha256": "75ec8ebe313b8d737641e5ca399086ae1a6f274f57c3b98a38112234ab240163",
+      "actualCodeSha256": "75ec8ebe313b8d737641e5ca399086ae1a6f274f57c3b98a38112234ab240163",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:1939c20f182b3d088697fcfca121c182dabaaff3b33979e5b12965c3be3ab099",
+      "runId": "c59abe93-52da-4037-bc41-3d05847df99f",
+      "documentRevision": 2,
+      "artifactId": "practice-f5588252-9541-4f94-b8ba-7d6382559de7.code.2",
+      "result": "passed",
+      "passed": 17,
+      "total": 17,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

@@ -1,0 +1,121 @@
+{
+  "key": "PHP-003",
+  "revision": "sha256:8357474064591cccde8be7790df65e6a34502dc3f7513f8ce62520afea9bb06d",
+  "language": "php",
+  "runtime": "php-wasm",
+  "origin": "https://musclememory.run",
+  "partition": "f-java-csharp-php",
+  "review": {
+    "key": "PHP-003",
+    "revision": "sha256:8357474064591cccde8be7790df65e6a34502dc3f7513f8ce62520afea9bb06d",
+    "firstCandidate": "attempts/first.php",
+    "wrongCandidate": "attempts/wrong.php",
+    "wrongIntent": "Choose minute/hour units using raw seconds instead of rounded-up minutes, reporting 60 minutes for 3541..3599 seconds.",
+    "assumptions": [
+      "Positive lock duration is at most the stated 24 hours."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": [
+      "Threshold after rounding and forbidden downward rounding APIs are explicit."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": 3540,
+        "expected": "Too many attempts. Try again in 59 minutes.",
+        "reason": "Rounded minutes below hour threshold."
+      },
+      {
+        "input": 3541,
+        "expected": "Too many attempts. Try again in 1 hour.",
+        "reason": "Rounded minutes reach 60."
+      },
+      {
+        "input": 3601,
+        "expected": "Too many attempts. Try again in 2 hours.",
+        "reason": "Hours round upward."
+      },
+      {
+        "input": -1,
+        "expected": "You can try again now.",
+        "reason": "Ended lockout."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:10:59.234Z",
+      "finishedAt": "2026-10-26T03:10:59.419Z",
+      "candidatePath": "f-java-csharp-php/PHP-003/attempts/first.php",
+      "candidateSha256": "c162c1d0ea151a80dcf4be02291d8b7b6eabc3a469478888031809d97ef4f896",
+      "actualCodeSha256": "c162c1d0ea151a80dcf4be02291d8b7b6eabc3a469478888031809d97ef4f896",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:8357474064591cccde8be7790df65e6a34502dc3f7513f8ce62520afea9bb06d",
+      "runId": "f4c7503a-984e-4b84-8de4-31eb579fa635",
+      "documentRevision": 1,
+      "artifactId": "practice-25b49ac1-9f57-4cdf-bfa3-2798fa5ac354.code.1",
+      "result": "passed",
+      "passed": 18,
+      "total": 18,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:11:00.137Z",
+      "finishedAt": "2026-10-26T03:11:00.424Z",
+      "candidatePath": "f-java-csharp-php/PHP-003/attempts/wrong.php",
+      "candidateSha256": "9537f71f78d07678a4d7368736fde25a42a4a4549104f9b7ecb09583497fe7d0",
+      "actualCodeSha256": "9537f71f78d07678a4d7368736fde25a42a4a4549104f9b7ecb09583497fe7d0",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:8357474064591cccde8be7790df65e6a34502dc3f7513f8ce62520afea9bb06d",
+      "runId": "b2d72adf-ddd0-49d3-b0c0-2ad17ac17602",
+      "documentRevision": 1,
+      "artifactId": "practice-c99b4126-9ce3-4079-9a88-99d8d6a47a41.code.1",
+      "result": "failed",
+      "passed": 17,
+      "total": 18,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "1 of 18 cases failed.\n\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:11:00.875Z",
+      "finishedAt": "2026-10-26T03:11:00.940Z",
+      "candidatePath": "f-java-csharp-php/PHP-003/attempts/first.php",
+      "candidateSha256": "c162c1d0ea151a80dcf4be02291d8b7b6eabc3a469478888031809d97ef4f896",
+      "actualCodeSha256": "c162c1d0ea151a80dcf4be02291d8b7b6eabc3a469478888031809d97ef4f896",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:8357474064591cccde8be7790df65e6a34502dc3f7513f8ce62520afea9bb06d",
+      "runId": "6e79006a-5347-4d49-8275-b8c1ba19cd93",
+      "documentRevision": 2,
+      "artifactId": "practice-c99b4126-9ce3-4079-9a88-99d8d6a47a41.code.2",
+      "result": "passed",
+      "passed": 18,
+      "total": 18,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

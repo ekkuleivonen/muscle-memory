@@ -1,0 +1,117 @@
+{
+  "key": "PY-002",
+  "revision": "sha256:0bca3c710baad47c31104359cd36ad162502a38d311d5cb421bb6399431ff250",
+  "language": "python",
+  "runtime": "Pyodide/CPython3.14",
+  "origin": "https://musclememory.run",
+  "partition": "a-python",
+  "review": {
+    "key": "PY-002",
+    "revision": "sha256:0bca3c710baad47c31104359cd36ad162502a38d311d5cb421bb6399431ff250",
+    "firstCandidate": "attempts/first.py",
+    "wrongCandidate": "attempts/wrong.py",
+    "wrongIntent": "Lowercase keys, merging case-distinct strings.",
+    "assumptions": [
+      "All items are strings."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": [
+      "Odd-key example is redundant for Python dicts but harmless."
+    ],
+    "confidence": "high, unexecuted",
+    "publicEdgeCases": [
+      {
+        "input": [
+          "",
+          " ",
+          "",
+          "A",
+          "a"
+        ],
+        "expected": {
+          "": 2,
+          " ": 1,
+          "A": 1,
+          "a": 1
+        },
+        "reason": "Empty, whitespace and case-distinct strings remain separate."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:11:15.849Z",
+      "finishedAt": "2026-10-26T03:11:17.276Z",
+      "candidatePath": "a-python/PY-002/attempts/first.py",
+      "candidateSha256": "17d354b98a2dc006c320b0e1fb3267c0ea4255f86e123969fe04eb528afed705",
+      "actualCodeSha256": "17d354b98a2dc006c320b0e1fb3267c0ea4255f86e123969fe04eb528afed705",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:0bca3c710baad47c31104359cd36ad162502a38d311d5cb421bb6399431ff250",
+      "runId": "539004ac-8958-4b65-a308-8a0e14a01a09",
+      "documentRevision": 1,
+      "artifactId": "practice-4d3cfec3-e60e-4861-9f23-b5cbe8d54438.code.1",
+      "result": "passed",
+      "passed": 15,
+      "total": 15,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:11:17.988Z",
+      "finishedAt": "2026-10-26T03:11:19.404Z",
+      "candidatePath": "a-python/PY-002/attempts/wrong.py",
+      "candidateSha256": "65534a0b15e175d9d95cacceee068b8a35c77818839bbc6767fb0aa08b298ff8",
+      "actualCodeSha256": "65534a0b15e175d9d95cacceee068b8a35c77818839bbc6767fb0aa08b298ff8",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:0bca3c710baad47c31104359cd36ad162502a38d311d5cb421bb6399431ff250",
+      "runId": "8e7ef239-8de4-4603-8d05-b2c41c181282",
+      "documentRevision": 1,
+      "artifactId": "practice-3e206a54-2862-494d-9c6a-535d6d7f05b4.code.1",
+      "result": "failed",
+      "passed": 11,
+      "total": 15,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "4 of 15 cases failed.\n\n✘\ncase 3\nInput\n[\"A\",\"a\",\"A\"]\nExpected\n{\"A\":2,\"a\":1}\nGot\n{\"a\": 3}\n✘\nhidden case 8hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 11hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:11:19.834Z",
+      "finishedAt": "2026-10-26T03:11:20.822Z",
+      "candidatePath": "a-python/PY-002/attempts/first.py",
+      "candidateSha256": "17d354b98a2dc006c320b0e1fb3267c0ea4255f86e123969fe04eb528afed705",
+      "actualCodeSha256": "17d354b98a2dc006c320b0e1fb3267c0ea4255f86e123969fe04eb528afed705",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:0bca3c710baad47c31104359cd36ad162502a38d311d5cb421bb6399431ff250",
+      "runId": "15002a59-b099-4f10-928b-a7945604b98a",
+      "documentRevision": 2,
+      "artifactId": "practice-3e206a54-2862-494d-9c6a-535d6d7f05b4.code.2",
+      "result": "passed",
+      "passed": 15,
+      "total": 15,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

@@ -1,0 +1,64 @@
+{
+  "key": "RB-001",
+  "revision": "sha256:841e463333b9f30f9215e462b9d74e38d6b7f44eedd44ec1dc9a9c04611a50db",
+  "language": "ruby",
+  "runtime": "ruby.wasm",
+  "at": "2026-10-26T03:21:16.146Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "dcf6db599ea798b81f387b615e40b5f372fabc82c460a9c06503880001fb1eb1",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "one\t\ntwo\rthree",
+          "expected": 3,
+          "reason": "Mixed separators.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 3,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "hello-world + 42",
+          "expected": 3,
+          "reason": "Punctuation stays within word; standalone symbol counts.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 3,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "33bf04e45fa89a03438b5f871a00c3e33dfb5c76d0c42710ca7cb1411b986893",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "one\t\ntwo\rthree",
+          "expected": 3,
+          "reason": "Mixed separators.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 3,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "hello-world + 42",
+          "expected": 3,
+          "reason": "Punctuation stays within word; standalone symbol counts.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 3,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

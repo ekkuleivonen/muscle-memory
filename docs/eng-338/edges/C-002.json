@@ -1,0 +1,188 @@
+{
+  "key": "C-002",
+  "revision": "sha256:4899b029c3c81ed2f64d068ca4d436a00b232c9e9fcdf8ac4fd3dd7bba9fc032",
+  "language": "c",
+  "runtime": "Clang/YoWASP",
+  "at": "2026-10-26T03:18:54.893Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "8679444cd7adeaf0793fca1ab5b473b31480e2ed887ad55c83859603475a160b",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            0,
+            [
+              1,
+              2
+            ]
+          ],
+          "expected": [],
+          "reason": "Zero capacity retains nothing.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            1,
+            [
+              1,
+              2,
+              3
+            ]
+          ],
+          "expected": [
+            3
+          ],
+          "reason": "Every push replaces the previous entry.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            3
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            5,
+            [
+              8,
+              9
+            ]
+          ],
+          "expected": [
+            8,
+            9
+          ],
+          "reason": "Underfilled capacity preserves order.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            8,
+            9
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            2,
+            [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          ],
+          "expected": [
+            4,
+            5
+          ],
+          "reason": "Multiple wraparounds retain the latest two.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            4,
+            5
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "060f360bce50e72a3b6c2ee6b8865717912a96501ae363d8b316d68364694c60",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            0,
+            [
+              1,
+              2
+            ]
+          ],
+          "expected": [],
+          "reason": "Zero capacity retains nothing.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            1,
+            [
+              1,
+              2,
+              3
+            ]
+          ],
+          "expected": [
+            3
+          ],
+          "reason": "Every push replaces the previous entry.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            1
+          ],
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            5,
+            [
+              8,
+              9
+            ]
+          ],
+          "expected": [
+            8,
+            9
+          ],
+          "reason": "Underfilled capacity preserves order.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            8,
+            9
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            2,
+            [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          ],
+          "expected": [
+            4,
+            5
+          ],
+          "reason": "Multiple wraparounds retain the latest two.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            1,
+            2
+          ],
+          "executionError": null,
+          "pass": false
+        }
+      ]
+    }
+  ]
+}

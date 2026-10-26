@@ -1,0 +1,82 @@
+{
+  "key": "CS-005",
+  "revision": "sha256:9050e23ee2641c3fdcdb84632210fbfaf4d73b2ba6e7d1e3b19cad89e4a40d01",
+  "language": "csharp",
+  "runtime": "Roslyn/.NET WASM",
+  "at": "2026-10-26T03:20:14.413Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "8b41c9fbc156dd6edd72efc99fa7088d8f6ad230b84ea1e2eb801b0c44d0b197",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "aA",
+          "expected": "a1A1",
+          "reason": "Case separates runs and singleton counts are mandatory.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "a1A1",
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "aaaaaaaaaaaa",
+          "expected": "a12",
+          "reason": "Multi-digit run count.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "a12",
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "aba",
+          "expected": "a1b1a1",
+          "reason": "Separated equal characters are distinct runs.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "a1b1a1",
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "3a10b59e4ee80b318673a9ba94ff2ed359d6bdcf4780de682e6fc4dc7e42aa51",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "aA",
+          "expected": "a1A1",
+          "reason": "Case separates runs and singleton counts are mandatory.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "aA",
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": "aaaaaaaaaaaa",
+          "expected": "a12",
+          "reason": "Multi-digit run count.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "a12",
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "aba",
+          "expected": "a1b1a1",
+          "reason": "Separated equal characters are distinct runs.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "aba",
+          "executionError": null,
+          "pass": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,234 @@
+{
+  "key": "TS-005",
+  "revision": "sha256:f718959a5bcb435aa430b9c66a61a17ab67e73472af901a6f517867c33705a63",
+  "language": "typescript",
+  "runtime": "Sucrase/browser JavaScript",
+  "at": "2026-10-26T03:21:28.940Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "ccf9f683658aabdc00668315c7fcf8f4228f5db1af5814c925e75e6725e549c9",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": {
+            "id": "tie",
+            "taxRate": 5000,
+            "lines": [
+              {
+                "sku": "a",
+                "price": 1,
+                "quantity": 1,
+                "discount": 0,
+                "taxable": true
+              },
+              {
+                "sku": "b",
+                "price": 1,
+                "quantity": 1,
+                "discount": 0,
+                "taxable": true
+              }
+            ]
+          },
+          "expected": {
+            "lines": [
+              {
+                "sku": "a",
+                "net": 1,
+                "tax": 1
+              },
+              {
+                "sku": "b",
+                "net": 1,
+                "tax": 0
+              }
+            ],
+            "net": 2,
+            "tax": 1,
+            "total": 3
+          },
+          "reason": "Equal half-cent remainders award the earlier line.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "lines": [
+              {
+                "sku": "a",
+                "net": 1,
+                "tax": 1
+              },
+              {
+                "sku": "b",
+                "net": 1,
+                "tax": 0
+              }
+            ],
+            "net": 2,
+            "tax": 1,
+            "total": 3
+          },
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": {
+            "id": "gift",
+            "taxRate": 825,
+            "lines": [
+              {
+                "sku": "gift",
+                "price": 2500,
+                "quantity": 1,
+                "discount": 0,
+                "taxable": false
+              }
+            ]
+          },
+          "expected": {
+            "lines": [
+              {
+                "sku": "gift",
+                "net": 2500,
+                "tax": 0
+              }
+            ],
+            "net": 2500,
+            "tax": 0,
+            "total": 2500
+          },
+          "reason": "Nontaxable value remains in net but contributes no tax.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "lines": [
+              {
+                "sku": "gift",
+                "net": 2500,
+                "tax": 0
+              }
+            ],
+            "net": 2500,
+            "tax": 0,
+            "total": 2500
+          },
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "1f5562505bdfea5cb397221d11b9a50aed0578cdc8a22daa9a3b3d63d105ca19",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": {
+            "id": "tie",
+            "taxRate": 5000,
+            "lines": [
+              {
+                "sku": "a",
+                "price": 1,
+                "quantity": 1,
+                "discount": 0,
+                "taxable": true
+              },
+              {
+                "sku": "b",
+                "price": 1,
+                "quantity": 1,
+                "discount": 0,
+                "taxable": true
+              }
+            ]
+          },
+          "expected": {
+            "lines": [
+              {
+                "sku": "a",
+                "net": 1,
+                "tax": 1
+              },
+              {
+                "sku": "b",
+                "net": 1,
+                "tax": 0
+              }
+            ],
+            "net": 2,
+            "tax": 1,
+            "total": 3
+          },
+          "reason": "Equal half-cent remainders award the earlier line.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "lines": [
+              {
+                "sku": "a",
+                "net": 1,
+                "tax": 0
+              },
+              {
+                "sku": "b",
+                "net": 1,
+                "tax": 1
+              }
+            ],
+            "net": 2,
+            "tax": 1,
+            "total": 3
+          },
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": {
+            "id": "gift",
+            "taxRate": 825,
+            "lines": [
+              {
+                "sku": "gift",
+                "price": 2500,
+                "quantity": 1,
+                "discount": 0,
+                "taxable": false
+              }
+            ]
+          },
+          "expected": {
+            "lines": [
+              {
+                "sku": "gift",
+                "net": 2500,
+                "tax": 0
+              }
+            ],
+            "net": 2500,
+            "tax": 0,
+            "total": 2500
+          },
+          "reason": "Nontaxable value remains in net but contributes no tax.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "lines": [
+              {
+                "sku": "gift",
+                "net": 2500,
+                "tax": 0
+              }
+            ],
+            "net": 2500,
+            "tax": 0,
+            "total": 2500
+          },
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

@@ -717,5 +717,98 @@
       }
     ],
     "hidden": true
+  },
+  {
+    "input": [
+      [
+        "add",
+        "x",
+        1000,
+        1
+      ],
+      [
+        "code",
+        {
+          "name": "X",
+          "amount": 100
+        }
+      ],
+      [
+        "summary"
+      ],
+      [
+        "code",
+        {
+          "name": "X",
+          "amount": 200
+        }
+      ],
+      [
+        "summary"
+      ]
+    ],
+    "expected": [
+      {
+        "items": 1,
+        "subtotal": 1000,
+        "discount": 100,
+        "total": 900
+      },
+      {
+        "items": 1,
+        "subtotal": 1000,
+        "discount": 200,
+        "total": 800
+      }
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      [
+        "add",
+        "a",
+        1
+      ],
+      [
+        "add",
+        "b",
+        2
+      ],
+      [
+        "summary"
+      ],
+      [
+        "remove",
+        "a"
+      ],
+      [
+        "remove",
+        "b"
+      ],
+      [
+        "add",
+        "a:1x1,b",
+        2
+      ],
+      [
+        "summary"
+      ]
+    ],
+    "expected": [
+      {
+        "items": 2,
+        "subtotal": 3,
+        "discount": 0,
+        "total": 3
+      },
+      {
+        "items": 1,
+        "subtotal": 2,
+        "discount": 0,
+        "total": 2
+      }
+    ],
+    "hidden": true
   }
 ]

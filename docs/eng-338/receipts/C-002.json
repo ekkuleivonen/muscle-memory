@@ -1,0 +1,158 @@
+{
+  "key": "C-002",
+  "revision": "sha256:4899b029c3c81ed2f64d068ca4d436a00b232c9e9fcdf8ac4fd3dd7bba9fc032",
+  "language": "c",
+  "runtime": "Clang/YoWASP",
+  "origin": "https://musclememory.run",
+  "partition": "d-c-cpp",
+  "review": {
+    "key": "C-002",
+    "revision": "sha256:4899b029c3c81ed2f64d068ca4d436a00b232c9e9fcdf8ac4fd3dd7bba9fc032",
+    "firstCandidate": "attempts/first.c",
+    "wrongCandidate": "attempts/wrong.c",
+    "wrongIntent": "Retain the first capacity entries instead of overwriting oldest entries after overflow.",
+    "assumptions": [
+      "Only observable final buffer contents are required; directly copying the retained suffix implements the stated result.",
+      "Input/output are valid for the stated counts; arbitrary partial overlap is not specified."
+    ],
+    "ambiguityFindings": [
+      "Does not require an actual internal ring representation or allocation strategy."
+    ],
+    "verbosityFindings": "Short, sufficient behavior and explicit zero-capacity requirement.",
+    "confidence": "high; not executed",
+    "publicEdgeCases": [
+      {
+        "input": [
+          0,
+          [
+            1,
+            2
+          ]
+        ],
+        "expected": [],
+        "reason": "Zero capacity retains nothing."
+      },
+      {
+        "input": [
+          1,
+          [
+            1,
+            2,
+            3
+          ]
+        ],
+        "expected": [
+          3
+        ],
+        "reason": "Every push replaces the previous entry."
+      },
+      {
+        "input": [
+          5,
+          [
+            8,
+            9
+          ]
+        ],
+        "expected": [
+          8,
+          9
+        ],
+        "reason": "Underfilled capacity preserves order."
+      },
+      {
+        "input": [
+          2,
+          [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        ],
+        "expected": [
+          4,
+          5
+        ],
+        "reason": "Multiple wraparounds retain the latest two."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:06:47.749Z",
+      "finishedAt": "2026-10-26T03:06:49.837Z",
+      "candidatePath": "d-c-cpp/C-002/attempts/first.c",
+      "candidateSha256": "8679444cd7adeaf0793fca1ab5b473b31480e2ed887ad55c83859603475a160b",
+      "actualCodeSha256": "8679444cd7adeaf0793fca1ab5b473b31480e2ed887ad55c83859603475a160b",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:4899b029c3c81ed2f64d068ca4d436a00b232c9e9fcdf8ac4fd3dd7bba9fc032",
+      "runId": "357649bc-1873-4f4a-b5c3-af72648dcd4f",
+      "documentRevision": 1,
+      "artifactId": "practice-0a353a8b-4edd-4609-9f43-e5c5bf0c480c.code.1",
+      "result": "passed",
+      "passed": 16,
+      "total": 16,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:06:50.593Z",
+      "finishedAt": "2026-10-26T03:06:52.523Z",
+      "candidatePath": "d-c-cpp/C-002/attempts/wrong.c",
+      "candidateSha256": "060f360bce50e72a3b6c2ee6b8865717912a96501ae363d8b316d68364694c60",
+      "actualCodeSha256": "060f360bce50e72a3b6c2ee6b8865717912a96501ae363d8b316d68364694c60",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:4899b029c3c81ed2f64d068ca4d436a00b232c9e9fcdf8ac4fd3dd7bba9fc032",
+      "runId": "024eb425-7920-4a14-b4bc-1e8147f876e8",
+      "documentRevision": 1,
+      "artifactId": "practice-63b99113-4715-4404-a498-f812612633a5.code.1",
+      "result": "failed",
+      "passed": 7,
+      "total": 16,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "9 of 16 cases failed.\n\n✘\ncase 1\nInput\n[3,[1,2,3,4]]\nExpected\n[2,3,4]\nGot\n[1,2,3]\n✘\nhidden case 5hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 6hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 9hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 11hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 13hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 15hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:06:52.920Z",
+      "finishedAt": "2026-10-26T03:06:53.176Z",
+      "candidatePath": "d-c-cpp/C-002/attempts/first.c",
+      "candidateSha256": "8679444cd7adeaf0793fca1ab5b473b31480e2ed887ad55c83859603475a160b",
+      "actualCodeSha256": "8679444cd7adeaf0793fca1ab5b473b31480e2ed887ad55c83859603475a160b",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:4899b029c3c81ed2f64d068ca4d436a00b232c9e9fcdf8ac4fd3dd7bba9fc032",
+      "runId": "10719730-736d-450f-ab64-d50e0d42e1b6",
+      "documentRevision": 2,
+      "artifactId": "practice-63b99113-4715-4404-a498-f812612633a5.code.2",
+      "result": "passed",
+      "passed": 16,
+      "total": 16,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

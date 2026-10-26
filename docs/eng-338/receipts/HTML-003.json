@@ -1,0 +1,119 @@
+{
+  "key": "HTML-003",
+  "revision": "sha256:c552d26e087693857289d1f490c0584144f34be0619095c60aecbad9792be715",
+  "language": "html",
+  "runtime": "linkedom DOM",
+  "origin": "https://musclememory.run",
+  "partition": "c-sql-html",
+  "review": {
+    "key": "HTML-003",
+    "revision": "sha256:c552d26e087693857289d1f490c0584144f34be0619095c60aecbad9792be715",
+    "firstCandidate": "HTML-003/attempts/first.html",
+    "wrongCandidate": "HTML-003/attempts/wrong.html",
+    "wrongIntent": "Omit open so the disclosure starts collapsed.",
+    "assumptions": [
+      "Bare open is the native HTML boolean attribute."
+    ],
+    "ambiguityFindings": "No material ambiguity. The first element child constraint permits whitespace; boolean open syntax should be treated semantically.",
+    "verbosityFindings": "Clear compact specification, with a mildly repetitive example.",
+    "confidence": "High; reasoned from visible requirements only, not executed.",
+    "publicEdgeCases": [
+      {
+        "input": [
+          "details > :first-child",
+          "text"
+        ],
+        "expected": [
+          "What is a prime?"
+        ],
+        "reason": "Summary is the first element child."
+      },
+      {
+        "input": [
+          "details > p",
+          "text"
+        ],
+        "expected": [
+          "A whole number greater than 1 with exactly two positive divisors."
+        ],
+        "reason": "The answer paragraph follows the summary."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:09:25.533Z",
+      "finishedAt": "2026-10-26T03:09:25.589Z",
+      "candidatePath": "c-sql-html/HTML-003/attempts/first.html",
+      "candidateSha256": "53f8aa83c23e5d03c4ca2ef7ca5074e016473fa88b150045b9e3137996ab2162",
+      "actualCodeSha256": "53f8aa83c23e5d03c4ca2ef7ca5074e016473fa88b150045b9e3137996ab2162",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:c552d26e087693857289d1f490c0584144f34be0619095c60aecbad9792be715",
+      "runId": "2e543a8b-9620-4ffe-87d3-4c6e876a5a9d",
+      "documentRevision": 1,
+      "artifactId": "practice-acac5769-cfa0-40f7-979a-5f398a359c2d.code.1",
+      "result": "passed",
+      "passed": 10,
+      "total": 10,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:09:26.363Z",
+      "finishedAt": "2026-10-26T03:09:26.412Z",
+      "candidatePath": "c-sql-html/HTML-003/attempts/wrong.html",
+      "candidateSha256": "8b541fda3601d33ef6a28599763a117e0b539eeea415633776dd01674fafb51f",
+      "actualCodeSha256": "8b541fda3601d33ef6a28599763a117e0b539eeea415633776dd01674fafb51f",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:c552d26e087693857289d1f490c0584144f34be0619095c60aecbad9792be715",
+      "runId": "49334622-f8e8-46a9-8364-c5caafaba4a7",
+      "documentRevision": 1,
+      "artifactId": "practice-8e7696dc-8e27-4882-ac52-3029404376aa.code.1",
+      "result": "failed",
+      "passed": 9,
+      "total": 10,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "1 of 10 cases failed.\n\n✘\ncase 2\nInput\n[\"details[open]\",\"count\"]\nExpected\n1\nGot\n0\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:09:26.867Z",
+      "finishedAt": "2026-10-26T03:09:26.911Z",
+      "candidatePath": "c-sql-html/HTML-003/attempts/first.html",
+      "candidateSha256": "53f8aa83c23e5d03c4ca2ef7ca5074e016473fa88b150045b9e3137996ab2162",
+      "actualCodeSha256": "53f8aa83c23e5d03c4ca2ef7ca5074e016473fa88b150045b9e3137996ab2162",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:c552d26e087693857289d1f490c0584144f34be0619095c60aecbad9792be715",
+      "runId": "5fe89b72-a4e3-4f9b-a730-bf437279318f",
+      "documentRevision": 2,
+      "artifactId": "practice-8e7696dc-8e27-4882-ac52-3029404376aa.code.2",
+      "result": "passed",
+      "passed": 10,
+      "total": 10,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

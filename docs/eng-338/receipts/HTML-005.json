@@ -1,0 +1,118 @@
+{
+  "key": "HTML-005",
+  "revision": "sha256:cd5926aef237c59d9f8d3633d5dfa877ad520f81f2b23fcd1a211b8ede01d809",
+  "language": "html",
+  "runtime": "linkedom DOM",
+  "origin": "https://musclememory.run",
+  "partition": "c-sql-html",
+  "review": {
+    "key": "HTML-005",
+    "revision": "sha256:cd5926aef237c59d9f8d3633d5dfa877ad520f81f2b23fcd1a211b8ede01d809",
+    "firstCandidate": "HTML-005/attempts/first.html",
+    "wrongCandidate": "HTML-005/attempts/wrong.html",
+    "wrongIntent": "Open the first link in a new tab, violating the explicit no-target and same-tab requirements.",
+    "assumptions": [
+      "Normal same-tab behavior is achieved by omitting target entirely."
+    ],
+    "ambiguityFindings": "No material ambiguity. Link containment does not require an unstated direct-child anchor structure.",
+    "verbosityFindings": "Explicit counts, paths, ordering and navigation constraints are helpful; example repeats them.",
+    "confidence": "High; reasoned from visible requirements only, not executed.",
+    "publicEdgeCases": [
+      {
+        "input": [
+          "ol > li a",
+          "href"
+        ],
+        "expected": [
+          "/guides/arrays",
+          "/guides/maps"
+        ],
+        "reason": "Both exact navigation paths must match."
+      },
+      {
+        "input": [
+          "[target]",
+          "count"
+        ],
+        "expected": 0,
+        "reason": "No target attributes are allowed."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:05:37.502Z",
+      "finishedAt": "2026-10-26T03:05:37.560Z",
+      "candidatePath": "c-sql-html/HTML-005/attempts/first.html",
+      "candidateSha256": "904a46a06e684f927b4d6f6e6daf0eab7bda1c1fb3142d67d1f2ac2f2129863c",
+      "actualCodeSha256": "904a46a06e684f927b4d6f6e6daf0eab7bda1c1fb3142d67d1f2ac2f2129863c",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:cd5926aef237c59d9f8d3633d5dfa877ad520f81f2b23fcd1a211b8ede01d809",
+      "runId": "617f5f5b-9b63-4c05-abe4-8ce15d3533b9",
+      "documentRevision": 1,
+      "artifactId": "practice-8a4a0751-dff4-4f6a-897a-6afedaf817d9.code.1",
+      "result": "passed",
+      "passed": 12,
+      "total": 12,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:05:38.296Z",
+      "finishedAt": "2026-10-26T03:05:38.351Z",
+      "candidatePath": "c-sql-html/HTML-005/attempts/wrong.html",
+      "candidateSha256": "79544d54ca1b107fd777807b01078d607ae6d5af2e6403160c2fde8145ead86c",
+      "actualCodeSha256": "79544d54ca1b107fd777807b01078d607ae6d5af2e6403160c2fde8145ead86c",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:cd5926aef237c59d9f8d3633d5dfa877ad520f81f2b23fcd1a211b8ede01d809",
+      "runId": "970d05d7-56bb-4a6f-ae92-8305bb774c81",
+      "documentRevision": 1,
+      "artifactId": "practice-23928c44-717d-40f3-af68-c2dc2d20bae1.code.1",
+      "result": "failed",
+      "passed": 11,
+      "total": 12,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "1 of 12 cases failed.\n\n✘\nhidden case 8hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:05:38.810Z",
+      "finishedAt": "2026-10-26T03:05:38.867Z",
+      "candidatePath": "c-sql-html/HTML-005/attempts/first.html",
+      "candidateSha256": "904a46a06e684f927b4d6f6e6daf0eab7bda1c1fb3142d67d1f2ac2f2129863c",
+      "actualCodeSha256": "904a46a06e684f927b4d6f6e6daf0eab7bda1c1fb3142d67d1f2ac2f2129863c",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:cd5926aef237c59d9f8d3633d5dfa877ad520f81f2b23fcd1a211b8ede01d809",
+      "runId": "de56cc90-72de-4232-af9c-f1fc7ef30a52",
+      "documentRevision": 2,
+      "artifactId": "practice-23928c44-717d-40f3-af68-c2dc2d20bae1.code.2",
+      "result": "passed",
+      "passed": 12,
+      "total": 12,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

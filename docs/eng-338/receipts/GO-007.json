@@ -1,0 +1,152 @@
+{
+  "key": "GO-007",
+  "revision": "sha256:e566002e3c3b173b0fca4cf9b2b6480cfb6fdd630f2b7f0d557659672de5844d",
+  "language": "go",
+  "runtime": "Yaegi WASM",
+  "origin": "https://musclememory.run",
+  "partition": "e-go-ruby",
+  "review": {
+    "key": "GO-007",
+    "revision": "sha256:e566002e3c3b173b0fca4cf9b2b6480cfb6fdd630f2b7f0d557659672de5844d",
+    "firstCandidate": "attempts/first.go",
+    "wrongCandidate": "attempts/wrong.go",
+    "wrongIntent": "Resolve equal current values toward the last server instead of the first.",
+    "assumptions": [
+      "Negative weights are unsupported; treated as drained defensively.",
+      "Weights and accumulated totals fit int; instances constructed by NewRoundRobin."
+    ],
+    "ambiguityFindings": [
+      "Negative weights and integer limits are unspecified.",
+      "Concurrent Next requirement is clear but cannot be established by PickOrder outputs alone."
+    ],
+    "verbosityFindings": [
+      "Worked table is lengthy but useful for exact smooth ordering."
+    ],
+    "confidence": "high; unexecuted",
+    "publicEdgeCases": [
+      {
+        "input": [
+          [
+            {
+              "name": "off",
+              "weight": 0
+            }
+          ],
+          4
+        ],
+        "expected": [],
+        "reason": "All drained produces no picks."
+      },
+      {
+        "input": [
+          [
+            {
+              "name": "a",
+              "weight": 1
+            },
+            {
+              "name": "b",
+              "weight": 1
+            }
+          ],
+          3
+        ],
+        "expected": [
+          "a",
+          "b",
+          "a"
+        ],
+        "reason": "Tie favors first listed backend."
+      },
+      {
+        "input": [
+          [
+            {
+              "name": "a",
+              "weight": 1
+            }
+          ],
+          0
+        ],
+        "expected": [],
+        "reason": "Zero requested picks."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:09:12.296Z",
+      "finishedAt": "2026-10-26T03:09:13.260Z",
+      "candidatePath": "e-go-ruby/GO-007/attempts/first.go",
+      "candidateSha256": "9e3c40b73c9a7a465352ca6ae5960373f643812065548fe3bb1b861924a7eb5f",
+      "actualCodeSha256": "9e3c40b73c9a7a465352ca6ae5960373f643812065548fe3bb1b861924a7eb5f",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:e566002e3c3b173b0fca4cf9b2b6480cfb6fdd630f2b7f0d557659672de5844d",
+      "runId": "1871ecbe-5494-4045-bccf-e9c3589497dc",
+      "documentRevision": 1,
+      "artifactId": "practice-ad96f04a-d98a-4b95-8009-de66889d228a.code.1",
+      "result": "passed",
+      "passed": 16,
+      "total": 16,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:09:14.008Z",
+      "finishedAt": "2026-10-26T03:09:15.027Z",
+      "candidatePath": "e-go-ruby/GO-007/attempts/wrong.go",
+      "candidateSha256": "3ae4739c20391c9feceb82f252ed23b4eb3605ae4d8c43a5dd7d817db41f64e1",
+      "actualCodeSha256": "3ae4739c20391c9feceb82f252ed23b4eb3605ae4d8c43a5dd7d817db41f64e1",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:e566002e3c3b173b0fca4cf9b2b6480cfb6fdd630f2b7f0d557659672de5844d",
+      "runId": "8fdc4d72-8955-4cbd-b990-a56132837cb9",
+      "documentRevision": 1,
+      "artifactId": "practice-15c32357-bb5c-4ad0-83de-514b485f01cb.code.1",
+      "result": "failed",
+      "passed": 7,
+      "total": 16,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "9 of 16 cases failed.\n\n✘\ncase 1\nInput\n[[{\"name\":\"a\",\"weight\":1},{\"name\":\"b\",\"weight\":1},{\"name\":\"c\",\"weight\":1}],6]\nExpected\n[\"a\",\"b\",\"c\",\"a\",\"b\",\"c\"]\nGot\n[\"c\",\"b\",\"a\",\"c\",\"b\",\"a\"]\n✘\ncase 2\nInput\n[[{\"name\":\"a\",\"weight\":5},{\"name\":\"b\",\"weight\":1},{\"name\":\"c\",\"weight\":1}],7]\nExpected\n[\"a\",\"a\",\"b\",\"a\",\"c\",\"a\",\"a\"]\nGot\n[\"a\",\"a\",\"c\",\"a\",\"b\",\"a\",\"a\"]\n✘\ncase 3\nInput\n[[{\"name\":\"origin-v1\",\"weight\":9},{\"name\":\"origin-v2\",\"weight\":1}],10]\nExpected\n[\"origin-v1\",\"origin-v1\",\"origin-v1\",\"origin-v1\",\"origin-v1\",\"origin-v2\",\"origin-v1\",\"origin-v1\",\"origin-v1\",\"origin-v1\"]\nGot\n[\"origin-v1\",\"origin-v1\",\"origin-v1\",\"origin-v1\",\"origin-v2\",\"origin-v1\",\"origin-v1\",\"origin-v1\",\"origin-v1\",\"origin-v1\"]\n✘\nhidden case 9hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 10hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 12hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 13hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 15hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:09:15.510Z",
+      "finishedAt": "2026-10-26T03:09:15.703Z",
+      "candidatePath": "e-go-ruby/GO-007/attempts/first.go",
+      "candidateSha256": "9e3c40b73c9a7a465352ca6ae5960373f643812065548fe3bb1b861924a7eb5f",
+      "actualCodeSha256": "9e3c40b73c9a7a465352ca6ae5960373f643812065548fe3bb1b861924a7eb5f",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:e566002e3c3b173b0fca4cf9b2b6480cfb6fdd630f2b7f0d557659672de5844d",
+      "runId": "f2f3f488-5f19-4b36-b712-1a41632d22e9",
+      "documentRevision": 2,
+      "artifactId": "practice-15c32357-bb5c-4ad0-83de-514b485f01cb.code.2",
+      "result": "passed",
+      "passed": 16,
+      "total": 16,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

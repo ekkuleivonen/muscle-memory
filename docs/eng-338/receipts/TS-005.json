@@ -1,0 +1,172 @@
+{
+  "key": "TS-005",
+  "revision": "sha256:f718959a5bcb435aa430b9c66a61a17ab67e73472af901a6f517867c33705a63",
+  "language": "typescript",
+  "runtime": "Sucrase/browser JavaScript",
+  "origin": "https://musclememory.run",
+  "partition": "b-js-ts",
+  "review": {
+    "key": "TS-005",
+    "revision": "sha256:f718959a5bcb435aa430b9c66a61a17ab67e73472af901a6f517867c33705a63",
+    "firstCandidate": "attempts/first.ts",
+    "wrongCandidate": "attempts/wrong.ts",
+    "wrongIntent": "Award tied remainder cents to later lines instead of earlier lines.",
+    "assumptions": [
+      "Order line nets and tax rates are nonnegative sales values.",
+      "Amount times rate stays within JavaScript exact integer range."
+    ],
+    "ambiguityFindings": [
+      "No numeric bounds or treatment of negative taxable amounts/rates are stated."
+    ],
+    "verbosityFindings": [
+      "Receipt example and explicit largest-remainder tie rule sufficiently define allocation."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": {
+          "id": "tie",
+          "taxRate": 5000,
+          "lines": [
+            {
+              "sku": "a",
+              "price": 1,
+              "quantity": 1,
+              "discount": 0,
+              "taxable": true
+            },
+            {
+              "sku": "b",
+              "price": 1,
+              "quantity": 1,
+              "discount": 0,
+              "taxable": true
+            }
+          ]
+        },
+        "expected": {
+          "lines": [
+            {
+              "sku": "a",
+              "net": 1,
+              "tax": 1
+            },
+            {
+              "sku": "b",
+              "net": 1,
+              "tax": 0
+            }
+          ],
+          "net": 2,
+          "tax": 1,
+          "total": 3
+        },
+        "reason": "Equal half-cent remainders award the earlier line."
+      },
+      {
+        "input": {
+          "id": "gift",
+          "taxRate": 825,
+          "lines": [
+            {
+              "sku": "gift",
+              "price": 2500,
+              "quantity": 1,
+              "discount": 0,
+              "taxable": false
+            }
+          ]
+        },
+        "expected": {
+          "lines": [
+            {
+              "sku": "gift",
+              "net": 2500,
+              "tax": 0
+            }
+          ],
+          "net": 2500,
+          "tax": 0,
+          "total": 2500
+        },
+        "reason": "Nontaxable value remains in net but contributes no tax."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:13:09.475Z",
+      "finishedAt": "2026-10-26T03:13:09.542Z",
+      "candidatePath": "b-js-ts/TS-005/attempts/first.ts",
+      "candidateSha256": "ccf9f683658aabdc00668315c7fcf8f4228f5db1af5814c925e75e6725e549c9",
+      "actualCodeSha256": "ccf9f683658aabdc00668315c7fcf8f4228f5db1af5814c925e75e6725e549c9",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:f718959a5bcb435aa430b9c66a61a17ab67e73472af901a6f517867c33705a63",
+      "runId": "704ce01f-9aee-4b26-ab03-e22c321e3ec6",
+      "documentRevision": 1,
+      "artifactId": "practice-757eb840-225a-4993-9c41-7be211727871.code.1",
+      "result": "passed",
+      "passed": 16,
+      "total": 16,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:13:10.308Z",
+      "finishedAt": "2026-10-26T03:13:10.375Z",
+      "candidatePath": "b-js-ts/TS-005/attempts/wrong.ts",
+      "candidateSha256": "1f5562505bdfea5cb397221d11b9a50aed0578cdc8a22daa9a3b3d63d105ca19",
+      "actualCodeSha256": "1f5562505bdfea5cb397221d11b9a50aed0578cdc8a22daa9a3b3d63d105ca19",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:f718959a5bcb435aa430b9c66a61a17ab67e73472af901a6f517867c33705a63",
+      "runId": "2122673a-ee90-43dc-9f0d-54bd06e133d3",
+      "documentRevision": 1,
+      "artifactId": "practice-2ea266f0-2897-400b-8118-befa4e114b16.code.1",
+      "result": "failed",
+      "passed": 12,
+      "total": 16,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "4 of 16 cases failed.\n\n✘\ncase 1\nInput\n{\"id\":\"20417\",\"taxRate\":825,\"lines\":[{\"sku\":\"rain-jacket\",\"price\":5000,\"quantity\":1,\"discount\":500,\"taxable\":true},{\"sku\":\"tee\",\"price\":2500,\"quantity\":2,\"discount\":500,\"taxable\":true},{\"sku\":\"socks\",\"price\":1200,\"quantity\":1,\"discount\":120,\"taxable\":true}]}\nExpected\n{\"lines\":[{\"sku\":\"rain-jacket\",\"net\":4500,\"tax\":372},{\"sku\":\"tee\",\"net\":4500,\"tax\":371},{\"sku\":\"socks\",\"net\":1080,\"tax\":89}],\"net\":10080,\"tax\":832,\"total\":10912}\nGot\n{\"lines\":[{\"sku\":\"rain-jacket\",\"net\":4500,\"tax\":371},{\"sku\":\"tee\",\"net\":4500,\"tax\":372},{\"sku\":\"socks\",\"net\":1080,\"tax\":89}],\"net\":10080,\"tax\":832,\"total\":10912}\n✘\ncase 4\nInput\n{\"id\":\"20611\",\"taxRate\":825,\"lines\":[{\"sku\":\"mug-red\",\"price\":1000,\"quantity\":1,\"discount\":0,\"taxable\":true},{\"sku\":\"mug-blue\",\"price\":1000,\"quantity\":1,\"discount\":0,\"taxable\":true},{\"sku\":\"mug-green\",\"price\":1000,\"quantity\":1,\"discount\":0,\"taxable\":true}]}\nExpected\n{\"lines\":[{\"sku\":\"mug-red\",\"net\":1000,\"tax\":83},{\"sku\":\"mug-blue\",\"net\":1000,\"tax\":83},{\"sku\":\"mug-green\",\"net\":1000,\"tax\":82}],\"net\":3000,\"tax\":248,\"total\":3248}\nGot\n{\"lines\":[{\"sku\":\"mug-red\",\"net\":1000,\"tax\":82},{\"sku\":\"mug-blue\",\"net\":1000,\"tax\":83},{\"sku\":\"mug-green\",\"net\":1000,\"tax\":83}],\"net\":3000,\"tax\":248,\"total\":3248}\n✘\nhidden case 12hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:13:10.877Z",
+      "finishedAt": "2026-10-26T03:13:10.943Z",
+      "candidatePath": "b-js-ts/TS-005/attempts/first.ts",
+      "candidateSha256": "ccf9f683658aabdc00668315c7fcf8f4228f5db1af5814c925e75e6725e549c9",
+      "actualCodeSha256": "ccf9f683658aabdc00668315c7fcf8f4228f5db1af5814c925e75e6725e549c9",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:f718959a5bcb435aa430b9c66a61a17ab67e73472af901a6f517867c33705a63",
+      "runId": "7f422584-a2b2-4254-8f3e-7096fa0174c7",
+      "documentRevision": 2,
+      "artifactId": "practice-2ea266f0-2897-400b-8118-befa4e114b16.code.2",
+      "result": "passed",
+      "passed": 16,
+      "total": 16,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

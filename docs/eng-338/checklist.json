@@ -1,0 +1,3468 @@
+{
+  "baseline": "214d40aaff96021bfcd7ef9b819c418b11c52a9c",
+  "mode": "synthetic agent blind solve + automated normal UI runtime",
+  "entries": [
+    {
+      "key": "C-001",
+      "revision": "sha256:35464d4a9a60e22e03b023e944edd4afefcc668dcd5fcc4dd374272584ab32b6",
+      "language": "c",
+      "title": "Normalize Host headers, IPv6 literals included",
+      "difficulty": "easy",
+      "file": "src/normalize_host.c",
+      "url": "https://musclememory.run/challenges/C-001",
+      "runtime": "Clang/YoWASP",
+      "partition": "d-c-cpp",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "5352a33b-c1a4-4034-9b0a-ae2eb8da6e6f",
+        "result": "passed",
+        "passed": 22,
+        "total": 22,
+        "codeSha256": "f6c96e174eca5e9a34a8ccdfc5c8d5b6eb59f636d77ac9a5a2df7a499f476201"
+      },
+      "finalAttempt": {
+        "revision": "sha256:35464d4a9a60e22e03b023e944edd4afefcc668dcd5fcc4dd374272584ab32b6",
+        "runId": "a04b6ec2-f943-4ff1-8b78-7d0d2402dd77",
+        "result": "passed",
+        "passed": 22,
+        "total": 22,
+        "codeSha256": "f6c96e174eca5e9a34a8ccdfc5c8d5b6eb59f636d77ac9a5a2df7a499f476201"
+      },
+      "wrongAttempt": {
+        "runId": "58aeb626-e983-45bd-b7be-9d0c99442a6a",
+        "result": "failed",
+        "passed": 21,
+        "total": 22
+      },
+      "edgeEvidence": {
+        "path": "edges/C-001.json",
+        "cases": 5,
+        "correctPassed": 5,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/C-001.json",
+      "baselineRevision": "sha256:35464d4a9a60e22e03b023e944edd4afefcc668dcd5fcc4dd374272584ab32b6",
+      "candidateRevision": "sha256:35464d4a9a60e22e03b023e944edd4afefcc668dcd5fcc4dd374272584ab32b6",
+      "candidateUIReceipt": "receipts/C-001.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:35464d4a9a60e22e03b023e944edd4afefcc668dcd5fcc4dd374272584ab32b6",
+        "runId": "58aeb626-e983-45bd-b7be-9d0c99442a6a",
+        "result": "failed",
+        "passed": 21,
+        "total": 22
+      }
+    },
+    {
+      "key": "C-002",
+      "revision": "sha256:4899b029c3c81ed2f64d068ca4d436a00b232c9e9fcdf8ac4fd3dd7bba9fc032",
+      "language": "c",
+      "title": "Keep the last N request latencies in memory",
+      "difficulty": "medium",
+      "file": "src/ring_buffer.c",
+      "url": "https://musclememory.run/challenges/C-002",
+      "runtime": "Clang/YoWASP",
+      "partition": "d-c-cpp",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "357649bc-1873-4f4a-b5c3-af72648dcd4f",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "8679444cd7adeaf0793fca1ab5b473b31480e2ed887ad55c83859603475a160b"
+      },
+      "finalAttempt": {
+        "revision": "sha256:4899b029c3c81ed2f64d068ca4d436a00b232c9e9fcdf8ac4fd3dd7bba9fc032",
+        "runId": "10719730-736d-450f-ab64-d50e0d42e1b6",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "8679444cd7adeaf0793fca1ab5b473b31480e2ed887ad55c83859603475a160b"
+      },
+      "wrongAttempt": {
+        "runId": "024eb425-7920-4a14-b4bc-1e8147f876e8",
+        "result": "failed",
+        "passed": 7,
+        "total": 16
+      },
+      "edgeEvidence": {
+        "path": "edges/C-002.json",
+        "cases": 4,
+        "correctPassed": 4,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/C-002.json",
+      "baselineRevision": "sha256:4899b029c3c81ed2f64d068ca4d436a00b232c9e9fcdf8ac4fd3dd7bba9fc032",
+      "candidateRevision": "sha256:4899b029c3c81ed2f64d068ca4d436a00b232c9e9fcdf8ac4fd3dd7bba9fc032",
+      "candidateUIReceipt": "receipts/C-002.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:4899b029c3c81ed2f64d068ca4d436a00b232c9e9fcdf8ac4fd3dd7bba9fc032",
+        "runId": "024eb425-7920-4a14-b4bc-1e8147f876e8",
+        "result": "failed",
+        "passed": 7,
+        "total": 16
+      }
+    },
+    {
+      "key": "C-003",
+      "revision": "sha256:fc49a2573a90a5450a5281c039315685f129c3d670615bc6abaa5c63e886fb42",
+      "language": "c",
+      "title": "Longest run of equal values",
+      "difficulty": "easy",
+      "file": "longest_run.c",
+      "url": "https://musclememory.run/challenges/C-003",
+      "runtime": "Clang/YoWASP",
+      "partition": "d-c-cpp",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "2ac6e875-955a-45e7-a1db-f5d84120358b",
+        "result": "passed",
+        "passed": 15,
+        "total": 15,
+        "codeSha256": "fd37a6ea46be5526c460c3e4ecd742c43b5499d54014f43955c92bfbd22b8458"
+      },
+      "finalAttempt": {
+        "revision": "sha256:fc49a2573a90a5450a5281c039315685f129c3d670615bc6abaa5c63e886fb42",
+        "runId": "e8abea1a-c083-4c1f-85a0-e168fc433a82",
+        "result": "passed",
+        "passed": 15,
+        "total": 15,
+        "codeSha256": "fd37a6ea46be5526c460c3e4ecd742c43b5499d54014f43955c92bfbd22b8458"
+      },
+      "wrongAttempt": {
+        "runId": "af14d093-b897-4f89-9c27-8f1ef897225c",
+        "result": "failed",
+        "passed": 11,
+        "total": 15
+      },
+      "edgeEvidence": {
+        "path": "edges/C-003.json",
+        "cases": 4,
+        "correctPassed": 4,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/C-003.json",
+      "baselineRevision": "sha256:fc49a2573a90a5450a5281c039315685f129c3d670615bc6abaa5c63e886fb42",
+      "candidateRevision": "sha256:fc49a2573a90a5450a5281c039315685f129c3d670615bc6abaa5c63e886fb42",
+      "candidateUIReceipt": "receipts/C-003.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:fc49a2573a90a5450a5281c039315685f129c3d670615bc6abaa5c63e886fb42",
+        "runId": "af14d093-b897-4f89-9c27-8f1ef897225c",
+        "result": "failed",
+        "passed": 11,
+        "total": 15
+      }
+    },
+    {
+      "key": "C-004",
+      "revision": "sha256:0935afcb9a890ea280e72a546da4e928d86b58f35df2c67b3903090ef0f32d7e",
+      "language": "c",
+      "title": "Remove a chosen value",
+      "difficulty": "easy",
+      "file": "remove_value.c",
+      "url": "https://musclememory.run/challenges/C-004",
+      "runtime": "Clang/YoWASP",
+      "partition": "d-c-cpp",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "c9ccd8a6-c124-4041-9a8c-385510a5c310",
+        "result": "passed",
+        "passed": 31,
+        "total": 31,
+        "codeSha256": "00cd4c23b79aeb6378423649b4ed98340a03e03168b711622c07b8f40300a394"
+      },
+      "finalAttempt": {
+        "revision": "sha256:0935afcb9a890ea280e72a546da4e928d86b58f35df2c67b3903090ef0f32d7e",
+        "runId": "19068868-c7a8-47a0-ac6e-e005aa5e681d",
+        "result": "passed",
+        "passed": 31,
+        "total": 31,
+        "codeSha256": "00cd4c23b79aeb6378423649b4ed98340a03e03168b711622c07b8f40300a394"
+      },
+      "wrongAttempt": {
+        "runId": "b41b2d25-b150-4b29-ac19-cd318dda12a3",
+        "result": "failed",
+        "passed": 25,
+        "total": 31
+      },
+      "edgeEvidence": {
+        "path": "edges/C-004.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/C-004.json",
+      "baselineRevision": "sha256:0935afcb9a890ea280e72a546da4e928d86b58f35df2c67b3903090ef0f32d7e",
+      "candidateRevision": "sha256:0935afcb9a890ea280e72a546da4e928d86b58f35df2c67b3903090ef0f32d7e",
+      "candidateUIReceipt": "receipts/C-004.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:0935afcb9a890ea280e72a546da4e928d86b58f35df2c67b3903090ef0f32d7e",
+        "runId": "b41b2d25-b150-4b29-ac19-cd318dda12a3",
+        "result": "failed",
+        "passed": 25,
+        "total": 31
+      }
+    },
+    {
+      "key": "C-005",
+      "revision": "sha256:cde78a35b25418677471ff6911c4a89792e744996396c7712b9346b121a0e53e",
+      "language": "c",
+      "title": "Greatest common divisor of a list",
+      "difficulty": "medium",
+      "file": "common_divisor.c",
+      "url": "https://musclememory.run/challenges/C-005",
+      "runtime": "Clang/YoWASP",
+      "partition": "d-c-cpp",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "d39d336a-8748-4d0f-96fb-5075025310c2",
+        "result": "passed",
+        "passed": 19,
+        "total": 19,
+        "codeSha256": "8f458874f1f04abe502e0fb6b158127f73b17ca5ffd44f2c36c81b8d36313f2f"
+      },
+      "finalAttempt": {
+        "revision": "sha256:cde78a35b25418677471ff6911c4a89792e744996396c7712b9346b121a0e53e",
+        "runId": "8deabe1c-af07-4532-88fb-ac584ec0cdb2",
+        "result": "passed",
+        "passed": 19,
+        "total": 19,
+        "codeSha256": "8f458874f1f04abe502e0fb6b158127f73b17ca5ffd44f2c36c81b8d36313f2f"
+      },
+      "wrongAttempt": {
+        "runId": "5ae14633-8eeb-4c8d-bdfe-94d88232c75b",
+        "result": "failed",
+        "passed": 13,
+        "total": 19
+      },
+      "edgeEvidence": {
+        "path": "edges/C-005.json",
+        "cases": 5,
+        "correctPassed": 5,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/C-005.json",
+      "baselineRevision": "sha256:cde78a35b25418677471ff6911c4a89792e744996396c7712b9346b121a0e53e",
+      "candidateRevision": "sha256:cde78a35b25418677471ff6911c4a89792e744996396c7712b9346b121a0e53e",
+      "candidateUIReceipt": "receipts/C-005.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:cde78a35b25418677471ff6911c4a89792e744996396c7712b9346b121a0e53e",
+        "runId": "5ae14633-8eeb-4c8d-bdfe-94d88232c75b",
+        "result": "failed",
+        "passed": 13,
+        "total": 19
+      }
+    },
+    {
+      "key": "CPP-001",
+      "revision": "sha256:63cd99a0b96aaeff42563a0a2f470f7ce079c6418e9216150f4e3ff1be91e236",
+      "language": "cpp",
+      "title": "Cache evicts entries that were just used",
+      "difficulty": "hard",
+      "file": "src/simulate.cpp",
+      "url": "https://musclememory.run/challenges/CPP-001",
+      "runtime": "Clang/YoWASP",
+      "partition": "d-c-cpp",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "8a5635a1-2ed5-4666-b6d6-66f86d42bd51",
+        "result": "passed",
+        "passed": 15,
+        "total": 15,
+        "codeSha256": "ca1595fe3354d4da491d24d7d7614fdad37930f6a184a29bf522c516e3d476c2"
+      },
+      "finalAttempt": {
+        "revision": "sha256:63cd99a0b96aaeff42563a0a2f470f7ce079c6418e9216150f4e3ff1be91e236",
+        "runId": "f08b86ee-5f09-463d-9fa9-44edb10d874d",
+        "result": "passed",
+        "passed": 15,
+        "total": 15,
+        "codeSha256": "ca1595fe3354d4da491d24d7d7614fdad37930f6a184a29bf522c516e3d476c2"
+      },
+      "wrongAttempt": {
+        "runId": "cfdda6b5-cad0-44fd-ab10-ff86759a0fbc",
+        "result": "failed",
+        "passed": 10,
+        "total": 15
+      },
+      "edgeEvidence": {
+        "path": "edges/CPP-001.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/CPP-001.json",
+      "baselineRevision": "sha256:63cd99a0b96aaeff42563a0a2f470f7ce079c6418e9216150f4e3ff1be91e236",
+      "candidateRevision": "sha256:63cd99a0b96aaeff42563a0a2f470f7ce079c6418e9216150f4e3ff1be91e236",
+      "candidateUIReceipt": "receipts/CPP-001.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:63cd99a0b96aaeff42563a0a2f470f7ce079c6418e9216150f4e3ff1be91e236",
+        "runId": "cfdda6b5-cad0-44fd-ab10-ff86759a0fbc",
+        "result": "failed",
+        "passed": 10,
+        "total": 15
+      }
+    },
+    {
+      "key": "CPP-002",
+      "revision": "sha256:b60f7273efa7d21fcf71119f061d5e4bc9f9e27ff2599fe7ee2c3c34883b0f21",
+      "language": "cpp",
+      "title": "Open-addressing index loses keys after a purge",
+      "difficulty": "hard",
+      "file": "src/cache_index.cpp",
+      "url": "https://musclememory.run/challenges/CPP-002",
+      "runtime": "Clang/YoWASP",
+      "partition": "d-c-cpp",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "a6cb7d43-8a9d-40cb-8a13-1ceed7359e9e",
+        "result": "passed",
+        "passed": 18,
+        "total": 18,
+        "codeSha256": "3b21106f06b6acf0e4546e89b71e85fe1d5b3768427d26f6cb0c55526b0bb0d9"
+      },
+      "finalAttempt": {
+        "revision": "sha256:b60f7273efa7d21fcf71119f061d5e4bc9f9e27ff2599fe7ee2c3c34883b0f21",
+        "runId": "c5c1b1b5-63e0-4bdf-b842-e350613fe1bf",
+        "result": "passed",
+        "passed": 18,
+        "total": 18,
+        "codeSha256": "3b21106f06b6acf0e4546e89b71e85fe1d5b3768427d26f6cb0c55526b0bb0d9"
+      },
+      "wrongAttempt": {
+        "runId": "7076c120-09ee-43ae-a311-7f0f3835be34",
+        "result": "failed",
+        "passed": 10,
+        "total": 18
+      },
+      "edgeEvidence": {
+        "path": "edges/CPP-002.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/CPP-002.json",
+      "baselineRevision": "sha256:b60f7273efa7d21fcf71119f061d5e4bc9f9e27ff2599fe7ee2c3c34883b0f21",
+      "candidateRevision": "sha256:b60f7273efa7d21fcf71119f061d5e4bc9f9e27ff2599fe7ee2c3c34883b0f21",
+      "candidateUIReceipt": "receipts/CPP-002.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:b60f7273efa7d21fcf71119f061d5e4bc9f9e27ff2599fe7ee2c3c34883b0f21",
+        "runId": "7076c120-09ee-43ae-a311-7f0f3835be34",
+        "result": "failed",
+        "passed": 10,
+        "total": 18
+      }
+    },
+    {
+      "key": "CPP-003",
+      "revision": "sha256:93bfa0b61e35a93c49ccae694223646dc68856855e1c2114936214611fac52ea",
+      "language": "cpp",
+      "title": "Check nested brackets",
+      "difficulty": "medium",
+      "file": "brackets.cpp",
+      "url": "https://musclememory.run/challenges/CPP-003",
+      "runtime": "Clang/YoWASP",
+      "partition": "d-c-cpp",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "cd890ed8-cc71-4cec-8d9c-98f621f32820",
+        "result": "passed",
+        "passed": 9,
+        "total": 9,
+        "codeSha256": "dd2164965205d175426e18c0826975aa32d20c3dadfa2a96daa9597ee0365df4"
+      },
+      "finalAttempt": {
+        "revision": "sha256:93bfa0b61e35a93c49ccae694223646dc68856855e1c2114936214611fac52ea",
+        "runId": "36629b34-d159-4133-b090-d4490657eba6",
+        "result": "passed",
+        "passed": 9,
+        "total": 9,
+        "codeSha256": "dd2164965205d175426e18c0826975aa32d20c3dadfa2a96daa9597ee0365df4"
+      },
+      "wrongAttempt": {
+        "runId": "52ea474c-5ad1-400d-91c2-487f7aba1d06",
+        "result": "failed",
+        "passed": 8,
+        "total": 9
+      },
+      "edgeEvidence": {
+        "path": "edges/CPP-003.json",
+        "cases": 5,
+        "correctPassed": 5,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/CPP-003.json",
+      "baselineRevision": "sha256:93bfa0b61e35a93c49ccae694223646dc68856855e1c2114936214611fac52ea",
+      "candidateRevision": "sha256:93bfa0b61e35a93c49ccae694223646dc68856855e1c2114936214611fac52ea",
+      "candidateUIReceipt": "receipts/CPP-003.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:93bfa0b61e35a93c49ccae694223646dc68856855e1c2114936214611fac52ea",
+        "runId": "52ea474c-5ad1-400d-91c2-487f7aba1d06",
+        "result": "failed",
+        "passed": 8,
+        "total": 9
+      }
+    },
+    {
+      "key": "CPP-004",
+      "revision": "sha256:7d583fad9b86a7f92104bc7abf7bc1b91fd4b43c12b977fe36e22ac16ba36143",
+      "language": "cpp",
+      "title": "Rotate a sequence to the right",
+      "difficulty": "easy",
+      "file": "rotate.cpp",
+      "url": "https://musclememory.run/challenges/CPP-004",
+      "runtime": "Clang/YoWASP",
+      "partition": "d-c-cpp",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "2cad08e4-0c60-44aa-b661-baf5393597ff",
+        "result": "passed",
+        "passed": 31,
+        "total": 31,
+        "codeSha256": "bb654b236bde0cdb07d2741852600479301954532808339a25eadb0280aea0ab"
+      },
+      "finalAttempt": {
+        "revision": "sha256:7d583fad9b86a7f92104bc7abf7bc1b91fd4b43c12b977fe36e22ac16ba36143",
+        "runId": "3c50233f-32d5-477b-be4e-3b5f2553ca34",
+        "result": "passed",
+        "passed": 31,
+        "total": 31,
+        "codeSha256": "bb654b236bde0cdb07d2741852600479301954532808339a25eadb0280aea0ab"
+      },
+      "wrongAttempt": {
+        "runId": "d13461a6-72fa-4605-a5ce-4e6c5f75a524",
+        "result": "failed",
+        "passed": 26,
+        "total": 31
+      },
+      "edgeEvidence": {
+        "path": "edges/CPP-004.json",
+        "cases": 4,
+        "correctPassed": 4,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/CPP-004.json",
+      "baselineRevision": "sha256:7d583fad9b86a7f92104bc7abf7bc1b91fd4b43c12b977fe36e22ac16ba36143",
+      "candidateRevision": "sha256:7d583fad9b86a7f92104bc7abf7bc1b91fd4b43c12b977fe36e22ac16ba36143",
+      "candidateUIReceipt": "receipts/CPP-004.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:7d583fad9b86a7f92104bc7abf7bc1b91fd4b43c12b977fe36e22ac16ba36143",
+        "runId": "d13461a6-72fa-4605-a5ce-4e6c5f75a524",
+        "result": "failed",
+        "passed": 26,
+        "total": 31
+      }
+    },
+    {
+      "key": "CPP-005",
+      "revision": "sha256:66e7aed0a6be2a82415a3cde0bd43b8c267387f37aeb81df0ae585296125ab06",
+      "language": "cpp",
+      "title": "Merge overlapping intervals",
+      "difficulty": "medium",
+      "file": "merge.cpp",
+      "url": "https://musclememory.run/challenges/CPP-005",
+      "runtime": "Clang/YoWASP",
+      "partition": "d-c-cpp",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "f3f2ca62-84a2-4e02-923b-2ed590afca7e",
+        "result": "passed",
+        "passed": 7,
+        "total": 7,
+        "codeSha256": "53eb1e0860fc73abd830661d05b42738d4d6c8da1a046d06ac6947756bd67cf1"
+      },
+      "finalAttempt": {
+        "revision": "sha256:66e7aed0a6be2a82415a3cde0bd43b8c267387f37aeb81df0ae585296125ab06",
+        "runId": "89464c40-6b9b-446b-bae1-e06e60e3ae94",
+        "result": "passed",
+        "passed": 7,
+        "total": 7,
+        "codeSha256": "53eb1e0860fc73abd830661d05b42738d4d6c8da1a046d06ac6947756bd67cf1"
+      },
+      "wrongAttempt": {
+        "runId": "a762236e-c7d9-485f-b2c9-7422ee029c20",
+        "result": "failed",
+        "passed": 6,
+        "total": 7
+      },
+      "edgeEvidence": {
+        "path": "edges/CPP-005.json",
+        "cases": 4,
+        "correctPassed": 4,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/CPP-005.json",
+      "baselineRevision": "sha256:66e7aed0a6be2a82415a3cde0bd43b8c267387f37aeb81df0ae585296125ab06",
+      "candidateRevision": "sha256:66e7aed0a6be2a82415a3cde0bd43b8c267387f37aeb81df0ae585296125ab06",
+      "candidateUIReceipt": "receipts/CPP-005.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:66e7aed0a6be2a82415a3cde0bd43b8c267387f37aeb81df0ae585296125ab06",
+        "runId": "a762236e-c7d9-485f-b2c9-7422ee029c20",
+        "result": "failed",
+        "passed": 6,
+        "total": 7
+      }
+    },
+    {
+      "key": "CS-001",
+      "revision": "sha256:1eb2bc05c4324e1e52f7876a7446eeb81d829fa42d4f4483582f462eae5f1188",
+      "language": "csharp",
+      "title": "The composer says 1 word when the post is empty",
+      "difficulty": "easy",
+      "file": "src/WordCount.cs",
+      "url": "https://musclememory.run/challenges/CS-001",
+      "runtime": "Roslyn/.NET WASM",
+      "partition": "f-java-csharp-php",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "711959fb-2985-4582-bf29-9fca457da896",
+        "result": "passed",
+        "passed": 21,
+        "total": 21,
+        "codeSha256": "ad024133c5955fc9981e584211c77e13590382e59489ca476215a059c8e62bf0"
+      },
+      "finalAttempt": {
+        "revision": "sha256:1eb2bc05c4324e1e52f7876a7446eeb81d829fa42d4f4483582f462eae5f1188",
+        "runId": "8f1ebe4e-3598-448d-9eb5-0b0547f771d0",
+        "result": "passed",
+        "passed": 21,
+        "total": 21,
+        "codeSha256": "ad024133c5955fc9981e584211c77e13590382e59489ca476215a059c8e62bf0"
+      },
+      "wrongAttempt": {
+        "runId": "779df2a1-a1d3-4636-801f-41d93d9fcc46",
+        "result": "failed",
+        "passed": 13,
+        "total": 21
+      },
+      "edgeEvidence": {
+        "path": "edges/CS-001.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/CS-001.json",
+      "baselineRevision": "sha256:1eb2bc05c4324e1e52f7876a7446eeb81d829fa42d4f4483582f462eae5f1188",
+      "candidateRevision": "sha256:1eb2bc05c4324e1e52f7876a7446eeb81d829fa42d4f4483582f462eae5f1188",
+      "candidateUIReceipt": "receipts/CS-001.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:1eb2bc05c4324e1e52f7876a7446eeb81d829fa42d4f4483582f462eae5f1188",
+        "runId": "779df2a1-a1d3-4636-801f-41d93d9fcc46",
+        "result": "failed",
+        "passed": 13,
+        "total": 21
+      }
+    },
+    {
+      "key": "CS-002",
+      "revision": "sha256:790005e37baedc0c98656a2bd01150a206a8a02142dedfbc985b9e1e6a2dce6f",
+      "language": "csharp",
+      "title": "Late fees are a cent off on some invoices",
+      "difficulty": "easy",
+      "file": "src/LateFees.cs",
+      "url": "https://musclememory.run/challenges/CS-002",
+      "runtime": "Roslyn/.NET WASM",
+      "partition": "f-java-csharp-php",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "892989cc-f2c9-4fb6-afe8-c0feedc1da6a",
+        "result": "passed",
+        "passed": 23,
+        "total": 23,
+        "codeSha256": "1808918dc2812b884c3c231f86fe99ea2dc15286bf6decae54e6d6232c638fee"
+      },
+      "finalAttempt": {
+        "revision": "sha256:9b878939135d18b7e0c5c43336857b13e7755fa6b44b81ffb30bb1e66a9ad3c2",
+        "runId": "f66addd0-a1ac-476e-8e1b-838e1316dcc2",
+        "result": "passed",
+        "passed": 23,
+        "total": 23,
+        "codeSha256": "1808918dc2812b884c3c231f86fe99ea2dc15286bf6decae54e6d6232c638fee"
+      },
+      "wrongAttempt": {
+        "runId": "9a07a4fb-d6ab-46af-b998-3ef808ae564c",
+        "result": "failed",
+        "passed": 15,
+        "total": 23
+      },
+      "edgeEvidence": {
+        "path": "edges-final/CS-002.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/CS-002.json",
+      "baselineRevision": "sha256:790005e37baedc0c98656a2bd01150a206a8a02142dedfbc985b9e1e6a2dce6f",
+      "candidateRevision": "sha256:9b878939135d18b7e0c5c43336857b13e7755fa6b44b81ffb30bb1e66a9ad3c2",
+      "candidateUIReceipt": "retests/pass1/CS-002.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:9b878939135d18b7e0c5c43336857b13e7755fa6b44b81ffb30bb1e66a9ad3c2",
+        "runId": "6bcf80cb-4315-48c0-bd57-6524510bf910",
+        "result": "failed",
+        "passed": 15,
+        "total": 23
+      }
+    },
+    {
+      "key": "CS-003",
+      "revision": "sha256:528bb5a08300f125a51e8ab0d3c6d79e070eb1fd92bc594b3b3755a248ac58da",
+      "language": "csharp",
+      "title": "Longest strictly increasing stretch",
+      "difficulty": "easy",
+      "file": "Solution.cs",
+      "url": "https://musclememory.run/challenges/CS-003",
+      "runtime": "Roslyn/.NET WASM",
+      "partition": "f-java-csharp-php",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "cffd14ef-2ee4-4612-8c8c-b7f9a73453bc",
+        "result": "passed",
+        "passed": 15,
+        "total": 15,
+        "codeSha256": "b20e2dff64e8849847d209a7f94c6083e5065ea7bbbe47da3c96f3f15e5b3fc6"
+      },
+      "finalAttempt": {
+        "revision": "sha256:528bb5a08300f125a51e8ab0d3c6d79e070eb1fd92bc594b3b3755a248ac58da",
+        "runId": "a3c7729d-1595-413a-83d6-982d78bca820",
+        "result": "passed",
+        "passed": 15,
+        "total": 15,
+        "codeSha256": "b20e2dff64e8849847d209a7f94c6083e5065ea7bbbe47da3c96f3f15e5b3fc6"
+      },
+      "wrongAttempt": {
+        "runId": "f5c33cfd-617a-4aca-979d-dcbb463e8159",
+        "result": "failed",
+        "passed": 10,
+        "total": 15
+      },
+      "edgeEvidence": {
+        "path": "edges/CS-003.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/CS-003.json",
+      "baselineRevision": "sha256:528bb5a08300f125a51e8ab0d3c6d79e070eb1fd92bc594b3b3755a248ac58da",
+      "candidateRevision": "sha256:528bb5a08300f125a51e8ab0d3c6d79e070eb1fd92bc594b3b3755a248ac58da",
+      "candidateUIReceipt": "receipts/CS-003.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:528bb5a08300f125a51e8ab0d3c6d79e070eb1fd92bc594b3b3755a248ac58da",
+        "runId": "f5c33cfd-617a-4aca-979d-dcbb463e8159",
+        "result": "failed",
+        "passed": 10,
+        "total": 15
+      }
+    },
+    {
+      "key": "CS-004",
+      "revision": "sha256:6c14f033784ce4714c264a1f25cca13e0708d534eef38e840280abb23452a436",
+      "language": "csharp",
+      "title": "Transpose a rectangular matrix",
+      "difficulty": "medium",
+      "file": "Solution.cs",
+      "url": "https://musclememory.run/challenges/CS-004",
+      "runtime": "Roslyn/.NET WASM",
+      "partition": "f-java-csharp-php",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "cb332c86-2a24-4fd7-b9ad-7ac0388d96a2",
+        "result": "passed",
+        "passed": 6,
+        "total": 6,
+        "codeSha256": "e6a601783a2f01315c7bcbafdc063814c05e273a82bf355dd81074baa9659645"
+      },
+      "finalAttempt": {
+        "revision": "sha256:6c14f033784ce4714c264a1f25cca13e0708d534eef38e840280abb23452a436",
+        "runId": "5c315192-060a-4710-be99-944f60b762ff",
+        "result": "passed",
+        "passed": 6,
+        "total": 6,
+        "codeSha256": "e6a601783a2f01315c7bcbafdc063814c05e273a82bf355dd81074baa9659645"
+      },
+      "wrongAttempt": {
+        "runId": "793da486-8ee2-4728-a554-b55132936f9b",
+        "result": "failed",
+        "passed": 2,
+        "total": 6
+      },
+      "edgeEvidence": {
+        "path": "edges/CS-004.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/CS-004.json",
+      "baselineRevision": "sha256:6c14f033784ce4714c264a1f25cca13e0708d534eef38e840280abb23452a436",
+      "candidateRevision": "sha256:6c14f033784ce4714c264a1f25cca13e0708d534eef38e840280abb23452a436",
+      "candidateUIReceipt": "receipts/CS-004.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:6c14f033784ce4714c264a1f25cca13e0708d534eef38e840280abb23452a436",
+        "runId": "793da486-8ee2-4728-a554-b55132936f9b",
+        "result": "failed",
+        "passed": 2,
+        "total": 6
+      }
+    },
+    {
+      "key": "CS-005",
+      "revision": "sha256:9050e23ee2641c3fdcdb84632210fbfaf4d73b2ba6e7d1e3b19cad89e4a40d01",
+      "language": "csharp",
+      "title": "Encode consecutive character runs",
+      "difficulty": "medium",
+      "file": "Solution.cs",
+      "url": "https://musclememory.run/challenges/CS-005",
+      "runtime": "Roslyn/.NET WASM",
+      "partition": "f-java-csharp-php",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "d3ae9045-2d9e-421c-ad53-825342b3aba6",
+        "result": "passed",
+        "passed": 11,
+        "total": 11,
+        "codeSha256": "8b41c9fbc156dd6edd72efc99fa7088d8f6ad230b84ea1e2eb801b0c44d0b197"
+      },
+      "finalAttempt": {
+        "revision": "sha256:9050e23ee2641c3fdcdb84632210fbfaf4d73b2ba6e7d1e3b19cad89e4a40d01",
+        "runId": "9ec5b4a8-c244-4972-b75b-501668fbf146",
+        "result": "passed",
+        "passed": 11,
+        "total": 11,
+        "codeSha256": "8b41c9fbc156dd6edd72efc99fa7088d8f6ad230b84ea1e2eb801b0c44d0b197"
+      },
+      "wrongAttempt": {
+        "runId": "8147b72f-d1f4-46c4-b87b-ebe2c6ef578f",
+        "result": "failed",
+        "passed": 6,
+        "total": 11
+      },
+      "edgeEvidence": {
+        "path": "edges/CS-005.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/CS-005.json",
+      "baselineRevision": "sha256:9050e23ee2641c3fdcdb84632210fbfaf4d73b2ba6e7d1e3b19cad89e4a40d01",
+      "candidateRevision": "sha256:9050e23ee2641c3fdcdb84632210fbfaf4d73b2ba6e7d1e3b19cad89e4a40d01",
+      "candidateUIReceipt": "receipts/CS-005.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:9050e23ee2641c3fdcdb84632210fbfaf4d73b2ba6e7d1e3b19cad89e4a40d01",
+        "runId": "8147b72f-d1f4-46c4-b87b-ebe2c6ef578f",
+        "result": "failed",
+        "passed": 6,
+        "total": 11
+      }
+    },
+    {
+      "key": "GO-001",
+      "revision": "sha256:d73f7e05a154610c4956be662c29d248d32610da14ce1371ea5434295cd678df",
+      "language": "go",
+      "title": "The composer says 1 word when the post is empty",
+      "difficulty": "easy",
+      "file": "count_words.go",
+      "url": "https://musclememory.run/challenges/GO-001",
+      "runtime": "Yaegi WASM",
+      "partition": "e-go-ruby",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "ca526311-1088-42d9-ae33-b82fae9a2be8",
+        "result": "passed",
+        "passed": 21,
+        "total": 21,
+        "codeSha256": "ab868972bf416daaeb70648c132571f0d3e468a2cdb00728d1b0d3337d6ed945"
+      },
+      "finalAttempt": {
+        "revision": "sha256:d73f7e05a154610c4956be662c29d248d32610da14ce1371ea5434295cd678df",
+        "runId": "40cd2593-78c5-49fc-aaef-64328a6e3e60",
+        "result": "passed",
+        "passed": 21,
+        "total": 21,
+        "codeSha256": "ab868972bf416daaeb70648c132571f0d3e468a2cdb00728d1b0d3337d6ed945"
+      },
+      "wrongAttempt": {
+        "runId": "715596cd-fc0c-4b6a-a0fc-e5b2ab7119f8",
+        "result": "failed",
+        "passed": 14,
+        "total": 21
+      },
+      "edgeEvidence": {
+        "path": "edges/GO-001.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/GO-001.json",
+      "baselineRevision": "sha256:d73f7e05a154610c4956be662c29d248d32610da14ce1371ea5434295cd678df",
+      "candidateRevision": "sha256:d73f7e05a154610c4956be662c29d248d32610da14ce1371ea5434295cd678df",
+      "candidateUIReceipt": "receipts/GO-001.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:d73f7e05a154610c4956be662c29d248d32610da14ce1371ea5434295cd678df",
+        "runId": "715596cd-fc0c-4b6a-a0fc-e5b2ab7119f8",
+        "result": "failed",
+        "passed": 14,
+        "total": 21
+      }
+    },
+    {
+      "key": "GO-002",
+      "revision": "sha256:3c10fd7c2fe8a7b04b4d62426d75f10b156363b1ab6c4971f9ef12e0d81fdc67",
+      "language": "go",
+      "title": "List endpoints accept any page size",
+      "difficulty": "easy",
+      "file": "parse_page.go",
+      "url": "https://musclememory.run/challenges/GO-002",
+      "runtime": "Yaegi WASM",
+      "partition": "e-go-ruby",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "849cb572-afac-4644-a6fb-fd13f3206db0",
+        "result": "passed",
+        "passed": 18,
+        "total": 18,
+        "codeSha256": "0d8999fbdca6ca3f9e2836b89e4ed00506a18f8e205da726a0890a766f435ec0"
+      },
+      "finalAttempt": {
+        "revision": "sha256:3c10fd7c2fe8a7b04b4d62426d75f10b156363b1ab6c4971f9ef12e0d81fdc67",
+        "runId": "de87f12e-4417-41dd-91cf-c00476f4606b",
+        "result": "passed",
+        "passed": 18,
+        "total": 18,
+        "codeSha256": "0d8999fbdca6ca3f9e2836b89e4ed00506a18f8e205da726a0890a766f435ec0"
+      },
+      "wrongAttempt": {
+        "runId": "ffc27c76-f4b7-41b2-9009-925b1e5bf531",
+        "result": "failed",
+        "passed": 16,
+        "total": 18
+      },
+      "edgeEvidence": {
+        "path": "edges/GO-002.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/GO-002.json",
+      "baselineRevision": "sha256:3c10fd7c2fe8a7b04b4d62426d75f10b156363b1ab6c4971f9ef12e0d81fdc67",
+      "candidateRevision": "sha256:3c10fd7c2fe8a7b04b4d62426d75f10b156363b1ab6c4971f9ef12e0d81fdc67",
+      "candidateUIReceipt": "receipts/GO-002.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:3c10fd7c2fe8a7b04b4d62426d75f10b156363b1ab6c4971f9ef12e0d81fdc67",
+        "runId": "ffc27c76-f4b7-41b2-9009-925b1e5bf531",
+        "result": "failed",
+        "passed": 16,
+        "total": 18
+      }
+    },
+    {
+      "key": "GO-003",
+      "revision": "sha256:23419d0a4b0be060582624f6565db67d433042ffcf4bd46101a67c0eb22e1c62",
+      "language": "go",
+      "title": "Access log parser drops fields on 5xx lines",
+      "difficulty": "easy",
+      "file": "parse_line.go",
+      "url": "https://musclememory.run/challenges/GO-003",
+      "runtime": "Yaegi WASM",
+      "partition": "e-go-ruby",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "392f2918-d64a-44b3-ac4c-5909875ee65e",
+        "result": "passed",
+        "passed": 15,
+        "total": 15,
+        "codeSha256": "7b4fb4ff77729744d2b0447ce4c5df24786ee7b0cee2b2654479fb8adab20b09"
+      },
+      "finalAttempt": {
+        "revision": "sha256:23419d0a4b0be060582624f6565db67d433042ffcf4bd46101a67c0eb22e1c62",
+        "runId": "2c6a1039-1749-450b-8e71-6c5d4c84a1ec",
+        "result": "passed",
+        "passed": 15,
+        "total": 15,
+        "codeSha256": "7b4fb4ff77729744d2b0447ce4c5df24786ee7b0cee2b2654479fb8adab20b09"
+      },
+      "wrongAttempt": {
+        "runId": "91898ed8-8ea5-4723-a900-3467b0c1874a",
+        "result": "failed",
+        "passed": 2,
+        "total": 15
+      },
+      "edgeEvidence": {
+        "path": "edges/GO-003.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/GO-003.json",
+      "baselineRevision": "sha256:23419d0a4b0be060582624f6565db67d433042ffcf4bd46101a67c0eb22e1c62",
+      "candidateRevision": "sha256:23419d0a4b0be060582624f6565db67d433042ffcf4bd46101a67c0eb22e1c62",
+      "candidateUIReceipt": "receipts/GO-003.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:23419d0a4b0be060582624f6565db67d433042ffcf4bd46101a67c0eb22e1c62",
+        "runId": "91898ed8-8ea5-4723-a900-3467b0c1874a",
+        "result": "failed",
+        "passed": 2,
+        "total": 15
+      }
+    },
+    {
+      "key": "GO-004",
+      "revision": "sha256:bd709be6d3575e68975be801468cc1b784b3df5d0219d65892f920fde30b45fe",
+      "language": "go",
+      "title": "Timeouts in config must be written in seconds",
+      "difficulty": "easy",
+      "file": "parse_duration.go",
+      "url": "https://musclememory.run/challenges/GO-004",
+      "runtime": "Yaegi WASM",
+      "partition": "e-go-ruby",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "14b70f6f-5499-4d27-aae3-b1335b9c35e2",
+        "result": "passed",
+        "passed": 24,
+        "total": 24,
+        "codeSha256": "601f2077361e8041ce6461180e8af09a55d8cc63bd4ef8e5ae02d8448babc98b"
+      },
+      "finalAttempt": {
+        "revision": "sha256:bd709be6d3575e68975be801468cc1b784b3df5d0219d65892f920fde30b45fe",
+        "runId": "61a953e7-9a68-4b60-b31a-07bcfb3ff78d",
+        "result": "passed",
+        "passed": 24,
+        "total": 24,
+        "codeSha256": "601f2077361e8041ce6461180e8af09a55d8cc63bd4ef8e5ae02d8448babc98b"
+      },
+      "wrongAttempt": {
+        "runId": "a28dcac2-9acd-415d-96fe-72493b065033",
+        "result": "failed",
+        "passed": 23,
+        "total": 24
+      },
+      "edgeEvidence": {
+        "path": "edges/GO-004.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/GO-004.json",
+      "baselineRevision": "sha256:bd709be6d3575e68975be801468cc1b784b3df5d0219d65892f920fde30b45fe",
+      "candidateRevision": "sha256:bd709be6d3575e68975be801468cc1b784b3df5d0219d65892f920fde30b45fe",
+      "candidateUIReceipt": "receipts/GO-004.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:bd709be6d3575e68975be801468cc1b784b3df5d0219d65892f920fde30b45fe",
+        "runId": "a28dcac2-9acd-415d-96fe-72493b065033",
+        "result": "failed",
+        "passed": 23,
+        "total": 24
+      }
+    },
+    {
+      "key": "GO-005",
+      "revision": "sha256:6284f2295fb1f0060fc22f1d6576ddadfa1718e01c43f5813c1fee767339ec76",
+      "language": "go",
+      "title": "Sign-up creates a second account for the same email",
+      "difficulty": "medium",
+      "file": "canonical_email.go",
+      "url": "https://musclememory.run/challenges/GO-005",
+      "runtime": "Yaegi WASM",
+      "partition": "e-go-ruby",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "0bcdd07c-5c1f-4f86-8829-dedff3da6136",
+        "result": "passed",
+        "passed": 20,
+        "total": 20,
+        "codeSha256": "f969d68586a7caa93f4f268b64d960c1ae3acd9d5fce1ae287e5a5cb63e4ae83"
+      },
+      "finalAttempt": {
+        "revision": "sha256:6284f2295fb1f0060fc22f1d6576ddadfa1718e01c43f5813c1fee767339ec76",
+        "runId": "3403b9e0-b2f1-41fd-924b-44ce2fb862ef",
+        "result": "passed",
+        "passed": 20,
+        "total": 20,
+        "codeSha256": "f969d68586a7caa93f4f268b64d960c1ae3acd9d5fce1ae287e5a5cb63e4ae83"
+      },
+      "wrongAttempt": {
+        "runId": "a0e25e8f-ce83-4bc3-921d-bad7fc144323",
+        "result": "failed",
+        "passed": 19,
+        "total": 20
+      },
+      "edgeEvidence": {
+        "path": "edges/GO-005.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/GO-005.json",
+      "baselineRevision": "sha256:6284f2295fb1f0060fc22f1d6576ddadfa1718e01c43f5813c1fee767339ec76",
+      "candidateRevision": "sha256:6284f2295fb1f0060fc22f1d6576ddadfa1718e01c43f5813c1fee767339ec76",
+      "candidateUIReceipt": "receipts/GO-005.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:6284f2295fb1f0060fc22f1d6576ddadfa1718e01c43f5813c1fee767339ec76",
+        "runId": "a0e25e8f-ce83-4bc3-921d-bad7fc144323",
+        "result": "failed",
+        "passed": 19,
+        "total": 20
+      }
+    },
+    {
+      "key": "GO-006",
+      "revision": "sha256:2279a86fff5bbd13533f770365d985f72270906b14513b46cc7e1c8855625da7",
+      "language": "go",
+      "title": "Compute nearest-rank percentiles for the latency panel",
+      "difficulty": "medium",
+      "file": "percentile.go",
+      "url": "https://musclememory.run/challenges/GO-006",
+      "runtime": "Yaegi WASM",
+      "partition": "e-go-ruby",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "13355082-a4d2-47a6-8edf-907900f7c344",
+        "result": "passed",
+        "passed": 19,
+        "total": 19,
+        "codeSha256": "b68ea04f497cb7cdab7adc64ba1395d3535e21e225cad5dca7dd372352f996b5"
+      },
+      "finalAttempt": {
+        "revision": "sha256:2279a86fff5bbd13533f770365d985f72270906b14513b46cc7e1c8855625da7",
+        "runId": "f4c9fea7-a2ef-423d-9b67-3b99832fcfbc",
+        "result": "passed",
+        "passed": 19,
+        "total": 19,
+        "codeSha256": "b68ea04f497cb7cdab7adc64ba1395d3535e21e225cad5dca7dd372352f996b5"
+      },
+      "wrongAttempt": {
+        "runId": "759a18d4-98ad-49dc-97ed-b2e2752af6f8",
+        "result": "failed",
+        "passed": 12,
+        "total": 19
+      },
+      "edgeEvidence": {
+        "path": "edges/GO-006.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/GO-006.json",
+      "baselineRevision": "sha256:2279a86fff5bbd13533f770365d985f72270906b14513b46cc7e1c8855625da7",
+      "candidateRevision": "sha256:2279a86fff5bbd13533f770365d985f72270906b14513b46cc7e1c8855625da7",
+      "candidateUIReceipt": "receipts/GO-006.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:2279a86fff5bbd13533f770365d985f72270906b14513b46cc7e1c8855625da7",
+        "runId": "759a18d4-98ad-49dc-97ed-b2e2752af6f8",
+        "result": "failed",
+        "passed": 12,
+        "total": 19
+      }
+    },
+    {
+      "key": "GO-007",
+      "revision": "sha256:e566002e3c3b173b0fca4cf9b2b6480cfb6fdd630f2b7f0d557659672de5844d",
+      "language": "go",
+      "title": "Upstream weights are ignored",
+      "difficulty": "medium",
+      "file": "pick_order.go",
+      "url": "https://musclememory.run/challenges/GO-007",
+      "runtime": "Yaegi WASM",
+      "partition": "e-go-ruby",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "1871ecbe-5494-4045-bccf-e9c3589497dc",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "9e3c40b73c9a7a465352ca6ae5960373f643812065548fe3bb1b861924a7eb5f"
+      },
+      "finalAttempt": {
+        "revision": "sha256:e566002e3c3b173b0fca4cf9b2b6480cfb6fdd630f2b7f0d557659672de5844d",
+        "runId": "f2f3f488-5f19-4b36-b712-1a41632d22e9",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "9e3c40b73c9a7a465352ca6ae5960373f643812065548fe3bb1b861924a7eb5f"
+      },
+      "wrongAttempt": {
+        "runId": "8fdc4d72-8955-4cbd-b990-a56132837cb9",
+        "result": "failed",
+        "passed": 7,
+        "total": 16
+      },
+      "edgeEvidence": {
+        "path": "edges/GO-007.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/GO-007.json",
+      "baselineRevision": "sha256:e566002e3c3b173b0fca4cf9b2b6480cfb6fdd630f2b7f0d557659672de5844d",
+      "candidateRevision": "sha256:e566002e3c3b173b0fca4cf9b2b6480cfb6fdd630f2b7f0d557659672de5844d",
+      "candidateUIReceipt": "receipts/GO-007.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:e566002e3c3b173b0fca4cf9b2b6480cfb6fdd630f2b7f0d557659672de5844d",
+        "runId": "8fdc4d72-8955-4cbd-b990-a56132837cb9",
+        "result": "failed",
+        "passed": 7,
+        "total": 16
+      }
+    },
+    {
+      "key": "HTML-001",
+      "revision": "sha256:e6472fd87067e5f59a01f2ee609623bcd3663e8e261b4840612bb451899dbb3b",
+      "language": "html",
+      "title": "Product filter checkboxes have no labels",
+      "difficulty": "easy",
+      "file": "templates/filter-form-labels.html",
+      "url": "https://musclememory.run/challenges/HTML-001",
+      "runtime": "linkedom DOM",
+      "partition": "c-sql-html",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "9fb8a53b-4be7-4133-be48-3f97a2776308",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "626ee2c428eeca227e43c4e9fc1102a734b7e04658c1521a0302821877e68194"
+      },
+      "finalAttempt": {
+        "revision": "sha256:e6472fd87067e5f59a01f2ee609623bcd3663e8e261b4840612bb451899dbb3b",
+        "runId": "67c7f60a-eae7-46da-a7de-5bf853439419",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "626ee2c428eeca227e43c4e9fc1102a734b7e04658c1521a0302821877e68194"
+      },
+      "wrongAttempt": {
+        "runId": "bc875d1f-814e-41af-9922-cef9f2f31146",
+        "result": "failed",
+        "passed": 11,
+        "total": 16
+      },
+      "edgeEvidence": {
+        "path": "edges/HTML-001.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/HTML-001.json",
+      "baselineRevision": "sha256:e6472fd87067e5f59a01f2ee609623bcd3663e8e261b4840612bb451899dbb3b",
+      "candidateRevision": "sha256:e6472fd87067e5f59a01f2ee609623bcd3663e8e261b4840612bb451899dbb3b",
+      "candidateUIReceipt": "receipts/HTML-001.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:e6472fd87067e5f59a01f2ee609623bcd3663e8e261b4840612bb451899dbb3b",
+        "runId": "bc875d1f-814e-41af-9922-cef9f2f31146",
+        "result": "failed",
+        "passed": 11,
+        "total": 16
+      }
+    },
+    {
+      "key": "HTML-002",
+      "revision": "sha256:5083edcff0065f9c07142b0f573ddd0e49d9428284c9d0b7f04aae376f0e7d8c",
+      "language": "html",
+      "title": "Build a table with headers",
+      "difficulty": "easy",
+      "file": "page.html",
+      "url": "https://musclememory.run/challenges/HTML-002",
+      "runtime": "linkedom DOM",
+      "partition": "c-sql-html",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "b5a7423e-a0a7-429d-9a23-bc05e75b588a",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "d520b764256b7a40c80372aa07b74b67c2fc8ba788cabc688c75bf02fe441ae8"
+      },
+      "finalAttempt": {
+        "revision": "sha256:5083edcff0065f9c07142b0f573ddd0e49d9428284c9d0b7f04aae376f0e7d8c",
+        "runId": "838beaaa-d570-467f-a497-8f41df5f224c",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "d520b764256b7a40c80372aa07b74b67c2fc8ba788cabc688c75bf02fe441ae8"
+      },
+      "wrongAttempt": {
+        "runId": "0c6bc7aa-9486-43fa-8e24-aebe86dca57d",
+        "result": "failed",
+        "passed": 15,
+        "total": 16
+      },
+      "edgeEvidence": {
+        "path": "edges/HTML-002.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/HTML-002.json",
+      "baselineRevision": "sha256:5083edcff0065f9c07142b0f573ddd0e49d9428284c9d0b7f04aae376f0e7d8c",
+      "candidateRevision": "sha256:5083edcff0065f9c07142b0f573ddd0e49d9428284c9d0b7f04aae376f0e7d8c",
+      "candidateUIReceipt": "receipts/HTML-002.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:5083edcff0065f9c07142b0f573ddd0e49d9428284c9d0b7f04aae376f0e7d8c",
+        "runId": "0c6bc7aa-9486-43fa-8e24-aebe86dca57d",
+        "result": "failed",
+        "passed": 15,
+        "total": 16
+      }
+    },
+    {
+      "key": "HTML-003",
+      "revision": "sha256:c552d26e087693857289d1f490c0584144f34be0619095c60aecbad9792be715",
+      "language": "html",
+      "title": "Offer a native disclosure",
+      "difficulty": "easy",
+      "file": "page.html",
+      "url": "https://musclememory.run/challenges/HTML-003",
+      "runtime": "linkedom DOM",
+      "partition": "c-sql-html",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "2e543a8b-9620-4ffe-87d3-4c6e876a5a9d",
+        "result": "passed",
+        "passed": 10,
+        "total": 10,
+        "codeSha256": "53f8aa83c23e5d03c4ca2ef7ca5074e016473fa88b150045b9e3137996ab2162"
+      },
+      "finalAttempt": {
+        "revision": "sha256:c552d26e087693857289d1f490c0584144f34be0619095c60aecbad9792be715",
+        "runId": "5fe89b72-a4e3-4f9b-a730-bf437279318f",
+        "result": "passed",
+        "passed": 10,
+        "total": 10,
+        "codeSha256": "53f8aa83c23e5d03c4ca2ef7ca5074e016473fa88b150045b9e3137996ab2162"
+      },
+      "wrongAttempt": {
+        "runId": "49334622-f8e8-46a9-8364-c5caafaba4a7",
+        "result": "failed",
+        "passed": 9,
+        "total": 10
+      },
+      "edgeEvidence": {
+        "path": "edges/HTML-003.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/HTML-003.json",
+      "baselineRevision": "sha256:c552d26e087693857289d1f490c0584144f34be0619095c60aecbad9792be715",
+      "candidateRevision": "sha256:c552d26e087693857289d1f490c0584144f34be0619095c60aecbad9792be715",
+      "candidateUIReceipt": "receipts/HTML-003.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:c552d26e087693857289d1f490c0584144f34be0619095c60aecbad9792be715",
+        "runId": "49334622-f8e8-46a9-8364-c5caafaba4a7",
+        "result": "failed",
+        "passed": 9,
+        "total": 10
+      }
+    },
+    {
+      "key": "HTML-004",
+      "revision": "sha256:06166dcb2efbabf16d17b8d91ee57a781881920b64f16924d59eb7f6f457d542",
+      "language": "html",
+      "title": "Describe an image with a caption",
+      "difficulty": "easy",
+      "file": "page.html",
+      "url": "https://musclememory.run/challenges/HTML-004",
+      "runtime": "linkedom DOM",
+      "partition": "c-sql-html",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "899bd86a-74a6-4a24-83fa-6790ff0c0809",
+        "result": "passed",
+        "passed": 10,
+        "total": 10,
+        "codeSha256": "b785c92fda5d3a94caa7b54aa7918e760146668531ee462de077e60a805870b8"
+      },
+      "finalAttempt": {
+        "revision": "sha256:06166dcb2efbabf16d17b8d91ee57a781881920b64f16924d59eb7f6f457d542",
+        "runId": "83b25f88-2422-446d-9766-7ebd7358ba1c",
+        "result": "passed",
+        "passed": 10,
+        "total": 10,
+        "codeSha256": "b785c92fda5d3a94caa7b54aa7918e760146668531ee462de077e60a805870b8"
+      },
+      "wrongAttempt": {
+        "runId": "e5c3263e-6793-4a6f-a7ad-0b52ff4d7482",
+        "result": "failed",
+        "passed": 9,
+        "total": 10
+      },
+      "edgeEvidence": {
+        "path": "edges/HTML-004.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/HTML-004.json",
+      "baselineRevision": "sha256:06166dcb2efbabf16d17b8d91ee57a781881920b64f16924d59eb7f6f457d542",
+      "candidateRevision": "sha256:06166dcb2efbabf16d17b8d91ee57a781881920b64f16924d59eb7f6f457d542",
+      "candidateUIReceipt": "receipts/HTML-004.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:06166dcb2efbabf16d17b8d91ee57a781881920b64f16924d59eb7f6f457d542",
+        "runId": "e5c3263e-6793-4a6f-a7ad-0b52ff4d7482",
+        "result": "failed",
+        "passed": 9,
+        "total": 10
+      }
+    },
+    {
+      "key": "HTML-005",
+      "revision": "sha256:cd5926aef237c59d9f8d3633d5dfa877ad520f81f2b23fcd1a211b8ede01d809",
+      "language": "html",
+      "title": "Mark up a reading list",
+      "difficulty": "easy",
+      "file": "page.html",
+      "url": "https://musclememory.run/challenges/HTML-005",
+      "runtime": "linkedom DOM",
+      "partition": "c-sql-html",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "617f5f5b-9b63-4c05-abe4-8ce15d3533b9",
+        "result": "passed",
+        "passed": 12,
+        "total": 12,
+        "codeSha256": "904a46a06e684f927b4d6f6e6daf0eab7bda1c1fb3142d67d1f2ac2f2129863c"
+      },
+      "finalAttempt": {
+        "revision": "sha256:cd5926aef237c59d9f8d3633d5dfa877ad520f81f2b23fcd1a211b8ede01d809",
+        "runId": "de56cc90-72de-4232-af9c-f1fc7ef30a52",
+        "result": "passed",
+        "passed": 12,
+        "total": 12,
+        "codeSha256": "904a46a06e684f927b4d6f6e6daf0eab7bda1c1fb3142d67d1f2ac2f2129863c"
+      },
+      "wrongAttempt": {
+        "runId": "970d05d7-56bb-4a6f-ae92-8305bb774c81",
+        "result": "failed",
+        "passed": 11,
+        "total": 12
+      },
+      "edgeEvidence": {
+        "path": "edges/HTML-005.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/HTML-005.json",
+      "baselineRevision": "sha256:cd5926aef237c59d9f8d3633d5dfa877ad520f81f2b23fcd1a211b8ede01d809",
+      "candidateRevision": "sha256:cd5926aef237c59d9f8d3633d5dfa877ad520f81f2b23fcd1a211b8ede01d809",
+      "candidateUIReceipt": "receipts/HTML-005.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:cd5926aef237c59d9f8d3633d5dfa877ad520f81f2b23fcd1a211b8ede01d809",
+        "runId": "970d05d7-56bb-4a6f-ae92-8305bb774c81",
+        "result": "failed",
+        "passed": 11,
+        "total": 12
+      }
+    },
+    {
+      "key": "JAVA-001",
+      "revision": "sha256:e9b1f62267acffdb9af08edf569dacad5f8d1bb726952031e2d555f537dd5d0f",
+      "language": "java",
+      "title": "The composer says 1 word when the post is empty",
+      "difficulty": "easy",
+      "file": "src/main/java/com/acme/composer/WordCount.java",
+      "url": "https://musclememory.run/challenges/JAVA-001",
+      "runtime": "teavm-javac",
+      "partition": "f-java-csharp-php",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "89fa0076-3cb1-4f76-b13a-3d9638919834",
+        "result": "passed",
+        "passed": 21,
+        "total": 21,
+        "codeSha256": "8deee53fab301063eb9c6c11520aa50753e5207f083510cfe6706921bc46d1b4"
+      },
+      "finalAttempt": {
+        "revision": "sha256:e9b1f62267acffdb9af08edf569dacad5f8d1bb726952031e2d555f537dd5d0f",
+        "runId": "0f3d099d-32b3-4420-9683-5b14304edbf6",
+        "result": "passed",
+        "passed": 21,
+        "total": 21,
+        "codeSha256": "8deee53fab301063eb9c6c11520aa50753e5207f083510cfe6706921bc46d1b4"
+      },
+      "wrongAttempt": {
+        "runId": "c08e370b-c969-48d1-ad37-4b87e692cd6a",
+        "result": "failed",
+        "passed": 16,
+        "total": 21
+      },
+      "edgeEvidence": {
+        "path": "edges/JAVA-001.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/JAVA-001.json",
+      "baselineRevision": "sha256:e9b1f62267acffdb9af08edf569dacad5f8d1bb726952031e2d555f537dd5d0f",
+      "candidateRevision": "sha256:e9b1f62267acffdb9af08edf569dacad5f8d1bb726952031e2d555f537dd5d0f",
+      "candidateUIReceipt": "receipts/JAVA-001.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:e9b1f62267acffdb9af08edf569dacad5f8d1bb726952031e2d555f537dd5d0f",
+        "runId": "c08e370b-c969-48d1-ad37-4b87e692cd6a",
+        "result": "failed",
+        "passed": 16,
+        "total": 21
+      }
+    },
+    {
+      "key": "JAVA-002",
+      "revision": "sha256:e66f307517576c3f72faac06898c651f8f2fd504a07529b6c6a5643ac5a1a057",
+      "language": "java",
+      "title": "Password policy still allows 8-character passwords",
+      "difficulty": "easy",
+      "file": "src/main/java/com/acme/accounts/PasswordPolicy.java",
+      "url": "https://musclememory.run/challenges/JAVA-002",
+      "runtime": "teavm-javac",
+      "partition": "f-java-csharp-php",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "f4032bda-bf6e-489c-ba8c-638d34c92a32",
+        "result": "passed",
+        "passed": 22,
+        "total": 22,
+        "codeSha256": "fece7ffd65c630acc54a2d9de275d6538db3daa70b90bbef13775ac9fab8a7e8"
+      },
+      "finalAttempt": {
+        "revision": "sha256:e66f307517576c3f72faac06898c651f8f2fd504a07529b6c6a5643ac5a1a057",
+        "runId": "4934a8cb-7000-466e-8227-e3f1da6712fa",
+        "result": "passed",
+        "passed": 22,
+        "total": 22,
+        "codeSha256": "fece7ffd65c630acc54a2d9de275d6538db3daa70b90bbef13775ac9fab8a7e8"
+      },
+      "wrongAttempt": {
+        "runId": "9d86a16f-9cf3-482e-ae1d-e6300a4e105e",
+        "result": "failed",
+        "passed": 21,
+        "total": 22
+      },
+      "edgeEvidence": {
+        "path": "edges/JAVA-002.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/JAVA-002.json",
+      "baselineRevision": "sha256:e66f307517576c3f72faac06898c651f8f2fd504a07529b6c6a5643ac5a1a057",
+      "candidateRevision": "sha256:e66f307517576c3f72faac06898c651f8f2fd504a07529b6c6a5643ac5a1a057",
+      "candidateUIReceipt": "receipts/JAVA-002.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:e66f307517576c3f72faac06898c651f8f2fd504a07529b6c6a5643ac5a1a057",
+        "runId": "9d86a16f-9cf3-482e-ae1d-e6300a4e105e",
+        "result": "failed",
+        "passed": 21,
+        "total": 22
+      }
+    },
+    {
+      "key": "JAVA-003",
+      "revision": "sha256:faa01f0f122e610cef0279979605f7bea84c8ce033b322d9ae6a7250621133df",
+      "language": "java",
+      "title": "Find the insertion index",
+      "difficulty": "medium",
+      "file": "Solution.java",
+      "url": "https://musclememory.run/challenges/JAVA-003",
+      "runtime": "teavm-javac",
+      "partition": "f-java-csharp-php",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "24289c87-4030-41cc-ab63-5960dde0fb25",
+        "result": "passed",
+        "passed": 32,
+        "total": 32,
+        "codeSha256": "13a0dbccda6edf682d23c1b26b915eeaa6c48b77ff80f15bf9ee0e0e77af33e6"
+      },
+      "finalAttempt": {
+        "revision": "sha256:faa01f0f122e610cef0279979605f7bea84c8ce033b322d9ae6a7250621133df",
+        "runId": "9b5e147a-e490-409a-bb08-e755594fc092",
+        "result": "passed",
+        "passed": 32,
+        "total": 32,
+        "codeSha256": "13a0dbccda6edf682d23c1b26b915eeaa6c48b77ff80f15bf9ee0e0e77af33e6"
+      },
+      "wrongAttempt": {
+        "runId": "850ebc60-270c-43fc-9001-b0376760c7c3",
+        "result": "failed",
+        "passed": 24,
+        "total": 32
+      },
+      "edgeEvidence": {
+        "path": "edges/JAVA-003.json",
+        "cases": 4,
+        "correctPassed": 4,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/JAVA-003.json",
+      "baselineRevision": "sha256:faa01f0f122e610cef0279979605f7bea84c8ce033b322d9ae6a7250621133df",
+      "candidateRevision": "sha256:faa01f0f122e610cef0279979605f7bea84c8ce033b322d9ae6a7250621133df",
+      "candidateUIReceipt": "receipts/JAVA-003.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:faa01f0f122e610cef0279979605f7bea84c8ce033b322d9ae6a7250621133df",
+        "runId": "850ebc60-270c-43fc-9001-b0376760c7c3",
+        "result": "failed",
+        "passed": 24,
+        "total": 32
+      }
+    },
+    {
+      "key": "JAVA-004",
+      "revision": "sha256:ec7de97a2f1029310028e237a35c8be08f7aa1168bad3923dd0b03a023b2a4f0",
+      "language": "java",
+      "title": "Sum the two matrix diagonals",
+      "difficulty": "easy",
+      "file": "Solution.java",
+      "url": "https://musclememory.run/challenges/JAVA-004",
+      "runtime": "teavm-javac",
+      "partition": "f-java-csharp-php",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "abf25b8a-9ab5-46f6-bbc9-cf73578f3464",
+        "result": "passed",
+        "passed": 5,
+        "total": 5,
+        "codeSha256": "44707f35371d12b79e55aff78accad4b12191e15dc1958ccb216a16aeee8c0ae"
+      },
+      "finalAttempt": {
+        "revision": "sha256:ec7de97a2f1029310028e237a35c8be08f7aa1168bad3923dd0b03a023b2a4f0",
+        "runId": "f16edc45-4f3b-481e-9594-b0b7c1098bee",
+        "result": "passed",
+        "passed": 5,
+        "total": 5,
+        "codeSha256": "44707f35371d12b79e55aff78accad4b12191e15dc1958ccb216a16aeee8c0ae"
+      },
+      "wrongAttempt": {
+        "runId": "45abc635-94a9-43eb-a75b-b717f0ce015d",
+        "result": "failed",
+        "passed": 2,
+        "total": 5
+      },
+      "edgeEvidence": {
+        "path": "edges/JAVA-004.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/JAVA-004.json",
+      "baselineRevision": "sha256:ec7de97a2f1029310028e237a35c8be08f7aa1168bad3923dd0b03a023b2a4f0",
+      "candidateRevision": "sha256:ec7de97a2f1029310028e237a35c8be08f7aa1168bad3923dd0b03a023b2a4f0",
+      "candidateUIReceipt": "receipts/JAVA-004.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:ec7de97a2f1029310028e237a35c8be08f7aa1168bad3923dd0b03a023b2a4f0",
+        "runId": "45abc635-94a9-43eb-a75b-b717f0ce015d",
+        "result": "failed",
+        "passed": 2,
+        "total": 5
+      }
+    },
+    {
+      "key": "JAVA-005",
+      "revision": "sha256:3ce284ce819534d3560b32ba560afab936ec6c79859c74dc9de98f85ddd7a790",
+      "language": "java",
+      "title": "Shift ASCII letters",
+      "difficulty": "easy",
+      "file": "Solution.java",
+      "url": "https://musclememory.run/challenges/JAVA-005",
+      "runtime": "teavm-javac",
+      "partition": "f-java-csharp-php",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "683b6f04-0692-462c-88a1-27bdf8ab341e",
+        "result": "passed",
+        "passed": 19,
+        "total": 19,
+        "codeSha256": "45936b002bb10e4ac9f8629fbfcbf948a26cbb16eb83e6681ec777a061d47dc9"
+      },
+      "finalAttempt": {
+        "revision": "sha256:3ce284ce819534d3560b32ba560afab936ec6c79859c74dc9de98f85ddd7a790",
+        "runId": "4934efb0-6c25-4518-89b4-8c2c485e0102",
+        "result": "passed",
+        "passed": 19,
+        "total": 19,
+        "codeSha256": "45936b002bb10e4ac9f8629fbfcbf948a26cbb16eb83e6681ec777a061d47dc9"
+      },
+      "wrongAttempt": {
+        "runId": "69fce65b-9d41-417f-a420-17c384a90f67",
+        "result": "failed",
+        "passed": 15,
+        "total": 19
+      },
+      "edgeEvidence": {
+        "path": "edges/JAVA-005.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/JAVA-005.json",
+      "baselineRevision": "sha256:3ce284ce819534d3560b32ba560afab936ec6c79859c74dc9de98f85ddd7a790",
+      "candidateRevision": "sha256:3ce284ce819534d3560b32ba560afab936ec6c79859c74dc9de98f85ddd7a790",
+      "candidateUIReceipt": "receipts/JAVA-005.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:3ce284ce819534d3560b32ba560afab936ec6c79859c74dc9de98f85ddd7a790",
+        "runId": "69fce65b-9d41-417f-a420-17c384a90f67",
+        "result": "failed",
+        "passed": 15,
+        "total": 19
+      }
+    },
+    {
+      "key": "JS-001",
+      "revision": "sha256:4e3890b9a4fc1ca84f0335e24280c404258aceb2c27116588ecc099034b63e1c",
+      "language": "javascript",
+      "title": "Guest checkout fails with a server error",
+      "difficulty": "easy",
+      "file": "quote.js",
+      "url": "https://musclememory.run/challenges/JS-001",
+      "runtime": "browser JavaScript",
+      "partition": "b-js-ts",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "0ee75566-38c9-4c10-8243-b34d91deb88d",
+        "result": "passed",
+        "passed": 10,
+        "total": 10,
+        "codeSha256": "d2255668a1cbdc8e647a30b7724f7606691a239f27d79c6d56cb7814c5a3bc84"
+      },
+      "finalAttempt": {
+        "revision": "sha256:4e3890b9a4fc1ca84f0335e24280c404258aceb2c27116588ecc099034b63e1c",
+        "runId": "a0e43fcb-e5f5-4338-8add-a7ef705aab92",
+        "result": "passed",
+        "passed": 10,
+        "total": 10,
+        "codeSha256": "d2255668a1cbdc8e647a30b7724f7606691a239f27d79c6d56cb7814c5a3bc84"
+      },
+      "wrongAttempt": {
+        "runId": "e713512b-ec35-480c-8c24-4923af3c99f3",
+        "result": "failed",
+        "passed": 8,
+        "total": 10
+      },
+      "edgeEvidence": {
+        "path": "edges/JS-001.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/JS-001.json",
+      "baselineRevision": "sha256:4e3890b9a4fc1ca84f0335e24280c404258aceb2c27116588ecc099034b63e1c",
+      "candidateRevision": "sha256:4e3890b9a4fc1ca84f0335e24280c404258aceb2c27116588ecc099034b63e1c",
+      "candidateUIReceipt": "receipts/JS-001.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:4e3890b9a4fc1ca84f0335e24280c404258aceb2c27116588ecc099034b63e1c",
+        "runId": "e713512b-ec35-480c-8c24-4923af3c99f3",
+        "result": "failed",
+        "passed": 8,
+        "total": 10
+      }
+    },
+    {
+      "key": "JS-002",
+      "revision": "sha256:2c358ce3b84548983336df1ef9ce888dc9bceaa9e455eb50302f467262e19b52",
+      "language": "javascript",
+      "title": "The composer says 1 word when the post is empty",
+      "difficulty": "easy",
+      "file": "src/count-words.js",
+      "url": "https://musclememory.run/challenges/JS-002",
+      "runtime": "browser JavaScript",
+      "partition": "b-js-ts",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "3b518eae-d56c-4e7e-8b51-0e68d6fad8a4",
+        "result": "passed",
+        "passed": 21,
+        "total": 21,
+        "codeSha256": "2245ad234bd26ecdb3061cb198de912f3581d4d8564b2462b2c90384625d57c3"
+      },
+      "finalAttempt": {
+        "revision": "sha256:2c358ce3b84548983336df1ef9ce888dc9bceaa9e455eb50302f467262e19b52",
+        "runId": "a386e855-38ec-42b3-8c72-0a751e383ad2",
+        "result": "passed",
+        "passed": 21,
+        "total": 21,
+        "codeSha256": "2245ad234bd26ecdb3061cb198de912f3581d4d8564b2462b2c90384625d57c3"
+      },
+      "wrongAttempt": {
+        "runId": "de3e6837-4be1-4f6c-af05-e053c7ab6f5f",
+        "result": "failed",
+        "passed": 13,
+        "total": 21
+      },
+      "edgeEvidence": {
+        "path": "edges/JS-002.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/JS-002.json",
+      "baselineRevision": "sha256:2c358ce3b84548983336df1ef9ce888dc9bceaa9e455eb50302f467262e19b52",
+      "candidateRevision": "sha256:2c358ce3b84548983336df1ef9ce888dc9bceaa9e455eb50302f467262e19b52",
+      "candidateUIReceipt": "receipts/JS-002.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:2c358ce3b84548983336df1ef9ce888dc9bceaa9e455eb50302f467262e19b52",
+        "runId": "de3e6837-4be1-4f6c-af05-e053c7ab6f5f",
+        "result": "failed",
+        "passed": 13,
+        "total": 21
+      }
+    },
+    {
+      "key": "JS-003",
+      "revision": "sha256:59980dd4271aad495759ce574ac1dfd8aae296d6be088d021e9930f4d6c80cfe",
+      "language": "javascript",
+      "title": "Cart shows prices as raw cents",
+      "difficulty": "easy",
+      "file": "src/format-price.js",
+      "url": "https://musclememory.run/challenges/JS-003",
+      "runtime": "browser JavaScript",
+      "partition": "b-js-ts",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "d2a335d5-e59e-49e0-8ad1-ebdde2761a97",
+        "result": "passed",
+        "passed": 18,
+        "total": 18,
+        "codeSha256": "53d2ceaecd16ede577184679a9f51e205ffaa415aa9ba4fd7af22bf89931b00c"
+      },
+      "finalAttempt": {
+        "revision": "sha256:59980dd4271aad495759ce574ac1dfd8aae296d6be088d021e9930f4d6c80cfe",
+        "runId": "18a10edc-929a-43d7-997a-101b03fc24db",
+        "result": "passed",
+        "passed": 18,
+        "total": 18,
+        "codeSha256": "53d2ceaecd16ede577184679a9f51e205ffaa415aa9ba4fd7af22bf89931b00c"
+      },
+      "wrongAttempt": {
+        "runId": "14231462-ba44-4c36-9425-1635d3a100da",
+        "result": "failed",
+        "passed": 13,
+        "total": 18
+      },
+      "edgeEvidence": {
+        "path": "edges/JS-003.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/JS-003.json",
+      "baselineRevision": "sha256:59980dd4271aad495759ce574ac1dfd8aae296d6be088d021e9930f4d6c80cfe",
+      "candidateRevision": "sha256:59980dd4271aad495759ce574ac1dfd8aae296d6be088d021e9930f4d6c80cfe",
+      "candidateUIReceipt": "receipts/JS-003.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:59980dd4271aad495759ce574ac1dfd8aae296d6be088d021e9930f4d6c80cfe",
+        "runId": "14231462-ba44-4c36-9425-1635d3a100da",
+        "result": "failed",
+        "passed": 13,
+        "total": 18
+      }
+    },
+    {
+      "key": "JS-004",
+      "revision": "sha256:0f48fac293b51f964489eb05f34751cdff3b6dc80e7cd17de9aa6b2d51a9b2a1",
+      "language": "javascript",
+      "title": "Show how far the cart is from free shipping",
+      "difficulty": "easy",
+      "file": "shipping.js",
+      "url": "https://musclememory.run/challenges/JS-004",
+      "runtime": "browser JavaScript",
+      "partition": "b-js-ts",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "cb92ccee-f142-4018-b466-5fab47191575",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "9bfd368f1eaba70af1aeccc6d7551d9074ae7e02b08bc48fea84df6e8a9e5e3b"
+      },
+      "finalAttempt": {
+        "revision": "sha256:0f48fac293b51f964489eb05f34751cdff3b6dc80e7cd17de9aa6b2d51a9b2a1",
+        "runId": "746bfae4-313a-4ab8-babb-8df7067e670c",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "9bfd368f1eaba70af1aeccc6d7551d9074ae7e02b08bc48fea84df6e8a9e5e3b"
+      },
+      "wrongAttempt": {
+        "runId": "7597fea4-0493-4fdb-a0b2-a7d5b3d12fa8",
+        "result": "failed",
+        "passed": 12,
+        "total": 16
+      },
+      "edgeEvidence": {
+        "path": "edges/JS-004.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/JS-004.json",
+      "baselineRevision": "sha256:0f48fac293b51f964489eb05f34751cdff3b6dc80e7cd17de9aa6b2d51a9b2a1",
+      "candidateRevision": "sha256:0f48fac293b51f964489eb05f34751cdff3b6dc80e7cd17de9aa6b2d51a9b2a1",
+      "candidateUIReceipt": "receipts/JS-004.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:0f48fac293b51f964489eb05f34751cdff3b6dc80e7cd17de9aa6b2d51a9b2a1",
+        "runId": "7597fea4-0493-4fdb-a0b2-a7d5b3d12fa8",
+        "result": "failed",
+        "passed": 12,
+        "total": 16
+      }
+    },
+    {
+      "key": "JS-005",
+      "revision": "sha256:6320a78f51591e7d65e30a36f2d8082d6d2b2ff8db98bdab80ced65af4e48492",
+      "language": "javascript",
+      "title": "Refunds give back less than the customer paid",
+      "difficulty": "medium",
+      "file": "totals.js",
+      "url": "https://musclememory.run/challenges/JS-005",
+      "runtime": "browser JavaScript",
+      "partition": "b-js-ts",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "38051b51-23d9-47dd-9841-9121e3ac1635",
+        "result": "passed",
+        "passed": 17,
+        "total": 17,
+        "codeSha256": "3a5003184d28d08e365367ab45fdba0cb6677db3cabacccc38dd75cf31810299"
+      },
+      "finalAttempt": {
+        "revision": "sha256:6320a78f51591e7d65e30a36f2d8082d6d2b2ff8db98bdab80ced65af4e48492",
+        "runId": "9d6b506c-c9c2-43b4-b571-afc42a0479dc",
+        "result": "passed",
+        "passed": 17,
+        "total": 17,
+        "codeSha256": "3a5003184d28d08e365367ab45fdba0cb6677db3cabacccc38dd75cf31810299"
+      },
+      "wrongAttempt": {
+        "runId": "abc9b310-5a03-43dd-a578-46dabf08328c",
+        "result": "failed",
+        "passed": 3,
+        "total": 17
+      },
+      "edgeEvidence": {
+        "path": "edges/JS-005.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/JS-005.json",
+      "baselineRevision": "sha256:6320a78f51591e7d65e30a36f2d8082d6d2b2ff8db98bdab80ced65af4e48492",
+      "candidateRevision": "sha256:6320a78f51591e7d65e30a36f2d8082d6d2b2ff8db98bdab80ced65af4e48492",
+      "candidateUIReceipt": "receipts/JS-005.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:6320a78f51591e7d65e30a36f2d8082d6d2b2ff8db98bdab80ced65af4e48492",
+        "runId": "abc9b310-5a03-43dd-a578-46dabf08328c",
+        "result": "failed",
+        "passed": 3,
+        "total": 17
+      }
+    },
+    {
+      "key": "JS-006",
+      "revision": "sha256:8082598a59e16473dbbe2f22745501419af4a551ed2f59905d0bf09e78c47e57",
+      "language": "javascript",
+      "title": "Cart drawer shows the old total after changing quantity",
+      "difficulty": "medium",
+      "file": "cart.js",
+      "url": "https://musclememory.run/challenges/JS-006",
+      "runtime": "browser JavaScript",
+      "partition": "b-js-ts",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "b5802674-09be-4d85-9d9d-a07ceb517b00",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "b692973fe154a80dd62fa64771d2a1e1dc94152d51ace7c095aefdc6844bb8dd"
+      },
+      "finalAttempt": {
+        "revision": "sha256:4e1161b197cfa68192cd34ee679733fe37448235f9c7ef0b9d3fb45c23e4f098",
+        "runId": "eed2afb1-3f9e-4759-b535-547ee9fe9c29",
+        "result": "passed",
+        "passed": 18,
+        "total": 18,
+        "codeSha256": "b692973fe154a80dd62fa64771d2a1e1dc94152d51ace7c095aefdc6844bb8dd"
+      },
+      "wrongAttempt": {
+        "runId": "b45581c8-d341-470f-81d0-ed79f397af88",
+        "result": "passed",
+        "passed": 16,
+        "total": 16
+      },
+      "edgeEvidence": {
+        "path": "edges-final/JS-006.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/JS-006.json",
+      "baselineRevision": "sha256:8082598a59e16473dbbe2f22745501419af4a551ed2f59905d0bf09e78c47e57",
+      "candidateRevision": "sha256:4e1161b197cfa68192cd34ee679733fe37448235f9c7ef0b9d3fb45c23e4f098",
+      "candidateUIReceipt": "retests/pass1/JS-006.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:4e1161b197cfa68192cd34ee679733fe37448235f9c7ef0b9d3fb45c23e4f098",
+        "runId": "28774e5a-6242-469b-9b5e-da935c6fdd56",
+        "result": "failed",
+        "passed": 17,
+        "total": 18
+      }
+    },
+    {
+      "key": "PHP-001",
+      "revision": "sha256:883834c79dad09356b7fa8a1fd43941b2bffae32264173cb04bbfdb6ccb591f4",
+      "language": "php",
+      "title": "The composer says 1 word when the post is empty",
+      "difficulty": "easy",
+      "file": "src/countWords.php",
+      "url": "https://musclememory.run/challenges/PHP-001",
+      "runtime": "php-wasm",
+      "partition": "f-java-csharp-php",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "b19ecec4-a53e-4f46-9898-39938a976535",
+        "result": "passed",
+        "passed": 21,
+        "total": 21,
+        "codeSha256": "37316ecfe139f71c48e3284185be7223799229f6e0d7bd3b8a016c567441b39a"
+      },
+      "finalAttempt": {
+        "revision": "sha256:883834c79dad09356b7fa8a1fd43941b2bffae32264173cb04bbfdb6ccb591f4",
+        "runId": "cb4e4134-0ff1-4c3b-be45-fc1ac625fc17",
+        "result": "passed",
+        "passed": 21,
+        "total": 21,
+        "codeSha256": "37316ecfe139f71c48e3284185be7223799229f6e0d7bd3b8a016c567441b39a"
+      },
+      "wrongAttempt": {
+        "runId": "d3ec263b-281c-4727-8357-e31595234519",
+        "result": "failed",
+        "passed": 13,
+        "total": 21
+      },
+      "edgeEvidence": {
+        "path": "edges/PHP-001.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/PHP-001.json",
+      "baselineRevision": "sha256:883834c79dad09356b7fa8a1fd43941b2bffae32264173cb04bbfdb6ccb591f4",
+      "candidateRevision": "sha256:883834c79dad09356b7fa8a1fd43941b2bffae32264173cb04bbfdb6ccb591f4",
+      "candidateUIReceipt": "receipts/PHP-001.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:883834c79dad09356b7fa8a1fd43941b2bffae32264173cb04bbfdb6ccb591f4",
+        "runId": "d3ec263b-281c-4727-8357-e31595234519",
+        "result": "failed",
+        "passed": 13,
+        "total": 21
+      }
+    },
+    {
+      "key": "PHP-002",
+      "revision": "sha256:07b2c479fd24fbccfe96d50e89758d7babf532375d31fc50fb4f075447949fa3",
+      "language": "php",
+      "title": "Password reset links expire after a minute",
+      "difficulty": "easy",
+      "file": "src/isExpired.php",
+      "url": "https://musclememory.run/challenges/PHP-002",
+      "runtime": "php-wasm",
+      "partition": "f-java-csharp-php",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "f42314d2-9d0c-4ca3-a836-1e0f6f016c75",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "00624114789079524bb1214a4181d128c69a9b339537da8f67b48503ef095ed8"
+      },
+      "finalAttempt": {
+        "revision": "sha256:07b2c479fd24fbccfe96d50e89758d7babf532375d31fc50fb4f075447949fa3",
+        "runId": "f9c71d44-2bb2-43ec-aaa7-fdabbfcb68ce",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "00624114789079524bb1214a4181d128c69a9b339537da8f67b48503ef095ed8"
+      },
+      "wrongAttempt": {
+        "runId": "04fda85d-6ebe-4acc-b66b-eafa3cd2b317",
+        "result": "failed",
+        "passed": 9,
+        "total": 16
+      },
+      "edgeEvidence": {
+        "path": "edges/PHP-002.json",
+        "cases": 4,
+        "correctPassed": 4,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/PHP-002.json",
+      "baselineRevision": "sha256:07b2c479fd24fbccfe96d50e89758d7babf532375d31fc50fb4f075447949fa3",
+      "candidateRevision": "sha256:07b2c479fd24fbccfe96d50e89758d7babf532375d31fc50fb4f075447949fa3",
+      "candidateUIReceipt": "receipts/PHP-002.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:07b2c479fd24fbccfe96d50e89758d7babf532375d31fc50fb4f075447949fa3",
+        "runId": "04fda85d-6ebe-4acc-b66b-eafa3cd2b317",
+        "result": "failed",
+        "passed": 9,
+        "total": 16
+      }
+    },
+    {
+      "key": "PHP-003",
+      "revision": "sha256:8357474064591cccde8be7790df65e6a34502dc3f7513f8ce62520afea9bb06d",
+      "language": "php",
+      "title": "Lockout message tells people to try again in 0 minutes",
+      "difficulty": "easy",
+      "file": "src/retryMessage.php",
+      "url": "https://musclememory.run/challenges/PHP-003",
+      "runtime": "php-wasm",
+      "partition": "f-java-csharp-php",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "f4c7503a-984e-4b84-8de4-31eb579fa635",
+        "result": "passed",
+        "passed": 18,
+        "total": 18,
+        "codeSha256": "c162c1d0ea151a80dcf4be02291d8b7b6eabc3a469478888031809d97ef4f896"
+      },
+      "finalAttempt": {
+        "revision": "sha256:8357474064591cccde8be7790df65e6a34502dc3f7513f8ce62520afea9bb06d",
+        "runId": "6e79006a-5347-4d49-8275-b8c1ba19cd93",
+        "result": "passed",
+        "passed": 18,
+        "total": 18,
+        "codeSha256": "c162c1d0ea151a80dcf4be02291d8b7b6eabc3a469478888031809d97ef4f896"
+      },
+      "wrongAttempt": {
+        "runId": "b2d72adf-ddd0-49d3-b0c0-2ad17ac17602",
+        "result": "failed",
+        "passed": 17,
+        "total": 18
+      },
+      "edgeEvidence": {
+        "path": "edges/PHP-003.json",
+        "cases": 4,
+        "correctPassed": 4,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/PHP-003.json",
+      "baselineRevision": "sha256:8357474064591cccde8be7790df65e6a34502dc3f7513f8ce62520afea9bb06d",
+      "candidateRevision": "sha256:8357474064591cccde8be7790df65e6a34502dc3f7513f8ce62520afea9bb06d",
+      "candidateUIReceipt": "receipts/PHP-003.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:8357474064591cccde8be7790df65e6a34502dc3f7513f8ce62520afea9bb06d",
+        "runId": "b2d72adf-ddd0-49d3-b0c0-2ad17ac17602",
+        "result": "failed",
+        "passed": 17,
+        "total": 18
+      }
+    },
+    {
+      "key": "PHP-004",
+      "revision": "sha256:3b183d6cb847b893fbf2e00ede2f1c9fbbe4bdf10d990db2dbf6471ca7b8b4c4",
+      "language": "php",
+      "title": "Partition integers by parity",
+      "difficulty": "easy",
+      "file": "evensFirst.php",
+      "url": "https://musclememory.run/challenges/PHP-004",
+      "runtime": "php-wasm",
+      "partition": "f-java-csharp-php",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "b62b7c26-c5cf-4ff9-ad88-4d07ebf7129d",
+        "result": "passed",
+        "passed": 14,
+        "total": 14,
+        "codeSha256": "cc10cb5800be083f0d7869462e633b880052e52ce0f18087097b21424bcef5ec"
+      },
+      "finalAttempt": {
+        "revision": "sha256:3b183d6cb847b893fbf2e00ede2f1c9fbbe4bdf10d990db2dbf6471ca7b8b4c4",
+        "runId": "8dc9e3a1-08e5-4452-9443-43c315c85864",
+        "result": "passed",
+        "passed": 14,
+        "total": 14,
+        "codeSha256": "cc10cb5800be083f0d7869462e633b880052e52ce0f18087097b21424bcef5ec"
+      },
+      "wrongAttempt": {
+        "runId": "d525f162-dc18-4adf-85a7-bb22ef6d882b",
+        "result": "failed",
+        "passed": 7,
+        "total": 14
+      },
+      "edgeEvidence": {
+        "path": "edges/PHP-004.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/PHP-004.json",
+      "baselineRevision": "sha256:3b183d6cb847b893fbf2e00ede2f1c9fbbe4bdf10d990db2dbf6471ca7b8b4c4",
+      "candidateRevision": "sha256:3b183d6cb847b893fbf2e00ede2f1c9fbbe4bdf10d990db2dbf6471ca7b8b4c4",
+      "candidateUIReceipt": "receipts/PHP-004.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:3b183d6cb847b893fbf2e00ede2f1c9fbbe4bdf10d990db2dbf6471ca7b8b4c4",
+        "runId": "d525f162-dc18-4adf-85a7-bb22ef6d882b",
+        "result": "failed",
+        "passed": 7,
+        "total": 14
+      }
+    },
+    {
+      "key": "PHP-005",
+      "revision": "sha256:2d5c560a396e1394e03216a9a6443754706a9545649060e69b732143349e3638",
+      "language": "php",
+      "title": "Validate an ISBN-10 checksum",
+      "difficulty": "medium",
+      "file": "validIsbn.php",
+      "url": "https://musclememory.run/challenges/PHP-005",
+      "runtime": "php-wasm",
+      "partition": "f-java-csharp-php",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "e9042689-97bc-4d01-8832-bdbbcb7ab5b9",
+        "result": "passed",
+        "passed": 10,
+        "total": 10,
+        "codeSha256": "5a0e943eabaabab9fa8741c578fc1afe2036719bc64aae8a9f8e2a23cbe4ab06"
+      },
+      "finalAttempt": {
+        "revision": "sha256:2d5c560a396e1394e03216a9a6443754706a9545649060e69b732143349e3638",
+        "runId": "55f26e5e-1452-4b69-add9-ed56448b0ce0",
+        "result": "passed",
+        "passed": 10,
+        "total": 10,
+        "codeSha256": "5a0e943eabaabab9fa8741c578fc1afe2036719bc64aae8a9f8e2a23cbe4ab06"
+      },
+      "wrongAttempt": {
+        "runId": "eaa3904c-affe-4cf9-8892-c53e1a2eab3f",
+        "result": "failed",
+        "passed": 9,
+        "total": 10
+      },
+      "edgeEvidence": {
+        "path": "edges/PHP-005.json",
+        "cases": 5,
+        "correctPassed": 5,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/PHP-005.json",
+      "baselineRevision": "sha256:2d5c560a396e1394e03216a9a6443754706a9545649060e69b732143349e3638",
+      "candidateRevision": "sha256:2d5c560a396e1394e03216a9a6443754706a9545649060e69b732143349e3638",
+      "candidateUIReceipt": "receipts/PHP-005.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:2d5c560a396e1394e03216a9a6443754706a9545649060e69b732143349e3638",
+        "runId": "eaa3904c-affe-4cf9-8892-c53e1a2eab3f",
+        "result": "failed",
+        "passed": 9,
+        "total": 10
+      }
+    },
+    {
+      "key": "PY-001",
+      "revision": "sha256:1478c6f5aea26bf22940cfb6cd43d29c4405167ed75715684297b4145031e9b5",
+      "language": "python",
+      "title": "The composer says 1 word when the post is empty",
+      "difficulty": "easy",
+      "file": "count_words.py",
+      "url": "https://musclememory.run/challenges/PY-001",
+      "runtime": "Pyodide/CPython3.14",
+      "partition": "a-python",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "3e5a9f81-f9d3-4125-a34e-0f5ae75b9d21",
+        "result": "passed",
+        "passed": 21,
+        "total": 21,
+        "codeSha256": "0951bd0495f93d3e617d69458818b2f6041dd12dc2b6e68c3258df1c6856a1ee"
+      },
+      "finalAttempt": {
+        "revision": "sha256:1478c6f5aea26bf22940cfb6cd43d29c4405167ed75715684297b4145031e9b5",
+        "runId": "a9dc0410-00c0-4789-9add-100f6fa6df8d",
+        "result": "passed",
+        "passed": 21,
+        "total": 21,
+        "codeSha256": "0951bd0495f93d3e617d69458818b2f6041dd12dc2b6e68c3258df1c6856a1ee"
+      },
+      "wrongAttempt": {
+        "runId": "2a0a8774-3e94-45ef-be6a-640a85691e28",
+        "result": "failed",
+        "passed": 13,
+        "total": 21
+      },
+      "edgeEvidence": {
+        "path": "edges/PY-001.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/PY-001.json",
+      "baselineRevision": "sha256:1478c6f5aea26bf22940cfb6cd43d29c4405167ed75715684297b4145031e9b5",
+      "candidateRevision": "sha256:1478c6f5aea26bf22940cfb6cd43d29c4405167ed75715684297b4145031e9b5",
+      "candidateUIReceipt": "receipts/PY-001.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:1478c6f5aea26bf22940cfb6cd43d29c4405167ed75715684297b4145031e9b5",
+        "runId": "2a0a8774-3e94-45ef-be6a-640a85691e28",
+        "result": "failed",
+        "passed": 13,
+        "total": 21
+      }
+    },
+    {
+      "key": "PY-002",
+      "revision": "sha256:0bca3c710baad47c31104359cd36ad162502a38d311d5cb421bb6399431ff250",
+      "language": "python",
+      "title": "Count how often each string appears",
+      "difficulty": "easy",
+      "file": "frequency_map.py",
+      "url": "https://musclememory.run/challenges/PY-002",
+      "runtime": "Pyodide/CPython3.14",
+      "partition": "a-python",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "539004ac-8958-4b65-a308-8a0e14a01a09",
+        "result": "passed",
+        "passed": 15,
+        "total": 15,
+        "codeSha256": "17d354b98a2dc006c320b0e1fb3267c0ea4255f86e123969fe04eb528afed705"
+      },
+      "finalAttempt": {
+        "revision": "sha256:0bca3c710baad47c31104359cd36ad162502a38d311d5cb421bb6399431ff250",
+        "runId": "15002a59-b099-4f10-928b-a7945604b98a",
+        "result": "passed",
+        "passed": 15,
+        "total": 15,
+        "codeSha256": "17d354b98a2dc006c320b0e1fb3267c0ea4255f86e123969fe04eb528afed705"
+      },
+      "wrongAttempt": {
+        "runId": "8e7ef239-8de4-4603-8d05-b2c41c181282",
+        "result": "failed",
+        "passed": 11,
+        "total": 15
+      },
+      "edgeEvidence": {
+        "path": "edges/PY-002.json",
+        "cases": 1,
+        "correctPassed": 1,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/PY-002.json",
+      "baselineRevision": "sha256:0bca3c710baad47c31104359cd36ad162502a38d311d5cb421bb6399431ff250",
+      "candidateRevision": "sha256:0bca3c710baad47c31104359cd36ad162502a38d311d5cb421bb6399431ff250",
+      "candidateUIReceipt": "receipts/PY-002.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:0bca3c710baad47c31104359cd36ad162502a38d311d5cb421bb6399431ff250",
+        "runId": "8e7ef239-8de4-4603-8d05-b2c41c181282",
+        "result": "failed",
+        "passed": 11,
+        "total": 15
+      }
+    },
+    {
+      "key": "PY-003",
+      "revision": "sha256:f6cad67e20e329daa0b38afe744e617f03e52a51f04de47e40db380f5a5c64c8",
+      "language": "python",
+      "title": "Herbarium import creates duplicate species from the tally sheet",
+      "difficulty": "easy",
+      "file": "tally.py",
+      "url": "https://musclememory.run/challenges/PY-003",
+      "runtime": "Pyodide/CPython3.14",
+      "partition": "a-python",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "8823881e-c2df-4634-bfd8-af123749eb39",
+        "result": "passed",
+        "passed": 17,
+        "total": 17,
+        "codeSha256": "4ddd3e91c3e4964fad1e0b8e01ec0dc44fa87402cccf57f361390a44a0a042dd"
+      },
+      "finalAttempt": {
+        "revision": "sha256:f6cad67e20e329daa0b38afe744e617f03e52a51f04de47e40db380f5a5c64c8",
+        "runId": "c37d336a-37c5-40ab-8fb1-d72492b3dab9",
+        "result": "passed",
+        "passed": 17,
+        "total": 17,
+        "codeSha256": "4ddd3e91c3e4964fad1e0b8e01ec0dc44fa87402cccf57f361390a44a0a042dd"
+      },
+      "wrongAttempt": {
+        "runId": "f105be7c-0136-419a-a32e-09bfd17c45a1",
+        "result": "failed",
+        "passed": 2,
+        "total": 17
+      },
+      "edgeEvidence": {
+        "path": "edges/PY-003.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/PY-003.json",
+      "baselineRevision": "sha256:f6cad67e20e329daa0b38afe744e617f03e52a51f04de47e40db380f5a5c64c8",
+      "candidateRevision": "sha256:f6cad67e20e329daa0b38afe744e617f03e52a51f04de47e40db380f5a5c64c8",
+      "candidateUIReceipt": "receipts/PY-003.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:f6cad67e20e329daa0b38afe744e617f03e52a51f04de47e40db380f5a5c64c8",
+        "runId": "f105be7c-0136-419a-a32e-09bfd17c45a1",
+        "result": "failed",
+        "passed": 2,
+        "total": 17
+      }
+    },
+    {
+      "key": "PY-004",
+      "revision": "sha256:9ee05a3f865db74c01f872dec5154e0ebba422df819d806051e79b4da20a425a",
+      "language": "python",
+      "title": "CSV import splits company names on commas",
+      "difficulty": "easy",
+      "file": "parse_csv_line.py",
+      "url": "https://musclememory.run/challenges/PY-004",
+      "runtime": "Pyodide/CPython3.14",
+      "partition": "a-python",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "872f9b26-3fa4-4c0f-9079-aee92c8de85c",
+        "result": "passed",
+        "passed": 18,
+        "total": 18,
+        "codeSha256": "6c36d2f1b7a948f1f5b8333567eb94bf2ce750ba568b28d139c72594dbdf8ecb"
+      },
+      "finalAttempt": {
+        "revision": "sha256:9ee05a3f865db74c01f872dec5154e0ebba422df819d806051e79b4da20a425a",
+        "runId": "ff308c06-3282-4a5d-8229-803a682e9ffd",
+        "result": "passed",
+        "passed": 18,
+        "total": 18,
+        "codeSha256": "6c36d2f1b7a948f1f5b8333567eb94bf2ce750ba568b28d139c72594dbdf8ecb"
+      },
+      "wrongAttempt": {
+        "runId": "4e257b18-107b-49f3-8ec5-597dc4d4c2ff",
+        "result": "failed",
+        "passed": 17,
+        "total": 18
+      },
+      "edgeEvidence": {
+        "path": "edges/PY-004.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/PY-004.json",
+      "baselineRevision": "sha256:9ee05a3f865db74c01f872dec5154e0ebba422df819d806051e79b4da20a425a",
+      "candidateRevision": "sha256:9ee05a3f865db74c01f872dec5154e0ebba422df819d806051e79b4da20a425a",
+      "candidateUIReceipt": "receipts/PY-004.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:9ee05a3f865db74c01f872dec5154e0ebba422df819d806051e79b4da20a425a",
+        "runId": "4e257b18-107b-49f3-8ec5-597dc4d4c2ff",
+        "result": "failed",
+        "passed": 17,
+        "total": 18
+      }
+    },
+    {
+      "key": "PY-005",
+      "revision": "sha256:3b8d9edb5d37413ecd4a2d53dd6f2a400ee8d5427b35a044775a248e0f4c067a",
+      "language": "python",
+      "title": "Length report crashes on the Oregon volunteers' sheets",
+      "difficulty": "medium",
+      "file": "report.py",
+      "url": "https://musclememory.run/challenges/PY-005",
+      "runtime": "Pyodide/CPython3.14",
+      "partition": "a-python",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "2beb5fb6-5464-433b-b030-b3047bf86f4b",
+        "result": "passed",
+        "passed": 17,
+        "total": 17,
+        "codeSha256": "1a102bd05292a63cb68eb66e7a750a899aaa7a81740d28778d96493e3b24579a"
+      },
+      "finalAttempt": {
+        "revision": "sha256:3b8d9edb5d37413ecd4a2d53dd6f2a400ee8d5427b35a044775a248e0f4c067a",
+        "runId": "0b52becd-8e86-4646-8eaa-2261381ca25f",
+        "result": "passed",
+        "passed": 17,
+        "total": 17,
+        "codeSha256": "1a102bd05292a63cb68eb66e7a750a899aaa7a81740d28778d96493e3b24579a"
+      },
+      "wrongAttempt": {
+        "runId": "a13c7998-a538-4b74-92b8-412fe0c3afd9",
+        "result": "failed",
+        "passed": 16,
+        "total": 17
+      },
+      "edgeEvidence": {
+        "path": "edges/PY-005.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/PY-005.json",
+      "baselineRevision": "sha256:3b8d9edb5d37413ecd4a2d53dd6f2a400ee8d5427b35a044775a248e0f4c067a",
+      "candidateRevision": "sha256:3b8d9edb5d37413ecd4a2d53dd6f2a400ee8d5427b35a044775a248e0f4c067a",
+      "candidateUIReceipt": "receipts/PY-005.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:3b8d9edb5d37413ecd4a2d53dd6f2a400ee8d5427b35a044775a248e0f4c067a",
+        "runId": "a13c7998-a538-4b74-92b8-412fe0c3afd9",
+        "result": "failed",
+        "passed": 16,
+        "total": 17
+      }
+    },
+    {
+      "key": "PY-006",
+      "revision": "sha256:4f006c4a24df017d5b24293dee551f8b3a22fc370db9285bba5dc49a4844cefb",
+      "language": "python",
+      "title": "Site summary undercounts since last week's speed-up",
+      "difficulty": "medium",
+      "file": "sites.py",
+      "url": "https://musclememory.run/challenges/PY-006",
+      "runtime": "Pyodide/CPython3.14",
+      "partition": "a-python",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "aff043a9-4415-4776-85ee-cd30a89b7b5c",
+        "result": "passed",
+        "passed": 17,
+        "total": 17,
+        "codeSha256": "21ce2fc83b656a636758cbfc25c8ff3bfe2ac39d1c7947593bc91727b901247b"
+      },
+      "finalAttempt": {
+        "revision": "sha256:4f006c4a24df017d5b24293dee551f8b3a22fc370db9285bba5dc49a4844cefb",
+        "runId": "f5a84d07-3932-46ca-81ac-ca88ba174f5c",
+        "result": "passed",
+        "passed": 17,
+        "total": 17,
+        "codeSha256": "21ce2fc83b656a636758cbfc25c8ff3bfe2ac39d1c7947593bc91727b901247b"
+      },
+      "wrongAttempt": {
+        "runId": "83b5a380-ecec-4e11-8d31-e3d05069c113",
+        "result": "failed",
+        "passed": 13,
+        "total": 17
+      },
+      "edgeEvidence": {
+        "path": "edges/PY-006.json",
+        "cases": 1,
+        "correctPassed": 1,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/PY-006.json",
+      "baselineRevision": "sha256:4f006c4a24df017d5b24293dee551f8b3a22fc370db9285bba5dc49a4844cefb",
+      "candidateRevision": "sha256:4f006c4a24df017d5b24293dee551f8b3a22fc370db9285bba5dc49a4844cefb",
+      "candidateUIReceipt": "receipts/PY-006.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:4f006c4a24df017d5b24293dee551f8b3a22fc370db9285bba5dc49a4844cefb",
+        "runId": "83b5a380-ecec-4e11-8d31-e3d05069c113",
+        "result": "failed",
+        "passed": 13,
+        "total": 17
+      }
+    },
+    {
+      "key": "PY-007",
+      "revision": "sha256:e8a8cfef1e394439d2f5f9bba7ac4b3f82dbe489c34540adb2e3c33e5fcc3b33",
+      "language": "python",
+      "title": "Deduplicate customer records by email",
+      "difficulty": "medium",
+      "file": "dedupe.py",
+      "url": "https://musclememory.run/challenges/PY-007",
+      "runtime": "Pyodide/CPython3.14",
+      "partition": "a-python",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "80b5c18c-ad46-42f3-91fe-3d7185d7815e",
+        "result": "passed",
+        "passed": 15,
+        "total": 15,
+        "codeSha256": "8737163ef6c90c13ab7968aeaca2ac871e949e4e5a4087cb0edffee46c8fe754"
+      },
+      "finalAttempt": {
+        "revision": "sha256:8be1ec712ed87c9fb4964e1672a9675028e2eb1ff0efc2a71ed3d0492ad98ad6",
+        "runId": "d3b4444d-6a41-40bc-8d8f-017728a84085",
+        "result": "passed",
+        "passed": 17,
+        "total": 17,
+        "codeSha256": "8737163ef6c90c13ab7968aeaca2ac871e949e4e5a4087cb0edffee46c8fe754"
+      },
+      "wrongAttempt": {
+        "runId": "0d08b602-31a8-43b9-b971-bd5a56ddd74a",
+        "result": "passed",
+        "passed": 15,
+        "total": 15
+      },
+      "edgeEvidence": {
+        "path": "edges-final/PY-007.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/PY-007.json",
+      "baselineRevision": "sha256:e8a8cfef1e394439d2f5f9bba7ac4b3f82dbe489c34540adb2e3c33e5fcc3b33",
+      "candidateRevision": "sha256:8be1ec712ed87c9fb4964e1672a9675028e2eb1ff0efc2a71ed3d0492ad98ad6",
+      "candidateUIReceipt": "retests/pass1/PY-007.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:8be1ec712ed87c9fb4964e1672a9675028e2eb1ff0efc2a71ed3d0492ad98ad6",
+        "runId": "9af8683f-1a91-460c-aafe-bf8995215802",
+        "result": "failed",
+        "passed": 15,
+        "total": 17
+      }
+    },
+    {
+      "key": "PY-008",
+      "revision": "sha256:27a612b805df8919368a4a34dc4bce46ec0d686d8263384e0b2dbb9f6e5263f6",
+      "language": "python",
+      "title": "Active customers report is short 212 customers",
+      "difficulty": "medium",
+      "file": "dedupe.py",
+      "url": "https://musclememory.run/challenges/PY-008",
+      "runtime": "Pyodide/CPython3.14",
+      "partition": "a-python",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "cc7bb7a3-cdaf-4032-ab4b-e33a794d53c2",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "7ec8ec2714b8f6aac2d8a83a7276a645f20d0edf2182a36e31d4b8e952cc5b52"
+      },
+      "finalAttempt": {
+        "revision": "sha256:27a612b805df8919368a4a34dc4bce46ec0d686d8263384e0b2dbb9f6e5263f6",
+        "runId": "7fa96bc3-6ba7-41fa-a172-133e79930104",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "7ec8ec2714b8f6aac2d8a83a7276a645f20d0edf2182a36e31d4b8e952cc5b52"
+      },
+      "wrongAttempt": {
+        "runId": "9613767b-aa33-4625-85ba-e156eeaf87b1",
+        "result": "failed",
+        "passed": 11,
+        "total": 16
+      },
+      "edgeEvidence": {
+        "path": "edges/PY-008.json",
+        "cases": 1,
+        "correctPassed": 1,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/PY-008.json",
+      "baselineRevision": "sha256:27a612b805df8919368a4a34dc4bce46ec0d686d8263384e0b2dbb9f6e5263f6",
+      "candidateRevision": "sha256:27a612b805df8919368a4a34dc4bce46ec0d686d8263384e0b2dbb9f6e5263f6",
+      "candidateUIReceipt": "receipts/PY-008.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:27a612b805df8919368a4a34dc4bce46ec0d686d8263384e0b2dbb9f6e5263f6",
+        "runId": "9613767b-aa33-4625-85ba-e156eeaf87b1",
+        "result": "failed",
+        "passed": 11,
+        "total": 16
+      }
+    },
+    {
+      "key": "PY-009",
+      "revision": "sha256:697c865602b328b0bc03e0d023f1c54a64133f7d9ecbded3f147d18c598c01ef",
+      "language": "python",
+      "title": "Volunteers have to expand ditto marks by hand",
+      "difficulty": "hard",
+      "file": "transcribe.py",
+      "url": "https://musclememory.run/challenges/PY-009",
+      "runtime": "Pyodide/CPython3.14",
+      "partition": "a-python",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "eb0e02c3-e528-44c4-a79d-306745dc1a9f",
+        "result": "passed",
+        "passed": 17,
+        "total": 17,
+        "codeSha256": "556b96d3e0f509fe17274ef496f6f05fad95967b07bb0d634520d3fbdae1b815"
+      },
+      "finalAttempt": {
+        "revision": "sha256:697c865602b328b0bc03e0d023f1c54a64133f7d9ecbded3f147d18c598c01ef",
+        "runId": "e7f1370e-a3cd-4138-a22c-f3d8b168926e",
+        "result": "passed",
+        "passed": 17,
+        "total": 17,
+        "codeSha256": "556b96d3e0f509fe17274ef496f6f05fad95967b07bb0d634520d3fbdae1b815"
+      },
+      "wrongAttempt": {
+        "runId": "e10636dd-a516-4377-9f2b-88f77c58f1f4",
+        "result": "failed",
+        "passed": 11,
+        "total": 17
+      },
+      "edgeEvidence": {
+        "path": "edges/PY-009.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/PY-009.json",
+      "baselineRevision": "sha256:697c865602b328b0bc03e0d023f1c54a64133f7d9ecbded3f147d18c598c01ef",
+      "candidateRevision": "sha256:697c865602b328b0bc03e0d023f1c54a64133f7d9ecbded3f147d18c598c01ef",
+      "candidateUIReceipt": "receipts/PY-009.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:697c865602b328b0bc03e0d023f1c54a64133f7d9ecbded3f147d18c598c01ef",
+        "runId": "e10636dd-a516-4377-9f2b-88f77c58f1f4",
+        "result": "failed",
+        "passed": 11,
+        "total": 17
+      }
+    },
+    {
+      "key": "PY-010",
+      "revision": "sha256:8969155c54b3eac0355430c8e94d888bcb203115356b2f1c92280c2ad852bb72",
+      "language": "python",
+      "title": "Bluefin settlements don't match their statements",
+      "difficulty": "hard",
+      "file": "report.py",
+      "url": "https://musclememory.run/challenges/PY-010",
+      "runtime": "Pyodide/CPython3.14",
+      "partition": "a-python",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "30ed032e-7e30-4e43-90ee-28120e474a73",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "d40ca0ebf5186d3384eeb26b227f64f30041dee800830a1e5e29a94a355de220"
+      },
+      "finalAttempt": {
+        "revision": "sha256:fa5027f5253636addb28778d37bc3af17a69ac208c818c8ca8123e16263d8822",
+        "runId": "8c07adec-a4b4-4997-aa53-a1fa66e2cde9",
+        "result": "passed",
+        "passed": 19,
+        "total": 19,
+        "codeSha256": "e8c3d2d88a7594c729a611a39561b3ac5845077ad1733bb6199896801491ac5a"
+      },
+      "wrongAttempt": {
+        "runId": "99b90b5a-bcc7-40b4-b54e-31af1a4191e3",
+        "result": "failed",
+        "passed": 8,
+        "total": 16
+      },
+      "edgeEvidence": {
+        "path": "edges-final/PY-010.json",
+        "cases": 5,
+        "correctPassed": 5,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/PY-010.json",
+      "baselineRevision": "sha256:8969155c54b3eac0355430c8e94d888bcb203115356b2f1c92280c2ad852bb72",
+      "candidateRevision": "sha256:fa5027f5253636addb28778d37bc3af17a69ac208c818c8ca8123e16263d8822",
+      "candidateUIReceipt": "retests/pass1/PY-010.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:fa5027f5253636addb28778d37bc3af17a69ac208c818c8ca8123e16263d8822",
+        "runId": "cba31629-2d60-4aa1-babf-71e2a774e89d",
+        "result": "failed",
+        "passed": 9,
+        "total": 19
+      }
+    },
+    {
+      "key": "RB-001",
+      "revision": "sha256:841e463333b9f30f9215e462b9d74e38d6b7f44eedd44ec1dc9a9c04611a50db",
+      "language": "ruby",
+      "title": "The composer says 1 word when the post is empty",
+      "difficulty": "easy",
+      "file": "lib/count_words.rb",
+      "url": "https://musclememory.run/challenges/RB-001",
+      "runtime": "ruby.wasm",
+      "partition": "e-go-ruby",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "b6901814-bb43-46bc-8a17-db2e22b36e2e",
+        "result": "passed",
+        "passed": 21,
+        "total": 21,
+        "codeSha256": "dcf6db599ea798b81f387b615e40b5f372fabc82c460a9c06503880001fb1eb1"
+      },
+      "finalAttempt": {
+        "revision": "sha256:841e463333b9f30f9215e462b9d74e38d6b7f44eedd44ec1dc9a9c04611a50db",
+        "runId": "1d38cc20-a3a4-465c-b7c7-f1f0d40e489b",
+        "result": "passed",
+        "passed": 21,
+        "total": 21,
+        "codeSha256": "dcf6db599ea798b81f387b615e40b5f372fabc82c460a9c06503880001fb1eb1"
+      },
+      "wrongAttempt": {
+        "runId": "0563788f-168f-41e1-972c-981848a1871a",
+        "result": "failed",
+        "passed": 18,
+        "total": 21
+      },
+      "edgeEvidence": {
+        "path": "edges/RB-001.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/RB-001.json",
+      "baselineRevision": "sha256:841e463333b9f30f9215e462b9d74e38d6b7f44eedd44ec1dc9a9c04611a50db",
+      "candidateRevision": "sha256:841e463333b9f30f9215e462b9d74e38d6b7f44eedd44ec1dc9a9c04611a50db",
+      "candidateUIReceipt": "receipts/RB-001.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:841e463333b9f30f9215e462b9d74e38d6b7f44eedd44ec1dc9a9c04611a50db",
+        "runId": "0563788f-168f-41e1-972c-981848a1871a",
+        "result": "failed",
+        "passed": 18,
+        "total": 21
+      }
+    },
+    {
+      "key": "RB-002",
+      "revision": "sha256:16a31aca47c21134000a4a909854bb9daa57dcbde33c088ae1fe5228a71bf1b9",
+      "language": "ruby",
+      "title": "Workspace URLs break on names with accents",
+      "difficulty": "easy",
+      "file": "lib/slugify.rb",
+      "url": "https://musclememory.run/challenges/RB-002",
+      "runtime": "ruby.wasm",
+      "partition": "e-go-ruby",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "63c6be02-b618-4484-a6a9-a13195080698",
+        "result": "passed",
+        "passed": 24,
+        "total": 24,
+        "codeSha256": "e0647d17bd44425838940a3b248062a20d38002c586cc60fb5224458edd86ab2"
+      },
+      "finalAttempt": {
+        "revision": "sha256:16a31aca47c21134000a4a909854bb9daa57dcbde33c088ae1fe5228a71bf1b9",
+        "runId": "1ca83ff4-28a4-4714-bfb8-9e661c7f94b8",
+        "result": "passed",
+        "passed": 24,
+        "total": 24,
+        "codeSha256": "e0647d17bd44425838940a3b248062a20d38002c586cc60fb5224458edd86ab2"
+      },
+      "wrongAttempt": {
+        "runId": "33a15ec8-e6c7-4200-bb53-22731b2b5b63",
+        "result": "failed",
+        "passed": 16,
+        "total": 24
+      },
+      "edgeEvidence": {
+        "path": "edges/RB-002.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/RB-002.json",
+      "baselineRevision": "sha256:16a31aca47c21134000a4a909854bb9daa57dcbde33c088ae1fe5228a71bf1b9",
+      "candidateRevision": "sha256:16a31aca47c21134000a4a909854bb9daa57dcbde33c088ae1fe5228a71bf1b9",
+      "candidateUIReceipt": "receipts/RB-002.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:16a31aca47c21134000a4a909854bb9daa57dcbde33c088ae1fe5228a71bf1b9",
+        "runId": "33a15ec8-e6c7-4200-bb53-22731b2b5b63",
+        "result": "failed",
+        "passed": 16,
+        "total": 24
+      }
+    },
+    {
+      "key": "RB-003",
+      "revision": "sha256:d62765131db83c04a32b80eddb1942678b3a402bb586c6adcee86f680910f073",
+      "language": "ruby",
+      "title": "Group consecutive integers",
+      "difficulty": "medium",
+      "file": "group_runs.rb",
+      "url": "https://musclememory.run/challenges/RB-003",
+      "runtime": "ruby.wasm",
+      "partition": "e-go-ruby",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "d7b640cd-553e-41f7-8899-880d8e97e4a8",
+        "result": "passed",
+        "passed": 6,
+        "total": 6,
+        "codeSha256": "4bc20415569a272eeafe0b703917f5629359f04867cb24e629d57d3fc51a563b"
+      },
+      "finalAttempt": {
+        "revision": "sha256:d62765131db83c04a32b80eddb1942678b3a402bb586c6adcee86f680910f073",
+        "runId": "f86e542f-9c98-4d4f-a375-d12aa7406c2d",
+        "result": "passed",
+        "passed": 6,
+        "total": 6,
+        "codeSha256": "4bc20415569a272eeafe0b703917f5629359f04867cb24e629d57d3fc51a563b"
+      },
+      "wrongAttempt": {
+        "runId": "405fd637-ffa4-4a7d-9ab2-9dcaf59e91df",
+        "result": "failed",
+        "passed": 3,
+        "total": 6
+      },
+      "edgeEvidence": {
+        "path": "edges/RB-003.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/RB-003.json",
+      "baselineRevision": "sha256:d62765131db83c04a32b80eddb1942678b3a402bb586c6adcee86f680910f073",
+      "candidateRevision": "sha256:d62765131db83c04a32b80eddb1942678b3a402bb586c6adcee86f680910f073",
+      "candidateUIReceipt": "receipts/RB-003.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:d62765131db83c04a32b80eddb1942678b3a402bb586c6adcee86f680910f073",
+        "runId": "405fd637-ffa4-4a7d-9ab2-9dcaf59e91df",
+        "result": "failed",
+        "passed": 3,
+        "total": 6
+      }
+    },
+    {
+      "key": "RB-004",
+      "revision": "sha256:7b75bd74a6c5dd5fcb5f7fb30baccc5ac2690cb2212762d561883a5f663f06c4",
+      "language": "ruby",
+      "title": "Multiply two polynomials",
+      "difficulty": "medium",
+      "file": "multiply.rb",
+      "url": "https://musclememory.run/challenges/RB-004",
+      "runtime": "ruby.wasm",
+      "partition": "e-go-ruby",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "dba83f8b-8104-474e-ba61-95a992c90c79",
+        "result": "passed",
+        "passed": 6,
+        "total": 6,
+        "codeSha256": "a4969d8e091c1bba4f10bda7c115e96a3288797d1894d27fb71fc36c9d16438b"
+      },
+      "finalAttempt": {
+        "revision": "sha256:7b75bd74a6c5dd5fcb5f7fb30baccc5ac2690cb2212762d561883a5f663f06c4",
+        "runId": "96ded35e-bc9e-42e2-b775-4f76d46ead46",
+        "result": "passed",
+        "passed": 6,
+        "total": 6,
+        "codeSha256": "a4969d8e091c1bba4f10bda7c115e96a3288797d1894d27fb71fc36c9d16438b"
+      },
+      "wrongAttempt": {
+        "runId": "02e837a0-2253-44fd-bc84-1b1a1d45c966",
+        "result": "failed",
+        "passed": 4,
+        "total": 6
+      },
+      "edgeEvidence": {
+        "path": "edges/RB-004.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/RB-004.json",
+      "baselineRevision": "sha256:7b75bd74a6c5dd5fcb5f7fb30baccc5ac2690cb2212762d561883a5f663f06c4",
+      "candidateRevision": "sha256:7b75bd74a6c5dd5fcb5f7fb30baccc5ac2690cb2212762d561883a5f663f06c4",
+      "candidateUIReceipt": "receipts/RB-004.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:7b75bd74a6c5dd5fcb5f7fb30baccc5ac2690cb2212762d561883a5f663f06c4",
+        "runId": "02e837a0-2253-44fd-bc84-1b1a1d45c966",
+        "result": "failed",
+        "passed": 4,
+        "total": 6
+      }
+    },
+    {
+      "key": "RB-005",
+      "revision": "sha256:24ea37d6e5454810290af61db7adbdf28095322099193a5b3e0e091b377ba56c",
+      "language": "ruby",
+      "title": "Evaluate reverse Polish notation",
+      "difficulty": "medium",
+      "file": "evaluate.rb",
+      "url": "https://musclememory.run/challenges/RB-005",
+      "runtime": "ruby.wasm",
+      "partition": "e-go-ruby",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "7b90d761-db69-4ea7-bbcc-cd7a9cdf4bad",
+        "result": "passed",
+        "passed": 7,
+        "total": 7,
+        "codeSha256": "b277e623da9f5e6ea3ad87832d0af3605aefe51667675e5a2c4d2b8e1f90a873"
+      },
+      "finalAttempt": {
+        "revision": "sha256:24ea37d6e5454810290af61db7adbdf28095322099193a5b3e0e091b377ba56c",
+        "runId": "f45cc285-38db-43ec-bc0d-16e61346d32b",
+        "result": "passed",
+        "passed": 7,
+        "total": 7,
+        "codeSha256": "b277e623da9f5e6ea3ad87832d0af3605aefe51667675e5a2c4d2b8e1f90a873"
+      },
+      "wrongAttempt": {
+        "runId": "6ae7b14e-882c-42cc-b035-7cdbc70bf9e2",
+        "result": "failed",
+        "passed": 4,
+        "total": 7
+      },
+      "edgeEvidence": {
+        "path": "edges/RB-005.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/RB-005.json",
+      "baselineRevision": "sha256:24ea37d6e5454810290af61db7adbdf28095322099193a5b3e0e091b377ba56c",
+      "candidateRevision": "sha256:24ea37d6e5454810290af61db7adbdf28095322099193a5b3e0e091b377ba56c",
+      "candidateUIReceipt": "receipts/RB-005.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:24ea37d6e5454810290af61db7adbdf28095322099193a5b3e0e091b377ba56c",
+        "runId": "6ae7b14e-882c-42cc-b035-7cdbc70bf9e2",
+        "result": "failed",
+        "passed": 4,
+        "total": 7
+      }
+    },
+    {
+      "key": "SQL-001",
+      "revision": "sha256:c7146b957f34cd809b870274d51538f3a035d05332644405d0b9c0ac09e11cf9",
+      "language": "sql",
+      "title": "Revenue by customer for the monthly report",
+      "difficulty": "easy",
+      "file": "queries/top-customers.sql",
+      "url": "https://musclememory.run/challenges/SQL-001",
+      "runtime": "PGlite/PostgreSQL",
+      "partition": "c-sql-html",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "64e4ba89-375c-4b82-b748-6716eebe5dcb",
+        "result": "passed",
+        "passed": 15,
+        "total": 15,
+        "codeSha256": "565b570c25be0a125232d196546318a8e877351e768cb02305121188cf8603a3"
+      },
+      "finalAttempt": {
+        "revision": "sha256:c7146b957f34cd809b870274d51538f3a035d05332644405d0b9c0ac09e11cf9",
+        "runId": "b501ba8e-3893-403c-a05a-c528258f6453",
+        "result": "passed",
+        "passed": 15,
+        "total": 15,
+        "codeSha256": "565b570c25be0a125232d196546318a8e877351e768cb02305121188cf8603a3"
+      },
+      "wrongAttempt": {
+        "runId": "399f3a92-d4c5-4327-9527-e4acf6c2a79e",
+        "result": "failed",
+        "passed": 13,
+        "total": 15
+      },
+      "edgeEvidence": {
+        "path": "edges/SQL-001.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/SQL-001.json",
+      "baselineRevision": "sha256:c7146b957f34cd809b870274d51538f3a035d05332644405d0b9c0ac09e11cf9",
+      "candidateRevision": "sha256:c7146b957f34cd809b870274d51538f3a035d05332644405d0b9c0ac09e11cf9",
+      "candidateUIReceipt": "receipts/SQL-001.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:c7146b957f34cd809b870274d51538f3a035d05332644405d0b9c0ac09e11cf9",
+        "runId": "399f3a92-d4c5-4327-9527-e4acf6c2a79e",
+        "result": "failed",
+        "passed": 13,
+        "total": 15
+      }
+    },
+    {
+      "key": "SQL-002",
+      "revision": "sha256:8069f186eae8b4632639b0e191c9bce0b5386e9a22ed1729facb3c68d8b4d6d7",
+      "language": "sql",
+      "title": "Collected-by-partner report overstates split payments",
+      "difficulty": "easy",
+      "file": "queries/collected-by-partner.sql",
+      "url": "https://musclememory.run/challenges/SQL-002",
+      "runtime": "PGlite/PostgreSQL",
+      "partition": "c-sql-html",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "c0ec97b9-fbfe-4931-bb12-d0cb3cdbe226",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "3e1332449795e16e6f2c3e688dcb7bf7fd93e39f9359549bac34b8976041571d"
+      },
+      "finalAttempt": {
+        "revision": "sha256:8069f186eae8b4632639b0e191c9bce0b5386e9a22ed1729facb3c68d8b4d6d7",
+        "runId": "c2a2c52e-b555-4782-91d3-e6f729293019",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "3e1332449795e16e6f2c3e688dcb7bf7fd93e39f9359549bac34b8976041571d"
+      },
+      "wrongAttempt": {
+        "runId": "30694d26-cf0d-46fe-907c-3d3a8e0f9a96",
+        "result": "failed",
+        "passed": 10,
+        "total": 16
+      },
+      "edgeEvidence": {
+        "path": "edges/SQL-002.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/SQL-002.json",
+      "baselineRevision": "sha256:8069f186eae8b4632639b0e191c9bce0b5386e9a22ed1729facb3c68d8b4d6d7",
+      "candidateRevision": "sha256:8069f186eae8b4632639b0e191c9bce0b5386e9a22ed1729facb3c68d8b4d6d7",
+      "candidateUIReceipt": "receipts/SQL-002.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:8069f186eae8b4632639b0e191c9bce0b5386e9a22ed1729facb3c68d8b4d6d7",
+        "runId": "30694d26-cf0d-46fe-907c-3d3a8e0f9a96",
+        "result": "failed",
+        "passed": 10,
+        "total": 16
+      }
+    },
+    {
+      "key": "SQL-003",
+      "revision": "sha256:4cb69977e6d6cec2973eadb1e04bc73e4a04ffd314271e6609d006b98c8c383f",
+      "language": "sql",
+      "title": "Find orders with no matching payment",
+      "difficulty": "medium",
+      "file": "queries/unpaid-orders.sql",
+      "url": "https://musclememory.run/challenges/SQL-003",
+      "runtime": "PGlite/PostgreSQL",
+      "partition": "c-sql-html",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "49f318d9-c91a-409e-8111-a353977584b4",
+        "result": "passed",
+        "passed": 15,
+        "total": 15,
+        "codeSha256": "b18f4f1c72fc7bf1f9b61b70020ce81ecb1211872a23ad883b85765fba567fcf"
+      },
+      "finalAttempt": {
+        "revision": "sha256:4cb69977e6d6cec2973eadb1e04bc73e4a04ffd314271e6609d006b98c8c383f",
+        "runId": "cc433082-406f-42fc-aca2-853f6da43dfd",
+        "result": "passed",
+        "passed": 15,
+        "total": 15,
+        "codeSha256": "b18f4f1c72fc7bf1f9b61b70020ce81ecb1211872a23ad883b85765fba567fcf"
+      },
+      "wrongAttempt": {
+        "runId": "8c31c723-47a6-4ade-b120-9e6357743db8",
+        "result": "failed",
+        "passed": 14,
+        "total": 15
+      },
+      "edgeEvidence": {
+        "path": "edges/SQL-003.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/SQL-003.json",
+      "baselineRevision": "sha256:4cb69977e6d6cec2973eadb1e04bc73e4a04ffd314271e6609d006b98c8c383f",
+      "candidateRevision": "sha256:4cb69977e6d6cec2973eadb1e04bc73e4a04ffd314271e6609d006b98c8c383f",
+      "candidateUIReceipt": "receipts/SQL-003.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:4cb69977e6d6cec2973eadb1e04bc73e4a04ffd314271e6609d006b98c8c383f",
+        "runId": "8c31c723-47a6-4ade-b120-9e6357743db8",
+        "result": "failed",
+        "passed": 14,
+        "total": 15
+      }
+    },
+    {
+      "key": "SQL-004",
+      "revision": "sha256:2a1c63fa67d12f5ca4784022b71d2dae3ede00c13f48896d8799b8966ce86401",
+      "language": "sql",
+      "title": "Top scores with ties",
+      "difficulty": "medium",
+      "file": "top_scores.sql",
+      "url": "https://musclememory.run/challenges/SQL-004",
+      "runtime": "PGlite/PostgreSQL",
+      "partition": "c-sql-html",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "05524674-81f5-4df8-b5ab-32bdd948782c",
+        "result": "passed",
+        "passed": 5,
+        "total": 5,
+        "codeSha256": "3a53dd93ed4300aec4d96d6a6e84d0dad0c0f42efd54799d88a3c9a3917e5817"
+      },
+      "finalAttempt": {
+        "revision": "sha256:2a1c63fa67d12f5ca4784022b71d2dae3ede00c13f48896d8799b8966ce86401",
+        "runId": "9b63cff0-e695-4c0a-a738-46b830398554",
+        "result": "passed",
+        "passed": 5,
+        "total": 5,
+        "codeSha256": "3a53dd93ed4300aec4d96d6a6e84d0dad0c0f42efd54799d88a3c9a3917e5817"
+      },
+      "wrongAttempt": {
+        "runId": "de4eab27-cd04-49f5-9c06-aceb6b9cd5dd",
+        "result": "failed",
+        "passed": 4,
+        "total": 5
+      },
+      "edgeEvidence": {
+        "path": "edges/SQL-004.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/SQL-004.json",
+      "baselineRevision": "sha256:2a1c63fa67d12f5ca4784022b71d2dae3ede00c13f48896d8799b8966ce86401",
+      "candidateRevision": "sha256:2a1c63fa67d12f5ca4784022b71d2dae3ede00c13f48896d8799b8966ce86401",
+      "candidateUIReceipt": "receipts/SQL-004.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:2a1c63fa67d12f5ca4784022b71d2dae3ede00c13f48896d8799b8966ce86401",
+        "runId": "de4eab27-cd04-49f5-9c06-aceb6b9cd5dd",
+        "result": "failed",
+        "passed": 4,
+        "total": 5
+      }
+    },
+    {
+      "key": "SQL-005",
+      "revision": "sha256:50aa91bff2feac02486115dffb17a0204676fecb22258178abcc71529692bd0a",
+      "language": "sql",
+      "title": "Running balances per account",
+      "difficulty": "medium",
+      "file": "balances.sql",
+      "url": "https://musclememory.run/challenges/SQL-005",
+      "runtime": "PGlite/PostgreSQL",
+      "partition": "c-sql-html",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "2f31e2a0-50a6-45cd-b2ba-513e48841a16",
+        "result": "passed",
+        "passed": 5,
+        "total": 5,
+        "codeSha256": "028693d3d5a8e160b649d967223002b8ce0acbd439127a6ade668dac6b1c8f37"
+      },
+      "finalAttempt": {
+        "revision": "sha256:50aa91bff2feac02486115dffb17a0204676fecb22258178abcc71529692bd0a",
+        "runId": "cc832c51-1874-4bab-ad49-446970bc5a4f",
+        "result": "passed",
+        "passed": 5,
+        "total": 5,
+        "codeSha256": "028693d3d5a8e160b649d967223002b8ce0acbd439127a6ade668dac6b1c8f37"
+      },
+      "wrongAttempt": {
+        "runId": "c0a45774-ad70-4ec4-801d-4f5c3deae601",
+        "result": "failed",
+        "passed": 3,
+        "total": 5
+      },
+      "edgeEvidence": {
+        "path": "edges/SQL-005.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/SQL-005.json",
+      "baselineRevision": "sha256:50aa91bff2feac02486115dffb17a0204676fecb22258178abcc71529692bd0a",
+      "candidateRevision": "sha256:50aa91bff2feac02486115dffb17a0204676fecb22258178abcc71529692bd0a",
+      "candidateUIReceipt": "receipts/SQL-005.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:50aa91bff2feac02486115dffb17a0204676fecb22258178abcc71529692bd0a",
+        "runId": "c0a45774-ad70-4ec4-801d-4f5c3deae601",
+        "result": "failed",
+        "passed": 3,
+        "total": 5
+      }
+    },
+    {
+      "key": "TS-001",
+      "revision": "sha256:87f3834b8d08c2b7bdfc322567c3f437e0ba19d6d8a90aa1dc53d8268a3666a1",
+      "language": "typescript",
+      "title": "The composer says 1 word when the post is empty",
+      "difficulty": "easy",
+      "file": "src/count-words.ts",
+      "url": "https://musclememory.run/challenges/TS-001",
+      "runtime": "Sucrase/browser JavaScript",
+      "partition": "b-js-ts",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "defe6b54-de94-4d29-b232-c1016c44dc06",
+        "result": "passed",
+        "passed": 21,
+        "total": 21,
+        "codeSha256": "acd6c763cadde305b0e2e4e9bec4afaffa18538a73735093d2c5fc3be0c38bd5"
+      },
+      "finalAttempt": {
+        "revision": "sha256:87f3834b8d08c2b7bdfc322567c3f437e0ba19d6d8a90aa1dc53d8268a3666a1",
+        "runId": "ec158b2a-9dc7-4b42-bfb9-04e7524bd68c",
+        "result": "passed",
+        "passed": 21,
+        "total": 21,
+        "codeSha256": "acd6c763cadde305b0e2e4e9bec4afaffa18538a73735093d2c5fc3be0c38bd5"
+      },
+      "wrongAttempt": {
+        "runId": "47197f80-bc6f-4d67-93ce-228ce5c74fb4",
+        "result": "failed",
+        "passed": 13,
+        "total": 21
+      },
+      "edgeEvidence": {
+        "path": "edges/TS-001.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/TS-001.json",
+      "baselineRevision": "sha256:87f3834b8d08c2b7bdfc322567c3f437e0ba19d6d8a90aa1dc53d8268a3666a1",
+      "candidateRevision": "sha256:87f3834b8d08c2b7bdfc322567c3f437e0ba19d6d8a90aa1dc53d8268a3666a1",
+      "candidateUIReceipt": "receipts/TS-001.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:87f3834b8d08c2b7bdfc322567c3f437e0ba19d6d8a90aa1dc53d8268a3666a1",
+        "runId": "47197f80-bc6f-4d67-93ce-228ce5c74fb4",
+        "result": "failed",
+        "passed": 13,
+        "total": 21
+      }
+    },
+    {
+      "key": "TS-002",
+      "revision": "sha256:a035e776c48a0d4909f10ca1e8d77fab41b41a6ff5a538e5d02c9069d47d8b35",
+      "language": "typescript",
+      "title": "Discount codes fail when typed in lowercase",
+      "difficulty": "easy",
+      "file": "src/apply-discount.ts",
+      "url": "https://musclememory.run/challenges/TS-002",
+      "runtime": "Sucrase/browser JavaScript",
+      "partition": "b-js-ts",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "cea15495-7040-4a0d-a850-167202272497",
+        "result": "passed",
+        "passed": 19,
+        "total": 19,
+        "codeSha256": "da36ee27a6cd8a61e07237ed9b0c15a03ad9fb2ede76f26d07f38daae3d0884e"
+      },
+      "finalAttempt": {
+        "revision": "sha256:a035e776c48a0d4909f10ca1e8d77fab41b41a6ff5a538e5d02c9069d47d8b35",
+        "runId": "f22c8bfc-0473-426e-8e88-88a98bc5fdeb",
+        "result": "passed",
+        "passed": 19,
+        "total": 19,
+        "codeSha256": "da36ee27a6cd8a61e07237ed9b0c15a03ad9fb2ede76f26d07f38daae3d0884e"
+      },
+      "wrongAttempt": {
+        "runId": "0779b2af-ac98-480b-9b1a-f02725ca68ed",
+        "result": "failed",
+        "passed": 16,
+        "total": 19
+      },
+      "edgeEvidence": {
+        "path": "edges/TS-002.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/TS-002.json",
+      "baselineRevision": "sha256:a035e776c48a0d4909f10ca1e8d77fab41b41a6ff5a538e5d02c9069d47d8b35",
+      "candidateRevision": "sha256:a035e776c48a0d4909f10ca1e8d77fab41b41a6ff5a538e5d02c9069d47d8b35",
+      "candidateUIReceipt": "receipts/TS-002.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:a035e776c48a0d4909f10ca1e8d77fab41b41a6ff5a538e5d02c9069d47d8b35",
+        "runId": "0779b2af-ac98-480b-9b1a-f02725ca68ed",
+        "result": "failed",
+        "passed": 16,
+        "total": 19
+      }
+    },
+    {
+      "key": "TS-003",
+      "revision": "sha256:49b3238dff45ac0dc41efce567ae8c3aa76987f0dc4cef04d3338321f31daa0f",
+      "language": "typescript",
+      "title": "Search box sends a request on every keystroke",
+      "difficulty": "medium",
+      "file": "src/debounce-times.ts",
+      "url": "https://musclememory.run/challenges/TS-003",
+      "runtime": "Sucrase/browser JavaScript",
+      "partition": "b-js-ts",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "ce985fe0-e1b9-4dd2-afe6-76af25f15b46",
+        "result": "passed",
+        "passed": 18,
+        "total": 18,
+        "codeSha256": "6e2b9bb7a2087bc69ce806f070dfee75a4b8bac07768537c49f26ac4592de2c9"
+      },
+      "finalAttempt": {
+        "revision": "sha256:49b3238dff45ac0dc41efce567ae8c3aa76987f0dc4cef04d3338321f31daa0f",
+        "runId": "396eae3b-5756-4143-a259-e83ba39b134b",
+        "result": "passed",
+        "passed": 18,
+        "total": 18,
+        "codeSha256": "6e2b9bb7a2087bc69ce806f070dfee75a4b8bac07768537c49f26ac4592de2c9"
+      },
+      "wrongAttempt": {
+        "runId": "3601362e-45f3-4478-8ecc-f94ba1628acc",
+        "result": "failed",
+        "passed": 17,
+        "total": 18
+      },
+      "edgeEvidence": {
+        "path": "edges/TS-003.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/TS-003.json",
+      "baselineRevision": "sha256:49b3238dff45ac0dc41efce567ae8c3aa76987f0dc4cef04d3338321f31daa0f",
+      "candidateRevision": "sha256:49b3238dff45ac0dc41efce567ae8c3aa76987f0dc4cef04d3338321f31daa0f",
+      "candidateUIReceipt": "receipts/TS-003.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:49b3238dff45ac0dc41efce567ae8c3aa76987f0dc4cef04d3338321f31daa0f",
+        "runId": "3601362e-45f3-4478-8ecc-f94ba1628acc",
+        "result": "failed",
+        "passed": 17,
+        "total": 18
+      }
+    },
+    {
+      "key": "TS-004",
+      "revision": "sha256:0a4a87c203c1b0f54951657915ea7c55c51fe9d9ae7baa333887aa528375513b",
+      "language": "typescript",
+      "title": "Rate-limit login attempts",
+      "difficulty": "medium",
+      "file": "src/allow.ts",
+      "url": "https://musclememory.run/challenges/TS-004",
+      "runtime": "Sucrase/browser JavaScript",
+      "partition": "b-js-ts",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "d3e5021c-0fd3-49de-931a-64c7ac091612",
+        "result": "passed",
+        "passed": 18,
+        "total": 18,
+        "codeSha256": "618b1feb7867b4a01db750443eebc4c390527928a8fc700757d73b70c25f9175"
+      },
+      "finalAttempt": {
+        "revision": "sha256:0a4a87c203c1b0f54951657915ea7c55c51fe9d9ae7baa333887aa528375513b",
+        "runId": "0f41d3fd-9ce2-498e-8a02-57b0ba68d527",
+        "result": "passed",
+        "passed": 18,
+        "total": 18,
+        "codeSha256": "618b1feb7867b4a01db750443eebc4c390527928a8fc700757d73b70c25f9175"
+      },
+      "wrongAttempt": {
+        "runId": "7ee7f3c9-dcb1-45d8-8ba5-ff76d628b563",
+        "result": "failed",
+        "passed": 17,
+        "total": 18
+      },
+      "edgeEvidence": {
+        "path": "edges/TS-004.json",
+        "cases": 3,
+        "correctPassed": 3,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/TS-004.json",
+      "baselineRevision": "sha256:0a4a87c203c1b0f54951657915ea7c55c51fe9d9ae7baa333887aa528375513b",
+      "candidateRevision": "sha256:0a4a87c203c1b0f54951657915ea7c55c51fe9d9ae7baa333887aa528375513b",
+      "candidateUIReceipt": "receipts/TS-004.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:0a4a87c203c1b0f54951657915ea7c55c51fe9d9ae7baa333887aa528375513b",
+        "runId": "7ee7f3c9-dcb1-45d8-8ba5-ff76d628b563",
+        "result": "failed",
+        "passed": 17,
+        "total": 18
+      }
+    },
+    {
+      "key": "TS-005",
+      "revision": "sha256:f718959a5bcb435aa430b9c66a61a17ab67e73472af901a6f517867c33705a63",
+      "language": "typescript",
+      "title": "Receipt tax lines don't add up to the tax charged",
+      "difficulty": "hard",
+      "file": "src/checkout/receipt.ts",
+      "url": "https://musclememory.run/challenges/TS-005",
+      "runtime": "Sucrase/browser JavaScript",
+      "partition": "b-js-ts",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "704ce01f-9aee-4b26-ab03-e22c321e3ec6",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "ccf9f683658aabdc00668315c7fcf8f4228f5db1af5814c925e75e6725e549c9"
+      },
+      "finalAttempt": {
+        "revision": "sha256:f718959a5bcb435aa430b9c66a61a17ab67e73472af901a6f517867c33705a63",
+        "runId": "7f422584-a2b2-4254-8f3e-7096fa0174c7",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "ccf9f683658aabdc00668315c7fcf8f4228f5db1af5814c925e75e6725e549c9"
+      },
+      "wrongAttempt": {
+        "runId": "2122673a-ee90-43dc-9f0d-54bd06e133d3",
+        "result": "failed",
+        "passed": 12,
+        "total": 16
+      },
+      "edgeEvidence": {
+        "path": "edges/TS-005.json",
+        "cases": 2,
+        "correctPassed": 2,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/TS-005.json",
+      "baselineRevision": "sha256:f718959a5bcb435aa430b9c66a61a17ab67e73472af901a6f517867c33705a63",
+      "candidateRevision": "sha256:f718959a5bcb435aa430b9c66a61a17ab67e73472af901a6f517867c33705a63",
+      "candidateUIReceipt": "receipts/TS-005.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:f718959a5bcb435aa430b9c66a61a17ab67e73472af901a6f517867c33705a63",
+        "runId": "2122673a-ee90-43dc-9f0d-54bd06e133d3",
+        "result": "failed",
+        "passed": 12,
+        "total": 16
+      }
+    },
+    {
+      "key": "TS-006",
+      "revision": "sha256:1939c20f182b3d088697fcfca121c182dabaaff3b33979e5b12965c3be3ab099",
+      "language": "typescript",
+      "title": "Old refresh tokens work again since the grace window",
+      "difficulty": "hard",
+      "file": "refresh.ts",
+      "url": "https://musclememory.run/challenges/TS-006",
+      "runtime": "Sucrase/browser JavaScript",
+      "partition": "b-js-ts",
+      "status": "content/UI/edge verified; final pipeline recorded separately",
+      "firstAttempt": {
+        "runId": "caa7d5c9-7870-430d-baf7-18bb47a1a603",
+        "result": "passed",
+        "passed": 17,
+        "total": 17,
+        "codeSha256": "75ec8ebe313b8d737641e5ca399086ae1a6f274f57c3b98a38112234ab240163"
+      },
+      "finalAttempt": {
+        "revision": "sha256:1939c20f182b3d088697fcfca121c182dabaaff3b33979e5b12965c3be3ab099",
+        "runId": "c59abe93-52da-4037-bc41-3d05847df99f",
+        "result": "passed",
+        "passed": 17,
+        "total": 17,
+        "codeSha256": "75ec8ebe313b8d737641e5ca399086ae1a6f274f57c3b98a38112234ab240163"
+      },
+      "wrongAttempt": {
+        "runId": "900c0e5b-5579-453d-8cb6-306ceabf0e49",
+        "result": "failed",
+        "passed": 16,
+        "total": 17
+      },
+      "edgeEvidence": {
+        "path": "edges/TS-006.json",
+        "cases": 4,
+        "correctPassed": 4,
+        "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately."
+      },
+      "receipt": "receipts/TS-006.json",
+      "baselineRevision": "sha256:1939c20f182b3d088697fcfca121c182dabaaff3b33979e5b12965c3be3ab099",
+      "candidateRevision": "sha256:1939c20f182b3d088697fcfca121c182dabaaff3b33979e5b12965c3be3ab099",
+      "candidateUIReceipt": "receipts/TS-006.json",
+      "finalWrongAttempt": {
+        "revision": "sha256:1939c20f182b3d088697fcfca121c182dabaaff3b33979e5b12965c3be3ab099",
+        "runId": "900c0e5b-5579-453d-8cb6-306ceabf0e49",
+        "result": "failed",
+        "passed": 16,
+        "total": 17
+      }
+    }
+  ],
+  "publishedBaseline": "214d40aaff96021bfcd7ef9b819c418b11c52a9c",
+  "changedChallenges": [
+    "CS-002",
+    "JS-006",
+    "PY-007",
+    "PY-010"
+  ],
+  "candidateTotal": 69,
+  "verifiedPublicEdges": 192,
+  "originalArchivesByteIdentical": 112,
+  "syntheticNotHuman": true,
+  "publishedInventoryReceipt": "published-baseline-reconciliation.json"
+}

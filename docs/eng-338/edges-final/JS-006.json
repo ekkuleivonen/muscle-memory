@@ -1,0 +1,361 @@
+{
+  "candidatePhase": "post-public-repair; PY010 uses separately saved second candidate",
+  "key": "JS-006",
+  "revision": "sha256:4e1161b197cfa68192cd34ee679733fe37448235f9c7ef0b9d3fb45c23e4f098",
+  "language": "javascript",
+  "runtime": "browser JavaScript",
+  "at": "2026-10-26T03:34:48.364Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "b692973fe154a80dd62fa64771d2a1e1dc94152d51ace7c095aefdc6844bb8dd",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            [
+              "add",
+              "x",
+              1000,
+              1
+            ],
+            [
+              "code",
+              {
+                "name": "X",
+                "amount": 100
+              }
+            ],
+            [
+              "summary"
+            ],
+            [
+              "code",
+              {
+                "name": "X",
+                "amount": 200
+              }
+            ],
+            [
+              "summary"
+            ]
+          ],
+          "expected": [
+            {
+              "items": 1,
+              "subtotal": 1000,
+              "discount": 100,
+              "total": 900
+            },
+            {
+              "items": 1,
+              "subtotal": 1000,
+              "discount": 200,
+              "total": 800
+            }
+          ],
+          "reason": "Same-name codes can change price.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            {
+              "items": 1,
+              "subtotal": 1000,
+              "discount": 100,
+              "total": 900
+            },
+            {
+              "items": 1,
+              "subtotal": 1000,
+              "discount": 200,
+              "total": 800
+            }
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              "add",
+              "x",
+              1000,
+              1
+            ],
+            [
+              "add",
+              "x",
+              2000,
+              1
+            ],
+            [
+              "summary"
+            ]
+          ],
+          "expected": [
+            {
+              "items": 2,
+              "subtotal": 2000,
+              "discount": 0,
+              "total": 2000
+            }
+          ],
+          "reason": "Adding an existing SKU preserves original price.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            {
+              "items": 2,
+              "subtotal": 2000,
+              "discount": 0,
+              "total": 2000
+            }
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              "add",
+              "a",
+              1
+            ],
+            [
+              "add",
+              "b",
+              2
+            ],
+            [
+              "summary"
+            ],
+            [
+              "remove",
+              "a"
+            ],
+            [
+              "remove",
+              "b"
+            ],
+            [
+              "add",
+              "a:1x1,b",
+              2
+            ],
+            [
+              "summary"
+            ]
+          ],
+          "expected": [
+            {
+              "items": 2,
+              "subtotal": 3,
+              "discount": 0,
+              "total": 3
+            },
+            {
+              "items": 1,
+              "subtotal": 2,
+              "discount": 0,
+              "total": 2
+            }
+          ],
+          "reason": "Opaque valid SKU must not collide with serialized line delimiters",
+          "origin": "independent review public-contract probe",
+          "actual": [
+            {
+              "items": 2,
+              "subtotal": 3,
+              "discount": 0,
+              "total": 3
+            },
+            {
+              "items": 1,
+              "subtotal": 2,
+              "discount": 0,
+              "total": 2
+            }
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "64192e3ad3a225b84317c0db034f57ce0cb9daf3cd56daaa7aa529b53a2b2781",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            [
+              "add",
+              "x",
+              1000,
+              1
+            ],
+            [
+              "code",
+              {
+                "name": "X",
+                "amount": 100
+              }
+            ],
+            [
+              "summary"
+            ],
+            [
+              "code",
+              {
+                "name": "X",
+                "amount": 200
+              }
+            ],
+            [
+              "summary"
+            ]
+          ],
+          "expected": [
+            {
+              "items": 1,
+              "subtotal": 1000,
+              "discount": 100,
+              "total": 900
+            },
+            {
+              "items": 1,
+              "subtotal": 1000,
+              "discount": 200,
+              "total": 800
+            }
+          ],
+          "reason": "Same-name codes can change price.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            {
+              "items": 1,
+              "subtotal": 1000,
+              "discount": 100,
+              "total": 900
+            },
+            {
+              "items": 1,
+              "subtotal": 1000,
+              "discount": 100,
+              "total": 900
+            }
+          ],
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            [
+              "add",
+              "x",
+              1000,
+              1
+            ],
+            [
+              "add",
+              "x",
+              2000,
+              1
+            ],
+            [
+              "summary"
+            ]
+          ],
+          "expected": [
+            {
+              "items": 2,
+              "subtotal": 2000,
+              "discount": 0,
+              "total": 2000
+            }
+          ],
+          "reason": "Adding an existing SKU preserves original price.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            {
+              "items": 2,
+              "subtotal": 2000,
+              "discount": 0,
+              "total": 2000
+            }
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              "add",
+              "a",
+              1
+            ],
+            [
+              "add",
+              "b",
+              2
+            ],
+            [
+              "summary"
+            ],
+            [
+              "remove",
+              "a"
+            ],
+            [
+              "remove",
+              "b"
+            ],
+            [
+              "add",
+              "a:1x1,b",
+              2
+            ],
+            [
+              "summary"
+            ]
+          ],
+          "expected": [
+            {
+              "items": 2,
+              "subtotal": 3,
+              "discount": 0,
+              "total": 3
+            },
+            {
+              "items": 1,
+              "subtotal": 2,
+              "discount": 0,
+              "total": 2
+            }
+          ],
+          "reason": "Opaque valid SKU must not collide with serialized line delimiters",
+          "origin": "independent review public-contract probe",
+          "actual": [
+            {
+              "items": 2,
+              "subtotal": 3,
+              "discount": 0,
+              "total": 3
+            },
+            {
+              "items": 1,
+              "subtotal": 2,
+              "discount": 0,
+              "total": 2
+            }
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

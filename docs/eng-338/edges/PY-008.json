@@ -1,0 +1,142 @@
+{
+  "key": "PY-008",
+  "revision": "sha256:27a612b805df8919368a4a34dc4bce46ec0d686d8263384e0b2dbb9f6e5263f6",
+  "language": "python",
+  "runtime": "Pyodide/CPython3.14",
+  "at": "2026-10-26T03:21:12.998Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "7ec8ec2714b8f6aac2d8a83a7276a645f20d0edf2182a36e31d4b8e952cc5b52",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            {
+              "id": 1,
+              "email": "a@x",
+              "phone": ""
+            },
+            {
+              "id": 2,
+              "email": " ",
+              "phone": "111"
+            },
+            {
+              "id": 3,
+              "email": "A@x",
+              "phone": "222"
+            },
+            {
+              "id": 4,
+              "phone": "333"
+            }
+          ],
+          "expected": [
+            {
+              "id": 1,
+              "email": "a@x",
+              "phone": "222"
+            },
+            {
+              "id": 2,
+              "email": " ",
+              "phone": "111"
+            },
+            {
+              "id": 4,
+              "phone": "333"
+            }
+          ],
+          "reason": "Unmatchable records retain their place; duplicates fill first record without replacing email.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            {
+              "id": 1,
+              "email": "a@x",
+              "phone": "222"
+            },
+            {
+              "id": 2,
+              "email": " ",
+              "phone": "111"
+            },
+            {
+              "id": 4,
+              "phone": "333"
+            }
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "6c0ae1650347e5fc55b61ac73670c22d23fd7b4b4b1c6f2df15ad894d8475bd1",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            {
+              "id": 1,
+              "email": "a@x",
+              "phone": ""
+            },
+            {
+              "id": 2,
+              "email": " ",
+              "phone": "111"
+            },
+            {
+              "id": 3,
+              "email": "A@x",
+              "phone": "222"
+            },
+            {
+              "id": 4,
+              "phone": "333"
+            }
+          ],
+          "expected": [
+            {
+              "id": 1,
+              "email": "a@x",
+              "phone": "222"
+            },
+            {
+              "id": 2,
+              "email": " ",
+              "phone": "111"
+            },
+            {
+              "id": 4,
+              "phone": "333"
+            }
+          ],
+          "reason": "Unmatchable records retain their place; duplicates fill first record without replacing email.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            {
+              "id": 1,
+              "email": "a@x",
+              "phone": "222"
+            },
+            {
+              "id": 2,
+              "email": " ",
+              "phone": "111"
+            }
+          ],
+          "executionError": null,
+          "pass": false
+        }
+      ]
+    }
+  ]
+}

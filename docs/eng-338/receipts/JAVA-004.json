@@ -1,0 +1,145 @@
+{
+  "key": "JAVA-004",
+  "revision": "sha256:ec7de97a2f1029310028e237a35c8be08f7aa1168bad3923dd0b03a023b2a4f0",
+  "language": "java",
+  "runtime": "teavm-javac",
+  "origin": "https://musclememory.run",
+  "partition": "f-java-csharp-php",
+  "review": {
+    "key": "JAVA-004",
+    "revision": "sha256:ec7de97a2f1029310028e237a35c8be08f7aa1168bad3923dd0b03a023b2a4f0",
+    "firstCandidate": "attempts/first.java",
+    "wrongCandidate": "attempts/wrong.java",
+    "wrongIntent": "Count the odd-size center twice.",
+    "assumptions": [
+      "Matrix satisfies the stated square nonempty contract."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": [
+      "Concise complete contract with explicit center behavior."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": [
+          [
+            -8
+          ]
+        ],
+        "expected": -8,
+        "reason": "Single center counted once."
+      },
+      {
+        "input": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "expected": 10,
+        "reason": "Even matrix has no shared center."
+      },
+      {
+        "input": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            -5,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "expected": -5,
+        "reason": "Negative center contributes once."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:10:11.223Z",
+      "finishedAt": "2026-10-26T03:10:14.609Z",
+      "candidatePath": "f-java-csharp-php/JAVA-004/attempts/first.java",
+      "candidateSha256": "44707f35371d12b79e55aff78accad4b12191e15dc1958ccb216a16aeee8c0ae",
+      "actualCodeSha256": "44707f35371d12b79e55aff78accad4b12191e15dc1958ccb216a16aeee8c0ae",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:ec7de97a2f1029310028e237a35c8be08f7aa1168bad3923dd0b03a023b2a4f0",
+      "runId": "abf25b8a-9ab5-46f6-bbc9-cf73578f3464",
+      "documentRevision": 1,
+      "artifactId": "practice-0e2b3684-ef50-489d-bc0b-9a2225d52bbe.code.1",
+      "result": "passed",
+      "passed": 5,
+      "total": 5,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:10:15.135Z",
+      "finishedAt": "2026-10-26T03:10:18.497Z",
+      "candidatePath": "f-java-csharp-php/JAVA-004/attempts/wrong.java",
+      "candidateSha256": "dccfe176a76e05c259bfaeddbeb61ae4bafc51f470be48e59abf152330177360",
+      "actualCodeSha256": "dccfe176a76e05c259bfaeddbeb61ae4bafc51f470be48e59abf152330177360",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:ec7de97a2f1029310028e237a35c8be08f7aa1168bad3923dd0b03a023b2a4f0",
+      "runId": "45abc635-94a9-43eb-a75b-b717f0ce015d",
+      "documentRevision": 1,
+      "artifactId": "practice-6a004307-ee08-486a-95fa-3ab2be35d57b.code.1",
+      "result": "failed",
+      "passed": 2,
+      "total": 5,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "3 of 5 cases failed.\n\n✘\ncase 1\nInput\n[[1,2,3],[4,5,6],[7,8,9]]\nExpected\n25\nGot\n30\n✘\ncase 2\nInput\n[[7]]\nExpected\n7\nGot\n14\n✘\nhidden case 4hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:10:19.135Z",
+      "finishedAt": "2026-10-26T03:10:22.094Z",
+      "candidatePath": "f-java-csharp-php/JAVA-004/attempts/first.java",
+      "candidateSha256": "44707f35371d12b79e55aff78accad4b12191e15dc1958ccb216a16aeee8c0ae",
+      "actualCodeSha256": "44707f35371d12b79e55aff78accad4b12191e15dc1958ccb216a16aeee8c0ae",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:ec7de97a2f1029310028e237a35c8be08f7aa1168bad3923dd0b03a023b2a4f0",
+      "runId": "f16edc45-4f3b-481e-9594-b0b7c1098bee",
+      "documentRevision": 2,
+      "artifactId": "practice-6a004307-ee08-486a-95fa-3ab2be35d57b.code.2",
+      "result": "passed",
+      "passed": 5,
+      "total": 5,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

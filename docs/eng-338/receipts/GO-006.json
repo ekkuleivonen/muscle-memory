@@ -1,0 +1,128 @@
+{
+  "key": "GO-006",
+  "revision": "sha256:2279a86fff5bbd13533f770365d985f72270906b14513b46cc7e1c8855625da7",
+  "language": "go",
+  "runtime": "Yaegi WASM",
+  "origin": "https://musclememory.run",
+  "partition": "e-go-ruby",
+  "review": {
+    "key": "GO-006",
+    "revision": "sha256:2279a86fff5bbd13533f770365d985f72270906b14513b46cc7e1c8855625da7",
+    "firstCandidate": "attempts/first.go",
+    "wrongCandidate": "attempts/wrong.go",
+    "wrongIntent": "Round rank down instead of up, clamping minimum to one.",
+    "assumptions": [
+      "p is within its stated range; preserve input via scaffold copy."
+    ],
+    "ambiguityFindings": [
+      "Input mutation policy is not explicit but the scaffold already copies samples."
+    ],
+    "verbosityFindings": [
+      "Formula precisely specifies the percentile convention."
+    ],
+    "confidence": "high; unexecuted",
+    "publicEdgeCases": [
+      {
+        "input": [
+          [
+            9,
+            1,
+            9,
+            5
+          ],
+          25.1
+        ],
+        "expected": 5,
+        "reason": "Non-integral rank rounds up."
+      },
+      {
+        "input": [
+          [
+            4,
+            2,
+            2
+          ],
+          100
+        ],
+        "expected": 4,
+        "reason": "Maximum at p100, repeated values allowed."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:09:07.324Z",
+      "finishedAt": "2026-10-26T03:09:08.293Z",
+      "candidatePath": "e-go-ruby/GO-006/attempts/first.go",
+      "candidateSha256": "b68ea04f497cb7cdab7adc64ba1395d3535e21e225cad5dca7dd372352f996b5",
+      "actualCodeSha256": "b68ea04f497cb7cdab7adc64ba1395d3535e21e225cad5dca7dd372352f996b5",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:2279a86fff5bbd13533f770365d985f72270906b14513b46cc7e1c8855625da7",
+      "runId": "13355082-a4d2-47a6-8edf-907900f7c344",
+      "documentRevision": 1,
+      "artifactId": "practice-009a5f07-ba93-4dd7-a0ea-d4a6fc426bb9.code.1",
+      "result": "passed",
+      "passed": 19,
+      "total": 19,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:09:08.950Z",
+      "finishedAt": "2026-10-26T03:09:09.879Z",
+      "candidatePath": "e-go-ruby/GO-006/attempts/wrong.go",
+      "candidateSha256": "d7b4b82402cf95210ec7d950e560a66201964a9b78262c0c743da52d9642f5b0",
+      "actualCodeSha256": "d7b4b82402cf95210ec7d950e560a66201964a9b78262c0c743da52d9642f5b0",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:2279a86fff5bbd13533f770365d985f72270906b14513b46cc7e1c8855625da7",
+      "runId": "759a18d4-98ad-49dc-97ed-b2e2752af6f8",
+      "documentRevision": 1,
+      "artifactId": "practice-8c092cbd-8a6e-4a44-adec-04444ad78d25.code.1",
+      "result": "failed",
+      "passed": 12,
+      "total": 19,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "7 of 19 cases failed.\n\n✘\ncase 1\nInput\n[[15,20,35,40,50],30]\nExpected\n20\nGot\n15\n✘\nhidden case 5hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 9hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 11hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 12hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 15hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 19hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:09:10.280Z",
+      "finishedAt": "2026-10-26T03:09:10.572Z",
+      "candidatePath": "e-go-ruby/GO-006/attempts/first.go",
+      "candidateSha256": "b68ea04f497cb7cdab7adc64ba1395d3535e21e225cad5dca7dd372352f996b5",
+      "actualCodeSha256": "b68ea04f497cb7cdab7adc64ba1395d3535e21e225cad5dca7dd372352f996b5",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:2279a86fff5bbd13533f770365d985f72270906b14513b46cc7e1c8855625da7",
+      "runId": "f4c9fea7-a2ef-423d-9b67-3b99832fcfbc",
+      "documentRevision": 2,
+      "artifactId": "practice-8c092cbd-8a6e-4a44-adec-04444ad78d25.code.2",
+      "result": "passed",
+      "passed": 19,
+      "total": 19,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

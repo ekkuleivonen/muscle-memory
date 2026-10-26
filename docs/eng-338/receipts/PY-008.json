@@ -1,0 +1,144 @@
+{
+  "key": "PY-008",
+  "revision": "sha256:27a612b805df8919368a4a34dc4bce46ec0d686d8263384e0b2dbb9f6e5263f6",
+  "language": "python",
+  "runtime": "Pyodide/CPython3.14",
+  "origin": "https://musclememory.run",
+  "partition": "a-python",
+  "review": {
+    "key": "PY-008",
+    "revision": "sha256:27a612b805df8919368a4a34dc4bce46ec0d686d8263384e0b2dbb9f6e5263f6",
+    "firstCandidate": "attempts/first.py",
+    "wrongCandidate": "attempts/wrong.py",
+    "wrongIntent": "Treat every absent or blank email as a shared None key and merge unrelated customers.",
+    "assumptions": [
+      "Shallow copies suffice because only top-level fields are assigned.",
+      "The supplied helper defines blank-field filling."
+    ],
+    "ambiguityFindings": [
+      "A duplicate missing-value field may insert a missing key with None via the supplied helper; the helper is treated as authoritative."
+    ],
+    "verbosityFindings": [
+      "Long narrative is relevant to the explicit performance requirement."
+    ],
+    "confidence": "high, unexecuted",
+    "publicEdgeCases": [
+      {
+        "input": [
+          {
+            "id": 1,
+            "email": "a@x",
+            "phone": ""
+          },
+          {
+            "id": 2,
+            "email": " ",
+            "phone": "111"
+          },
+          {
+            "id": 3,
+            "email": "A@x",
+            "phone": "222"
+          },
+          {
+            "id": 4,
+            "phone": "333"
+          }
+        ],
+        "expected": [
+          {
+            "id": 1,
+            "email": "a@x",
+            "phone": "222"
+          },
+          {
+            "id": 2,
+            "email": " ",
+            "phone": "111"
+          },
+          {
+            "id": 4,
+            "phone": "333"
+          }
+        ],
+        "reason": "Unmatchable records retain their place; duplicates fill first record without replacing email."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:11:53.288Z",
+      "finishedAt": "2026-10-26T03:11:55.243Z",
+      "candidatePath": "a-python/PY-008/attempts/first.py",
+      "candidateSha256": "7ec8ec2714b8f6aac2d8a83a7276a645f20d0edf2182a36e31d4b8e952cc5b52",
+      "actualCodeSha256": "7ec8ec2714b8f6aac2d8a83a7276a645f20d0edf2182a36e31d4b8e952cc5b52",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:27a612b805df8919368a4a34dc4bce46ec0d686d8263384e0b2dbb9f6e5263f6",
+      "runId": "cc7bb7a3-cdaf-4032-ab4b-e33a794d53c2",
+      "documentRevision": 1,
+      "artifactId": "practice-e3960182-dac3-4aaf-83dc-c7f4c5761224.code.1",
+      "result": "passed",
+      "passed": 16,
+      "total": 16,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:11:55.977Z",
+      "finishedAt": "2026-10-26T03:11:57.429Z",
+      "candidatePath": "a-python/PY-008/attempts/wrong.py",
+      "candidateSha256": "6c0ae1650347e5fc55b61ac73670c22d23fd7b4b4b1c6f2df15ad894d8475bd1",
+      "actualCodeSha256": "6c0ae1650347e5fc55b61ac73670c22d23fd7b4b4b1c6f2df15ad894d8475bd1",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:27a612b805df8919368a4a34dc4bce46ec0d686d8263384e0b2dbb9f6e5263f6",
+      "runId": "9613767b-aa33-4625-85ba-e156eeaf87b1",
+      "documentRevision": 1,
+      "artifactId": "practice-691ad1fb-a100-447f-9e3e-6e14636317b3.code.1",
+      "result": "failed",
+      "passed": 11,
+      "total": 16,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "5 of 16 cases failed.\n\n✘\ncase 2\nInput\n[{\"id\":\"C-20931\",\"name\":\"Hollis Bakery\",\"email\":null,\"phone\":\"0113 496 0021\"},{\"id\":\"C-20977\",\"name\":\"Marsh & Daughters\",\"email\":\"\",\"phone\":\"0113 496 0088\"},{\"id\":\"C-21012\",\"name\":\"T. Okafor\",\"email\":null,\"phone\":\"0113 496 0140\"}]\nExpected\n[{\"id\":\"C-20931\",\"name\":\"Hollis Bakery\",\"email\":null,\"phone\":\"0113 496 0021\"},{\"id\":\"C-20977\",\"name\":\"Marsh & Daughters\",\"email\":\"\",\"phone\":\"0113 496 0088\"},{\"id\":\"C-21012\",\"name\":\"T. Okafor\",\"email\":null,\"phone\":\"0113 496 0140\"}]\nGot\n[{\"id\": \"C-20931\", \"name\": \"Hollis Bakery\", \"email\": null, \"phone\": \"0113 496 0021\"}]\n✘\nhidden case 6hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 12hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:11:57.905Z",
+      "finishedAt": "2026-10-26T03:11:58.831Z",
+      "candidatePath": "a-python/PY-008/attempts/first.py",
+      "candidateSha256": "7ec8ec2714b8f6aac2d8a83a7276a645f20d0edf2182a36e31d4b8e952cc5b52",
+      "actualCodeSha256": "7ec8ec2714b8f6aac2d8a83a7276a645f20d0edf2182a36e31d4b8e952cc5b52",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:27a612b805df8919368a4a34dc4bce46ec0d686d8263384e0b2dbb9f6e5263f6",
+      "runId": "7fa96bc3-6ba7-41fa-a172-133e79930104",
+      "documentRevision": 2,
+      "artifactId": "practice-691ad1fb-a100-447f-9e3e-6e14636317b3.code.2",
+      "result": "passed",
+      "passed": 16,
+      "total": 16,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

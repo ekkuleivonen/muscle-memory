@@ -1,0 +1,46 @@
+{
+  "key": "PY-007",
+  "revision": "sha256:e8a8cfef1e394439d2f5f9bba7ac4b3f82dbe489c34540adb2e3c33e5fcc3b33",
+  "renderedFeedback": {
+    "wrongCandidate": "Done.",
+    "firstCandidate": "Done.",
+    "recovery": "Done."
+  },
+  "verdict": "A public-contract counterexample exists; wrong.py is not valid for Unicode caseless matching.",
+  "publicRequirement": "Two records are duplicates when their emails match ignoring letter case (any letter, not only ASCII) and spaces around them.",
+  "wrongIntent": "Use lower rather than Unicode casefold, missing case-equivalent Unicode strings.",
+  "counterexamples": [
+    {
+      "input": [
+        {"id": 1, "email": "Σ@x.io"},
+        {"id": 2, "email": "ς@x.io"}
+      ],
+      "expected": [{"id": 1, "email": "Σ@x.io"}],
+      "predictedWrongOutput": [
+        {"id": 1, "email": "Σ@x.io"},
+        {"id": 2, "email": "ς@x.io"}
+      ],
+      "reason": "Greek capital sigma and final lowercase sigma are caseless equivalents. Lowercasing produces σ for Σ but leaves ς unchanged, so the deliberate candidate gives distinct keys. Casefold maps both to σ. This avoids reliance on a multi-character expansion interpretation."
+    },
+    {
+      "input": [
+        {"id": 1, "email": " Straße@x.io ", "tag": "keep"},
+        {"id": 2, "email": "STRASSE@x.io"}
+      ],
+      "expected": [{"id": 1, "email": " Straße@x.io ", "tag": "keep"}],
+      "predictedWrongOutput": [
+        {"id": 1, "email": " Straße@x.io ", "tag": "keep"},
+        {"id": 2, "email": "STRASSE@x.io"}
+      ],
+      "reason": "The previously recorded public edge case uses the Unicode caseless equivalence of ß and ss; lower preserves the difference while casefold removes it."
+    }
+  ],
+  "interpretation": "The observed UI text alone does not establish whether these inputs were checked, whether the code was accepted under a narrower contract, or whether Done is a general completion message. If it denotes successful validation, the deliberate candidate's acceptance leaves a public-contract coverage gap. No hidden test contents or actual runtime outputs are inferred.",
+  "ambiguityFindings": [
+    "The statement explicitly includes non-ASCII letters but does not name Unicode case folding or show a non-ASCII public example.",
+    "Adding the Greek sigma example would distinguish lower from caseless comparison without requiring discussion of multi-character expansions."
+  ],
+  "execution": "No code, compiler, tests or runtime probes were run. Predicted outputs are static reasoning from the deliberate transformation.",
+  "preserved": ["attempts/first.py", "attempts/wrong.py"],
+  "confidence": "High for the sigma counterexample under the explicit any-letter caseless requirement. UI validation semantics remain unverified."
+}

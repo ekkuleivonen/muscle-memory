@@ -1,0 +1,100 @@
+{
+  "key": "PHP-003",
+  "revision": "sha256:8357474064591cccde8be7790df65e6a34502dc3f7513f8ce62520afea9bb06d",
+  "language": "php",
+  "runtime": "php-wasm",
+  "at": "2026-10-26T03:20:55.522Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "c162c1d0ea151a80dcf4be02291d8b7b6eabc3a469478888031809d97ef4f896",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": 3540,
+          "expected": "Too many attempts. Try again in 59 minutes.",
+          "reason": "Rounded minutes below hour threshold.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "Too many attempts. Try again in 59 minutes.",
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": 3541,
+          "expected": "Too many attempts. Try again in 1 hour.",
+          "reason": "Rounded minutes reach 60.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "Too many attempts. Try again in 1 hour.",
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": 3601,
+          "expected": "Too many attempts. Try again in 2 hours.",
+          "reason": "Hours round upward.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "Too many attempts. Try again in 2 hours.",
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": -1,
+          "expected": "You can try again now.",
+          "reason": "Ended lockout.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "You can try again now.",
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "9537f71f78d07678a4d7368736fde25a42a4a4549104f9b7ecb09583497fe7d0",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": 3540,
+          "expected": "Too many attempts. Try again in 59 minutes.",
+          "reason": "Rounded minutes below hour threshold.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "Too many attempts. Try again in 59 minutes.",
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": 3541,
+          "expected": "Too many attempts. Try again in 1 hour.",
+          "reason": "Rounded minutes reach 60.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "Too many attempts. Try again in 60 minutes.",
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": 3601,
+          "expected": "Too many attempts. Try again in 2 hours.",
+          "reason": "Hours round upward.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "Too many attempts. Try again in 2 hours.",
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": -1,
+          "expected": "You can try again now.",
+          "reason": "Ended lockout.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "You can try again now.",
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

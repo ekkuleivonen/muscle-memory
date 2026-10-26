@@ -1,0 +1,131 @@
+{
+  "key": "PY-010",
+  "revision": "sha256:8969155c54b3eac0355430c8e94d888bcb203115356b2f1c92280c2ad852bb72",
+  "language": "python",
+  "runtime": "Pyodide/CPython3.14",
+  "origin": "https://musclememory.run",
+  "partition": "a-python",
+  "review": {
+    "key": "PY-010",
+    "revision": "sha256:8969155c54b3eac0355430c8e94d888bcb203115356b2f1c92280c2ad852bb72",
+    "firstCandidate": "attempts/first.py",
+    "wrongCandidate": "attempts/wrong.py",
+    "wrongIntent": "Subtract signed refund directly, so bracketed refunds increase rather than reduce net.",
+    "assumptions": [
+      "The provided to_cents helper is authoritative for what counts as a plain amount.",
+      "Accounting brackets imply a negative magnitude even when the inner plain amount has a sign.",
+      "Only type and amount ValueError failures are rejection cases; structural errors propagate."
+    ],
+    "ambiguityFindings": [
+      "The prose says plain amounts have at most two decimal places, but supplied to_cents accepts numerically cent-exact values like 1.000 and exponent notation such as 1e2. Candidate preserves and calls that helper.",
+      "A signed amount inside accounting brackets is allowed by the stated inner-plain-amount rule, but the sign interaction is not explicitly demonstrated; candidate treats brackets as negative magnitude.",
+      "Malformed rows combined with a bad type may be rejected before a structural error is accessed, following starter flow."
+    ],
+    "verbosityFindings": [
+      "Detailed reading rules help scope the fix; helper acceptance mismatch should be resolved."
+    ],
+    "confidence": "high for illustrated domain; medium for ambiguous amount boundaries; unexecuted",
+    "publicEdgeCases": [
+      {
+        "input": "partner,order_id,type,amount,currency\n B ,1, SALE ,10, eur \nB,1,refund,-2,EUR\nB,x,adjustment,(1.50),EUR\n",
+        "expected": {
+          "partners": [
+            {
+              "partner": "B",
+              "currency": "EUR",
+              "sales": 1,
+              "refunds": 1,
+              "net": 650
+            }
+          ],
+          "rejected": 0
+        },
+        "reason": "Trim and normalise fields, reduce net for negative plain refunds, and retain adjustment sign."
+      },
+      {
+        "input": "partner,order_id,type,amount,currency\nB,1,sale,(1.234),EUR\nB,2,sale,NaN,EUR\n",
+        "expected": {
+          "partners": [],
+          "rejected": 2
+        },
+        "reason": "Invalid inner plain precision and NaN reject the rows."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:05:09.167Z",
+      "finishedAt": "2026-10-26T03:05:10.641Z",
+      "candidatePath": "a-python/PY-010/attempts/first.py",
+      "candidateSha256": "d40ca0ebf5186d3384eeb26b227f64f30041dee800830a1e5e29a94a355de220",
+      "actualCodeSha256": "d40ca0ebf5186d3384eeb26b227f64f30041dee800830a1e5e29a94a355de220",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:8969155c54b3eac0355430c8e94d888bcb203115356b2f1c92280c2ad852bb72",
+      "runId": "30ed032e-7e30-4e43-90ee-28120e474a73",
+      "documentRevision": 1,
+      "artifactId": "practice-85ad9ee7-fe5f-4148-858e-db3b4a6ee43b.code.1",
+      "result": "passed",
+      "passed": 16,
+      "total": 16,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:05:11.564Z",
+      "finishedAt": "2026-10-26T03:05:13.030Z",
+      "candidatePath": "a-python/PY-010/attempts/wrong.py",
+      "candidateSha256": "8a61eb6d5f9ba1bfdef5852e7ca4d811bba5dc71c7cc2ab0ead8fe75c7d314e8",
+      "actualCodeSha256": "8a61eb6d5f9ba1bfdef5852e7ca4d811bba5dc71c7cc2ab0ead8fe75c7d314e8",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:8969155c54b3eac0355430c8e94d888bcb203115356b2f1c92280c2ad852bb72",
+      "runId": "99b90b5a-bcc7-40b4-b54e-31af1a4191e3",
+      "documentRevision": 1,
+      "artifactId": "practice-eb1081e7-a313-49f9-9250-d5820727eb8d.code.1",
+      "result": "failed",
+      "passed": 8,
+      "total": 16,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "8 of 16 cases failed.\n\n✘\ncase 2\nInput\n\"partner,order_id,type,amount,currency\\nBluefin,BF-77101,sale,45.00,EUR\\nBluefin,BF-77102,sale,30.00,EUR\\nBluefin,BF-77101,refund,(12.50),EUR\\nBluefin,BF-FEE-10,adjustment,(3.00),EUR\\n\"\nExpected\n{\"partners\":[{\"partner\":\"Bluefin\",\"currency\":\"EUR\",\"sales\":2,\"refunds\":1,\"net\":5950}],\"rejected\":0}\nGot\n{\"partners\": [{\"partner\": \"Bluefin\", \"currency\": \"EUR\", \"sales\": 2, \"refunds\": 1, \"net\": 8450}], \"rejected\": 0}\n✘\ncase 3\nInput\n\"partner,order_id,type,amount,currency\\nNorthwind,NW-2001,sale,60.00,USD\\nBluefin,BF-78001,sale,100.00,EUR\\nBluefin,BF-78001,refund,(25.00),EUR\\nNorthwind,NW-2001,refund,15.00,USD\\nBluefin,BF-FEE-11,adjustment,(1.50),EUR\\n\"\nExpected\n{\"partners\":[{\"partner\":\"Bluefin\",\"currency\":\"EUR\",\"sales\":1,\"refunds\":1,\"net\":7350},{\"partner\":\"Northwind\",\"currency\":\"USD\",\"sales\":1,\"refunds\":1,\"net\":4500}],\"rejected\":0}\nGot\n{\"partners\": [{\"partner\": \"Bluefin\", \"currency\": \"EUR\", \"sales\": 1, \"refunds\": 1, \"net\": 12350}, {\"partner\": \"Northwind\", \"currency\": \"USD\", \"sales\": 1, \"refunds\": 1, \"net\": 4500}], \"rejected\": 0}\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 10hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 11hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 12hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 13hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 16hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:05:13.499Z",
+      "finishedAt": "2026-10-26T03:05:14.533Z",
+      "candidatePath": "a-python/PY-010/attempts/first.py",
+      "candidateSha256": "d40ca0ebf5186d3384eeb26b227f64f30041dee800830a1e5e29a94a355de220",
+      "actualCodeSha256": "d40ca0ebf5186d3384eeb26b227f64f30041dee800830a1e5e29a94a355de220",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:8969155c54b3eac0355430c8e94d888bcb203115356b2f1c92280c2ad852bb72",
+      "runId": "5436bbb4-1276-437e-abcf-2518fc8d9802",
+      "documentRevision": 2,
+      "artifactId": "practice-eb1081e7-a313-49f9-9250-d5820727eb8d.code.2",
+      "result": "passed",
+      "passed": 16,
+      "total": 16,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

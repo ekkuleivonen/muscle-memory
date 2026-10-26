@@ -1,0 +1,126 @@
+{
+  "key": "PHP-005",
+  "revision": "sha256:2d5c560a396e1394e03216a9a6443754706a9545649060e69b732143349e3638",
+  "language": "php",
+  "runtime": "php-wasm",
+  "origin": "https://musclememory.run",
+  "partition": "f-java-csharp-php",
+  "review": {
+    "key": "PHP-005",
+    "revision": "sha256:2d5c560a396e1394e03216a9a6443754706a9545649060e69b732143349e3638",
+    "firstCandidate": "attempts/first.php",
+    "wrongCandidate": "attempts/wrong.php",
+    "wrongIntent": "Accept lowercase x in the check-digit position despite the uppercase-only requirement.",
+    "assumptions": [
+      "Input is ASCII as specified; validation follows the stated checksum without additional ISBN allocation rules."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": [
+      "Exact length, permitted characters, weights and checksum rule are complete."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": "080442957x",
+        "expected": false,
+        "reason": "Lowercase x is forbidden even when checksum would match."
+      },
+      {
+        "input": "0000000000",
+        "expected": true,
+        "reason": "All-zero values meet the specified checksum rule."
+      },
+      {
+        "input": "X000000000",
+        "expected": false,
+        "reason": "X allowed only in last position."
+      },
+      {
+        "input": "0306406153",
+        "expected": false,
+        "reason": "Incorrect checksum."
+      },
+      {
+        "input": "0306406152 ",
+        "expected": false,
+        "reason": "No trimming; length must be exactly ten."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:11:05.049Z",
+      "finishedAt": "2026-10-26T03:11:05.416Z",
+      "candidatePath": "f-java-csharp-php/PHP-005/attempts/first.php",
+      "candidateSha256": "5a0e943eabaabab9fa8741c578fc1afe2036719bc64aae8a9f8e2a23cbe4ab06",
+      "actualCodeSha256": "5a0e943eabaabab9fa8741c578fc1afe2036719bc64aae8a9f8e2a23cbe4ab06",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:2d5c560a396e1394e03216a9a6443754706a9545649060e69b732143349e3638",
+      "runId": "e9042689-97bc-4d01-8832-bdbbcb7ab5b9",
+      "documentRevision": 1,
+      "artifactId": "practice-7b68c8ac-c65d-4d11-9d5f-4886edd58b0f.code.1",
+      "result": "passed",
+      "passed": 10,
+      "total": 10,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:11:06.143Z",
+      "finishedAt": "2026-10-26T03:11:06.426Z",
+      "candidatePath": "f-java-csharp-php/PHP-005/attempts/wrong.php",
+      "candidateSha256": "74a831d3eafe79f491f4325a3fb80049775e3b137d755a7973a4b981f0bd531e",
+      "actualCodeSha256": "74a831d3eafe79f491f4325a3fb80049775e3b137d755a7973a4b981f0bd531e",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:2d5c560a396e1394e03216a9a6443754706a9545649060e69b732143349e3638",
+      "runId": "eaa3904c-affe-4cf9-8892-c53e1a2eab3f",
+      "documentRevision": 1,
+      "artifactId": "practice-010261e3-70af-4518-99bc-27b7fdcc4197.code.1",
+      "result": "failed",
+      "passed": 9,
+      "total": 10,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "1 of 10 cases failed.\n\n✘\nhidden case 5hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:11:06.871Z",
+      "finishedAt": "2026-10-26T03:11:06.927Z",
+      "candidatePath": "f-java-csharp-php/PHP-005/attempts/first.php",
+      "candidateSha256": "5a0e943eabaabab9fa8741c578fc1afe2036719bc64aae8a9f8e2a23cbe4ab06",
+      "actualCodeSha256": "5a0e943eabaabab9fa8741c578fc1afe2036719bc64aae8a9f8e2a23cbe4ab06",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:2d5c560a396e1394e03216a9a6443754706a9545649060e69b732143349e3638",
+      "runId": "55f26e5e-1452-4b69-add9-ed56448b0ce0",
+      "documentRevision": 2,
+      "artifactId": "practice-010261e3-70af-4518-99bc-27b7fdcc4197.code.2",
+      "result": "passed",
+      "passed": 10,
+      "total": 10,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

@@ -1,0 +1,125 @@
+{
+  "key": "PY-006",
+  "revision": "sha256:4f006c4a24df017d5b24293dee551f8b3a22fc370db9285bba5dc49a4844cefb",
+  "language": "python",
+  "runtime": "Pyodide/CPython3.14",
+  "origin": "https://musclememory.run",
+  "partition": "a-python",
+  "review": {
+    "key": "PY-006",
+    "revision": "sha256:4f006c4a24df017d5b24293dee551f8b3a22fc370db9285bba5dc49a4844cefb",
+    "firstCandidate": "attempts/first.py",
+    "wrongCandidate": "attempts/wrong.py",
+    "wrongIntent": "Use last encountered date as latest date, violating unsorted-date requirement.",
+    "assumptions": [
+      "All dates use the fixed YYYY-MM-DD format and all input lines are valid specimen rows."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": [
+      "Narrative and explicit unsorted-input warning clearly motivate one-pass accumulation."
+    ],
+    "confidence": "high, unexecuted",
+    "publicEdgeCases": [
+      {
+        "input": [
+          "2026-06-10 | X | A | | 2",
+          "2026-06-01 | Y | A | | 1",
+          "2026-05-01 | X | a | | 3"
+        ],
+        "expected": {
+          "X": {
+            "lots": 2,
+            "individuals": 5,
+            "species": 2,
+            "first": "2026-05-01",
+            "last": "2026-06-10"
+          },
+          "Y": {
+            "lots": 1,
+            "individuals": 1,
+            "species": 1,
+            "first": "2026-06-01",
+            "last": "2026-06-01"
+          }
+        },
+        "reason": "Interleaving and reverse dates; species matching is case sensitive."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:11:40.664Z",
+      "finishedAt": "2026-10-26T03:11:42.119Z",
+      "candidatePath": "a-python/PY-006/attempts/first.py",
+      "candidateSha256": "21ce2fc83b656a636758cbfc25c8ff3bfe2ac39d1c7947593bc91727b901247b",
+      "actualCodeSha256": "21ce2fc83b656a636758cbfc25c8ff3bfe2ac39d1c7947593bc91727b901247b",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:4f006c4a24df017d5b24293dee551f8b3a22fc370db9285bba5dc49a4844cefb",
+      "runId": "aff043a9-4415-4776-85ee-cd30a89b7b5c",
+      "documentRevision": 1,
+      "artifactId": "practice-700cb6bd-06bc-4da0-9cf4-fdc02734f63e.code.1",
+      "result": "passed",
+      "passed": 17,
+      "total": 17,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:11:42.845Z",
+      "finishedAt": "2026-10-26T03:11:44.274Z",
+      "candidatePath": "a-python/PY-006/attempts/wrong.py",
+      "candidateSha256": "e1b043b0e899934fea178693735530a2cdec8d1dc2baa56314beb17ddd5a9258",
+      "actualCodeSha256": "e1b043b0e899934fea178693735530a2cdec8d1dc2baa56314beb17ddd5a9258",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:4f006c4a24df017d5b24293dee551f8b3a22fc370db9285bba5dc49a4844cefb",
+      "runId": "83b5a380-ecec-4e11-8d31-e3d05069c113",
+      "documentRevision": 1,
+      "artifactId": "practice-7b4975ec-4b66-4b47-a7f8-6602b9c07517.code.1",
+      "result": "failed",
+      "passed": 13,
+      "total": 17,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "4 of 17 cases failed.\n\n✘\ncase 5\nInput\n[\"2026-06-14 | Alder Creek | Carabus nemoralis | 15 mm | 1\",\"2026-05-28 | Alder Creek | Pterostichus niger | 11 mm | 2\",\"2026-06-02 | Alder Creek | Carabus nemoralis | | 1\"]\nExpected\n{\"Alder Creek\":{\"lots\":3,\"individuals\":4,\"species\":2,\"first\":\"2026-05-28\",\"last\":\"2026-06-14\"}}\nGot\n{\"Alder Creek\": {\"lots\": 3, \"individuals\": 4, \"species\": 2, \"first\": \"2026-05-28\", \"last\": \"2026-06-02\"}}\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 12hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 17hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:11:44.742Z",
+      "finishedAt": "2026-10-26T03:11:45.688Z",
+      "candidatePath": "a-python/PY-006/attempts/first.py",
+      "candidateSha256": "21ce2fc83b656a636758cbfc25c8ff3bfe2ac39d1c7947593bc91727b901247b",
+      "actualCodeSha256": "21ce2fc83b656a636758cbfc25c8ff3bfe2ac39d1c7947593bc91727b901247b",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:4f006c4a24df017d5b24293dee551f8b3a22fc370db9285bba5dc49a4844cefb",
+      "runId": "f5a84d07-3932-46ca-81ac-ca88ba174f5c",
+      "documentRevision": 2,
+      "artifactId": "practice-7b4975ec-4b66-4b47-a7f8-6602b9c07517.code.2",
+      "result": "passed",
+      "passed": 17,
+      "total": 17,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

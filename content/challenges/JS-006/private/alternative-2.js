@@ -34,7 +34,7 @@ export class Cart {
    * every render, and pricing a 60-line cart on each one cost 38 ms a frame.
    */
   summary() {
-    const key = this.lines.map((l) => `${l.sku}:${l.price}x${l.quantity}`).join(",") + "|" + (this.code ? `${this.code.name}:${this.code.percent ?? ""}:${this.code.amount ?? ""}` : "");
+    const key = JSON.stringify([this.lines, this.code]);
     if (this.cache?.key === key) return this.cache.value;
     const subtotal = sum(this.lines.map((l) => l.price * l.quantity));
     const discount = discountFor(this.code, subtotal);

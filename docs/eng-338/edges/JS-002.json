@@ -1,0 +1,64 @@
+{
+  "key": "JS-002",
+  "revision": "sha256:2c358ce3b84548983336df1ef9ce888dc9bceaa9e455eb50302f467262e19b52",
+  "language": "javascript",
+  "runtime": "browser JavaScript",
+  "at": "2026-10-26T03:20:54.462Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "2245ad234bd26ecdb3061cb198de912f3581d4d8564b2462b2c90384625d57c3",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "\tone\r\ntwo\tthree \n",
+          "expected": 3,
+          "reason": "Mixed whitespace separates runs.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 3,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "é ! 123",
+          "expected": 3,
+          "reason": "Symbols and non-English letters are word characters.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 3,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "9a6c7fd3a95316240459050a5127b75952ffdefdc838a97cf15be305eeb31a41",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "\tone\r\ntwo\tthree \n",
+          "expected": 3,
+          "reason": "Mixed whitespace separates runs.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 2,
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": "é ! 123",
+          "expected": 3,
+          "reason": "Symbols and non-English letters are word characters.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 3,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

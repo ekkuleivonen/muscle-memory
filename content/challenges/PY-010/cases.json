@@ -261,5 +261,37 @@
       "rejected": 0
     },
     "hidden": true
+  },
+  {
+    "input": "partner,order_id,type,amount,currency\nB,1,sale,1.000,EUR\n",
+    "expected": {
+      "partners": [],
+      "rejected": 1
+    },
+    "hidden": true
+  },
+  {
+    "input": "partner,order_id,type,amount,currency\nB,1,sale,1e2,EUR\n",
+    "expected": {
+      "partners": [],
+      "rejected": 1
+    },
+    "hidden": true
+  },
+  {
+    "input": "partner,order_id,type,amount,currency\nB,1,adjustment,(-3.00),EUR\n",
+    "expected": {
+      "partners": [
+        {
+          "partner": "B",
+          "currency": "EUR",
+          "sales": 0,
+          "refunds": 0,
+          "net": -300
+        }
+      ],
+      "rejected": 0
+    },
+    "hidden": true
   }
 ]
