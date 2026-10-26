@@ -1,5 +1,7 @@
 "use client";
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { isOperatorPath } from "../../lib/paths";
 import {
   openPracticeStore,
   type PracticeStore,
@@ -16,8 +18,9 @@ let uploader: Uploader | null = null;
  * and tries once more as the page is hidden. Off unless an ingest endpoint is configured.
  */
 export function Uploads() {
+  const operator = isOperatorPath(usePathname());
   useEffect(() => {
-    if (!INGEST_URL) return;
+    if (!INGEST_URL || operator) return;
     let store: Promise<PracticeStore> | null = null;
     uploader ??= new Uploader({
       endpoint: INGEST_URL,
@@ -37,6 +40,6 @@ export function Uploads() {
       document.removeEventListener("visibilitychange", hidden);
       current.stop();
     };
-  }, []);
+  }, [operator]);
   return null;
 }

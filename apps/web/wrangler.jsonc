@@ -7,6 +7,12 @@
   "routes": [{ "pattern": "musclememory.run", "custom_domain": true }],
   "compatibility_date": "2026-10-23",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // Public verification metadata for the separately approved /admin* Access app.
+  // These are not credentials; assertions are verified against the team's JWKS.
+  "vars": {
+    "ADMIN_ACCESS_ISSUER": "https://elei.cloudflareaccess.com",
+    "ADMIN_ACCESS_AUD": "147a7760861e051b94b0c5035288fdddcb301afa47d7973527127deeda3e2c4e",
+  },
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
   "services": [
     { "binding": "WORKER_SELF_REFERENCE", "service": "muscle-memory" },

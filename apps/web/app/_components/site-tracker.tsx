@@ -1,5 +1,5 @@
 "use client";
-import { isPracticePath } from "../../lib/paths";
+import { isPracticePath, isOperatorPath } from "../../lib/paths";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
@@ -24,6 +24,7 @@ export function SiteTracker() {
   const last = useRef<string | null>(null);
 
   useEffect(() => {
+    if (isOperatorPath(path)) return;
     const here = query ? `${path}?${query}` : path;
     // Development runs effects twice; the same page right after itself is that, not a view.
     if (last.current === here) return;
@@ -41,7 +42,7 @@ export function SiteTracker() {
     void logView(challengeContext(path), { path, query, previous });
   }, [path, query]);
 
-  const inIde = isPracticePath(path);
+  const inIde = isPracticePath(path) || isOperatorPath(path);
   useEffect(() => {
     if (inIde) return;
     let resize: ReturnType<typeof setTimeout> | undefined;
