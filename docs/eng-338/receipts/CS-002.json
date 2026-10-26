@@ -1,0 +1,128 @@
+{
+  "key": "CS-002",
+  "revision": "sha256:790005e37baedc0c98656a2bd01150a206a8a02142dedfbc985b9e1e6a2dce6f",
+  "language": "csharp",
+  "runtime": "Roslyn/.NET WASM",
+  "origin": "https://musclememory.run",
+  "partition": "f-java-csharp-php",
+  "review": {
+    "key": "CS-002",
+    "revision": "sha256:790005e37baedc0c98656a2bd01150a206a8a02142dedfbc985b9e1e6a2dce6f",
+    "firstCandidate": "attempts/first.cs",
+    "wrongCandidate": "attempts/wrong.cs",
+    "wrongIntent": "Use bankers rounding at midpoint cents instead of away from zero.",
+    "assumptions": [
+      "Balance is nonnegative and within decimal arithmetic range; cap is equivalent to limiting positive days to 20."
+    ],
+    "ambiguityFindings": [
+      "Starter XML says fee is in cents but task and examples say dollars; candidate follows task and examples.",
+      "No maximum balance is given, so decimal overflow bounds are unspecified."
+    ],
+    "verbosityFindings": [
+      "Task rules are clear; contradictory XML unit should be corrected."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": [
+          1,
+          1
+        ],
+        "expected": 0.01,
+        "reason": "Half-cent rounds upward."
+      },
+      {
+        "input": [
+          100,
+          2147483647
+        ],
+        "expected": 10,
+        "reason": "Days beyond twenty hit ten-percent cap."
+      },
+      {
+        "input": [
+          20,
+          -1
+        ],
+        "expected": 0,
+        "reason": "Negative days charge zero."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:05:18.598Z",
+      "finishedAt": "2026-10-26T03:05:20.015Z",
+      "candidatePath": "f-java-csharp-php/CS-002/attempts/first.cs",
+      "candidateSha256": "1808918dc2812b884c3c231f86fe99ea2dc15286bf6decae54e6d6232c638fee",
+      "actualCodeSha256": "1808918dc2812b884c3c231f86fe99ea2dc15286bf6decae54e6d6232c638fee",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:790005e37baedc0c98656a2bd01150a206a8a02142dedfbc985b9e1e6a2dce6f",
+      "runId": "892989cc-f2c9-4fb6-afe8-c0feedc1da6a",
+      "documentRevision": 1,
+      "artifactId": "practice-78459874-477c-4c57-b0e8-d7d607e2cf07.code.1",
+      "result": "passed",
+      "passed": 23,
+      "total": 23,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:05:20.657Z",
+      "finishedAt": "2026-10-26T03:05:22.096Z",
+      "candidatePath": "f-java-csharp-php/CS-002/attempts/wrong.cs",
+      "candidateSha256": "ad331fea16f5316fbf3aeadb0434672cbc5a92cac3ad8d096d1490e2e26c77cb",
+      "actualCodeSha256": "ad331fea16f5316fbf3aeadb0434672cbc5a92cac3ad8d096d1490e2e26c77cb",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:790005e37baedc0c98656a2bd01150a206a8a02142dedfbc985b9e1e6a2dce6f",
+      "runId": "9a07a4fb-d6ab-46af-b998-3ef808ae564c",
+      "documentRevision": 1,
+      "artifactId": "practice-0a4d9cc5-1f12-4190-a5b7-5f9f96e67bdb.code.1",
+      "result": "failed",
+      "passed": 15,
+      "total": 23,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "8 of 23 cases failed.\n\n✘\ncase 2\nInput\n[101,1]\nExpected\n0.51\nGot\n0.50\n✘\ncase 3\nInput\n[1,1]\nExpected\n0.01\nGot\n0.00\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 8hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 9hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 15hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 23hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:05:22.434Z",
+      "finishedAt": "2026-10-26T03:05:23.514Z",
+      "candidatePath": "f-java-csharp-php/CS-002/attempts/first.cs",
+      "candidateSha256": "1808918dc2812b884c3c231f86fe99ea2dc15286bf6decae54e6d6232c638fee",
+      "actualCodeSha256": "1808918dc2812b884c3c231f86fe99ea2dc15286bf6decae54e6d6232c638fee",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:790005e37baedc0c98656a2bd01150a206a8a02142dedfbc985b9e1e6a2dce6f",
+      "runId": "bcaf8030-bfc2-4b18-a1e9-68c6c7c82064",
+      "documentRevision": 2,
+      "artifactId": "practice-0a4d9cc5-1f12-4190-a5b7-5f9f96e67bdb.code.2",
+      "result": "passed",
+      "passed": 23,
+      "total": 23,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

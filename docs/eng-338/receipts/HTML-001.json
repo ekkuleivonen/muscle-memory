@@ -1,0 +1,118 @@
+{
+  "key": "HTML-001",
+  "revision": "sha256:e6472fd87067e5f59a01f2ee609623bcd3663e8e261b4840612bb451899dbb3b",
+  "language": "html",
+  "runtime": "linkedom DOM",
+  "origin": "https://musclememory.run",
+  "partition": "c-sql-html",
+  "review": {
+    "key": "HTML-001",
+    "revision": "sha256:e6472fd87067e5f59a01f2ee609623bcd3663e8e261b4840612bb451899dbb3b",
+    "firstCandidate": "HTML-001/attempts/first.html",
+    "wrongCandidate": "HTML-001/attempts/wrong.html",
+    "wrongIntent": "Second label refers to the first checkbox, leaving on-sale without its required association.",
+    "assumptions": [
+      "Literal checkbox names are the required visible label text."
+    ],
+    "ambiguityFindings": "No material ambiguity. Wrapping labels could be valid if the required for/id association and document order are preserved.",
+    "verbosityFindings": "Specific selectors, ordering and exact text make this self-contained; audit narrative is brief.",
+    "confidence": "High; reasoned from visible requirements only, not executed.",
+    "publicEdgeCases": [
+      {
+        "input": [
+          "form label",
+          "for"
+        ],
+        "expected": [
+          "filter-in-stock",
+          "filter-on-sale"
+        ],
+        "reason": "Each label explicitly targets its matching checkbox."
+      },
+      {
+        "input": [
+          "form input[type=checkbox]",
+          "count"
+        ],
+        "expected": 2,
+        "reason": "Both original checkboxes remain."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:09:20.364Z",
+      "finishedAt": "2026-10-26T03:09:20.410Z",
+      "candidatePath": "c-sql-html/HTML-001/attempts/first.html",
+      "candidateSha256": "626ee2c428eeca227e43c4e9fc1102a734b7e04658c1521a0302821877e68194",
+      "actualCodeSha256": "626ee2c428eeca227e43c4e9fc1102a734b7e04658c1521a0302821877e68194",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:e6472fd87067e5f59a01f2ee609623bcd3663e8e261b4840612bb451899dbb3b",
+      "runId": "9fb8a53b-4be7-4133-be48-3f97a2776308",
+      "documentRevision": 1,
+      "artifactId": "practice-c3e653bd-2220-432a-b34e-9c122ac23a35.code.1",
+      "result": "passed",
+      "passed": 16,
+      "total": 16,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:09:21.237Z",
+      "finishedAt": "2026-10-26T03:09:21.285Z",
+      "candidatePath": "c-sql-html/HTML-001/attempts/wrong.html",
+      "candidateSha256": "158d2ad1630a5b61d95fee4b7fadaf169a586ee215276545539b4ffff39ba3c6",
+      "actualCodeSha256": "158d2ad1630a5b61d95fee4b7fadaf169a586ee215276545539b4ffff39ba3c6",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:e6472fd87067e5f59a01f2ee609623bcd3663e8e261b4840612bb451899dbb3b",
+      "runId": "bc875d1f-814e-41af-9922-cef9f2f31146",
+      "documentRevision": 1,
+      "artifactId": "practice-b8c282d4-cf2d-4656-957d-e4ff41ee6aa8.code.1",
+      "result": "failed",
+      "passed": 11,
+      "total": 16,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "5 of 16 cases failed.\n\n✘\ncase 3\nInput\n[\"form input[type=checkbox]\",\"label\"]\nExpected\n[\"in-stock\",\"on-sale\"]\nGot\n[\"in-stock\",null]\n✘\nhidden case 9hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 13hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 15hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:09:21.759Z",
+      "finishedAt": "2026-10-26T03:09:21.801Z",
+      "candidatePath": "c-sql-html/HTML-001/attempts/first.html",
+      "candidateSha256": "626ee2c428eeca227e43c4e9fc1102a734b7e04658c1521a0302821877e68194",
+      "actualCodeSha256": "626ee2c428eeca227e43c4e9fc1102a734b7e04658c1521a0302821877e68194",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:e6472fd87067e5f59a01f2ee609623bcd3663e8e261b4840612bb451899dbb3b",
+      "runId": "67c7f60a-eae7-46da-a7de-5bf853439419",
+      "documentRevision": 2,
+      "artifactId": "practice-b8c282d4-cf2d-4656-957d-e4ff41ee6aa8.code.2",
+      "result": "passed",
+      "passed": 16,
+      "total": 16,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

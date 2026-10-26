@@ -1,0 +1,88 @@
+{
+  "key": "TS-005",
+  "revision": "sha256:f718959a5bcb435aa430b9c66a61a17ab67e73472af901a6f517867c33705a63",
+  "firstCandidate": "attempts/first.ts",
+  "wrongCandidate": "attempts/wrong.ts",
+  "wrongIntent": "Award tied remainder cents to later lines instead of earlier lines.",
+  "assumptions": [
+    "Order line nets and tax rates are nonnegative sales values.",
+    "Amount times rate stays within JavaScript exact integer range."
+  ],
+  "ambiguityFindings": [
+    "No numeric bounds or treatment of negative taxable amounts/rates are stated."
+  ],
+  "verbosityFindings": [
+    "Receipt example and explicit largest-remainder tie rule sufficiently define allocation."
+  ],
+  "confidence": "high",
+  "publicEdgeCases": [
+    {
+      "input": {
+        "id": "tie",
+        "taxRate": 5000,
+        "lines": [
+          {
+            "sku": "a",
+            "price": 1,
+            "quantity": 1,
+            "discount": 0,
+            "taxable": true
+          },
+          {
+            "sku": "b",
+            "price": 1,
+            "quantity": 1,
+            "discount": 0,
+            "taxable": true
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "sku": "a",
+            "net": 1,
+            "tax": 1
+          },
+          {
+            "sku": "b",
+            "net": 1,
+            "tax": 0
+          }
+        ],
+        "net": 2,
+        "tax": 1,
+        "total": 3
+      },
+      "reason": "Equal half-cent remainders award the earlier line."
+    },
+    {
+      "input": {
+        "id": "gift",
+        "taxRate": 825,
+        "lines": [
+          {
+            "sku": "gift",
+            "price": 2500,
+            "quantity": 1,
+            "discount": 0,
+            "taxable": false
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "sku": "gift",
+            "net": 2500,
+            "tax": 0
+          }
+        ],
+        "net": 2500,
+        "tax": 0,
+        "total": 2500
+      },
+      "reason": "Nontaxable value remains in net but contributes no tax."
+    }
+  ]
+}

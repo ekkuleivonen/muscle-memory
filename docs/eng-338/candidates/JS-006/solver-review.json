@@ -1,0 +1,93 @@
+{
+  "key": "JS-006",
+  "revision": "sha256:8082598a59e16473dbbe2f22745501419af4a551ed2f59905d0bf09e78c47e57",
+  "firstCandidate": "attempts/first.js",
+  "wrongCandidate": "attempts/wrong.js",
+  "wrongIntent": "Include line values but only the promo name, leaving same-name discount changes stale.",
+  "assumptions": [
+    "Cart input data uses documented serializable shapes.",
+    "Computing a cache key is permitted; unchanged inputs skip all pricing operations."
+  ],
+  "ambiguityFindings": [
+    "Statement permits key-based memoization; cache key creation still scans lines, as in starter."
+  ],
+  "verbosityFindings": [
+    "Explicit same-name promo rule prevents an otherwise plausible incomplete fix."
+  ],
+  "confidence": "high",
+  "publicEdgeCases": [
+    {
+      "input": [
+        [
+          "add",
+          "x",
+          1000,
+          1
+        ],
+        [
+          "code",
+          {
+            "name": "X",
+            "amount": 100
+          }
+        ],
+        [
+          "summary"
+        ],
+        [
+          "code",
+          {
+            "name": "X",
+            "amount": 200
+          }
+        ],
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 1,
+          "subtotal": 1000,
+          "discount": 100,
+          "total": 900
+        },
+        {
+          "items": 1,
+          "subtotal": 1000,
+          "discount": 200,
+          "total": 800
+        }
+      ],
+      "reason": "Same-name codes can change price."
+    },
+    {
+      "input": [
+        [
+          "add",
+          "x",
+          1000,
+          1
+        ],
+        [
+          "add",
+          "x",
+          2000,
+          1
+        ],
+        [
+          "summary"
+        ]
+      ],
+      "expected": [
+        {
+          "items": 2,
+          "subtotal": 2000,
+          "discount": 0,
+          "total": 2000
+        }
+      ],
+      "reason": "Adding an existing SKU preserves original price."
+    }
+  ]
+}

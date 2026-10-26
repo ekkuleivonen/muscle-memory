@@ -1,0 +1,134 @@
+{
+  "key": "PY-005",
+  "revision": "sha256:3b8d9edb5d37413ecd4a2d53dd6f2a400ee8d5427b35a044775a248e0f4c067a",
+  "language": "python",
+  "runtime": "Pyodide/CPython3.14",
+  "origin": "https://musclememory.run",
+  "partition": "a-python",
+  "review": {
+    "key": "PY-005",
+    "revision": "sha256:3b8d9edb5d37413ecd4a2d53dd6f2a400ee8d5427b35a044775a248e0f4c067a",
+    "firstCandidate": "attempts/first.py",
+    "wrongCandidate": "attempts/wrong.py",
+    "wrongIntent": "Weight lengths and measured total by individual counts rather than count each lot once.",
+    "assumptions": [
+      "Nonblank valid notebook rows; lengths use digits with optional fractional digits as described.",
+      "Use Python round(value, 1)."
+    ],
+    "ambiguityFindings": [
+      "Rounding tie convention is not stated; starter implies Python round.",
+      "Malformed lengths and blank notebook lines have no prescribed handling."
+    ],
+    "verbosityFindings": [
+      "Useful separation of lot count from individual count."
+    ],
+    "confidence": "high, unexecuted",
+    "publicEdgeCases": [
+      {
+        "input": [
+          "2026-06-03 | X | A | 0mm | 4",
+          "2026-06-03 | X | A | 2 CM | 1"
+        ],
+        "expected": {
+          "A": {
+            "measured": 2,
+            "min_mm": 0,
+            "max_mm": 20,
+            "mean_mm": 10
+          }
+        },
+        "reason": "Zero is measured, and each lot contributes once."
+      },
+      {
+        "input": [
+          "2026-06-03 | X | A | ? | 3"
+        ],
+        "expected": {
+          "A": {
+            "measured": 0,
+            "min_mm": null,
+            "max_mm": null,
+            "mean_mm": null
+          }
+        },
+        "reason": "Unmeasured species still appears."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:11:34.644Z",
+      "finishedAt": "2026-10-26T03:11:36.084Z",
+      "candidatePath": "a-python/PY-005/attempts/first.py",
+      "candidateSha256": "1a102bd05292a63cb68eb66e7a750a899aaa7a81740d28778d96493e3b24579a",
+      "actualCodeSha256": "1a102bd05292a63cb68eb66e7a750a899aaa7a81740d28778d96493e3b24579a",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:3b8d9edb5d37413ecd4a2d53dd6f2a400ee8d5427b35a044775a248e0f4c067a",
+      "runId": "2beb5fb6-5464-433b-b030-b3047bf86f4b",
+      "documentRevision": 1,
+      "artifactId": "practice-fb454563-8f04-4442-b311-b116a4778b4e.code.1",
+      "result": "passed",
+      "passed": 17,
+      "total": 17,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:11:36.832Z",
+      "finishedAt": "2026-10-26T03:11:38.284Z",
+      "candidatePath": "a-python/PY-005/attempts/wrong.py",
+      "candidateSha256": "b7bdd2cc46d7b383f7122c5cef57cb40ebf3b83dd1f92df83bfea380a7e29de0",
+      "actualCodeSha256": "b7bdd2cc46d7b383f7122c5cef57cb40ebf3b83dd1f92df83bfea380a7e29de0",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:3b8d9edb5d37413ecd4a2d53dd6f2a400ee8d5427b35a044775a248e0f4c067a",
+      "runId": "a13c7998-a538-4b74-92b8-412fe0c3afd9",
+      "documentRevision": 1,
+      "artifactId": "practice-7e8c1385-82d2-4504-8f53-5ebe8f714a75.code.1",
+      "result": "failed",
+      "passed": 16,
+      "total": 17,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "1 of 17 cases failed.\n\n✘\ncase 2\nInput\n[\"2026-06-03 | Alder Creek | Carabus nemoralis | 0.6 in | 1\",\"2026-06-03 | Alder Creek | Carabus nemoralis | 0.7 in | 2\"]\nExpected\n{\"Carabus nemoralis\":{\"measured\":2,\"min_mm\":15.2,\"max_mm\":17.8,\"mean_mm\":16.5}}\nGot\n{\"Carabus nemoralis\": {\"measured\": 3, \"min_mm\": 15.2, \"max_mm\": 17.8, \"mean_mm\": 16.9}}\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:11:38.746Z",
+      "finishedAt": "2026-10-26T03:11:39.690Z",
+      "candidatePath": "a-python/PY-005/attempts/first.py",
+      "candidateSha256": "1a102bd05292a63cb68eb66e7a750a899aaa7a81740d28778d96493e3b24579a",
+      "actualCodeSha256": "1a102bd05292a63cb68eb66e7a750a899aaa7a81740d28778d96493e3b24579a",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:3b8d9edb5d37413ecd4a2d53dd6f2a400ee8d5427b35a044775a248e0f4c067a",
+      "runId": "0b52becd-8e86-4646-8eaa-2261381ca25f",
+      "documentRevision": 2,
+      "artifactId": "practice-7e8c1385-82d2-4504-8f53-5ebe8f714a75.code.2",
+      "result": "passed",
+      "passed": 17,
+      "total": 17,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

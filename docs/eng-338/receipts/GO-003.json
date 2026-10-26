@@ -1,0 +1,123 @@
+{
+  "key": "GO-003",
+  "revision": "sha256:23419d0a4b0be060582624f6565db67d433042ffcf4bd46101a67c0eb22e1c62",
+  "language": "go",
+  "runtime": "Yaegi WASM",
+  "origin": "https://musclememory.run",
+  "partition": "e-go-ruby",
+  "review": {
+    "key": "GO-003",
+    "revision": "sha256:23419d0a4b0be060582624f6565db67d433042ffcf4bd46101a67c0eb22e1c62",
+    "firstCandidate": "attempts/first.go",
+    "wrongCandidate": "attempts/wrong.go",
+    "wrongIntent": "Convert duration into whole seconds instead of preserving milliseconds.",
+    "assumptions": [
+      "Inputs obey the four-field format and integers fit int."
+    ],
+    "ambiguityFindings": [
+      "Malformed input behavior is unspecified, appropriately outside stated format."
+    ],
+    "verbosityFindings": [
+      "Precise, minimal specification."
+    ],
+    "confidence": "high; unexecuted",
+    "publicEdgeCases": [
+      {
+        "input": "PATCH /items?q=a 503 0ms",
+        "expected": {
+          "method": "PATCH",
+          "path": "/items?q=a",
+          "status": 503,
+          "ms": 0
+        },
+        "reason": "Keep query and method, accept zero duration."
+      },
+      {
+        "input": "GET / 404 1501ms",
+        "expected": {
+          "method": "GET",
+          "path": "/",
+          "status": 404,
+          "ms": 1501
+        },
+        "reason": "Preserve whole milliseconds."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:08:53.206Z",
+      "finishedAt": "2026-10-26T03:08:54.208Z",
+      "candidatePath": "e-go-ruby/GO-003/attempts/first.go",
+      "candidateSha256": "7b4fb4ff77729744d2b0447ce4c5df24786ee7b0cee2b2654479fb8adab20b09",
+      "actualCodeSha256": "7b4fb4ff77729744d2b0447ce4c5df24786ee7b0cee2b2654479fb8adab20b09",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:23419d0a4b0be060582624f6565db67d433042ffcf4bd46101a67c0eb22e1c62",
+      "runId": "392f2918-d64a-44b3-ac4c-5909875ee65e",
+      "documentRevision": 1,
+      "artifactId": "practice-7af3ce7d-77cd-4bce-9a61-4f4bbb5cc90d.code.1",
+      "result": "passed",
+      "passed": 15,
+      "total": 15,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:08:54.992Z",
+      "finishedAt": "2026-10-26T03:08:55.941Z",
+      "candidatePath": "e-go-ruby/GO-003/attempts/wrong.go",
+      "candidateSha256": "1aa88bffb8d932172cca83368f6bcf6a37d3bf85066b19411a88779dac72c830",
+      "actualCodeSha256": "1aa88bffb8d932172cca83368f6bcf6a37d3bf85066b19411a88779dac72c830",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:23419d0a4b0be060582624f6565db67d433042ffcf4bd46101a67c0eb22e1c62",
+      "runId": "91898ed8-8ea5-4723-a900-3467b0c1874a",
+      "documentRevision": 1,
+      "artifactId": "practice-b3c5b962-6be9-40cb-b831-dffd7ee9f526.code.1",
+      "result": "failed",
+      "passed": 2,
+      "total": 15,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "13 of 15 cases failed.\n\n✘\ncase 1\nInput\n\"GET /cart 200 12ms\"\nExpected\n{\"method\":\"GET\",\"path\":\"/cart\",\"status\":200,\"ms\":12}\nGot\n{\"method\":\"GET\",\"path\":\"/cart\",\"status\":200,\"ms\":0}\n✘\ncase 2\nInput\n\"POST /pay 502 1300ms\"\nExpected\n{\"method\":\"POST\",\"path\":\"/pay\",\"status\":502,\"ms\":1300}\nGot\n{\"method\":\"POST\",\"path\":\"/pay\",\"status\":502,\"ms\":1}\n✘\nhidden case 3hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 4hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 6hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 9hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 10hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 11hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 12hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 13hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 15hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:08:56.388Z",
+      "finishedAt": "2026-10-26T03:08:56.560Z",
+      "candidatePath": "e-go-ruby/GO-003/attempts/first.go",
+      "candidateSha256": "7b4fb4ff77729744d2b0447ce4c5df24786ee7b0cee2b2654479fb8adab20b09",
+      "actualCodeSha256": "7b4fb4ff77729744d2b0447ce4c5df24786ee7b0cee2b2654479fb8adab20b09",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:23419d0a4b0be060582624f6565db67d433042ffcf4bd46101a67c0eb22e1c62",
+      "runId": "2c6a1039-1749-450b-8e71-6c5d4c84a1ec",
+      "documentRevision": 2,
+      "artifactId": "practice-b3c5b962-6be9-40cb-b831-dffd7ee9f526.code.2",
+      "result": "passed",
+      "passed": 15,
+      "total": 15,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

@@ -1,0 +1,133 @@
+{
+  "key": "PY-009",
+  "revision": "sha256:697c865602b328b0bc03e0d023f1c54a64133f7d9ecbded3f147d18c598c01ef",
+  "language": "python",
+  "runtime": "Pyodide/CPython3.14",
+  "origin": "https://musclememory.run",
+  "partition": "a-python",
+  "review": {
+    "key": "PY-009",
+    "revision": "sha256:697c865602b328b0bc03e0d023f1c54a64133f7d9ecbded3f147d18c598c01ef",
+    "firstCandidate": "attempts/first.py",
+    "wrongCandidate": "attempts/wrong.py",
+    "wrongIntent": "Skip headings without clearing previous row, allowing dittos to reach across pages.",
+    "assumptions": [
+      "Specimen rows contain five fields and counts are valid integers unless unresolved dittos.",
+      "Unresolved fields use an internal None sentinel; empty strings remain resolved values."
+    ],
+    "ambiguityFindings": [
+      "Malformed field counts and invalid literal counts have no prescribed recovery; existing helper errors propagate."
+    ],
+    "verbosityFindings": [
+      "Detailed unresolved-row propagation rule is necessary and precise."
+    ],
+    "confidence": "high, unexecuted",
+    "publicEdgeCases": [
+      {
+        "input": "\" | X | A | | 1\n2026-06-01 | do. | do. | do. | do.",
+        "expected": {
+          "rows": [
+            {
+              "date": "2026-06-01",
+              "site": "X",
+              "species": "A",
+              "length": "",
+              "count": 1
+            }
+          ],
+          "unresolved": [
+            1
+          ]
+        },
+        "reason": "An unresolved row still supplies its known fields to the next row, which can resolve independently."
+      },
+      {
+        "input": "# note\n\n\" | X | A | | 1\n〃 | X | A | | 2",
+        "expected": {
+          "rows": [],
+          "unresolved": [
+            3,
+            4
+          ]
+        },
+        "reason": "Unresolved field propagates; numbering includes notes and blanks."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:11:59.766Z",
+      "finishedAt": "2026-10-26T03:12:01.198Z",
+      "candidatePath": "a-python/PY-009/attempts/first.py",
+      "candidateSha256": "556b96d3e0f509fe17274ef496f6f05fad95967b07bb0d634520d3fbdae1b815",
+      "actualCodeSha256": "556b96d3e0f509fe17274ef496f6f05fad95967b07bb0d634520d3fbdae1b815",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:697c865602b328b0bc03e0d023f1c54a64133f7d9ecbded3f147d18c598c01ef",
+      "runId": "eb0e02c3-e528-44c4-a79d-306745dc1a9f",
+      "documentRevision": 1,
+      "artifactId": "practice-90d5e5bc-df24-4382-9c11-c26075a6fb4b.code.1",
+      "result": "passed",
+      "passed": 17,
+      "total": 17,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:12:02.019Z",
+      "finishedAt": "2026-10-26T03:12:03.459Z",
+      "candidatePath": "a-python/PY-009/attempts/wrong.py",
+      "candidateSha256": "725136c912f6518f1dea2b0b1d7f42ec3da4b45372f17170e9ef5f4462022a09",
+      "actualCodeSha256": "725136c912f6518f1dea2b0b1d7f42ec3da4b45372f17170e9ef5f4462022a09",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:697c865602b328b0bc03e0d023f1c54a64133f7d9ecbded3f147d18c598c01ef",
+      "runId": "e10636dd-a516-4377-9f2b-88f77c58f1f4",
+      "documentRevision": 1,
+      "artifactId": "practice-29729e47-4316-4023-b22d-5baa5dab7d01.code.1",
+      "result": "failed",
+      "passed": 11,
+      "total": 17,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "6 of 17 cases failed.\n\n✘\ncase 4\nInput\n\"== p. 14 ==\\n2026-06-03 | Ridge B | Carabus nemoralis | 14.5 mm | 2\\n== p. 15 ==\\n\\\" | Alder Creek | Carabus nemoralis | 15 mm | 1\\n2026-06-05 | Alder Creek | Pterostichus niger | | 1\"\nExpected\n{\"rows\":[{\"date\":\"2026-06-03\",\"site\":\"Ridge B\",\"species\":\"Carabus nemoralis\",\"length\":\"14.5 mm\",\"count\":2},{\"date\":\"2026-06-05\",\"site\":\"Alder Creek\",\"species\":\"Pterostichus niger\",\"length\":\"\",\"count\":1}],\"unresolved\":[4]}\nRaised\nValueError: expected 5 fields: '== p. 14 =='\n✘\nhidden case 10hidden case\n\nRaised an error.\n\n✘\nhidden case 11hidden case\n\nRaised an error.\n\n✘\nhidden case 12hidden case\n\nRaised an error.\n\n✘\nhidden case 14hidden case\n\nRaised an error.\n\n✘\nhidden case 17hidden case\n\nRaised an error.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:12:03.914Z",
+      "finishedAt": "2026-10-26T03:12:04.852Z",
+      "candidatePath": "a-python/PY-009/attempts/first.py",
+      "candidateSha256": "556b96d3e0f509fe17274ef496f6f05fad95967b07bb0d634520d3fbdae1b815",
+      "actualCodeSha256": "556b96d3e0f509fe17274ef496f6f05fad95967b07bb0d634520d3fbdae1b815",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:697c865602b328b0bc03e0d023f1c54a64133f7d9ecbded3f147d18c598c01ef",
+      "runId": "e7f1370e-a3cd-4138-a22c-f3d8b168926e",
+      "documentRevision": 2,
+      "artifactId": "practice-29729e47-4316-4023-b22d-5baa5dab7d01.code.2",
+      "result": "passed",
+      "passed": 17,
+      "total": 17,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

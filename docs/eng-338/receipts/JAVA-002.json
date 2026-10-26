@@ -1,0 +1,124 @@
+{
+  "key": "JAVA-002",
+  "revision": "sha256:e66f307517576c3f72faac06898c651f8f2fd504a07529b6c6a5643ac5a1a057",
+  "language": "java",
+  "runtime": "teavm-javac",
+  "origin": "https://musclememory.run",
+  "partition": "f-java-csharp-php",
+  "review": {
+    "key": "JAVA-002",
+    "revision": "sha256:e66f307517576c3f72faac06898c651f8f2fd504a07529b6c6a5643ac5a1a057",
+    "firstCandidate": "attempts/first.java",
+    "wrongCandidate": "attempts/wrong.java",
+    "wrongIntent": "Trim whitespace before length validation, violating the rule that whitespace counts toward length.",
+    "assumptions": [
+      "Input is non-null."
+    ],
+    "ambiguityFindings": [
+      "Null input behavior is unspecified; character definitions and UTF-16 length are explicit."
+    ],
+    "verbosityFindings": [
+      "Detailed character semantics remove Unicode ambiguity."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": " a1234567890 ",
+        "expected": [
+          "has-whitespace"
+        ],
+        "reason": "Edge spaces count toward the minimum length."
+      },
+      {
+        "input": "α١abcdefghij",
+        "expected": [],
+        "reason": "Non-ASCII letter and digit use Character definitions."
+      },
+      {
+        "input": "            ",
+        "expected": [
+          "no-digit",
+          "no-letter",
+          "has-whitespace"
+        ],
+        "reason": "Twelve spaces count toward length but violate other rules."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:09:46.621Z",
+      "finishedAt": "2026-10-26T03:09:50.017Z",
+      "candidatePath": "f-java-csharp-php/JAVA-002/attempts/first.java",
+      "candidateSha256": "fece7ffd65c630acc54a2d9de275d6538db3daa70b90bbef13775ac9fab8a7e8",
+      "actualCodeSha256": "fece7ffd65c630acc54a2d9de275d6538db3daa70b90bbef13775ac9fab8a7e8",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:e66f307517576c3f72faac06898c651f8f2fd504a07529b6c6a5643ac5a1a057",
+      "runId": "f4032bda-bf6e-489c-ba8c-638d34c92a32",
+      "documentRevision": 1,
+      "artifactId": "practice-b3833208-1d0a-4d38-9507-5b95172189a4.code.1",
+      "result": "passed",
+      "passed": 22,
+      "total": 22,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:09:50.506Z",
+      "finishedAt": "2026-10-26T03:09:53.973Z",
+      "candidatePath": "f-java-csharp-php/JAVA-002/attempts/wrong.java",
+      "candidateSha256": "7daa369e5b1bb9bc6ef9e88fc2bc0f5d9af34390df49d4d5d4b41ab96e86eed9",
+      "actualCodeSha256": "7daa369e5b1bb9bc6ef9e88fc2bc0f5d9af34390df49d4d5d4b41ab96e86eed9",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:e66f307517576c3f72faac06898c651f8f2fd504a07529b6c6a5643ac5a1a057",
+      "runId": "9d86a16f-9cf3-482e-ae1d-e6300a4e105e",
+      "documentRevision": 1,
+      "artifactId": "practice-e589a998-4fef-40a6-ad38-be4733c1235b.code.1",
+      "result": "failed",
+      "passed": 21,
+      "total": 22,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "1 of 22 cases failed.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:09:54.555Z",
+      "finishedAt": "2026-10-26T03:09:57.593Z",
+      "candidatePath": "f-java-csharp-php/JAVA-002/attempts/first.java",
+      "candidateSha256": "fece7ffd65c630acc54a2d9de275d6538db3daa70b90bbef13775ac9fab8a7e8",
+      "actualCodeSha256": "fece7ffd65c630acc54a2d9de275d6538db3daa70b90bbef13775ac9fab8a7e8",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:e66f307517576c3f72faac06898c651f8f2fd504a07529b6c6a5643ac5a1a057",
+      "runId": "4934a8cb-7000-466e-8227-e3f1da6712fa",
+      "documentRevision": 2,
+      "artifactId": "practice-e589a998-4fef-40a6-ad38-be4733c1235b.code.2",
+      "result": "passed",
+      "passed": 22,
+      "total": 22,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

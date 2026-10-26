@@ -1,0 +1,119 @@
+{
+  "key": "HTML-004",
+  "revision": "sha256:06166dcb2efbabf16d17b8d91ee57a781881920b64f16924d59eb7f6f457d542",
+  "language": "html",
+  "runtime": "linkedom DOM",
+  "origin": "https://musclememory.run",
+  "partition": "c-sql-html",
+  "review": {
+    "key": "HTML-004",
+    "revision": "sha256:06166dcb2efbabf16d17b8d91ee57a781881920b64f16924d59eb7f6f457d542",
+    "firstCandidate": "HTML-004/attempts/first.html",
+    "wrongCandidate": "HTML-004/attempts/wrong.html",
+    "wrongIntent": "Use an empty alternative text despite the required descriptive alt.",
+    "assumptions": [
+      "The existing image source and caption text are preserved."
+    ],
+    "ambiguityFindings": "No material ambiguity. HTML void img syntax with or without a trailing slash should both be accepted; no fetch is necessary.",
+    "verbosityFindings": "All attributes and content are explicit; example repeats the alt/caption distinction.",
+    "confidence": "High; reasoned from visible requirements only, not executed.",
+    "publicEdgeCases": [
+      {
+        "input": [
+          "figure img",
+          "width"
+        ],
+        "expected": [
+          "640"
+        ],
+        "reason": "Specified intrinsic width is retained."
+      },
+      {
+        "input": [
+          "figure img",
+          "height"
+        ],
+        "expected": [
+          "480"
+        ],
+        "reason": "Specified intrinsic height is retained."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:09:28.083Z",
+      "finishedAt": "2026-10-26T03:09:28.134Z",
+      "candidatePath": "c-sql-html/HTML-004/attempts/first.html",
+      "candidateSha256": "b785c92fda5d3a94caa7b54aa7918e760146668531ee462de077e60a805870b8",
+      "actualCodeSha256": "b785c92fda5d3a94caa7b54aa7918e760146668531ee462de077e60a805870b8",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:06166dcb2efbabf16d17b8d91ee57a781881920b64f16924d59eb7f6f457d542",
+      "runId": "899bd86a-74a6-4a24-83fa-6790ff0c0809",
+      "documentRevision": 1,
+      "artifactId": "practice-b99bad2d-cce6-40c4-aeb3-591d884f4ab4.code.1",
+      "result": "passed",
+      "passed": 10,
+      "total": 10,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:09:28.882Z",
+      "finishedAt": "2026-10-26T03:09:28.930Z",
+      "candidatePath": "c-sql-html/HTML-004/attempts/wrong.html",
+      "candidateSha256": "50bee38d2307964fc41c543db01a9d637cd9aa00f5508df9d522defa12e36075",
+      "actualCodeSha256": "50bee38d2307964fc41c543db01a9d637cd9aa00f5508df9d522defa12e36075",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:06166dcb2efbabf16d17b8d91ee57a781881920b64f16924d59eb7f6f457d542",
+      "runId": "e5c3263e-6793-4a6f-a7ad-0b52ff4d7482",
+      "documentRevision": 1,
+      "artifactId": "practice-d4d2f6b4-e7ea-4265-b2b1-97fc50e0d7e4.code.1",
+      "result": "failed",
+      "passed": 9,
+      "total": 10,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "1 of 10 cases failed.\n\n✘\ncase 1\nInput\n[\"figure img\",\"alt\"]\nExpected\n[\"Crescent Moon above a dark horizon\"]\nGot\n[\"\"]\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:09:29.384Z",
+      "finishedAt": "2026-10-26T03:09:29.430Z",
+      "candidatePath": "c-sql-html/HTML-004/attempts/first.html",
+      "candidateSha256": "b785c92fda5d3a94caa7b54aa7918e760146668531ee462de077e60a805870b8",
+      "actualCodeSha256": "b785c92fda5d3a94caa7b54aa7918e760146668531ee462de077e60a805870b8",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:06166dcb2efbabf16d17b8d91ee57a781881920b64f16924d59eb7f6f457d542",
+      "runId": "83b25f88-2422-446d-9766-7ebd7358ba1c",
+      "documentRevision": 2,
+      "artifactId": "practice-d4d2f6b4-e7ea-4265-b2b1-97fc50e0d7e4.code.2",
+      "result": "passed",
+      "passed": 10,
+      "total": 10,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

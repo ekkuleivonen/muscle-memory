@@ -1,0 +1,34 @@
+{
+  "key": "HTML-001",
+  "revision": "sha256:e6472fd87067e5f59a01f2ee609623bcd3663e8e261b4840612bb451899dbb3b",
+  "firstCandidate": "HTML-001/attempts/first.html",
+  "wrongCandidate": "HTML-001/attempts/wrong.html",
+  "wrongIntent": "Second label refers to the first checkbox, leaving on-sale without its required association.",
+  "assumptions": [
+    "Literal checkbox names are the required visible label text."
+  ],
+  "ambiguityFindings": "No material ambiguity. Wrapping labels could be valid if the required for/id association and document order are preserved.",
+  "verbosityFindings": "Specific selectors, ordering and exact text make this self-contained; audit narrative is brief.",
+  "confidence": "High; reasoned from visible requirements only, not executed.",
+  "publicEdgeCases": [
+    {
+      "input": [
+        "form label",
+        "for"
+      ],
+      "expected": [
+        "filter-in-stock",
+        "filter-on-sale"
+      ],
+      "reason": "Each label explicitly targets its matching checkbox."
+    },
+    {
+      "input": [
+        "form input[type=checkbox]",
+        "count"
+      ],
+      "expected": 2,
+      "reason": "Both original checkboxes remain."
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "key": "GO-005",
+  "revision": "sha256:6284f2295fb1f0060fc22f1d6576ddadfa1718e01c43f5813c1fee767339ec76",
+  "language": "go",
+  "runtime": "Yaegi WASM",
+  "origin": "https://musclememory.run",
+  "partition": "e-go-ruby",
+  "review": {
+    "key": "GO-005",
+    "revision": "sha256:6284f2295fb1f0060fc22f1d6576ddadfa1718e01c43f5813c1fee767339ec76",
+    "firstCandidate": "attempts/first.go",
+    "wrongCandidate": "attempts/wrong.go",
+    "wrongIntent": "Apply Gmail rules to domains with Gmail suffixes including subdomains and longer domains.",
+    "assumptions": [
+      "Only listed acceptance checks apply; do not impose general email RFC validation."
+    ],
+    "ambiguityFindings": [
+      "Clear exact-domain and Unicode-whitespace rules."
+    ],
+    "verbosityFindings": [
+      "Longer context is justified by provider-specific behavior."
+    ],
+    "confidence": "high; unexecuted",
+    "publicEdgeCases": [
+      {
+        "input": ".+tag@googlemail.com",
+        "expected": null,
+        "reason": "Gmail normalization leaves empty local part."
+      },
+      {
+        "input": "A.B+x@mail.gmail.com",
+        "expected": "a.b+x@mail.gmail.com",
+        "reason": "Subdomains do not receive Gmail normalization."
+      },
+      {
+        "input": "a b@example.com",
+        "expected": null,
+        "reason": "Internal Unicode whitespace is invalid."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:09:02.718Z",
+      "finishedAt": "2026-10-26T03:09:03.664Z",
+      "candidatePath": "e-go-ruby/GO-005/attempts/first.go",
+      "candidateSha256": "f969d68586a7caa93f4f268b64d960c1ae3acd9d5fce1ae287e5a5cb63e4ae83",
+      "actualCodeSha256": "f969d68586a7caa93f4f268b64d960c1ae3acd9d5fce1ae287e5a5cb63e4ae83",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:6284f2295fb1f0060fc22f1d6576ddadfa1718e01c43f5813c1fee767339ec76",
+      "runId": "0bcdd07c-5c1f-4f86-8829-dedff3da6136",
+      "documentRevision": 1,
+      "artifactId": "practice-f9195254-f4fb-481d-b07f-57a4cbafbaa9.code.1",
+      "result": "passed",
+      "passed": 20,
+      "total": 20,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:09:04.422Z",
+      "finishedAt": "2026-10-26T03:09:05.368Z",
+      "candidatePath": "e-go-ruby/GO-005/attempts/wrong.go",
+      "candidateSha256": "e74ba7aaef7d6ed63ebc7d12b35e6c3ab3823477d9b4ffbf1927d3b7c2fe3a68",
+      "actualCodeSha256": "e74ba7aaef7d6ed63ebc7d12b35e6c3ab3823477d9b4ffbf1927d3b7c2fe3a68",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:6284f2295fb1f0060fc22f1d6576ddadfa1718e01c43f5813c1fee767339ec76",
+      "runId": "a0e25e8f-ce83-4bc3-921d-bad7fc144323",
+      "documentRevision": 1,
+      "artifactId": "practice-33412878-dac9-4013-978d-b15083ad820d.code.1",
+      "result": "failed",
+      "passed": 19,
+      "total": 20,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "1 of 20 cases failed.\n\n✘\nhidden case 15hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:09:05.773Z",
+      "finishedAt": "2026-10-26T03:09:06.303Z",
+      "candidatePath": "e-go-ruby/GO-005/attempts/first.go",
+      "candidateSha256": "f969d68586a7caa93f4f268b64d960c1ae3acd9d5fce1ae287e5a5cb63e4ae83",
+      "actualCodeSha256": "f969d68586a7caa93f4f268b64d960c1ae3acd9d5fce1ae287e5a5cb63e4ae83",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:6284f2295fb1f0060fc22f1d6576ddadfa1718e01c43f5813c1fee767339ec76",
+      "runId": "3403b9e0-b2f1-41fd-924b-44ce2fb862ef",
+      "documentRevision": 2,
+      "artifactId": "practice-33412878-dac9-4013-978d-b15083ad820d.code.2",
+      "result": "passed",
+      "passed": 20,
+      "total": 20,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

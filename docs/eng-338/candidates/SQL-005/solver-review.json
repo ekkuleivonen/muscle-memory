@@ -1,0 +1,75 @@
+{
+  "key": "SQL-005",
+  "revision": "sha256:50aa91bff2feac02486115dffb17a0204676fecb22258178abcc71529692bd0a",
+  "firstCandidate": "SQL-005/attempts/first.sql",
+  "wrongCandidate": "SQL-005/attempts/wrong.sql",
+  "wrongIntent": "Reverse the id tie-break within the running sum, calculating tied-sequence balances in the wrong order.",
+  "assumptions": [
+    "Every account starts independently at zero; explicit ROWS framing accumulates through the current ordered transaction."
+  ],
+  "ambiguityFindings": "No material ambiguity. Sequence ties, output ordering, zero amounts, negatives and empty input are explicit.",
+  "verbosityFindings": "Concise complete contract with useful examples; no extraneous requirements.",
+  "confidence": "High; reasoned from visible requirements only, not executed.",
+  "publicEdgeCases": [
+    {
+      "input": {
+        "transactions": [
+          [
+            3,
+            1,
+            2,
+            0
+          ],
+          [
+            2,
+            1,
+            1,
+            -3
+          ],
+          [
+            1,
+            1,
+            1,
+            10
+          ],
+          [
+            4,
+            2,
+            1,
+            8
+          ]
+        ]
+      },
+      "expected": [
+        [
+          1,
+          1,
+          10
+        ],
+        [
+          1,
+          2,
+          7
+        ],
+        [
+          1,
+          3,
+          7
+        ],
+        [
+          2,
+          4,
+          8
+        ]
+      ],
+      "reason": "Input order is irrelevant; id breaks sequence ties, zero produces a row, and accounts reset."
+    },
+    {
+      "input": {
+        "transactions": []
+      },
+      "expected": [],
+      "reason": "Empty input produces no balances."
+    }
+  ]
+}

@@ -1,0 +1,159 @@
+{
+  "key": "CPP-004",
+  "revision": "sha256:7d583fad9b86a7f92104bc7abf7bc1b91fd4b43c12b977fe36e22ac16ba36143",
+  "language": "cpp",
+  "runtime": "Clang/YoWASP",
+  "origin": "https://musclememory.run",
+  "partition": "d-c-cpp",
+  "review": {
+    "key": "CPP-004",
+    "revision": "sha256:7d583fad9b86a7f92104bc7abf7bc1b91fd4b43c12b977fe36e22ac16ba36143",
+    "firstCandidate": "attempts/first.cpp",
+    "wrongCandidate": "attempts/wrong.cpp",
+    "wrongIntent": "Treat every k at least the sequence length as a no-op rather than reducing modulo length.",
+    "assumptions": [
+      "k obeys nonnegative stated range."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": "Clear short contract includes direction, large k, empty input and immutability.",
+    "confidence": "high; not executed",
+    "publicEdgeCases": [
+      {
+        "input": [
+          [
+            1,
+            2,
+            3
+          ],
+          4
+        ],
+        "expected": [
+          3,
+          1,
+          2
+        ],
+        "reason": "Large k reduces modulo length."
+      },
+      {
+        "input": [
+          [
+            1,
+            2,
+            3
+          ],
+          3
+        ],
+        "expected": [
+          1,
+          2,
+          3
+        ],
+        "reason": "Full turn is identity."
+      },
+      {
+        "input": [
+          [
+            2,
+            2,
+            1
+          ],
+          0
+        ],
+        "expected": [
+          2,
+          2,
+          1
+        ],
+        "reason": "Zero shift preserves duplicates and order."
+      },
+      {
+        "input": [
+          [
+            9
+          ],
+          10000
+        ],
+        "expected": [
+          9
+        ],
+        "reason": "Singleton unchanged under any valid shift."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:07:51.018Z",
+      "finishedAt": "2026-10-26T03:07:55.148Z",
+      "candidatePath": "d-c-cpp/CPP-004/attempts/first.cpp",
+      "candidateSha256": "bb654b236bde0cdb07d2741852600479301954532808339a25eadb0280aea0ab",
+      "actualCodeSha256": "bb654b236bde0cdb07d2741852600479301954532808339a25eadb0280aea0ab",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:7d583fad9b86a7f92104bc7abf7bc1b91fd4b43c12b977fe36e22ac16ba36143",
+      "runId": "2cad08e4-0c60-44aa-b661-baf5393597ff",
+      "documentRevision": 1,
+      "artifactId": "practice-d2d59c3b-6d01-449e-95f9-85ef9cf30629.code.1",
+      "result": "passed",
+      "passed": 31,
+      "total": 31,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:07:55.886Z",
+      "finishedAt": "2026-10-26T03:07:59.852Z",
+      "candidatePath": "d-c-cpp/CPP-004/attempts/wrong.cpp",
+      "candidateSha256": "6b3ef95f95193e4db99007a10a4fd421af57ed1f42256c1e8259042a717e8eeb",
+      "actualCodeSha256": "6b3ef95f95193e4db99007a10a4fd421af57ed1f42256c1e8259042a717e8eeb",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:7d583fad9b86a7f92104bc7abf7bc1b91fd4b43c12b977fe36e22ac16ba36143",
+      "runId": "d13461a6-72fa-4605-a5ce-4e6c5f75a524",
+      "documentRevision": 1,
+      "artifactId": "practice-5ddf07d5-1257-423d-971b-cdaceb610afe.code.1",
+      "result": "failed",
+      "passed": 26,
+      "total": 31,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "5 of 31 cases failed.\n\n✘\nhidden case 3hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 19hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 22hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 28hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 31hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:08:00.285Z",
+      "finishedAt": "2026-10-26T03:08:02.260Z",
+      "candidatePath": "d-c-cpp/CPP-004/attempts/first.cpp",
+      "candidateSha256": "bb654b236bde0cdb07d2741852600479301954532808339a25eadb0280aea0ab",
+      "actualCodeSha256": "bb654b236bde0cdb07d2741852600479301954532808339a25eadb0280aea0ab",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:7d583fad9b86a7f92104bc7abf7bc1b91fd4b43c12b977fe36e22ac16ba36143",
+      "runId": "3c50233f-32d5-477b-be4e-3b5f2553ca34",
+      "documentRevision": 2,
+      "artifactId": "practice-5ddf07d5-1257-423d-971b-cdaceb610afe.code.2",
+      "result": "passed",
+      "passed": 31,
+      "total": 31,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

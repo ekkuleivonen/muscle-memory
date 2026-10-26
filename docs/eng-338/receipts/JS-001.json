@@ -1,0 +1,138 @@
+{
+  "key": "JS-001",
+  "revision": "sha256:4e3890b9a4fc1ca84f0335e24280c404258aceb2c27116588ecc099034b63e1c",
+  "language": "javascript",
+  "runtime": "browser JavaScript",
+  "origin": "https://musclememory.run",
+  "partition": "b-js-ts",
+  "review": {
+    "key": "JS-001",
+    "revision": "sha256:4e3890b9a4fc1ca84f0335e24280c404258aceb2c27116588ecc099034b63e1c",
+    "firstCandidate": "attempts/first.js",
+    "wrongCandidate": "attempts/wrong.js",
+    "wrongIntent": "Treat every non-guest as an active loyalty member, incorrectly granting lapsed members the $30 threshold.",
+    "assumptions": [
+      "Customer follows one of the two documented shapes."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": [
+      "Rules and reusable helpers are clearly specified."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": {
+          "customer": {
+            "id": "x",
+            "loyalty": {
+              "tier": "none"
+            }
+          },
+          "items": [
+            {
+              "sku": "x",
+              "price": 3000,
+              "quantity": 1
+            }
+          ]
+        },
+        "expected": {
+          "subtotal": 3000,
+          "shipping": 495,
+          "total": 3495
+        },
+        "reason": "Lapsed membership uses standard threshold."
+      },
+      {
+        "input": {
+          "customer": {
+            "guest": true
+          },
+          "items": []
+        },
+        "expected": {
+          "subtotal": 0,
+          "shipping": 495,
+          "total": 495
+        },
+        "reason": "Empty subtotal remains below free shipping threshold."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:05:25.974Z",
+      "finishedAt": "2026-10-26T03:05:26.023Z",
+      "candidatePath": "b-js-ts/JS-001/attempts/first.js",
+      "candidateSha256": "d2255668a1cbdc8e647a30b7724f7606691a239f27d79c6d56cb7814c5a3bc84",
+      "actualCodeSha256": "d2255668a1cbdc8e647a30b7724f7606691a239f27d79c6d56cb7814c5a3bc84",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:4e3890b9a4fc1ca84f0335e24280c404258aceb2c27116588ecc099034b63e1c",
+      "runId": "0ee75566-38c9-4c10-8243-b34d91deb88d",
+      "documentRevision": 1,
+      "artifactId": "practice-c90d40e7-7d13-4f01-a86a-e9cdefa9858f.code.1",
+      "result": "passed",
+      "passed": 10,
+      "total": 10,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:05:26.838Z",
+      "finishedAt": "2026-10-26T03:05:26.897Z",
+      "candidatePath": "b-js-ts/JS-001/attempts/wrong.js",
+      "candidateSha256": "1d075dc4cf604e83366d466de24b191a68eac3db4872d233fc344ddf4a467287",
+      "actualCodeSha256": "1d075dc4cf604e83366d466de24b191a68eac3db4872d233fc344ddf4a467287",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:4e3890b9a4fc1ca84f0335e24280c404258aceb2c27116588ecc099034b63e1c",
+      "runId": "e713512b-ec35-480c-8c24-4923af3c99f3",
+      "documentRevision": 1,
+      "artifactId": "practice-8c69adf3-3618-4821-bcdb-a479dca30a9b.code.1",
+      "result": "failed",
+      "passed": 8,
+      "total": 10,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "2 of 10 cases failed.\n\n✘\nhidden case 4hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 10hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:05:27.383Z",
+      "finishedAt": "2026-10-26T03:05:27.430Z",
+      "candidatePath": "b-js-ts/JS-001/attempts/first.js",
+      "candidateSha256": "d2255668a1cbdc8e647a30b7724f7606691a239f27d79c6d56cb7814c5a3bc84",
+      "actualCodeSha256": "d2255668a1cbdc8e647a30b7724f7606691a239f27d79c6d56cb7814c5a3bc84",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:4e3890b9a4fc1ca84f0335e24280c404258aceb2c27116588ecc099034b63e1c",
+      "runId": "a0e43fcb-e5f5-4338-8add-a7ef705aab92",
+      "documentRevision": 2,
+      "artifactId": "practice-8c69adf3-3618-4821-bcdb-a479dca30a9b.code.2",
+      "result": "passed",
+      "passed": 10,
+      "total": 10,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

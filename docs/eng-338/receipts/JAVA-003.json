@@ -1,0 +1,143 @@
+{
+  "key": "JAVA-003",
+  "revision": "sha256:faa01f0f122e610cef0279979605f7bea84c8ce033b322d9ae6a7250621133df",
+  "language": "java",
+  "runtime": "teavm-javac",
+  "origin": "https://musclememory.run",
+  "partition": "f-java-csharp-php",
+  "review": {
+    "key": "JAVA-003",
+    "revision": "sha256:faa01f0f122e610cef0279979605f7bea84c8ce033b322d9ae6a7250621133df",
+    "firstCandidate": "attempts/first.java",
+    "wrongCandidate": "attempts/wrong.java",
+    "wrongIntent": "Compute upper bound, skipping values equal to target instead of returning the first equal value.",
+    "assumptions": [
+      "Array satisfies the stated sorting and bounds contract."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": [
+      "Concise complete contract; any strategy explicitly allowed."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": [
+          [],
+          0
+        ],
+        "expected": 0,
+        "reason": "Empty array insertion position."
+      },
+      {
+        "input": [
+          [
+            3,
+            3,
+            3
+          ],
+          3
+        ],
+        "expected": 0,
+        "reason": "First matching duplicate."
+      },
+      {
+        "input": [
+          [
+            -4,
+            2
+          ],
+          -5
+        ],
+        "expected": 0,
+        "reason": "Target before all values."
+      },
+      {
+        "input": [
+          [
+            1,
+            3
+          ],
+          2
+        ],
+        "expected": 1,
+        "reason": "First greater element when target absent."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:09:58.857Z",
+      "finishedAt": "2026-10-26T03:10:02.305Z",
+      "candidatePath": "f-java-csharp-php/JAVA-003/attempts/first.java",
+      "candidateSha256": "13a0dbccda6edf682d23c1b26b915eeaa6c48b77ff80f15bf9ee0e0e77af33e6",
+      "actualCodeSha256": "13a0dbccda6edf682d23c1b26b915eeaa6c48b77ff80f15bf9ee0e0e77af33e6",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:faa01f0f122e610cef0279979605f7bea84c8ce033b322d9ae6a7250621133df",
+      "runId": "24289c87-4030-41cc-ab63-5960dde0fb25",
+      "documentRevision": 1,
+      "artifactId": "practice-5ad605f1-e59a-4e1e-93bb-906f76b4e37c.code.1",
+      "result": "passed",
+      "passed": 32,
+      "total": 32,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:10:02.746Z",
+      "finishedAt": "2026-10-26T03:10:06.763Z",
+      "candidatePath": "f-java-csharp-php/JAVA-003/attempts/wrong.java",
+      "candidateSha256": "a9a123937d87695480ea89c96d641cc131814caf898bb4b250645e5eeb4ffa8f",
+      "actualCodeSha256": "a9a123937d87695480ea89c96d641cc131814caf898bb4b250645e5eeb4ffa8f",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:faa01f0f122e610cef0279979605f7bea84c8ce033b322d9ae6a7250621133df",
+      "runId": "850ebc60-270c-43fc-9001-b0376760c7c3",
+      "documentRevision": 1,
+      "artifactId": "practice-1fe38bf1-9c17-4f69-8c67-837b78d3f0c1.code.1",
+      "result": "failed",
+      "passed": 24,
+      "total": 32,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "8 of 32 cases failed.\n\n✘\ncase 1\nInput\n[[1,3,3,7],3]\nExpected\n1\nGot\n3\n✘\nhidden case 4hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 16hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 18hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 24hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 27hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 32hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:10:07.258Z",
+      "finishedAt": "2026-10-26T03:10:10.414Z",
+      "candidatePath": "f-java-csharp-php/JAVA-003/attempts/first.java",
+      "candidateSha256": "13a0dbccda6edf682d23c1b26b915eeaa6c48b77ff80f15bf9ee0e0e77af33e6",
+      "actualCodeSha256": "13a0dbccda6edf682d23c1b26b915eeaa6c48b77ff80f15bf9ee0e0e77af33e6",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:faa01f0f122e610cef0279979605f7bea84c8ce033b322d9ae6a7250621133df",
+      "runId": "9b5e147a-e490-409a-bb08-e755594fc092",
+      "documentRevision": 2,
+      "artifactId": "practice-1fe38bf1-9c17-4f69-8c67-837b78d3f0c1.code.2",
+      "result": "passed",
+      "passed": 32,
+      "total": 32,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

@@ -1,0 +1,113 @@
+{
+  "key": "GO-001",
+  "revision": "sha256:d73f7e05a154610c4956be662c29d248d32610da14ce1371ea5434295cd678df",
+  "language": "go",
+  "runtime": "Yaegi WASM",
+  "origin": "https://musclememory.run",
+  "partition": "e-go-ruby",
+  "review": {
+    "key": "GO-001",
+    "revision": "sha256:d73f7e05a154610c4956be662c29d248d32610da14ce1371ea5434295cd678df",
+    "firstCandidate": "attempts/first.go",
+    "wrongCandidate": "attempts/wrong.go",
+    "wrongIntent": "Split only literal spaces; repeated spaces and other whitespace are miscounted.",
+    "assumptions": [
+      "Whitespace includes Unicode whitespace, consistent with Go strings.Fields."
+    ],
+    "ambiguityFindings": [
+      "Any whitespace is broader than the listed ASCII examples; Unicode behavior is implicit."
+    ],
+    "verbosityFindings": [
+      "Concise and actionable."
+    ],
+    "confidence": "high; unexecuted",
+    "publicEdgeCases": [
+      {
+        "input": "a\t\nb\r c",
+        "expected": 3,
+        "reason": "Mixed whitespace runs separate words."
+      },
+      {
+        "input": "!  café 42",
+        "expected": 3,
+        "reason": "Symbols, non-English letters, and digits count."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:08:43.634Z",
+      "finishedAt": "2026-10-26T03:08:44.572Z",
+      "candidatePath": "e-go-ruby/GO-001/attempts/first.go",
+      "candidateSha256": "ab868972bf416daaeb70648c132571f0d3e468a2cdb00728d1b0d3337d6ed945",
+      "actualCodeSha256": "ab868972bf416daaeb70648c132571f0d3e468a2cdb00728d1b0d3337d6ed945",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:d73f7e05a154610c4956be662c29d248d32610da14ce1371ea5434295cd678df",
+      "runId": "ca526311-1088-42d9-ae33-b82fae9a2be8",
+      "documentRevision": 1,
+      "artifactId": "practice-1ca1e046-b40d-4020-a6ec-0e68f0bc7f36.code.1",
+      "result": "passed",
+      "passed": 21,
+      "total": 21,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:08:45.344Z",
+      "finishedAt": "2026-10-26T03:08:46.265Z",
+      "candidatePath": "e-go-ruby/GO-001/attempts/wrong.go",
+      "candidateSha256": "f1428d91e53e3af0047f542e83f540ab59be3ee3a71a21fc45baee6fb9e195ea",
+      "actualCodeSha256": "f1428d91e53e3af0047f542e83f540ab59be3ee3a71a21fc45baee6fb9e195ea",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:d73f7e05a154610c4956be662c29d248d32610da14ce1371ea5434295cd678df",
+      "runId": "715596cd-fc0c-4b6a-a0fc-e5b2ab7119f8",
+      "documentRevision": 1,
+      "artifactId": "practice-51dccc41-a6c5-4122-ad7b-b59e934f939e.code.1",
+      "result": "failed",
+      "passed": 14,
+      "total": 21,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "7 of 21 cases failed.\n\n✘\ncase 3\nInput\n\" spaced out \"\nExpected\n2\nGot\n4\n✘\nhidden case 5hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 12hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 13hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 19hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 20hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:08:46.708Z",
+      "finishedAt": "2026-10-26T03:08:46.884Z",
+      "candidatePath": "e-go-ruby/GO-001/attempts/first.go",
+      "candidateSha256": "ab868972bf416daaeb70648c132571f0d3e468a2cdb00728d1b0d3337d6ed945",
+      "actualCodeSha256": "ab868972bf416daaeb70648c132571f0d3e468a2cdb00728d1b0d3337d6ed945",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:d73f7e05a154610c4956be662c29d248d32610da14ce1371ea5434295cd678df",
+      "runId": "40cd2593-78c5-49fc-aaef-64328a6e3e60",
+      "documentRevision": 2,
+      "artifactId": "practice-51dccc41-a6c5-4122-ad7b-b59e934f939e.code.2",
+      "result": "passed",
+      "passed": 21,
+      "total": 21,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

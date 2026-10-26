@@ -1,0 +1,119 @@
+{
+  "key": "JAVA-001",
+  "revision": "sha256:e9b1f62267acffdb9af08edf569dacad5f8d1bb726952031e2d555f537dd5d0f",
+  "language": "java",
+  "runtime": "teavm-javac",
+  "origin": "https://musclememory.run",
+  "partition": "f-java-csharp-php",
+  "review": {
+    "key": "JAVA-001",
+    "revision": "sha256:e9b1f62267acffdb9af08edf569dacad5f8d1bb726952031e2d555f537dd5d0f",
+    "firstCandidate": "attempts/first.java",
+    "wrongCandidate": "attempts/wrong.java",
+    "wrongIntent": "Split only on spaces, incorrectly retaining tabs and newlines within words.",
+    "assumptions": [
+      "Input is non-null.",
+      "Any whitespace includes Unicode whitespace and space characters."
+    ],
+    "ambiguityFindings": [
+      "Null behavior is unspecified; exact Unicode whitespace repertoire is not named."
+    ],
+    "verbosityFindings": [
+      "Requirements are concise and examples omit tabs/newlines."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": "a\tb\nc\rd",
+        "expected": 4,
+        "reason": "Every listed whitespace type separates words."
+      },
+      {
+        "input": " \t\r\n ",
+        "expected": 0,
+        "reason": "Blank text has no words."
+      },
+      {
+        "input": "你好 + 42!",
+        "expected": 3,
+        "reason": "Letters, symbols and digits remain words."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:09:33.929Z",
+      "finishedAt": "2026-10-26T03:09:37.360Z",
+      "candidatePath": "f-java-csharp-php/JAVA-001/attempts/first.java",
+      "candidateSha256": "8deee53fab301063eb9c6c11520aa50753e5207f083510cfe6706921bc46d1b4",
+      "actualCodeSha256": "8deee53fab301063eb9c6c11520aa50753e5207f083510cfe6706921bc46d1b4",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:e9b1f62267acffdb9af08edf569dacad5f8d1bb726952031e2d555f537dd5d0f",
+      "runId": "89fa0076-3cb1-4f76-b13a-3d9638919834",
+      "documentRevision": 1,
+      "artifactId": "practice-17739d05-e9eb-4668-8970-1477aca822fe.code.1",
+      "result": "passed",
+      "passed": 21,
+      "total": 21,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:09:37.892Z",
+      "finishedAt": "2026-10-26T03:09:41.996Z",
+      "candidatePath": "f-java-csharp-php/JAVA-001/attempts/wrong.java",
+      "candidateSha256": "be4dd6e27b5110b4bf96b070d7e8854a4efd05f5e1b856f4e11f670ff5c4a734",
+      "actualCodeSha256": "be4dd6e27b5110b4bf96b070d7e8854a4efd05f5e1b856f4e11f670ff5c4a734",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:e9b1f62267acffdb9af08edf569dacad5f8d1bb726952031e2d555f537dd5d0f",
+      "runId": "c08e370b-c969-48d1-ad37-4b87e692cd6a",
+      "documentRevision": 1,
+      "artifactId": "practice-53ed8d0a-5c17-4d86-b86a-abd9cb1b1f22.code.1",
+      "result": "failed",
+      "passed": 16,
+      "total": 21,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "5 of 21 cases failed.\n\n✘\nhidden case 5hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 13hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 19hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 20hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:09:42.699Z",
+      "finishedAt": "2026-10-26T03:09:45.606Z",
+      "candidatePath": "f-java-csharp-php/JAVA-001/attempts/first.java",
+      "candidateSha256": "8deee53fab301063eb9c6c11520aa50753e5207f083510cfe6706921bc46d1b4",
+      "actualCodeSha256": "8deee53fab301063eb9c6c11520aa50753e5207f083510cfe6706921bc46d1b4",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:e9b1f62267acffdb9af08edf569dacad5f8d1bb726952031e2d555f537dd5d0f",
+      "runId": "0f3d099d-32b3-4420-9683-5b14304edbf6",
+      "documentRevision": 2,
+      "artifactId": "practice-53ed8d0a-5c17-4d86-b86a-abd9cb1b1f22.code.2",
+      "result": "passed",
+      "passed": 21,
+      "total": 21,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

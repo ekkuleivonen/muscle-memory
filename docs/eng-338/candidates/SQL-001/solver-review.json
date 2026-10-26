@@ -1,0 +1,78 @@
+{
+  "key": "SQL-001",
+  "revision": "sha256:c7146b957f34cd809b870274d51538f3a035d05332644405d0b9c0ac09e11cf9",
+  "firstCandidate": "SQL-001/attempts/first.sql",
+  "wrongCandidate": "SQL-001/attempts/wrong.sql",
+  "wrongIntent": "Filter out nonpositive orders before aggregation, losing zero and negative adjustments.",
+  "assumptions": [
+    "PostgreSQL SUM(integer) returns bigint, satisfying totals beyond 32-bit range.",
+    "No date restriction is implied by the monthly-report narrative; no date column exists."
+  ],
+  "ambiguityFindings": "No material ambiguity. Exact names, default PostgreSQL text ordering, negative totals, ties and empty input are explicitly covered.",
+  "verbosityFindings": "Concise and sufficient schema and result contract.",
+  "confidence": "High; reasoned from visible requirements only, not executed.",
+  "publicEdgeCases": [
+    {
+      "input": {
+        "orders": [
+          [
+            1,
+            "b",
+            -5
+          ],
+          [
+            2,
+            "a",
+            0
+          ],
+          [
+            3,
+            "b",
+            5
+          ]
+        ]
+      },
+      "expected": [
+        [
+          "a",
+          0
+        ],
+        [
+          "b",
+          0
+        ]
+      ],
+      "reason": "Adjustments count and zero-sum customers remain, with name tie-break."
+    },
+    {
+      "input": {
+        "orders": [
+          [
+            1,
+            "a",
+            2147483647
+          ],
+          [
+            2,
+            "a",
+            1
+          ]
+        ]
+      },
+      "expected": [
+        [
+          "a",
+          2147483648
+        ]
+      ],
+      "reason": "Sum must exceed signed 32-bit safely."
+    },
+    {
+      "input": {
+        "orders": []
+      },
+      "expected": [],
+      "reason": "No orders yields no grouped rows."
+    }
+  ]
+}

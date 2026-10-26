@@ -1,0 +1,37 @@
+{
+  "key": "HTML-002",
+  "revision": "sha256:5083edcff0065f9c07142b0f573ddd0e49d9428284c9d0b7f04aae376f0e7d8c",
+  "firstCandidate": "HTML-002/attempts/first.html",
+  "wrongCandidate": "HTML-002/attempts/wrong.html",
+  "wrongIntent": "Body headers incorrectly use column scope instead of the specified row scope.",
+  "assumptions": [
+    "The starter table is replaced in place with semantic table sections."
+  ],
+  "ambiguityFindings": "No material ambiguity; required sections, cell types, order, scopes and counts are explicit.",
+  "verbosityFindings": "Example restates the requirements but adds no conflicting constraints.",
+  "confidence": "High; reasoned from visible requirements only, not executed.",
+  "publicEdgeCases": [
+    {
+      "input": [
+        "tbody th",
+        "scope"
+      ],
+      "expected": [
+        "row",
+        "row"
+      ],
+      "reason": "Mountain names identify their body rows."
+    },
+    {
+      "input": [
+        "tbody td",
+        "text"
+      ],
+      "expected": [
+        "3776",
+        "5895"
+      ],
+      "reason": "Heights follow the required mountain order."
+    }
+  ]
+}

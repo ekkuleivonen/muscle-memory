@@ -1,0 +1,166 @@
+{
+  "key": "CS-004",
+  "revision": "sha256:6c14f033784ce4714c264a1f25cca13e0708d534eef38e840280abb23452a436",
+  "language": "csharp",
+  "runtime": "Roslyn/.NET WASM",
+  "origin": "https://musclememory.run",
+  "partition": "f-java-csharp-php",
+  "review": {
+    "key": "CS-004",
+    "revision": "sha256:6c14f033784ce4714c264a1f25cca13e0708d534eef38e840280abb23452a436",
+    "firstCandidate": "attempts/first.cs",
+    "wrongCandidate": "attempts/wrong.cs",
+    "wrongIntent": "Reverse row order while transposing, producing a clockwise rotation instead of the required column order.",
+    "assumptions": [
+      "Matrix satisfies the stated nonempty rectangular contract."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": [
+      "Non-square and input preservation requirements are explicit."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": [
+          [
+            1,
+            2,
+            3
+          ]
+        ],
+        "expected": [
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            3
+          ]
+        ],
+        "reason": "One row becomes one column."
+      },
+      {
+        "input": [
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            3
+          ]
+        ],
+        "expected": [
+          [
+            1,
+            2,
+            3
+          ]
+        ],
+        "reason": "One column preserves row order in output."
+      },
+      {
+        "input": [
+          [
+            -1,
+            0
+          ],
+          [
+            2,
+            -3
+          ]
+        ],
+        "expected": [
+          [
+            -1,
+            2
+          ],
+          [
+            0,
+            -3
+          ]
+        ],
+        "reason": "Negative and zero values preserved."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:08:30.397Z",
+      "finishedAt": "2026-10-26T03:08:31.422Z",
+      "candidatePath": "f-java-csharp-php/CS-004/attempts/first.cs",
+      "candidateSha256": "e6a601783a2f01315c7bcbafdc063814c05e273a82bf355dd81074baa9659645",
+      "actualCodeSha256": "e6a601783a2f01315c7bcbafdc063814c05e273a82bf355dd81074baa9659645",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:6c14f033784ce4714c264a1f25cca13e0708d534eef38e840280abb23452a436",
+      "runId": "cb332c86-2a24-4fd7-b9ad-7ac0388d96a2",
+      "documentRevision": 1,
+      "artifactId": "practice-776697a7-8687-4f4a-b076-0da446158d9b.code.1",
+      "result": "passed",
+      "passed": 6,
+      "total": 6,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:08:32.041Z",
+      "finishedAt": "2026-10-26T03:08:33.075Z",
+      "candidatePath": "f-java-csharp-php/CS-004/attempts/wrong.cs",
+      "candidateSha256": "d134a59942f5dc2419652da8f9214d5ede8acdf8ee4b24e68f86ef93e0258ecc",
+      "actualCodeSha256": "d134a59942f5dc2419652da8f9214d5ede8acdf8ee4b24e68f86ef93e0258ecc",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:6c14f033784ce4714c264a1f25cca13e0708d534eef38e840280abb23452a436",
+      "runId": "793da486-8ee2-4728-a554-b55132936f9b",
+      "documentRevision": 1,
+      "artifactId": "practice-914b2c64-ec59-4671-9cf4-4709911bd89d.code.1",
+      "result": "failed",
+      "passed": 2,
+      "total": 6,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "4 of 6 cases failed.\n\n✘\ncase 1\nInput\n[[1,2,3],[4,5,6]]\nExpected\n[[1,4],[2,5],[3,6]]\nGot\n[[4,1],[5,2],[6,3]]\n✘\nhidden case 4hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 5hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 6hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:08:33.410Z",
+      "finishedAt": "2026-10-26T03:08:34.035Z",
+      "candidatePath": "f-java-csharp-php/CS-004/attempts/first.cs",
+      "candidateSha256": "e6a601783a2f01315c7bcbafdc063814c05e273a82bf355dd81074baa9659645",
+      "actualCodeSha256": "e6a601783a2f01315c7bcbafdc063814c05e273a82bf355dd81074baa9659645",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:6c14f033784ce4714c264a1f25cca13e0708d534eef38e840280abb23452a436",
+      "runId": "5c315192-060a-4710-be99-944f60b762ff",
+      "documentRevision": 2,
+      "artifactId": "practice-914b2c64-ec59-4671-9cf4-4709911bd89d.code.2",
+      "result": "passed",
+      "passed": 6,
+      "total": 6,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

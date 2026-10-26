@@ -1,0 +1,187 @@
+{
+  "key": "CPP-005",
+  "revision": "sha256:66e7aed0a6be2a82415a3cde0bd43b8c267387f37aeb81df0ae585296125ab06",
+  "language": "cpp",
+  "runtime": "Clang/YoWASP",
+  "origin": "https://musclememory.run",
+  "partition": "d-c-cpp",
+  "review": {
+    "key": "CPP-005",
+    "revision": "sha256:66e7aed0a6be2a82415a3cde0bd43b8c267387f37aeb81df0ae585296125ab06",
+    "firstCandidate": "attempts/first.cpp",
+    "wrongCandidate": "attempts/wrong.cpp",
+    "wrongIntent": "Merge integer-adjacent disjoint intervals such as [1,2] and [3,4], explicitly forbidden by task.",
+    "assumptions": [
+      "Each inner vector has exactly two entries with valid ordered endpoints as specified."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": "Clear and complete edge cases; explicit adjacency example prevents integer-range interpretation.",
+    "confidence": "high; not executed",
+    "publicEdgeCases": [
+      {
+        "input": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "expected": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "reason": "Adjacent integers do not imply overlapping closed intervals."
+      },
+      {
+        "input": [
+          [
+            3,
+            3
+          ],
+          [
+            1,
+            3
+          ]
+        ],
+        "expected": [
+          [
+            1,
+            3
+          ]
+        ],
+        "reason": "Zero-length interval shares endpoint."
+      },
+      {
+        "input": [
+          [
+            1,
+            10
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            1,
+            10
+          ]
+        ],
+        "expected": [
+          [
+            1,
+            10
+          ]
+        ],
+        "reason": "Nested and duplicated intervals collapse without shortening end."
+      },
+      {
+        "input": [
+          [
+            5,
+            6
+          ],
+          [
+            -2,
+            -1
+          ]
+        ],
+        "expected": [
+          [
+            -2,
+            -1
+          ],
+          [
+            5,
+            6
+          ]
+        ],
+        "reason": "Disjoint result sorted by start."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:08:03.095Z",
+      "finishedAt": "2026-10-26T03:08:08.778Z",
+      "candidatePath": "d-c-cpp/CPP-005/attempts/first.cpp",
+      "candidateSha256": "53eb1e0860fc73abd830661d05b42738d4d6c8da1a046d06ac6947756bd67cf1",
+      "actualCodeSha256": "53eb1e0860fc73abd830661d05b42738d4d6c8da1a046d06ac6947756bd67cf1",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:66e7aed0a6be2a82415a3cde0bd43b8c267387f37aeb81df0ae585296125ab06",
+      "runId": "f3f2ca62-84a2-4e02-923b-2ed590afca7e",
+      "documentRevision": 1,
+      "artifactId": "practice-b28b70b9-2b8c-4092-bfae-f717e0569fd4.code.1",
+      "result": "passed",
+      "passed": 7,
+      "total": 7,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:08:09.224Z",
+      "finishedAt": "2026-10-26T03:08:13.902Z",
+      "candidatePath": "d-c-cpp/CPP-005/attempts/wrong.cpp",
+      "candidateSha256": "815ef9868213721e59d5ad7188ffcf0f09bb858a2cd6d0218c8cbe7fee66cb6d",
+      "actualCodeSha256": "815ef9868213721e59d5ad7188ffcf0f09bb858a2cd6d0218c8cbe7fee66cb6d",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:66e7aed0a6be2a82415a3cde0bd43b8c267387f37aeb81df0ae585296125ab06",
+      "runId": "a762236e-c7d9-485f-b2c9-7422ee029c20",
+      "documentRevision": 1,
+      "artifactId": "practice-873b9eb2-7992-4c9a-acf8-3fcc92b84093.code.1",
+      "result": "failed",
+      "passed": 6,
+      "total": 7,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "1 of 7 cases failed.\n\n✘\nhidden case 3hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:08:14.536Z",
+      "finishedAt": "2026-10-26T03:08:16.717Z",
+      "candidatePath": "d-c-cpp/CPP-005/attempts/first.cpp",
+      "candidateSha256": "53eb1e0860fc73abd830661d05b42738d4d6c8da1a046d06ac6947756bd67cf1",
+      "actualCodeSha256": "53eb1e0860fc73abd830661d05b42738d4d6c8da1a046d06ac6947756bd67cf1",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:66e7aed0a6be2a82415a3cde0bd43b8c267387f37aeb81df0ae585296125ab06",
+      "runId": "89464c40-6b9b-446b-bae1-e06e60e3ae94",
+      "documentRevision": 2,
+      "artifactId": "practice-873b9eb2-7992-4c9a-acf8-3fcc92b84093.code.2",
+      "result": "passed",
+      "passed": 7,
+      "total": 7,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

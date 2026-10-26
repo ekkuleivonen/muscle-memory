@@ -1,0 +1,146 @@
+{
+  "key": "C-004",
+  "revision": "sha256:0935afcb9a890ea280e72a546da4e928d86b58f35df2c67b3903090ef0f32d7e",
+  "language": "c",
+  "runtime": "Clang/YoWASP",
+  "origin": "https://musclememory.run",
+  "partition": "d-c-cpp",
+  "review": {
+    "key": "C-004",
+    "revision": "sha256:0935afcb9a890ea280e72a546da4e928d86b58f35df2c67b3903090ef0f32d7e",
+    "firstCandidate": "attempts/first.c",
+    "wrongCandidate": "attempts/wrong.c",
+    "wrongIntent": "Remove only the first target occurrence instead of every occurrence.",
+    "assumptions": [
+      "Input and output are separate buffers, consistent with not modifying input."
+    ],
+    "ambiguityFindings": [
+      "Pointer overlap is not explicitly specified."
+    ],
+    "verbosityFindings": "Clear concise specification, including output capacity.",
+    "confidence": "high; not executed",
+    "publicEdgeCases": [
+      {
+        "input": [
+          [
+            2,
+            2,
+            2
+          ],
+          2
+        ],
+        "expected": [],
+        "reason": "All target occurrences must disappear."
+      },
+      {
+        "input": [
+          [
+            -1,
+            0,
+            -1
+          ],
+          9
+        ],
+        "expected": [
+          -1,
+          0,
+          -1
+        ],
+        "reason": "Missing target preserves all values and order."
+      },
+      {
+        "input": [
+          [
+            0,
+            1,
+            0,
+            2,
+            0
+          ],
+          0
+        ],
+        "expected": [
+          1,
+          2
+        ],
+        "reason": "Repeated target around surviving values."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:07:00.115Z",
+      "finishedAt": "2026-10-26T03:07:02.039Z",
+      "candidatePath": "d-c-cpp/C-004/attempts/first.c",
+      "candidateSha256": "00cd4c23b79aeb6378423649b4ed98340a03e03168b711622c07b8f40300a394",
+      "actualCodeSha256": "00cd4c23b79aeb6378423649b4ed98340a03e03168b711622c07b8f40300a394",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:0935afcb9a890ea280e72a546da4e928d86b58f35df2c67b3903090ef0f32d7e",
+      "runId": "c9ccd8a6-c124-4041-9a8c-385510a5c310",
+      "documentRevision": 1,
+      "artifactId": "practice-8d56abe1-1b32-4bf7-9bca-87a104e92fc7.code.1",
+      "result": "passed",
+      "passed": 31,
+      "total": 31,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:07:02.692Z",
+      "finishedAt": "2026-10-26T03:07:04.658Z",
+      "candidatePath": "d-c-cpp/C-004/attempts/wrong.c",
+      "candidateSha256": "6a19c4e37a5726cc155fadc7c527535747d7d13026dc65d25a27884a5263817e",
+      "actualCodeSha256": "6a19c4e37a5726cc155fadc7c527535747d7d13026dc65d25a27884a5263817e",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:0935afcb9a890ea280e72a546da4e928d86b58f35df2c67b3903090ef0f32d7e",
+      "runId": "b41b2d25-b150-4b29-ac19-cd318dda12a3",
+      "documentRevision": 1,
+      "artifactId": "practice-d6764884-b115-47b0-8d65-f8429abcd846.code.1",
+      "result": "failed",
+      "passed": 25,
+      "total": 31,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "6 of 31 cases failed.\n\n✘\ncase 1\nInput\n[[2,1,2,3],2]\nExpected\n[1,3]\nGot\n[1,2,3]\n✘\nhidden case 3hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 4hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 8hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 19hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 24hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:07:05.075Z",
+      "finishedAt": "2026-10-26T03:07:05.344Z",
+      "candidatePath": "d-c-cpp/C-004/attempts/first.c",
+      "candidateSha256": "00cd4c23b79aeb6378423649b4ed98340a03e03168b711622c07b8f40300a394",
+      "actualCodeSha256": "00cd4c23b79aeb6378423649b4ed98340a03e03168b711622c07b8f40300a394",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:0935afcb9a890ea280e72a546da4e928d86b58f35df2c67b3903090ef0f32d7e",
+      "runId": "19068868-c7a8-47a0-ac6e-e005aa5e681d",
+      "documentRevision": 2,
+      "artifactId": "practice-d6764884-b115-47b0-8d65-f8429abcd846.code.2",
+      "result": "passed",
+      "passed": 31,
+      "total": 31,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

@@ -1,0 +1,142 @@
+{
+  "key": "PHP-004",
+  "revision": "sha256:3b183d6cb847b893fbf2e00ede2f1c9fbbe4bdf10d990db2dbf6471ca7b8b4c4",
+  "language": "php",
+  "runtime": "php-wasm",
+  "origin": "https://musclememory.run",
+  "partition": "f-java-csharp-php",
+  "review": {
+    "key": "PHP-004",
+    "revision": "sha256:3b183d6cb847b893fbf2e00ede2f1c9fbbe4bdf10d990db2dbf6471ca7b8b4c4",
+    "firstCandidate": "attempts/first.php",
+    "wrongCandidate": "attempts/wrong.php",
+    "wrongIntent": "Sort each parity group, violating stable original order and explicit no-sort rule.",
+    "assumptions": [
+      "Input elements are integers within stated bounds."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": [
+      "Parity, stable order and consecutive output indices are explicit."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": [
+          -3,
+          0,
+          -2,
+          -1,
+          4
+        ],
+        "expected": [
+          0,
+          -2,
+          4,
+          -3,
+          -1
+        ],
+        "reason": "Zero and negative evens are even and order is stable."
+      },
+      {
+        "input": [
+          6,
+          2,
+          4,
+          5,
+          1,
+          3
+        ],
+        "expected": [
+          6,
+          2,
+          4,
+          5,
+          1,
+          3
+        ],
+        "reason": "Group order must not be sorted."
+      },
+      {
+        "input": [],
+        "expected": [],
+        "reason": "Empty output remains a JSON list."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:11:01.941Z",
+      "finishedAt": "2026-10-26T03:11:02.344Z",
+      "candidatePath": "f-java-csharp-php/PHP-004/attempts/first.php",
+      "candidateSha256": "cc10cb5800be083f0d7869462e633b880052e52ce0f18087097b21424bcef5ec",
+      "actualCodeSha256": "cc10cb5800be083f0d7869462e633b880052e52ce0f18087097b21424bcef5ec",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:3b183d6cb847b893fbf2e00ede2f1c9fbbe4bdf10d990db2dbf6471ca7b8b4c4",
+      "runId": "b62b7c26-c5cf-4ff9-ad88-4d07ebf7129d",
+      "documentRevision": 1,
+      "artifactId": "practice-6743eecd-7c5c-49f7-85a2-950ea07c4997.code.1",
+      "result": "passed",
+      "passed": 14,
+      "total": 14,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:11:03.069Z",
+      "finishedAt": "2026-10-26T03:11:03.469Z",
+      "candidatePath": "f-java-csharp-php/PHP-004/attempts/wrong.php",
+      "candidateSha256": "48f62210e354cdaedd59fb6e547c0a7bd91f54d5df932add48a5f7d02ca4ad4c",
+      "actualCodeSha256": "48f62210e354cdaedd59fb6e547c0a7bd91f54d5df932add48a5f7d02ca4ad4c",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:3b183d6cb847b893fbf2e00ede2f1c9fbbe4bdf10d990db2dbf6471ca7b8b4c4",
+      "runId": "d525f162-dc18-4adf-85a7-bb22ef6d882b",
+      "documentRevision": 1,
+      "artifactId": "practice-b4d74235-c72b-4d0a-9390-c5070c09a89b.code.1",
+      "result": "failed",
+      "passed": 7,
+      "total": 14,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "7 of 14 cases failed.\n\n✘\ncase 1\nInput\n[3,2,1,4]\nExpected\n[2,4,3,1]\nGot\n[2,4,1,3]\n✘\nhidden case 3hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 4hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 5hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 10hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 11hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:11:03.914Z",
+      "finishedAt": "2026-10-26T03:11:04.117Z",
+      "candidatePath": "f-java-csharp-php/PHP-004/attempts/first.php",
+      "candidateSha256": "cc10cb5800be083f0d7869462e633b880052e52ce0f18087097b21424bcef5ec",
+      "actualCodeSha256": "cc10cb5800be083f0d7869462e633b880052e52ce0f18087097b21424bcef5ec",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:3b183d6cb847b893fbf2e00ede2f1c9fbbe4bdf10d990db2dbf6471ca7b8b4c4",
+      "runId": "8dc9e3a1-08e5-4452-9443-43c315c85864",
+      "documentRevision": 2,
+      "artifactId": "practice-b4d74235-c72b-4d0a-9390-c5070c09a89b.code.2",
+      "result": "passed",
+      "passed": 14,
+      "total": 14,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

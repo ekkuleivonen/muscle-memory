@@ -1,0 +1,116 @@
+{
+  "key": "CS-005",
+  "revision": "sha256:9050e23ee2641c3fdcdb84632210fbfaf4d73b2ba6e7d1e3b19cad89e4a40d01",
+  "language": "csharp",
+  "runtime": "Roslyn/.NET WASM",
+  "origin": "https://musclememory.run",
+  "partition": "f-java-csharp-php",
+  "review": {
+    "key": "CS-005",
+    "revision": "sha256:9050e23ee2641c3fdcdb84632210fbfaf4d73b2ba6e7d1e3b19cad89e4a40d01",
+    "firstCandidate": "attempts/first.cs",
+    "wrongCandidate": "attempts/wrong.cs",
+    "wrongIntent": "Omit count 1 for singleton runs, violating the always-write-count requirement.",
+    "assumptions": [
+      "Input is non-null ASCII letters as specified."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": [
+      "Count formatting, case sensitivity and empty input are explicit."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": "aA",
+        "expected": "a1A1",
+        "reason": "Case separates runs and singleton counts are mandatory."
+      },
+      {
+        "input": "aaaaaaaaaaaa",
+        "expected": "a12",
+        "reason": "Multi-digit run count."
+      },
+      {
+        "input": "aba",
+        "expected": "a1b1a1",
+        "reason": "Separated equal characters are distinct runs."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:08:34.732Z",
+      "finishedAt": "2026-10-26T03:08:36.185Z",
+      "candidatePath": "f-java-csharp-php/CS-005/attempts/first.cs",
+      "candidateSha256": "8b41c9fbc156dd6edd72efc99fa7088d8f6ad230b84ea1e2eb801b0c44d0b197",
+      "actualCodeSha256": "8b41c9fbc156dd6edd72efc99fa7088d8f6ad230b84ea1e2eb801b0c44d0b197",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:9050e23ee2641c3fdcdb84632210fbfaf4d73b2ba6e7d1e3b19cad89e4a40d01",
+      "runId": "d3ae9045-2d9e-421c-ad53-825342b3aba6",
+      "documentRevision": 1,
+      "artifactId": "practice-253ca408-6600-4315-b3e1-8cbfbcf67d2d.code.1",
+      "result": "passed",
+      "passed": 11,
+      "total": 11,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:08:36.785Z",
+      "finishedAt": "2026-10-26T03:08:38.313Z",
+      "candidatePath": "f-java-csharp-php/CS-005/attempts/wrong.cs",
+      "candidateSha256": "3a10b59e4ee80b318673a9ba94ff2ed359d6bdcf4780de682e6fc4dc7e42aa51",
+      "actualCodeSha256": "3a10b59e4ee80b318673a9ba94ff2ed359d6bdcf4780de682e6fc4dc7e42aa51",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:9050e23ee2641c3fdcdb84632210fbfaf4d73b2ba6e7d1e3b19cad89e4a40d01",
+      "runId": "8147b72f-d1f4-46c4-b87b-ebe2c6ef578f",
+      "documentRevision": 1,
+      "artifactId": "practice-fdb9b917-310e-4053-b529-fd924b2af99e.code.1",
+      "result": "failed",
+      "passed": 6,
+      "total": 11,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "5 of 11 cases failed.\n\n✘\ncase 1\nInput\n\"aaabbA\"\nExpected\n\"a3b2A1\"\nGot\n\"a3b2A\"\n✘\nhidden case 3hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 4hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 5hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 9hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:08:38.969Z",
+      "finishedAt": "2026-10-26T03:08:39.692Z",
+      "candidatePath": "f-java-csharp-php/CS-005/attempts/first.cs",
+      "candidateSha256": "8b41c9fbc156dd6edd72efc99fa7088d8f6ad230b84ea1e2eb801b0c44d0b197",
+      "actualCodeSha256": "8b41c9fbc156dd6edd72efc99fa7088d8f6ad230b84ea1e2eb801b0c44d0b197",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:9050e23ee2641c3fdcdb84632210fbfaf4d73b2ba6e7d1e3b19cad89e4a40d01",
+      "runId": "9ec5b4a8-c244-4972-b75b-501668fbf146",
+      "documentRevision": 2,
+      "artifactId": "practice-fdb9b917-310e-4053-b529-fd924b2af99e.code.2",
+      "result": "passed",
+      "passed": 11,
+      "total": 11,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

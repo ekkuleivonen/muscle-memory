@@ -1,0 +1,124 @@
+{
+  "key": "CPP-003",
+  "revision": "sha256:93bfa0b61e35a93c49ccae694223646dc68856855e1c2114936214611fac52ea",
+  "language": "cpp",
+  "runtime": "Clang/YoWASP",
+  "origin": "https://musclememory.run",
+  "partition": "d-c-cpp",
+  "review": {
+    "key": "CPP-003",
+    "revision": "sha256:93bfa0b61e35a93c49ccae694223646dc68856855e1c2114936214611fac52ea",
+    "firstCandidate": "attempts/first.cpp",
+    "wrongCandidate": "attempts/wrong.cpp",
+    "wrongIntent": "Accept unmatched opening brackets left at the end.",
+    "assumptions": [
+      "Every non-bracket character is ignored literally, including quotes and whitespace."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": "Clear and sufficient.",
+    "confidence": "high; not executed",
+    "publicEdgeCases": [
+      {
+        "input": "",
+        "expected": true,
+        "reason": "Empty string explicitly balanced."
+      },
+      {
+        "input": "abc",
+        "expected": true,
+        "reason": "Non-brackets ignored."
+      },
+      {
+        "input": "(",
+        "expected": false,
+        "reason": "Unclosed opening bracket."
+      },
+      {
+        "input": ")(",
+        "expected": false,
+        "reason": "Closer cannot precede its opening bracket."
+      },
+      {
+        "input": "([]{})",
+        "expected": true,
+        "reason": "Multiple bracket types correctly nested."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:07:38.303Z",
+      "finishedAt": "2026-10-26T03:07:42.925Z",
+      "candidatePath": "d-c-cpp/CPP-003/attempts/first.cpp",
+      "candidateSha256": "dd2164965205d175426e18c0826975aa32d20c3dadfa2a96daa9597ee0365df4",
+      "actualCodeSha256": "dd2164965205d175426e18c0826975aa32d20c3dadfa2a96daa9597ee0365df4",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:93bfa0b61e35a93c49ccae694223646dc68856855e1c2114936214611fac52ea",
+      "runId": "cd890ed8-cc71-4cec-8d9c-98f621f32820",
+      "documentRevision": 1,
+      "artifactId": "practice-b49afe57-f2e0-4c39-8288-ed6f71761ea0.code.1",
+      "result": "passed",
+      "passed": 9,
+      "total": 9,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:07:43.595Z",
+      "finishedAt": "2026-10-26T03:07:47.674Z",
+      "candidatePath": "d-c-cpp/CPP-003/attempts/wrong.cpp",
+      "candidateSha256": "46fe4fcbddfe20cbba2f5c3469011081c6a106cb774a7f10042448ba58ed1f8d",
+      "actualCodeSha256": "46fe4fcbddfe20cbba2f5c3469011081c6a106cb774a7f10042448ba58ed1f8d",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:93bfa0b61e35a93c49ccae694223646dc68856855e1c2114936214611fac52ea",
+      "runId": "52ea474c-5ad1-400d-91c2-487f7aba1d06",
+      "documentRevision": 1,
+      "artifactId": "practice-767720b5-5eca-443d-a10b-f21f35d3fad3.code.1",
+      "result": "failed",
+      "passed": 8,
+      "total": 9,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "1 of 9 cases failed.\n\n✘\nhidden case 6hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:07:48.381Z",
+      "finishedAt": "2026-10-26T03:07:50.126Z",
+      "candidatePath": "d-c-cpp/CPP-003/attempts/first.cpp",
+      "candidateSha256": "dd2164965205d175426e18c0826975aa32d20c3dadfa2a96daa9597ee0365df4",
+      "actualCodeSha256": "dd2164965205d175426e18c0826975aa32d20c3dadfa2a96daa9597ee0365df4",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:93bfa0b61e35a93c49ccae694223646dc68856855e1c2114936214611fac52ea",
+      "runId": "36629b34-d159-4133-b090-d4490657eba6",
+      "documentRevision": 2,
+      "artifactId": "practice-767720b5-5eca-443d-a10b-f21f35d3fad3.code.2",
+      "result": "passed",
+      "passed": 9,
+      "total": 9,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

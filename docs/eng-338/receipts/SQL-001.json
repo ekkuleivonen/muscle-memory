@@ -1,0 +1,162 @@
+{
+  "key": "SQL-001",
+  "revision": "sha256:c7146b957f34cd809b870274d51538f3a035d05332644405d0b9c0ac09e11cf9",
+  "language": "sql",
+  "runtime": "PGlite/PostgreSQL",
+  "origin": "https://musclememory.run",
+  "partition": "c-sql-html",
+  "review": {
+    "key": "SQL-001",
+    "revision": "sha256:c7146b957f34cd809b870274d51538f3a035d05332644405d0b9c0ac09e11cf9",
+    "firstCandidate": "SQL-001/attempts/first.sql",
+    "wrongCandidate": "SQL-001/attempts/wrong.sql",
+    "wrongIntent": "Filter out nonpositive orders before aggregation, losing zero and negative adjustments.",
+    "assumptions": [
+      "PostgreSQL SUM(integer) returns bigint, satisfying totals beyond 32-bit range.",
+      "No date restriction is implied by the monthly-report narrative; no date column exists."
+    ],
+    "ambiguityFindings": "No material ambiguity. Exact names, default PostgreSQL text ordering, negative totals, ties and empty input are explicitly covered.",
+    "verbosityFindings": "Concise and sufficient schema and result contract.",
+    "confidence": "High; reasoned from visible requirements only, not executed.",
+    "publicEdgeCases": [
+      {
+        "input": {
+          "orders": [
+            [
+              1,
+              "b",
+              -5
+            ],
+            [
+              2,
+              "a",
+              0
+            ],
+            [
+              3,
+              "b",
+              5
+            ]
+          ]
+        },
+        "expected": [
+          [
+            "a",
+            0
+          ],
+          [
+            "b",
+            0
+          ]
+        ],
+        "reason": "Adjustments count and zero-sum customers remain, with name tie-break."
+      },
+      {
+        "input": {
+          "orders": [
+            [
+              1,
+              "a",
+              2147483647
+            ],
+            [
+              2,
+              "a",
+              1
+            ]
+          ]
+        },
+        "expected": [
+          [
+            "a",
+            2147483648
+          ]
+        ],
+        "reason": "Sum must exceed signed 32-bit safely."
+      },
+      {
+        "input": {
+          "orders": []
+        },
+        "expected": [],
+        "reason": "No orders yields no grouped rows."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:05:31.020Z",
+      "finishedAt": "2026-10-26T03:05:32.489Z",
+      "candidatePath": "c-sql-html/SQL-001/attempts/first.sql",
+      "candidateSha256": "565b570c25be0a125232d196546318a8e877351e768cb02305121188cf8603a3",
+      "actualCodeSha256": "565b570c25be0a125232d196546318a8e877351e768cb02305121188cf8603a3",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:c7146b957f34cd809b870274d51538f3a035d05332644405d0b9c0ac09e11cf9",
+      "runId": "64e4ba89-375c-4b82-b748-6716eebe5dcb",
+      "documentRevision": 1,
+      "artifactId": "practice-95737ce1-7872-4240-947c-df6168b9b7f2.code.1",
+      "result": "passed",
+      "passed": 15,
+      "total": 15,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:05:33.483Z",
+      "finishedAt": "2026-10-26T03:05:34.961Z",
+      "candidatePath": "c-sql-html/SQL-001/attempts/wrong.sql",
+      "candidateSha256": "9d4dc0b2b518a538076490f1aa92d6c8666bdf06427dffc9f2a8dd6d72d4681b",
+      "actualCodeSha256": "9d4dc0b2b518a538076490f1aa92d6c8666bdf06427dffc9f2a8dd6d72d4681b",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:c7146b957f34cd809b870274d51538f3a035d05332644405d0b9c0ac09e11cf9",
+      "runId": "399f3a92-d4c5-4327-9527-e4acf6c2a79e",
+      "documentRevision": 1,
+      "artifactId": "practice-b97aaedb-a409-40a2-b8b5-a856a15e493f.code.1",
+      "result": "failed",
+      "passed": 13,
+      "total": 15,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "2 of 15 cases failed.\n\n✘\nhidden case 8hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 9hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:05:35.382Z",
+      "finishedAt": "2026-10-26T03:05:36.249Z",
+      "candidatePath": "c-sql-html/SQL-001/attempts/first.sql",
+      "candidateSha256": "565b570c25be0a125232d196546318a8e877351e768cb02305121188cf8603a3",
+      "actualCodeSha256": "565b570c25be0a125232d196546318a8e877351e768cb02305121188cf8603a3",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:c7146b957f34cd809b870274d51538f3a035d05332644405d0b9c0ac09e11cf9",
+      "runId": "b501ba8e-3893-403c-a05a-c528258f6453",
+      "documentRevision": 2,
+      "artifactId": "practice-b97aaedb-a409-40a2-b8b5-a856a15e493f.code.2",
+      "result": "passed",
+      "passed": 15,
+      "total": 15,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

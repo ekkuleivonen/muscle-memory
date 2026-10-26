@@ -1,0 +1,209 @@
+{
+  "key": "CPP-002",
+  "revision": "sha256:b60f7273efa7d21fcf71119f061d5e4bc9f9e27ff2599fe7ee2c3c34883b0f21",
+  "language": "cpp",
+  "runtime": "Clang/YoWASP",
+  "origin": "https://musclememory.run",
+  "partition": "d-c-cpp",
+  "review": {
+    "key": "CPP-002",
+    "revision": "sha256:b60f7273efa7d21fcf71119f061d5e4bc9f9e27ff2599fe7ee2c3c34883b0f21",
+    "firstCandidate": "attempts/first.cpp",
+    "wrongCandidate": "attempts/wrong.cpp",
+    "wrongIntent": "Lookup matches deleted slots by stale key, bringing a purged response back.",
+    "assumptions": [
+      "Keep startup vector allocation permitted by starter; allocation-free means no new per-request index allocation.",
+      "Slots is nonnegative and values are nonnegative per task.",
+      "Starter uses the language unsigned conversion for key home slots."
+    ],
+    "ambiguityFindings": [
+      "Allocation-free wording could literally forbid the required initial array and returned results vector; starter and table description clarify intended scope."
+    ],
+    "verbosityFindings": "Detailed but necessary collision, purge, reuse and update contract.",
+    "confidence": "high; not executed",
+    "publicEdgeCases": [
+      {
+        "input": [
+          0,
+          [
+            [
+              "put",
+              0,
+              1
+            ],
+            [
+              "get",
+              0
+            ],
+            [
+              "erase",
+              0
+            ]
+          ]
+        ],
+        "expected": [
+          -1
+        ],
+        "reason": "Zero slots is legal and must avoid modulo by zero."
+      },
+      {
+        "input": [
+          2,
+          [
+            [
+              "put",
+              0,
+              10
+            ],
+            [
+              "put",
+              2,
+              20
+            ],
+            [
+              "erase",
+              0
+            ],
+            [
+              "put",
+              2,
+              21
+            ],
+            [
+              "erase",
+              2
+            ],
+            [
+              "get",
+              2
+            ]
+          ]
+        ],
+        "expected": [
+          -1
+        ],
+        "reason": "Update must search beyond tombstone rather than create a duplicate that survives purge."
+      },
+      {
+        "input": [
+          1,
+          [
+            [
+              "put",
+              -1,
+              3
+            ],
+            [
+              "put",
+              -1,
+              4
+            ],
+            [
+              "get",
+              -1
+            ],
+            [
+              "erase",
+              -1
+            ],
+            [
+              "put",
+              2,
+              5
+            ],
+            [
+              "get",
+              2
+            ],
+            [
+              "get",
+              -1
+            ]
+          ]
+        ],
+        "expected": [
+          4,
+          5,
+          -1
+        ],
+        "reason": "Full-table update, negative key, and reuse after purge."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:07:25.188Z",
+      "finishedAt": "2026-10-26T03:07:29.668Z",
+      "candidatePath": "d-c-cpp/CPP-002/attempts/first.cpp",
+      "candidateSha256": "3b21106f06b6acf0e4546e89b71e85fe1d5b3768427d26f6cb0c55526b0bb0d9",
+      "actualCodeSha256": "3b21106f06b6acf0e4546e89b71e85fe1d5b3768427d26f6cb0c55526b0bb0d9",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:b60f7273efa7d21fcf71119f061d5e4bc9f9e27ff2599fe7ee2c3c34883b0f21",
+      "runId": "a6cb7d43-8a9d-40cb-8a13-1ceed7359e9e",
+      "documentRevision": 1,
+      "artifactId": "practice-7a631f2e-6e6f-4bd3-a880-46c7ec06ab87.code.1",
+      "result": "passed",
+      "passed": 18,
+      "total": 18,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:07:30.332Z",
+      "finishedAt": "2026-10-26T03:07:34.976Z",
+      "candidatePath": "d-c-cpp/CPP-002/attempts/wrong.cpp",
+      "candidateSha256": "17f3c35eeefd96fe03077ccb3235c80e9cb4ea8ed419b0384bfe8938928d584d",
+      "actualCodeSha256": "17f3c35eeefd96fe03077ccb3235c80e9cb4ea8ed419b0384bfe8938928d584d",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:b60f7273efa7d21fcf71119f061d5e4bc9f9e27ff2599fe7ee2c3c34883b0f21",
+      "runId": "7076c120-09ee-43ae-a311-7f0f3835be34",
+      "documentRevision": 1,
+      "artifactId": "practice-077754cb-b981-443f-be91-74053e9c2d67.code.1",
+      "result": "failed",
+      "passed": 10,
+      "total": 18,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "8 of 18 cases failed.\n\n✘\ncase 2\nInput\n[8,[[\"put\",3,30],[\"put\",11,110],[\"put\",19,190],[\"erase\",3],[\"get\",11],[\"get\",19],[\"get\",3]]]\nExpected\n[110,190,-1]\nGot\n[110,190,30]\n✘\ncase 3\nInput\n[8,[[\"put\",5,50],[\"put\",5,55],[\"get\",5],[\"erase\",5],[\"get\",5],[\"erase\",5],[\"get\",5]]]\nExpected\n[55,-1,-1]\nGot\n[55,55,55]\n✘\ncase 5\nInput\n[4,[[\"put\",3,30],[\"put\",7,70],[\"put\",11,110],[\"erase\",7],[\"get\",11],[\"get\",3],[\"get\",7]]]\nExpected\n[110,30,-1]\nGot\n[110,30,70]\n✘\nhidden case 6hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 11hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 12hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 15hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:07:35.362Z",
+      "finishedAt": "2026-10-26T03:07:37.430Z",
+      "candidatePath": "d-c-cpp/CPP-002/attempts/first.cpp",
+      "candidateSha256": "3b21106f06b6acf0e4546e89b71e85fe1d5b3768427d26f6cb0c55526b0bb0d9",
+      "actualCodeSha256": "3b21106f06b6acf0e4546e89b71e85fe1d5b3768427d26f6cb0c55526b0bb0d9",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:b60f7273efa7d21fcf71119f061d5e4bc9f9e27ff2599fe7ee2c3c34883b0f21",
+      "runId": "c5c1b1b5-63e0-4bdf-b842-e350613fe1bf",
+      "documentRevision": 2,
+      "artifactId": "practice-077754cb-b981-443f-be91-74053e9c2d67.code.2",
+      "result": "passed",
+      "passed": 18,
+      "total": 18,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

@@ -1,0 +1,9 @@
+{
+  "key":"C-001","revision":"sha256:35464d4a9a60e22e03b023e944edd4afefcc668dcd5fcc4dd374272584ab32b6",
+  "firstCandidate":"attempts/first.c","wrongCandidate":"attempts/wrong.c",
+  "wrongIntent":"Accept invalid non-port suffix after the closing IPv6 bracket.",
+  "assumptions":["Only stated structural validation is required; do not validate actual hostname or IPv6 syntax.","Non-null NUL-terminated host and writable out for positive size; return type assumes normalized length fits int."],
+  "ambiguityFindings":["Port content is unrestricted by the rules, including empty ports.","Literal interior validity and output-buffer contents on error are unspecified."],
+  "verbosityFindings":"Rules and buffer contract are clear and examples concise.","confidence":"high; not executed",
+  "publicEdgeCases":[{"input":["[AB::1]:",8],"expected":"[ab::1]","reason":"Empty port removed, literal lowercased, exact fit."},{"input":["[::1]tail",20],"expected":null,"reason":"Closing bracket followed by invalid suffix."},{"input":["x",0],"expected":null,"reason":"Zero-size buffer."},{"input":[".",2],"expected":null,"reason":"Trailing-dot removal leaves empty value."},{"input":["a..",4],"expected":"a.","reason":"Remove only one trailing dot."}]
+}
