@@ -47,3 +47,45 @@
   margin-bottom: 8px;
   color: var(--dim);
 }
+.admin-stats-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+  margin-top: 24px;
+}
+.admin-stats-filters label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.admin-stats-filters input {
+  max-width: 100%;
+  min-width: 0;
+}
+.admin-stats-notice {
+  border-left: 3px solid var(--accent);
+  padding-left: 12px;
+}
+.admin-stats-definitions {
+  margin-top: 24px;
+}
+.admin-stats-table th:first-child {
+  white-space: normal;
+}
+.admin-stats-table th p {
+  font-weight: normal;
+  min-width: 180px;
+}
+.admin-stats-table summary {
+  cursor: pointer;
+}
+@media (max-width: 600px) {
+  .admin-stats-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .admin-shell {
+    padding: 16px;
+  }
+}

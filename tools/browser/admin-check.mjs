@@ -61,6 +61,22 @@ async function sign(claims = {}, key = privateKey) {
     .sign(key);
 }
 const valid = await sign();
+// Optional synthetic-only SQL service. No Cloudflare credentials or network requests.
+const statsFixture = process.env.ADMIN_STATS_FIXTURE === "1";
+let statsCalls = 0;
+let statsMode = "data";
+const statsRevision = "sha256:" + "a".repeat(64);
+const statsCoverage = {
+  scope: "coverage",
+  observed: 21,
+  duplicates: 2,
+  conflicts: 0,
+  known_synthetic: 0,
+  unsupported: 0,
+  first_observed: "2026-10-21T12:00:00.000Z",
+  last_observed: "2026-10-21T12:05:00.000Z",
+  last_received: "2026-10-21T12:06:00.000Z",
+};
 const wrong = await sign({ email: "wrong@example.test" });
 const expired = await sign({ exp: now - 1 });
 const foreignKey = await generateKeyPair("RS256");
@@ -106,8 +122,70 @@ const mf = new Miniflare(
           CATALOG_MODE: "bundled",
           ADMIN_ACCESS_ISSUER: issuer,
           ADMIN_ACCESS_AUD: aud,
+          ...(statsFixture
+            ? {
+                ADMIN_STATS_SQL_TOKEN:
+                  "synthetic-local-fixture-not-a-credential",
+              }
+            : {}),
         },
         outboundService: async (request) => {
+          if (
+            statsFixture &&
+            new URL(request.url).hostname === "api.sql.cloudflarestorage.com"
+          ) {
+            statsCalls++;
+            assert.match(
+              request.headers.get("authorization") ?? "",
+              /synthetic-local-fixture/,
+            );
+            const body = await request.json();
+            assert.match(body.query, /^WITH record_groups AS/);
+            assert.match(body.query, /FROM default.events/);
+            assert.match(
+              body.query,
+              /challenge = 'JS-999'/,
+              "existing immutable QA metadata shapes the query",
+            );
+            if (statsMode === "error")
+              return new MFResponse("PRIVATE UPSTREAM ERROR", { status: 503 });
+            return MFResponse.json({
+              success: true,
+              result: {
+                rows: [
+                  statsCoverage,
+                  ...(statsMode === "empty"
+                    ? []
+                    : [
+                        {
+                          scope: "challenge",
+                          challenge: "PY-003",
+                          challenge_revision: statsRevision,
+                          starts: 4,
+                          browser_ids: 3,
+                          completions: 2,
+                          submissions: 7,
+                          runs: 8,
+                          missing_starts: 1,
+                          participant_id: "PRIVATE BROWSER ID",
+                          payload: "PRIVATE PLAYER CODE",
+                        },
+                        {
+                          scope: "challenge",
+                          challenge: "JS-001",
+                          challenge_revision: statsRevision,
+                          starts: 2,
+                          browser_ids: 1,
+                          completions: 2,
+                          submissions: 3,
+                          runs: 4,
+                          missing_starts: 0,
+                        },
+                      ]),
+                ],
+              },
+            });
+          }
           assert.equal(
             request.url,
             `${issuer}/cdn-cgi/access/certs`,
@@ -168,8 +246,23 @@ let closing = false;
 const routeErrors = [];
 try {
   await mf.ready;
+  if (statsFixture) {
+    const db = await mf.getD1Database("CATALOG_DB");
+    await db.exec(
+      "CREATE TABLE published_versions (challenge_key TEXT, revision TEXT, metadata_json TEXT)",
+    );
+    await db
+      .prepare("INSERT INTO published_versions VALUES (?, ?, ?)")
+      .bind(
+        "JS-999",
+        "sha256:" + "f".repeat(64),
+        JSON.stringify({ tags: ["synthetic-qa"] }),
+      )
+      .run();
+  }
   for (const path of [
     "/admin",
+    "/admin/statistics?run=1&from=2026-10-20&to=2026-10-26",
     "/admin/authoring",
     "/admin/api/catalog",
     "/api/admin/catalog",
@@ -330,6 +423,84 @@ try {
     await page.locator("main").innerText(),
     /No benchmark service is connected/,
   );
+  await page.getByRole("link", { name: "Statistics", exact: true }).click();
+  await page
+    .getByRole("heading", { name: "Challenge statistics", exact: true })
+    .waitFor();
+  assert.match(await page.locator("main").innerText(), /not human-only/);
+  assert.equal(
+    statsCalls,
+    0,
+    "opening admin statistics does not query automatically",
+  );
+  if (statsFixture) {
+    await page.getByLabel("From (UTC)", { exact: true }).fill("2026-10-20");
+    await page.getByLabel("Through (UTC)", { exact: true }).fill("2026-10-26");
+    await page.getByRole("button", { name: "Load statistics" }).click();
+    await page
+      .getByRole("region", { name: "Challenge statistics" })
+      .waitFor({ timeout: 10000 })
+      .catch(async (error) => {
+        console.error("Synthetic statistics diagnostic", {
+          sqlCalls: statsCalls,
+          rendered: await page.locator("main").innerText(),
+        });
+        throw error;
+      });
+    assert.equal(statsCalls, 1);
+    assert.match(await page.locator("main").innerText(), /50\.0% \(2\/4\)/);
+    assert.ok(!(await page.content()).includes("PRIVATE PLAYER CODE"));
+    assert.ok(!(await page.content()).includes("PRIVATE BROWSER ID"));
+    assert.ok(
+      !(await page.content()).includes(
+        "synthetic-local-fixture-not-a-credential",
+      ),
+    );
+    await page
+      .getByLabel("Sort rows", { exact: true })
+      .selectOption("challenge");
+    assert.match(await page.locator("tbody tr").first().innerText(), /JS-001/);
+    assert.equal(statsCalls, 1, "local sorting does not repeat a SQL scan");
+    await page.setViewportSize({ width: 390, height: 844 });
+    assert.equal(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+      true,
+      "mobile stats overflow",
+    );
+    await page.getByRole("region", { name: "Challenge statistics" }).focus();
+    await page.keyboard.press("ArrowRight");
+    await page.screenshot({
+      path: "/tmp/mm-eng355-statistics-mobile.png",
+      fullPage: false,
+    });
+    statsMode = "empty";
+    await page.getByRole("button", { name: "Load statistics" }).click();
+    await page.getByText(/No supported challenge activity/).waitFor();
+    statsMode = "error";
+    await page.getByRole("button", { name: "Load statistics" }).click();
+    await page.getByRole("alert").waitFor();
+    assert.match(
+      await page.getByRole("alert").innerText(),
+      /unavailable, not zero/,
+    );
+    assert.ok(!(await page.content()).includes("PRIVATE UPSTREAM ERROR"));
+    const calls = statsCalls;
+    await page.getByLabel("From (UTC)", { exact: true }).fill("2025-01-01");
+    await page.getByRole("button", { name: "Load statistics" }).click();
+    await page.getByText("Choose between 1 and 31 UTC days.").waitFor();
+    assert.equal(statsCalls, calls, "invalid filter never queries");
+  } else {
+    assert.match(
+      await page.locator("main").innerText(),
+      /Statistics access is not configured/,
+    );
+    assert.equal(
+      await page.getByRole("button", { name: "Load statistics" }).isDisabled(),
+      true,
+    );
+  }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("link", { name: "Challenges", exact: true }).click();
   await page
