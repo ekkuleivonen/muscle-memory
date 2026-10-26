@@ -139,3 +139,12 @@ zero QA receipts and 187 byte-verified objects (1,778,898 bytes). Independent re
 also verified all 117 historical registry mappings, all 69 private source mappings
 and the exact active manifest pointer. No live app binding was changed before these
 checks. Production import must not be repeated after normal authoring starts.
+
+Safari mutation regression: with the admin's `no-referrer` policy, Safari/WebKit
+turns `Origin` into `null` for `fetch(mode: "same-origin")`. Admin API requests use
+`mode: "cors"` so the browser retains the exact origin; URLs remain this site's API
+paths, credentials remain same-origin and redirects fail. The server still rejects
+missing/null/foreign origins. Run `ADMIN_BROWSER=webkit node --import tsx
+tools/browser/admin-origin-check.ts` and the same environment for
+`tools/browser/authoring-check.ts` after installing the official Playwright WebKit
+browser. This exercises the real request behavior and the actual authoring flow.

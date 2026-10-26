@@ -12,7 +12,7 @@ import {
 } from "miniflare";
 import { unstable_getMiniflareWorkerOptions } from "wrangler";
 import { generateKeyPair, exportJWK, SignJWT } from "jose";
-import { chromium } from "playwright";
+import { chromium, webkit } from "playwright";
 
 execFileSync(
   process.execPath,
@@ -250,7 +250,9 @@ try {
     headers: authHeaders,
     body: mutation(detail.head.generation),
   });
-  browser = await chromium.launch({ headless: true });
+  browser = await (
+    process.env.ADMIN_BROWSER === "webkit" ? webkit : chromium
+  ).launch({ headless: true });
   const context = await browser.newContext();
   let missingStorage = false;
   let uploads = 0,
@@ -259,6 +261,10 @@ try {
     try {
       const incoming = route.request(),
         url = new URL(incoming.url());
+      // WebKit exposes the sandbox's local opaque-origin blob worker to routing;
+      // Chromium does not. This is an in-memory URL, not an outbound request.
+      if (url.protocol === "blob:" && url.origin === "null")
+        return await route.continue();
       assert.equal(url.origin, "https://musclememory.run");
       if (url.pathname.startsWith("/_next/static/")) {
         const body = await readFile(
@@ -299,7 +305,7 @@ try {
         });
       }
       const h = {
-        ...incoming.headers(),
+        ...(await incoming.allHeaders()),
         host: url.host,
         "cf-access-jwt-assertion": valid,
       };
