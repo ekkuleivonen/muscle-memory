@@ -1,0 +1,49 @@
+.admin-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+.admin-shell header {
+  margin-bottom: 32px;
+}
+.admin-shell nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.admin-shell a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.admin-shell h1 {
+  font-size: 24px;
+}
+.admin-inventory {
+  overflow-x: auto;
+  margin-top: 24px;
+}
+.admin-inventory table {
+  width: 100%;
+  min-width: 1000px;
+  border-collapse: collapse;
+  text-align: left;
+}
+.admin-inventory th,
+.admin-inventory td {
+  padding: 12px;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+.admin-inventory th:first-child {
+  white-space: nowrap;
+}
+.admin-inventory code {
+  display: block;
+  width: 256px;
+  overflow-wrap: anywhere;
+}
+.admin-inventory caption {
+  text-align: left;
+  margin-bottom: 8px;
+  color: var(--dim);
+}
