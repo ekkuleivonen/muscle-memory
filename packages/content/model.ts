@@ -14,7 +14,10 @@ export type Difficulty = "easy" | "medium" | "hard";
  * answer: a pattern found or missing, a size metric above a bound, or a combination.
  */
 export type RuleTrigger =
-  | { readonly metric: "lines" | "function-lines" | "nesting"; readonly above: number }
+  | {
+      readonly metric: "lines" | "function-lines" | "nesting";
+      readonly above: number;
+    }
   | {
       readonly pattern: string;
       /** True: fires when the pattern is found; false: when it is missing. */
@@ -55,6 +58,16 @@ export interface Revision {
   /** Markdown: what to do. */
   readonly task: string;
   readonly language: string;
+  /** Managed publications freeze display metadata and runtime with the content hash.
+   * Existing repository revisions omit this field and keep their original hashes. */
+  readonly publication?: {
+    readonly metadata: Omit<ChallengeMetadata, "revision">;
+    readonly runtime: {
+      readonly engine: string;
+      readonly version: string;
+      readonly fingerprint: string;
+    };
+  };
   /** The file's name, as the code is run and shared under it: count_words.py. */
   readonly file: string;
   /** The file as practice opens it. */

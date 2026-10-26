@@ -1,0 +1,109 @@
+.authoring {
+  max-width: 960px;
+}
+.authoring h2 {
+  margin: 28px 0 12px;
+  font-size: 18px;
+}
+.authoring p {
+  margin: 12px 0;
+}
+.authoring-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.authoring label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 14px 0;
+}
+.authoring input,
+.authoring select,
+.authoring textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: var(--bg, #111);
+  color: inherit;
+  padding: 10px;
+  font: inherit;
+  border-radius: 0;
+}
+.authoring textarea {
+  resize: vertical;
+  tab-size: 2;
+}
+.authoring small {
+  color: var(--dim);
+}
+.authoring button {
+  border: 1px solid var(--line);
+  padding: 8px 12px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.authoring button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.authoring :is(button, input, select, textarea, a):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.authoring-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 20px 0;
+  align-items: center;
+}
+.authoring-status {
+  padding: 12px;
+  border: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.authoring [role="alert"] {
+  border-left: 3px solid var(--accent);
+  padding: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.authoring dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 8px 16px;
+}
+.authoring dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.authoring fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.authoring summary {
+  cursor: pointer;
+  margin: 20px 0;
+}
+.authoring pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .authoring-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .authoring dl {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .authoring dd {
+    margin-bottom: 10px;
+  }
+}

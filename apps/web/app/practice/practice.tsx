@@ -136,12 +136,14 @@ export function Practice({
   candidates,
   challenge,
   trail,
+  allowRepeat = true,
 }: {
   /**
    * The challenge's live revision by id, as a JSON string: React's serializer would drop a
    * "__proto__" fixture key.
    */
   revisionJson: string;
+  allowRepeat?: boolean;
   /** Where the challenge sits, for the status bar's breadcrumb trail. */
   trail: readonly Crumb[];
   candidates: ChallengeSummary[];
@@ -347,15 +349,26 @@ export function Practice({
       const host = editorHost.current;
       // A superseded open must not create a session or record anything.
       if (!host || !current()) return;
-      const start = takeStart(challenge.key);
+      const progress = readProgress();
+      const localAttempt = progress[challenge.key];
+      // Another tab may have changed progress after the continuation gate resolved.
+      if ((!allowRepeat && (!localAttempt || localAttempt.completedAt)) ||
+          (localAttempt?.revision && localAttempt.revision !== challenge.revision &&
+            !(localAttempt.completedAt && allowRepeat)))
+        throw new Error("The saved attempt changed. Reload to open its exact challenge version.");
+      const start = allowRepeat ? takeStart(challenge.key) : null;
       const now = new Date().toISOString();
       const chosen = attemptFor(
-        readProgress(),
+        progress,
         challenge.key,
         start !== null,
         now,
         randomAttempt,
+        challenge.revision,
       );
+      if (!chosen.fresh && chosen.progress[challenge.key]?.revision &&
+          chosen.progress[challenge.key].revision !== challenge.revision)
+        throw new Error("Reload to open the saved attempt's exact challenge version.");
       if (chosen.fresh) writeProgress(chosen.progress);
       const attemptId = chosen.attempt;
       const done = chosen.progress[challenge.key]?.completedAt != null;
@@ -780,9 +793,9 @@ export function Practice({
                         >
                           Next challenge →
                         </Link>{" "}
-                        <button type="button" className="btn" onClick={again}>
+                        {allowRepeat && <button type="button" className="btn" onClick={again}>
                           Practise this again
-                        </button>
+                        </button>}
                         <p className="faint">
                           Suggested by language and difficulty.
                         </p>
@@ -792,9 +805,9 @@ export function Practice({
                         <Link className="btn primary" href="/challenges">
                           Explore challenges
                         </Link>{" "}
-                        <button type="button" className="btn" onClick={again}>
+                        {allowRepeat && <button type="button" className="btn" onClick={again}>
                           Practise this again
-                        </button>
+                        </button>}
                       </>
                     )}
                     <AfterQuestions

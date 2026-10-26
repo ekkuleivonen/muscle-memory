@@ -16,7 +16,7 @@ The app's `prebuild` step builds the pinned in-browser runtimes (Pyodide, Sucras
 
 The adapter build invokes Next with the standalone output it needs. A regular Next build alone is not sufficient input for `--skipNextBuild`; use the complete adapter command above.
 
-The app has no database, R2 bucket or credential bindings: practice state lives in the browser's IndexedDB. Recorded practice is uploaded to a separate ingest Worker (`apps/ingest`, see [telemetry](telemetry.md)), which has an R2 bucket and a Pipelines stream of its own.
+The app's managed challenge catalog uses the `CATALOG_DB` D1 binding and private `CONTENT` R2 binding (see [admin challenge management](admin-challenge-management.md)). Player practice state remains in the browser's IndexedDB. Recorded practice is uploaded to a separate ingest Worker (`apps/ingest`, see [telemetry](telemetry.md)), which has an R2 bucket and a Pipelines stream of its own.
 
 Wrangler is pinned to a compatible patch that fixes a transitive sharp advisory. The root override raises the build-only `@node-minify/core` glob dependency to 10.5.0, which fixes its command-injection advisory. A clean install reported zero npm vulnerabilities. Revisit the override when upstream removes the older glob pin.
 
@@ -24,7 +24,7 @@ Wrangler is pinned to a compatible patch that fixes a transitive sharp advisory.
 
 The Worker serves the custom domain `musclememory.run`, with `workers.dev` and version preview URLs disabled. The site is public: the app, quick start (`/start`), shared results (`/r/*`) and their preview images, and `/ingest/*` (the ingest Worker, [telemetry](telemetry.md)) are reachable without signing in. Accepting the Terms at `/consent` (or by starting from `/start`) is the only gate, and it is the app's, not Cloudflare's.
 
-Cloudflare Access is kept for what must stay private: the future admin routes, when they exist, get their own Access application with an owner-only email rule. Do not put Access back in front of the whole hostname; shared links and uploads would stop working for everyone else.
+Cloudflare Access is kept for what must stay private: the `/admin*` routes have their own Access application with an owner-only email rule, plus server-side JWT verification. Do not put Access back in front of the whole hostname; shared links and uploads would stop working for everyone else.
 
 ## Deploying
 

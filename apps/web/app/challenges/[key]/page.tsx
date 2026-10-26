@@ -6,7 +6,10 @@ import { practiceHref } from "../../../lib/paths";
 import { getChallenges } from "../../../lib/load";
 import "../../_terminal/terminal.css";
 import "../../practice/practice.css";
-import { Practice } from "../../practice/practice";
+import { PracticeContinuation } from "../../practice/continuation";
+import { publicChallenge } from "../../../lib/catalog-source";
+
+export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ key: string }> };
 
@@ -28,33 +31,43 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PracticePage({ params }: Props) {
   const { key } = await params;
   await requireConsent(practiceHref(key));
-  const { findChallenge, revision: revisionOf, challenges } = await getChallenges();
+  const {
+    findChallenge,
+    revision: revisionOf,
+    challenges,
+  } = await getChallenges();
   const challenge = findChallenge(decodeURIComponent(key));
-  if (!challenge) notFound();
+  if (!challenge) {
+    const historical = await publicChallenge(decodeURIComponent(key));
+    if (!historical) notFound();
+    if (key !== historical.metadata.key)
+      redirect(practiceHref(historical.metadata.key));
+    return (
+      <PracticeContinuation
+        challengeKey={historical.metadata.key}
+        currentJson={null}
+        candidates={challenges.map(summarize)}
+      />
+    );
+  }
   if (key !== challenge.key) redirect(practiceHref(challenge.key));
-  const content = revisionOf(challenge.revision)!;
   return (
-    <Practice
-      key={`${challenge.key}:${challenge.revision}`}
-      revisionJson={JSON.stringify(content)}
-      trail={[
-        { label: "challenges", href: "/challenges" },
-        { label: challenge.key, href: practiceHref(challenge.key) },
-      ]}
-      candidates={[
-        summarize(challenge),
-        ...challenges.filter((i) => i.key !== challenge.key).map(summarize),
-      ]}
-      challenge={{
-        key: challenge.key,
-        revision: challenge.revision,
-        title: challenge.title,
-        task: content.task,
-        difficulty: challenge.difficulty,
-        tags: [...challenge.tags],
-        language: challenge.language!,
-        runnable: challenge.runnable,
-      }}
+    <PracticeContinuation
+      challengeKey={challenge.key}
+      currentJson={JSON.stringify({
+        metadata: {
+          key: challenge.key,
+          revision: challenge.revision,
+          title: challenge.title,
+          summary: challenge.summary,
+          hook: challenge.hook,
+          difficulty: challenge.difficulty,
+          tags: challenge.tags,
+        },
+        revision: revisionOf(challenge.revision)!,
+        archived: false,
+      })}
+      candidates={challenges.map(summarize)}
     />
   );
 }

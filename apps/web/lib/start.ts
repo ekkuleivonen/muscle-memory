@@ -23,12 +23,23 @@ export function noteStart(start: StartContext): void {
 }
 
 /** The start noted for this challenge, if any; it is used once. */
-export function takeStart(key: string): StartContext | null {
+export function peekStart(key: string): StartContext | null {
   try {
-    const value = JSON.parse(sessionStorage.getItem(START_KEY) ?? "null") as StartContext | null;
-    sessionStorage.removeItem(START_KEY);
+    const value = JSON.parse(
+      sessionStorage.getItem(START_KEY) ?? "null",
+    ) as StartContext | null;
     return value && value.key === key ? value : null;
   } catch {
     return null;
   }
+}
+
+export function takeStart(key: string): StartContext | null {
+  const start = peekStart(key);
+  try {
+    sessionStorage.removeItem(START_KEY);
+  } catch {
+    /* Storage unavailable. */
+  }
+  return start;
 }

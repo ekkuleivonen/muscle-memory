@@ -10,9 +10,20 @@
   // Public verification metadata for the separately approved /admin* Access app.
   // These are not credentials; assertions are verified against the team's JWKS.
   "vars": {
+    "CATALOG_MODE": "managed",
     "ADMIN_ACCESS_ISSUER": "https://elei.cloudflareaccess.com",
     "ADMIN_ACCESS_AUD": "147a7760861e051b94b0c5035288fdddcb301afa47d7973527127deeda3e2c4e",
   },
+  "d1_databases": [
+    {
+      "binding": "CATALOG_DB",
+      "database_name": "muscle-memory-catalog",
+      "database_id": "30916af3-46a7-451c-b0d3-92570e090329",
+    },
+  ],
+  "r2_buckets": [
+    { "binding": "CONTENT", "bucket_name": "muscle-memory-content" },
+  ],
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
   "services": [
     { "binding": "WORKER_SELF_REFERENCE", "service": "muscle-memory" },

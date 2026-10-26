@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LANGUAGES } from "../../../lib/languages";
+import { publicReceipt } from "../../../lib/catalog-source";
 import { getChallenges } from "../../../lib/load";
 import {
   outcomeLines,
@@ -17,6 +18,8 @@ import { Banner } from "../../_terminal/banner";
 import { TermFooter } from "../../_terminal/footer";
 import "../../_terminal/terminal.css";
 import "../../share.css";
+
+export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ card: string }> };
 
@@ -40,29 +43,42 @@ async function read(props: Props) {
   const { findChallenge } = await getChallenges();
   if (link.kind !== "outcome") return { link, challenge: undefined };
   const card = link.outcome;
-  const challenge = findChallenge(card.k);
+  const current = findChallenge(card.k);
+  const historical = await publicReceipt(card.k, `sha256:${card.rv}`);
+  const challenge = historical?.metadata;
+  const archived = historical?.archived ?? false;
   const label = LANGUAGES.find((l) => l.id === card.l)?.label ?? card.l;
   return {
     link,
     challenge,
     label,
-    shown: challenge ? view(card, label, challenge.title, challenge.revision) : undefined,
+    archived,
+    shown: challenge
+      ? view(card, label, challenge.title, current?.revision ?? "")
+      : undefined,
   };
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
-  const { challenge, label, shown } = await read(props);
+  const { challenge, label, shown, archived } = await read(props);
   if (!challenge || !shown)
     return { title: "Result not available", robots: { index: false } };
   const title = shown.headline;
-  const description = `${challenge.summary || challenge.title} Try the same ${label} challenge yourself.`;
+  const description = `${challenge.summary || challenge.title}${archived ? " This challenge is archived." : ` Try the same ${label} challenge yourself.`}`;
   const url = `/r/${(await props.params).card}`;
   return {
     title: { absolute: title },
     description,
     // Every share is its own address with the same challenge behind it: previews, not results.
     robots: NOT_INDEXED,
-    openGraph: { title, description, url, siteName: SITE_NAME, locale: "en_US", type: "website" },
+    openGraph: {
+      title,
+      description,
+      url,
+      siteName: SITE_NAME,
+      locale: "en_US",
+      type: "website",
+    },
     twitter: { card: "summary_large_image", title, description },
   };
 }
@@ -74,7 +90,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
  * so, never something in its place.
  */
 export default async function SharedResult(props: Props) {
-  const { link, challenge, shown } = await read(props);
+  const { link, challenge, shown, archived } = await read(props);
   if (link.kind === "malformed")
     return (
       <Unavailable
@@ -86,7 +102,7 @@ export default async function SharedResult(props: Props) {
     return (
       <Unavailable
         title="That challenge isn't available any more"
-        body={`This result is for ${link.outcome.k}, which has been retired, so it isn't shown.`}
+        body={`The public version named by this result for ${link.outcome.k} is unavailable.`}
       />
     );
   return (
@@ -98,26 +114,30 @@ export default async function SharedResult(props: Props) {
           <Receipt
             top={`${challenge.key} · shared result`}
             headline={shown.headline}
-            detail={`${shown.earlier ? "Completed on an earlier version of this challenge; you start from the current one. " : ""}The editor offers no AI completion, chat or generated code: a practice condition, not proof about other tools. As they shared it; not a verified record.`}
+            detail={`${archived ? "This challenge is archived. " : shown.earlier ? "Completed on an earlier version of this challenge; you start from the current one. " : ""}The editor offers no AI completion, chat or generated code: a practice condition, not proof about other tools. As they shared it; not a verified record.`}
             lines={shown.lines}
             completed={shown.completed}
           />
-          <h1 className="t-line home-headline">
-            <strong>Same challenge.</strong>
-            <br />
-            <strong className="t-brand">Your turn.</strong>
-          </h1>
-          <p className="t-line">
-            {challenge.hook ?? (challenge.summary || challenge.title)}{" "}
-            {startCopy(challenge.key, shown.sameVersion).lede}
-          </p>
-          <div className="home-start">
-            <YourTurn
-              challengeKey={challenge.key}
-              label={startCopy(challenge.key, shown.sameVersion).cta}
-            />
-            <span className="t-dim">No email needed.</span>
-          </div>
+          {!archived && (
+            <>
+              <h1 className="t-line home-headline">
+                <strong>Same challenge.</strong>
+                <br />
+                <strong className="t-brand">Your turn.</strong>
+              </h1>
+              <p className="t-line">
+                {challenge.hook ?? (challenge.summary || challenge.title)}{" "}
+                {startCopy(challenge.key, shown.sameVersion).lede}
+              </p>
+              <div className="home-start">
+                <YourTurn
+                  challengeKey={challenge.key}
+                  label={startCopy(challenge.key, shown.sameVersion).cta}
+                />
+                <span className="t-dim">No email needed.</span>
+              </div>
+            </>
+          )}
           <SharedCode />
         </main>
       </div>
