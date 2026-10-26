@@ -1,0 +1,129 @@
+{
+  "key": "PY-007",
+  "revision": "sha256:8be1ec712ed87c9fb4964e1672a9675028e2eb1ff0efc2a71ed3d0492ad98ad6",
+  "language": "python",
+  "runtime": "Pyodide/CPython3.14",
+  "origin": "http://localhost:3238",
+  "partition": "a-python",
+  "review": {
+    "key": "PY-007",
+    "revision": "sha256:e8a8cfef1e394439d2f5f9bba7ac4b3f82dbe489c34540adb2e3c33e5fcc3b33",
+    "firstCandidate": "attempts/first.py",
+    "wrongCandidate": "attempts/wrong.py",
+    "wrongIntent": "Use lower rather than Unicode casefold, missing case-equivalent Unicode strings such as STRASSE and Straße.",
+    "assumptions": [
+      "Each record has a string email.",
+      "Ignoring letter case for any letter means Unicode caseless comparison via casefold."
+    ],
+    "ambiguityFindings": [
+      "Unicode normalization is not specified; no accent or canonical-composition normalization is applied.",
+      "No Unicode example demonstrates why lower alone is insufficient."
+    ],
+    "verbosityFindings": [
+      "Concise; adding one casefold-specific public example would clarify intended Unicode semantics."
+    ],
+    "confidence": "high, unexecuted",
+    "publicEdgeCases": [
+      {
+        "input": [
+          {
+            "id": 1,
+            "email": " Straße@x.io ",
+            "tag": "keep"
+          },
+          {
+            "id": 2,
+            "email": "STRASSE@x.io"
+          }
+        ],
+        "expected": [
+          {
+            "id": 1,
+            "email": " Straße@x.io ",
+            "tag": "keep"
+          }
+        ],
+        "reason": "Unicode caseless match keeps first record unchanged."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "postPublicRepair": true,
+      "startedAt": "2026-10-26T03:31:34.707Z",
+      "finishedAt": "2026-10-26T03:31:36.117Z",
+      "candidatePath": "a-python/PY-007/attempts/first.py",
+      "candidateSha256": "8737163ef6c90c13ab7968aeaca2ac871e949e4e5a4087cb0edffee46c8fe754",
+      "actualCodeSha256": "8737163ef6c90c13ab7968aeaca2ac871e949e4e5a4087cb0edffee46c8fe754",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:8be1ec712ed87c9fb4964e1672a9675028e2eb1ff0efc2a71ed3d0492ad98ad6",
+      "runId": "19ed9241-c1eb-4a1b-87d5-1b6f3b9724ea",
+      "documentRevision": 1,
+      "artifactId": "practice-737e0694-25da-4609-a4b4-98e56038eef9.code.1",
+      "result": "passed",
+      "passed": 17,
+      "total": 17,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "postPublicRepair": true,
+      "startedAt": "2026-10-26T03:31:37.466Z",
+      "finishedAt": "2026-10-26T03:31:38.871Z",
+      "candidatePath": "a-python/PY-007/attempts/wrong.py",
+      "candidateSha256": "af84ef3e25d2ae8d4dec3007eca3bf10b424472daea666b56cbc4c9731dd8b52",
+      "actualCodeSha256": "af84ef3e25d2ae8d4dec3007eca3bf10b424472daea666b56cbc4c9731dd8b52",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:8be1ec712ed87c9fb4964e1672a9675028e2eb1ff0efc2a71ed3d0492ad98ad6",
+      "runId": "9af8683f-1a91-460c-aafe-bf8995215802",
+      "documentRevision": 1,
+      "artifactId": "practice-c006cebd-1e11-4feb-96c3-7bfac7b49f8a.code.1",
+      "result": "failed",
+      "passed": 15,
+      "total": 17,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "2 of 17 cases failed.\n\n✘\nhidden case 16hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 17hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "postPublicRepair": true,
+      "startedAt": "2026-10-26T03:31:39.334Z",
+      "finishedAt": "2026-10-26T03:31:40.300Z",
+      "candidatePath": "a-python/PY-007/attempts/first.py",
+      "candidateSha256": "8737163ef6c90c13ab7968aeaca2ac871e949e4e5a4087cb0edffee46c8fe754",
+      "actualCodeSha256": "8737163ef6c90c13ab7968aeaca2ac871e949e4e5a4087cb0edffee46c8fe754",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:8be1ec712ed87c9fb4964e1672a9675028e2eb1ff0efc2a71ed3d0492ad98ad6",
+      "runId": "d3b4444d-6a41-40bc-8d8f-017728a84085",
+      "documentRevision": 2,
+      "artifactId": "practice-c006cebd-1e11-4feb-96c3-7bfac7b49f8a.code.2",
+      "result": "passed",
+      "passed": 17,
+      "total": 17,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

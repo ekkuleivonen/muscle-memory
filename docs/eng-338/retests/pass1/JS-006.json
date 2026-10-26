@@ -1,0 +1,180 @@
+{
+  "key": "JS-006",
+  "revision": "sha256:4e1161b197cfa68192cd34ee679733fe37448235f9c7ef0b9d3fb45c23e4f098",
+  "language": "javascript",
+  "runtime": "browser JavaScript",
+  "origin": "http://localhost:3238",
+  "partition": "b-js-ts",
+  "review": {
+    "key": "JS-006",
+    "revision": "sha256:8082598a59e16473dbbe2f22745501419af4a551ed2f59905d0bf09e78c47e57",
+    "firstCandidate": "attempts/first.js",
+    "wrongCandidate": "attempts/wrong.js",
+    "wrongIntent": "Include line values but only the promo name, leaving same-name discount changes stale.",
+    "assumptions": [
+      "Cart input data uses documented serializable shapes.",
+      "Computing a cache key is permitted; unchanged inputs skip all pricing operations."
+    ],
+    "ambiguityFindings": [
+      "Statement permits key-based memoization; cache key creation still scans lines, as in starter."
+    ],
+    "verbosityFindings": [
+      "Explicit same-name promo rule prevents an otherwise plausible incomplete fix."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": [
+          [
+            "add",
+            "x",
+            1000,
+            1
+          ],
+          [
+            "code",
+            {
+              "name": "X",
+              "amount": 100
+            }
+          ],
+          [
+            "summary"
+          ],
+          [
+            "code",
+            {
+              "name": "X",
+              "amount": 200
+            }
+          ],
+          [
+            "summary"
+          ]
+        ],
+        "expected": [
+          {
+            "items": 1,
+            "subtotal": 1000,
+            "discount": 100,
+            "total": 900
+          },
+          {
+            "items": 1,
+            "subtotal": 1000,
+            "discount": 200,
+            "total": 800
+          }
+        ],
+        "reason": "Same-name codes can change price."
+      },
+      {
+        "input": [
+          [
+            "add",
+            "x",
+            1000,
+            1
+          ],
+          [
+            "add",
+            "x",
+            2000,
+            1
+          ],
+          [
+            "summary"
+          ]
+        ],
+        "expected": [
+          {
+            "items": 2,
+            "subtotal": 2000,
+            "discount": 0,
+            "total": 2000
+          }
+        ],
+        "reason": "Adding an existing SKU preserves original price."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "postPublicRepair": true,
+      "startedAt": "2026-10-26T03:31:28.532Z",
+      "finishedAt": "2026-10-26T03:31:28.629Z",
+      "candidatePath": "b-js-ts/JS-006/attempts/first.js",
+      "candidateSha256": "b692973fe154a80dd62fa64771d2a1e1dc94152d51ace7c095aefdc6844bb8dd",
+      "actualCodeSha256": "b692973fe154a80dd62fa64771d2a1e1dc94152d51ace7c095aefdc6844bb8dd",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:4e1161b197cfa68192cd34ee679733fe37448235f9c7ef0b9d3fb45c23e4f098",
+      "runId": "742f8aed-141c-4d1e-b625-ae3dd10f4751",
+      "documentRevision": 1,
+      "artifactId": "practice-d149c844-6753-41cb-a74a-857254308cab.code.1",
+      "result": "passed",
+      "passed": 18,
+      "total": 18,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "postPublicRepair": true,
+      "startedAt": "2026-10-26T03:31:30.171Z",
+      "finishedAt": "2026-10-26T03:31:30.241Z",
+      "candidatePath": "b-js-ts/JS-006/attempts/wrong.js",
+      "candidateSha256": "64192e3ad3a225b84317c0db034f57ce0cb9daf3cd56daaa7aa529b53a2b2781",
+      "actualCodeSha256": "64192e3ad3a225b84317c0db034f57ce0cb9daf3cd56daaa7aa529b53a2b2781",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:4e1161b197cfa68192cd34ee679733fe37448235f9c7ef0b9d3fb45c23e4f098",
+      "runId": "28774e5a-6242-469b-9b5e-da935c6fdd56",
+      "documentRevision": 1,
+      "artifactId": "practice-93bf89b8-8f99-48dd-bbd9-9db82774a1a0.code.1",
+      "result": "failed",
+      "passed": 17,
+      "total": 18,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "1 of 18 cases failed.\n\n✘\nhidden case 17hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "postPublicRepair": true,
+      "startedAt": "2026-10-26T03:31:30.800Z",
+      "finishedAt": "2026-10-26T03:31:30.853Z",
+      "candidatePath": "b-js-ts/JS-006/attempts/first.js",
+      "candidateSha256": "b692973fe154a80dd62fa64771d2a1e1dc94152d51ace7c095aefdc6844bb8dd",
+      "actualCodeSha256": "b692973fe154a80dd62fa64771d2a1e1dc94152d51ace7c095aefdc6844bb8dd",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:4e1161b197cfa68192cd34ee679733fe37448235f9c7ef0b9d3fb45c23e4f098",
+      "runId": "eed2afb1-3f9e-4759-b535-547ee9fe9c29",
+      "documentRevision": 2,
+      "artifactId": "practice-93bf89b8-8f99-48dd-bbd9-9db82774a1a0.code.2",
+      "result": "passed",
+      "passed": 18,
+      "total": 18,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}
