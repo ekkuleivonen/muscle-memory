@@ -85,5 +85,5 @@ CREATE UNIQUE INDEX successful_operation_audit ON operator_audit(request_id) WHE
 CREATE TABLE validation_sessions (
   token TEXT PRIMARY KEY, challenge_key TEXT NOT NULL REFERENCES challenge_heads(challenge_key),
   generation INTEGER NOT NULL, draft_digest TEXT NOT NULL, runtime_fingerprint TEXT NOT NULL,
-  expires_at TEXT NOT NULL, started_at TEXT, finished_at TEXT, failure_code TEXT, consumed_at TEXT
+  expires_at TEXT NOT NULL, consumed_at TEXT
 );

@@ -65,7 +65,7 @@ export async function initializeLocalCatalog(root: string, db: any) {
         .prepare("PRAGMA table_info(validation_sessions)")
         .all<{ name: string }>()
     ).results;
-    if (!columns.some((c) => c.name === "started_at"))
+    if (!columns.some((c) => c.name === "consumed_at"))
       throw new Error(
         "Local fixture schema differs. Use a new local state path; no data was reset.",
       );

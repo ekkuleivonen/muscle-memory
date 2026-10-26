@@ -58,7 +58,7 @@ export async function validationPlan(
   };
 }
 /** Server grades raw terminal results against the exact private source, never a client pass flag.
- * Only the server-owned trusted validator can submit these results to the receipt writer. */
+ * Evidence is submitted by the trusted operator browser, not independent runtime proof. */
 export function validateEvidence(
   plan: ValidationPlan,
   reported: unknown,
@@ -105,7 +105,7 @@ export function validateEvidence(
     if (expected.expect === "correct" ? !pass : pass)
       throw new AuthoringInvalid(
         expected.expect === "correct"
-          ? `${run.id} did not pass every case.`
+          ? `${run.id}: ${feedback.correct}/${feedback.total} cases passed. Review this implementation and its cases.`
           : `${run.id} unexpectedly passes every case.`,
       );
   }

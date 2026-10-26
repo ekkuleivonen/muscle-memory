@@ -12,9 +12,9 @@ export const POST = authoringRoute(async (service, request) => {
     )
   )
     throw new AuthoringInvalid(
-      "Client QA transcripts or pass flags are not accepted.",
+      "Start checks for the saved draft before submitting browser results.",
     );
-  return service.requestValidation(
+  return service.beginValidation(
     decodeURIComponent(new URL(request.url).pathname.split("/")[4]),
     body as never,
   );

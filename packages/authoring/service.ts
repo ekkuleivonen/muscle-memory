@@ -16,7 +16,6 @@ import type {
   EditorSummary,
   HistoricalChallenge,
   ValidationPlan,
-  TrustedValidator,
 } from "./contracts";
 import { AuthoringInvalid, prepareSource, structuralProblems } from "./source";
 import { digest, runtimePin } from "./runtime";
@@ -34,9 +33,6 @@ interface Session {
   runtime_fingerprint: string;
   expires_at: string;
   consumed_at: string | null;
-  started_at: string | null;
-  finished_at: string | null;
-  failure_code: string | null;
 }
 const json = (value: unknown) => canonical(value as Json);
 export class AuthoringService {
@@ -106,29 +102,6 @@ export class AuthoringService {
     if (!h) throw new AuthoringInvalid("Challenge not found.");
     const source = await this.source(h);
     const head = this.editorHead(h);
-    if (!h.qa_receipt && h.draft_digest) {
-      const last = await this.storage.db
-        .prepare(
-          `SELECT token,started_at,finished_at,failure_code,expires_at FROM validation_sessions WHERE challenge_key=? AND draft_digest=? AND generation=? ORDER BY expires_at DESC LIMIT 1`,
-        )
-        .bind(key, h.draft_digest, h.generation)
-        .first<{
-          token: string;
-          started_at: string | null;
-          finished_at: string | null;
-          failure_code: string | null;
-          expires_at: string;
-        }>();
-      if (last) {
-        head.validation =
-          last.finished_at || last.expires_at <= this.now()
-            ? "failed"
-            : last.started_at
-              ? "running"
-              : "queued";
-        head.validationJob = last.token;
-      }
-    }
     return {
       head,
       source,
@@ -138,37 +111,13 @@ export class AuthoringService {
   async list(): Promise<EditorSummary[]> {
     const rows = await this.storage.db
       .prepare(
-        `SELECT h.*,v.metadata_json,s.token AS validation_token,
-        s.started_at AS validation_started,s.finished_at AS validation_finished,s.expires_at AS validation_expires
-        FROM challenge_heads h
-      LEFT JOIN published_versions v ON v.revision = h.published_revision
-      LEFT JOIN validation_sessions s ON s.token=(SELECT token FROM validation_sessions
-        WHERE challenge_key=h.challenge_key AND draft_digest=h.draft_digest AND generation=h.generation
-        ORDER BY expires_at DESC LIMIT 1)
-      ORDER BY h.challenge_key`,
+        `SELECT h.*,v.metadata_json FROM challenge_heads h
+        LEFT JOIN published_versions v ON v.revision=h.published_revision ORDER BY h.challenge_key`,
       )
-      .all<
-        Head & {
-          metadata_json: string | null;
-          validation_token: string | null;
-          validation_started: string | null;
-          validation_finished: string | null;
-          validation_expires: string | null;
-        }
-      >();
+      .all<Head & { metadata_json: string | null }>();
     return rows.results.map((h) => {
       const m = JSON.parse(h.draft_metadata ?? h.metadata_json ?? "{}");
       const head = this.editorHead(h);
-      if (!h.qa_receipt && h.validation_token) {
-        head.validationJob = h.validation_token;
-        head.validation =
-          h.validation_finished ||
-          (h.validation_expires && h.validation_expires <= this.now())
-            ? "failed"
-            : h.validation_started
-              ? "running"
-              : "queued";
-      }
       return {
         ...head,
         title: m.title ?? h.challenge_key,
@@ -297,10 +246,7 @@ export class AuthoringService {
         "The runtime changed. Save the draft to pin the current runtime before validation.",
       );
   }
-  private async beginValidation(
-    key: string,
-    m: Mutation,
-  ): Promise<ValidationPlan> {
+  async beginValidation(key: string, m: Mutation): Promise<ValidationPlan> {
     this.checkMutation(m);
     const requestDigest = await digest({
       action: "begin-validation",
@@ -385,7 +331,7 @@ export class AuthoringService {
       );
     return plan;
   }
-  private async finishValidation(
+  async finishValidation(
     key: string,
     token: string,
     m: Mutation,
@@ -436,7 +382,7 @@ export class AuthoringService {
     const objectKey = `private/validation/${key}/${token}.json`;
     await this.storage.immutableObject(
       objectKey,
-      json({ provenance: "trusted-operator-cli", plan, runs }),
+      json({ provenance: "operator-browser-submitted", plan, runs }),
     );
     const at = this.now();
     await this.storage.operation(
@@ -457,10 +403,8 @@ export class AuthoringService {
           )
           .bind(token, key, h.draft_digest, runtime.fingerprint, objectKey, at),
         this.storage.db
-          .prepare(
-            "UPDATE validation_sessions SET consumed_at=?,finished_at=? WHERE token=?",
-          )
-          .bind(at, at, token),
+          .prepare("UPDATE validation_sessions SET consumed_at=? WHERE token=?")
+          .bind(at, token),
         this.storage.db
           .prepare(
             "UPDATE challenge_heads SET generation=generation+1,qa_receipt=?,updated_at=? WHERE challenge_key=?",
@@ -469,98 +413,6 @@ export class AuthoringService {
       ],
     );
     return this.detail(key);
-  }
-  async requestValidation(key: string, m: Mutation): Promise<EditorDetail> {
-    this.checkMutation(m);
-    const requestDigest = await digest({
-      action: "begin-validation",
-      key,
-      expected: m.expectedGeneration,
-    });
-    const prior = await this.storage.completed(m.requestId, requestDigest);
-    if (!prior) await this.beginValidation(key, m);
-    return this.detail(key);
-  }
-  /** Trusted operator tooling only. Never exposed as an HTTP callback or browser pass flag. */
-  async runValidationJob(
-    token: string,
-    validator: TrustedValidator,
-  ): Promise<EditorDetail> {
-    const session = await this.storage.db
-      .prepare("SELECT * FROM validation_sessions WHERE token=?")
-      .bind(token)
-      .first<Session>();
-    if (!session) throw new AuthoringInvalid("Validation job not found.");
-    const key = session.challenge_key;
-    const receipt = await this.storage.db
-      .prepare(
-        "SELECT receipt_id FROM qa_receipts WHERE receipt_id=? AND challenge_key=?",
-      )
-      .bind(token, key)
-      .first();
-    if (receipt) return this.detail(key);
-    const h = await this.checkedHead(key, session.generation),
-      source = await this.source(h);
-    if (
-      !source ||
-      !h.draft_digest ||
-      session.expires_at <= this.now() ||
-      session.draft_digest !== h.draft_digest
-    )
-      throw new AuthoringConflict(
-        "Validation job expired or the draft changed.",
-      );
-    const runtime = await runtimePin(source.revision.language);
-    await this.assertRuntime(source, runtime);
-    if (runtime.fingerprint !== session.runtime_fingerprint)
-      throw new AuthoringConflict(
-        "Validation runtime changed. Queue a fresh job.",
-      );
-    const plan = await validationPlan(
-      source,
-      runtime,
-      h.generation,
-      h.draft_digest,
-      token,
-      session.expires_at,
-    );
-    const claimed = await this.storage.db
-      .prepare(
-        `UPDATE validation_sessions SET started_at=? WHERE token=? AND started_at IS NULL AND consumed_at IS NULL RETURNING token`,
-      )
-      .bind(this.now(), token)
-      .first();
-    if (!claimed)
-      throw new AuthoringConflict(
-        "This validation is running or already attempted. Queue a new explicit attempt after checking its state.",
-      );
-    try {
-      const runs = await validator.run(plan);
-      return await this.finishValidation(
-        key,
-        token,
-        {
-          requestId: `finish_${(await digest(token)).slice(7)}`,
-          expectedGeneration: plan.generation,
-        },
-        runs,
-      );
-    } catch (error) {
-      await this.storage.db.batch([
-        this.storage.db
-          .prepare(
-            "UPDATE validation_sessions SET finished_at=?,failure_code=? WHERE token=?",
-          )
-          .bind(
-            this.now(),
-            error instanceof AuthoringInvalid
-              ? "checks_failed"
-              : "runtime_unavailable",
-            token,
-          ),
-      ]);
-      throw error;
-    }
   }
   async publish(key: string, m: Mutation): Promise<EditorDetail> {
     return this.transition(key, m, "publish");

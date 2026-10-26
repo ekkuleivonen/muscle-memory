@@ -11,9 +11,8 @@ export interface EditorHead {
   generation: number;
   lifecycle: "draft" | "published" | "archived";
   publishedRevision: string | null;
-  validationJob?: string;
   draftDigest: string | null;
-  validation: "unvalidated" | "queued" | "running" | "failed" | "passed";
+  validation: "unvalidated" | "passed";
 }
 export interface EditorSummary extends EditorHead {
   title: string;
@@ -50,9 +49,4 @@ export interface HistoricalChallenge {
   metadata: ChallengeMetadata;
   revision: Revision;
   archived: boolean;
-}
-
-/** Server-owned capability only; never constructed from HTTP input. */
-export interface TrustedValidator {
-  run(plan: ValidationPlan): Promise<ValidationRun[]>;
 }

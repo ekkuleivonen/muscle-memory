@@ -28,7 +28,6 @@ execFileSync(
   { stdio: "inherit" },
 );
 import { initializeLocalCatalog, repositorySeed } from "../authoring-local";
-import { localSandboxValidator } from "../authoring-sandbox";
 import { seedCatalog } from "../../packages/authoring/seed";
 import { CatalogStorage } from "../../packages/authoring/storage";
 import { encodeOutcome } from "../../apps/web/lib/outcome";
@@ -182,7 +181,7 @@ async function check(path, token, expected, extra = {}) {
   receipts.push({ path, method, host, status: response.status });
   return body;
 }
-let browser, sandbox, page;
+let browser, page;
 let closing = false;
 const routeErrors = [];
 const root = resolve(".");
@@ -344,30 +343,12 @@ try {
     .waitFor({ timeout: 15000 });
   detail = await service.detail("JS-998");
   assert.equal(detail.source.metadata.title, "Synthetic browser edited");
-  await page.getByRole("button", { name: "Queue trusted validation" }).click();
-  await page.getByText("Validation queued.", { exact: false }).waitFor();
-  assert.ok(
-    await page
-      .getByRole("button", { name: "Publish revision", exact: true })
-      .isDisabled(),
-  );
-  detail = await service.detail("JS-998");
-  assert.equal(detail.head.validation, "queued");
-  const future = new AuthoringService(storage, () =>
-    new Date(Date.now() + 86400000).toISOString(),
-  );
-  assert.equal((await future.detail("JS-998")).head.validation, "failed");
-  sandbox = await localSandboxValidator(root);
-  await service.runValidationJob(detail.head.validationJob, sandbox.validator);
-  await page.reload();
+  await page.getByRole("button", { name: "Run checks", exact: true }).click();
   await page
-    .getByRole("button", { name: "Publish revision", exact: true })
-    .waitFor();
-  assert.ok(
-    await page
-      .getByRole("button", { name: "Publish revision", exact: true })
-      .isEnabled(),
-  );
+    .getByText("Checks passed in this browser.", { exact: false })
+    .waitFor({ timeout: 90000 });
+  detail = await service.detail("JS-998");
+  assert.equal(detail.head.validation, "passed");
   await page
     .getByRole("button", { name: "Publish revision", exact: true })
     .click();
@@ -558,15 +539,60 @@ try {
   );
   await page.waitForURL("**/admin/authoring/JS-997");
   await page.locator("#authoring-title").waitFor();
-  await page.getByRole("button", { name: "Queue trusted validation" }).click();
+  await page.getByRole("button", { name: "Run checks", exact: true }).click();
   await page
-    .getByText("availability is not confirmed.", { exact: false })
+    .getByText("Checks passed in this browser.", { exact: false })
+    .waitFor({ timeout: 90000 });
+  assert.ok(
+    await page
+      .getByRole("button", { name: "Publish revision", exact: true })
+      .isEnabled(),
+  );
+  await page
+    .locator("#authoring-solution")
+    .fill("export function quoteOrder(order) { return null; }");
+  await page
+    .getByRole("button", { name: "Save private draft", exact: true })
+    .click();
+  await page.getByText("Private draft saved.", { exact: false }).waitFor();
+  await page.getByRole("button", { name: "Run checks", exact: true }).click();
+  await page
+    .getByRole("alert")
+    .filter({ hasText: "cases passed" })
+    .waitFor({ timeout: 90000 });
+  assert.ok(
+    await page
+      .getByRole("button", { name: "Publish revision", exact: true })
+      .isDisabled(),
+  );
+  await page
+    .locator("#authoring-solution")
+    .fill("while(true) {}\n" + source.private.solution);
+  await page
+    .getByRole("button", { name: "Save private draft", exact: true })
+    .click();
+  await page.getByText("Private draft saved.", { exact: false }).waitFor();
+  await page.getByRole("button", { name: "Run checks", exact: true }).click();
+  await page.getByText("Checking 1/", { exact: false }).waitFor();
+  await page.getByRole("button", { name: "Stop checks", exact: true }).click();
+  await page
+    .getByRole("alert")
+    .filter({ hasText: "Checks stopped." })
     .waitFor();
   assert.ok(
     await page
       .getByRole("button", { name: "Publish revision", exact: true })
       .isDisabled(),
   );
+  await page.locator("#authoring-solution").fill(source.private.solution);
+  await page
+    .getByRole("button", { name: "Save private draft", exact: true })
+    .click();
+  await page.getByText("Private draft saved.", { exact: false }).waitFor();
+  await page.getByRole("button", { name: "Run checks", exact: true }).click();
+  await page
+    .getByText("Checks passed in this browser.", { exact: false })
+    .waitFor({ timeout: 90000 });
   missingStorage = true;
   await page.reload();
   await page
@@ -590,7 +616,7 @@ try {
         syntheticUploadsBlocked: uploads,
         operatorUploads,
         browser:
-          "authenticated full create / failure recovery / edit / queue / trusted execution / publish / archive / mobile; archived continuation reload and fresh-start denial; archived shared result; all synthetic uploads blocked, zero operator uploads",
+          "authenticated full create / failure recovery / edit / operator browser checks / publish / archive / mobile; archived continuation reload and fresh-start denial; archived shared result; all synthetic uploads blocked, zero operator uploads",
         receipts,
       },
       null,
@@ -618,7 +644,6 @@ try {
   throw error;
 } finally {
   closing = true;
-  await sandbox?.dispose();
   await browser?.close();
   await mf.dispose();
   await unavailable.dispose();

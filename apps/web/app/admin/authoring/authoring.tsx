@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import type {
   EditorDetail,
   EditorSummary,
+  ValidationPlan,
 } from "../../../../../packages/authoring/contracts";
 import type { ChallengeSource } from "../../../../../packages/content/source";
+import { runBrowserValidation } from "../../../../../packages/authoring/browser";
 import { KEY_CODES } from "../../../../../packages/content/keys";
 
 const API = "/admin/api/challenges";
@@ -270,10 +272,9 @@ export function AuthoringEditor({ challengeKey }: { challengeKey?: string }) {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
-  const validationRequest = useRef<{
-    generation: number;
-    requestId: string;
-  } | null>(null);
+  const validationHost = useRef<HTMLDivElement>(null);
+  const checking = useRef<AbortController | null>(null);
+  useEffect(() => () => checking.current?.abort(), []);
   const requests = useRef(new Map<string, string>());
   const dirty = json(fields) !== saved;
   const key = detail?.head.key ?? challengeKey;
@@ -376,53 +377,53 @@ export function AuthoringEditor({ challengeKey }: { challengeKey?: string }) {
     }
   }
   async function validate() {
-    if (!detail) return;
+    if (!detail || !validationHost.current) return;
+    const stop = new AbortController();
+    checking.current = stop;
     setBusy("validation");
     setError("");
-    setStatus(
-      "Queuing validation for this saved draft. The operator runner executes it separately.",
-    );
-    if (validationRequest.current?.generation !== detail.head.generation) {
-      validationRequest.current = {
-        generation: detail.head.generation,
-        requestId: crypto.randomUUID(),
-      };
-    }
+    setStatus("Preparing checks…");
     try {
-      const next = await request<EditorDetail>(
+      const plan = await mutation<ValidationPlan>(
         `${path}/validation`,
         "POST",
-        {
-          requestId: validationRequest.current.requestId,
-          expectedGeneration: detail.head.generation,
-        },
-        AbortSignal.timeout(120_000),
+        { expectedGeneration: detail.head.generation },
       );
-      validationRequest.current = null;
+      accept(
+        {
+          ...detail,
+          head: {
+            ...detail.head,
+            generation: plan.generation,
+            validation: "unvalidated",
+          },
+        },
+        false,
+      );
+      const runs = await runBrowserValidation(
+        plan,
+        validationHost.current,
+        setStatus,
+        stop.signal,
+      );
+      const next = await mutation<EditorDetail>(
+        `${path}/validation/${encodeURIComponent(plan.token)}`,
+        "POST",
+        { expectedGeneration: plan.generation, runs },
+      );
       accept(next, false);
       setStatus(
-        next.head.validation === "passed"
-          ? "Trusted validation passed for this saved draft and runtime."
-          : next.head.validation === "queued"
-            ? "Validation queued. The trusted operator validator must run this exact-version job; refresh to read its result."
-            : "Trusted validation did not pass. Review the reported failure before retrying.",
+        "Checks passed in this browser. Results saved for this draft and runtime.",
       );
     } catch (error) {
-      if (error instanceof HttpError) {
-        validationRequest.current = null;
-        setError(message(error));
-        setStatus(
-          "Trusted validation did not complete successfully. Draft editing remains available.",
-        );
-      } else {
-        setError(
-          "The validation response could not be confirmed. The server may still be working. Retry to check the same request. Your draft text is still here.",
-        );
-        setStatus(
-          "Validation outcome is uncertain; no passing result is assumed.",
-        );
-      }
+      setStatus("");
+      setError(
+        stop.signal.aborted
+          ? "Checks stopped. No passing result is assumed."
+          : message(error),
+      );
     } finally {
+      checking.current = null;
       setBusy("");
     }
   }
@@ -462,6 +463,7 @@ export function AuthoringEditor({ challengeKey }: { challengeKey?: string }) {
       <p>
         <a href="/admin/authoring">← Challenge authoring</a>
       </p>
+      <div ref={validationHost} hidden aria-hidden="true" />
       <h1>{key ? `Edit ${key}` : "Create challenge"}</h1>
       {loading && <p role="status">Loading private source…</p>}
       {error && <p role="alert">{error}</p>}
@@ -477,12 +479,6 @@ export function AuthoringEditor({ challengeKey }: { challengeKey?: string }) {
           <dt>Validation</dt>
           <dd>
             {detail.head.validation}
-            {detail.head.validation === "queued"
-              ? " — waiting for a trusted validation worker; availability is not confirmed. Refresh for status."
-              : ""}
-            {detail.head.validation === "failed"
-              ? " — checks failed, execution was unavailable, or the job expired. Queue a new explicit attempt after reviewing the worker result."
-              : ""}
             {dirty ? " (unsaved edits)" : ""}
           </dd>
           <dt>Published revision</dt>
@@ -664,19 +660,21 @@ export function AuthoringEditor({ challengeKey }: { challengeKey?: string }) {
         <>
           <h2>Validate and publish</h2>
           <p>
-            Save first, then request trusted validation for this exact draft and
-            runtime. Validation requires the configured isolated validator.
-            Publishing creates or restores an immutable revision.
+            Save first, then run checks for this draft. Publish once they pass.
+            Checks run in your browser; saved results are operator-submitted.
           </p>
           <div className="authoring-actions">
             <button
               disabled={Boolean(busy) || dirty || !detail.source}
               onClick={() => void validate()}
             >
-              {busy === "validation"
-                ? "Queuing validation…"
-                : "Queue trusted validation"}
+              {busy === "validation" ? "Checking…" : "Run checks"}
             </button>
+            {busy === "validation" && (
+              <button type="button" onClick={() => checking.current?.abort()}>
+                Stop checks
+              </button>
+            )}
             <button
               disabled={
                 Boolean(busy) || dirty || detail.head.validation !== "passed"

@@ -1,199 +1,125 @@
-# Challenge management — ENG-354 draft
+# Challenge management — ENG-354
 
-Status: implementation design and local work only. No cloud resources, production
-migrations, merge, deployment, provider calls or new event schemas authorized.
+Draft implementation on baseline `8ec608414bcfc4ea8c33f21802e070def7f84821`.
+No live resources, migration, merge or deployment are authorized yet.
 
-## Inspected baseline
+## Operator workflow and trust
 
-Main `8ec608414bcfc4ea8c33f21802e070def7f84821`: 69 challenge folders and 117
-immutable revision archive files. The web Worker imports a catalog generated from
-repository sources. It currently has no content-storage binding. Its admin shell
-and APIs share signed Access assertion and same-origin mutation guards.
+There is one trusted operator, already protected by Cloudflare Access plus server
+JWT verification and same-origin mutation checks. The workflow is **save draft →
+run checks in this admin browser → inspect result → publish**. No hosted validator,
+Browser Run, background queue, Mac/dev-01 service, new credentials or manual CLI
+step is required for normal authoring. The abandoned hosted proposal and CLI-only
+validation dependency were removed.
 
-Read-only account inventory found no Muscle Memory D1 database and no content R2
-bucket. Existing project R2 resources serve ingestion/research and are not to be
-repurposed. The current ingest Worker and player event schemas remain unchanged.
-Historical ENG-309's Adventure/lifecycle package is absent from current main; do
-not restore it. Reuse current `validateRevision`, catalog/hash verification,
-`publishProblems`, runtime manifest and sandbox Runner instead.
+Checks use the existing opaque-origin sandbox and pinned browser runtimes, with
+the same effective timeout as players. A short-lived token pins the saved draft,
+generation and runtime while the browser checks the reference twice, starter,
+alternative solutions and wrong variants. Starting checks invalidates the previous
+pass. Edits/runtime changes invalidate evidence; stale, expired, incomplete or
+malformed submissions cannot enable publication. The server rechecks submitted
+outputs against saved cases and structural rules and stores immutable private
+results with provenance `operator-browser-submitted`.
 
-## Proposed storage and lifecycle
+This deliberately trusts the authorized operator: they can fabricate their own
+browser reports. These results are not independent server runtime proof, human
+research observations or model benchmarks. No enterprise adversarial-operator
+infrastructure is warranted here. Stop/unmount destroys the local runner; there is
+no remote job to cancel. Runner errors and code failures are shown as one actionable
+message, and publication remains disabled until a passing saved result is present.
 
-- One new private R2 bucket (`muscle-memory-content`) for content-addressed public
-  revision snapshots and separately namespaced private draft/validation material.
-  No public bucket access or direct object URLs. Published reads use a server
-  allowlist/projection and verify their hash; never return a private draft bundle.
-- One new D1 database (`muscle-memory-catalog`) for challenge identities, optimistic
-  draft generations, immutable publication registry, lifecycle/current pointer,
-  exact-version QA receipts, transactional operator audit and publication intents.
-- R2 immutable writes precede a D1 compare-and-swap publication transaction. The
-  transaction switches the live pointer and records audit plus durable benchmark
-  intent together. Partial object writes must not expose a version. Unreferenced
-  objects can remain; no destructive garbage collection in this issue.
-- Editing invalidates QA for that draft generation. Publication compares expected
-  generation, content/private/runtime digests and completed validation receipts.
-  Runtime code runs only in the existing opaque-origin browser sandbox, never the
-  application server. Client transcripts, including fabricated expected outputs,
-  cannot create a QA receipt. The server must invoke a trusted browser-execution
-  capability and grade its returned raw runs; no capability means publication is
-  blocked. A checkbox or operator-browser report is not a trusted QA result.
-- Publish does not wait for models. Intent status is explicitly blocked/unconfigured
-  while owner decisions on events, protocol, model set and budget remain open. No
-  invented model/protocol revisions, provider calls, run statuses or paid retries.
-- Unchanged republish restores the same version and preserves prior evidence and
-  intent. Changed content/runtime requires a new immutable version and fresh QA.
-- Archive is reversible lifecycle state, not deletion or emergency disable. It
-  removes discovery/new-start affordances while keeping pinned active attempts and
-  historical/shared views. This requires public historical revision loading and a
-  local continuation gate; do not silently treat current content as an old version.
+## Persistence and public content
 
-## Implemented public integration
+The current app bundles 69 challenge sources and 117 immutable archives. It has no
+managed content binding. Proposed storage is one dedicated private R2 bucket and
+one catalog D1 database; existing ingestion/research storage is not repurposed.
 
-Managed discovery reads the current manifest pointer on each request, replacing the
-old process-lifetime bundled-catalog cache. The bundled catalog remains the default
-until managed mode is explicitly configured. Configured storage failures are errors,
-not fallback discovery that could resurrect archived challenges.
+R2 stores content-addressed public revisions/manifests and separately namespaced
+private sources/results. Public reads use registered allowlisted snapshots and
+verify their hashes. Drafts, references, wrong variants and private validation
+material never appear in public APIs. Missing configuration keeps the existing
+bundled player catalog and clearly disables authoring. Explicit managed mode with
+broken storage fails instead of silently resurrecting archived bundled challenges.
 
-Practice resolves the saved attempt's immutable revision before mounting the editor.
-It uses an optional local progress pin, or recovers that pin from existing records,
-without adding observations or changing their meaning. Archived content admits only
-identified unfinished attempts. Shared receipts resolve their named immutable
-revision and omit new-start invitations when archived.
+D1 stores identities, draft generations, immutable version registry, current
+manifest pointer, QA receipt references and minimal operator mutation audit.
+R2 writes precede an atomic D1 batch. Generation/manifest guards prevent stale
+updates and lost publication; stable request IDs reconcile uncertain replies.
+Failed object or transaction writes do not partially publish. Unreferenced objects
+are harmless and retained; no deletion/garbage-collection system is added.
 
-New publication envelopes include metadata and an effective runtime fingerprint;
-content/runtime changes invalidate QA. Original content hashes and archives are
-unchanged. No human/model instrumentation is introduced by this versioning work.
+Changed content/runtime creates a new immutable version. Unchanged restore reuses
+the version and evidence. Archive replaces delete: it removes discovery/new starts
+while preserving unfinished pinned local attempts, saved code, exact historical
+versions and shared results. No stats reset, source ID rewrite or player schema
+change is included. The original 69 identities and all 117 archives are preserved.
 
-## Local implementation and approval plan
+Publication records a durable intent with status `blocked_configuration`, not a
+scheduled or completed benchmark. Event design, model roster/protocol, budget,
+provider calls and ENG-342/355 remain outside this issue and unresolved with owner.
 
-Implement the storage contract and transactional transitions first, with migrations
-and real local D1/R2 fixtures. Add authenticated draft APIs and small labeled forms,
-then exact-version sandbox validation and guarded publication/archive actions.
-Test stale edits, simultaneous publish, idempotency, object-write failure, retry,
-private/public projection, archived continuation and actual browser mutation paths.
+## Local checks
 
-Before any live action, request approval for the exact new resources/bindings,
-production schema migration and seed of the frozen current catalog/archives. Verify
-seeded hashes/counts before switching public reads to managed mode. An unconfigured
-installation must retain its existing bundled player catalog and clearly label
-admin storage unavailable. Configured managed storage failures must be explicit,
-not silently resurrect archived challenges from the bundle. No credentials or
-security policy changes are included in this draft authorization.
+Real Miniflare D1/R2 plus Chromium automation covers seed/hash preservation,
+private-draft isolation, concurrent saves/publications, actual transaction rollback
+after object writes, R2 outage, lost committed replies/idempotency, browser result
+validation, stale/expired reports, same-version restore and archive/history.
+The six-second reference regression fails under the shared player timeout.
 
-ENG-353's authenticated inventory and protected catalog API were subsequently
-verified read-only in the owner's existing Safari session. A fresh request did not
-reproduce the earlier blank observation. No new OTP or policy change was needed. ENG-355
-statistics and ENG-342 model execution remain outside this implementation.
+Built-Worker fixtures use ephemeral signed identities. Tests cover anonymous,
+forged/wrong/expired identity, CSRF, alternate hosts, malformed QA/pass flags,
+publication without QA, all create fields, save/edit-URL/reload, browser checks,
+publish/archive, recoverable storage failures, mobile layout, archived continuation
+and fresh-start denial, and archived shared-result rendering. All synthetic player
+upload attempts are intercepted; operator activity opens no player records and
+produces no player uploads. These are agent/browser fixtures, not human research or
+live Cloudflare proofs. Exact final receipts are linked in PR57.
 
-## Trusted runtime validation tradeoff
+## Minimal production approval bundle
 
-R2 and D1 provide persistence, not a trusted browser runtime. The draft now rejects
-client transcript finalization and client pass flags. Private receipt writing is
-reachable only through a server-owned validator capability, with exact draft and
-runtime bindings, a single-use validation session and independent case grading.
-Beginning validation clears an old pass atomically and advances the generation,
-so a concurrent publish cannot use a superseded receipt.
+1. Create private R2 bucket `muscle-memory-content` with no public access and D1
+   database `muscle-memory-catalog`. No hosted validator/Browser Run/DO/queue needed.
+2. Bind these only to the existing web app as `CONTENT` and `CATALOG_DB`. Preserve
+   current Access protection, workers.dev/preview disablement and public routes.
+3. Apply `migrations/catalog/0001_catalog.sql` to the new empty database. Import
+   current 69 sources and all 117 hash-verified archives using the reviewed seed
+   plan. Seed is non-destructive and reruns do not reset existing managed content.
+   The existing local seed CLI is plan/local-only; production import must use
+   explicitly approved remote resource targets and verify receipts before activation.
+4. Verify 69 active heads, 117 immutable versions, private source digests and active
+   manifest. Then set the app variable `CATALOG_MODE=managed`. No new secrets or
+   login providers are required. D1/R2/Workers normal usage charges still apply;
+   there is no separate browser-service charge.
+5. After exact configuration approval, merge/deploy PR57 and verify authenticated
+   create/check/publish/archive plus anonymous denial and public/history behavior.
+   Use an explicitly identified synthetic draft; do not publish filler production
+   content or send synthetic practice to research ingestion.
 
-The lean recommendation is an operator-side CLI using the existing sandbox Runner
-and local headless Chromium on Mac/dev-01. The authenticated UI queues an exact
-saved generation; only trusted tooling with direct storage authority may claim the
-job and write its independently graded receipt. There is no browser receipt upload
-endpoint, new signing credential, hosted validator Worker or Browser Run binding.
-Private source never goes into public CI artifacts. Manual operator attestation is
-not implemented and must not be described as automated execution.
+Rollback preserves Access and every stored object/row. Before managed changes,
+bundled reads can be restored after inventory verification. After changes, retain
+a compatible managed reader and active manifest pointer; blindly returning to the
+bundle could expose archived content or hide newly published challenges. No data
+or resource deletion is proposed.
 
-A standard Worker cannot execute the existing browser/WASM/DOM runtime safely as
-application code. D1/R2 alone cannot supply that runtime. Existing repository
-publish checks already execute the sandbox in Chromium, so the CLI reuses that
-approach rather than adding a hosted browser service. Generic green CI is not an
-exact private-draft receipt: current CI has no private draft access or trusted
-receipt-write channel. Adding that channel would require a separately reviewed
-credential/data path. The local CLI currently has no remote mode.
+## Expected incremental cost
 
-Local queue execution is automated runtime QA with operator-machine provenance;
-it is not independent human testing. Latency is the sum of real planned runs and
-queue delay, with one heavy job at a time. There is no new hosted usage charge.
-Publication remains blocked until the exact job succeeds. Production activation
-still needs a reviewed remote storage adapter and approval for its existing-account
-access, plus a choice between explicitly running the CLI per queued job and an
-always-on process on the existing host. No daemon or credentials were installed.
-A hosted browser could be considered later if unattended availability justifies
-its additional service, binding, resource limits and usage costs.
+The verified seed contains 187 immutable objects totalling 1,778,898 bytes, plus
+small D1 metadata/indexes. This is small relative to published included storage,
+but included usage is shared with other account workloads; a zero bill is not
+promised. No additional Worker, subscription upgrade or browser service is proposed.
 
-Actual local seed verification has created only gitignored emulator state: 69 heads,
-117 hash-verified public revisions, 69 digest-verified private sources and a 69-item
-active manifest. Repeating the seed leaves state unchanged. No seed QA passes are
-fabricated. Default CLI invocation is plan-only and has no remote mode.
+Current [D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/) has no
+capacity/hour charge: Free includes 5M rows read/day, 100K written/day and 5GB total;
+Paid includes 25B reads/month, 50M writes/month and 5GB, with published overages of
+$0.001/M reads, $1/M writes and $0.75/GB-month. [R2 Standard](https://developers.cloudflare.com/r2/pricing/)
+includes 10GB-month, 1M writes/Class A and 10M reads/Class B monthly, then
+$0.015/GB-month, $4.50/M Class A and $0.36/M Class B, subject to billing-unit rounding.
+Egress is free. The existing web app keeps its normal [Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/);
+no plan upgrade is part of this request.
 
-## Local verification checkpoint
-
-Real Miniflare D1/R2 plus trusted Chromium integration passed 11 scenarios: complete
-69/117 seed, private draft isolation, concurrent saves, actual D1 constraint rollback
-after R2 writes, R2 outage, lost committed reply/retry, exact-source runtime grading,
-concurrent shared-manifest publication/retry, immutable version/intent idempotency,
-archive/history preservation and rejection of a reference exceeding player timeout.
-The effective player timeout is shared with QA and included in the runtime pin.
-
-A built-Worker fixture using ephemeral signed identity keys passed 12 HTTP checks,
-including anonymous/forged/wrong/expired identity, cross-origin and alternate-host
-rejection, malformed create, client transcript/pass-flag rejection and publication
-without QA. Its authenticated Chromium UI flow edited a draft, queued validation,
-ran the trusted local worker, published, archived and checked a 390px viewport.
-Operator navigation created no player records or uploads. These are local fixtures,
-not live Access/storage proofs. The expanded browser test also fills every create field, verifies recoverable
-missing-storage create/load failures, confirms saved text survives retry and reload,
-and checks successful creation redirects from `/new` to its saved edit URL. A real
-unfinished synthetic player attempt survives archive and two reloads with its code;
-a fresh context is denied a new start. An archived shared-result fixture still
-renders its exact version and omits a challenge-start invitation. Synthetic player
-upload attempts are intercepted locally (four in this run); operator uploads are
-zero and operator navigation opens no player records. Existing public/admin guard
-regression additionally passes 48 request checks plus its browser flow.
-
-The final application build and web/ingest typechecks pass. Independent static
-review cleared the lifecycle/security paths, shared timeout-policy repair and
-create/edit URL repair. These checks do not establish production storage/Access or
-an available production validator. The authenticated QA is browser automation with
-synthetic fixtures, not human research.
-
-The validator deployment choice remains open with the owner: dependency on an
-existing Mac/dev-01 worker versus a self-contained hosted service. The local CLI is
-a reusable trusted adapter demonstration, not an approved production UX dependency.
-Queued UI state does not promise worker availability; expired jobs fail closed.
-
-## Production activation proposal — pending approval and validator choice
-
-Common minimum:
-
-1. Create one dedicated private content R2 bucket and one catalog D1 database.
-2. Bind them only to the app as `CONTENT` and `CATALOG_DB`. Apply the reviewed
-   catalog migration; do not repurpose research storage or alter Access policy.
-3. Import the frozen 69-source/117-revision seed without destructive resets. Verify
-   every digest and the active manifest before setting `CATALOG_MODE=managed`.
-4. Activate the selected trusted executor and validate a new private draft end to
-   end before allowing production publication. Retain audit and blocked benchmark
-   intents. Model/event design remains unresolved and does not block lifecycle.
-5. Review/approve the exact configuration and resource IDs, then merge/deploy and
-   perform live authorized/anonymous, public/private and archive/history checks.
-
-Existing-host option: add a reviewed remote D1/R2 adapter for the same queued-job
-interface, using existing authorized operator access without browser credentials.
-An existing Mac/dev-01 process runs Chromium and the pinned sandbox, one heavy job
-at a time. No persistent process has been installed. Owner must accept that host's
-availability dependency and choose explicit execution versus a supervised worker;
-a manual command is not silently assumed to be the desired admin workflow.
-
-Hosted option: keep the queue/receipt interface but supply a server-controlled
-browser executor through a private service binding. This requires a separately
-reviewed Worker/browser resource, request authentication, private-source handling,
-usage limits and operational cost approval. None has been created or implemented.
-A standard app Worker or a generic green CI result cannot stand in for real browser
-execution on the exact private draft. Existing CI could host jobs only after an
-explicit private-data/credential/artifact review; no such path is configured.
-
-Rollback must preserve Access and all D1/R2 records/immutable objects. Before any
-managed publications, switching back to bundled reads is safe after inventory
-verification. After managed changes, retain the managed reader or compatible prior
-app and active manifest pointer; blindly reverting to bundled reads could expose
-archived challenges or lose discovery of new ones. No destructive rollback or
-resource removal is proposed.
+Read-only Workers settings showed default usage model `standard`, but that is not
+proof of the account's subscription or remaining included usage. The existing
+credential's subscription lookup returned HTTP403 Authentication error; it was not
+retried or bypassed. Exact current plan/headroom remains unverified. Activation
+approval should cover ordinary D1/R2 usage under the existing plan, with any plan
+upgrade or materially different spending requiring a new decision.
