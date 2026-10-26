@@ -15,6 +15,8 @@ export interface ChallengeProgress {
   /** The current, or last, attempt. */
   readonly attempt: string;
   readonly startedAt: string;
+  /** Local continuation pin; never a new observation field. */
+  readonly revision?: string;
   /** When the current attempt was completed, or null while it is under way. */
   readonly completedAt: string | null;
   /** Attempts completed, this one included. */
@@ -29,7 +31,10 @@ const ATTEMPT = /^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$/;
 /** Reads stored progress, dropping anything malformed rather than failing. */
 export function parseProgress(raw: string | null): Progress {
   try {
-    const value = JSON.parse(raw ?? "{}") as Record<string, Partial<ChallengeProgress>>;
+    const value = JSON.parse(raw ?? "{}") as Record<
+      string,
+      Partial<ChallengeProgress>
+    >;
     if (!value || typeof value !== "object" || Array.isArray(value)) return {};
     return Object.fromEntries(
       Object.entries(value).flatMap(([key, p]) =>
@@ -38,6 +43,9 @@ export function parseProgress(raw: string | null): Progress {
         typeof p.attempt === "string" &&
         ATTEMPT.test(p.attempt) &&
         typeof p.startedAt === "string" &&
+        (p.revision === undefined ||
+          (typeof p.revision === "string" &&
+            /^sha256:[a-f0-9]{64}$/.test(p.revision))) &&
         (p.completedAt === null || typeof p.completedAt === "string") &&
         Number.isSafeInteger(p.completions) &&
         p.completions! >= 0
@@ -66,6 +74,7 @@ export function attemptFor(
   start: boolean,
   now: string,
   newId: () => string,
+  revision?: string,
 ): { progress: Progress; attempt: string; fresh: boolean } {
   const current = progress[key];
   if (current && !(start && current.completedAt))
@@ -77,6 +86,7 @@ export function attemptFor(
       [key]: {
         attempt,
         startedAt: now,
+        ...(revision ? { revision } : {}),
         completedAt: null,
         completions: current?.completions ?? 0,
       },
@@ -87,12 +97,22 @@ export function attemptFor(
 }
 
 /** The attempt completed: once, however many times it is reported. */
-export function complete(progress: Progress, key: string, attempt: string, at: string): Progress {
+export function complete(
+  progress: Progress,
+  key: string,
+  attempt: string,
+  at: string,
+): Progress {
   const current = progress[key];
-  if (!current || current.attempt !== attempt || current.completedAt) return progress;
+  if (!current || current.attempt !== attempt || current.completedAt)
+    return progress;
   return {
     ...progress,
-    [key]: { ...current, completedAt: at, completions: current.completions + 1 },
+    [key]: {
+      ...current,
+      completedAt: at,
+      completions: current.completions + 1,
+    },
   };
 }
 

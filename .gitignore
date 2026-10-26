@@ -18,3 +18,6 @@ node_modules/
 .dev.vars*
 *.tsbuildinfo
 apps/web/public/runtime/
+
+# Local authoring emulator state contains private drafts and QA evidence.
+.local/

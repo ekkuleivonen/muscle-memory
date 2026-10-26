@@ -1,6 +1,8 @@
 import { ImageResponse } from "next/og";
 import { LANGUAGES } from "../../../lib/languages";
-import { getChallenges } from "../../../lib/load";
+import { publicReceipt } from "../../../lib/catalog-source";
+
+export const dynamic = "force-dynamic";
 import { outcomeLines, outcomeSentence } from "../../../lib/outcome";
 import { inspectCard } from "../../../lib/share";
 import { OgCard } from "../../_components/og-card";
@@ -26,7 +28,9 @@ export default async function Image({
     ? (LANGUAGES.find((l) => l.id === card.l)?.label ?? card.l)
     : "";
   // As on the page: a card for a retired challenge is not shown.
-  const challenge = card ? (await getChallenges()).findChallenge(card.k) : undefined;
+  const challenge = card
+    ? (await publicReceipt(card.k, `sha256:${card.rv}`))?.metadata
+    : undefined;
   const shown =
     challenge && card
       ? {

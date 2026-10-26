@@ -50,7 +50,8 @@ import {
 } from "./editor";
 import type { TypeChecker } from "./type-checker";
 
-export const RUN_TIMEOUT_MS = 5000;
+export { RUN_TIMEOUT_MS } from "../../../../packages/runner/policy";
+import { RUN_TIMEOUT_MS } from "../../../../packages/runner/policy";
 const SNAPSHOT_EVERY_EDITS = 25;
 
 export interface RunView {
