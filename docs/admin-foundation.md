@@ -119,8 +119,8 @@ operator-recording exclusion and normal public-recording checks. It uses ephemer
 signed keys, an intercepted fixture JWKS endpoint and an ingress adapter that
 restores URL Host/Origin across Miniflare's loopback transport. It serves exact
 built static assets locally and blocks all synthetic uploads. It never contacts
-production or claims a live Access login. The final scoped table styling still
-requires its final build/browser rerun and CI.
+production or claims a live Access login. The final scoped table styling passed
+the build/browser rerun, and all four CI checks passed at `e54d7ca7a9f5cf0e8ebe8ad2f3a1f516008763d7`.
 
 Independent static review found no authorization bypass and identified one
 inherited-property section-routing error; `Object.hasOwn` now rejects those names
