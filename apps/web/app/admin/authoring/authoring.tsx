@@ -29,7 +29,9 @@ async function request<T>(
   const response = await fetch(path, {
     method,
     credentials: "same-origin",
-    mode: "same-origin",
+    // CORS mode preserves Origin under no-referrer (notably Safari). Every caller
+    // uses this site's API path; credentials stay same-origin and redirects fail.
+    mode: "cors",
     redirect: "error",
     cache: "no-store",
     signal,

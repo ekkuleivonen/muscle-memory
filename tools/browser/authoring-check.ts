@@ -12,7 +12,7 @@ import {
 } from "miniflare";
 import { unstable_getMiniflareWorkerOptions } from "wrangler";
 import { generateKeyPair, exportJWK, SignJWT } from "jose";
-import { chromium } from "playwright";
+import { chromium, webkit } from "playwright";
 
 execFileSync(
   process.execPath,
@@ -250,7 +250,9 @@ try {
     headers: authHeaders,
     body: mutation(detail.head.generation),
   });
-  browser = await chromium.launch({ headless: true });
+  browser = await (
+    process.env.ADMIN_BROWSER === "webkit" ? webkit : chromium
+  ).launch({ headless: true });
   const context = await browser.newContext();
   let missingStorage = false;
   let uploads = 0,
@@ -259,6 +261,10 @@ try {
     try {
       const incoming = route.request(),
         url = new URL(incoming.url());
+      // WebKit exposes the sandbox's local opaque-origin blob worker to routing;
+      // Chromium does not. This is an in-memory URL, not an outbound request.
+      if (url.protocol === "blob:" && url.origin === "null")
+        return await route.continue();
       assert.equal(url.origin, "https://musclememory.run");
       if (url.pathname.startsWith("/_next/static/")) {
         const body = await readFile(
@@ -299,7 +305,7 @@ try {
         });
       }
       const h = {
-        ...incoming.headers(),
+        ...(await incoming.allHeaders()),
         host: url.host,
         "cf-access-jwt-assertion": valid,
       };
@@ -371,118 +377,132 @@ try {
     name: "Archive challenge",
     exact: true,
   });
-  // Create a real unfinished local attempt before archiving it.
-  const consent = async (ctx) => {
-    await ctx.addCookies([
-      {
-        name: "mm_consent",
-        value: "2026-10-26.2",
-        url: "https://musclememory.run",
-      },
-    ]);
-    await ctx.addInitScript(() => {
-      if (location.origin === "null") return;
-      if (!localStorage.getItem("muscle-memory.profile"))
-        localStorage.setItem(
-          "muscle-memory.profile",
-          JSON.stringify({
-            version: "2",
-            createdAt: new Date().toISOString(),
-            accepted: { version: "2026-10-26.2", at: new Date().toISOString() },
-            stealth: true,
-            profile: {},
-          }),
-        );
-    });
-  };
-  // Operator context remains free of player storage; use a separate synthetic player.
-  const playerContext = await browser.newContext();
-  await playerContext.route("**/*", routeApplication);
-  await consent(playerContext);
-  const player = await playerContext.newPage();
-  player.on("pageerror", (e) => routeErrors.push(String(e)));
-  await player.goto("https://musclememory.run/challenges/JS-998");
-  const editor = player.locator(
-    '.practice-editor .cm-content[contenteditable="true"]',
-  );
-  await editor.waitFor();
-  const savedCode =
-    source.revision.starter + "\n// isolated continuation marker";
-  await editor.fill(savedCode);
-  await player.waitForTimeout(1300);
-  await archiveButton.click();
-  await page.waitForFunction(() =>
-    document.body.textContent.includes("archived"),
-  );
-  assert.equal((await service.detail("JS-998")).head.lifecycle, "archived");
-  assert.equal((await service.publicCatalog()).challenges.length, 69);
-  assert.equal(
-    (await service.publicRevision("JS-998", detail.head.publishedRevision))
-      .archived,
-    true,
-  );
-  await player.reload();
-  await player
-    .getByText(
-      "This challenge is archived. You can finish your saved attempt.",
-      { exact: true },
-    )
-    .waitFor();
-  await editor.waitFor();
-  assert.ok(
-    (await editor.innerText()).includes("isolated continuation marker"),
-  );
-  assert.equal(
-    await player.getByRole("button", { name: /practice again/i }).count(),
-    0,
-  );
-  await player.reload();
-  await editor.waitFor();
-  assert.ok(
-    (await editor.innerText()).includes("isolated continuation marker"),
-  );
-  const freshContext = await browser.newContext();
-  await freshContext.route("**/*", routeApplication);
-  await consent(freshContext);
-  const fresh = await freshContext.newPage();
-  await fresh.goto("https://musclememory.run/challenges/JS-998");
-  await fresh
-    .getByText("Only an existing unfinished attempt can continue here.", {
-      exact: false,
-    })
-    .waitFor();
-  assert.equal(await fresh.locator(".cm-content").count(), 0);
-  const card = encodeOutcome({
-    v: 3,
-    k: "JS-998",
-    l: "javascript",
-    rv: detail.head.publishedRevision.slice(7),
-    o: {
-      passed: source.revision.cases.length,
-      total: source.revision.cases.length,
-    },
-    f: null,
-    n: 1,
-    c: "syntheticqa",
-  });
-  await fresh.goto("https://musclememory.run/r/" + card);
-  await fresh
-    .getByText("This challenge is archived.", { exact: false })
-    .first()
-    .waitFor();
-  assert.ok(
-    (await fresh.locator("main").innerText()).includes(
-      "Synthetic browser edited",
-    ),
-  );
-  assert.equal(
+  if (process.env.ADMIN_BROWSER === "webkit") {
+    // WebKit coverage here targets admin mutations; Chromium separately covers
+    // player continuation/sharing through this local response bridge.
+    await archiveButton.click();
+    await page.waitForFunction(() =>
+      document.body.textContent.includes("archived"),
+    );
+    assert.equal((await service.detail("JS-998")).head.lifecycle, "archived");
+    assert.equal((await service.publicCatalog()).challenges.length, 69);
+  } else {
+    // Create a real unfinished local attempt before archiving it.
+    const consent = async (ctx) => {
+      await ctx.addCookies([
+        {
+          name: "mm_consent",
+          value: "2026-10-26.2",
+          url: "https://musclememory.run",
+        },
+      ]);
+      await ctx.addInitScript(() => {
+        if (location.origin === "null") return;
+        if (!localStorage.getItem("muscle-memory.profile"))
+          localStorage.setItem(
+            "muscle-memory.profile",
+            JSON.stringify({
+              version: "2",
+              createdAt: new Date().toISOString(),
+              accepted: {
+                version: "2026-10-26.2",
+                at: new Date().toISOString(),
+              },
+              stealth: true,
+              profile: {},
+            }),
+          );
+      });
+    };
+    // Operator context remains free of player storage; use a separate synthetic player.
+    const playerContext = await browser.newContext();
+    await playerContext.route("**/*", routeApplication);
+    await consent(playerContext);
+    const player = await playerContext.newPage();
+    player.on("pageerror", (e) => routeErrors.push(String(e)));
+    await player.goto("https://musclememory.run/challenges/JS-998");
+    const editor = player.locator(
+      '.practice-editor .cm-content[contenteditable="true"]',
+    );
+    await editor.waitFor();
+    const savedCode =
+      source.revision.starter + "\n// isolated continuation marker";
+    await editor.fill(savedCode);
+    await player.waitForTimeout(1300);
+    await archiveButton.click();
+    await page.waitForFunction(() =>
+      document.body.textContent.includes("archived"),
+    );
+    assert.equal((await service.detail("JS-998")).head.lifecycle, "archived");
+    assert.equal((await service.publicCatalog()).challenges.length, 69);
+    assert.equal(
+      (await service.publicRevision("JS-998", detail.head.publishedRevision))
+        .archived,
+      true,
+    );
+    await player.reload();
+    await player
+      .getByText(
+        "This challenge is archived. You can finish your saved attempt.",
+        { exact: true },
+      )
+      .waitFor();
+    await editor.waitFor();
+    assert.ok(
+      (await editor.innerText()).includes("isolated continuation marker"),
+    );
+    assert.equal(
+      await player.getByRole("button", { name: /practice again/i }).count(),
+      0,
+    );
+    await player.reload();
+    await editor.waitFor();
+    assert.ok(
+      (await editor.innerText()).includes("isolated continuation marker"),
+    );
+    const freshContext = await browser.newContext();
+    await freshContext.route("**/*", routeApplication);
+    await consent(freshContext);
+    const fresh = await freshContext.newPage();
+    await fresh.goto("https://musclememory.run/challenges/JS-998");
     await fresh
-      .getByRole("button", { name: /your turn|try.*challenge/i })
-      .count(),
-    0,
-  );
-  await freshContext.close();
-  await playerContext.close();
+      .getByText("Only an existing unfinished attempt can continue here.", {
+        exact: false,
+      })
+      .waitFor();
+    assert.equal(await fresh.locator(".cm-content").count(), 0);
+    const card = encodeOutcome({
+      v: 3,
+      k: "JS-998",
+      l: "javascript",
+      rv: detail.head.publishedRevision.slice(7),
+      o: {
+        passed: source.revision.cases.length,
+        total: source.revision.cases.length,
+      },
+      f: null,
+      n: 1,
+      c: "syntheticqa",
+    });
+    await fresh.goto("https://musclememory.run/r/" + card);
+    await fresh
+      .getByText("This challenge is archived.", { exact: false })
+      .first()
+      .waitFor();
+    assert.ok(
+      (await fresh.locator("main").innerText()).includes(
+        "Synthetic browser edited",
+      ),
+    );
+    assert.equal(
+      await fresh
+        .getByRole("button", { name: /your turn|try.*challenge/i })
+        .count(),
+      0,
+    );
+    await freshContext.close();
+    await playerContext.close();
+  }
   // Fill every create field through the actual simple authoring form.
   await page.goto("https://musclememory.run/admin/authoring/new");
   const create = structuredClone(source);
@@ -616,7 +636,9 @@ try {
         syntheticUploadsBlocked: uploads,
         operatorUploads,
         browser:
-          "authenticated full create / failure recovery / edit / operator browser checks / publish / archive / mobile; archived continuation reload and fresh-start denial; archived shared result; all synthetic uploads blocked, zero operator uploads",
+          process.env.ADMIN_BROWSER === "webkit"
+            ? "WebKit admin full create/edit/save/checks/failure/stop/retry/publish/archive/mobile and storage recovery; player continuation tested separately"
+            : "authenticated full create / failure recovery / edit / operator browser checks / publish / archive / mobile; archived continuation reload and fresh-start denial; archived shared result; all synthetic uploads blocked, zero operator uploads",
         receipts,
       },
       null,
