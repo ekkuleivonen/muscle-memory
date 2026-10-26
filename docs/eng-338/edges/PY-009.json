@@ -1,0 +1,140 @@
+{
+  "key": "PY-009",
+  "revision": "sha256:697c865602b328b0bc03e0d023f1c54a64133f7d9ecbded3f147d18c598c01ef",
+  "language": "python",
+  "runtime": "Pyodide/CPython3.14",
+  "at": "2026-10-26T03:21:15.415Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "556b96d3e0f509fe17274ef496f6f05fad95967b07bb0d634520d3fbdae1b815",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "\" | X | A | | 1\n2026-06-01 | do. | do. | do. | do.",
+          "expected": {
+            "rows": [
+              {
+                "date": "2026-06-01",
+                "site": "X",
+                "species": "A",
+                "length": "",
+                "count": 1
+              }
+            ],
+            "unresolved": [
+              1
+            ]
+          },
+          "reason": "An unresolved row still supplies its known fields to the next row, which can resolve independently.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "rows": [
+              {
+                "date": "2026-06-01",
+                "site": "X",
+                "species": "A",
+                "length": "",
+                "count": 1
+              }
+            ],
+            "unresolved": [
+              1
+            ]
+          },
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "# note\n\n\" | X | A | | 1\n〃 | X | A | | 2",
+          "expected": {
+            "rows": [],
+            "unresolved": [
+              3,
+              4
+            ]
+          },
+          "reason": "Unresolved field propagates; numbering includes notes and blanks.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "rows": [],
+            "unresolved": [
+              3,
+              4
+            ]
+          },
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "725136c912f6518f1dea2b0b1d7f42ec3da4b45372f17170e9ef5f4462022a09",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "\" | X | A | | 1\n2026-06-01 | do. | do. | do. | do.",
+          "expected": {
+            "rows": [
+              {
+                "date": "2026-06-01",
+                "site": "X",
+                "species": "A",
+                "length": "",
+                "count": 1
+              }
+            ],
+            "unresolved": [
+              1
+            ]
+          },
+          "reason": "An unresolved row still supplies its known fields to the next row, which can resolve independently.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "rows": [
+              {
+                "date": "2026-06-01",
+                "site": "X",
+                "species": "A",
+                "length": "",
+                "count": 1
+              }
+            ],
+            "unresolved": [
+              1
+            ]
+          },
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "# note\n\n\" | X | A | | 1\n〃 | X | A | | 2",
+          "expected": {
+            "rows": [],
+            "unresolved": [
+              3,
+              4
+            ]
+          },
+          "reason": "Unresolved field propagates; numbering includes notes and blanks.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "rows": [],
+            "unresolved": [
+              3,
+              4
+            ]
+          },
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

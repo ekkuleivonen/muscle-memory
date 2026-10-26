@@ -1,0 +1,118 @@
+{
+  "key": "CPP-003",
+  "revision": "sha256:93bfa0b61e35a93c49ccae694223646dc68856855e1c2114936214611fac52ea",
+  "language": "cpp",
+  "runtime": "Clang/YoWASP",
+  "at": "2026-10-26T03:19:22.260Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "dd2164965205d175426e18c0826975aa32d20c3dadfa2a96daa9597ee0365df4",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "",
+          "expected": true,
+          "reason": "Empty string explicitly balanced.",
+          "origin": "blind-solver public-derived edge",
+          "actual": true,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "abc",
+          "expected": true,
+          "reason": "Non-brackets ignored.",
+          "origin": "blind-solver public-derived edge",
+          "actual": true,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "(",
+          "expected": false,
+          "reason": "Unclosed opening bracket.",
+          "origin": "blind-solver public-derived edge",
+          "actual": false,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": ")(",
+          "expected": false,
+          "reason": "Closer cannot precede its opening bracket.",
+          "origin": "blind-solver public-derived edge",
+          "actual": false,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "([]{})",
+          "expected": true,
+          "reason": "Multiple bracket types correctly nested.",
+          "origin": "blind-solver public-derived edge",
+          "actual": true,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "46fe4fcbddfe20cbba2f5c3469011081c6a106cb774a7f10042448ba58ed1f8d",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "",
+          "expected": true,
+          "reason": "Empty string explicitly balanced.",
+          "origin": "blind-solver public-derived edge",
+          "actual": true,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "abc",
+          "expected": true,
+          "reason": "Non-brackets ignored.",
+          "origin": "blind-solver public-derived edge",
+          "actual": true,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "(",
+          "expected": false,
+          "reason": "Unclosed opening bracket.",
+          "origin": "blind-solver public-derived edge",
+          "actual": true,
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": ")(",
+          "expected": false,
+          "reason": "Closer cannot precede its opening bracket.",
+          "origin": "blind-solver public-derived edge",
+          "actual": false,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "([]{})",
+          "expected": true,
+          "reason": "Multiple bracket types correctly nested.",
+          "origin": "blind-solver public-derived edge",
+          "actual": true,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,140 @@
+{
+  "key": "JAVA-004",
+  "revision": "sha256:ec7de97a2f1029310028e237a35c8be08f7aa1168bad3923dd0b03a023b2a4f0",
+  "language": "java",
+  "runtime": "teavm-javac",
+  "at": "2026-10-26T03:20:47.405Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "44707f35371d12b79e55aff78accad4b12191e15dc1958ccb216a16aeee8c0ae",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            [
+              -8
+            ]
+          ],
+          "expected": -8,
+          "reason": "Single center counted once.",
+          "origin": "blind-solver public-derived edge",
+          "actual": -8,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ]
+          ],
+          "expected": 10,
+          "reason": "Even matrix has no shared center.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 10,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              -5,
+              0
+            ],
+            [
+              0,
+              0,
+              0
+            ]
+          ],
+          "expected": -5,
+          "reason": "Negative center contributes once.",
+          "origin": "blind-solver public-derived edge",
+          "actual": -5,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "dccfe176a76e05c259bfaeddbeb61ae4bafc51f470be48e59abf152330177360",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            [
+              -8
+            ]
+          ],
+          "expected": -8,
+          "reason": "Single center counted once.",
+          "origin": "blind-solver public-derived edge",
+          "actual": -16,
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ]
+          ],
+          "expected": 10,
+          "reason": "Even matrix has no shared center.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 10,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              -5,
+              0
+            ],
+            [
+              0,
+              0,
+              0
+            ]
+          ],
+          "expected": -5,
+          "reason": "Negative center contributes once.",
+          "origin": "blind-solver public-derived edge",
+          "actual": -10,
+          "executionError": null,
+          "pass": false
+        }
+      ]
+    }
+  ]
+}

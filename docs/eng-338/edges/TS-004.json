@@ -1,0 +1,178 @@
+{
+  "key": "TS-004",
+  "revision": "sha256:0a4a87c203c1b0f54951657915ea7c55c51fe9d9ae7baa333887aa528375513b",
+  "language": "typescript",
+  "runtime": "Sucrase/browser JavaScript",
+  "at": "2026-10-26T03:21:28.893Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "618b1feb7867b4a01db750443eebc4c390527928a8fc700757d73b70c25f9175",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            [
+              0,
+              5,
+              10
+            ],
+            1,
+            10
+          ],
+          "expected": [
+            true,
+            false,
+            true
+          ],
+          "reason": "Rejected attempt at 5 must not block at 10; time 0 expires at lower boundary.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            true,
+            false,
+            true
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              0,
+              0,
+              1
+            ],
+            0,
+            10
+          ],
+          "expected": [
+            false,
+            false,
+            false
+          ],
+          "reason": "Zero limit rejects all.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            false,
+            false,
+            false
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              0,
+              0,
+              1
+            ],
+            1,
+            0
+          ],
+          "expected": [
+            true,
+            true,
+            true
+          ],
+          "reason": "Zero-length open-lower window expires prior accepted times.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            true,
+            true,
+            true
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "177e010dc64ed0e0a129e6cb69fbaff8452d5f23673b05fb41746bc2d20d94b1",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            [
+              0,
+              5,
+              10
+            ],
+            1,
+            10
+          ],
+          "expected": [
+            true,
+            false,
+            true
+          ],
+          "reason": "Rejected attempt at 5 must not block at 10; time 0 expires at lower boundary.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            true,
+            false,
+            false
+          ],
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            [
+              0,
+              0,
+              1
+            ],
+            0,
+            10
+          ],
+          "expected": [
+            false,
+            false,
+            false
+          ],
+          "reason": "Zero limit rejects all.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            false,
+            false,
+            false
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              0,
+              0,
+              1
+            ],
+            1,
+            0
+          ],
+          "expected": [
+            true,
+            true,
+            true
+          ],
+          "reason": "Zero-length open-lower window expires prior accepted times.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            true,
+            true,
+            true
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

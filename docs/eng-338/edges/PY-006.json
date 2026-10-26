@@ -1,0 +1,114 @@
+{
+  "key": "PY-006",
+  "revision": "sha256:4f006c4a24df017d5b24293dee551f8b3a22fc370db9285bba5dc49a4844cefb",
+  "language": "python",
+  "runtime": "Pyodide/CPython3.14",
+  "at": "2026-10-26T03:21:10.596Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "21ce2fc83b656a636758cbfc25c8ff3bfe2ac39d1c7947593bc91727b901247b",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "2026-06-10 | X | A | | 2",
+            "2026-06-01 | Y | A | | 1",
+            "2026-05-01 | X | a | | 3"
+          ],
+          "expected": {
+            "X": {
+              "lots": 2,
+              "individuals": 5,
+              "species": 2,
+              "first": "2026-05-01",
+              "last": "2026-06-10"
+            },
+            "Y": {
+              "lots": 1,
+              "individuals": 1,
+              "species": 1,
+              "first": "2026-06-01",
+              "last": "2026-06-01"
+            }
+          },
+          "reason": "Interleaving and reverse dates; species matching is case sensitive.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "X": {
+              "lots": 2,
+              "individuals": 5,
+              "species": 2,
+              "first": "2026-05-01",
+              "last": "2026-06-10"
+            },
+            "Y": {
+              "lots": 1,
+              "individuals": 1,
+              "species": 1,
+              "first": "2026-06-01",
+              "last": "2026-06-01"
+            }
+          },
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "e1b043b0e899934fea178693735530a2cdec8d1dc2baa56314beb17ddd5a9258",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "2026-06-10 | X | A | | 2",
+            "2026-06-01 | Y | A | | 1",
+            "2026-05-01 | X | a | | 3"
+          ],
+          "expected": {
+            "X": {
+              "lots": 2,
+              "individuals": 5,
+              "species": 2,
+              "first": "2026-05-01",
+              "last": "2026-06-10"
+            },
+            "Y": {
+              "lots": 1,
+              "individuals": 1,
+              "species": 1,
+              "first": "2026-06-01",
+              "last": "2026-06-01"
+            }
+          },
+          "reason": "Interleaving and reverse dates; species matching is case sensitive.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "X": {
+              "lots": 2,
+              "individuals": 5,
+              "species": 2,
+              "first": "2026-05-01",
+              "last": "2026-05-01"
+            },
+            "Y": {
+              "lots": 1,
+              "individuals": 1,
+              "species": 1,
+              "first": "2026-06-01",
+              "last": "2026-06-01"
+            }
+          },
+          "executionError": null,
+          "pass": false
+        }
+      ]
+    }
+  ]
+}

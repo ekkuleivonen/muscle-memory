@@ -1,0 +1,94 @@
+{
+  "key": "GO-006",
+  "revision": "sha256:2279a86fff5bbd13533f770365d985f72270906b14513b46cc7e1c8855625da7",
+  "language": "go",
+  "runtime": "Yaegi WASM",
+  "at": "2026-10-26T03:20:18.299Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "b68ea04f497cb7cdab7adc64ba1395d3535e21e225cad5dca7dd372352f996b5",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            [
+              9,
+              1,
+              9,
+              5
+            ],
+            25.1
+          ],
+          "expected": 5,
+          "reason": "Non-integral rank rounds up.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 5,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              4,
+              2,
+              2
+            ],
+            100
+          ],
+          "expected": 4,
+          "reason": "Maximum at p100, repeated values allowed.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 4,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "d7b4b82402cf95210ec7d950e560a66201964a9b78262c0c743da52d9642f5b0",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            [
+              9,
+              1,
+              9,
+              5
+            ],
+            25.1
+          ],
+          "expected": 5,
+          "reason": "Non-integral rank rounds up.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 1,
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            [
+              4,
+              2,
+              2
+            ],
+            100
+          ],
+          "expected": 4,
+          "reason": "Maximum at p100, repeated values allowed.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 4,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

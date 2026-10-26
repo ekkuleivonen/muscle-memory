@@ -1,0 +1,200 @@
+{
+  "key": "SQL-001",
+  "revision": "sha256:c7146b957f34cd809b870274d51538f3a035d05332644405d0b9c0ac09e11cf9",
+  "language": "sql",
+  "runtime": "PGlite/PostgreSQL",
+  "at": "2026-10-26T03:21:21.269Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "565b570c25be0a125232d196546318a8e877351e768cb02305121188cf8603a3",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": {
+            "orders": [
+              [
+                1,
+                "b",
+                -5
+              ],
+              [
+                2,
+                "a",
+                0
+              ],
+              [
+                3,
+                "b",
+                5
+              ]
+            ]
+          },
+          "expected": [
+            [
+              "a",
+              0
+            ],
+            [
+              "b",
+              0
+            ]
+          ],
+          "reason": "Adjustments count and zero-sum customers remain, with name tie-break.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            [
+              "a",
+              0
+            ],
+            [
+              "b",
+              0
+            ]
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": {
+            "orders": [
+              [
+                1,
+                "a",
+                2147483647
+              ],
+              [
+                2,
+                "a",
+                1
+              ]
+            ]
+          },
+          "expected": [
+            [
+              "a",
+              2147483648
+            ]
+          ],
+          "reason": "Sum must exceed signed 32-bit safely.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            [
+              "a",
+              2147483648
+            ]
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": {
+            "orders": []
+          },
+          "expected": [],
+          "reason": "No orders yields no grouped rows.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "9d4dc0b2b518a538076490f1aa92d6c8666bdf06427dffc9f2a8dd6d72d4681b",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": {
+            "orders": [
+              [
+                1,
+                "b",
+                -5
+              ],
+              [
+                2,
+                "a",
+                0
+              ],
+              [
+                3,
+                "b",
+                5
+              ]
+            ]
+          },
+          "expected": [
+            [
+              "a",
+              0
+            ],
+            [
+              "b",
+              0
+            ]
+          ],
+          "reason": "Adjustments count and zero-sum customers remain, with name tie-break.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            [
+              "b",
+              5
+            ]
+          ],
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": {
+            "orders": [
+              [
+                1,
+                "a",
+                2147483647
+              ],
+              [
+                2,
+                "a",
+                1
+              ]
+            ]
+          },
+          "expected": [
+            [
+              "a",
+              2147483648
+            ]
+          ],
+          "reason": "Sum must exceed signed 32-bit safely.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            [
+              "a",
+              2147483648
+            ]
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": {
+            "orders": []
+          },
+          "expected": [],
+          "reason": "No orders yields no grouped rows.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,130 @@
+{
+  "key": "RB-004",
+  "revision": "sha256:7b75bd74a6c5dd5fcb5f7fb30baccc5ac2690cb2212762d561883a5f663f06c4",
+  "language": "ruby",
+  "runtime": "ruby.wasm",
+  "at": "2026-10-26T03:21:18.616Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "a4969d8e091c1bba4f10bda7c115e96a3288797d1894d27fb71fc36c9d16438b",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            [
+              1,
+              -1
+            ],
+            [
+              1,
+              1
+            ]
+          ],
+          "expected": [
+            1,
+            0,
+            -1
+          ],
+          "reason": "Cancellation at middle power.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            1,
+            0,
+            -1
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              2,
+              0
+            ],
+            [
+              3,
+              0
+            ]
+          ],
+          "expected": [
+            6,
+            0,
+            0
+          ],
+          "reason": "Trailing zeros retained.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            6,
+            0,
+            0
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "e10e6f28a7c421e08f006dfc9d4952f96946e7c872f65eef9872e70c21681c1b",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            [
+              1,
+              -1
+            ],
+            [
+              1,
+              1
+            ]
+          ],
+          "expected": [
+            1,
+            0,
+            -1
+          ],
+          "reason": "Cancellation at middle power.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            1,
+            0,
+            -1
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              2,
+              0
+            ],
+            [
+              3,
+              0
+            ]
+          ],
+          "expected": [
+            6,
+            0,
+            0
+          ],
+          "reason": "Trailing zeros retained.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            6
+          ],
+          "executionError": null,
+          "pass": false
+        }
+      ]
+    }
+  ]
+}

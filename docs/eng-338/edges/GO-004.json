@@ -1,0 +1,82 @@
+{
+  "key": "GO-004",
+  "revision": "sha256:bd709be6d3575e68975be801468cc1b784b3df5d0219d65892f920fde30b45fe",
+  "language": "go",
+  "runtime": "Yaegi WASM",
+  "at": "2026-10-26T03:20:16.961Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "601f2077361e8041ce6461180e8af09a55d8cc63bd4ef8e5ae02d8448babc98b",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "0h90m0s",
+          "expected": 5400,
+          "reason": "Zero parts and oversized minute values are allowed.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 5400,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "1s1m",
+          "expected": null,
+          "reason": "Units out of order.",
+          "origin": "blind-solver public-derived edge",
+          "actual": null,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "1h 2m",
+          "expected": null,
+          "reason": "No spaces allowed.",
+          "origin": "blind-solver public-derived edge",
+          "actual": null,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "15d61aee0edc9ff9f023937f45c965090f366c4269ad85d35893a82960df2345",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "0h90m0s",
+          "expected": 5400,
+          "reason": "Zero parts and oversized minute values are allowed.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 5400,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "1s1m",
+          "expected": null,
+          "reason": "Units out of order.",
+          "origin": "blind-solver public-derived edge",
+          "actual": null,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "1h 2m",
+          "expected": null,
+          "reason": "No spaces allowed.",
+          "origin": "blind-solver public-derived edge",
+          "actual": null,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

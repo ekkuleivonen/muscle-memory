@@ -1,0 +1,212 @@
+{
+  "key": "PY-010",
+  "revision": "sha256:8969155c54b3eac0355430c8e94d888bcb203115356b2f1c92280c2ad852bb72",
+  "language": "python",
+  "runtime": "Pyodide/CPython3.14",
+  "at": "2026-10-26T03:20:05.857Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "d40ca0ebf5186d3384eeb26b227f64f30041dee800830a1e5e29a94a355de220",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "partner,order_id,type,amount,currency\n B ,1, SALE ,10, eur \nB,1,refund,-2,EUR\nB,x,adjustment,(1.50),EUR\n",
+          "expected": {
+            "partners": [
+              {
+                "partner": "B",
+                "currency": "EUR",
+                "sales": 1,
+                "refunds": 1,
+                "net": 650
+              }
+            ],
+            "rejected": 0
+          },
+          "reason": "Trim and normalise fields, reduce net for negative plain refunds, and retain adjustment sign.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "partners": [
+              {
+                "partner": "B",
+                "currency": "EUR",
+                "sales": 1,
+                "refunds": 1,
+                "net": 650
+              }
+            ],
+            "rejected": 0
+          },
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "partner,order_id,type,amount,currency\nB,1,sale,(1.234),EUR\nB,2,sale,NaN,EUR\n",
+          "expected": {
+            "partners": [],
+            "rejected": 2
+          },
+          "reason": "Invalid inner plain precision and NaN reject the rows.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "partners": [],
+            "rejected": 2
+          },
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "partner,order_id,type,amount,currency\nB,1,sale,1.000,EUR\n",
+          "expected": {
+            "partners": [],
+            "rejected": 1
+          },
+          "reason": "Written plain-amount precision/format restriction",
+          "origin": "coordinator public-contract probe",
+          "actual": {
+            "partners": [
+              {
+                "partner": "B",
+                "currency": "EUR",
+                "sales": 1,
+                "refunds": 0,
+                "net": 100
+              }
+            ],
+            "rejected": 0
+          },
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": "partner,order_id,type,amount,currency\nB,1,sale,1e2,EUR\n",
+          "expected": {
+            "partners": [],
+            "rejected": 1
+          },
+          "reason": "Written plain-amount precision/format restriction",
+          "origin": "coordinator public-contract probe",
+          "actual": {
+            "partners": [
+              {
+                "partner": "B",
+                "currency": "EUR",
+                "sales": 1,
+                "refunds": 0,
+                "net": 10000
+              }
+            ],
+            "rejected": 0
+          },
+          "executionError": null,
+          "pass": false
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "8a61eb6d5f9ba1bfdef5852e7ca4d811bba5dc71c7cc2ab0ead8fe75c7d314e8",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "partner,order_id,type,amount,currency\n B ,1, SALE ,10, eur \nB,1,refund,-2,EUR\nB,x,adjustment,(1.50),EUR\n",
+          "expected": {
+            "partners": [
+              {
+                "partner": "B",
+                "currency": "EUR",
+                "sales": 1,
+                "refunds": 1,
+                "net": 650
+              }
+            ],
+            "rejected": 0
+          },
+          "reason": "Trim and normalise fields, reduce net for negative plain refunds, and retain adjustment sign.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "partners": [
+              {
+                "partner": "B",
+                "currency": "EUR",
+                "sales": 1,
+                "refunds": 1,
+                "net": 1050
+              }
+            ],
+            "rejected": 0
+          },
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": "partner,order_id,type,amount,currency\nB,1,sale,(1.234),EUR\nB,2,sale,NaN,EUR\n",
+          "expected": {
+            "partners": [],
+            "rejected": 2
+          },
+          "reason": "Invalid inner plain precision and NaN reject the rows.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "partners": [],
+            "rejected": 2
+          },
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "partner,order_id,type,amount,currency\nB,1,sale,1.000,EUR\n",
+          "expected": {
+            "partners": [],
+            "rejected": 1
+          },
+          "reason": "Written plain-amount precision/format restriction",
+          "origin": "coordinator public-contract probe",
+          "actual": {
+            "partners": [
+              {
+                "partner": "B",
+                "currency": "EUR",
+                "sales": 1,
+                "refunds": 0,
+                "net": 100
+              }
+            ],
+            "rejected": 0
+          },
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": "partner,order_id,type,amount,currency\nB,1,sale,1e2,EUR\n",
+          "expected": {
+            "partners": [],
+            "rejected": 1
+          },
+          "reason": "Written plain-amount precision/format restriction",
+          "origin": "coordinator public-contract probe",
+          "actual": {
+            "partners": [
+              {
+                "partner": "B",
+                "currency": "EUR",
+                "sales": 1,
+                "refunds": 0,
+                "net": 10000
+              }
+            ],
+            "rejected": 0
+          },
+          "executionError": null,
+          "pass": false
+        }
+      ]
+    }
+  ]
+}

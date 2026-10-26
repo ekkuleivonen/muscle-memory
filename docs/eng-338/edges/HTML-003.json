@@ -1,0 +1,92 @@
+{
+  "key": "HTML-003",
+  "revision": "sha256:c552d26e087693857289d1f490c0584144f34be0619095c60aecbad9792be715",
+  "language": "html",
+  "runtime": "linkedom DOM",
+  "at": "2026-10-26T03:20:19.102Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "53f8aa83c23e5d03c4ca2ef7ca5074e016473fa88b150045b9e3137996ab2162",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "details > :first-child",
+            "text"
+          ],
+          "expected": [
+            "What is a prime?"
+          ],
+          "reason": "Summary is the first element child.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "What is a prime?"
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "details > p",
+            "text"
+          ],
+          "expected": [
+            "A whole number greater than 1 with exactly two positive divisors."
+          ],
+          "reason": "The answer paragraph follows the summary.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "A whole number greater than 1 with exactly two positive divisors."
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "8b541fda3601d33ef6a28599763a117e0b539eeea415633776dd01674fafb51f",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "details > :first-child",
+            "text"
+          ],
+          "expected": [
+            "What is a prime?"
+          ],
+          "reason": "Summary is the first element child.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "What is a prime?"
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "details > p",
+            "text"
+          ],
+          "expected": [
+            "A whole number greater than 1 with exactly two positive divisors."
+          ],
+          "reason": "The answer paragraph follows the summary.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "A whole number greater than 1 with exactly two positive divisors."
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

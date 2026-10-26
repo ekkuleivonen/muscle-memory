@@ -1,0 +1,77 @@
+{
+  "key": "PY-002",
+  "revision": "sha256:0bca3c710baad47c31104359cd36ad162502a38d311d5cb421bb6399431ff250",
+  "language": "python",
+  "runtime": "Pyodide/CPython3.14",
+  "at": "2026-10-26T03:21:00.951Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "17d354b98a2dc006c320b0e1fb3267c0ea4255f86e123969fe04eb528afed705",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "",
+            " ",
+            "",
+            "A",
+            "a"
+          ],
+          "expected": {
+            "": 2,
+            " ": 1,
+            "A": 1,
+            "a": 1
+          },
+          "reason": "Empty, whitespace and case-distinct strings remain separate.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "": 2,
+            " ": 1,
+            "A": 1,
+            "a": 1
+          },
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "65534a0b15e175d9d95cacceee068b8a35c77818839bbc6767fb0aa08b298ff8",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "",
+            " ",
+            "",
+            "A",
+            "a"
+          ],
+          "expected": {
+            "": 2,
+            " ": 1,
+            "A": 1,
+            "a": 1
+          },
+          "reason": "Empty, whitespace and case-distinct strings remain separate.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "": 2,
+            " ": 1,
+            "a": 2
+          },
+          "executionError": null,
+          "pass": false
+        }
+      ]
+    }
+  ]
+}

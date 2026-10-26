@@ -10,5 +10,6 @@ id  email
 `dedupe(records)` runs before the newsletter sync. It gets a list of customer records, dicts with at least an `id` and an `email`, and returns the list without duplicates.
 
 - Two records are duplicates when their emails match ignoring letter case (any letter, not only ASCII) and spaces around them. Only the email decides; ids and other fields don't.
+- For example, `Σ@x.io` and `ς@x.io` match, as do `Straße@x.io` and `STRASSE@x.io`.
 - Keep the first record for each email and drop the later ones. Records stay in their original order.
 - A kept record is passed on unchanged, every field included: the sync and the CRM both need the email as it was written.

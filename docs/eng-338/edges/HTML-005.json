@@ -1,0 +1,88 @@
+{
+  "key": "HTML-005",
+  "revision": "sha256:cd5926aef237c59d9f8d3633d5dfa877ad520f81f2b23fcd1a211b8ede01d809",
+  "language": "html",
+  "runtime": "linkedom DOM",
+  "at": "2026-10-26T03:20:19.207Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "904a46a06e684f927b4d6f6e6daf0eab7bda1c1fb3142d67d1f2ac2f2129863c",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "ol > li a",
+            "href"
+          ],
+          "expected": [
+            "/guides/arrays",
+            "/guides/maps"
+          ],
+          "reason": "Both exact navigation paths must match.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "/guides/arrays",
+            "/guides/maps"
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "[target]",
+            "count"
+          ],
+          "expected": 0,
+          "reason": "No target attributes are allowed.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 0,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "79544d54ca1b107fd777807b01078d607ae6d5af2e6403160c2fde8145ead86c",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "ol > li a",
+            "href"
+          ],
+          "expected": [
+            "/guides/arrays",
+            "/guides/maps"
+          ],
+          "reason": "Both exact navigation paths must match.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            "/guides/arrays",
+            "/guides/maps"
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "[target]",
+            "count"
+          ],
+          "expected": 0,
+          "reason": "No target attributes are allowed.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 1,
+          "executionError": null,
+          "pass": false
+        }
+      ]
+    }
+  ]
+}

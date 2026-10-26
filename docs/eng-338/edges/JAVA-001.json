@@ -1,0 +1,82 @@
+{
+  "key": "JAVA-001",
+  "revision": "sha256:e9b1f62267acffdb9af08edf569dacad5f8d1bb726952031e2d555f537dd5d0f",
+  "language": "java",
+  "runtime": "teavm-javac",
+  "at": "2026-10-26T03:20:26.798Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "8deee53fab301063eb9c6c11520aa50753e5207f083510cfe6706921bc46d1b4",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "a\tb\nc\rd",
+          "expected": 4,
+          "reason": "Every listed whitespace type separates words.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 4,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": " \t\r\n ",
+          "expected": 0,
+          "reason": "Blank text has no words.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 0,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "你好 + 42!",
+          "expected": 3,
+          "reason": "Letters, symbols and digits remain words.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 3,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "be4dd6e27b5110b4bf96b070d7e8854a4efd05f5e1b856f4e11f670ff5c4a734",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "a\tb\nc\rd",
+          "expected": 4,
+          "reason": "Every listed whitespace type separates words.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 1,
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": " \t\r\n ",
+          "expected": 0,
+          "reason": "Blank text has no words.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 0,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "你好 + 42!",
+          "expected": 3,
+          "reason": "Letters, symbols and digits remain words.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 3,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

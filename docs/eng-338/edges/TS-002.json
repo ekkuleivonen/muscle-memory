@@ -1,0 +1,118 @@
+{
+  "key": "TS-002",
+  "revision": "sha256:a035e776c48a0d4909f10ca1e8d77fab41b41a6ff5a538e5d02c9069d47d8b35",
+  "language": "typescript",
+  "runtime": "Sucrase/browser JavaScript",
+  "at": "2026-10-26T03:21:28.805Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "da36ee27a6cd8a61e07237ed9b0c15a03ad9fb2ede76f26d07f38daae3d0884e",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            999,
+            "  hAlF  ",
+            {
+              "Half": 50
+            }
+          ],
+          "expected": 499,
+          "reason": "Normalize both names and floor final total.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 499,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            1000,
+            "A B",
+            {
+              "AB": 20
+            }
+          ],
+          "expected": 1000,
+          "reason": "Interior spaces remain significant.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 1000,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            1000,
+            "toString",
+            {
+              "SAVE": 20
+            }
+          ],
+          "expected": 1000,
+          "reason": "Only configured own keys match.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 1000,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "973661f733ef367d84b1e8de182cac50207ca68e4cefc31c87a2229cf2aef251",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            999,
+            "  hAlF  ",
+            {
+              "Half": 50
+            }
+          ],
+          "expected": 499,
+          "reason": "Normalize both names and floor final total.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 500,
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            1000,
+            "A B",
+            {
+              "AB": 20
+            }
+          ],
+          "expected": 1000,
+          "reason": "Interior spaces remain significant.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 1000,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            1000,
+            "toString",
+            {
+              "SAVE": 20
+            }
+          ],
+          "expected": 1000,
+          "reason": "Only configured own keys match.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 1000,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

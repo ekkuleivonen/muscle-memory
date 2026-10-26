@@ -1,0 +1,110 @@
+{
+  "key": "RB-005",
+  "revision": "sha256:24ea37d6e5454810290af61db7adbdf28095322099193a5b3e0e091b377ba56c",
+  "language": "ruby",
+  "runtime": "ruby.wasm",
+  "at": "2026-10-26T03:21:19.360Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "b277e623da9f5e6ea3ad87832d0af3605aefe51667675e5a2c4d2b8e1f90a873",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "-7"
+          ],
+          "expected": -7,
+          "reason": "Single negative integer is valid.",
+          "origin": "blind-solver public-derived edge",
+          "actual": -7,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "10",
+            "2",
+            "3",
+            "+",
+            "-"
+          ],
+          "expected": 5,
+          "reason": "Nested right operand must retain subtraction order.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 5,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "-2",
+            "3",
+            "*",
+            "4",
+            "+"
+          ],
+          "expected": -2,
+          "reason": "Negative intermediate and multiplication.",
+          "origin": "blind-solver public-derived edge",
+          "actual": -2,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "69a166db76ae1321ef5c8e8ed0d946cf6845db296cf2f8bde78e88042d29db81",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            "-7"
+          ],
+          "expected": -7,
+          "reason": "Single negative integer is valid.",
+          "origin": "blind-solver public-derived edge",
+          "actual": -7,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            "10",
+            "2",
+            "3",
+            "+",
+            "-"
+          ],
+          "expected": 5,
+          "reason": "Nested right operand must retain subtraction order.",
+          "origin": "blind-solver public-derived edge",
+          "actual": -5,
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            "-2",
+            "3",
+            "*",
+            "4",
+            "+"
+          ],
+          "expected": -2,
+          "reason": "Negative intermediate and multiplication.",
+          "origin": "blind-solver public-derived edge",
+          "actual": -2,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import csv
 import io
-from decimal import Decimal, InvalidOperation
+import re
 
 
 KINDS = {"sale", "refund", "adjustment"}
@@ -10,7 +10,7 @@ def parse_amount(text):
     """A plain amount, or an accounting negative in brackets: (12.50) is -12.50."""
     text = text.strip()
     if text.startswith("(") and text.endswith(")"):
-        return -to_cents(text[1:-1])
+        return -abs(to_cents(text[1:-1]))
     return to_cents(text)
 
 
@@ -75,14 +75,12 @@ def settlement_summary(text):
 
 
 def to_cents(text):
-    """A plain decimal amount ("12.50", "-3", " 7.05 ") as whole cents.
-
-    Raises ValueError for anything else. Partner-specific formats are the reader's job.
-    """
-    try:
-        value = Decimal(text.strip())
-    except InvalidOperation:
-        raise ValueError(f"not an amount: {text!r}") from None
-    if not value.is_finite() or value != value.quantize(Decimal("0.01")):
+    """A signed plain decimal with at most two places, as exact integer cents."""
+    text = text.strip()
+    if re.fullmatch(r"[+-]?(?:\d+(?:\.\d{0,2})?|\.\d{1,2})", text) is None:
         raise ValueError(f"not an amount: {text!r}")
-    return int(value * 100)
+    negative = text.startswith("-")
+    number = text.lstrip("+-")
+    whole, _, fraction = number.partition(".")
+    cents = int(whole or "0") * 100 + int(fraction.ljust(2, "0") or "0")
+    return -cents if negative else cents

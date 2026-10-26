@@ -6,7 +6,7 @@ def dedupe(records):
     seen = set()
     kept = []
     for record in records:
-        key = record["email"].strip().lower()
+        key = record["email"].strip().casefold()
         if key not in seen:
             seen.add(key)
             kept.append(record)

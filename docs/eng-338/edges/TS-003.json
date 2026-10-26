@@ -1,0 +1,112 @@
+{
+  "key": "TS-003",
+  "revision": "sha256:49b3238dff45ac0dc41efce567ae8c3aa76987f0dc4cef04d3338321f31daa0f",
+  "language": "typescript",
+  "runtime": "Sucrase/browser JavaScript",
+  "at": "2026-10-26T03:21:28.847Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "6e2b9bb7a2087bc69ce806f070dfee75a4b8bac07768537c49f26ac4592de2c9",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            [
+              0,
+              300
+            ],
+            300
+          ],
+          "expected": [
+            600
+          ],
+          "reason": "Equality cancels old request.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            600
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              5,
+              5,
+              6
+            ],
+            0
+          ],
+          "expected": [
+            5,
+            6
+          ],
+          "reason": "Zero wait coalesces simultaneous keys.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            5,
+            6
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "1874e1d1f7ed1f313e5d162c376cd1f274d964e7eae01f64f41a39b79fd4daed",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            [
+              0,
+              300
+            ],
+            300
+          ],
+          "expected": [
+            600
+          ],
+          "reason": "Equality cancels old request.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            300,
+            600
+          ],
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            [
+              5,
+              5,
+              6
+            ],
+            0
+          ],
+          "expected": [
+            5,
+            6
+          ],
+          "reason": "Zero wait coalesces simultaneous keys.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            5,
+            5,
+            6
+          ],
+          "executionError": null,
+          "pass": false
+        }
+      ]
+    }
+  ]
+}

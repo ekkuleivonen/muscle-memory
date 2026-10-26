@@ -1,0 +1,242 @@
+{
+  "key": "CPP-001",
+  "revision": "sha256:63cd99a0b96aaeff42563a0a2f470f7ce079c6418e9216150f4e3ff1be91e236",
+  "language": "cpp",
+  "runtime": "Clang/YoWASP",
+  "at": "2026-10-26T03:19:09.067Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "ca1595fe3354d4da491d24d7d7614fdad37930f6a184a29bf522c516e3d476c2",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            2,
+            [
+              [
+                "put",
+                1,
+                10
+              ],
+              [
+                "put",
+                2,
+                20
+              ],
+              [
+                "put",
+                1,
+                11
+              ],
+              [
+                "put",
+                3,
+                30
+              ],
+              [
+                "get",
+                2
+              ],
+              [
+                "get",
+                1
+              ]
+            ]
+          ],
+          "expected": [
+            -1,
+            11
+          ],
+          "reason": "Replacing an existing key refreshes recency without consuming another slot.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            -1,
+            11
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            2,
+            [
+              [
+                "put",
+                1,
+                10
+              ],
+              [
+                "put",
+                2,
+                20
+              ],
+              [
+                "get",
+                9
+              ],
+              [
+                "put",
+                3,
+                30
+              ],
+              [
+                "get",
+                1
+              ],
+              [
+                "get",
+                2
+              ]
+            ]
+          ],
+          "expected": [
+            -1,
+            -1,
+            20
+          ],
+          "reason": "A miss changes no entry recency.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            -1,
+            -1,
+            20
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            1,
+            []
+          ],
+          "expected": [],
+          "reason": "No gets produce no outputs.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "6c8cb240a6280b25beb9ee1361f91f17c44e185fe1d020a6f3de0f67ff1fee05",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            2,
+            [
+              [
+                "put",
+                1,
+                10
+              ],
+              [
+                "put",
+                2,
+                20
+              ],
+              [
+                "put",
+                1,
+                11
+              ],
+              [
+                "put",
+                3,
+                30
+              ],
+              [
+                "get",
+                2
+              ],
+              [
+                "get",
+                1
+              ]
+            ]
+          ],
+          "expected": [
+            -1,
+            11
+          ],
+          "reason": "Replacing an existing key refreshes recency without consuming another slot.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            -1,
+            11
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            2,
+            [
+              [
+                "put",
+                1,
+                10
+              ],
+              [
+                "put",
+                2,
+                20
+              ],
+              [
+                "get",
+                9
+              ],
+              [
+                "put",
+                3,
+                30
+              ],
+              [
+                "get",
+                1
+              ],
+              [
+                "get",
+                2
+              ]
+            ]
+          ],
+          "expected": [
+            -1,
+            -1,
+            20
+          ],
+          "reason": "A miss changes no entry recency.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            -1,
+            -1,
+            20
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            1,
+            []
+          ],
+          "expected": [],
+          "reason": "No gets produce no outputs.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

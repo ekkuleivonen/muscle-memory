@@ -1,0 +1,82 @@
+{
+  "key": "GO-005",
+  "revision": "sha256:6284f2295fb1f0060fc22f1d6576ddadfa1718e01c43f5813c1fee767339ec76",
+  "language": "go",
+  "runtime": "Yaegi WASM",
+  "at": "2026-10-26T03:20:17.650Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "f969d68586a7caa93f4f268b64d960c1ae3acd9d5fce1ae287e5a5cb63e4ae83",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": ".+tag@googlemail.com",
+          "expected": null,
+          "reason": "Gmail normalization leaves empty local part.",
+          "origin": "blind-solver public-derived edge",
+          "actual": null,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "A.B+x@mail.gmail.com",
+          "expected": "a.b+x@mail.gmail.com",
+          "reason": "Subdomains do not receive Gmail normalization.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "a.b+x@mail.gmail.com",
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "a b@example.com",
+          "expected": null,
+          "reason": "Internal Unicode whitespace is invalid.",
+          "origin": "blind-solver public-derived edge",
+          "actual": null,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "e74ba7aaef7d6ed63ebc7d12b35e6c3ab3823477d9b4ffbf1927d3b7c2fe3a68",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": ".+tag@googlemail.com",
+          "expected": null,
+          "reason": "Gmail normalization leaves empty local part.",
+          "origin": "blind-solver public-derived edge",
+          "actual": null,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "A.B+x@mail.gmail.com",
+          "expected": "a.b+x@mail.gmail.com",
+          "reason": "Subdomains do not receive Gmail normalization.",
+          "origin": "blind-solver public-derived edge",
+          "actual": "ab@gmail.com",
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": "a b@example.com",
+          "expected": null,
+          "reason": "Internal Unicode whitespace is invalid.",
+          "origin": "blind-solver public-derived edge",
+          "actual": null,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

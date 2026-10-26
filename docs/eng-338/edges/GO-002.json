@@ -1,0 +1,88 @@
+{
+  "key": "GO-002",
+  "revision": "sha256:3c10fd7c2fe8a7b04b4d62426d75f10b156363b1ab6c4971f9ef12e0d81fdc67",
+  "language": "go",
+  "runtime": "Yaegi WASM",
+  "at": "2026-10-26T03:20:15.637Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "0d8999fbdca6ca3f9e2836b89e4ed00506a18f8e205da726a0890a766f435ec0",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "page=0&per_page=101",
+          "expected": {
+            "page": 1,
+            "perPage": 100
+          },
+          "reason": "Default page and cap per_page independently.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "page": 1,
+            "perPage": 100
+          },
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "PAGE=3&per_page=0&page=7",
+          "expected": {
+            "page": 7,
+            "perPage": 20
+          },
+          "reason": "Exact names and independent fallback.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "page": 7,
+            "perPage": 20
+          },
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "ecd224e7dbd420abeecb3883e27da64f331535c2aa8f5c88d0db500ed0699a7d",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "page=0&per_page=101",
+          "expected": {
+            "page": 1,
+            "perPage": 100
+          },
+          "reason": "Default page and cap per_page independently.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "page": 1,
+            "perPage": 20
+          },
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": "PAGE=3&per_page=0&page=7",
+          "expected": {
+            "page": 7,
+            "perPage": 20
+          },
+          "reason": "Exact names and independent fallback.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "page": 7,
+            "perPage": 20
+          },
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

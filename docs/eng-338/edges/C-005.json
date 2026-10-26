@@ -1,0 +1,140 @@
+{
+  "key": "C-005",
+  "revision": "sha256:cde78a35b25418677471ff6911c4a89792e744996396c7712b9346b121a0e53e",
+  "language": "c",
+  "runtime": "Clang/YoWASP",
+  "at": "2026-10-26T03:19:02.127Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "8f458874f1f04abe502e0fb6b158127f73b17ca5ffd44f2c36c81b8d36313f2f",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [],
+          "expected": 0,
+          "reason": "Explicit empty-list identity.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 0,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            0,
+            0
+          ],
+          "expected": 0,
+          "reason": "All zero list.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 0,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            -9,
+            0
+          ],
+          "expected": 9,
+          "reason": "Ignore signs and zero after nonzero.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 9,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            -7
+          ],
+          "expected": 7,
+          "reason": "Nonnegative singleton result.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 7,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            12,
+            25
+          ],
+          "expected": 1,
+          "reason": "Coprime inputs.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 1,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "ea7149e6636afec7788fe4f9531864d88a728b834a2ea3bd096e92e75b8f3ec5",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [],
+          "expected": 0,
+          "reason": "Explicit empty-list identity.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 0,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            0,
+            0
+          ],
+          "expected": 0,
+          "reason": "All zero list.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 0,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            -9,
+            0
+          ],
+          "expected": 9,
+          "reason": "Ignore signs and zero after nonzero.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 0,
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            -7
+          ],
+          "expected": 7,
+          "reason": "Nonnegative singleton result.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 7,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            12,
+            25
+          ],
+          "expected": 1,
+          "reason": "Coprime inputs.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 1,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

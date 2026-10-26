@@ -1,0 +1,118 @@
+{
+  "key": "PHP-005",
+  "revision": "sha256:2d5c560a396e1394e03216a9a6443754706a9545649060e69b732143349e3638",
+  "language": "php",
+  "runtime": "php-wasm",
+  "at": "2026-10-26T03:20:56.135Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "5a0e943eabaabab9fa8741c578fc1afe2036719bc64aae8a9f8e2a23cbe4ab06",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "080442957x",
+          "expected": false,
+          "reason": "Lowercase x is forbidden even when checksum would match.",
+          "origin": "blind-solver public-derived edge",
+          "actual": false,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "0000000000",
+          "expected": true,
+          "reason": "All-zero values meet the specified checksum rule.",
+          "origin": "blind-solver public-derived edge",
+          "actual": true,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "X000000000",
+          "expected": false,
+          "reason": "X allowed only in last position.",
+          "origin": "blind-solver public-derived edge",
+          "actual": false,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "0306406153",
+          "expected": false,
+          "reason": "Incorrect checksum.",
+          "origin": "blind-solver public-derived edge",
+          "actual": false,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "0306406152 ",
+          "expected": false,
+          "reason": "No trimming; length must be exactly ten.",
+          "origin": "blind-solver public-derived edge",
+          "actual": false,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "74a831d3eafe79f491f4325a3fb80049775e3b137d755a7973a4b981f0bd531e",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "080442957x",
+          "expected": false,
+          "reason": "Lowercase x is forbidden even when checksum would match.",
+          "origin": "blind-solver public-derived edge",
+          "actual": true,
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": "0000000000",
+          "expected": true,
+          "reason": "All-zero values meet the specified checksum rule.",
+          "origin": "blind-solver public-derived edge",
+          "actual": true,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "X000000000",
+          "expected": false,
+          "reason": "X allowed only in last position.",
+          "origin": "blind-solver public-derived edge",
+          "actual": false,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "0306406153",
+          "expected": false,
+          "reason": "Incorrect checksum.",
+          "origin": "blind-solver public-derived edge",
+          "actual": false,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "0306406152 ",
+          "expected": false,
+          "reason": "No trimming; length must be exactly ten.",
+          "origin": "blind-solver public-derived edge",
+          "actual": false,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

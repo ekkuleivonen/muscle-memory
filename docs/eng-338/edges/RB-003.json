@@ -1,0 +1,146 @@
+{
+  "key": "RB-003",
+  "revision": "sha256:d62765131db83c04a32b80eddb1942678b3a402bb586c6adcee86f680910f073",
+  "language": "ruby",
+  "runtime": "ruby.wasm",
+  "at": "2026-10-26T03:21:17.841Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "4bc20415569a272eeafe0b703917f5629359f04867cb24e629d57d3fc51a563b",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            -2,
+            -1,
+            0,
+            2,
+            4,
+            5
+          ],
+          "expected": [
+            [
+              -2,
+              -1,
+              0
+            ],
+            [
+              2
+            ],
+            [
+              4,
+              5
+            ]
+          ],
+          "reason": "Cross zero and split every nonconsecutive gap.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            [
+              -2,
+              -1,
+              0
+            ],
+            [
+              2
+            ],
+            [
+              4,
+              5
+            ]
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            10000
+          ],
+          "expected": [
+            [
+              10000
+            ]
+          ],
+          "reason": "Singleton stays one run.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            [
+              10000
+            ]
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "042f909e67d927d106eaa586830df1f5bf919343173fe31be3c5348f9778293a",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            -2,
+            -1,
+            0,
+            2,
+            4,
+            5
+          ],
+          "expected": [
+            [
+              -2,
+              -1,
+              0
+            ],
+            [
+              2
+            ],
+            [
+              4,
+              5
+            ]
+          ],
+          "reason": "Cross zero and split every nonconsecutive gap.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            [
+              -2,
+              -1,
+              0,
+              2,
+              4,
+              5
+            ]
+          ],
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            10000
+          ],
+          "expected": [
+            [
+              10000
+            ]
+          ],
+          "reason": "Singleton stays one run.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            [
+              10000
+            ]
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

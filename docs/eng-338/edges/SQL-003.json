@@ -1,0 +1,217 @@
+{
+  "key": "SQL-003",
+  "revision": "sha256:4cb69977e6d6cec2973eadb1e04bc73e4a04ffd314271e6609d006b98c8c383f",
+  "language": "sql",
+  "runtime": "PGlite/PostgreSQL",
+  "at": "2026-10-26T03:21:25.125Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "b18f4f1c72fc7bf1f9b61b70020ce81ecb1211872a23ad883b85765fba567fcf",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": {
+            "orders": [
+              [
+                3,
+                "c"
+              ],
+              [
+                1,
+                "a"
+              ],
+              [
+                2,
+                "b"
+              ]
+            ],
+            "payments": [
+              [
+                1,
+                0
+              ],
+              [
+                2,
+                -5
+              ],
+              [
+                2,
+                5
+              ]
+            ]
+          },
+          "expected": [
+            [
+              3
+            ]
+          ],
+          "reason": "Zero and negative payments count, and multiple payments cannot duplicate unpaid rows.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            [
+              3
+            ]
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": {
+            "orders": [
+              [
+                8,
+                "a"
+              ],
+              [
+                2,
+                "b"
+              ]
+            ],
+            "payments": []
+          },
+          "expected": [
+            [
+              2
+            ],
+            [
+              8
+            ]
+          ],
+          "reason": "Orders without any payments are sorted by ascending id.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            [
+              2
+            ],
+            [
+              8
+            ]
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": {
+            "orders": [],
+            "payments": []
+          },
+          "expected": [],
+          "reason": "No orders yields no output.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "93505dbfd6619bbf4425eae21d3085bea7c0b60ccf580b40afb9390baf26da2a",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": {
+            "orders": [
+              [
+                3,
+                "c"
+              ],
+              [
+                1,
+                "a"
+              ],
+              [
+                2,
+                "b"
+              ]
+            ],
+            "payments": [
+              [
+                1,
+                0
+              ],
+              [
+                2,
+                -5
+              ],
+              [
+                2,
+                5
+              ]
+            ]
+          },
+          "expected": [
+            [
+              3
+            ]
+          ],
+          "reason": "Zero and negative payments count, and multiple payments cannot duplicate unpaid rows.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            [
+              1
+            ],
+            [
+              3
+            ]
+          ],
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": {
+            "orders": [
+              [
+                8,
+                "a"
+              ],
+              [
+                2,
+                "b"
+              ]
+            ],
+            "payments": []
+          },
+          "expected": [
+            [
+              2
+            ],
+            [
+              8
+            ]
+          ],
+          "reason": "Orders without any payments are sorted by ascending id.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            [
+              2
+            ],
+            [
+              8
+            ]
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": {
+            "orders": [],
+            "payments": []
+          },
+          "expected": [],
+          "reason": "No orders yields no output.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

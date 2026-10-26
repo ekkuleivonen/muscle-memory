@@ -1,0 +1,134 @@
+{
+  "key": "JS-001",
+  "revision": "sha256:4e3890b9a4fc1ca84f0335e24280c404258aceb2c27116588ecc099034b63e1c",
+  "language": "javascript",
+  "runtime": "browser JavaScript",
+  "at": "2026-10-26T03:20:54.423Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "d2255668a1cbdc8e647a30b7724f7606691a239f27d79c6d56cb7814c5a3bc84",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": {
+            "customer": {
+              "id": "x",
+              "loyalty": {
+                "tier": "none"
+              }
+            },
+            "items": [
+              {
+                "sku": "x",
+                "price": 3000,
+                "quantity": 1
+              }
+            ]
+          },
+          "expected": {
+            "subtotal": 3000,
+            "shipping": 495,
+            "total": 3495
+          },
+          "reason": "Lapsed membership uses standard threshold.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "subtotal": 3000,
+            "shipping": 495,
+            "total": 3495
+          },
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": {
+            "customer": {
+              "guest": true
+            },
+            "items": []
+          },
+          "expected": {
+            "subtotal": 0,
+            "shipping": 495,
+            "total": 495
+          },
+          "reason": "Empty subtotal remains below free shipping threshold.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "subtotal": 0,
+            "shipping": 495,
+            "total": 495
+          },
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "1d075dc4cf604e83366d466de24b191a68eac3db4872d233fc344ddf4a467287",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": {
+            "customer": {
+              "id": "x",
+              "loyalty": {
+                "tier": "none"
+              }
+            },
+            "items": [
+              {
+                "sku": "x",
+                "price": 3000,
+                "quantity": 1
+              }
+            ]
+          },
+          "expected": {
+            "subtotal": 3000,
+            "shipping": 495,
+            "total": 3495
+          },
+          "reason": "Lapsed membership uses standard threshold.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "subtotal": 3000,
+            "shipping": 0,
+            "total": 3000
+          },
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": {
+            "customer": {
+              "guest": true
+            },
+            "items": []
+          },
+          "expected": {
+            "subtotal": 0,
+            "shipping": 495,
+            "total": 495
+          },
+          "reason": "Empty subtotal remains below free shipping threshold.",
+          "origin": "blind-solver public-derived edge",
+          "actual": {
+            "subtotal": 0,
+            "shipping": 495,
+            "total": 495
+          },
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

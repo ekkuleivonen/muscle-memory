@@ -1,0 +1,208 @@
+{
+  "key": "CPP-004",
+  "revision": "sha256:7d583fad9b86a7f92104bc7abf7bc1b91fd4b43c12b977fe36e22ac16ba36143",
+  "language": "cpp",
+  "runtime": "Clang/YoWASP",
+  "at": "2026-10-26T03:19:28.510Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "bb654b236bde0cdb07d2741852600479301954532808339a25eadb0280aea0ab",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            [
+              1,
+              2,
+              3
+            ],
+            4
+          ],
+          "expected": [
+            3,
+            1,
+            2
+          ],
+          "reason": "Large k reduces modulo length.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            3,
+            1,
+            2
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              1,
+              2,
+              3
+            ],
+            3
+          ],
+          "expected": [
+            1,
+            2,
+            3
+          ],
+          "reason": "Full turn is identity.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            1,
+            2,
+            3
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              2,
+              2,
+              1
+            ],
+            0
+          ],
+          "expected": [
+            2,
+            2,
+            1
+          ],
+          "reason": "Zero shift preserves duplicates and order.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            2,
+            2,
+            1
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              9
+            ],
+            10000
+          ],
+          "expected": [
+            9
+          ],
+          "reason": "Singleton unchanged under any valid shift.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            9
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "6b3ef95f95193e4db99007a10a4fd421af57ed1f42256c1e8259042a717e8eeb",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            [
+              1,
+              2,
+              3
+            ],
+            4
+          ],
+          "expected": [
+            3,
+            1,
+            2
+          ],
+          "reason": "Large k reduces modulo length.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            1,
+            2,
+            3
+          ],
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            [
+              1,
+              2,
+              3
+            ],
+            3
+          ],
+          "expected": [
+            1,
+            2,
+            3
+          ],
+          "reason": "Full turn is identity.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            1,
+            2,
+            3
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              2,
+              2,
+              1
+            ],
+            0
+          ],
+          "expected": [
+            2,
+            2,
+            1
+          ],
+          "reason": "Zero shift preserves duplicates and order.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            2,
+            2,
+            1
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              9
+            ],
+            10000
+          ],
+          "expected": [
+            9
+          ],
+          "reason": "Singleton unchanged under any valid shift.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            9
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

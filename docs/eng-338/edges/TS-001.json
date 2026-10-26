@@ -1,0 +1,64 @@
+{
+  "key": "TS-001",
+  "revision": "sha256:87f3834b8d08c2b7bdfc322567c3f437e0ba19d6d8a90aa1dc53d8268a3666a1",
+  "language": "typescript",
+  "runtime": "Sucrase/browser JavaScript",
+  "at": "2026-10-26T03:21:28.759Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "acd6c763cadde305b0e2e4e9bec4afaffa18538a73735093d2c5fc3be0c38bd5",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "\tone\r\ntwo\tthree \n",
+          "expected": 3,
+          "reason": "Mixed whitespace separates runs.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 3,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": "é ! 123",
+          "expected": 3,
+          "reason": "Symbols and non-English letters are words.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 3,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "7fdad891b4b76cf9b50ec4711faefb8182c7ee1a83ccd4a3a67bf5674b22e31d",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": "\tone\r\ntwo\tthree \n",
+          "expected": 3,
+          "reason": "Mixed whitespace separates runs.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 2,
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": "é ! 123",
+          "expected": 3,
+          "reason": "Symbols and non-English letters are words.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 3,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

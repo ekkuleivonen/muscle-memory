@@ -1,0 +1,130 @@
+{
+  "key": "C-003",
+  "revision": "sha256:fc49a2573a90a5450a5281c039315685f129c3d670615bc6abaa5c63e886fb42",
+  "language": "c",
+  "runtime": "Clang/YoWASP",
+  "at": "2026-10-26T03:18:57.312Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "fd37a6ea46be5526c460c3e4ecd742c43b5499d54014f43955c92bfbd22b8458",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            7
+          ],
+          "expected": 1,
+          "reason": "Singleton is a run.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 1,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            2,
+            2,
+            2
+          ],
+          "expected": 3,
+          "reason": "Whole input is the longest run, ending at last element.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 3,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            -1,
+            0,
+            -1
+          ],
+          "expected": 1,
+          "reason": "Equal nonadjacent values do not form a contiguous run.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 1,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            1,
+            1,
+            2,
+            2
+          ],
+          "expected": 2,
+          "reason": "Tied longest runs.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 2,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "f1aa4d6d0a18523264e25862d4f18d04db91bc49b50cfc9682c918563b3f8c6d",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            7
+          ],
+          "expected": 1,
+          "reason": "Singleton is a run.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 1,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            2,
+            2,
+            2
+          ],
+          "expected": 3,
+          "reason": "Whole input is the longest run, ending at last element.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 1,
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            -1,
+            0,
+            -1
+          ],
+          "expected": 1,
+          "reason": "Equal nonadjacent values do not form a contiguous run.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 1,
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            1,
+            1,
+            2,
+            2
+          ],
+          "expected": 2,
+          "reason": "Tied longest runs.",
+          "origin": "blind-solver public-derived edge",
+          "actual": 2,
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

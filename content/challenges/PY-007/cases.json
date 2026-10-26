@@ -381,5 +381,45 @@
       }
     ],
     "hidden": true
+  },
+  {
+    "input": [
+      {
+        "id": 1,
+        "email": "Σ@x.io"
+      },
+      {
+        "id": 2,
+        "email": "ς@x.io"
+      }
+    ],
+    "expected": [
+      {
+        "id": 1,
+        "email": "Σ@x.io"
+      }
+    ],
+    "hidden": true
+  },
+  {
+    "input": [
+      {
+        "id": 1,
+        "email": " Straße@x.io ",
+        "tag": "keep"
+      },
+      {
+        "id": 2,
+        "email": "STRASSE@x.io"
+      }
+    ],
+    "expected": [
+      {
+        "id": 1,
+        "email": " Straße@x.io ",
+        "tag": "keep"
+      }
+    ],
+    "hidden": true
   }
 ]

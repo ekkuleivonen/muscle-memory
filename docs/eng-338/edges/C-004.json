@@ -1,0 +1,161 @@
+{
+  "key": "C-004",
+  "revision": "sha256:0935afcb9a890ea280e72a546da4e928d86b58f35df2c67b3903090ef0f32d7e",
+  "language": "c",
+  "runtime": "Clang/YoWASP",
+  "at": "2026-10-26T03:18:59.726Z",
+  "method": "Direct same Runner/opaque iframe/worker browser runtime; agent-authored public inputs, not hidden cases. Normal UI coverage is recorded separately.",
+  "stages": [
+    {
+      "stage": "first",
+      "codeSha256": "00cd4c23b79aeb6378423649b4ed98340a03e03168b711622c07b8f40300a394",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            [
+              2,
+              2,
+              2
+            ],
+            2
+          ],
+          "expected": [],
+          "reason": "All target occurrences must disappear.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              -1,
+              0,
+              -1
+            ],
+            9
+          ],
+          "expected": [
+            -1,
+            0,
+            -1
+          ],
+          "reason": "Missing target preserves all values and order.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            -1,
+            0,
+            -1
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              0,
+              1,
+              0,
+              2,
+              0
+            ],
+            0
+          ],
+          "expected": [
+            1,
+            2
+          ],
+          "reason": "Repeated target around surviving values.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            1,
+            2
+          ],
+          "executionError": null,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "stage": "wrong",
+      "codeSha256": "6a19c4e37a5726cc155fadc7c527535747d7d13026dc65d25a27884a5263817e",
+      "phase": "tests",
+      "status": "completed",
+      "error": null,
+      "cases": [
+        {
+          "input": [
+            [
+              2,
+              2,
+              2
+            ],
+            2
+          ],
+          "expected": [],
+          "reason": "All target occurrences must disappear.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            2,
+            2
+          ],
+          "executionError": null,
+          "pass": false
+        },
+        {
+          "input": [
+            [
+              -1,
+              0,
+              -1
+            ],
+            9
+          ],
+          "expected": [
+            -1,
+            0,
+            -1
+          ],
+          "reason": "Missing target preserves all values and order.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            -1,
+            0,
+            -1
+          ],
+          "executionError": null,
+          "pass": true
+        },
+        {
+          "input": [
+            [
+              0,
+              1,
+              0,
+              2,
+              0
+            ],
+            0
+          ],
+          "expected": [
+            1,
+            2
+          ],
+          "reason": "Repeated target around surviving values.",
+          "origin": "blind-solver public-derived edge",
+          "actual": [
+            1,
+            0,
+            2,
+            0
+          ],
+          "executionError": null,
+          "pass": false
+        }
+      ]
+    }
+  ]
+}
