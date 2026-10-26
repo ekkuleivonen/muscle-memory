@@ -31,6 +31,7 @@ import { initializeLocalCatalog, repositorySeed } from "../authoring-local";
 import { localSandboxValidator } from "../authoring-sandbox";
 import { seedCatalog } from "../../packages/authoring/seed";
 import { CatalogStorage } from "../../packages/authoring/storage";
+import { encodeOutcome } from "../../apps/web/lib/outcome";
 import { AuthoringService } from "../../packages/authoring/service";
 const legal = await readFile("apps/web/lib/legal.ts", "utf8");
 assert.ok(
@@ -78,52 +79,62 @@ const bundleDir = "/tmp/mm-eng354-worker";
 const moduleFiles = (await readdir(bundleDir))
   .filter((n) => /\.(js|wasm|bin)$/.test(n))
   .sort((a, b) => (a === "worker.js" ? -1 : b === "worker.js" ? 1 : 0));
-const mf = new Miniflare(
-  convertV4MiniflareOptions({
-    workers: [
-      {
-        ...workerOptions,
-        name: "muscle-memory",
-        d1Databases: ["CATALOG_DB"],
-        r2Buckets: ["CONTENT"],
-        modulesRoot: bundleDir,
-        // Miniflare's Node bridge substitutes a loopback Host header. This fixture-only
-        // ingress restores the Host from the original request URL, as the real edge sends it.
-        modules: [
-          {
-            path: `${bundleDir}/local-ingress.mjs`,
-            type: "ESModule",
-            contents: `import app from './worker.js'; export default {fetch(request, env, ctx) {
+const localOptions = {
+  workers: [
+    {
+      ...workerOptions,
+      name: "muscle-memory",
+      d1Databases: ["CATALOG_DB"],
+      r2Buckets: ["CONTENT"],
+      modulesRoot: bundleDir,
+      // Miniflare's Node bridge substitutes a loopback Host header. This fixture-only
+      // ingress restores the Host from the original request URL, as the real edge sends it.
+      modules: [
+        {
+          path: `${bundleDir}/local-ingress.mjs`,
+          type: "ESModule",
+          contents: `import app from './worker.js'; export default {fetch(request, env, ctx) {
       const headers = new Headers(request.headers); headers.set('host', new URL(request.url).host);
       if (headers.has('x-eng353-local-origin')) { headers.set('origin', headers.get('x-eng353-local-origin')); headers.delete('x-eng353-local-origin'); }
       return app.fetch(new Request(request, {headers}), env, ctx);
     }};`,
-          },
-          ...moduleFiles.map((name) => ({
-            path: `${bundleDir}/${name}`,
-            type: name.endsWith(".js")
-              ? "ESModule"
-              : name.endsWith(".wasm")
-                ? "CompiledWasm"
-                : "Data",
-          })),
-        ],
-        bindings: {
-          ...base.workerOptions.bindings,
-          CATALOG_MODE: "managed",
-          ADMIN_ACCESS_ISSUER: issuer,
-          ADMIN_ACCESS_AUD: aud,
         },
-        outboundService: async (request) => {
-          assert.equal(
-            request.url,
-            `${issuer}/cdn-cgi/access/certs`,
-            "unexpected outbound network",
-          );
-          return MFResponse.json(jwks);
-        },
+        ...moduleFiles.map((name) => ({
+          path: `${bundleDir}/${name}`,
+          type: name.endsWith(".js")
+            ? "ESModule"
+            : name.endsWith(".wasm")
+              ? "CompiledWasm"
+              : "Data",
+        })),
+      ],
+      bindings: {
+        ...base.workerOptions.bindings,
+        CATALOG_MODE: "managed",
+        ADMIN_ACCESS_ISSUER: issuer,
+        ADMIN_ACCESS_AUD: aud,
       },
-    ],
+      outboundService: async (request) => {
+        assert.equal(
+          request.url,
+          `${issuer}/cdn-cgi/access/certs`,
+          "unexpected outbound network",
+        );
+        return MFResponse.json(jwks);
+      },
+    },
+  ],
+};
+const mf = new Miniflare(convertV4MiniflareOptions(localOptions));
+const unavailable = new Miniflare(
+  convertV4MiniflareOptions({
+    ...localOptions,
+    workers: localOptions.workers.map((w) => ({
+      ...w,
+      d1Databases: [],
+      r2Buckets: [],
+      bindings: { ...w.bindings, CATALOG_MODE: "managed" },
+    })),
   }),
 );
 const receipts = [];
@@ -242,8 +253,10 @@ try {
   });
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
-  let uploads = 0;
-  await context.route("**/*", async (route) => {
+  let missingStorage = false;
+  let uploads = 0,
+    operatorUploads = 0;
+  const routeApplication = async (route) => {
     try {
       const incoming = route.request(),
         url = new URL(incoming.url());
@@ -265,8 +278,22 @@ try {
           body,
         });
       }
+      if (url.pathname.startsWith("/runtime/")) {
+        return await route.fulfill({
+          status: 200,
+          body: await readFile(
+            resolve("apps/web/public", "." + decodeURIComponent(url.pathname)),
+          ),
+          contentType: url.pathname.endsWith(".wasm")
+            ? "application/wasm"
+            : url.pathname.endsWith(".js")
+              ? "application/javascript"
+              : "application/octet-stream",
+        });
+      }
       if (url.pathname.startsWith("/ingest/")) {
         uploads++;
+        if (incoming.frame().page().context() === context) operatorUploads++;
         return await route.fulfill({
           status: 503,
           body: "Synthetic QA upload blocked",
@@ -281,14 +308,17 @@ try {
         h["x-eng353-local-origin"] = h.origin;
         delete h.origin;
       }
-      const response = await mf.dispatchFetch(url.href, {
-        method: incoming.method(),
-        headers: h,
-        ...(incoming.postDataBuffer()
-          ? { body: incoming.postDataBuffer() }
-          : {}),
-        redirect: "manual",
-      });
+      const response = await (missingStorage ? unavailable : mf).dispatchFetch(
+        url.href,
+        {
+          method: incoming.method(),
+          headers: h,
+          ...(incoming.postDataBuffer()
+            ? { body: incoming.postDataBuffer() }
+            : {}),
+          redirect: "manual",
+        },
+      );
       await route.fulfill({
         status: response.status,
         headers: Object.fromEntries(response.headers),
@@ -298,7 +328,8 @@ try {
       if (!closing) routeErrors.push(String(error));
       await route.abort().catch(() => {});
     }
-  });
+  };
+  await context.route("**/*", routeApplication);
   page = await context.newPage();
   page.on("pageerror", (e) => routeErrors.push(String(e)));
   await page.goto("https://musclememory.run/admin/authoring/JS-998");
@@ -359,6 +390,45 @@ try {
     name: "Archive challenge",
     exact: true,
   });
+  // Create a real unfinished local attempt before archiving it.
+  const consent = async (ctx) => {
+    await ctx.addCookies([
+      {
+        name: "mm_consent",
+        value: "2026-10-26.2",
+        url: "https://musclememory.run",
+      },
+    ]);
+    await ctx.addInitScript(() => {
+      if (location.origin === "null") return;
+      if (!localStorage.getItem("muscle-memory.profile"))
+        localStorage.setItem(
+          "muscle-memory.profile",
+          JSON.stringify({
+            version: "2",
+            createdAt: new Date().toISOString(),
+            accepted: { version: "2026-10-26.2", at: new Date().toISOString() },
+            stealth: true,
+            profile: {},
+          }),
+        );
+    });
+  };
+  // Operator context remains free of player storage; use a separate synthetic player.
+  const playerContext = await browser.newContext();
+  await playerContext.route("**/*", routeApplication);
+  await consent(playerContext);
+  const player = await playerContext.newPage();
+  player.on("pageerror", (e) => routeErrors.push(String(e)));
+  await player.goto("https://musclememory.run/challenges/JS-998");
+  const editor = player.locator(
+    '.practice-editor .cm-content[contenteditable="true"]',
+  );
+  await editor.waitFor();
+  const savedCode =
+    source.revision.starter + "\n// isolated continuation marker";
+  await editor.fill(savedCode);
+  await player.waitForTimeout(1300);
   await archiveButton.click();
   await page.waitForFunction(() =>
     document.body.textContent.includes("archived"),
@@ -370,15 +440,157 @@ try {
       .archived,
     true,
   );
-  assert.equal(uploads, 0);
+  await player.reload();
+  await player
+    .getByText(
+      "This challenge is archived. You can finish your saved attempt.",
+      { exact: true },
+    )
+    .waitFor();
+  await editor.waitFor();
+  assert.ok(
+    (await editor.innerText()).includes("isolated continuation marker"),
+  );
+  assert.equal(
+    await player.getByRole("button", { name: /practice again/i }).count(),
+    0,
+  );
+  await player.reload();
+  await editor.waitFor();
+  assert.ok(
+    (await editor.innerText()).includes("isolated continuation marker"),
+  );
+  const freshContext = await browser.newContext();
+  await freshContext.route("**/*", routeApplication);
+  await consent(freshContext);
+  const fresh = await freshContext.newPage();
+  await fresh.goto("https://musclememory.run/challenges/JS-998");
+  await fresh
+    .getByText("Only an existing unfinished attempt can continue here.", {
+      exact: false,
+    })
+    .waitFor();
+  assert.equal(await fresh.locator(".cm-content").count(), 0);
+  const card = encodeOutcome({
+    v: 3,
+    k: "JS-998",
+    l: "javascript",
+    rv: detail.head.publishedRevision.slice(7),
+    o: {
+      passed: source.revision.cases.length,
+      total: source.revision.cases.length,
+    },
+    f: null,
+    n: 1,
+    c: "syntheticqa",
+  });
+  await fresh.goto("https://musclememory.run/r/" + card);
+  await fresh
+    .getByText("This challenge is archived.", { exact: false })
+    .first()
+    .waitFor();
+  assert.ok(
+    (await fresh.locator("main").innerText()).includes(
+      "Synthetic browser edited",
+    ),
+  );
+  assert.equal(
+    await fresh
+      .getByRole("button", { name: /your turn|try.*challenge/i })
+      .count(),
+    0,
+  );
+  await freshContext.close();
+  await playerContext.close();
+  // Fill every create field through the actual simple authoring form.
+  await page.goto("https://musclememory.run/admin/authoring/new");
+  const create = structuredClone(source);
+  create.metadata.key = create.revision.challenge = "JS-997";
+  const fields = {
+    key: create.metadata.key,
+    title: "Complete form draft",
+    summary: create.metadata.summary,
+    hook: create.metadata.hook ?? "",
+    tags: JSON.stringify(create.metadata.tags),
+    task: create.revision.task,
+    file: create.revision.file,
+    entrypoint: create.revision.entrypoint,
+    parameters: create.revision.parameters
+      ? JSON.stringify(create.revision.parameters)
+      : "",
+    starter: create.revision.starter,
+    cases: JSON.stringify(create.revision.cases),
+    rules: JSON.stringify(create.revision.rules),
+    solution: create.private.solution,
+    alternatives: JSON.stringify(create.private.alternatives),
+    wrong: JSON.stringify(create.private.wrong),
+    examples: JSON.stringify(create.private.examples),
+  };
+  for (const [field, value] of Object.entries(fields))
+    await page.locator("#authoring-" + field).fill(value);
+  await page
+    .locator("#authoring-language")
+    .selectOption(create.revision.language);
+  await page
+    .locator("#authoring-difficulty")
+    .selectOption(create.metadata.difficulty);
+  missingStorage = true;
+  await page
+    .getByRole("button", { name: "Save private draft", exact: true })
+    .click();
+  await page
+    .getByRole("alert")
+    .filter({ hasText: "Managed content storage is not configured." })
+    .waitFor();
+  assert.equal(
+    await page.locator("#authoring-title").inputValue(),
+    "Complete form draft",
+  );
+  assert.equal(await storage.head("JS-997"), null);
+  missingStorage = false;
+  await page
+    .getByRole("button", { name: "Save private draft", exact: true })
+    .click();
+  await page.getByText("Private draft saved.", { exact: false }).waitFor();
+  assert.equal(
+    (await service.detail("JS-997")).source.metadata.title,
+    "Complete form draft",
+  );
+  await page.waitForURL("**/admin/authoring/JS-997");
+  await page.locator("#authoring-title").waitFor();
+  await page.getByRole("button", { name: "Queue trusted validation" }).click();
+  await page
+    .getByText("availability is not confirmed.", { exact: false })
+    .waitFor();
+  assert.ok(
+    await page
+      .getByRole("button", { name: "Publish revision", exact: true })
+      .isDisabled(),
+  );
+  missingStorage = true;
+  await page.reload();
+  await page
+    .getByRole("alert")
+    .filter({ hasText: "Managed content storage is not configured." })
+    .waitFor();
+  missingStorage = false;
+  await page.getByRole("button", { name: "Retry loading" }).click();
+  await page.locator("#authoring-title").waitFor();
+  assert.equal(
+    await page.locator("#authoring-title").inputValue(),
+    "Complete form draft",
+  );
+  assert.equal(operatorUploads, 0);
   assert.equal((await page.evaluate(() => indexedDB.databases())).length, 0);
   assert.deepEqual(routeErrors, []);
   console.log(
     JSON.stringify(
       {
         httpChecks: receipts.length,
+        syntheticUploadsBlocked: uploads,
+        operatorUploads,
         browser:
-          "authenticated edit / queue / trusted execution / publish / archive / mobile; zero player uploads",
+          "authenticated full create / failure recovery / edit / queue / trusted execution / publish / archive / mobile; archived continuation reload and fresh-start denial; archived shared result; all synthetic uploads blocked, zero operator uploads",
         receipts,
       },
       null,
@@ -409,4 +621,5 @@ try {
   await sandbox?.dispose();
   await browser?.close();
   await mf.dispose();
+  await unavailable.dispose();
 }

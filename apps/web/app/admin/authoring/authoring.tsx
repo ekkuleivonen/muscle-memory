@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type {
   EditorDetail,
   EditorSummary,
@@ -261,6 +262,7 @@ function sourceFor(f: Fields): ChallengeSource {
 }
 
 export function AuthoringEditor({ challengeKey }: { challengeKey?: string }) {
+  const router = useRouter();
   const [detail, setDetail] = useState<EditorDetail | null>(null);
   const [fields, setFields] = useState<Fields>(blank);
   const [saved, setSaved] = useState(json(blank));
@@ -337,6 +339,13 @@ export function AuthoringEditor({ challengeKey }: { challengeKey?: string }) {
       setStatus(
         "Private draft saved. Validate this generation before publishing.",
       );
+      if (!key)
+        router.replace(
+          `/admin/authoring/${encodeURIComponent(next.head.key)}`,
+          {
+            scroll: false,
+          },
+        );
     } catch (error) {
       setError(`${message(error)}\nYour form text is still here.`);
     } finally {

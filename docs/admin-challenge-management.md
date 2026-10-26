@@ -47,24 +47,22 @@ not restore it. Reuse current `validateRevision`, catalog/hash verification,
   historical/shared views. This requires public historical revision loading and a
   local continuation gate; do not silently treat current content as an old version.
 
-## Integration gaps to resolve explicitly
+## Implemented public integration
 
-`getChallenges()` currently caches a catalog promise for the server instance's
-lifetime. Managed publication must replace that behavior with current state, while
-immutable revision reads may cache by hash. Server-rendered public discovery must
-also see lifecycle changes without a rebuild.
+Managed discovery reads the current manifest pointer on each request, replacing the
+old process-lifetime bundled-catalog cache. The bundled catalog remains the default
+until managed mode is explicitly configured. Configured storage failures are errors,
+not fallback discovery that could resurrect archived challenges.
 
-Practice routes currently send only the latest revision, and local progress does
-not carry a revision pin. Preserve active attempts using their recorded pinned
-revision and saved code; do not create new player observations or reinterpret old
-ones. Existing immutable archives must be seeded and remain readable. Shared
-receipts must remain visible for archived challenges without an invitation to start
-an archived challenge.
+Practice resolves the saved attempt's immutable revision before mounting the editor.
+It uses an optional local progress pin, or recovers that pin from existing records,
+without adding observations or changing their meaning. Archived content admits only
+identified unfinished attempts. Shared receipts resolve their named immutable
+revision and omit new-start invitations when archived.
 
-Current content hashes do not include a runtime manifest pin. Define the immutable
-publication/validation envelope so runtime changes invalidate QA and version
-eligibility, preserving all existing content hashes and recorded history. Do not
-invent human/model instrumentation to solve this content-versioning problem.
+New publication envelopes include metadata and an effective runtime fingerprint;
+content/runtime changes invalidate QA. Original content hashes and archives are
+unchanged. No human/model instrumentation is introduced by this versioning work.
 
 ## Local implementation and approval plan
 
@@ -142,11 +140,60 @@ rejection, malformed create, client transcript/pass-flag rejection and publicati
 without QA. Its authenticated Chromium UI flow edited a draft, queued validation,
 ran the trusted local worker, published, archived and checked a 390px viewport.
 Operator navigation created no player records or uploads. These are local fixtures,
-not live Access/storage proofs. The browser test creates its initial draft through
-the real authenticated API; filling the entire create form, archived in-flight
-continuation and full missing-storage browser recovery remain follow-up coverage.
+not live Access/storage proofs. The expanded browser test also fills every create field, verifies recoverable
+missing-storage create/load failures, confirms saved text survives retry and reload,
+and checks successful creation redirects from `/new` to its saved edit URL. A real
+unfinished synthetic player attempt survives archive and two reloads with its code;
+a fresh context is denied a new start. An archived shared-result fixture still
+renders its exact version and omits a challenge-start invitation. Synthetic player
+upload attempts are intercepted locally (four in this run); operator uploads are
+zero and operator navigation opens no player records. Existing public/admin guard
+regression additionally passes 48 request checks plus its browser flow.
+
+The final application build and web/ingest typechecks pass. Independent static
+review cleared the lifecycle/security paths, shared timeout-policy repair and
+create/edit URL repair. These checks do not establish production storage/Access or
+an available production validator. The authenticated QA is browser automation with
+synthetic fixtures, not human research.
 
 The validator deployment choice remains open with the owner: dependency on an
 existing Mac/dev-01 worker versus a self-contained hosted service. The local CLI is
 a reusable trusted adapter demonstration, not an approved production UX dependency.
 Queued UI state does not promise worker availability; expired jobs fail closed.
+
+## Production activation proposal — pending approval and validator choice
+
+Common minimum:
+
+1. Create one dedicated private content R2 bucket and one catalog D1 database.
+2. Bind them only to the app as `CONTENT` and `CATALOG_DB`. Apply the reviewed
+   catalog migration; do not repurpose research storage or alter Access policy.
+3. Import the frozen 69-source/117-revision seed without destructive resets. Verify
+   every digest and the active manifest before setting `CATALOG_MODE=managed`.
+4. Activate the selected trusted executor and validate a new private draft end to
+   end before allowing production publication. Retain audit and blocked benchmark
+   intents. Model/event design remains unresolved and does not block lifecycle.
+5. Review/approve the exact configuration and resource IDs, then merge/deploy and
+   perform live authorized/anonymous, public/private and archive/history checks.
+
+Existing-host option: add a reviewed remote D1/R2 adapter for the same queued-job
+interface, using existing authorized operator access without browser credentials.
+An existing Mac/dev-01 process runs Chromium and the pinned sandbox, one heavy job
+at a time. No persistent process has been installed. Owner must accept that host's
+availability dependency and choose explicit execution versus a supervised worker;
+a manual command is not silently assumed to be the desired admin workflow.
+
+Hosted option: keep the queue/receipt interface but supply a server-controlled
+browser executor through a private service binding. This requires a separately
+reviewed Worker/browser resource, request authentication, private-source handling,
+usage limits and operational cost approval. None has been created or implemented.
+A standard app Worker or a generic green CI result cannot stand in for real browser
+execution on the exact private draft. Existing CI could host jobs only after an
+explicit private-data/credential/artifact review; no such path is configured.
+
+Rollback must preserve Access and all D1/R2 records/immutable objects. Before any
+managed publications, switching back to bundled reads is safe after inventory
+verification. After managed changes, retain the managed reader or compatible prior
+app and active manifest pointer; blindly reverting to bundled reads could expose
+archived challenges or lose discovery of new ones. No destructive rollback or
+resource removal is proposed.
