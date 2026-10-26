@@ -1,0 +1,154 @@
+{
+  "key": "TS-004",
+  "revision": "sha256:0a4a87c203c1b0f54951657915ea7c55c51fe9d9ae7baa333887aa528375513b",
+  "language": "typescript",
+  "runtime": "Sucrase/browser JavaScript",
+  "origin": "https://musclememory.run",
+  "partition": "b-js-ts",
+  "review": {
+    "key": "TS-004",
+    "revision": "sha256:0a4a87c203c1b0f54951657915ea7c55c51fe9d9ae7baa333887aa528375513b",
+    "firstCandidate": "attempts/first.ts",
+    "wrongCandidate": "attempts/wrong.ts",
+    "wrongIntent": "Count rejected attempts toward the sliding-window limit.",
+    "assumptions": [
+      "Input timestamps are sorted; windowMs is a nonnegative duration."
+    ],
+    "ambiguityFindings": [
+      "A duration range for windowMs is not explicitly stated; nonnegative is implied by sliding-window meaning."
+    ],
+    "verbosityFindings": [
+      "Open lower endpoint and rejection semantics are clear."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": [
+          [
+            0,
+            5,
+            10
+          ],
+          1,
+          10
+        ],
+        "expected": [
+          true,
+          false,
+          true
+        ],
+        "reason": "Rejected attempt at 5 must not block at 10; time 0 expires at lower boundary."
+      },
+      {
+        "input": [
+          [
+            0,
+            0,
+            1
+          ],
+          0,
+          10
+        ],
+        "expected": [
+          false,
+          false,
+          false
+        ],
+        "reason": "Zero limit rejects all."
+      },
+      {
+        "input": [
+          [
+            0,
+            0,
+            1
+          ],
+          1,
+          0
+        ],
+        "expected": [
+          true,
+          true,
+          true
+        ],
+        "reason": "Zero-length open-lower window expires prior accepted times."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:13:07.177Z",
+      "finishedAt": "2026-10-26T03:13:07.231Z",
+      "candidatePath": "b-js-ts/TS-004/attempts/first.ts",
+      "candidateSha256": "618b1feb7867b4a01db750443eebc4c390527928a8fc700757d73b70c25f9175",
+      "actualCodeSha256": "618b1feb7867b4a01db750443eebc4c390527928a8fc700757d73b70c25f9175",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:0a4a87c203c1b0f54951657915ea7c55c51fe9d9ae7baa333887aa528375513b",
+      "runId": "d3e5021c-0fd3-49de-931a-64c7ac091612",
+      "documentRevision": 1,
+      "artifactId": "practice-b08856e5-c85b-4f77-b638-630dbb6430e5.code.1",
+      "result": "passed",
+      "passed": 18,
+      "total": 18,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:13:08.086Z",
+      "finishedAt": "2026-10-26T03:13:08.136Z",
+      "candidatePath": "b-js-ts/TS-004/attempts/wrong.ts",
+      "candidateSha256": "177e010dc64ed0e0a129e6cb69fbaff8452d5f23673b05fb41746bc2d20d94b1",
+      "actualCodeSha256": "177e010dc64ed0e0a129e6cb69fbaff8452d5f23673b05fb41746bc2d20d94b1",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:0a4a87c203c1b0f54951657915ea7c55c51fe9d9ae7baa333887aa528375513b",
+      "runId": "7ee7f3c9-dcb1-45d8-8ba5-ff76d628b563",
+      "documentRevision": 1,
+      "artifactId": "practice-e02720d6-c74f-455b-a0a4-4e155aa4d94a.code.1",
+      "result": "failed",
+      "passed": 17,
+      "total": 18,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "1 of 18 cases failed.\n\n✘\nhidden case 18hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:13:08.596Z",
+      "finishedAt": "2026-10-26T03:13:08.655Z",
+      "candidatePath": "b-js-ts/TS-004/attempts/first.ts",
+      "candidateSha256": "618b1feb7867b4a01db750443eebc4c390527928a8fc700757d73b70c25f9175",
+      "actualCodeSha256": "618b1feb7867b4a01db750443eebc4c390527928a8fc700757d73b70c25f9175",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:0a4a87c203c1b0f54951657915ea7c55c51fe9d9ae7baa333887aa528375513b",
+      "runId": "0f41d3fd-9ce2-498e-8a02-57b0ba68d527",
+      "documentRevision": 2,
+      "artifactId": "practice-e02720d6-c74f-455b-a0a4-4e155aa4d94a.code.2",
+      "result": "passed",
+      "passed": 18,
+      "total": 18,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

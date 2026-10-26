@@ -1,0 +1,137 @@
+{
+  "key": "RB-004",
+  "revision": "sha256:7b75bd74a6c5dd5fcb5f7fb30baccc5ac2690cb2212762d561883a5f663f06c4",
+  "language": "ruby",
+  "runtime": "ruby.wasm",
+  "origin": "https://musclememory.run",
+  "partition": "e-go-ruby",
+  "review": {
+    "key": "RB-004",
+    "revision": "sha256:7b75bd74a6c5dd5fcb5f7fb30baccc5ac2690cb2212762d561883a5f663f06c4",
+    "firstCandidate": "attempts/first.rb",
+    "wrongCandidate": "attempts/wrong.rb",
+    "wrongIntent": "Trim trailing zero coefficients, violating exact output length.",
+    "assumptions": [
+      "Both coefficient lists are nonempty as guaranteed."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": [
+      "Exact output length and coefficient order are clearly stated."
+    ],
+    "confidence": "high; unexecuted",
+    "publicEdgeCases": [
+      {
+        "input": [
+          [
+            1,
+            -1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "expected": [
+          1,
+          0,
+          -1
+        ],
+        "reason": "Cancellation at middle power."
+      },
+      {
+        "input": [
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ]
+        ],
+        "expected": [
+          6,
+          0,
+          0
+        ],
+        "reason": "Trailing zeros retained."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:12:23.621Z",
+      "finishedAt": "2026-10-26T03:12:24.528Z",
+      "candidatePath": "e-go-ruby/RB-004/attempts/first.rb",
+      "candidateSha256": "a4969d8e091c1bba4f10bda7c115e96a3288797d1894d27fb71fc36c9d16438b",
+      "actualCodeSha256": "a4969d8e091c1bba4f10bda7c115e96a3288797d1894d27fb71fc36c9d16438b",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:7b75bd74a6c5dd5fcb5f7fb30baccc5ac2690cb2212762d561883a5f663f06c4",
+      "runId": "dba83f8b-8104-474e-ba61-95a992c90c79",
+      "documentRevision": 1,
+      "artifactId": "practice-7011bb45-e0d7-4082-92d8-99affe3c9646.code.1",
+      "result": "passed",
+      "passed": 6,
+      "total": 6,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:12:25.315Z",
+      "finishedAt": "2026-10-26T03:12:26.258Z",
+      "candidatePath": "e-go-ruby/RB-004/attempts/wrong.rb",
+      "candidateSha256": "e10e6f28a7c421e08f006dfc9d4952f96946e7c872f65eef9872e70c21681c1b",
+      "actualCodeSha256": "e10e6f28a7c421e08f006dfc9d4952f96946e7c872f65eef9872e70c21681c1b",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:7b75bd74a6c5dd5fcb5f7fb30baccc5ac2690cb2212762d561883a5f663f06c4",
+      "runId": "02e837a0-2253-44fd-bc84-1b1a1d45c966",
+      "documentRevision": 1,
+      "artifactId": "practice-b0bd58ce-0d1c-471f-b7b5-5853fccd6513.code.1",
+      "result": "failed",
+      "passed": 4,
+      "total": 6,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "2 of 6 cases failed.\n\n✘\ncase 2\nInput\n[[0],[2,3]]\nExpected\n[0,0]\nGot\n[0]\n✘\nhidden case 5hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:12:26.768Z",
+      "finishedAt": "2026-10-26T03:12:26.990Z",
+      "candidatePath": "e-go-ruby/RB-004/attempts/first.rb",
+      "candidateSha256": "a4969d8e091c1bba4f10bda7c115e96a3288797d1894d27fb71fc36c9d16438b",
+      "actualCodeSha256": "a4969d8e091c1bba4f10bda7c115e96a3288797d1894d27fb71fc36c9d16438b",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:7b75bd74a6c5dd5fcb5f7fb30baccc5ac2690cb2212762d561883a5f663f06c4",
+      "runId": "96ded35e-bc9e-42e2-b775-4f76d46ead46",
+      "documentRevision": 2,
+      "artifactId": "practice-b0bd58ce-0d1c-471f-b7b5-5853fccd6513.code.2",
+      "result": "passed",
+      "passed": 6,
+      "total": 6,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

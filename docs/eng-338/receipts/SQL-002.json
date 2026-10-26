@@ -1,0 +1,182 @@
+{
+  "key": "SQL-002",
+  "revision": "sha256:8069f186eae8b4632639b0e191c9bce0b5386e9a22ed1729facb3c68d8b4d6d7",
+  "language": "sql",
+  "runtime": "PGlite/PostgreSQL",
+  "origin": "https://musclememory.run",
+  "partition": "c-sql-html",
+  "review": {
+    "key": "SQL-002",
+    "revision": "sha256:8069f186eae8b4632639b0e191c9bce0b5386e9a22ed1729facb3c68d8b4d6d7",
+    "firstCandidate": "SQL-002/attempts/first.sql",
+    "wrongCandidate": "SQL-002/attempts/wrong.sql",
+    "wrongIntent": "Use DISTINCT payment amounts, collapsing separate equal-value payments.",
+    "assumptions": [
+      "All provided payments are in scope; the September narrative cannot imply a date filter because no date column is defined.",
+      "Foreign keys ensure every payment matches exactly one order; left joining preserves unpaid partners."
+    ],
+    "ambiguityFindings": "Minor narrative ambiguity: September motivates the request, but only the explicit all-payments contract can be implemented with the visible schema. Alphabetical ties naturally use database text ordering.",
+    "verbosityFindings": "Longer than necessary but explicit split-payment, partial-payment, unpaid-partner and duplicate-amount rules remove likely mistakes.",
+    "confidence": "High; reasoned from visible requirements only, not executed.",
+    "publicEdgeCases": [
+      {
+        "input": {
+          "orders": [
+            [
+              1,
+              "A",
+              100
+            ],
+            [
+              2,
+              "A",
+              50
+            ],
+            [
+              3,
+              "B",
+              20
+            ]
+          ],
+          "payments": [
+            [
+              1,
+              1,
+              20
+            ],
+            [
+              2,
+              1,
+              20
+            ]
+          ]
+        },
+        "expected": [
+          [
+            "A",
+            40
+          ],
+          [
+            "B",
+            0
+          ]
+        ],
+        "reason": "Equal-value payments both count; unpaid orders neither inflate collected nor hide partners."
+      },
+      {
+        "input": {
+          "orders": [
+            [
+              1,
+              "B",
+              1
+            ],
+            [
+              2,
+              "A",
+              1
+            ]
+          ],
+          "payments": []
+        },
+        "expected": [
+          [
+            "A",
+            0
+          ],
+          [
+            "B",
+            0
+          ]
+        ],
+        "reason": "COALESCE produces zero and alphabetical order breaks the tie."
+      },
+      {
+        "input": {
+          "orders": [],
+          "payments": []
+        },
+        "expected": [],
+        "reason": "No partner without an order may appear."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:12:34.679Z",
+      "finishedAt": "2026-10-26T03:12:36.208Z",
+      "candidatePath": "c-sql-html/SQL-002/attempts/first.sql",
+      "candidateSha256": "3e1332449795e16e6f2c3e688dcb7bf7fd93e39f9359549bac34b8976041571d",
+      "actualCodeSha256": "3e1332449795e16e6f2c3e688dcb7bf7fd93e39f9359549bac34b8976041571d",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:8069f186eae8b4632639b0e191c9bce0b5386e9a22ed1729facb3c68d8b4d6d7",
+      "runId": "c0ec97b9-fbfe-4931-bb12-d0cb3cdbe226",
+      "documentRevision": 1,
+      "artifactId": "practice-17593357-cdff-4165-8d00-e580a1e5a8e3.code.1",
+      "result": "passed",
+      "passed": 16,
+      "total": 16,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:12:36.942Z",
+      "finishedAt": "2026-10-26T03:12:38.446Z",
+      "candidatePath": "c-sql-html/SQL-002/attempts/wrong.sql",
+      "candidateSha256": "b8ab921a81b9d76406d7c79c8b304fe3737f6a0d8a02ac49c6e76edd1a69c01d",
+      "actualCodeSha256": "b8ab921a81b9d76406d7c79c8b304fe3737f6a0d8a02ac49c6e76edd1a69c01d",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:8069f186eae8b4632639b0e191c9bce0b5386e9a22ed1729facb3c68d8b4d6d7",
+      "runId": "30694d26-cf0d-46fe-907c-3d3a8e0f9a96",
+      "documentRevision": 1,
+      "artifactId": "practice-708c17f9-1de4-4e22-8b11-b50bc857dbeb.code.1",
+      "result": "failed",
+      "passed": 10,
+      "total": 16,
+      "rules": [
+        "sum-distinct"
+      ],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "6 of 16 cases failed.\n\n✘\ncase 2\nInput\n{\"orders\":[[1,\"Northwind\",500],[2,\"Bluefin\",80]],\"payments\":[[1,1,250],[2,1,250],[3,2,80]]}\nExpected\n[[\"Northwind\",500],[\"Bluefin\",80]]\nGot\n[[\"Northwind\",250],[\"Bluefin\",80]]\n✘\nhidden case 6hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 9hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 10hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 15hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:12:38.792Z",
+      "finishedAt": "2026-10-26T03:12:39.989Z",
+      "candidatePath": "c-sql-html/SQL-002/attempts/first.sql",
+      "candidateSha256": "3e1332449795e16e6f2c3e688dcb7bf7fd93e39f9359549bac34b8976041571d",
+      "actualCodeSha256": "3e1332449795e16e6f2c3e688dcb7bf7fd93e39f9359549bac34b8976041571d",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:8069f186eae8b4632639b0e191c9bce0b5386e9a22ed1729facb3c68d8b4d6d7",
+      "runId": "c2a2c52e-b555-4782-91d3-e6f729293019",
+      "documentRevision": 2,
+      "artifactId": "practice-708c17f9-1de4-4e22-8b11-b50bc857dbeb.code.2",
+      "result": "passed",
+      "passed": 16,
+      "total": 16,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

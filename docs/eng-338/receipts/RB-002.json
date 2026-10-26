@@ -1,0 +1,118 @@
+{
+  "key": "RB-002",
+  "revision": "sha256:16a31aca47c21134000a4a909854bb9daa57dcbde33c088ae1fe5228a71bf1b9",
+  "language": "ruby",
+  "runtime": "ruby.wasm",
+  "origin": "https://musclememory.run",
+  "partition": "e-go-ruby",
+  "review": {
+    "key": "RB-002",
+    "revision": "sha256:16a31aca47c21134000a4a909854bb9daa57dcbde33c088ae1fe5228a71bf1b9",
+    "firstCandidate": "attempts/first.rb",
+    "wrongCandidate": "attempts/wrong.rb",
+    "wrongIntent": "Treat accented Latin letters as separators instead of retaining their base letters.",
+    "assumptions": [
+      "Accent removal means canonical Unicode decomposition and removal of combining marks; no transliteration of ligatures or stroked letters without canonical base decomposition."
+    ],
+    "ambiguityFindings": [
+      "Accented Latin letters could be read broadly; desired treatment of ø, ł, æ and ß is not stated."
+    ],
+    "verbosityFindings": [
+      "Precise separator policy; one transliteration example could clarify exceptional letters."
+    ],
+    "confidence": "high for specified examples and decomposable accents; unexecuted",
+    "publicEdgeCases": [
+      {
+        "input": "Café & Öps",
+        "expected": "cafe-ops",
+        "reason": "Separate combining accents are removed."
+      },
+      {
+        "input": "a__😀/b--42",
+        "expected": "a-b-42",
+        "reason": "Runs of separators collapse."
+      },
+      {
+        "input": "東京😀",
+        "expected": "",
+        "reason": "Nothing ASCII retained."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:12:14.883Z",
+      "finishedAt": "2026-10-26T03:12:15.835Z",
+      "candidatePath": "e-go-ruby/RB-002/attempts/first.rb",
+      "candidateSha256": "e0647d17bd44425838940a3b248062a20d38002c586cc60fb5224458edd86ab2",
+      "actualCodeSha256": "e0647d17bd44425838940a3b248062a20d38002c586cc60fb5224458edd86ab2",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:16a31aca47c21134000a4a909854bb9daa57dcbde33c088ae1fe5228a71bf1b9",
+      "runId": "63c6be02-b618-4484-a6a9-a13195080698",
+      "documentRevision": 1,
+      "artifactId": "practice-47cdb7f7-849a-4b91-bf87-24bc67f57866.code.1",
+      "result": "passed",
+      "passed": 24,
+      "total": 24,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:12:16.670Z",
+      "finishedAt": "2026-10-26T03:12:17.602Z",
+      "candidatePath": "e-go-ruby/RB-002/attempts/wrong.rb",
+      "candidateSha256": "e88d703cc6cf54db9f1888d859560747b8d485d81ea030f2d396708e95385ed3",
+      "actualCodeSha256": "e88d703cc6cf54db9f1888d859560747b8d485d81ea030f2d396708e95385ed3",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:16a31aca47c21134000a4a909854bb9daa57dcbde33c088ae1fe5228a71bf1b9",
+      "runId": "33a15ec8-e6c7-4200-bb53-22731b2b5b63",
+      "documentRevision": 1,
+      "artifactId": "practice-e3833116-29c7-4250-9e64-b3e35143b087.code.1",
+      "result": "failed",
+      "passed": 16,
+      "total": 24,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "8 of 24 cases failed.\n\n✘\ncase 2\nInput\n\" Café Ünïcorn \"\nExpected\n\"cafe-unicorn\"\nGot\n\"caf-n-corn\"\n✘\nhidden case 6hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 11hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 12hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 13hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 15hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 22hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:12:18.062Z",
+      "finishedAt": "2026-10-26T03:12:18.311Z",
+      "candidatePath": "e-go-ruby/RB-002/attempts/first.rb",
+      "candidateSha256": "e0647d17bd44425838940a3b248062a20d38002c586cc60fb5224458edd86ab2",
+      "actualCodeSha256": "e0647d17bd44425838940a3b248062a20d38002c586cc60fb5224458edd86ab2",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:16a31aca47c21134000a4a909854bb9daa57dcbde33c088ae1fe5228a71bf1b9",
+      "runId": "1ca83ff4-28a4-4714-bfb8-9e661c7f94b8",
+      "documentRevision": 2,
+      "artifactId": "practice-e3833116-29c7-4250-9e64-b3e35143b087.code.2",
+      "result": "passed",
+      "passed": 24,
+      "total": 24,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

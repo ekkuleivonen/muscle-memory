@@ -1,0 +1,113 @@
+{
+  "key": "RB-001",
+  "revision": "sha256:841e463333b9f30f9215e462b9d74e38d6b7f44eedd44ec1dc9a9c04611a50db",
+  "language": "ruby",
+  "runtime": "ruby.wasm",
+  "origin": "https://musclememory.run",
+  "partition": "e-go-ruby",
+  "review": {
+    "key": "RB-001",
+    "revision": "sha256:841e463333b9f30f9215e462b9d74e38d6b7f44eedd44ec1dc9a9c04611a50db",
+    "firstCandidate": "attempts/first.rb",
+    "wrongCandidate": "attempts/wrong.rb",
+    "wrongIntent": "Count only alphanumeric runs, dropping standalone symbols and splitting punctuation inside words.",
+    "assumptions": [
+      "Any whitespace includes Unicode space, represented by POSIX space class."
+    ],
+    "ambiguityFindings": [
+      "Unicode whitespace scope is implicit in any whitespace."
+    ],
+    "verbosityFindings": [
+      "Concise and actionable."
+    ],
+    "confidence": "high; unexecuted",
+    "publicEdgeCases": [
+      {
+        "input": "one\t\ntwo\rthree",
+        "expected": 3,
+        "reason": "Mixed separators."
+      },
+      {
+        "input": "hello-world + 42",
+        "expected": 3,
+        "reason": "Punctuation stays within word; standalone symbol counts."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:12:09.359Z",
+      "finishedAt": "2026-10-26T03:12:11.256Z",
+      "candidatePath": "e-go-ruby/RB-001/attempts/first.rb",
+      "candidateSha256": "dcf6db599ea798b81f387b615e40b5f372fabc82c460a9c06503880001fb1eb1",
+      "actualCodeSha256": "dcf6db599ea798b81f387b615e40b5f372fabc82c460a9c06503880001fb1eb1",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:841e463333b9f30f9215e462b9d74e38d6b7f44eedd44ec1dc9a9c04611a50db",
+      "runId": "b6901814-bb43-46bc-8a17-db2e22b36e2e",
+      "documentRevision": 1,
+      "artifactId": "practice-d980faf5-8f10-4227-a7eb-a76f9ee83919.code.1",
+      "result": "passed",
+      "passed": 21,
+      "total": 21,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:12:12.169Z",
+      "finishedAt": "2026-10-26T03:12:13.115Z",
+      "candidatePath": "e-go-ruby/RB-001/attempts/wrong.rb",
+      "candidateSha256": "33bf04e45fa89a03438b5f871a00c3e33dfb5c76d0c42710ca7cb1411b986893",
+      "actualCodeSha256": "33bf04e45fa89a03438b5f871a00c3e33dfb5c76d0c42710ca7cb1411b986893",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:841e463333b9f30f9215e462b9d74e38d6b7f44eedd44ec1dc9a9c04611a50db",
+      "runId": "0563788f-168f-41e1-972c-981848a1871a",
+      "documentRevision": 1,
+      "artifactId": "practice-76b71c5e-c8e4-4d77-9fbd-bb58f20e6595.code.1",
+      "result": "failed",
+      "passed": 18,
+      "total": 21,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "3 of 21 cases failed.\n\n✘\nhidden case 15hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 16hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 17hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:12:13.599Z",
+      "finishedAt": "2026-10-26T03:12:13.821Z",
+      "candidatePath": "e-go-ruby/RB-001/attempts/first.rb",
+      "candidateSha256": "dcf6db599ea798b81f387b615e40b5f372fabc82c460a9c06503880001fb1eb1",
+      "actualCodeSha256": "dcf6db599ea798b81f387b615e40b5f372fabc82c460a9c06503880001fb1eb1",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:841e463333b9f30f9215e462b9d74e38d6b7f44eedd44ec1dc9a9c04611a50db",
+      "runId": "1d38cc20-a3a4-465c-b7c7-f1f0d40e489b",
+      "documentRevision": 2,
+      "artifactId": "practice-76b71c5e-c8e4-4d77-9fbd-bb58f20e6595.code.2",
+      "result": "passed",
+      "passed": 21,
+      "total": 21,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

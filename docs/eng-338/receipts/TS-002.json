@@ -1,0 +1,135 @@
+{
+  "key": "TS-002",
+  "revision": "sha256:a035e776c48a0d4909f10ca1e8d77fab41b41a6ff5a538e5d02c9069d47d8b35",
+  "language": "typescript",
+  "runtime": "Sucrase/browser JavaScript",
+  "origin": "https://musclememory.run",
+  "partition": "b-js-ts",
+  "review": {
+    "key": "TS-002",
+    "revision": "sha256:a035e776c48a0d4909f10ca1e8d77fab41b41a6ff5a538e5d02c9069d47d8b35",
+    "firstCandidate": "attempts/first.ts",
+    "wrongCandidate": "attempts/wrong.ts",
+    "wrongIntent": "Round discounted totals to nearest cent rather than down.",
+    "assumptions": [
+      "Object.keys enumerates configured codes; inherited properties are not configured codes.",
+      "Letter case comparison uses JavaScript toLowerCase."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": [
+      "Configured mixed case and interior spaces rules are useful precision."
+    ],
+    "confidence": "high",
+    "publicEdgeCases": [
+      {
+        "input": [
+          999,
+          "  hAlF  ",
+          {
+            "Half": 50
+          }
+        ],
+        "expected": 499,
+        "reason": "Normalize both names and floor final total."
+      },
+      {
+        "input": [
+          1000,
+          "A B",
+          {
+            "AB": 20
+          }
+        ],
+        "expected": 1000,
+        "reason": "Interior spaces remain significant."
+      },
+      {
+        "input": [
+          1000,
+          "toString",
+          {
+            "SAVE": 20
+          }
+        ],
+        "expected": 1000,
+        "reason": "Only configured own keys match."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:13:02.256Z",
+      "finishedAt": "2026-10-26T03:13:02.319Z",
+      "candidatePath": "b-js-ts/TS-002/attempts/first.ts",
+      "candidateSha256": "da36ee27a6cd8a61e07237ed9b0c15a03ad9fb2ede76f26d07f38daae3d0884e",
+      "actualCodeSha256": "da36ee27a6cd8a61e07237ed9b0c15a03ad9fb2ede76f26d07f38daae3d0884e",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:a035e776c48a0d4909f10ca1e8d77fab41b41a6ff5a538e5d02c9069d47d8b35",
+      "runId": "cea15495-7040-4a0d-a850-167202272497",
+      "documentRevision": 1,
+      "artifactId": "practice-149feaa7-7c4f-4cd4-a86e-49ac7aaa59ab.code.1",
+      "result": "passed",
+      "passed": 19,
+      "total": 19,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:13:03.053Z",
+      "finishedAt": "2026-10-26T03:13:03.106Z",
+      "candidatePath": "b-js-ts/TS-002/attempts/wrong.ts",
+      "candidateSha256": "973661f733ef367d84b1e8de182cac50207ca68e4cefc31c87a2229cf2aef251",
+      "actualCodeSha256": "973661f733ef367d84b1e8de182cac50207ca68e4cefc31c87a2229cf2aef251",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:a035e776c48a0d4909f10ca1e8d77fab41b41a6ff5a538e5d02c9069d47d8b35",
+      "runId": "0779b2af-ac98-480b-9b1a-f02725ca68ed",
+      "documentRevision": 1,
+      "artifactId": "practice-71a17e3d-ffcb-4572-9d62-32ecef66c8e4.code.1",
+      "result": "failed",
+      "passed": 16,
+      "total": 19,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "3 of 19 cases failed.\n\n✘\ncase 3\nInput\n[999,\"HALF\",{\"HALF\":50}]\nExpected\n499\nGot\n500\n✘\nhidden case 15hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 16hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:13:03.573Z",
+      "finishedAt": "2026-10-26T03:13:03.617Z",
+      "candidatePath": "b-js-ts/TS-002/attempts/first.ts",
+      "candidateSha256": "da36ee27a6cd8a61e07237ed9b0c15a03ad9fb2ede76f26d07f38daae3d0884e",
+      "actualCodeSha256": "da36ee27a6cd8a61e07237ed9b0c15a03ad9fb2ede76f26d07f38daae3d0884e",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:a035e776c48a0d4909f10ca1e8d77fab41b41a6ff5a538e5d02c9069d47d8b35",
+      "runId": "f22c8bfc-0473-426e-8e88-88a98bc5fdeb",
+      "documentRevision": 2,
+      "artifactId": "practice-71a17e3d-ffcb-4572-9d62-32ecef66c8e4.code.2",
+      "result": "passed",
+      "passed": 19,
+      "total": 19,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

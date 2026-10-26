@@ -1,0 +1,130 @@
+{
+  "key": "RB-005",
+  "revision": "sha256:24ea37d6e5454810290af61db7adbdf28095322099193a5b3e0e091b377ba56c",
+  "language": "ruby",
+  "runtime": "ruby.wasm",
+  "origin": "https://musclememory.run",
+  "partition": "e-go-ruby",
+  "review": {
+    "key": "RB-005",
+    "revision": "sha256:24ea37d6e5454810290af61db7adbdf28095322099193a5b3e0e091b377ba56c",
+    "firstCandidate": "attempts/first.rb",
+    "wrongCandidate": "attempts/wrong.rb",
+    "wrongIntent": "Reverse subtraction operands when popping the stack.",
+    "assumptions": [
+      "Expressions are valid and contain only the stated operators and decimal integer tokens."
+    ],
+    "ambiguityFindings": [],
+    "verbosityFindings": [
+      "Operand order and validity constraints are explicit."
+    ],
+    "confidence": "high; unexecuted",
+    "publicEdgeCases": [
+      {
+        "input": [
+          "-7"
+        ],
+        "expected": -7,
+        "reason": "Single negative integer is valid."
+      },
+      {
+        "input": [
+          "10",
+          "2",
+          "3",
+          "+",
+          "-"
+        ],
+        "expected": 5,
+        "reason": "Nested right operand must retain subtraction order."
+      },
+      {
+        "input": [
+          "-2",
+          "3",
+          "*",
+          "4",
+          "+"
+        ],
+        "expected": -2,
+        "reason": "Negative intermediate and multiplication."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:12:27.925Z",
+      "finishedAt": "2026-10-26T03:12:28.793Z",
+      "candidatePath": "e-go-ruby/RB-005/attempts/first.rb",
+      "candidateSha256": "b277e623da9f5e6ea3ad87832d0af3605aefe51667675e5a2c4d2b8e1f90a873",
+      "actualCodeSha256": "b277e623da9f5e6ea3ad87832d0af3605aefe51667675e5a2c4d2b8e1f90a873",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:24ea37d6e5454810290af61db7adbdf28095322099193a5b3e0e091b377ba56c",
+      "runId": "7b90d761-db69-4ea7-bbcc-cd7a9cdf4bad",
+      "documentRevision": 1,
+      "artifactId": "practice-2bb57209-3f1a-4814-853f-6c8cf2634db1.code.1",
+      "result": "passed",
+      "passed": 7,
+      "total": 7,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:12:29.639Z",
+      "finishedAt": "2026-10-26T03:12:30.540Z",
+      "candidatePath": "e-go-ruby/RB-005/attempts/wrong.rb",
+      "candidateSha256": "69a166db76ae1321ef5c8e8ed0d946cf6845db296cf2f8bde78e88042d29db81",
+      "actualCodeSha256": "69a166db76ae1321ef5c8e8ed0d946cf6845db296cf2f8bde78e88042d29db81",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:24ea37d6e5454810290af61db7adbdf28095322099193a5b3e0e091b377ba56c",
+      "runId": "6ae7b14e-882c-42cc-b035-7cdbc70bf9e2",
+      "documentRevision": 1,
+      "artifactId": "practice-4eb0cda9-b1f6-408d-9236-9d7406788980.code.1",
+      "result": "failed",
+      "passed": 4,
+      "total": 7,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "3 of 7 cases failed.\n\n✘\ncase 2\nInput\n[\"8\",\"3\",\"-\"]\nExpected\n5\nGot\n-5\n✘\nhidden case 5hidden case\n\nReturned a different value from the one expected.\n\n✘\nhidden case 7hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:12:31.060Z",
+      "finishedAt": "2026-10-26T03:12:31.335Z",
+      "candidatePath": "e-go-ruby/RB-005/attempts/first.rb",
+      "candidateSha256": "b277e623da9f5e6ea3ad87832d0af3605aefe51667675e5a2c4d2b8e1f90a873",
+      "actualCodeSha256": "b277e623da9f5e6ea3ad87832d0af3605aefe51667675e5a2c4d2b8e1f90a873",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:24ea37d6e5454810290af61db7adbdf28095322099193a5b3e0e091b377ba56c",
+      "runId": "f45cc285-38db-43ec-bc0d-16e61346d32b",
+      "documentRevision": 2,
+      "artifactId": "practice-4eb0cda9-b1f6-408d-9236-9d7406788980.code.2",
+      "result": "passed",
+      "passed": 7,
+      "total": 7,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

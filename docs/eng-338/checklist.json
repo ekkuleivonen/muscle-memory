@@ -1761,11 +1761,28 @@
       "url": "https://musclememory.run/challenges/RB-001",
       "runtime": "ruby.wasm",
       "partition": "e-go-ruby",
-      "status": "unrun",
-      "firstAttempt": null,
-      "finalAttempt": null,
-      "wrongAttempt": null,
-      "edgeEvidence": null
+      "status": "ui-candidates-verified; independent edge audit pending",
+      "firstAttempt": {
+        "runId": "b6901814-bb43-46bc-8a17-db2e22b36e2e",
+        "result": "passed",
+        "passed": 21,
+        "total": 21,
+        "codeSha256": "dcf6db599ea798b81f387b615e40b5f372fabc82c460a9c06503880001fb1eb1"
+      },
+      "finalAttempt": {
+        "runId": "1d38cc20-a3a4-465c-b7c7-f1f0d40e489b",
+        "result": "passed",
+        "passed": 21,
+        "total": 21
+      },
+      "wrongAttempt": {
+        "runId": "0563788f-168f-41e1-972c-981848a1871a",
+        "result": "failed",
+        "passed": 18,
+        "total": 21
+      },
+      "edgeEvidence": null,
+      "receipt": "receipts/RB-001.json"
     },
     {
       "key": "RB-002",
@@ -1777,11 +1794,28 @@
       "url": "https://musclememory.run/challenges/RB-002",
       "runtime": "ruby.wasm",
       "partition": "e-go-ruby",
-      "status": "unrun",
-      "firstAttempt": null,
-      "finalAttempt": null,
-      "wrongAttempt": null,
-      "edgeEvidence": null
+      "status": "ui-candidates-verified; independent edge audit pending",
+      "firstAttempt": {
+        "runId": "63c6be02-b618-4484-a6a9-a13195080698",
+        "result": "passed",
+        "passed": 24,
+        "total": 24,
+        "codeSha256": "e0647d17bd44425838940a3b248062a20d38002c586cc60fb5224458edd86ab2"
+      },
+      "finalAttempt": {
+        "runId": "1ca83ff4-28a4-4714-bfb8-9e661c7f94b8",
+        "result": "passed",
+        "passed": 24,
+        "total": 24
+      },
+      "wrongAttempt": {
+        "runId": "33a15ec8-e6c7-4200-bb53-22731b2b5b63",
+        "result": "failed",
+        "passed": 16,
+        "total": 24
+      },
+      "edgeEvidence": null,
+      "receipt": "receipts/RB-002.json"
     },
     {
       "key": "RB-003",
@@ -1793,11 +1827,28 @@
       "url": "https://musclememory.run/challenges/RB-003",
       "runtime": "ruby.wasm",
       "partition": "e-go-ruby",
-      "status": "unrun",
-      "firstAttempt": null,
-      "finalAttempt": null,
-      "wrongAttempt": null,
-      "edgeEvidence": null
+      "status": "ui-candidates-verified; independent edge audit pending",
+      "firstAttempt": {
+        "runId": "d7b640cd-553e-41f7-8899-880d8e97e4a8",
+        "result": "passed",
+        "passed": 6,
+        "total": 6,
+        "codeSha256": "4bc20415569a272eeafe0b703917f5629359f04867cb24e629d57d3fc51a563b"
+      },
+      "finalAttempt": {
+        "runId": "f86e542f-9c98-4d4f-a375-d12aa7406c2d",
+        "result": "passed",
+        "passed": 6,
+        "total": 6
+      },
+      "wrongAttempt": {
+        "runId": "405fd637-ffa4-4a7d-9ab2-9dcaf59e91df",
+        "result": "failed",
+        "passed": 3,
+        "total": 6
+      },
+      "edgeEvidence": null,
+      "receipt": "receipts/RB-003.json"
     },
     {
       "key": "RB-004",
@@ -1809,11 +1860,28 @@
       "url": "https://musclememory.run/challenges/RB-004",
       "runtime": "ruby.wasm",
       "partition": "e-go-ruby",
-      "status": "unrun",
-      "firstAttempt": null,
-      "finalAttempt": null,
-      "wrongAttempt": null,
-      "edgeEvidence": null
+      "status": "ui-candidates-verified; independent edge audit pending",
+      "firstAttempt": {
+        "runId": "dba83f8b-8104-474e-ba61-95a992c90c79",
+        "result": "passed",
+        "passed": 6,
+        "total": 6,
+        "codeSha256": "a4969d8e091c1bba4f10bda7c115e96a3288797d1894d27fb71fc36c9d16438b"
+      },
+      "finalAttempt": {
+        "runId": "96ded35e-bc9e-42e2-b775-4f76d46ead46",
+        "result": "passed",
+        "passed": 6,
+        "total": 6
+      },
+      "wrongAttempt": {
+        "runId": "02e837a0-2253-44fd-bc84-1b1a1d45c966",
+        "result": "failed",
+        "passed": 4,
+        "total": 6
+      },
+      "edgeEvidence": null,
+      "receipt": "receipts/RB-004.json"
     },
     {
       "key": "RB-005",
@@ -1825,11 +1893,28 @@
       "url": "https://musclememory.run/challenges/RB-005",
       "runtime": "ruby.wasm",
       "partition": "e-go-ruby",
-      "status": "unrun",
-      "firstAttempt": null,
-      "finalAttempt": null,
-      "wrongAttempt": null,
-      "edgeEvidence": null
+      "status": "ui-candidates-verified; independent edge audit pending",
+      "firstAttempt": {
+        "runId": "7b90d761-db69-4ea7-bbcc-cd7a9cdf4bad",
+        "result": "passed",
+        "passed": 7,
+        "total": 7,
+        "codeSha256": "b277e623da9f5e6ea3ad87832d0af3605aefe51667675e5a2c4d2b8e1f90a873"
+      },
+      "finalAttempt": {
+        "runId": "f45cc285-38db-43ec-bc0d-16e61346d32b",
+        "result": "passed",
+        "passed": 7,
+        "total": 7
+      },
+      "wrongAttempt": {
+        "runId": "6ae7b14e-882c-42cc-b035-7cdbc70bf9e2",
+        "result": "failed",
+        "passed": 4,
+        "total": 7
+      },
+      "edgeEvidence": null,
+      "receipt": "receipts/RB-005.json"
     },
     {
       "key": "SQL-001",
@@ -1874,11 +1959,28 @@
       "url": "https://musclememory.run/challenges/SQL-002",
       "runtime": "PGlite/PostgreSQL",
       "partition": "c-sql-html",
-      "status": "unrun",
-      "firstAttempt": null,
-      "finalAttempt": null,
-      "wrongAttempt": null,
-      "edgeEvidence": null
+      "status": "ui-candidates-verified; independent edge audit pending",
+      "firstAttempt": {
+        "runId": "c0ec97b9-fbfe-4931-bb12-d0cb3cdbe226",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "3e1332449795e16e6f2c3e688dcb7bf7fd93e39f9359549bac34b8976041571d"
+      },
+      "finalAttempt": {
+        "runId": "c2a2c52e-b555-4782-91d3-e6f729293019",
+        "result": "passed",
+        "passed": 16,
+        "total": 16
+      },
+      "wrongAttempt": {
+        "runId": "30694d26-cf0d-46fe-907c-3d3a8e0f9a96",
+        "result": "failed",
+        "passed": 10,
+        "total": 16
+      },
+      "edgeEvidence": null,
+      "receipt": "receipts/SQL-002.json"
     },
     {
       "key": "SQL-003",
@@ -1890,11 +1992,28 @@
       "url": "https://musclememory.run/challenges/SQL-003",
       "runtime": "PGlite/PostgreSQL",
       "partition": "c-sql-html",
-      "status": "unrun",
-      "firstAttempt": null,
-      "finalAttempt": null,
-      "wrongAttempt": null,
-      "edgeEvidence": null
+      "status": "ui-candidates-verified; independent edge audit pending",
+      "firstAttempt": {
+        "runId": "49f318d9-c91a-409e-8111-a353977584b4",
+        "result": "passed",
+        "passed": 15,
+        "total": 15,
+        "codeSha256": "b18f4f1c72fc7bf1f9b61b70020ce81ecb1211872a23ad883b85765fba567fcf"
+      },
+      "finalAttempt": {
+        "runId": "cc433082-406f-42fc-aca2-853f6da43dfd",
+        "result": "passed",
+        "passed": 15,
+        "total": 15
+      },
+      "wrongAttempt": {
+        "runId": "8c31c723-47a6-4ade-b120-9e6357743db8",
+        "result": "failed",
+        "passed": 14,
+        "total": 15
+      },
+      "edgeEvidence": null,
+      "receipt": "receipts/SQL-003.json"
     },
     {
       "key": "SQL-004",
@@ -1906,11 +2025,28 @@
       "url": "https://musclememory.run/challenges/SQL-004",
       "runtime": "PGlite/PostgreSQL",
       "partition": "c-sql-html",
-      "status": "unrun",
-      "firstAttempt": null,
-      "finalAttempt": null,
-      "wrongAttempt": null,
-      "edgeEvidence": null
+      "status": "ui-candidates-verified; independent edge audit pending",
+      "firstAttempt": {
+        "runId": "05524674-81f5-4df8-b5ab-32bdd948782c",
+        "result": "passed",
+        "passed": 5,
+        "total": 5,
+        "codeSha256": "3a53dd93ed4300aec4d96d6a6e84d0dad0c0f42efd54799d88a3c9a3917e5817"
+      },
+      "finalAttempt": {
+        "runId": "9b63cff0-e695-4c0a-a738-46b830398554",
+        "result": "passed",
+        "passed": 5,
+        "total": 5
+      },
+      "wrongAttempt": {
+        "runId": "de4eab27-cd04-49f5-9c06-aceb6b9cd5dd",
+        "result": "failed",
+        "passed": 4,
+        "total": 5
+      },
+      "edgeEvidence": null,
+      "receipt": "receipts/SQL-004.json"
     },
     {
       "key": "SQL-005",
@@ -1922,11 +2058,28 @@
       "url": "https://musclememory.run/challenges/SQL-005",
       "runtime": "PGlite/PostgreSQL",
       "partition": "c-sql-html",
-      "status": "unrun",
-      "firstAttempt": null,
-      "finalAttempt": null,
-      "wrongAttempt": null,
-      "edgeEvidence": null
+      "status": "ui-candidates-verified; independent edge audit pending",
+      "firstAttempt": {
+        "runId": "2f31e2a0-50a6-45cd-b2ba-513e48841a16",
+        "result": "passed",
+        "passed": 5,
+        "total": 5,
+        "codeSha256": "028693d3d5a8e160b649d967223002b8ce0acbd439127a6ade668dac6b1c8f37"
+      },
+      "finalAttempt": {
+        "runId": "cc832c51-1874-4bab-ad49-446970bc5a4f",
+        "result": "passed",
+        "passed": 5,
+        "total": 5
+      },
+      "wrongAttempt": {
+        "runId": "c0a45774-ad70-4ec4-801d-4f5c3deae601",
+        "result": "failed",
+        "passed": 3,
+        "total": 5
+      },
+      "edgeEvidence": null,
+      "receipt": "receipts/SQL-005.json"
     },
     {
       "key": "TS-001",
@@ -1938,11 +2091,28 @@
       "url": "https://musclememory.run/challenges/TS-001",
       "runtime": "Sucrase/browser JavaScript",
       "partition": "b-js-ts",
-      "status": "unrun",
-      "firstAttempt": null,
-      "finalAttempt": null,
-      "wrongAttempt": null,
-      "edgeEvidence": null
+      "status": "ui-candidates-verified; independent edge audit pending",
+      "firstAttempt": {
+        "runId": "defe6b54-de94-4d29-b232-c1016c44dc06",
+        "result": "passed",
+        "passed": 21,
+        "total": 21,
+        "codeSha256": "acd6c763cadde305b0e2e4e9bec4afaffa18538a73735093d2c5fc3be0c38bd5"
+      },
+      "finalAttempt": {
+        "runId": "ec158b2a-9dc7-4b42-bfb9-04e7524bd68c",
+        "result": "passed",
+        "passed": 21,
+        "total": 21
+      },
+      "wrongAttempt": {
+        "runId": "47197f80-bc6f-4d67-93ce-228ce5c74fb4",
+        "result": "failed",
+        "passed": 13,
+        "total": 21
+      },
+      "edgeEvidence": null,
+      "receipt": "receipts/TS-001.json"
     },
     {
       "key": "TS-002",
@@ -1954,11 +2124,28 @@
       "url": "https://musclememory.run/challenges/TS-002",
       "runtime": "Sucrase/browser JavaScript",
       "partition": "b-js-ts",
-      "status": "unrun",
-      "firstAttempt": null,
-      "finalAttempt": null,
-      "wrongAttempt": null,
-      "edgeEvidence": null
+      "status": "ui-candidates-verified; independent edge audit pending",
+      "firstAttempt": {
+        "runId": "cea15495-7040-4a0d-a850-167202272497",
+        "result": "passed",
+        "passed": 19,
+        "total": 19,
+        "codeSha256": "da36ee27a6cd8a61e07237ed9b0c15a03ad9fb2ede76f26d07f38daae3d0884e"
+      },
+      "finalAttempt": {
+        "runId": "f22c8bfc-0473-426e-8e88-88a98bc5fdeb",
+        "result": "passed",
+        "passed": 19,
+        "total": 19
+      },
+      "wrongAttempt": {
+        "runId": "0779b2af-ac98-480b-9b1a-f02725ca68ed",
+        "result": "failed",
+        "passed": 16,
+        "total": 19
+      },
+      "edgeEvidence": null,
+      "receipt": "receipts/TS-002.json"
     },
     {
       "key": "TS-003",
@@ -1970,11 +2157,28 @@
       "url": "https://musclememory.run/challenges/TS-003",
       "runtime": "Sucrase/browser JavaScript",
       "partition": "b-js-ts",
-      "status": "unrun",
-      "firstAttempt": null,
-      "finalAttempt": null,
-      "wrongAttempt": null,
-      "edgeEvidence": null
+      "status": "ui-candidates-verified; independent edge audit pending",
+      "firstAttempt": {
+        "runId": "ce985fe0-e1b9-4dd2-afe6-76af25f15b46",
+        "result": "passed",
+        "passed": 18,
+        "total": 18,
+        "codeSha256": "6e2b9bb7a2087bc69ce806f070dfee75a4b8bac07768537c49f26ac4592de2c9"
+      },
+      "finalAttempt": {
+        "runId": "396eae3b-5756-4143-a259-e83ba39b134b",
+        "result": "passed",
+        "passed": 18,
+        "total": 18
+      },
+      "wrongAttempt": {
+        "runId": "3601362e-45f3-4478-8ecc-f94ba1628acc",
+        "result": "failed",
+        "passed": 17,
+        "total": 18
+      },
+      "edgeEvidence": null,
+      "receipt": "receipts/TS-003.json"
     },
     {
       "key": "TS-004",
@@ -1986,11 +2190,28 @@
       "url": "https://musclememory.run/challenges/TS-004",
       "runtime": "Sucrase/browser JavaScript",
       "partition": "b-js-ts",
-      "status": "unrun",
-      "firstAttempt": null,
-      "finalAttempt": null,
-      "wrongAttempt": null,
-      "edgeEvidence": null
+      "status": "ui-candidates-verified; independent edge audit pending",
+      "firstAttempt": {
+        "runId": "d3e5021c-0fd3-49de-931a-64c7ac091612",
+        "result": "passed",
+        "passed": 18,
+        "total": 18,
+        "codeSha256": "618b1feb7867b4a01db750443eebc4c390527928a8fc700757d73b70c25f9175"
+      },
+      "finalAttempt": {
+        "runId": "0f41d3fd-9ce2-498e-8a02-57b0ba68d527",
+        "result": "passed",
+        "passed": 18,
+        "total": 18
+      },
+      "wrongAttempt": {
+        "runId": "7ee7f3c9-dcb1-45d8-8ba5-ff76d628b563",
+        "result": "failed",
+        "passed": 17,
+        "total": 18
+      },
+      "edgeEvidence": null,
+      "receipt": "receipts/TS-004.json"
     },
     {
       "key": "TS-005",
@@ -2002,11 +2223,28 @@
       "url": "https://musclememory.run/challenges/TS-005",
       "runtime": "Sucrase/browser JavaScript",
       "partition": "b-js-ts",
-      "status": "unrun",
-      "firstAttempt": null,
-      "finalAttempt": null,
-      "wrongAttempt": null,
-      "edgeEvidence": null
+      "status": "ui-candidates-verified; independent edge audit pending",
+      "firstAttempt": {
+        "runId": "704ce01f-9aee-4b26-ab03-e22c321e3ec6",
+        "result": "passed",
+        "passed": 16,
+        "total": 16,
+        "codeSha256": "ccf9f683658aabdc00668315c7fcf8f4228f5db1af5814c925e75e6725e549c9"
+      },
+      "finalAttempt": {
+        "runId": "7f422584-a2b2-4254-8f3e-7096fa0174c7",
+        "result": "passed",
+        "passed": 16,
+        "total": 16
+      },
+      "wrongAttempt": {
+        "runId": "2122673a-ee90-43dc-9f0d-54bd06e133d3",
+        "result": "failed",
+        "passed": 12,
+        "total": 16
+      },
+      "edgeEvidence": null,
+      "receipt": "receipts/TS-005.json"
     },
     {
       "key": "TS-006",
@@ -2018,11 +2256,28 @@
       "url": "https://musclememory.run/challenges/TS-006",
       "runtime": "Sucrase/browser JavaScript",
       "partition": "b-js-ts",
-      "status": "unrun",
-      "firstAttempt": null,
-      "finalAttempt": null,
-      "wrongAttempt": null,
-      "edgeEvidence": null
+      "status": "ui-candidates-verified; independent edge audit pending",
+      "firstAttempt": {
+        "runId": "caa7d5c9-7870-430d-baf7-18bb47a1a603",
+        "result": "passed",
+        "passed": 17,
+        "total": 17,
+        "codeSha256": "75ec8ebe313b8d737641e5ca399086ae1a6f274f57c3b98a38112234ab240163"
+      },
+      "finalAttempt": {
+        "runId": "c59abe93-52da-4037-bc41-3d05847df99f",
+        "result": "passed",
+        "passed": 17,
+        "total": 17
+      },
+      "wrongAttempt": {
+        "runId": "900c0e5b-5579-453d-8cb6-306ceabf0e49",
+        "result": "failed",
+        "passed": 16,
+        "total": 17
+      },
+      "edgeEvidence": null,
+      "receipt": "receipts/TS-006.json"
     }
   ]
 }

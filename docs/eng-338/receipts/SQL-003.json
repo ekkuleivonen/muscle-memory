@@ -1,0 +1,169 @@
+{
+  "key": "SQL-003",
+  "revision": "sha256:4cb69977e6d6cec2973eadb1e04bc73e4a04ffd314271e6609d006b98c8c383f",
+  "language": "sql",
+  "runtime": "PGlite/PostgreSQL",
+  "origin": "https://musclememory.run",
+  "partition": "c-sql-html",
+  "review": {
+    "key": "SQL-003",
+    "revision": "sha256:4cb69977e6d6cec2973eadb1e04bc73e4a04ffd314271e6609d006b98c8c383f",
+    "firstCandidate": "SQL-003/attempts/first.sql",
+    "wrongCandidate": "SQL-003/attempts/wrong.sql",
+    "wrongIntent": "Treat only positive payments as payments, incorrectly returning orders with zero or negative payments.",
+    "assumptions": [
+      "Payment existence alone determines inclusion; payment amounts do not affect it."
+    ],
+    "ambiguityFindings": "No material ambiguity. The text explicitly distinguishes no payment from zero or net-zero amounts.",
+    "verbosityFindings": "Compact schema and result contract fully specify duplicate and empty-result semantics.",
+    "confidence": "High; reasoned from visible requirements only, not executed.",
+    "publicEdgeCases": [
+      {
+        "input": {
+          "orders": [
+            [
+              3,
+              "c"
+            ],
+            [
+              1,
+              "a"
+            ],
+            [
+              2,
+              "b"
+            ]
+          ],
+          "payments": [
+            [
+              1,
+              0
+            ],
+            [
+              2,
+              -5
+            ],
+            [
+              2,
+              5
+            ]
+          ]
+        },
+        "expected": [
+          [
+            3
+          ]
+        ],
+        "reason": "Zero and negative payments count, and multiple payments cannot duplicate unpaid rows."
+      },
+      {
+        "input": {
+          "orders": [
+            [
+              8,
+              "a"
+            ],
+            [
+              2,
+              "b"
+            ]
+          ],
+          "payments": []
+        },
+        "expected": [
+          [
+            2
+          ],
+          [
+            8
+          ]
+        ],
+        "reason": "Orders without any payments are sorted by ascending id."
+      },
+      {
+        "input": {
+          "orders": [],
+          "payments": []
+        },
+        "expected": [],
+        "reason": "No orders yields no output."
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "first",
+      "startedAt": "2026-10-26T03:12:40.547Z",
+      "finishedAt": "2026-10-26T03:12:42.045Z",
+      "candidatePath": "c-sql-html/SQL-003/attempts/first.sql",
+      "candidateSha256": "b18f4f1c72fc7bf1f9b61b70020ce81ecb1211872a23ad883b85765fba567fcf",
+      "actualCodeSha256": "b18f4f1c72fc7bf1f9b61b70020ce81ecb1211872a23ad883b85765fba567fcf",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:4cb69977e6d6cec2973eadb1e04bc73e4a04ffd314271e6609d006b98c8c383f",
+      "runId": "49f318d9-c91a-409e-8111-a353977584b4",
+      "documentRevision": 1,
+      "artifactId": "practice-44415e44-04b6-4951-b31c-0b8786b04a66.code.1",
+      "result": "passed",
+      "passed": 15,
+      "total": 15,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "wrong",
+      "startedAt": "2026-10-26T03:12:42.679Z",
+      "finishedAt": "2026-10-26T03:12:44.203Z",
+      "candidatePath": "c-sql-html/SQL-003/attempts/wrong.sql",
+      "candidateSha256": "93505dbfd6619bbf4425eae21d3085bea7c0b60ccf580b40afb9390baf26da2a",
+      "actualCodeSha256": "93505dbfd6619bbf4425eae21d3085bea7c0b60ccf580b40afb9390baf26da2a",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:4cb69977e6d6cec2973eadb1e04bc73e4a04ffd314271e6609d006b98c8c383f",
+      "runId": "8c31c723-47a6-4ade-b120-9e6357743db8",
+      "documentRevision": 1,
+      "artifactId": "practice-f4148623-48c8-47d3-b9d7-c4fcc939854d.code.1",
+      "result": "failed",
+      "passed": 14,
+      "total": 15,
+      "rules": [],
+      "completed": false,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "1 of 15 cases failed.\n\n✘\nhidden case 14hidden case\n\nReturned a different value from the one expected.\n\nFix the code, then submit again.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    },
+    {
+      "stage": "recovery",
+      "startedAt": "2026-10-26T03:12:44.541Z",
+      "finishedAt": "2026-10-26T03:12:45.649Z",
+      "candidatePath": "c-sql-html/SQL-003/attempts/first.sql",
+      "candidateSha256": "b18f4f1c72fc7bf1f9b61b70020ce81ecb1211872a23ad883b85765fba567fcf",
+      "actualCodeSha256": "b18f4f1c72fc7bf1f9b61b70020ce81ecb1211872a23ad883b85765fba567fcf",
+      "codeMatches": true,
+      "revisionMatches": true,
+      "uiCompletionMatchesReceipt": true,
+      "challengeRevision": "sha256:4cb69977e6d6cec2973eadb1e04bc73e4a04ffd314271e6609d006b98c8c383f",
+      "runId": "cc433082-406f-42fc-aca2-853f6da43dfd",
+      "documentRevision": 2,
+      "artifactId": "practice-f4148623-48c8-47d3-b9d7-c4fcc939854d.code.2",
+      "result": "passed",
+      "passed": 15,
+      "total": 15,
+      "rules": [],
+      "completed": true,
+      "runtimeStatus": "result",
+      "phase": "tests",
+      "feedback": "Done.",
+      "automation": "Playwright normal editor/Submit UI; local captured run/artifact verified; no private cases supplied to solver"
+    }
+  ],
+  "status": "ui-candidates-verified",
+  "completionSurvivesReload": true
+}

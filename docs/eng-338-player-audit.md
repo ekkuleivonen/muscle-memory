@@ -76,19 +76,19 @@ Statuses below distinguish completed UI candidate checks from the still-pending 
 | PY-008 | `27a612b805df` | python / Pyodide/CPython3.14 | passed 16/16 | 16/16 | failed 11/16; edge pending | [receipt](eng-338/receipts/PY-008.json) |
 | PY-009 | `697c865602b3` | python / Pyodide/CPython3.14 | passed 17/17 | 17/17 | failed 11/17; edge pending | [receipt](eng-338/receipts/PY-009.json) |
 | PY-010 | `8969155c54b3` | python / Pyodide/CPython3.14 | passed 16/16 | 16/16 | failed 8/16; edge pending | [receipt](eng-338/receipts/PY-010.json) |
-| RB-001 | `841e463333b9` | ruby / ruby.wasm | unrun | pending | unrun |  |
-| RB-002 | `16a31aca47c2` | ruby / ruby.wasm | unrun | pending | unrun |  |
-| RB-003 | `d62765131db8` | ruby / ruby.wasm | unrun | pending | unrun |  |
-| RB-004 | `7b75bd74a6c5` | ruby / ruby.wasm | unrun | pending | unrun |  |
-| RB-005 | `24ea37d6e545` | ruby / ruby.wasm | unrun | pending | unrun |  |
+| RB-001 | `841e463333b9` | ruby / ruby.wasm | passed 21/21 | 21/21 | failed 18/21; edge pending | [receipt](eng-338/receipts/RB-001.json) |
+| RB-002 | `16a31aca47c2` | ruby / ruby.wasm | passed 24/24 | 24/24 | failed 16/24; edge pending | [receipt](eng-338/receipts/RB-002.json) |
+| RB-003 | `d62765131db8` | ruby / ruby.wasm | passed 6/6 | 6/6 | failed 3/6; edge pending | [receipt](eng-338/receipts/RB-003.json) |
+| RB-004 | `7b75bd74a6c5` | ruby / ruby.wasm | passed 6/6 | 6/6 | failed 4/6; edge pending | [receipt](eng-338/receipts/RB-004.json) |
+| RB-005 | `24ea37d6e545` | ruby / ruby.wasm | passed 7/7 | 7/7 | failed 4/7; edge pending | [receipt](eng-338/receipts/RB-005.json) |
 | SQL-001 | `c7146b957f34` | sql / PGlite/PostgreSQL | passed 15/15 | 15/15 | failed 13/15; edge pending | [receipt](eng-338/receipts/SQL-001.json) |
-| SQL-002 | `8069f186eae8` | sql / PGlite/PostgreSQL | unrun | pending | unrun |  |
-| SQL-003 | `4cb69977e6d6` | sql / PGlite/PostgreSQL | unrun | pending | unrun |  |
-| SQL-004 | `2a1c63fa67d1` | sql / PGlite/PostgreSQL | unrun | pending | unrun |  |
-| SQL-005 | `50aa91bff2fe` | sql / PGlite/PostgreSQL | unrun | pending | unrun |  |
-| TS-001 | `87f3834b8d08` | typescript / Sucrase/browser JavaScript | unrun | pending | unrun |  |
-| TS-002 | `a035e776c48a` | typescript / Sucrase/browser JavaScript | unrun | pending | unrun |  |
-| TS-003 | `49b3238dff45` | typescript / Sucrase/browser JavaScript | unrun | pending | unrun |  |
-| TS-004 | `0a4a87c203c1` | typescript / Sucrase/browser JavaScript | unrun | pending | unrun |  |
-| TS-005 | `f718959a5bcb` | typescript / Sucrase/browser JavaScript | unrun | pending | unrun |  |
-| TS-006 | `1939c20f182b` | typescript / Sucrase/browser JavaScript | unrun | pending | unrun |  |
+| SQL-002 | `8069f186eae8` | sql / PGlite/PostgreSQL | passed 16/16 | 16/16 | failed 10/16; edge pending | [receipt](eng-338/receipts/SQL-002.json) |
+| SQL-003 | `4cb69977e6d6` | sql / PGlite/PostgreSQL | passed 15/15 | 15/15 | failed 14/15; edge pending | [receipt](eng-338/receipts/SQL-003.json) |
+| SQL-004 | `2a1c63fa67d1` | sql / PGlite/PostgreSQL | passed 5/5 | 5/5 | failed 4/5; edge pending | [receipt](eng-338/receipts/SQL-004.json) |
+| SQL-005 | `50aa91bff2fe` | sql / PGlite/PostgreSQL | passed 5/5 | 5/5 | failed 3/5; edge pending | [receipt](eng-338/receipts/SQL-005.json) |
+| TS-001 | `87f3834b8d08` | typescript / Sucrase/browser JavaScript | passed 21/21 | 21/21 | failed 13/21; edge pending | [receipt](eng-338/receipts/TS-001.json) |
+| TS-002 | `a035e776c48a` | typescript / Sucrase/browser JavaScript | passed 19/19 | 19/19 | failed 16/19; edge pending | [receipt](eng-338/receipts/TS-002.json) |
+| TS-003 | `49b3238dff45` | typescript / Sucrase/browser JavaScript | passed 18/18 | 18/18 | failed 17/18; edge pending | [receipt](eng-338/receipts/TS-003.json) |
+| TS-004 | `0a4a87c203c1` | typescript / Sucrase/browser JavaScript | passed 18/18 | 18/18 | failed 17/18; edge pending | [receipt](eng-338/receipts/TS-004.json) |
+| TS-005 | `f718959a5bcb` | typescript / Sucrase/browser JavaScript | passed 16/16 | 16/16 | failed 12/16; edge pending | [receipt](eng-338/receipts/TS-005.json) |
+| TS-006 | `1939c20f182b` | typescript / Sucrase/browser JavaScript | passed 17/17 | 17/17 | failed 16/17; edge pending | [receipt](eng-338/receipts/TS-006.json) |

@@ -1,0 +1,69 @@
+{
+  "key": "JS-006",
+  "revision": "sha256:8082598a59e16473dbbe2f22745501419af4a551ed2f59905d0bf09e78c47e57",
+  "renderedFeedback": "Done.",
+  "verdict": "public-contract counterexample exists; wrong candidate is invalid",
+  "requirement": "Two codes can share a name and differ in what they take off; summary must reflect the current cart.",
+  "counterexample": {
+    "input": [
+      [
+        "add",
+        "x",
+        1000,
+        1
+      ],
+      [
+        "code",
+        {
+          "name": "X",
+          "amount": 100
+        }
+      ],
+      [
+        "summary"
+      ],
+      [
+        "code",
+        {
+          "name": "X",
+          "amount": 200
+        }
+      ],
+      [
+        "summary"
+      ]
+    ],
+    "expected": [
+      {
+        "items": 1,
+        "subtotal": 1000,
+        "discount": 100,
+        "total": 900
+      },
+      {
+        "items": 1,
+        "subtotal": 1000,
+        "discount": 200,
+        "total": 800
+      }
+    ],
+    "reason": "Same-name codes can change price."
+  },
+  "predictedWrongOutput": [
+    {
+      "items": 1,
+      "subtotal": 1000,
+      "discount": 100,
+      "total": 900
+    },
+    {
+      "items": 1,
+      "subtotal": 1000,
+      "discount": 100,
+      "total": 900
+    }
+  ],
+  "reason": "The wrong candidate keys the cache by serialized lines and promo name only. Changing X amount from 100 to 200 leaves that key unchanged, so the second summary returns the cached 900 total rather than 800.",
+  "evidenceLimit": "This prediction follows from the visible contract and documented wrongIntent, without execution. The rendered text Done. supplies no case outputs and does not establish semantic correctness.",
+  "candidatesPreserved": true
+}
