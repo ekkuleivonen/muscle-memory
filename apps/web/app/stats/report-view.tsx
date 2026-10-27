@@ -54,10 +54,10 @@ function VisualView({ visual, label }: { visual: Visual; label: string }) {
 
 export function QuestionView({ q }: { q: Question }) {
   return (
-    <section className="report-question" id={`q-${q.id}`} aria-labelledby={`q-${q.id}-title`}>
-      <h2 id={`q-${q.id}-title`} className="report-kicker">
+    <section className="report-question t-md" id={`q-${q.id}`} aria-labelledby={`q-${q.id}-title`}>
+      <h3 id={`q-${q.id}-title`}>
         {q.question}
-      </h2>
+      </h3>
       <p className="report-headline">{q.answer}</p>
       <VisualView visual={q.visual} label={q.answer} />
       {q.note && <p className="report-note">{q.note}</p>}

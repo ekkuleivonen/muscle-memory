@@ -5,7 +5,6 @@
  * one tiny FYI on the relevant answer. Pure and deterministic; see docs/developer-profile.md.
  */
 import type { AttemptSummary } from "../../../packages/developer-profile/derive";
-import { SMALL_EDIT_UNITS } from "../../../packages/developer-profile/registry";
 import { receiptMatch, type ModelReceipt } from "../../../packages/model-runs/receipts";
 import { defaultComparisons } from "../../../packages/model-runs/comparison";
 import { languageLabel, type ChallengeSummary } from "./challenges";
@@ -17,7 +16,6 @@ export type ReportAttempt = AttemptSummary & { source: Source };
 
 /** Wording cut-offs, not norms: they choose which true sentence answers a question. */
 export const FREQUENT_CHECKS = 3;
-export const LARGE_STEP_SHARE = 0.3;
 /** Model results are read for at most this many of your solved challenges. */
 export const COMPARISON_TASKS = 3;
 /** Keystrokes per word for words per minute, the usual typing-test convention. */
@@ -27,7 +25,7 @@ const TIMELINE_CAP = 200;
 /** Below this many code-character keystrokes a typing rate is too noisy to show. */
 export const MIN_TYPED_KEYS = 50;
 
-/** One attempt per attempt/revision: the trace with the later last observation wins, the device on a tie. */
+/** One attempt per attempt/revision. A partial trace must not hide a verified completion. */
 export function mergeEvidence(
   device: readonly AttemptSummary[],
   uploaded: readonly AttemptSummary[],
@@ -40,7 +38,17 @@ export function mergeEvidence(
     for (const a of list) {
       const key = JSON.stringify([a.attempt, a.revision]);
       const prior = merged.get(key);
-      if (!prior || a.last >= prior.last) merged.set(key, { ...a, source });
+      const usable = (x: AttemptSummary) => x.completed && !x.issues.length;
+      // A missing start is known absence; ambiguous positions and integrity warnings stay withheld.
+      const integrityFailure = (x: AttemptSummary) => x.issues.some(issue =>
+        issue !== "Attempt start is missing; this may be latest-only or partial history.");
+      if (
+        !prior ||
+        integrityFailure(a) || (!integrityFailure(prior) && (
+          (usable(a) && !usable(prior)) ||
+          (usable(a) === usable(prior) && a.last >= prior.last)))
+      )
+        merged.set(key, { ...a, source });
     }
   return [...merged.values()].sort(
     (a, b) =>
@@ -55,7 +63,7 @@ export type Visual =
   | { kind: "number"; value: string; unit: string }
   | { kind: "turn"; from: string; to: string };
 export interface Question {
-  id: "start" | "iterate" | "difficulty" | "languages" | "typing" | "rewrite" | "recovery" | "repeat";
+  id: "start" | "iterate" | "difficulty" | "languages" | "typing" | "rewrite" | "recovery" | "repeat" | "familiarity";
   question: string;
   answer: string;
   visual: Visual;
@@ -85,6 +93,7 @@ export interface Report {
   waiting: string | null;
   next: NextStep | null;
   profile: NextStep | null;
+  previews: { question: string; action: NextStep }[];
   /** Exact revisions whose model results could add the iterate FYI. */
   comparisonRevisions: { challenge: string; revision: string }[];
 }
@@ -168,11 +177,13 @@ function iterate(solved: ReportAttempt[], fyi: string | null): Question | null {
   const firsts = counted.filter((a) => num(a.values.firstSubmit));
   const oneShot = firsts.filter((a) => a.values.firstSubmit === 1).length;
   const answer =
-    m >= FREQUENT_CHECKS
-      ? `You iterate: a median of ${plural(m, "check")} per solve.`
-      : firsts.length && oneShot / firsts.length >= 0.5
-        ? `Mostly one shot: ${oneShot} of ${plural(firsts.length, "solve")} passed on the first submission.`
-        : `A few checks per solve: ${plural(m, "check")} in a typical one.`;
+    counted.length === 1
+      ? `This solve took ${plural(checks[0], "check")}${firsts.length ? `; your first submission ${oneShot ? "passed" : "didn't pass"}` : ""}.`
+      : m >= FREQUENT_CHECKS
+        ? `You iterate: a median of ${plural(m, "check")} per solve.`
+        : firsts.length && oneShot / firsts.length >= 0.5
+          ? `Mostly one shot: ${oneShot} of ${plural(firsts.length, "solve")} passed on the first submission.`
+          : `A few checks per solve: ${plural(m, "check")} in a typical one.`;
   return {
     id: "iterate",
     question: "Do you iterate or go for one shot?",
@@ -182,7 +193,15 @@ function iterate(solved: ReportAttempt[], fyi: string | null): Question | null {
       kind: "bars",
       bars: CHECK_BUCKETS.flatMap(([label, low, high]) => {
         const n = checks.filter((c) => c >= low && c <= high).length;
-        return n ? [{ label: `${label} ${low === 1 && high === 1 ? "check" : "checks"}`, value: n, display: plural(n, "solve") }] : [];
+        return n
+          ? [
+              {
+                label: `${label} ${low === 1 && high === 1 ? "check" : "checks"}`,
+                value: n,
+                display: plural(n, "solve"),
+              },
+            ]
+          : [];
       }),
     },
     note: null,
@@ -250,6 +269,45 @@ function languages(attempts: readonly ReportAttempt[], catalog: readonly Challen
   };
 }
 
+/** A profile groups existing personal work; it makes no claim about other players. */
+function familiarity(
+  attempts: readonly ReportAttempt[],
+  catalog: readonly ChallengeSummary[],
+  profile: Profile | null,
+): Question | null {
+  if (!profile?.languages?.length) return null;
+  const lang = current(catalog, (c) => c.language);
+  const work = [0, 0];
+  for (const a of attempts) {
+    const language = lang(a);
+    if (!language || !clean(a) || !num(a.values.active) || a.values.active <= 0)
+      continue;
+    work[
+      profile.languages.includes(language as (typeof profile.languages)[number])
+        ? 0
+        : 1
+    ] += a.values.active;
+  }
+  if (!work[0] && !work[1]) return null;
+  return {
+    id: "familiarity",
+    question: "Your usual languages or something new?",
+    answer: !work[1]
+      ? "All your recorded practice is in your usual languages so far."
+      : !work[0]
+        ? "Your recorded practice is outside your usual languages so far."
+        : `${duration(work[0])} in your usual languages; ${duration(work[1])} outside them.`,
+    visual: {
+      kind: "bars",
+      bars: ["Usual languages", "Other languages"].flatMap((label, i) =>
+        work[i] ? [{ label, value: work[i], display: duration(work[i]) }] : [],
+      ),
+    },
+    note: "Active practice time, grouped by the languages you listed.",
+    fyi: null,
+  };
+}
+
 /**
  * Words per minute while typing code characters: all code-character keystroke intervals inside
  * bursts, pooled (keys over time), at 5 characters a word. Arrows, Backspace, shortcuts, pastes
@@ -271,28 +329,6 @@ function typing(attempts: readonly ReportAttempt[]): Question | null {
   };
 }
 
-/**
- * Edit sizes only: small edits vs bigger pieces. Inserted and deleted totals include starter text,
- * pastes and replacements, so they can't say how much of what you typed survived.
- */
-function rewrite(attempts: readonly ReportAttempt[]): Question | null {
-  const usable = attempts.filter((a) => clean(a) && num(a.values.smallEdits) && num(a.values.largeEdits));
-  const small = usable.reduce((n, a) => n + a.values.smallEdits!, 0),
-    large = usable.reduce((n, a) => n + a.values.largeEdits!, 0);
-  if (small + large === 0) return null;
-  const bigShare = large / (small + large);
-  return {
-    id: "rewrite",
-    question: "Small edits or bigger pieces?",
-    answer:
-      bigShare >= LARGE_STEP_SHARE
-        ? `Often bigger pieces: ${Math.round(bigShare * 100)}% of your edits change more than ${SMALL_EDIT_UNITS} characters at once.`
-        : `Mostly small edits: ${Math.round((1 - bigShare) * 100)}% change ${SMALL_EDIT_UNITS} characters or fewer.`,
-    visual: { kind: "split", parts: [{ label: `small edits (≤${SMALL_EDIT_UNITS} chars)`, value: small }, { label: "bigger pieces", value: large }] },
-    note: "Bigger pieces include pastes; neither means a mistake.",
-    fyi: null,
-  };
-}
 
 /**
  * Solves whose first submission failed. Only the count: `recoveryChecks` measures checks to the
@@ -352,7 +388,7 @@ function modelFyi(solved: ReportAttempt[], receipts: ReportInput["receipts"]): s
         tries.set(JSON.stringify([a.revision, receipt.model, receipt.reasoning, receipt.try]), receipt.submissions);
   }
   const m = median([...tries.values()]);
-  return m === null ? null : `FYI: models that solved the same challenges needed ${plural(m, "submission")}, typically.`;
+  return m === null ? null : `Models that solved the same challenges needed ${plural(m, "submission")}, typically.`;
 }
 
 function next(input: ReportInput, started: Set<string>): NextStep | null {
@@ -375,10 +411,11 @@ export function buildReport(input: ReportInput): Report {
     start(solved),
     iterate(solved, modelFyi(solved, input.receipts)),
     recovery(solved),
-    rewrite(input.attempts),
+    // Per-keystroke change sizes do not establish a person's revision style.
     typing(input.attempts),
     difficulty(solved, input.catalog),
     languages(input.attempts, input.catalog),
+    familiarity(input.attempts, input.catalog, input.profile),
     repeat(solved),
   ].filter((q): q is Question => q !== null);
   return {
@@ -386,10 +423,20 @@ export function buildReport(input: ReportInput): Report {
     questions,
     waiting: started.size && !questions.length ? "Solve a challenge and your answers start here." : null,
     next: next(input, started),
-    profile:
-      questions.length && !input.profile?.experience
-        ? { label: "Add your coding experience (optional)", href: "/settings/profile/experience" }
-        : null,
+    profile: null,
+    previews:
+      questions.some((q) => q.id === "languages") &&
+      !input.profile?.languages?.length
+        ? [
+            {
+              question: "Your usual languages or something new?",
+              action: {
+                label: "Set your usual languages to group this practice",
+                href: "/settings/profile/languages",
+              },
+            },
+          ]
+        : [],
     comparisonRevisions,
   };
 }
