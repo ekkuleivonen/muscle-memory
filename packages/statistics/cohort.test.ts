@@ -311,6 +311,33 @@ test("first-try and finisher denominators suppress independently; unknown is not
   assert.equal(h.denominators.firstTry, "20–49");
   assert.equal(h.denominators.submissions, null);
 });
+test("a malformed decided first verdict with a valid later completion withholds the whole attempt", () => {
+  for (const change of [
+    (o: any) => {
+      o.data.passed = -1;
+    },
+    (o: any) => {
+      o.data.total = 0;
+    },
+    (o: any) => {
+      o.data.rules = null;
+    },
+  ]) {
+    const events = many(20).map((e) =>
+      e.participant_id === "b0" &&
+      e.type === "practice.submitted" &&
+      JSON.parse(e.payload!).data.runId === "r1"
+        ? editEvent(e, change)
+        : e,
+    );
+    const rows = run(events);
+    assert.equal(
+      rows.reduce((n: number, r: { browsers: number }) => n + r.browsers, 0),
+      19,
+    );
+    assert.deepEqual(cohortResult(rows).groups, []);
+  }
+});
 test("submissions after solve are not counted as what the solve took", () => {
   const events = many(20);
   const extra = events
@@ -395,6 +422,11 @@ test("unsubmitted eligible starts remain in the observed-completion denominator"
   );
   const g = cohortResult(run(events)).groups[0];
   assert.ok(g);
+  assert.equal(g.participants, "20–49");
+  assert.ok(
+    Math.abs(g.solved - 0.95) < 1e-9,
+    "LEFT JOIN absence remains a legitimate unfinished start",
+  );
   assert.equal(g.firstTry, null);
   assert.equal(g.submissions, null);
 });

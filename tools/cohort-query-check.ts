@@ -79,6 +79,27 @@ const scenarios: { name: string; events: Event[]; browsers: number }[] = [
     browsers: 42,
   },
 ];
+scenarios.push({
+  name: "malformed first decided verdict with valid second completion",
+  events: many(20).map((e) => {
+    if (e.participant_id !== "b0" || e.type !== "practice.submitted") return e;
+    const o = JSON.parse(e.payload!);
+    if (o.data.runId !== "r1") return e;
+    o.data.passed = -1;
+    return { ...e, payload: JSON.stringify(o) };
+  }),
+  browsers: 19,
+});
+scenarios.push({
+  name: "unsubmitted start survives LEFT JOIN",
+  events: many(20).filter(
+    (e) =>
+      e.participant_id !== "b0" ||
+      e.type === "site.profile" ||
+      JSON.parse(e.payload!).source.sequence <= 2,
+  ),
+  browsers: 20,
+});
 const discoveryQuery = cohortDiscoveryQuery([
   { challenge: "JS-001", revision: syntheticRevision, window: syntheticWindow },
 ]);
