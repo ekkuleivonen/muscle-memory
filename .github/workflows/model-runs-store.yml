@@ -1,0 +1,33 @@
+name: Store model runs
+
+# Appends the admin's finished model runs (private R2, model-runs/outbox/) to
+# default.model_events in the events bucket's R2 Data Catalog, never the events table
+# (tools/model-runs/store_events.py, docs/model-runs.md). On demand only.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: model-runs-store
+  cancel-in-progress: false
+
+jobs:
+  store:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CATALOG_URI: ${{ secrets.R2_CATALOG_URI }}
+      WAREHOUSE: ${{ secrets.R2_WAREHOUSE }}
+      CATALOG_TOKEN: ${{ secrets.R2_CATALOG_TOKEN }}
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r tools/erasure/requirements.txt
+      - run: python tools/model-runs/store_events.py runs-r2 muscle-memory-content

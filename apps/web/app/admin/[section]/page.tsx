@@ -5,10 +5,6 @@ const sections = {
     "Challenge authoring",
     "Draft, publish and archive controls are not implemented. Published challenges are currently managed through reviewed repository changes.",
   ],
-  benchmarks: [
-    "Benchmarks",
-    "No benchmark service is connected. No model runs, scores or jobs are available here.",
-  ],
 } as const;
 export default async function Section({
   params,

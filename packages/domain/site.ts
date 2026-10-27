@@ -15,7 +15,8 @@ import {
   type StoredRecord,
 } from "./records";
 
-export const SITE_CAPTURE_VERSION = "site-capture-1.0.0";
+/** 1.1: every observation says who acted (`actor`), always a person here. */
+export const SITE_CAPTURE_VERSION = "site-capture-1.1.0";
 /** A page of the app was shown: its path, its query string, and the app page before it. */
 export interface ViewData {
   readonly path: string;

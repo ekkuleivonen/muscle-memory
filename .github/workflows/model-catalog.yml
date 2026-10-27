@@ -1,0 +1,42 @@
+name: Model catalog
+
+# The daily price snapshot (tools/model-runs/snapshot.ts, docs/model-runs.md): OpenRouter's
+# model list and the roster's endpoints, verbatim, appended to default.model_catalog in the
+# events bucket's R2 Data Catalog (never the events table). On demand only for now; a daily
+# schedule (cron "41 5 * * *") waits for the owner's go-ahead.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: model-catalog
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CATALOG_URI: ${{ secrets.R2_CATALOG_URI }}
+      WAREHOUSE: ${{ secrets.R2_WAREHOUSE }}
+      CATALOG_TOKEN: ${{ secrets.R2_CATALOG_TOKEN }}
+      # Optional: without them the snapshot is the model list alone, without endpoint statistics.
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      D1_ACCOUNT_ID: 166fd3dff06a9c3f1aef172a25db7ace
+      D1_DATABASE_ID: 30916af3-46a7-451c-b0d3-92570e090329
+      D1_TOKEN: ${{ secrets.MODEL_RUNS_D1_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --import tsx tools/model-runs/snapshot.ts model-catalog-outbox
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r tools/erasure/requirements.txt
+      - run: python tools/model-runs/store_events.py catalog model-catalog-outbox

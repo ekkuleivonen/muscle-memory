@@ -23,8 +23,9 @@ Every observation (`packages/domain/records.ts`) carries:
 | `sessionId` | the page load (`packages/browser/page-session.ts`), shared by every stream recording during it |
 | `source` | `{ id, sequence }`: one stream per page load and recorder, positions from 1 with no reuse |
 | `occurredAt`, `elapsedMs` | wall clock, and a monotonic clock from the stream's start in 0.1 ms steps |
-| `captureVersion` | `practice-capture-1.1.0` or `site-capture-1.0.0` |
-| `termsVersion` | the Terms and Privacy Notice version accepted |
+| `captureVersion` | `practice-capture-1.2.0` or `site-capture-1.1.0` |
+| `actor` | `person`, or `model` for a model run recorded by the offline harness ([model runs](model-runs.md)) |
+| `termsVersion` | the Terms and Privacy Notice version accepted; null for a model, which accepts none |
 | `assignments` | experiment arms in force, by experiment id (`{}` until there are experiments) |
 | `challenge`, `challengeRevision` | the challenge's key (such as `PY-003`) and the exact revision, when it is about one |
 | `attemptId` | the attempt, for practice |
@@ -54,7 +55,7 @@ Everything inside a challenge at `/challenges/<KEY>` (`packages/domain/practice.
 | `practice.page`, `practice.runtime`, `practice.closed` | the page visible or hidden, focused, resized; the runtime loading, ready or failing; practice left, or the page hidden as it unloads |
 | `practice.capture-gap` | an explicit lost range of positions (`buffer-full` or `write-conflict`) |
 
-Practice capture 1.1 adds keyboard access to type tooltips: `practice.assist` kind `hover` now covers pointer and keyboard opening. The opened editor features also name `keyboard-type-info` and `keyboard-diagnostics`.
+Practice capture 1.2 adds `actor` to every observation, `from: "model-run"` and the `run-ended` reason for a model's attempt; a model's practice stream is recorded by the same session code, never uploaded (below). Practice capture 1.1 adds keyboard access to type tooltips: `practice.assist` kind `hover` now covers pointer and keyboard opening. The opened editor features also name `keyboard-type-info` and `keyboard-diagnostics`.
 
 **The environment** in `opened` is coarse and comparable, never identifying (`apps/web/lib/environment.ts`): browser and OS family, the primary pointer (fine, coarse, none), the browser language, the IANA time zone and UTC offset, what a few physical keys type where Chromium says (enough to tell QWERTY, QWERTZ, AZERTY and Nordic layouts apart).
 
@@ -100,7 +101,7 @@ browser (IndexedDB) ──outbox──▶ ingest Worker ──▶ Pipelines stre
 
 `apps/ingest` serves `musclememory.run/ingest/*`: same origin as the app, behind the same Access gate during the owner preview.
 
-- `POST /ingest/v1/batches`: a batch (`packages/domain/ingest.ts`). The whole batch is refused (400) only if its shape is wrong; single records are checked one by one and refused with a reason in a successful reply (another participant, an unknown capture version, a type from the other stream, a payload that does not match its envelope). Only `practice-capture-1.1.0` and `site-capture-1.0.0` are accepted. Release the Worker with the domain package before the app whenever a capture version changes, or the new records are refused.
+- `POST /ingest/v1/batches`: a batch (`packages/domain/ingest.ts`). The whole batch is refused (400) only if its shape is wrong; single records are checked one by one and refused with a reason in a successful reply (another participant, an unknown capture version, a type from the other stream, a payload that does not match its envelope). Only `practice-capture-1.2.0` and `site-capture-1.1.0` are accepted, and only a person's observations: anything with another `actor` is refused (`not a person`). Model runs are stored apart ([model runs](model-runs.md)). Release the Worker with the domain package before the app whenever a capture version changes, or the new records are refused.
 - **Rate limits** (Workers rate limiting bindings, approximate and per Cloudflare location): 600 requests a minute per address, checked before the body is read, and 120 a minute per participant. Over a limit the reply is 429 with `Retry-After: 60`, and the device keeps its records and backs off.
 - `POST /ingest/v1/participants/<id>/delete` with `{ "secret": … }`: writes a tombstone (`deleted/<id>` in the control bucket), after which uploads for that ID get 410 and the uploader stops, and removes the proof (`participants/<id>`), which the tombstone makes useless.
 - `POST /ingest/v1/participants/<id>/access` with `{ "secret": … }`: an access request (Settings → access). Notes it as `access/<reference>.json` (`{ participantId, requestedAt }`) and returns the reference, `MM-XXXX-XXXX`, which the person emails us; `{ uploaded: false }` when nothing was ever uploaded under the ID, and 410 after deletion. The operator answers with `tools/erasure/access.py <reference> <file>`, run on their own machine with the erasure job's credentials: every row of that participant, deduplicated and in stream order, as NDJSON.
@@ -117,6 +118,7 @@ Created on the Cloudflare account that hosts the app (`166fd3dff06a9c3f1aef172a2
 - An R2 API token (Admin Read & Write, which Data Catalog needs) for the sink, kept by the sink.
 - The Worker `muscle-memory-erasure` (`apps/erasure`), with no route, its Container `EraseJob`, and the secret `CATALOG_TOKEN`: an R2 API token with Admin Read & Write on `muscle-memory-events` only, used for nothing else. Data Catalog vends the storage credentials, so the container needs no S3 keys. Set it with `npx wrangler secret put CATALOG_TOKEN --config apps/erasure/wrangler.jsonc`.
 - The app is built with `NEXT_PUBLIC_INGEST_URL=/ingest` (`apps/web/.env.production`).
+- Model runs have their own tables in the same catalog, `default.model_events` and `default.model_catalog`, created on first use by `tools/model-runs/store_events.py` ([model runs](model-runs.md)). Neither is the events table, and nothing a person records goes there.
 
 CI deploys the ingest Worker with every push to `main`, before the app ([Cloudflare build](cloudflare-build.md)). By hand: `npx wrangler deploy --config apps/ingest/wrangler.jsonc --env=""`. Wrangler needs Node.js 22.
 
