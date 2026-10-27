@@ -6,6 +6,7 @@ import { deriveAttempts } from "./derive";
 import type { RunStatus, RunPurpose, SubmitResult } from "../domain/practice";
 import {
   historyQuery,
+  normalizeHistoryRows,
   historyResult,
   historyWindow,
   ownerHistory,
@@ -24,7 +25,12 @@ const window = historyWindow({
   to: "2026-10-27",
   after: "",
 });
-function rows(records: StoredRecord[], p = participant, w = window) {
+function rows(
+  records: StoredRecord[],
+  p = participant,
+  w = window,
+  joined = false,
+) {
   const events = records.map((r) => {
     const o = JSON.parse(r.payload);
     return {
@@ -50,7 +56,11 @@ print(json.dumps([dict(r) for r in c.execute(v['query'].replace('default.events'
     maxBuffer: 8 * 1024 * 1024,
   });
   assert.equal(result.status, 0, result.stderr);
-  return JSON.parse(result.stdout);
+  return (
+    joined
+      ? JSON.parse(result.stdout)
+      : normalizeHistoryRows(JSON.parse(result.stdout))
+  ) as any;
 }
 function result(records = trace()) {
   return historyResult(participant, window, rows(records));
@@ -600,4 +610,102 @@ test("near-budget prefixes measure their actual variable-length continuation cur
   assert.ok(bytes > 240000 && bytes <= 256 * 1024);
   assert.equal(page.attempts.length, 19);
   assert.equal(page.next, page.attempts.at(-1)!.attempt);
+});
+
+test("native UNION failure is avoided by a single SELECT, including empty and oversized metadata-only reads", () => {
+  const query = historyQuery(participant, window);
+  assert.ok(!query.includes("UNION ALL"));
+  assert.match(query, /LEFT JOIN owner/);
+  assert.equal(
+    historyResult(
+      participant,
+      window,
+      normalizeHistoryRows(rows([], participant, window, true)),
+    ).attempts.length,
+    0,
+  );
+  const entry = {
+    scope: "entry",
+    attempt_id: "oversized",
+    observations: HISTORY_MAX_RECORDS + 1,
+    bytes: 1,
+    first_at: "2026-10-27T10:00:00Z",
+    last_at: "2026-10-27T10:00:00Z",
+    conflicts: 0,
+    record_id: null,
+    payload: null,
+  };
+  const value = historyResult(
+    participant,
+    window,
+    normalizeHistoryRows([entry]),
+  );
+  assert.equal(value.attempts.length, 0);
+  assert.equal(value.unavailable[0].attempt, "oversized");
+  assert.equal(value.next, null);
+});
+
+test("joined rows retain exact coverage and ordering, reject missing or contradictory observations", () => {
+  const joined = rows(
+    [...trace("b", "source-b"), ...trace("a", "source-a")],
+    participant,
+    window,
+    true,
+  );
+  const value = historyResult(
+    participant,
+    window,
+    normalizeHistoryRows([...joined].reverse()),
+  );
+  assert.deepEqual(
+    value.attempts.map((a) => a.attempt),
+    ["a", "b"],
+  );
+  assert.throws(
+    () =>
+      historyResult(participant, window, normalizeHistoryRows(joined.slice(1))),
+    /Incomplete/,
+  );
+  const altered = joined.map((r: any, i: number) =>
+    i === 1 ? { ...r, bytes: Number(r.bytes) + 1 } : r,
+  );
+  assert.throws(() => normalizeHistoryRows(altered), /coverage/);
+  assert.throws(
+    () =>
+      normalizeHistoryRows([
+        { ...joined[0], record_id: null, payload: "not-null" },
+      ]),
+    /Invalid observation/,
+  );
+});
+
+test("the actual transport accepts joined rows but never returns source payloads", async () => {
+  const value = await readUploadedHistory(
+    "synthetic-token",
+    participant,
+    window,
+    async () =>
+      Response.json({
+        success: true,
+        result: { rows: rows(trace(), participant, window, true) },
+      }),
+  );
+  assert.equal(value.attempts.length, 1);
+  assert.ok(!JSON.stringify(value).includes('"payload"'));
+  assert.ok(!JSON.stringify(value).includes('"record_id"'));
+  const entry = {
+    scope: "entry",
+    attempt_id: "budget",
+    observations: 1,
+    bytes: 1,
+    first_at: "2026-10-27T10:00:00Z",
+    last_at: "2026-10-27T10:00:00Z",
+    conflicts: 0,
+    record_id: "budget-row",
+    payload: "x".repeat(6 * 1024 * 1024 + 1),
+  };
+  assert.throws(
+    () => historyResult(participant, window, normalizeHistoryRows([entry])),
+    /input exceeds/,
+  );
 });

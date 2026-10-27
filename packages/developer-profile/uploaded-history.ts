@@ -7,7 +7,7 @@ import { METRICS, type Values } from "./registry";
 
 export const HISTORY_PAGE_SIZE = 100;
 export const HISTORY_BATCH_BYTES = 6 * 1024 * 1024;
-export const HISTORY_BATCH_RECORDS = 50_000;
+export const HISTORY_BATCH_RECORDS = 25_000;
 export const HISTORY_REPLY_BYTES = 256 * 1024;
 export const HISTORY_TRANSPORT_BYTES = 16 * 1024 * 1024;
 export const HISTORY_MAX_RECORDS = 10000;
@@ -77,19 +77,16 @@ export function historyQuery(
  SELECT *, ROW_NUMBER() OVER (ORDER BY attempt_id) AS position,
  SUM(read_bytes) OVER (ORDER BY attempt_id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS batch_bytes,
  SUM(read_records) OVER (ORDER BY attempt_id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS batch_records FROM costs
-), page AS (
- SELECT * FROM bounded WHERE position <= ${HISTORY_PAGE_SIZE} AND batch_bytes <= ${HISTORY_BATCH_BYTES} AND batch_records <= ${HISTORY_BATCH_RECORDS}
-), more AS (
- SELECT s.* FROM selected s LEFT JOIN page p ON p.attempt_id=s.attempt_id
- WHERE p.attempt_id IS NULL ORDER BY s.attempt_id LIMIT 1
+), marked AS (
+ SELECT *, CASE WHEN position <= ${HISTORY_PAGE_SIZE} AND batch_bytes <= ${HISTORY_BATCH_BYTES} AND batch_records <= ${HISTORY_BATCH_RECORDS} THEN 1 ELSE 0 END AS readable FROM bounded
+), frontier AS (
+ SELECT *, LAG(readable,1,1) OVER (ORDER BY position) AS previous_readable FROM marked
 )
-SELECT 'attempt' AS scope, attempt_id, observations, bytes, first_at, last_at, conflicts, NULL AS record_id, NULL AS payload FROM page
-UNION ALL
-SELECT 'continuation' AS scope, attempt_id, observations, bytes, first_at, last_at, conflicts, NULL AS record_id, NULL AS payload FROM more
-UNION ALL
-SELECT 'observation' AS scope, o.attempt_id, NULL AS observations, NULL AS bytes, NULL AS first_at, NULL AS last_at, NULL AS conflicts, o.record_id, o.payload
-FROM owner o JOIN page p ON o.attempt_id = p.attempt_id
-WHERE p.observations <= ${HISTORY_MAX_RECORDS} AND p.bytes <= ${HISTORY_MAX_BYTES}`;
+SELECT CASE WHEN b.readable=1 THEN 'entry' ELSE 'continuation' END AS scope,
+ b.attempt_id,b.observations,b.bytes,b.first_at,b.last_at,b.conflicts,o.record_id,o.payload
+FROM frontier b LEFT JOIN owner o ON o.attempt_id=b.attempt_id AND b.readable=1
+ AND b.observations <= ${HISTORY_MAX_RECORDS} AND b.bytes <= ${HISTORY_MAX_BYTES}
+WHERE b.readable=1 OR b.previous_readable=1`;
 }
 
 type Row = {
@@ -103,6 +100,51 @@ type Row = {
   record_id: string;
   payload: string;
 };
+/** A single SELECT avoids Basin's distributed UNION partition failure when a branch is empty.
+ * Repeated metadata is checked before it is reduced to the existing private interpreter shape. */
+export function normalizeHistoryRows(rows: unknown): unknown {
+  if (
+    !Array.isArray(rows) ||
+    rows.length > HISTORY_BATCH_RECORDS + HISTORY_PAGE_SIZE + 1
+  )
+    throw new Error("History response exceeds its budget.");
+  const entries = new Map<string, Row>();
+  const normalized: Row[] = [];
+  const meta = [
+    "observations",
+    "bytes",
+    "first_at",
+    "last_at",
+    "conflicts",
+  ] as const;
+  for (const row of rows as Row[]) {
+    if (!row || typeof row !== "object")
+      throw new Error("Invalid history response.");
+    if (row.scope !== "entry") {
+      normalized.push(row);
+      continue;
+    }
+    const previous = entries.get(row.attempt_id);
+    if (previous && meta.some((k) => previous[k] !== row[k]))
+      throw new Error("Invalid attempt coverage.");
+    if (!previous) {
+      const entry = {
+        ...row,
+        scope: "attempt",
+        record_id: null,
+        payload: null,
+      } as unknown as Row;
+      entries.set(row.attempt_id, entry);
+      normalized.push(entry);
+    }
+    if (row.record_id === null && row.payload === null) continue;
+    if (typeof row.record_id !== "string" || typeof row.payload !== "string")
+      throw new Error("Invalid observation.");
+    normalized.push({ ...row, scope: "observation" });
+  }
+  return normalized;
+}
+
 /** Never forward arbitrary event strings: only defined reflection choices and typed checkpoints. */
 function project(a: AttemptSummary): AttemptSummary {
   const answers = Object.fromEntries(
@@ -202,6 +244,8 @@ export function historyResult(
       Number(e.observations) < 1 ||
       !Number.isSafeInteger(Number(e.bytes)) ||
       Number(e.bytes) < 1 ||
+      !Number.isSafeInteger(Number(e.conflicts)) ||
+      Number(e.conflicts) < 0 ||
       !Number.isFinite(Date.parse(e.first_at)) ||
       !Number.isFinite(Date.parse(e.last_at))
     )
@@ -478,7 +522,11 @@ export async function readUploadedHistory(
     stage = "storage-result";
     if (body?.success !== true) throw new Error("History is unavailable.");
     stage = "projection";
-    return historyResult(participant, window, body.result?.rows);
+    return historyResult(
+      participant,
+      window,
+      normalizeHistoryRows(body.result?.rows),
+    );
   } catch (cause) {
     // Only messages authored by our validator can refine the category. Nothing
     // from an upstream response or private record is logged or returned.

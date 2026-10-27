@@ -72,7 +72,7 @@ cases.push({
   events: Array.from({ length: 6 }, (_, i) =>
     Array.from({ length: 9000 }, (_, j) => budgetEvent(`budget-${i}`, j, "{}")),
   ).flat(),
-  expected: { attempts: 5, continuation: 1 },
+  expected: { attempts: 2, continuation: 1 },
 });
 cases.push({
   query: historyQuery("synthetic-participant", window),
