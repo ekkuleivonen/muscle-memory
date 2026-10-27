@@ -117,6 +117,9 @@ try {
     "ctx",
     "constructor",
     "probe-control",
+    "check",
+    "generation",
+    "authorize",
   ]) {
     assert.equal((await call(method)).status, 400);
   }

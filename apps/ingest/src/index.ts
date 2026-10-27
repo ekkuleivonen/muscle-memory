@@ -17,6 +17,7 @@ import {
   type EventRow,
 } from "../../../packages/domain/ingest";
 import { safeIdentifier } from "../../../packages/domain/capture";
+import { advanceComparisonGeneration } from "./comparison-fence";
 import { comparisonPrivacy } from "./comparison-privacy";
 
 /** The parts of an R2 bucket this Worker uses. */
@@ -200,6 +201,11 @@ async function erase(
       `deleted/${participantId}`,
       JSON.stringify({ requestedAt: new Date().toISOString() }),
     );
+  // Keep the proof until invalidation succeeds, so an interrupted deletion remains retryable.
+  if (env.COMPARISON_PRIVACY_ENABLED === "true") {
+    await advanceComparisonGeneration(env);
+    await env.CONTROL.delete(`comparison-privacy/${participantId}`);
+  }
   // The tombstone refuses uploads from now on, so the proof has no use left.
   await env.CONTROL.delete(`participants/${participantId}`);
   proofs.delete(participantId);

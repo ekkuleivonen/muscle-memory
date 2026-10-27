@@ -1,6 +1,10 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import ingest, { type Env } from "./index";
 import { verifyOwner } from "./owner";
+import {
+  comparisonGeneration,
+  authorizeComparisonGeneration,
+} from "./comparison-fence";
 import { checkComparisonMembers } from "./comparison-privacy";
 export default ingest;
 /** Reachable only through an explicitly installed service binding, never public HTTP. */
@@ -16,9 +20,32 @@ export class ParticipantOwner extends WorkerEntrypoint<Env> {
 
 /** Deliberately separate from the approved ownership entrypoint; no live binding yet. */
 export class ComparisonEligibility extends WorkerEntrypoint<Env> {
+  async generation(): Promise<string | null> {
+    if (this.env.COMPARISON_PRIVACY_ENABLED !== "true")
+      throw new Error("Comparisons unavailable.");
+    try {
+      return await comparisonGeneration(this.env);
+    } catch {
+      throw new Error("Comparisons unavailable.");
+    }
+  }
+  async authorize(generation: unknown): Promise<boolean> {
+    if (this.env.COMPARISON_PRIVACY_ENABLED !== "true")
+      throw new Error("Comparisons unavailable.");
+    try {
+      return await authorizeComparisonGeneration(this.env, generation);
+    } catch {
+      throw new Error("Comparisons unavailable.");
+    }
+  }
+
   async check(members: unknown) {
-    if (this.env.COMPARISON_PRIVACY_ENABLED !== "true") throw new Error("Comparisons unavailable.");
-    try { return await checkComparisonMembers(this.env, members); }
-    catch { throw new Error("Comparisons unavailable."); }
+    if (this.env.COMPARISON_PRIVACY_ENABLED !== "true")
+      throw new Error("Comparisons unavailable.");
+    try {
+      return await checkComparisonMembers(this.env, members);
+    } catch {
+      throw new Error("Comparisons unavailable.");
+    }
   }
 }

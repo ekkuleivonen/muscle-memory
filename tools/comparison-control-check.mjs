@@ -63,6 +63,7 @@ try {
         method: "POST",
         body: JSON.stringify({
           secret,
+          action: "update",
           expectedRevision,
           stealth,
           age: "adult",
@@ -75,10 +76,15 @@ try {
       body: JSON.stringify({ method, members }),
     });
   assert.deepEqual(await (await check()).json(), [null]);
+  assert.equal(await (await check("generation")).json(), null);
   const created = await update(null);
   assert.equal(created.status, 200);
-  const { revision } = await created.json();
+  const {
+    value: { revision },
+  } = await created.json();
   assert.deepEqual(await (await check()).json(), [revision]);
+  const firstGeneration = await (await check("generation")).json();
+  assert.equal(await (await check("authorize", firstGeneration)).json(), true);
   // R2's real conditional-put behavior, not just an in-memory fake.
   const race = await Promise.all([
     update(revision, true),
@@ -87,6 +93,7 @@ try {
   assert.deepEqual(race.map((r) => r.status).sort(), [200, 409]);
   assert.deepEqual(await (await check()).json(), [null]);
   assert.equal((await update(revision)).status, 409);
+  assert.equal(await (await check("authorize", firstGeneration)).json(), false);
   for (const method of [
     "get",
     "put",
@@ -106,7 +113,7 @@ try {
   ])
     assert.equal((await check("check", members)).status, 503);
   await bucket.put(`deleted/${id}`, "{}");
-  assert.equal((await update(null)).status, 410);
+  assert.equal((await update(null)).status, 401);
   assert.deepEqual(await (await check()).json(), [null]);
   console.log(
     "Synthetic comparison control: R2 CAS, stale writes, tombstones, method/path bounds passed.",

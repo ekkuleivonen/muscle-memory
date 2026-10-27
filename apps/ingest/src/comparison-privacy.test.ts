@@ -42,7 +42,14 @@ async function fixture() {
     expectedRevision: unknown = null,
     stealth = false,
     age = "adult",
-  ) => comparisonPrivacy(env, id, { secret, expectedRevision, stealth, age });
+  ) =>
+    comparisonPrivacy(env, id, {
+      secret,
+      action: "update",
+      expectedRevision,
+      stealth,
+      age,
+    });
   return { env, objects, set, update };
 }
 test("privacy requires original secret; disabled public path and arbitrary methods/paths stay closed", async () => {
@@ -50,6 +57,7 @@ test("privacy requires original secret; disabled public path and arbitrary metho
   for (const bad of ["", await sha256Hex(secret), "x".repeat(257)]) {
     const r = await comparisonPrivacy(env, id, {
       secret: bad,
+      action: "update",
       expectedRevision: null,
       stealth: false,
       age: "adult",
@@ -81,10 +89,10 @@ test("conditional writes reject stale and racing requests, telemetry cannot rest
   const { env, update, objects } = await fixture();
   const first = await update();
   assert.equal(first.status, 200);
-  const revision = first.body.revision;
+  const revision = (first.body.value as { revision: string }).revision;
   const raced = await Promise.all([
     update(revision, true),
-    update(revision, false),
+    update(revision, true),
   ]);
   assert.deepEqual(raced.map((r) => r.status).sort(), [200, 409]);
   assert.deepEqual(await checkComparisonMembers(env, [id]), [null]);
@@ -95,12 +103,18 @@ test("missing, unknown, minors, stealth and deletion fail closed, including dele
   const { env, update, set, objects } = await fixture();
   assert.deepEqual(await checkComparisonMembers(env, [id]), [null]);
   let r = await update();
-  assert.deepEqual(await checkComparisonMembers(env, [id]), [r.body.revision]);
+  assert.deepEqual(await checkComparisonMembers(env, [id]), [
+    (r.body.value as { revision: string }).revision,
+  ]);
   for (const age of ["unknown", "non-adult"]) {
-    r = await update(r.body.revision, false, age);
+    r = await update(
+      (r.body.value as { revision: string }).revision,
+      false,
+      age,
+    );
     assert.deepEqual(await checkComparisonMembers(env, [id]), [null]);
   }
-  r = await update(r.body.revision);
+  r = await update((r.body.value as { revision: string }).revision);
   const get = env.CONTROL.get;
   env.CONTROL.get = async (key) => {
     const result = await get(key);
@@ -108,7 +122,10 @@ test("missing, unknown, minors, stealth and deletion fail closed, including dele
     return result;
   };
   assert.deepEqual(await checkComparisonMembers(env, [id]), [null]);
-  assert.equal((await update(r.body.revision)).status, 410);
+  assert.equal(
+    (await update((r.body.value as { revision: string }).revision)).status,
+    401,
+  );
   objects.delete(`participants/${id}`);
   assert.deepEqual(await checkComparisonMembers(env, [id]), [null]);
 });
