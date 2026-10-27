@@ -2,11 +2,15 @@
 import Link from "next/link";
 import React, { useCallback, useEffect, useState } from "react";
 import { openPracticeStore } from "../../../../packages/browser/practice-store";
+import { repeatHistory } from "../../../../packages/developer-profile/longitudinal";
 import { localHistory } from "../../../../packages/developer-profile/history";
 import type { AttemptSummary } from "../../../../packages/developer-profile/derive";
 import {
   GATED,
   PROFILE_HISTORY_ENABLED,
+  REPEAT_METRICS,
+  REPEAT_MIN_ATTEMPTS,
+  REPEAT_WINDOW_DAYS,
   METRICS,
   METRIC_VERSION,
   SECTIONS,
@@ -37,7 +41,7 @@ const format = (id: MetricId, n: number) =>
         ? "passed"
         : "did not pass"
       : `${Number.isInteger(n) ? n : n.toFixed(1)}`;
-function attemptAnchor(a: AttemptSummary) {
+function attemptAnchor(a: Pick<AttemptSummary, "attempt" | "revision">) {
   return `attempt-${a.attempt}-${a.revision.slice(7)}`;
 }
 function revealAttempt() {
@@ -318,6 +322,7 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
                 ))}
                 {section === "Reflection / growth" && (
                   <>
+                    <RepeatHistory attempts={attempts} until={snapshot.at} />
                     <h3>Optional reflections</h3>
                     <p className="t-dim">
                       Retrospective answers from successful completers only.
@@ -618,5 +623,100 @@ function Attempt({ attempt: a }: { attempt: AttemptSummary }) {
         ))}
       </ol>
     </details>
+  );
+}
+
+/** Safe descriptive repeat history; fresh-task growth remains evidence-gated separately. */
+export function RepeatHistory({
+  attempts,
+  until,
+}: {
+  attempts: AttemptSummary[];
+  until: string;
+}) {
+  const history = repeatHistory(attempts, until);
+  return (
+    <section aria-label="Same-task repeat history">
+      <h3>Same-task repeat history</h3>
+      <p className="t-dim">
+        Two adjacent {REPEAT_WINDOW_DAYS}-day windows, by attempt start (UTC):{" "}
+        {history.earlierFrom.slice(0, 10)} → {history.recentFrom.slice(0, 10)} →{" "}
+        {history.until.slice(0, 10)}. Completed observed repeats only, grouped
+        by exact task revision and recorded runtime/editor tools. External
+        assistance remains unknown.
+      </p>
+      <p className="t-dim">
+        At least {REPEAT_MIN_ATTEMPTS} eligible attempts per window to display
+        each median; this is a descriptive display rule, not statistical
+        confidence. {history.excluded} retained attempts are outside these
+        conditions/windows. This does not measure fresh-task skill or explain a
+        change.
+      </p>
+      {!history.groups.length && (
+        <p>
+          Matched repeated-task history is unavailable in the retained evidence.
+          It needs older uploaded history through an approved private reader, or
+          approved local summaries, plus repeats under the same recorded
+          conditions. Playing more cannot reconstruct already-compacted history.
+        </p>
+      )}
+      {history.groups.slice(0, 10).map((g, index) => (
+        <details
+          className="stats-metric"
+          key={`${g.challenge}:${g.revision}:${index}`}
+        >
+          <summary>
+            {g.challenge} · {g.earlier} earlier / {g.recent} recent completed
+            repeats
+          </summary>
+          <p className="t-dim">Revision {g.revision}</p>
+          {g.conditions.map((c) => (
+            <p className="t-dim" key={c}>
+              {c}
+            </p>
+          ))}
+          {REPEAT_METRICS.map((id) => (
+            <p key={id}>
+              {METRICS[id].label}:{" "}
+              {g.metrics[id].earlier.median === null
+                ? "unavailable"
+                : format(id, g.metrics[id].earlier.median!)}{" "}
+              →{" "}
+              {g.metrics[id].recent.median === null
+                ? "unavailable"
+                : format(id, g.metrics[id].recent.median!)}{" "}
+              · eligible samples {g.metrics[id].earlier.sample} /{" "}
+              {g.metrics[id].recent.sample}.{" "}
+              <span className="t-dim">{METRICS[id].definition}</span>
+            </p>
+          ))}
+          <details>
+            <summary>Supporting attempts / {g.evidence.length}</summary>
+            {g.evidence.map((a) => (
+              <p key={a.attempt}>
+                <a
+                  className="t-cmd"
+                  href={`#${attemptAnchor(a)}`}
+                  onClick={() => queueMicrotask(revealAttempt)}
+                >
+                  {a.window} · {a.started.slice(0, 10)} · {g.challenge}
+                </a>
+              </p>
+            ))}
+          </details>
+          <p className="t-dim">
+            Supporting attempt timelines show the recorded events and
+            missingness. Completion-only selection and familiar-task practice
+            limit interpretation; no population baseline.
+          </p>
+        </details>
+      ))}
+      {history.groups.length > 10 && (
+        <p className="t-dim">
+          Showing 10 of {history.groups.length} condition groups. Narrow the
+          language/attempt filter for this view.
+        </p>
+      )}
+    </section>
   );
 }

@@ -25,3 +25,7 @@ Automated checks: `npm test`, `npm run typecheck`, `npm run build`, `npm run bui
 Review performed locally: traced every displayed metric to its definition/source; checked unique run IDs, static rules in first-submit success, source clock boundaries, no raw code/output in summaries, no public private-history path, stealth suppression, reset notification ordering and the storage-disclosure gate. No independent human review has been claimed. The draft PR remains for review; merging/deployment are not authorized.
 
 Full metric/data-source inventory, limits and release decisions: [developer-profile.md](../developer-profile.md).
+
+Follow-up proposal and unaffected longitudinal work: [minimal private-history options and exact owner decision](../eng-340-longitudinal-proposal.md). The same-task repeat-history reducer now has synthetic tests for exact revisions/conditions, windows, missing metrics, completed-repeat selection, conflicting summaries, and participant isolation. Its display is descriptive, with no fresh-task ability/growth claim; no new history source or retention is enabled.
+
+[Longitudinal availability on mobile](longitudinal-mobile-availability.png) shows the specific missing-history requirement and descriptive window rules without a fabricated trend. Latest follow-up verification: **238 tests passed**, workspace typechecks passed; Cloudflare build includes the Next production build. No private-history endpoint, new permission, disclosure edit or retention flag was enabled.

@@ -222,3 +222,13 @@ export const GATED = [
     "Needs enough fresh tasks matched by revision, language/runtime and tools, with repeats separate. An easier task mix cannot show increased skill.",
   ],
 ] as const;
+
+/** Descriptive own-history windows, never a human cohort or an ability threshold. */
+export const REPEAT_WINDOW_DAYS = 28;
+export const REPEAT_MIN_ATTEMPTS = 2;
+export const REPEAT_METRICS = [
+  "elapsed",
+  "submissions",
+  "inserted",
+  "deleted",
+] as const satisfies readonly MetricId[];

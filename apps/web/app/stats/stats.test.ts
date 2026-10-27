@@ -34,3 +34,17 @@ test("loading renders no zero placeholders for private metrics before mount", ()
     /0 challenges completed|median \/ attempt|0 retained/,
   );
 });
+
+test("repeat-history availability keeps longitudinal delivery explicit without inventing growth", async () => {
+  const { RepeatHistory } = await import("./stats");
+  const html = renderToStaticMarkup(
+    createElement(RepeatHistory, {
+      attempts: [],
+      until: "2026-10-27T00:00:00Z",
+    }),
+  );
+  assert.match(html, /approved private reader/);
+  assert.match(html, /Playing more cannot reconstruct/);
+  assert.match(html, /External assistance remains unknown/);
+  assert.match(html, /not statistical confidence/);
+});
