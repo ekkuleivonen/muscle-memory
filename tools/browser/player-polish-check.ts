@@ -16,7 +16,13 @@ const output = process.env.POLISH_ARTIFACTS ?? "/tmp/mm-eng306";
 await mkdir(output, { recursive: true });
 const receipts: object[] = [];
 let uploads = 0;
-const correct = readChallenge("JS-002").private.solution;
+const source = readChallenge("JS-002");
+const correct = source.private.solution;
+// Passes the public examples and fails every hidden case (ENG-375: Submit needs passing examples).
+const examplesOnly = `export function countWords(text) { const examples = ${JSON.stringify(
+  source.revision.cases.filter((c) => !c.hidden).map((c) => [c.input, c.expected]),
+)}; return examples.find(([input]) => input === text)?.[1] ?? -987654321; }`;
+const EXAMPLES_PASSED = /Examples: \d+ passed, 0 failed/;
 
 async function ready(page: Page) {
   // Phones get the desktop-first notice; this check solves on them anyway (ENG-386).
@@ -29,11 +35,20 @@ async function ready(page: Page) {
     .waitFor();
   if (await solveHere.isVisible()) await solveHere.click();
   await page.locator(".practice-editor:not([hidden]) .cm-content").waitFor();
+  // The runtime is ready when Run examples is; Submit waits for passing examples.
+  await page.getByRole("button", { name: /^Run examples/ }).and(page.locator(":enabled")).waitFor();
+}
+
+/** Ctrl/Cmd+Enter runs the public examples (never submits); waits for them all to pass. */
+async function runExamples(page: Page) {
+  await page.locator(".practice-editor .cm-content").focus();
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+Enter" : "Control+Enter");
   await page.waitForFunction(
-    () =>
-      !document.querySelector<HTMLButtonElement>(
-        ".practice-controls button:last-child",
-      )?.disabled,
+    (pattern) =>
+      new RegExp(pattern).test(
+        document.querySelector(".practice-results > .pane-body > [role=status]")?.textContent ?? "",
+      ),
+    EXAMPLES_PASSED.source,
   );
 }
 
@@ -330,7 +345,11 @@ try {
         await page.keyboard.press("2");
         assert.equal(await editor.evaluate((n) => n === document.activeElement), true);
       }
-      await page.getByRole("button", { name: /^Submit/ }).click();
+      const submitButton = page.getByRole("button", { name: "Submit", exact: true });
+      await editor.fill(examplesOnly);
+      assert.equal(await submitButton.isDisabled(), true, "Submit before examples");
+      await runExamples(page);
+      await submitButton.click();
       await page
         .locator(".check-headline")
         .filter({ hasText: /failed/ })
@@ -349,7 +368,11 @@ try {
       const safeHiddenRows = await page
         .locator(".hidden-checks .ci-failing > li")
         .count();
-      assert.equal(safeHiddenRows, 12);
+      // Examples-only code fails every hidden case, and only hidden ones.
+      assert.equal(
+        safeHiddenRows,
+        source.revision.cases.filter((c) => c.hidden).length,
+      );
       assert.equal(
         await page.locator(".hidden-checks .ci-failing > li:visible").count(),
         0,
@@ -358,7 +381,8 @@ try {
         await page
           .locator(".check-feedback > .ci-failing > li:visible")
           .count(),
-        3,
+        0,
+        "public examples already passed before Submit",
       );
       await page.screenshot({
         path: `${output}/${engine}-${width}-compact-failure.png`,
@@ -385,19 +409,20 @@ try {
       assert.equal(await page.locator(".practice-next").count(), 0);
       assert.equal(
         await page
-          .getByText("Last run output — code edited since", { exact: true })
+          .getByText("Last output · code edited since", { exact: true })
           .count(),
         1,
       );
       await editor.fill(correct);
-      await editor.press(
-        process.platform === "darwin" ? "Meta+Enter" : "Control+Enter",
-      );
+      assert.equal(await submitButton.isDisabled(), true, "edit relocks Submit");
+      await runExamples(page);
+      await submitButton.click();
       await page
-        .getByRole("heading", { name: "Next challenge", exact: true })
+        .getByRole("link", { name: "Next challenge →", exact: true })
         .waitFor();
       if (mobile) await move("Feedback");
-      assert.equal(await page.getByText("Done.", { exact: true }).count(), 1);
+      // ENG-375: output stays, no Done banner.
+      assert.equal(await page.getByText("Done.", { exact: true }).count(), 0);
       const next = page.getByRole("link", {
         name: "Next challenge →",
         exact: true,

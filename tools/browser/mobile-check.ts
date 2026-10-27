@@ -2,12 +2,14 @@
  * MOBILE_ORIGIN=http://localhost:3060 MOBILE_BROWSER=chromium|webkit node --import tsx tools/browser/mobile-check.ts
  * Device emulation (viewport, touch, coarse pointer), not a study on real devices. Uploads and
  * every other request off the origin are stopped in the browser and counted, never sent.
+ * Needs the managed catalog copy (`npm run catalog:pull`): Stats is checked after a synthetic solve.
  */
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { chromium, webkit, type Page } from "playwright";
 import { LEGAL_VERSION } from "../../apps/web/lib/legal";
 import { encodeOutcome } from "../../apps/web/lib/outcome";
+import { readChallenge } from "../../packages/content/source";
 import catalog from "../../content/catalog.json" with { type: "json" };
 
 const origin = process.env.MOBILE_ORIGIN ?? "http://localhost:3060";
@@ -29,7 +31,16 @@ const card = encodeOutcome({
   c: "synthetic01",
 });
 
-const DEVICES = [
+const solution = readChallenge(KEY).private.solution;
+type Device = {
+  name: string;
+  width: number;
+  height: number;
+  touch: boolean;
+  phone: boolean;
+};
+
+const DEVICES: Device[] = [
   { name: "phone-320", width: 320, height: 640, touch: true, phone: true },
   { name: "phone-390", width: 390, height: 844, touch: true, phone: true },
   {
@@ -63,28 +74,29 @@ async function noOverflow(page: Page, where: string) {
   );
 }
 
-try {
-  for (const device of DEVICES) {
-    const context = await browser.newContext({
-      viewport: { width: device.width, height: device.height },
-      hasTouch: device.touch,
-      isMobile: device.touch,
-    });
-    await context.route(
-      (url) => url.origin !== origin && url.protocol.startsWith("http"),
-      (route) => {
-        blocked++;
-        return route.abort();
-      },
-    );
-    await context.route("**/ingest/**", (route) => {
+/** A fresh synthetic participant: Terms accepted, stealth or not; nothing leaves the browser. */
+async function open(device: Device, stealth: boolean) {
+  const context = await browser.newContext({
+    viewport: { width: device.width, height: device.height },
+    hasTouch: device.touch,
+    isMobile: device.touch,
+  });
+  await context.route(
+    (url) => url.origin !== origin && url.protocol.startsWith("http"),
+    (route) => {
       blocked++;
-      return route.fulfill({ status: 410, body: "isolated-synthetic-qa" });
-    });
-    await context.addCookies([
-      { name: "mm_consent", value: LEGAL_VERSION, url: origin },
-    ]);
-    await context.addInitScript((version) => {
+      return route.abort();
+    },
+  );
+  await context.route("**/ingest/**", (route) => {
+    blocked++;
+    return route.fulfill({ status: 410, body: "isolated-synthetic-qa" });
+  });
+  await context.addCookies([
+    { name: "mm_consent", value: LEGAL_VERSION, url: origin },
+  ]);
+  await context.addInitScript(
+    ([version, stealth]) => {
       if (location.origin === "null") return;
       localStorage.setItem(
         "muscle-memory.profile",
@@ -92,19 +104,27 @@ try {
           version: "2",
           createdAt: new Date().toISOString(),
           accepted: { version, at: new Date().toISOString() },
-          stealth: true,
+          stealth,
           profile: {},
         }),
       );
-    }, LEGAL_VERSION);
-    const page = await context.newPage();
-    page.setDefaultTimeout(60000);
-    const errors: string[] = [];
-    page.on("pageerror", (e) => errors.push(e.message));
-    const shot = (name: string) =>
-      page.screenshot({
-        path: `${output}/${engine}-${device.name}-${name}.png`,
-      });
+    },
+    [LEGAL_VERSION, stealth] as const,
+  );
+  const page = await context.newPage();
+  page.setDefaultTimeout(60000);
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  const shot = (name: string) =>
+    page.screenshot({
+      path: `${output}/${engine}-${device.name}-${name}.png`,
+    });
+  return { context, page, errors, shot };
+}
+
+try {
+  for (const device of DEVICES) {
+    const { context, page, errors, shot } = await open(device, true);
     const narrowBar = device.width <= 860;
 
     // A shared result shows its challenge and leads to it.
@@ -254,6 +274,109 @@ try {
     assert.deepEqual(errors, [], `${device.name} page errors`);
     results.push({ device: device.name, ok: true });
     await context.close();
+  }
+
+  // Stats on phones, beyond stealth: empty, a report, uploads unavailable, storage unreadable.
+  for (const device of DEVICES.filter((d) => d.phone)) {
+    const { context, page, errors, shot } = await open(device, false);
+    let history: "absent" | "down" = "absent";
+    // Uploaded history is synthetic: an empty page, or the service failing.
+    await context.route("**/api/private-history", async (route) => {
+      if (history === "down") return route.fulfill({ status: 503, body: "" });
+      const { window } = route.request().postDataJSON();
+      return route.fulfill({
+        json: {
+          attempts: [],
+          unavailable: [],
+          next: null,
+          readAt: new Date().toISOString(),
+          window,
+          state: "absent",
+        },
+      });
+    });
+    const heading = page.locator(".stats h1");
+    const status = page.locator(".report-status");
+    const stats = async (title: string, name: string) => {
+      await page.goto(`${origin}/stats`);
+      await heading.filter({ hasText: title }).waitFor();
+      await page.waitForLoadState("networkidle");
+      await noOverflow(page, `${device.name} /stats ${name}`);
+      await shot(`stats-${name}`);
+    };
+
+    await stats("Your portrait starts with one challenge.", "empty");
+
+    // A synthetic solve on the phone, so the report has something to say.
+    await page.goto(`${origin}/challenges/${KEY}`);
+    await page.getByRole("button", { name: "Solve here anyway" }).click();
+    const editor = page.locator(".practice-editor .cm-content");
+    await editor.fill(solution);
+    await page
+      .getByRole("button", { name: /^Run examples/ })
+      .and(page.locator(":enabled"))
+      .click();
+    const submit = page.getByRole("button", { name: "Submit", exact: true });
+    await submit.and(page.locator(":enabled")).waitFor();
+    await submit.click();
+    await page.getByRole("link", { name: "Next challenge →" }).waitFor();
+
+    await stats("How you code", "report");
+    assert.equal(await status.count(), 0, `${device.name} report status`);
+    history = "down";
+    await stats("How you code", "history-unavailable");
+    await status.filter({ hasText: "couldn't be added right now" }).waitFor();
+    assert.deepEqual(errors, [], `${device.name} stats page errors`);
+    await context.close();
+
+    // Storage that can't be read says so and changes nothing: practice records (IndexedDB)
+    // unreadable leaves a partial report; an unreadable profile, the error page.
+    for (const broken of ["records", "profile"] as const) {
+      const run = await open(device, false);
+      // No named functions inside: tsx would wrap them in a helper the page doesn't have.
+      await run.page.addInitScript((broken) => {
+        if (broken === "records")
+          IDBFactory.prototype.open = () => {
+            throw new DOMException(
+              "Synthetic: storage blocked",
+              "SecurityError",
+            );
+          };
+        else {
+          const getItem = Storage.prototype.getItem;
+          Storage.prototype.getItem = function (key: string) {
+            if (key === "muscle-memory.profile")
+              throw new DOMException(
+                "Synthetic: storage blocked",
+                "SecurityError",
+              );
+            return getItem.call(this, key);
+          };
+        }
+      }, broken);
+      await run.page.goto(`${origin}/stats`);
+      await run.page
+        .getByText(
+          broken === "records"
+            ? "Some saved practice couldn't be read."
+            : "Your practice couldn't be read on this browser.",
+        )
+        .waitFor();
+      await noOverflow(run.page, `${device.name} /stats ${broken} error`);
+      await run.shot(`stats-error-${broken}`);
+      await run.context.close();
+    }
+    results.push({
+      device: device.name,
+      stats: [
+        "stealth",
+        "empty",
+        "report",
+        "history-unavailable",
+        "records-unreadable",
+        "profile-unreadable",
+      ],
+    });
   }
 } finally {
   await browser.close();
