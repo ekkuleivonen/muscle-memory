@@ -12,7 +12,7 @@ import sys
 import datafusion
 import pyarrow as pa
 
-fields = ["record_id", "type", "participant_id", "attempt_id", "challenge", "challenge_revision", "occurred_at", "kind", "payload"]
+fields = ["received_at","record_id", "type", "participant_id", "attempt_id", "challenge", "challenge_revision", "occurred_at", "kind", "payload"]
 
 
 def get(doc, key):

@@ -1,4 +1,5 @@
 /** Trusted server reducer. Member rows and eligibility revisions must never reach an HTTP response. */
+import type { CohortWindow } from "./cohort-window";
 import { safeIdentifier } from "../domain/capture";
 import { cohortQuery, cohortResult, type CohortRead } from "./cohort";
 export const MAX_COHORT_MEMBERS = 100;
@@ -7,15 +8,21 @@ export interface EligibilityChecker {
 }
 
 /** Fixed revision query with internal membership retained for current CONTROL checks. */
-export function cohortMemberQuery(challenge: string, revision: string): string {
-  const query = cohortQuery(challenge, revision);
+export function cohortMemberQuery(
+  challenge: string,
+  revision: string,
+  window: CohortWindow,
+): string {
+  const query = cohortQuery(challenge, revision, window);
   return (
     query.slice(
       0,
-      query.indexOf("\nSELECT runtime, diagnostics, practice, completed"),
+      query.indexOf(
+        "\nSELECT runtime, editor, diagnostics, practice, completed",
+      ),
     ) +
     `
-SELECT participant_id, runtime, diagnostics, practice, completed, first_pass, submissions, 1 AS browsers
+SELECT participant_id, runtime, editor, diagnostics, practice, completed, first_pass, submissions, 1 AS browsers
 FROM one_per_browser WHERE pick = 1
 LIMIT 1001`
   );

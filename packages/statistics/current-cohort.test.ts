@@ -2,10 +2,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { currentCohort, cohortMemberQuery } from "./current-cohort";
 import { syntheticRevision } from "../developer-profile/fixtures";
+import { syntheticWindow } from "./cohort-fixtures";
 const revision = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const rows = Array.from({ length: 20 }, (_, i) => ({
   participant_id: `synthetic-${i}`,
   runtime: '{"engine":"synthetic"}',
+  editor: '{"name":"CodeMirror","features":["syntax-highlighting"]}',
   diagnostics: 0,
   practice: "first",
   completed: 1,
@@ -61,10 +63,17 @@ test("control failures, malformed control replies, duplicate browsers and budget
 });
 test("only exact registered-revision-shaped query inputs, no arbitrary SQL", () => {
   assert.match(
-    cohortMemberQuery("JS-001", syntheticRevision),
+    cohortMemberQuery("JS-001", syntheticRevision, syntheticWindow),
     /SELECT participant_id, runtime/,
   );
-  assert.match(cohortMemberQuery("JS-001", syntheticRevision), /LIMIT 1001$/);
-  assert.throws(() => cohortMemberQuery("' OR 1=1", syntheticRevision));
-  assert.throws(() => cohortMemberQuery("JS-001", "../../control"));
+  assert.match(
+    cohortMemberQuery("JS-001", syntheticRevision, syntheticWindow),
+    /LIMIT 1001$/,
+  );
+  assert.throws(() =>
+    cohortMemberQuery("' OR 1=1", syntheticRevision, syntheticWindow),
+  );
+  assert.throws(() =>
+    cohortMemberQuery("JS-001", "../../control", syntheticWindow),
+  );
 });
