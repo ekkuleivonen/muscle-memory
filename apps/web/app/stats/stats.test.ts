@@ -69,3 +69,46 @@ test("narrow screens get one comparison card per challenge with every model outc
   assert.match(cards, /<dt>synthetic\/model · high<\/dt><dd><span class="report-result is-solved">/);
   assert.match(cards, /<dt>People<\/dt><dd class="t-dim">not compared yet<\/dd>/);
 });
+
+test("a matched model receipt renders real observed outcome, incompatible context withholds it", async () => {
+  const { ModelReceiptView } = await import("./model-comparisons");
+  const r = {
+    model: "synthetic/model",
+    reportedModels: ["synthetic/model-2026"],
+    reasoning: "high",
+    defaultReasoning: "high",
+    finalCodeLength: null,
+    harness: "harness-1",
+    try: 1,
+    state: "completed" as const,
+    submissions: 2,
+    runtime: { id: "synthetic", version: "1" },
+    features: [],
+    budget: { turns: 50, submissions: 10 },
+  };
+  const conditions = [
+    'Runtime: {"id":"synthetic","version":"1"}',
+    "Editor: codemirror-6; features: syntax-highlighting",
+  ];
+  const matched = renderToStaticMarkup(
+    createElement(ModelReceiptView, { receipt: r, conditions }),
+  );
+  assert.match(matched, /Observed outcome: completed/);
+  assert.match(matched, /2 submissions/);
+  assert.match(matched, /synthetic\/model-2026/);
+  const mismatch = renderToStaticMarkup(
+    createElement(ModelReceiptView, { receipt: r, conditions: [] }),
+  );
+  assert.doesNotMatch(mismatch, /Observed outcome: completed/);
+  assert.match(mismatch, /Outcome withheld/);
+});
+
+test("repeat history in the measurements appendix never invents growth", async () => {
+  const { RepeatHistory } = await import("./appendix");
+  const html = renderToStaticMarkup(
+    createElement(RepeatHistory, { attempts: [], until: "2026-10-27T00:00:00Z" }),
+  );
+  assert.match(html, /playing more cannot\s+reconstruct/);
+  assert.match(html, /External\s+assistance remains unknown/);
+  assert.match(html, /not statistical confidence/);
+});
