@@ -5,6 +5,7 @@ export const COMMANDS = {
   profile: "your answers: experience, work, languages, AI use, editor",
   privacy: "go stealth, Terms and Privacy Notice",
   export: "download everything here as a file, to keep or move",
+  access: "ask us for a copy of what our servers hold",
   import: "restore a downloaded file into this browser",
   logout: "sign out on this device",
   reset: "start over: no progress or saved practice",
@@ -15,7 +16,7 @@ export type CommandName = keyof typeof COMMANDS;
 
 /** How the list groups them: what you keep here, then the account itself. */
 export const GROUPS: { label: string; commands: CommandName[] }[] = [
-  { label: "your data", commands: ["profile", "privacy", "export", "import"] },
+  { label: "your data", commands: ["profile", "privacy", "export", "access", "import"] },
   { label: "account", commands: ["logout", "reset", "delete"] },
 ];
 

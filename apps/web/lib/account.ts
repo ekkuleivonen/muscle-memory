@@ -3,7 +3,7 @@
  * cookie that stands in for a session. Browser-only; the server sees just the cookie.
  */
 import { openPracticeStore } from "../../../packages/browser/practice-store";
-import { eraseUploaded } from "./ingest";
+import { eraseUploaded, requestAccess } from "./ingest";
 import { PROGRESS_CHANGE, PROGRESS_KEY } from "./progress";
 import type { LanguageId } from "./languages";
 import { LEGAL_VERSION, type Acceptance } from "./legal";
@@ -120,6 +120,19 @@ export async function resetProgress(identity = false) {
   const store = await openPracticeStore();
   try {
     await store.clear(identity);
+  } finally {
+    store.close();
+  }
+}
+
+/**
+ * Asks for a copy of what this browser uploaded (Settings → access): the reference to email
+ * us, or null when the server holds nothing from it.
+ */
+export async function requestUploadedCopy(): Promise<string | null> {
+  const store = await openPracticeStore();
+  try {
+    return await requestAccess(store);
   } finally {
     store.close();
   }

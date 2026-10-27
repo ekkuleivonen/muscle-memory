@@ -10,6 +10,7 @@ from pyiceberg.catalog.sql import SqlCatalog
 from pyiceberg.schema import Schema
 from pyiceberg.types import DoubleType, LongType, NestedField, StringType
 
+import access
 import erase
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -31,6 +32,8 @@ def rows(participant: str, count: int, table_schema: Schema) -> pa.Table:
     data = {f.name: [None] * count for f in table_schema.fields}
     data.update(
         record_id=[f"{participant}-r{i}" for i in range(count)],
+        source_id=["practice-a"] * count,
+        sequence=list(range(count, 0, -1)),
         kind=["observation"] * count,
         participant_id=[participant] * count,
         received_at=["2026-10-25T10:00:00Z"] * count,
@@ -87,6 +90,24 @@ class ErasureTest(unittest.TestCase):
             # A later run finds nothing more to remove, and records nothing.
             again = erase.erase(table, ids)
             self.assertEqual(sum(again.values()), 0)
+
+
+class AccessTest(unittest.TestCase):
+    def test_a_request_gets_that_participants_rows_once_each_in_stream_order(self):
+        with tempfile.TemporaryDirectory() as warehouse:
+            catalog = SqlCatalog(
+                "local", uri=f"sqlite:///{warehouse}/catalog.db", warehouse=f"file://{warehouse}"
+            )
+            catalog.create_namespace("default")
+            s = schema()
+            table = catalog.create_table("default.events", schema=s)
+            table.append(rows("p-asks", 3, s))
+            table.append(rows("p-asks", 3, s))  # a retried upload, delivered twice
+            table.append(rows("p-other", 2, s))
+
+            found = access.rows(table, "p-asks")
+            self.assertEqual([r["record_id"] for r in found], ["p-asks-r2", "p-asks-r1", "p-asks-r0"])
+            self.assertEqual({r["participant_id"] for r in found}, {"p-asks"})
 
 
 if __name__ == "__main__":
