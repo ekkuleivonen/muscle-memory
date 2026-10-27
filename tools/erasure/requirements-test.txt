@@ -1,3 +1,3 @@
 -r requirements.txt
-pyiceberg[pyarrow,sql-sqlite]==0.12.0
+pyiceberg[pyarrow,pyiceberg-core,sql-sqlite]==0.12.0
 sqlalchemy==2.1.6

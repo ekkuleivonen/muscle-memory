@@ -11,8 +11,12 @@ import type { Claimed } from "./ledger";
 /** An OpenRouter model id, such as anthropic/claude-opus-5.5 or a/b:free. */
 export const MODEL_ID = /^~?[a-z0-9][a-z0-9._-]*\/[a-zA-Z0-9][a-zA-Z0-9._-]*(?::[a-z0-9-]+)?$/;
 
-/** Tries per target and live revision: each runs this many times, never more. */
-export const TRIES = 3;
+/**
+ * Tries per target and live revision: each runs this many times, never more. One for now
+ * (decided 27 October 2026, for cost). Raising it later only adds the extra tries: Go never
+ * redoes a finished one.
+ */
+export const TRIES = 1;
 
 /** Reasoning efforts as OpenRouter names them, and `default` for leaving it to the model. */
 export const EFFORTS = ["default", "none", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
@@ -80,4 +84,19 @@ export function checkRunRecords(records: unknown, slot: Claimed): StoredRecord[]
       throw new Error(`${record.recordId} is not this run's.`);
   }
   return records as StoredRecord[];
+}
+
+/**
+ * What a run's responses reported costing (OpenRouter's `usage.cost`, USD), read from its own
+ * records; null when none reported a cost.
+ */
+export function runCost(records: readonly StoredRecord[]): number | null {
+  let total: number | null = null;
+  for (const record of records) {
+    if (record.kind !== "observation" || !record.payload.includes('"model.response"')) continue;
+    const value = JSON.parse(record.payload) as { type?: string; data?: { usage?: { cost?: unknown } } };
+    const cost = value.type === "model.response" ? value.data?.usage?.cost : undefined;
+    if (typeof cost === "number" && Number.isFinite(cost)) total = (total ?? 0) + cost;
+  }
+  return total;
 }

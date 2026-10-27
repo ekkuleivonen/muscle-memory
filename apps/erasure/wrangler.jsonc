@@ -1,0 +1,33 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  // Erases deleted participants' rows from the events table, daily, inside Cloudflare
+  // (docs/telemetry.md#erasure). No route and no public URL: only the cron runs it.
+  "name": "muscle-memory-erasure",
+  "main": "src/index.ts",
+  "workers_dev": false,
+  "preview_urls": false,
+  "compatibility_date": "2026-10-23",
+  "triggers": { "crons": ["17 3 * * *"] },
+  "r2_buckets": [{ "binding": "CONTROL", "bucket_name": "muscle-memory-control" }],
+  // The Python job (tools/erasure): PyIceberg needs only the catalog token, since R2 Data
+  // Catalog vends the storage credentials. The token is the secret CATALOG_TOKEN.
+  "vars": {
+    "CATALOG_URI": "https://catalog.cloudflarestorage.com/166fd3dff06a9c3f1aef172a25db7ace/muscle-memory-events",
+    "WAREHOUSE": "166fd3dff06a9c3f1aef172a25db7ace_muscle-memory-events",
+    "EVENTS_TABLE": "default.events",
+  },
+  // The "durable_object" scheduling policy (the only one this account may use): the image and
+  // the instance size are picked when EraseJob starts the container (src/index.ts).
+  "containers": [
+    {
+      "class_name": "EraseJob",
+      "scheduling_policy": "durable_object",
+      "images": {
+        "job": { "dockerfile": "../../tools/erasure/Dockerfile", "build_context": "../../tools/erasure" },
+      },
+    },
+  ],
+  "durable_objects": { "bindings": [{ "name": "JOB", "class_name": "EraseJob" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["EraseJob"] }],
+  "observability": { "enabled": true },
+}

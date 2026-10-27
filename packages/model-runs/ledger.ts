@@ -1,7 +1,7 @@
 /**
- * The run ledger in D1 (migrations/catalog/0002_model_runs.sql, 0003_model_run_targets.sql):
- * which runs exist, so nothing runs twice. The roster is a list of targets (a model at a
- * reasoning effort); a slot is a revision, a model, a harness version, a condition and a try.
+ * The run ledger in D1 (migrations/catalog/0002…0004): which runs exist, so nothing runs
+ * twice. The model list holds the models covered; the roster, which of their reasoning levels
+ * run (targets); a slot is a revision, a model, a harness version, a condition and a try.
  * `sync` makes the queue exactly what the targets still need on the live revisions; workers
  * claim slots one at a time, first tries first, so coverage grows evenly.
  */
@@ -44,12 +44,30 @@ export function targets(db: Sql): Promise<Target[]> {
   return db.all<Target>("SELECT model, effort FROM model_roster ORDER BY model, effort");
 }
 
-/** The models with at least one target. */
+/** The models on the list, in the order they were added. */
 export async function roster(db: Sql): Promise<string[]> {
-  return [...new Set((await targets(db)).map((t) => t.model))];
+  const rows = await db.all<{ model: string }>("SELECT model FROM model_list ORDER BY added_at, model");
+  return rows.map((r) => r.model);
 }
 
+/** Puts a model on the list, with none of its levels running yet. */
+export async function addModel(db: Sql, model: string, now: string): Promise<void> {
+  await db.run("INSERT OR IGNORE INTO model_list (model, added_at) VALUES (?, ?)", [model, now]);
+}
+
+/**
+ * Takes a model off the list with all its targets and waiting runs. Finished runs stay, and
+ * so does a run under way: it hands in as usual.
+ */
+export async function removeModel(db: Sql, model: string): Promise<void> {
+  await db.run("DELETE FROM model_list WHERE model = ?", [model]);
+  await db.run("DELETE FROM model_roster WHERE model = ?", [model]);
+  await db.run("DELETE FROM model_runs WHERE model = ? AND status IN ('queued', 'harness-failed')", [model]);
+}
+
+/** Runs a reasoning level of a model (on the list, added if not). */
 export async function addTarget(db: Sql, target: Target, now: string): Promise<void> {
+  await addModel(db, target.model, now);
   await db.run("INSERT OR IGNORE INTO model_roster (model, effort, added_at) VALUES (?, ?, ?)", [
     target.model,
     target.effort,
@@ -57,9 +75,16 @@ export async function addTarget(db: Sql, target: Target, now: string): Promise<v
   ]);
 }
 
-/** Takes a target off the roster. Its finished runs stay; its waiting ones go at the next sync. */
+/**
+ * Takes a target off the roster, with its waiting runs. Its finished runs stay, and so does a
+ * run under way: it hands in as usual.
+ */
 export async function removeTarget(db: Sql, target: Target): Promise<void> {
   await db.run("DELETE FROM model_roster WHERE model = ? AND effort = ?", [target.model, target.effort]);
+  await db.run(
+    "DELETE FROM model_runs WHERE model = ? AND condition = ? AND status IN ('queued', 'harness-failed')",
+    [target.model, targetCondition(target)],
+  );
 }
 
 /** The condition a target runs under. */
@@ -160,6 +185,9 @@ export async function claim(
            OR (status = 'harness-failed' AND harness_attempts < ?)
            OR (status = 'running' AND started_at < ? AND harness_attempts < ?))
          AND (? IS NULL OR harness_version = ?)
+         -- Only what the roster still asks for, whatever is left in the queue.
+         AND EXISTS (SELECT 1 FROM model_roster r
+           WHERE r.model = model_runs.model AND json_extract(model_runs.condition, '$.reasoning') = r.effort)
        ORDER BY try, queued_at, revision, model, condition LIMIT 1`,
       [
         filter.maxHarnessAttempts ?? 3,
@@ -209,14 +237,16 @@ export async function finish(
     readonly reason: string | null;
     readonly turns: number;
     readonly submissions: number;
+    /** What the run's responses reported costing, in USD; null when none reported. */
+    readonly cost?: number | null;
   },
   now: string,
 ): Promise<void> {
   const { changes } = await db.run(
     `UPDATE model_runs SET status = 'finished', outcome = ?, reason = ?, turns = ?, submissions = ?,
-       finished_at = ?
+       cost = ?, finished_at = ?
      WHERE run_id = ? AND status = 'running'`,
-    [result.outcome, result.reason, result.turns, result.submissions, now, runId],
+    [result.outcome, result.reason, result.turns, result.submissions, result.cost ?? null, now, runId],
   );
   if (changes !== 1) throw new Error(`run ${runId} is not running`);
 }
@@ -265,12 +295,20 @@ export interface Coverage {
   readonly status: string;
   readonly outcome: string | null;
   readonly runs: number;
+  /** Over the finished runs among these: their summed cost and how many reported one. */
+  readonly cost: number | null;
+  readonly priced: number;
+  /** Over the finished runs among these: seconds from claim to hand-in, summed. */
+  readonly seconds: number | null;
 }
 
 /** Slots by model, harness version, condition, revision, status and outcome. */
 export function coverage(db: Sql): Promise<Coverage[]> {
   return db.all<Coverage>(
-    `SELECT model, harness_version, condition, revision, status, outcome, COUNT(*) AS runs
+    `SELECT model, harness_version, condition, revision, status, outcome, COUNT(*) AS runs,
+       SUM(cost) AS cost, COUNT(cost) AS priced,
+       SUM(CASE WHEN status = 'finished'
+         THEN (julianday(finished_at) - julianday(started_at)) * 86400 END) AS seconds
      FROM model_runs GROUP BY model, harness_version, condition, revision, status, outcome`,
   );
 }
