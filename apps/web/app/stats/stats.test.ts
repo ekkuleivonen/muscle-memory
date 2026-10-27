@@ -7,6 +7,7 @@ import { buildReport } from "../../lib/report";
 import { deriveAttempts } from "../../../../packages/developer-profile/derive";
 import { trace } from "../../../../packages/developer-profile/fixtures";
 import type { ChallengeSummary } from "../../lib/challenges";
+import type { ModelReceipt } from "../../../../packages/model-runs/receipts";
 
 const catalog = [
   { key: "JS-001", title: "Synthetic", language: "javascript", tags: ["arrays"], runnable: true },
@@ -61,7 +62,7 @@ test("a rich report opens on a personal takeaway with chapters, visuals and evid
 
 test("narrow screens get one comparison card per challenge with every model outcome", () => {
   const attempts = deriveAttempts(trace(), "synthetic-participant").map((a) => ({ ...a, source: "device" as const }));
-  const receipt = { model: "synthetic/model", reportedModels: ["synthetic/model-2026"], reasoning: "high", harness: "h", try: 1, state: "completed" as const, submissions: 1, runtime: { engine: "javascript", version: "synthetic" }, features: [], budget: null };
+  const receipt = { model: "synthetic/model", reportedModels: ["synthetic/model-2026"], reasoning: "high", harness: "h", try: 1, state: "completed" as const, submissions: 1, runtime: { engine: "javascript", version: "synthetic" }, features: [], budget: null, defaultReasoning: null, finalCodeLength: null } as ModelReceipt;
   const report = buildReport({ catalog, progress: {}, attempts, profile: null, receipts: { [attempts[0].revision]: [receipt] } });
   const html = renderToStaticMarkup(createElement(ReportBody, { report, status: null }));
   const cards = html.slice(html.indexOf('class="report-cards"'));

@@ -57,7 +57,9 @@ const input = (over: Partial<ReportInput> = {}): ReportInput => ({
 });
 const chapter = <T>(report: ReturnType<typeof buildReport>, id: string) =>
   report.chapters.find((c) => c.id === id) as T | undefined;
-const receipt = (over: Partial<ModelReceipt> = {}): ModelReceipt => ({
+// Carries ENG-375's defaultReasoning/finalCodeLength; the assertion keeps it valid before and after that type change.
+const receipt = (over: Partial<ModelReceipt> = {}): ModelReceipt =>
+  ({
   model: "synthetic/model",
   reportedModels: ["synthetic/model-2026"],
   reasoning: "high",
@@ -68,8 +70,10 @@ const receipt = (over: Partial<ModelReceipt> = {}): ModelReceipt => ({
   runtime: { engine: "javascript", version: "synthetic" },
   features: [],
   budget: { turns: 50, submissions: 10 },
+  defaultReasoning: null,
+  finalCodeLength: null,
   ...over,
-});
+  }) as ModelReceipt;
 
 test("a new player gets one inviting empty state, never zero-filled chapters", () => {
   const r = buildReport(input());
