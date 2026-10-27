@@ -66,3 +66,14 @@ Synthetic tests execute the actual fixed SQL in SQLite (table namespace adapted;
 ## Binding-only rollout coordination
 
 No live rollout is necessary to publish the review bundle. If dot chooses a binding-only rollout, prepare it from the currently approved main application using **only** ingest `owner.ts`, `worker.ts`, `rpc-runtime.d.ts`, the ingest `main` entry-module change and web's exact approved service-binding entry (plus their synthetic tests). Do not include the player history API, SQL reader, stats UI, Privacy Notice/version or any other dashboard implementation. Update ingest before web so the named entrypoint exists. Do not deploy this feature branch as a shortcut. The account token remains unchanged and uninspected in web; no secret copy is necessary. The independently reviewed dashboard can be released later only under subsequent explicit instruction.
+
+## Explicit configuration / deployment receipt
+
+| Checkpoint | Receipt | Meaning |
+| --- | --- | --- |
+| Root-reviewed head `2746eeb` | Source `apps/web/wrangler.jsonc` contained only `WORKER_SELF_REFERENCE` | The approved binding was not yet prepared there; the private reader remained fail-closed |
+| Preparation commit `5b84423` and later PR67 heads | Source contains `PARTICIPANT_OWNER` → `muscle-memory-ingest` / `ParticipantOwner`; `test:owner-rpc` reads and validates that exact entry | Approved configuration is prepared in the PR, not proven installed in production |
+| Live history configuration | **No production installation/version/RPC receipt supplied or claimed by this branch** | Treat uploaded history as unconfigured until dot confirms the ingest entrypoint and web service binding are deployed together under the approved rollout boundary |
+| Missing live binding or SQL secret | Server returns 503 with a fixed unconfigured message and performs no SQL read | Approval/source presence does not make the live reader configured |
+
+A future live receipt must identify the ingest deployment exporting `ParticipantOwner`, the web deployment containing its service binding, the approved base application/commit, and a safe verification result. PR65's production receipt confirms its catalog release only; it is not an ENG-340 binding/history receipt. No dashboard deployment approval is inferred. Any prior wording “binding configured” means **prepared in source only**, not a working live history reader.

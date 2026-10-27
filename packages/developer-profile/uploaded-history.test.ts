@@ -2,6 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { trace } from "./fixtures";
+import { deriveAttempts } from "./derive";
+import type { RunStatus, RunPurpose, SubmitResult } from "../domain/practice";
 import {
   historyQuery,
   historyResult,
@@ -376,4 +378,103 @@ test("deletion takes precedence over failed reads and invalid RPC states fail cl
     /ownership/,
   );
   assert.equal(reads, 0);
+});
+
+// Exhaustive records make a future vocabulary addition a typecheck failure until reviewed.
+const terminalLabels: Record<Exclude<RunStatus, "queued" | "running">, true> = {
+  result: true,
+  "user-error": true,
+  "runner-error": true,
+  timeout: true,
+  cancelled: true,
+};
+const submissionLabels: Record<SubmitResult, true> = {
+  passed: true,
+  failed: true,
+  errored: true,
+  cancelled: true,
+};
+const purposes: Record<RunPurpose, true> = { examples: true, submit: true };
+for (const purpose of Object.keys(purposes) as RunPurpose[])
+  for (const status of Object.keys(
+    terminalLabels,
+  ) as (keyof typeof terminalLabels)[])
+    test(`uploaded timeline preserves emitted ${purpose}/${status} checkpoints without error text`, () => {
+      const records = trace().map((r) => {
+        const o = JSON.parse(r.payload);
+        if (o.type === "practice.run") {
+          o.data.purpose = purpose;
+          if (o.data.status !== "queued" && o.data.status !== "running") {
+            o.data.status = status;
+            o.data.outcome = {
+              phase:
+                status === "user-error"
+                  ? "compile"
+                  : status === "runner-error"
+                    ? "runner"
+                    : "test",
+              error: "synthetic-private-run-text",
+            };
+          }
+        }
+        return { ...r, payload: JSON.stringify(o) };
+      });
+      const derived = deriveAttempts(records, participant)[0].timeline;
+      assert.ok(derived.some((t) => t.label === `${purpose}: ${status}`));
+      const uploaded = result(records);
+      const projected = uploaded.attempts[0].timeline;
+      assert.deepEqual(projected, derived);
+      assert.ok(
+        !JSON.stringify(uploaded).includes("synthetic-private-run-text"),
+      );
+      assert.ok(
+        !projected.some(
+          (t) => t.label.endsWith(": queued") || t.label.endsWith(": running"),
+        ),
+      );
+    });
+for (const outcome of Object.keys(submissionLabels) as SubmitResult[])
+  test(`uploaded timeline preserves emitted ${outcome} submission checkpoints without rule IDs`, () => {
+    const records = trace().map((r) => {
+      const o = JSON.parse(r.payload);
+      if (o.type === "practice.submitted")
+        o.data = {
+          ...o.data,
+          result: outcome,
+          passed: outcome === "passed" ? 2 : 0,
+          total: 2,
+          rules: ["synthetic-private-rule-id"],
+        };
+      return { ...r, payload: JSON.stringify(o) };
+    });
+    const derived = deriveAttempts(records, participant)[0].timeline;
+    assert.ok(
+      derived.some(
+        (t) =>
+          t.label ===
+          `${outcome}: ${outcome === "passed" ? 2 : 0}/2 checks; 1 static rules`,
+      ),
+    );
+    const uploaded = result(records);
+    const projected = uploaded.attempts[0].timeline;
+    assert.deepEqual(projected, derived);
+    assert.ok(!JSON.stringify(uploaded).includes("synthetic-private-rule-id"));
+  });
+
+test("uploaded timeline rejects unknown outcome vocabulary and arbitrary checkpoint text", () => {
+  const records = trace().map((r) => {
+    const o = JSON.parse(r.payload);
+    if (o.type === "practice.run") {
+      o.data.purpose = "synthetic-private-purpose";
+      o.data.status = "synthetic-private-status";
+    }
+    if (o.type === "practice.submitted")
+      o.data.result = "synthetic-private-result";
+    if (o.type === "practice.snapshot")
+      o.data.reason = "synthetic-private-reason";
+    return { ...r, payload: JSON.stringify(o) };
+  });
+  const projected = result(records).attempts[0].timeline;
+  assert.ok(!JSON.stringify(projected).includes("synthetic-private-"));
+  assert.ok(projected.some((t) => t.label === "started"));
 });

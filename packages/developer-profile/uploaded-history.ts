@@ -135,7 +135,7 @@ function project(a: AttemptSummary): AttemptSummary {
     })
     .slice(0, 20);
   const timeline = a.timeline.filter((t) =>
-    /^(started|opened|completed|closed|capture-gap|Code checkpoint \((opened|periodic|run|oversize-edit|restored)\)|(examples|submit): (passed|failed|errored|cancelled|timed-out)|(?:passed|failed): \d+\/\d+ checks; \d+ static rules)$/.test(
+    /^(started|opened|completed|closed|capture-gap|Code checkpoint \((opened|periodic|run|oversize-edit|restored)\)|(examples|submit): (result|user-error|runner-error|timeout|cancelled)|(?:passed|failed|errored|cancelled): \d+\/\d+ checks; \d+ static rules)$/.test(
       t.label,
     ),
   );
