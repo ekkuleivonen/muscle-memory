@@ -1,11 +1,13 @@
 """
 Appends model-run outbox files to their Iceberg table (docs/model-runs.md), in the same R2
 Data Catalog as the events table but never in it: `default.model_events` for runs, with the
-events table's columns (apps/ingest/events.schema.json). Each `<name>.ndjson` file is appended in
+events table's columns (apps/ingest/events.schema.json), and `default.model_catalog` for the
+daily price snapshots (tools/model-runs/catalog.schema.json). Each `<name>.ndjson` file is appended in
 one commit, then moved to `stored/`. A file whose first row is already in the table was
 appended before the move failed; it is moved without appending again.
 
     python store_events.py runs <outbox>       # default.model_events
+    python store_events.py catalog <outbox>    # default.model_catalog
 
 Environment: CATALOG_URI, WAREHOUSE, CATALOG_TOKEN (R2 Data Catalog).
 """
@@ -20,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 TABLES = {
     "runs": ("default.model_events", ROOT / "apps/ingest/events.schema.json", "record_id"),
+    "catalog": ("default.model_catalog", ROOT / "tools/model-runs/catalog.schema.json", "snapshot_id"),
 }
 
 

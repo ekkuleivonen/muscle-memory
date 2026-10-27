@@ -54,6 +54,15 @@ class StoreTest(unittest.TestCase):
             self.assertEqual(store_events.append(table, outbox, key), ["run-1.ndjson"])
             self.assertEqual(table.scan().to_arrow().num_rows, 2)
 
+    def test_the_catalog_table_has_its_own_schema(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            catalog = SqlCatalog("local", uri=f"sqlite:///{root}/catalog.db", warehouse=f"file://{root}")
+            name, schema_path, key = store_events.TABLES["catalog"]
+            table = store_events.table_for(catalog, name, store_events.schema(schema_path))
+            self.assertEqual(name, "default.model_catalog")
+            self.assertEqual(table.schema().find_field(key).name, "snapshot_id")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,7 +2,7 @@
 
 Models play every challenge the way a person does, through a headless copy of practice, and everything they do is recorded as raw as a person's practice is: so people's work can be compared with models', and models with each other. Analysis comes later, from the raw data.
 
-**Built so far:** the recorded types (`packages/domain/model.ts`, `actor` in every envelope) headless practice, the model loop, the run ledger and storage (`tools/model-runs/`). **Not yet:** the price snapshots, a worker that runs and stores claimed slots, publishing and showing results.
+**Built so far:** the recorded types (`packages/domain/model.ts`, `actor` in every envelope), headless practice, the model loop, the run ledger, storage and the daily price history (`tools/model-runs/`). **Not yet:** a worker that claims slots, runs them and stores them; the publish hook (publishing still records `blocked_configuration`); the lookup condition; showing results. Nothing has called a model: that needs an OpenRouter key, a spend cap and the decisions below.
 
 ## Conditions
 
@@ -75,3 +75,25 @@ Runs are never uploaded through ingest, which refuses any `actor` but a person, 
 
 - **The ledger** is in the catalog D1 database (`migrations/catalog/0002_model_runs.sql`, `tools/model-runs/ledger.ts`). `model_roster` lists the models to run; `model_runs` has one row per slot: revision, model, harness version, condition (experiment arms as canonical JSON) and try. Backfilling queues every slot the roster and the published revisions call for and leaves existing slots alone, so a new model, a new revision, a new harness version or a new condition is just new rows. A worker claims the oldest queued slot under a fresh run id. A finished row is a result: a trigger refuses any change to it. A harness failure (the sandbox, the network, the machine) marks the slot to run again under a new run id, up to three attempts, and then it waits for a person.
 - **The events** go to their own Iceberg table, `default.model_events`, in the events bucket's R2 Data Catalog, with exactly the events table's columns (`tools/model-runs/store.ts`): `received_at` is when the harness stored the run, and `country` is null. The harness writes one NDJSON file per run to an outbox, refusing anything that is not a model's; `tools/model-runs/store_events.py runs <outbox>` appends each file in one commit and moves it to `stored/`. A file already appended (its first record is in the table) is moved without appending again. Like the events table, read it deduplicated on `record_id`.
+
+## Price history
+
+`.github/workflows/model-catalog.yml` runs `tools/model-runs/snapshot.ts` every day: OpenRouter's whole model list (no key needed) and the endpoints of every model on the roster, each HTTP exchange verbatim, one row per request in `default.model_catalog` (`tools/model-runs/catalog.schema.json`). With the `MODEL_RUNS_D1_TOKEN` secret the roster is read from D1; without it, the snapshot is the list alone. With `OPENROUTER_API_KEY`, endpoint latency and throughput figures are included; OpenRouter gives them only to a signed-in caller. The first run creates the table.
+
+## Open decisions
+
+Before the first real runs:
+
+- **The roster:** which models.
+- **Reasoning:** each model's default, or one fixed effort for all (a fixed request parameter, recorded with every run).
+- **Log probabilities:** request them wherever a model supports them.
+- **Tries** per revision, model and condition.
+- **Budget:** the turn and submission limits (50 and 10 by default), and a spend cap per backfill.
+
+## Not yet
+
+- **The worker:** claim a slot, run it, write the outbox, finish or mark a harness failure; and where it runs (a work machine, or CI with Docker for the runtimes).
+- **Applying the migration** to the catalog database, and the `MODEL_RUNS_D1_TOKEN` and `OPENROUTER_API_KEY` secrets.
+- **Publishing:** queue a new revision's slots instead of recording `blocked_configuration`.
+- **The lookup condition:** a `search_web` tool as a separate condition, once hidden cases and solutions have left the repository.
+- **Showing results** to people after they complete, from a daily aggregate of the runs.

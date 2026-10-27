@@ -116,6 +116,7 @@ Created on the Cloudflare account that hosts the app (`166fd3dff06a9c3f1aef172a2
 - The Worker `muscle-memory-ingest` on the route `musclememory.run/ingest/*`. A route takes precedence over the app's Custom Domain on the same hostname, and Cloudflare Access covers it like the rest of the hostname.
 - An R2 API token (Admin Read & Write, which Data Catalog needs) for the sink and the erasure job, stored as the repository secrets `R2_CATALOG_TOKEN`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`, with `R2_CATALOG_URI`, `R2_WAREHOUSE` and `R2_ENDPOINT`.
 - The app is built with `NEXT_PUBLIC_INGEST_URL=/ingest` (`apps/web/.env.production`).
+- Model runs have their own tables in the same catalog, `default.model_events` and `default.model_catalog`, created on first use by `tools/model-runs/store_events.py` ([model runs](model-runs.md)). Neither is the events table, and nothing a person records goes there.
 
 CI deploys the Worker with every push to `main`, before the app ([Cloudflare build](cloudflare-build.md)). By hand: `npx wrangler deploy --config apps/ingest/wrangler.jsonc --env=""`. Wrangler needs Node.js 22.
 
