@@ -67,13 +67,13 @@ test("a solved trace answers the supported questions from recorded values only",
     py = summary("a2", "PY-001", revB);
   const r = buildReport(input({ attempts: device(js, py) }));
   // The fixture's few keys never form a run of code characters, so typing is left out.
-  assert.deepEqual(r.questions.map((x) => x.id), ["start", "iterate", "recovery", "rewrite", "difficulty", "languages"]);
+  assert.deepEqual(r.questions.map((x) => x.id), ["start", "iterate", "recovery", "difficulty", "languages"]);
   // The fixture: first edit at 0.1 s, 2 submissions, the first failed.
   assert.equal(q(r, "start")!.answer, "Your first edit comes about 1 s in.");
   assert.equal(q(r, "iterate")!.answer, "A few checks per solve: 2 checks in a typical one.");
   assert.deepEqual(q(r, "iterate")!.visual, { kind: "bars", bars: [{ label: "2–3 checks", value: 2, display: "2 solves" }] });
   assert.equal(q(r, "recovery")!.answer, "You kept going: 2 solves came after a failed first submission.");
-  assert.equal(q(r, "rewrite")!.answer, "Mostly small edits: 100% change 20 characters or fewer.");
+  assert.equal(q(r, "rewrite"), undefined, "keystroke-size buckets are not revision style");
   assert.equal(q(r, "difficulty")!.answer, "easy 7 s, medium 7 s of active time, typically.");
   assert.equal(q(r, "languages")!.answer, "Mostly JavaScript, then Python.");
   assert.doesNotMatch(visible(r), /thinking|reading|finished \d|open|revisited|waiting|sha256|revision|harness|receipt|evidence/i);
@@ -92,7 +92,7 @@ test("gapped traces, one difficulty level and no failed first submission leave q
 test("the model comparison is one tiny FYI on the iterate answer, only from comparable solves", () => {
   const a = summary("m1", "JS-001");
   const fyi = (receipts: ReportInput["receipts"]) => q(buildReport(input({ attempts: device(a), receipts })), "iterate")!.fyi;
-  assert.equal(fyi({ [a.revision]: [receipt()] }), "FYI: models that solved the same challenges needed 2 submissions, typically.");
+  assert.equal(fyi({ [a.revision]: [receipt()] }), "Models that solved the same challenges needed 2 submissions, typically.");
   assert.equal(fyi({}), null);
   assert.equal(fyi({ [a.revision]: "loading" }), null);
   assert.equal(fyi({ [a.revision]: "unavailable" }), null);
@@ -153,6 +153,70 @@ test("device and uploaded evidence is deduplicated by attempt and revision", () 
   assert.equal(mergeEvidence([a], [{ ...a, revision: `sha256:${"c".repeat(64)}` }]).length, 2, "revisions stay separate");
 });
 
+test("a newer partial local trace does not hide an uploaded verified completion", () => {
+  const complete = summary("preserved-solve", "JS-001");
+  const partial = {
+    ...complete,
+    completed: false,
+    last: "2026-10-28T10:00:00Z",
+    issues: ["Attempt start is missing; this may be latest-only or partial history."],
+  };
+  const merged = mergeEvidence([partial], [complete]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].source, "uploaded");
+  assert.equal(merged[0].completed, true);
+  assert.deepEqual(
+    merged[0].values,
+    complete.values,
+    "do not combine partial-derived values into the complete summary",
+  );
+});
+
+test("known or ambiguous integrity failures cannot be replaced by a clean uploaded subset", () => {
+  const complete = summary("integrity-solve", "JS-001");
+  for (const issue of ["Conflicting record IDs.", "Non-monotonic source clock.", "Malformed practice data; derived values are unavailable.", "Missing or conflicting source positions."]) {
+    const corrupt = { ...complete, completed: false, issues: [issue], last: "2026-10-28T10:00:00Z" };
+    const report = buildReport(input({ attempts: mergeEvidence([corrupt], [complete]) }));
+    assert.deepEqual(report.questions, [], issue);
+    assert.deepEqual(mergeEvidence([complete], [corrupt])[0].issues, [issue], "integrity failures stay withheld in either source order");
+  }
+});
+
+test("one solved sample describes that solve rather than a developer trait", () => {
+  const a = summary("one-sample", "JS-001");
+  const r = q(
+    buildReport(
+      input({
+        attempts: device({ ...a, values: { ...a.values, firstSubmit: 1 } }),
+      }),
+    ),
+    "iterate",
+  )!;
+  assert.match(r.answer, /^This solve took/);
+  assert.doesNotMatch(r.answer, /mostly|one.shot|typical|you iterate/i);
+});
+
+test("the usual-language preview enables a personal grouping, never promises demographic cohorts", () => {
+  const attempts = device(
+    summary("usual-js", "JS-001"),
+    summary("other-py", "PY-001", revB),
+  );
+  const missing = buildReport(input({ attempts }));
+  assert.equal(missing.previews.length, 1);
+  assert.equal(missing.previews[0].action.href, "/settings/profile/languages");
+  const filled = buildReport(
+    input({ attempts, profile: { languages: ["javascript"] } }),
+  );
+  assert.deepEqual(filled.previews, []);
+  const answer = q(filled, "familiarity")!;
+  assert.match(answer.answer, /usual languages.*outside them/);
+  assert.equal(answer.fyi, null);
+  assert.doesNotMatch(
+    JSON.stringify(missing.previews),
+    /unlock|similar experience|AI.use|faster than/i,
+  );
+});
+
 test("the real uploaded-history projection flows into the portrait beside device evidence", async () => {
   const { historyResult, historyWindow } = await import("../../../packages/developer-profile/uploaded-history");
   const older = trace("older-attempt", "older-source", "JS-001"),
@@ -184,7 +248,7 @@ test("the real uploaded-history projection flows into the portrait beside device
   ]);
   const r = buildReport(input({ attempts: merged }));
   assert.match(q(r, "iterate")!.answer, /2 checks/);
-  assert.doesNotMatch(JSON.stringify(r), /synthetic-artifact|"abc"|secret/, "no code or identifiers reach the report");
+  assert.doesNotMatch(JSON.stringify(r) ?? "", /synthetic-artifact|"abc"|secret/, "no code or identifiers reach the report");
 });
 
 /** The fixture trace with its key batch replaced: [elapsedMs, key, modifiers] per keydown. */
@@ -226,8 +290,8 @@ test("deleting starter code or pasting changes edit sizes, never a claim about w
   const a = summary("s1", "JS-001");
   const starterAndPaste = { ...a, values: { ...a.values, deleted: 400, inserted: 600, smallEdits: 6, largeEdits: 4, paste: 2 } };
   const r = q(buildReport(input({ attempts: device(starterAndPaste) })), "rewrite")!;
-  assert.equal(r.answer, "Often bigger pieces: 40% of your edits change more than 20 characters at once.");
-  assert.doesNotMatch(JSON.stringify(r), /stays|kept|surviv|rewrite intent/i);
+  assert.equal(r, undefined, "per-keystroke event sizes are not a revision-style insight");
+  assert.doesNotMatch(JSON.stringify(r) ?? "", /stays|kept|surviv|rewrite intent/i);
 });
 
 test("repeated solves count each model try once in the FYI", () => {
@@ -237,7 +301,7 @@ test("repeated solves count each model try once in the FYI", () => {
     [revB]: [receipt({ submissions: 6, runtime: { engine: "javascript", version: "synthetic" } })],
   };
   // Distinct tries [2, 6] give 4; counting JS-001's try three times would give 2.
-  assert.equal(q(buildReport(input({ attempts: device(...solves), receipts })), "iterate")!.fyi, "FYI: models that solved the same challenges needed 4 submissions, typically.");
+  assert.equal(q(buildReport(input({ attempts: device(...solves), receipts })), "iterate")!.fyi, "Models that solved the same challenges needed 4 submissions, typically.");
 });
 
 test("an attempt on an earlier revision isn't classified with current difficulty or language", () => {
@@ -271,7 +335,7 @@ test("reproduction: a page observation an hour after completion doesn't change a
 test("reproduction: 10 inserted and 100 deleted units make no survival claim", () => {
   const a = summary("i10d100", "JS-001");
   const r = q(buildReport(input({ attempts: device({ ...a, values: { ...a.values, inserted: 10, deleted: 100 } }) })), "rewrite")!;
-  assert.doesNotMatch(JSON.stringify(r), /stays|%\s*of what you type/);
+  assert.doesNotMatch(JSON.stringify(r) ?? "", /stays|%\s*of what you type/);
 });
 
 test("Vim keybindings make the typing rate unavailable: normal-mode letters are commands", () => {
