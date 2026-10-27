@@ -533,7 +533,9 @@ function ModelCard({
           : listed
             ? ""
             : "Not in OpenRouter's list now. "}
-        Coverage counts a challenge once all {tries} tries have finished.
+        {tries === 1
+          ? "A challenge is covered once its run has finished."
+          : `A challenge is covered once all ${tries} tries have finished.`}
       </p>
       <div className="admin-inventory" role="region" aria-label={`${model} reasoning levels`} tabIndex={0}>
         <table>

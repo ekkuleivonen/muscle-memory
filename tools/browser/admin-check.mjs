@@ -292,12 +292,12 @@ async function modelRun(page) {
   await page.getByLabel("Add a model (as OpenRouter names it)").fill("scripted/reference");
   await page.getByRole("button", { name: "Add model", exact: true }).click();
   // Added with only its default level on.
-  await card.getByText(/1 of 2 levels on · 0% covered · 207 runs left/).waitFor();
-  await page.getByText(/207 of 207/).waitFor();
+  await card.getByText(/1 of 2 levels on · 0% covered · 69 runs left/).waitFor();
+  await page.getByText(/69 of 69/).waitFor();
   await page.getByLabel("OpenRouter key").fill(fixtureKey);
   await page.getByLabel("Runs at a time").fill("1");
   await page.getByRole("button", { name: "Go", exact: true }).click();
-  await page.getByText("Queued 207 missing runs.").waitFor();
+  await page.getByText("Queued 69 missing runs.").waitFor();
   // Stop once the first run is under way: it finishes, and nothing more is claimed.
   await page.getByText(/scripted\/reference · high · [A-Z]+-\d{3} · try 1/).waitFor();
   await page.getByRole("button", { name: "Stop after the current runs" }).click();
@@ -305,7 +305,7 @@ async function modelRun(page) {
   const log = await page.getByRole("list", { name: "Runner log" }).innerText();
   assert.match(log, /→ completed, 2 turns, 1 submissions/, log);
   await page.getByText("Not running.").waitFor();
-  await page.getByText(/206 of 207/).waitFor();
+  await page.getByText(/68 of 69/).waitFor();
   // Go is idempotent: the queue already holds exactly what is missing.
   const again = JSON.parse(
     await check("/admin/api/model-runs/sync", valid, 200, {
@@ -320,12 +320,12 @@ async function modelRun(page) {
   const levels = page.getByRole("region", { name: "scripted/reference reasoning levels" });
   const high = levels.getByRole("row").filter({ hasText: /^.*high/ });
   assert.match(await high.innerText(), /high\s*default/i);
-  assert.match(await high.innerText(), /0 \/ 69 \(1 started\)/);
+  assert.match(await high.innerText(), /1 \/ 69/);
   assert.match(await high.innerText(), /≈ \$|under \$0\.01/);
   // Switching on another level adds its runs to do, estimated from the model's other runs.
   await page.getByLabel("Run scripted/reference at low").check();
   await card.getByText(/2 of 2 levels on/).waitFor();
-  await page.getByText(/413 of 414/).waitFor();
+  await page.getByText(/137 of 138/).waitFor();
   assert.match(await levels.getByRole("row").filter({ hasText: /^.*low/ }).innerText(), /from other levels/);
   await page.screenshot({ path: "/tmp/mm-eng342-benchmarks.png", fullPage: true });
   const overview = JSON.parse(await check("/admin/api/model-runs", valid, 200));
