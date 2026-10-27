@@ -884,9 +884,9 @@ try {
     await page.getByText(/No supported challenge activity/).waitFor();
     statsMode = "error";
     await page.getByRole("button", { name: "Load statistics" }).click();
-    await page.getByRole("alert").waitFor();
+    await page.locator("main").getByRole("alert").waitFor();
     assert.match(
-      await page.getByRole("alert").innerText(),
+      await page.locator("main").getByRole("alert").innerText(),
       /unavailable, not zero/,
     );
     assert.ok(!(await page.content()).includes("PRIVATE UPSTREAM ERROR"));

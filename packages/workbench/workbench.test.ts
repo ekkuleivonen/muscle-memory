@@ -26,6 +26,7 @@ test("reads are accepted, with comments, CTEs, joins and a trailing semicolon", 
     'SELECT "update", "select" FROM default.events',
     "SELECT * FROM default.events a, default.model_events b, (SELECT 1) c WHERE a.x = b.x",
     "SELECT * FROM default.events a LEFT JOIN default.model_events b ON a.x = b.x AND a.y IN (1, 2), default.model_catalog c",
+    "SELECT E'it\\'s', X'ff' FROM default.events",
     "SHOW DATABASES",
     "SHOW TABLES IN default",
     "DESCRIBE default.events",
@@ -33,6 +34,9 @@ test("reads are accepted, with comments, CTEs, joins and a trailing semicolon", 
     "(SELECT 1) UNION ALL (SELECT 2)",
     "SELECT ROW_NUMBER() OVER (PARTITION BY type ORDER BY occurred_at) FROM default.events QUALIFY 1 = 1",
     "SELECT count(*) FROM default.events GROUP BY GROUPING SETS ((type), ())",
+    "SELECT * FROM (default.events e JOIN default.model_events m ON e.session_id = m.session_id)",
+    "SELECT * FROM ((SELECT 1 AS x) a JOIN (SELECT 1 AS x) b ON a.x = b.x)",
+    "SELECT * FROM (SELECT * FROM default.events) e, (SELECT 1) f",
   ];
   for (const sql of ok) assert.doesNotThrow(() => checkQuery(sql), sql);
   assert.equal(checkQuery("select 1;").sql, "select 1");
@@ -68,6 +72,20 @@ test("writes, sessions, other namespaces and several statements are rejected ser
   rejected("SELECT * FROM default.events a JOIN default.events b ON a.x = b.x, secrets.keys", /not "secrets"/);
   rejected("SELECT * FROM (SELECT * FROM secrets.keys) k", /not "secrets"/);
   rejected("SELECT * FROM read_parquet('s3://bucket/x')", /Table functions/);
+  // Every table position, however it is written (review of PR 68).
+  rejected("SELECT * FROM (secrets.keys k CROSS JOIN default.events e)", /not "secrets"/);
+  rejected("SELECT * FROM (default.events e CROSS JOIN secrets.keys k)", /not "secrets"/);
+  rejected("SELECT * FROM ((secrets.keys))", /not "secrets"/);
+  rejected("SELECT * FROM (default.events e JOIN (secrets.keys k JOIN default.events f ON 1 = 1) ON 1 = 1)", /not "secrets"/);
+  rejected("SELECT * FROM (default.events e, secrets.keys k)", /not "secrets"/);
+  rejected("SELECT * FROM (catalog.default.events)", /namespace\.table at most/);
+  rejected("SELECT * FROM (read_parquet('x') r)", /Table functions/);
+  rejected("SELECT * FROM 'secrets'.keys", /Only a table name/);
+  rejected("SELECT * FROM default.'secrets'", /Only a table name/);
+  rejected("SELECT * FROM default.events JOIN 'secrets'.keys ON 1 = 1", /Only a table name/);
+  rejected("SELECT * FROM default.events WHERE x IN (FROM secrets.keys SELECT k)", /not "secrets"/);
+  rejected("SELECT 1 UNION TABLE secrets.keys", /"TABLE" is not allowed/);
+  rejected("SELECT * FROM", /table name is missing/);
   rejected("SHOW TABLES IN secrets", /SHOW TABLES IN default/);
   rejected("SHOW ALL", /SHOW TABLES IN default/);
   rejected("DESCRIBE secrets.keys", /not "secrets"/);
@@ -111,6 +129,9 @@ const corpus = [
   "SELECT DISTINCT ON (record_id) record_id, extract(year from occurred_at::timestamp) y, cast(x as int), row_number() over (partition by a order by b) FROM default.events e WHERE NOT EXISTS (SELECT 1 FROM default.events f WHERE f.x = e.x) AND a IS DISTINCT FROM b UNION ALL select 1,2,3,4 from t /* c  d */",
   "select 'multi\nline  string', \"Quoted  Name\", 1.5e-3, -2, arr[1], m['k'] from default.events; show tables in default",
   "SELECT left(type, 3), right(type, 2), first, last, row FROM default.events",
+  "SELECT 'a  \nb', 'trailing  ', \"name  \nx\" FROM default.events",
+  "SELECT 1 -- comment\n; SELECT 2 -- two\n",
+  "SELECT E'hello\\nworld', e'it\\'s', X'ff', N'x', 'plain' FROM default.events",
 ];
 
 test("formatting changes only whitespace and reserved-word case", () => {
@@ -122,6 +143,7 @@ test("formatting changes only whitespace and reserved-word case", () => {
     const formatted = formatSql(sql);
     assert.deepEqual(essence(formatted), essence(sql), formatted);
     assert.equal(formatSql(formatted), formatted, "formatting is stable");
+    assert.equal(statements(formatted).length, statements(sql).length, "statements stay apart");
   }
   // Words that can be column names keep their case.
   assert.match(formatSql(corpus[3]), /left\(type, 3\)/);
@@ -129,6 +151,9 @@ test("formatting changes only whitespace and reserved-word case", () => {
   // Strings, including their whitespace, are untouched.
   assert.match(formatSql(corpus[2]), /'multi\nline  string'/);
   assert.equal(formatSql("SELECT 'open"), "SELECT 'open");
+  assert.match(formatSql(corpus[4]), /'a  \nb',\n  'trailing  ',\n  "name  \nx"/);
+  assert.match(formatSql(corpus[5]), /-- comment\n;/);
+  assert.match(formatSql(corpus[6]), /E'hello\\nworld',\n  e'it\\'s',\n  X'ff'/);
   assert.equal(
     formatSql("select a, b from default.events where x = 1 and y = 2"),
     "SELECT\n  a,\n  b\nFROM default.events\nWHERE x = 1\n  AND y = 2\n",
@@ -317,4 +342,22 @@ test("the schema is listed and described from metadata", async () => {
     },
   ]);
   assert.deepEqual(schema.failed, ["model_events"]);
+});
+
+test("a schema read has one query in flight at a time", async () => {
+  let open = 0;
+  let most = 0;
+  const f = (async (_url: string, init: RequestInit) => {
+    open++;
+    most = Math.max(most, open);
+    await new Promise((r) => setTimeout(r, 5));
+    open--;
+    const { query } = JSON.parse(init.body as string);
+    return query.startsWith("SHOW")
+      ? Response.json({ success: true, result: { schema: [{ name: "table_name" }], rows: ["a", "b", "c", "d", "e", "f"].map((t) => ({ table_name: t })) } })
+      : Response.json({ success: true, result: { schema: [{ name: "column_name" }, { name: "type" }], rows: [{ column_name: "x", type: "int" }] } });
+  }) as unknown as typeof fetch;
+  const schema = await readSchema("test-token", DEFAULT_LIMITS, f);
+  assert.equal(schema.tables.length, 6);
+  assert.equal(most, 1);
 });

@@ -72,12 +72,14 @@ export function tokenize(text: string, backslash = false): Token[] {
         i++;
       }
       push("comment", from);
-    } else if (c === "'") {
-      i++;
+    } else if (c === "'" || (/[EeXxNnBb]/.test(c) && text[i + 1] === "'" && !/[\p{L}\p{N}_$]/u.test(text[i - 1] ?? ""))) {
+      // A prefix (E'…', X'…', N'…', B'…') belongs to its string; E strings always escape.
+      const escapes = backslash || c === "E" || c === "e";
+      i += c === "'" ? 1 : 2;
       for (;;) {
         if (i >= text.length)
           throw new SqlRejected("This string is never closed.", from);
-        if (backslash && text[i] === "\\") {
+        if (escapes && text[i] === "\\") {
           i += 2;
           continue;
         }
@@ -191,7 +193,7 @@ const DENIED = new Set(
     "INSERT UPDATE DELETE MERGE UPSERT CREATE DROP ALTER TRUNCATE RENAME COPY GRANT REVOKE " +
     "CALL EXEC EXECUTE PREPARE DEALLOCATE ATTACH DETACH INSTALL LOAD PRAGMA VACUUM OPTIMIZE " +
     "SET RESET BEGIN START COMMIT ROLLBACK SAVEPOINT RELEASE LOCK UNLOCK USE INTO REFRESH " +
-    "CACHE UNCACHE MSCK DECLARE KILL COMMENT REPAIR"
+    "CACHE UNCACHE MSCK DECLARE KILL COMMENT REPAIR TABLE"
   ).split(" "),
 );
 const STARTS = new Set(["SELECT", "WITH", "SHOW", "DESCRIBE", "DESC", "EXPLAIN", "VALUES"]);
@@ -202,7 +204,8 @@ const CLAUSE = new Set([
   "SELECT", "WHERE", "GROUP", "HAVING", "ORDER", "LIMIT", "OFFSET", "QUALIFY", "UNION",
   "INTERSECT", "EXCEPT", "WINDOW", "FETCH",
 ]);
-const QUERY_START = new Set(["SELECT", "WITH", "VALUES"]);
+/** What a subquery's parentheses start with (FROM for FROM-first queries). */
+const QUERY_START = new Set(["SELECT", "WITH", "VALUES", "FROM"]);
 export const NAMESPACE = "default";
 
 export type StatementKind = "select" | "show" | "describe" | "explain";
@@ -226,16 +229,17 @@ function unquote(t: Token): string {
 }
 
 /** A dotted name starting at `i`: its parts and the index after it. */
-function dotted(tokens: Token[], i: number): { parts: string[]; next: number } {
+function dotted(tokens: Token[], i: number): { parts: string[]; next: number; broken: boolean } {
   const parts: string[] = [];
   let j = i;
-  while (j < tokens.length && (tokens[j].kind === "word" || tokens[j].kind === "quoted")) {
-    parts.push(unquote(tokens[j]));
+  for (;;) {
+    const t = tokens[j];
+    if (!t || (t.kind !== "word" && t.kind !== "quoted")) return { parts, next: j, broken: true };
+    parts.push(unquote(t));
     j++;
     if (tokens[j]?.text === "." && tokens[j].kind === "punct") j++;
-    else break;
+    else return { parts, next: j, broken: false };
   }
-  return { parts, next: j };
 }
 
 function checkRelation(parts: string[], at: number) {
@@ -329,52 +333,80 @@ export function checkQuery(text: string, maxLength = 20000): CheckedQuery {
   } else if (word === "DESCRIBE" || word === "DESC") {
     kind = "describe";
     const name = dotted(tokens, 1);
-    if (!name.parts.length || name.next !== tokens.length)
+    if (name.broken || name.next !== tokens.length)
       throw new SqlRejected(`Use DESCRIBE ${NAMESPACE}.<table>.`, at(first));
     checkRelation(name.parts, at(tokens[1]));
   } else if (word === "EXPLAIN") {
     kind = "explain";
   }
 
-  // Table names: after FROM or JOIN, and after commas in a FROM list, in each query. FROM
-  // inside a function call's parentheses (EXTRACT(YEAR FROM t), TRIM(x FROM y)) is not one.
+  // Every table reference is checked, failing closed: after FROM or JOIN, after commas in a
+  // FROM list, and first in a parenthesised join. Only a name, a subquery or a parenthesised
+  // join may stand there. FROM inside a function call's parentheses (EXTRACT(YEAR FROM t),
+  // TRIM(x FROM y)) is an expression, not a table.
   const fromList: boolean[] = [false];
   const query: boolean[] = [true];
   let depth = 0;
+  let expect = false;
+  const opens = (j: number) => {
+    const next = tokens[j + 1];
+    return (
+      !!next &&
+      ((next.kind === "word" && QUERY_START.has(next.text.toUpperCase())) ||
+        (next.kind === "punct" && next.text === "("))
+    );
+  };
   for (let j = 0; j < tokens.length; j++) {
     const t = tokens[j];
     const upper = t.kind === "word" ? t.text.toUpperCase() : "";
+    if (expect) {
+      expect = false;
+      if (t.kind === "punct" && t.text === "(") {
+        // A subquery, or a parenthesised join whose first item is a table again.
+        const next = tokens[j + 1];
+        const subquery = next?.kind === "word" && QUERY_START.has(next.text.toUpperCase());
+        depth++;
+        query[depth] = true;
+        fromList[depth] = !subquery;
+        expect = !subquery;
+        continue;
+      }
+      if (t.kind !== "word" && t.kind !== "quoted")
+        throw new SqlRejected("Only a table name, a subquery or a parenthesised join can stand here.", at(t));
+      const name = dotted(tokens, j);
+      if (name.broken)
+        throw new SqlRejected("Only a table name, a subquery or a parenthesised join can stand here.", at(t));
+      if (tokens[name.next]?.text === "(" && tokens[name.next].kind === "punct")
+        throw new SqlRejected("Table functions are not available here.", at(t));
+      checkRelation(name.parts, at(t));
+      j = name.next - 1;
+      continue;
+    }
     if (t.text === "(" && t.kind === "punct") {
       depth++;
       fromList[depth] = false;
-      const next = tokens[j + 1];
-      query[depth] =
-        !!next &&
-        ((next.kind === "word" && QUERY_START.has(next.text.toUpperCase())) ||
-          (next.kind === "punct" && next.text === "("));
+      query[depth] = opens(j);
       continue;
     }
     if (t.text === ")" && t.kind === "punct") {
       depth = Math.max(0, depth - 1);
       continue;
     }
+    // JOIN only ever names a table; FROM and commas do in a query's own parentheses.
+    if (upper === "JOIN") {
+      expect = true;
+      continue;
+    }
     if (!query[depth]) continue;
     if (CLAUSE.has(upper)) fromList[depth] = false;
     // a IS [NOT] DISTINCT FROM b compares; it names no table.
     const distinct = upper === "FROM" && tokens[j - 1]?.text.toUpperCase() === "DISTINCT";
-    const relation =
-      (RELATION.has(upper) && !distinct) ||
-      (t.kind === "punct" && t.text === "," && fromList[depth]);
-    if (upper === "FROM" && !distinct) fromList[depth] = true;
-    if (!relation) continue;
-    const next = tokens[j + 1];
-    if (!next) throw new SqlRejected("A table name is missing.", at(t));
-    if (next.kind !== "word" && next.kind !== "quoted") continue;
-    const name = dotted(tokens, j + 1);
-    if (tokens[name.next]?.text === "(" && tokens[name.next].kind === "punct")
-      throw new SqlRejected("Table functions are not available here.", at(next));
-    checkRelation(name.parts, at(next));
+    if (upper === "FROM" && !distinct) {
+      fromList[depth] = true;
+      expect = true;
+    } else if (t.kind === "punct" && t.text === "," && fromList[depth]) expect = true;
   }
+  if (expect) throw new SqlRejected("A table name is missing.", offset + sql.length);
 
   // LIMIT at the outermost level (not inside a subquery or CTE).
   depth = 0;

@@ -293,44 +293,38 @@ export async function readSchema(
     .slice(0, 50);
   const failed: string[] = [];
   const tables: SchemaTable[] = [];
-  // A few at a time: each DESCRIBE is its own request.
-  for (let i = 0; i < names.length; i += 4) {
-    const batch = await Promise.all(
-      names.slice(i, i + 4).map(async (name) => {
-        try {
-          const d = await send(token, checkQuery(`DESCRIBE ${NAMESPACE}.${name}`), metaLimits, request, signal);
-          const at = (pattern: RegExp) => d.columns.findIndex((c) => pattern.test(c.name));
-          const col = at(/^(column_?name|name|field)$/i);
-          const type = at(/^(type|data_?type)$/i);
-          const required = at(/^(required|not_?null)$/i);
-          const nullable = at(/^(nullable|is_nullable)$/i);
-          const doc = at(/^(doc|comment|description)$/i);
-          if (col < 0) throw new Error("No column names.");
-          return {
-            namespace: NAMESPACE,
-            name,
-            columns: d.rows
-              .filter((row) => typeof row[col] === "string")
-              .map((row) => ({
-                name: row[col] as string,
-                type: type >= 0 && row[type] != null ? String(row[type]) : "",
-                required:
-                  required >= 0 && typeof row[required] === "boolean"
-                    ? (row[required] as boolean)
-                    : nullable >= 0 && typeof row[nullable] === "boolean"
-                      ? !(row[nullable] as boolean)
-                      : null,
-                doc: doc >= 0 && typeof row[doc] === "string" && row[doc] ? (row[doc] as string) : null,
-              })),
-          } satisfies SchemaTable;
-        } catch (cause) {
-          if (signal?.aborted) throw cause;
-          failed.push(name);
-          return null;
-        }
-      }),
-    );
-    for (const t of batch) if (t) tables.push(t);
+  // One at a time, so a schema read is one query in flight, like any other (the route's bound).
+  for (const name of names) {
+    try {
+      const d = await send(token, checkQuery(`DESCRIBE ${NAMESPACE}.${name}`), metaLimits, request, signal);
+      const at = (pattern: RegExp) => d.columns.findIndex((c) => pattern.test(c.name));
+      const col = at(/^(column_?name|name|field)$/i);
+      const type = at(/^(type|data_?type)$/i);
+      const required = at(/^(required|not_?null)$/i);
+      const nullable = at(/^(nullable|is_nullable)$/i);
+      const doc = at(/^(doc|comment|description)$/i);
+      if (col < 0) throw new Error("No column names.");
+      tables.push({
+        namespace: NAMESPACE,
+        name,
+        columns: d.rows
+          .filter((row) => typeof row[col] === "string")
+          .map((row) => ({
+            name: row[col] as string,
+            type: type >= 0 && row[type] != null ? String(row[type]) : "",
+            required:
+              required >= 0 && typeof row[required] === "boolean"
+                ? (row[required] as boolean)
+                : nullable >= 0 && typeof row[nullable] === "boolean"
+                  ? !(row[nullable] as boolean)
+                  : null,
+            doc: doc >= 0 && typeof row[doc] === "string" && row[doc] ? (row[doc] as string) : null,
+          })),
+      } satisfies SchemaTable);
+    } catch (cause) {
+      if (signal?.aborted) throw cause;
+      failed.push(name);
+    }
   }
   return { tables, failed, loadedAt: new Date().toISOString() };
 }

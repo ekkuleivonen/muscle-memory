@@ -73,7 +73,8 @@ export function formatSql(text: string): string {
     let join = false;
 
     if (t.kind === "punct" && t.text === ";") {
-      out = out.replace(/\s+$/, "") + ";";
+      // After a line comment the newline must stay, or the ; would join the comment.
+      out = prev?.kind === "comment" && prev.text.startsWith("--") ? out.replace(/[ \t]+$/, "") + ";" : out.replace(/\s+$/, "") + ";";
       stack.length = 0;
       stack.push(level0());
       if (next) out += "\n\n";
@@ -167,5 +168,6 @@ export function formatSql(text: string): string {
     }
     prev = t;
   }
-  return out.replace(/[ \t]+$/gm, "").trim() + "\n";
+  // Only the formatter's own trailing space goes; strings keep theirs (newline() trims as it goes).
+  return out.replace(/\s+$/, "") + "\n";
 }
