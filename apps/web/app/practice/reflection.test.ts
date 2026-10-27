@@ -37,6 +37,22 @@ test("solves rotate through existing questions without rerender selecting anothe
     dismissed: true,
   });
   const restored = parseProgress(JSON.stringify(saved));
+  assert.deepEqual(
+    parseProgress(JSON.stringify(progress))["JS-900"],
+    progress["JS-900"],
+  );
+  assert.equal(
+    "reflection" in
+      parseProgress(
+        JSON.stringify({
+          "JS-900": {
+            ...progress["JS-900"],
+            reflection: { question: "invalid", dismissed: false },
+          },
+        }),
+      )["JS-900"],
+    false,
+  );
   assert.deepEqual(restored["JS-900"].reflection, {
     ...chosen,
     dismissed: true,

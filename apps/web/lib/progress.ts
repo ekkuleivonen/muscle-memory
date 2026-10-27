@@ -56,8 +56,12 @@ export function parseProgress(raw: string | null): Progress {
               [
                 key,
                 {
-                  ...p,
-                  reflection: parseReflection(p.reflection),
+                  ...Object.fromEntries(
+                    Object.entries(p).filter(([key]) => key !== "reflection"),
+                  ),
+                  ...(parseReflection(p.reflection)
+                    ? { reflection: parseReflection(p.reflection) }
+                    : {}),
                 } as ChallengeProgress,
               ],
             ]

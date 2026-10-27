@@ -3,7 +3,12 @@ import assert from "node:assert/strict";
 import { codeRevision, toRecord } from "../domain/records";
 import { modelParticipant } from "../domain/model";
 import { canonical } from "../domain/json";
-import { defaultComparisons, lengthDelta, codeLength } from "./comparison";
+import {
+  defaultComparisons,
+  lengthDelta,
+  codeLength,
+  solvedLength,
+} from "./comparison";
 import { modelReceipt } from "./receipts";
 import { receiptText, slot } from "./receipt-fixtures";
 const revision = `sha256:${"a".repeat(64)}`;
@@ -112,4 +117,50 @@ test("only exact successful submitted artifact yields numeric code points, with 
   assert.equal(codeLength(artifact, "different-owner"), null);
   const missing = receipt();
   assert.equal(missing.finalCodeLength, null);
+});
+
+test("human length follows the latest successful submitted artifact, never later edits", () => {
+  const participant = "synthetic-person";
+  const make = (n: number, text: string) =>
+    codeRevision(participant, "synthetic-source", n, "practice-capture-1.2.0", {
+      "fixture.js": { text, mediaType: "text/javascript" },
+    });
+  const a = make(1, "first"),
+    b = make(2, "latest"),
+    edit = make(3, "later-unsubmitted");
+  const observation = (type: string, sequence: number, data: any) => ({
+    recordId: `synthetic-source.${sequence}`,
+    participantId: participant,
+    kind: "observation" as const,
+    payload: JSON.stringify({
+      type,
+      actor: "person",
+      participantId: participant,
+      source: { id: "synthetic-source", sequence },
+      occurredAt: "2026-10-27T00:00:00Z",
+      challenge: "JS-900",
+      challengeRevision: revision,
+      attemptId: "attempt",
+      data,
+    }),
+  });
+  const records = [
+    toRecord(a),
+    toRecord(b),
+    toRecord(edit),
+    observation("practice.submitted", 1, {
+      runId: "a",
+      codeArtifactId: a.artifactId,
+      result: "passed",
+    }),
+    observation("practice.completed", 2, { runId: "a" }),
+    observation("practice.submitted", 3, {
+      runId: "b",
+      codeArtifactId: b.artifactId,
+      result: "passed",
+    }),
+    observation("practice.completed", 4, { runId: "b" }),
+  ];
+  assert.equal(solvedLength(records, "JS-900", revision, "attempt"), 6);
+  assert.equal(solvedLength(records, "JS-900", revision, "different"), null);
 });
