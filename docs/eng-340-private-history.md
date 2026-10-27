@@ -1,5 +1,7 @@
 # ENG-340: approved option A implementation and binding approval
 
+> **ENG-374 update:** the report now reads the first history page automatically on an ordinary visit instead of behind a load button, keeps the result in page memory for up to five minutes, and stealth reads nothing at all. The endpoint, query, budgets, ownership checks and retention below are unchanged. Where this page says "explicit" load or that history never reloads after reset, [the report](developer-profile.md#data-freshness-and-boundaries) supersedes it.
+
 Ekku approved **option A's direction** on 27 October 2026 via dot: reuse existing uploads, owner-only code-free summaries, no new collection or persistent storage, unchanged retention, explicit loading, reset/deletion/stealth safeguards and revised disclosure. Local historical retention remains disabled. Ekku subsequently approved the exact verification binding and existing-token use through dot on 27 October. The binding is now prepared in source. Dashboard merge/deployment still require final review and a subsequent release instruction. Any live binding-only rollout must be coordinated with dot.
 
 ## Approved security boundary

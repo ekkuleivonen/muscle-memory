@@ -7,7 +7,7 @@ export const PRIVACY = `## The short version
 - Muscle Memory is coding practice without AI, and **recording how you work is the product**: we study how people write code. Your progress and private observed practice statistics are yours now. Stored model tries may be shown separately; community comparisons and research publications are planned.
 - You're a random ID in your browser. We don't ask for your name or email.
 - Other people never see your results unless you share a result link yourself. Future community comparisons will use aggregates, such as percentiles and averages.
-- We may publish **insights**: statistics and findings about how people code, never your records or your code. Don't want to count towards them? **Go stealth** in Settings, no questions asked. (Fair warning: stealth works both ways, so you won't see other people's stats either.)
+- We may publish **insights**: statistics and findings about how people code, never your records or your code. Don't want to count towards them? **Go stealth** in Settings, no questions asked. (Fair warning: stealth works both ways, so you won't see other people's stats, or your own report, either.)
 - We don't sell your personal data, and there are no ads.
 - **What you do here is sent to our servers as you go**, and your browser keeps what practice needs (your latest attempt at each challenge). Delete your account in Settings and it's deleted on both.
 
@@ -71,19 +71,19 @@ The law asks for a reason (a "legal basis") for everything. Here are ours:
 
 When they come, comparisons with other people will be aggregates: "faster than 70% of people on this challenge", never a comparison with one named or identifiable person.
 
-Comparisons are a two-way street. If you go stealth, you're left out of everyone else's comparisons, and you don't see other people's stats in return. That includes comparisons with LLMs: stealth means no comparisons at all.
+Comparisons are a two-way street. If you go stealth, you're left out of everyone else's comparisons, and you don't see other people's stats in return. That includes comparisons with LLMs: stealth means no comparisons at all, and no report on \`/stats\`.
 
 Comparing you with LLMs doesn't involve sending your data to them. The models solve the same challenges separately, and we compare the results. No AI model sees what you do here, while you practise or afterwards.
 
-Your private dashboard can summarize your own recorded practice. Separately, we look at records internally: for example, how many people started and solved each challenge, to make better ones. That's internal, so it includes everyone, stealth or not.
+Your private report can summarize your own recorded practice, unless you're in stealth. Separately, we look at records internally: for example, how many people started and solved each challenge, to make better ones. That's internal, so it includes everyone, stealth or not.
 
-## Your private uploaded history
+## Your private report
 
-The dashboard starts with evidence retained on this device. **Load uploaded history** asks for code-free summaries of your existing uploaded records. Your browser proves ownership using its private secret; a participant ID or upload proof alone is not enough. No one else’s activity is returned. The summaries describe observed practice, missing evidence and recorded conditions; they do not measure intelligence, attention or dependence on AI.
+Your report on \`/stats\` is built from what's recorded about your own practice: evidence kept on this device and, automatically when you open it, code-free summaries of your existing uploads from the past year. Your browser proves ownership using its private secret; a participant ID or upload proof alone is not enough. No one else’s activity is returned. The summaries describe observed practice, missing evidence and recorded conditions; they do not measure intelligence, attention or dependence on AI.
 
-The reader adds no new activity collection or permanent summary storage. It processes existing records under the retention periods below. Summaries contain counts, timestamps, recorded runtime/editor conditions, bounded checkpoint labels and optional post-completion answers, not code, raw keys or outputs. Uploaded summaries exist only in request memory and the open dashboard’s memory; they are not saved in browser history storage or included in backup files. Loading history is not code recovery or device sync.
+The reader adds no new activity collection or permanent summary storage. It processes existing records under the retention periods below. Summaries contain counts, timestamps, recorded runtime/editor conditions, bounded checkpoint labels and optional post-completion answers, not code, raw keys or outputs. Uploaded summaries exist only in request memory and the open page’s memory, while the report is open and for at most five minutes after you leave it; they are not saved in browser storage or included in backup files, and they never change your progress. Reading them is not code recovery or device sync. If a model has tried the same challenges, the report asks for those results too; that request names only the challenge, never you.
 
-**Reset** clears the current view and device progress without deleting existing uploads. History never reloads automatically after reset; you can explicitly ask to view uploads again. Logout, account deletion and privacy changes also clear the view and discard pending responses. Account deletion blocks further uploaded-history reads immediately, while existing server erasure completes within 30 days. Stealth keeps your own private statistics available and hides human and model comparisons. Upload delays, missing records and read limits are shown as limitations, never as invented zeroes.
+**Reset** clears device progress and the open report, and discards pending responses, without deleting existing uploads. The report doesn't re-read them in that moment; the next time you open it, it reads them again. To remove uploads too, delete your account: that blocks further reads immediately, and existing server erasure completes within 30 days. Logout and privacy changes also clear the report. **Stealth** means no report at all: \`/stats\` reads nothing, neither your history nor anyone's comparisons, and shows only how to change it. Upload delays, missing records and read limits are shown as limitations, never as invented zeroes.
 
 ## Publishing insights, carefully
 
