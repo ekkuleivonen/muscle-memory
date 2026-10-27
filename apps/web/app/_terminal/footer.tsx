@@ -1,4 +1,6 @@
+"use client";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 /** One step of the trail; the last one is the page itself and is not a link. */
 export interface Crumb {
@@ -21,10 +23,13 @@ const LINKS = [
 
 /**
  * The terminal's status bar: where this page sits, as a trail of clickable steps from home,
- * pinned to the bottom of every terminal page, with a few fixed links on the right.
+ * pinned to the bottom of every terminal page, with a few fixed links on the right. Where the
+ * bar is short of room the links fold into a menu (a popover, so Escape or a tap outside
+ * closes it), and the trail keeps its room.
  */
 export function TermFooter({ trail = [] }: { trail?: readonly Crumb[] }) {
   const steps: Crumb[] = [{ label: "muscle memory", href: "/" }, ...trail];
+  const path = usePathname();
   return (
     <footer className="t-footer">
       <nav aria-label="Breadcrumb">
@@ -58,9 +63,32 @@ export function TermFooter({ trail = [] }: { trail?: readonly Crumb[] }) {
             );
           })}
         </ol>
-        <span className="t-footer-fill" />
+      </nav>
+      <button
+        type="button"
+        className="t-footer-link t-menu-button"
+        popoverTarget="t-site-menu"
+      >
+        menu
+      </button>
+      <nav aria-label="Site" id="t-site-menu" className="t-menu" popover="auto">
         {LINKS.map((link) => (
-          <Link key={link.href} href={link.href} className="t-footer-link">
+          <Link
+            key={link.href}
+            href={link.href}
+            className="t-footer-link"
+            aria-current={
+              path === link.href
+                ? "page"
+                : path.startsWith(`${link.href}/`)
+                  ? "true"
+                  : undefined
+            }
+            onClick={(event) => {
+              const menu = event.currentTarget.parentElement;
+              if (menu?.matches(":popover-open")) menu.hidePopover();
+            }}
+          >
             {link.label}
           </Link>
         ))}
