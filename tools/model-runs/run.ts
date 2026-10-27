@@ -183,6 +183,7 @@ export async function runModel(input: RunInput): Promise<RunResult> {
         callId: call.id,
         name: call.function.name,
         arguments: call.function.arguments,
+        repeated: call.repeated ?? false,
         parse: parsed.parse,
       });
       const started = runClock();

@@ -14,6 +14,8 @@ export interface ToolCall {
   id: string;
   type: string;
   function: { name: string; arguments: string };
+  /** The stream sent the whole arguments twice; `arguments` is one copy (see `settle`). */
+  repeated?: boolean;
 }
 
 /** What a streamed response adds up to. */
@@ -125,6 +127,29 @@ export function addLine(into: Assembled, line: string, at: number): boolean {
   return true;
 }
 
+/**
+ * Undoes a provider's repetition: some send a tool call's complete arguments as a delta and
+ * then again, so concatenating deltas, as the protocol says, gives `{…}{…}`. When the
+ * arguments are exactly one valid JSON value twice over, the call keeps one copy and says so.
+ * The model wrote a valid call; the lines record what the provider sent. Anything else is left
+ * exactly as assembled, invalid or not.
+ */
+export function settle(a: Assembled): Assembled {
+  for (const call of a.toolCalls) {
+    const text = call?.function.arguments ?? "";
+    const half = text.slice(0, text.length / 2);
+    if (text.length % 2 || !half || half + half !== text) continue;
+    try {
+      JSON.parse(half);
+    } catch {
+      continue;
+    }
+    call.function.arguments = half;
+    call.repeated = true;
+  }
+  return a;
+}
+
 /** The assistant message to send back next turn: what the model said, as it said it. */
 export function assistantMessage(a: Assembled): Record<string, Json> {
   return {
@@ -202,7 +227,7 @@ export async function stream(
       }
       if (done) break;
     }
-    return { kind: "streamed", status: response.status, assembled: result };
+    return { kind: "streamed", status: response.status, assembled: settle(result) };
   } catch (error) {
     const message = String((error as Error)?.message ?? error);
     return controller.signal.aborted ? { kind: "timeout", message } : { kind: "network", message };

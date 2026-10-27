@@ -155,6 +155,11 @@ export interface ModelData {
     readonly name: string;
     /** The arguments exactly as written, valid JSON or not. */
     readonly arguments: string;
+    /**
+     * The provider streamed the whole arguments twice, and `arguments` is one copy: the model
+     * wrote a valid call (the stream's lines keep what was sent).
+     */
+    readonly repeated: boolean;
     readonly parse: ToolParse;
   };
   /** What the tool did and the exact text the model was given back. */

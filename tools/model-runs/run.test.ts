@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { ChallengeMetadata, Revision } from "../../packages/content/model";
 import type { StoredRecord } from "../../packages/domain/records";
-import { addLine, assembled } from "./openrouter";
+import { addLine, assembled, settle } from "./openrouter";
 import type { Edited, Ran, Range } from "./page";
 import { runModel, type Practice } from "./run";
 import { parseCall } from "./tools";
@@ -299,6 +299,21 @@ test("tool arguments must be exactly what the tool takes", () => {
   assert.equal(parseCall("edit_code", '{"old":"a"}').parse, "invalid-arguments");
   assert.deepEqual(parseCall("edit_code", '{"old":"a","new":"b"}'), { parse: "ok", name: "edit_code", old: "a", new: "b" });
   assert.equal(parseCall("write_code", "[1]").parse, "invalid-arguments");
+});
+
+test("arguments a provider streamed twice are one call; other invalid arguments stay invalid", () => {
+  const twice = assembled();
+  const delta = (args: string) =>
+    `data: ${JSON.stringify({ id: "g", choices: [{ index: 0, delta: { tool_calls: [{ index: 0, function: { arguments: args } }] } }] })}`;
+  addLine(twice, `data: ${JSON.stringify(call("c", "edit_code", ""))}`, 1);
+  addLine(twice, delta('{"old":"x","new":"y"}'), 2);
+  addLine(twice, delta('{"old":"x","new":"y"}'), 3);
+  assert.deepEqual(settle(twice).toolCalls[0].function.arguments, '{"old":"x","new":"y"}');
+  assert.equal(twice.toolCalls[0].repeated, true);
+  const broken = assembled();
+  addLine(broken, `data: ${JSON.stringify(call("c", "edit_code", '{"old":"x"}{"old":"y"}'))}`, 1);
+  assert.equal(settle(broken).toolCalls[0].function.arguments, '{"old":"x"}{"old":"y"}');
+  assert.equal(broken.toolCalls[0].repeated, undefined);
 });
 
 test("a usage chunk repeating the finish reason is accounting, not a second message", () => {
