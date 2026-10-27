@@ -111,3 +111,7 @@ Runs are never uploaded through ingest, which refuses any `actor` but a person, 
 - **Publishing** still records `blocked_configuration`. Nothing more is needed to cover a new revision: the next Go queues it.
 - **The lookup condition:** a `search_web` tool as a separate condition, once hidden cases and solutions have left the repository.
 - **Showing results** to people after they complete, from a daily aggregate of the runs.
+
+### Challenge source for local tools
+
+The headless checks and pilot load challenges through `packages/content/source.ts`, from the same authorized gitignored managed copy as builds and publish checks. Run `npm run catalog:pull` first. Missing private access is a setup failure, never a reason to substitute a stale repository source or reference solution. This changes source loading only; the shipped operator-browser runner, conditions, event contract and spend gates are unchanged. See [private catalog development](private-catalog.md).

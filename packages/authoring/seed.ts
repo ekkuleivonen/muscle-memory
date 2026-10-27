@@ -4,8 +4,14 @@ import type { ChallengeSource } from "../content/source";
 import { revisionId, verifyCatalog } from "../content/revision";
 import { canonical, type Json } from "../domain/json";
 import { digest, runtimePin } from "./runtime";
-import { normalizedSource } from "./source";
-import { AuthoringConflict, CatalogStorage, type Statement } from "./storage";
+import { normalizeStoredSource } from "../content/copy";
+import {
+  AuthoringConflict,
+  CatalogStorage,
+  type Statement,
+  type Head,
+  type Version,
+} from "./storage";
 
 export interface SeedInput {
   catalog: Catalog;
@@ -19,8 +25,9 @@ export interface SeedPlan {
   heads: {
     key: string;
     revision: string;
-    object: string;
-    digest: string;
+    object: string | null;
+    digest: string | null;
+    lifecycle: "published" | "archived";
     metadata: string;
   }[];
   versions: {
@@ -40,7 +47,7 @@ export async function planCatalogSeed(input: SeedInput): Promise<SeedPlan> {
   const metadata = new Map(catalog.challenges.map((m) => [m.key, m]));
   const sources = new Map<string, ChallengeSource>();
   for (const source of input.sources) {
-    const normalized = normalizedSource(source);
+    const normalized = normalizeStoredSource(source);
     if (text(normalized) !== text(source))
       throw new Error("Seed source has unrecognized fields.");
     const key = source.metadata.key;
@@ -58,13 +65,23 @@ export async function planCatalogSeed(input: SeedInput): Promise<SeedPlan> {
     throw new Error(
       "Every current challenge needs its original private source.",
     );
+  // Archived challenges remain registered even when absent from discovery.
+  for (const [id, revision] of Object.entries(input.archives)) {
+    if (!metadata.has(revision.challenge) && revision.publication)
+      metadata.set(revision.challenge, {
+        ...revision.publication.metadata,
+        revision: id,
+      });
+  }
   const objects: SeedPlan["objects"] = [];
   const versions: SeedPlan["versions"] = [];
   const runtime = new Map<string, string>();
   for (const [id, revision] of Object.entries(input.archives).sort(([a], [b]) =>
     a.localeCompare(b),
   )) {
-    const meta = metadata.get(revision.challenge);
+    const meta = revision.publication
+      ? { ...revision.publication.metadata, revision: id }
+      : metadata.get(revision.challenge);
     if (!meta || revisionId(revision) !== id)
       throw new Error(`Invalid or unrecognized archive: ${id}`);
     // Validate historical content against current metadata context; past titles are not known.
@@ -73,13 +90,16 @@ export async function planCatalogSeed(input: SeedInput): Promise<SeedPlan> {
       challenges: [{ ...meta, revision: id }],
       revisions: { [id]: revision },
     });
-    if (revision.publication)
-      throw new Error("Bootstrap accepts the frozen legacy archives only.");
     const plain = revision;
-    const projected = normalizedSource({
+    const projected = normalizeStoredSource({
       metadata: { ...meta, revision: undefined },
       revision: plain,
-      private: sources.get(meta.key)!.private,
+      private: sources.get(meta.key)?.private ?? {
+        solution: "",
+        alternatives: [],
+        wrong: [],
+        examples: {},
+      },
     }).revision;
     if (text(projected) !== text(plain))
       throw new Error(`Archive contains unrecognized public fields: ${id}`);
@@ -110,6 +130,7 @@ export async function planCatalogSeed(input: SeedInput): Promise<SeedPlan> {
     objects.push({ key: object, text: text(source) });
     heads.push({
       key,
+      lifecycle: "published",
       revision: metadata.get(key)!.revision,
       object,
       digest: sourceDigest,
@@ -119,6 +140,19 @@ export async function planCatalogSeed(input: SeedInput): Promise<SeedPlan> {
       }),
     });
   }
+  for (const [key, meta] of metadata)
+    if (!sources.has(key))
+      heads.push({
+        key,
+        lifecycle: "archived",
+        revision: meta.revision,
+        object: null,
+        digest: null,
+        metadata: text({
+          ...meta,
+          language: input.archives[meta.revision].language,
+        }),
+      });
   const catalogObject = `published/catalogs/${(await digest(catalog)).slice(7)}.json`;
   objects.push({ key: catalogObject, text: text(catalog) });
   return { catalogObject, objects, heads, versions };
@@ -174,8 +208,9 @@ export async function seedCatalog(
       sql(
         `INSERT INTO challenge_heads
       (challenge_key,generation,lifecycle,published_revision,draft_object,draft_digest,draft_metadata,qa_receipt,updated_at)
-      VALUES (?,1,'published',?,?,?,?,NULL,?)`,
+      VALUES (?,1,?,?,?,?,?,NULL,?)`,
         h.key,
+        h.lifecycle,
         h.revision,
         h.object,
         h.digest,
@@ -195,15 +230,17 @@ export async function seedCatalog(
         at,
       ),
     ),
-    ...plan.heads.map((h) =>
-      sql(
-        `INSERT INTO publication_intents(revision,challenge_key,state,created_at)
+    ...plan.heads
+      .filter((h) => h.lifecycle === "published")
+      .map((h) =>
+        sql(
+          `INSERT INTO publication_intents(revision,challenge_key,state,created_at)
       VALUES (?,?,'blocked_configuration',?)`,
-        h.revision,
-        h.key,
-        at,
+          h.revision,
+          h.key,
+          at,
+        ),
       ),
-    ),
     sql(
       `UPDATE catalog_state SET generation=1,active_object=?,seeded_at=? WHERE singleton=1`,
       plan.catalogObject,
@@ -222,5 +259,53 @@ export async function seedCatalog(
     challenges: plan.heads.length,
     revisions: plan.versions.length,
     catalogObject: plan.catalogObject,
+  };
+}
+
+/** Verify local restored history; an archived head may intentionally have no editable draft. */
+export async function verifySeededCatalog(storage: CatalogStorage) {
+  const versions = (
+    await storage.db.prepare("SELECT * FROM published_versions").all<Version>()
+  ).results;
+  const heads = (
+    await storage.db.prepare("SELECT * FROM challenge_heads").all<Head>()
+  ).results;
+  for (const version of versions)
+    if (
+      revisionId((await storage.readObject(version.object_key)) as Revision) !==
+      version.revision
+    )
+      throw new Error("Local archive hash verification failed.");
+  for (const head of heads) {
+    const registered = versions.some(
+      (v) =>
+        v.challenge_key === head.challenge_key &&
+        v.revision === head.published_revision,
+    );
+    if (
+      head.lifecycle === "archived" &&
+      head.draft_object === null &&
+      head.draft_digest === null &&
+      registered
+    )
+      continue;
+    if (
+      !head.draft_object ||
+      !head.draft_digest ||
+      (await digest(await storage.readObject(head.draft_object))) !==
+        head.draft_digest
+    )
+      throw new Error("Local source digest verification failed.");
+  }
+  const state = await storage.catalogState();
+  if (!state?.active_object)
+    throw new Error("Local catalog pointer is missing.");
+  const published = verifyCatalog(
+    await storage.readObject(state.active_object),
+  );
+  return {
+    verifiedLocalHeads: heads.length,
+    verifiedLocalArchives: versions.length,
+    activeChallenges: published.challenges.length,
   };
 }

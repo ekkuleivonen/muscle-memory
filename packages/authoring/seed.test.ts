@@ -5,11 +5,14 @@ import { readFileSync } from "node:fs";
 import { CatalogStorage, type Statement } from "./storage";
 import { readChallenge } from "../content/source";
 import { revisionId } from "../content/revision";
-import { planCatalogSeed, seedCatalog, type SeedInput } from "./seed";
+import {
+  planCatalogSeed,
+  seedCatalog,
+  verifySeededCatalog,
+  type SeedInput,
+} from "./seed";
 
-const source = readChallenge(
-  new URL("../../content/challenges/PY-001", import.meta.url).pathname,
-);
+const source = readChallenge("PY-001");
 const id = revisionId(source.revision);
 const input: SeedInput = {
   sources: [source],
@@ -210,43 +213,19 @@ test("concurrent seeds commit once and return a safe initialized result", async 
   f.sql.close();
 });
 
-test("full frozen repository plan preserves all 69 current heads and 117 legacy hashes", async () => {
-  const { readChallenges } = await import("../content/source");
-  const { readdirSync } = await import("node:fs");
-  const sources = readChallenges(
-    new URL("../../content/challenges", import.meta.url).pathname,
+test("managed copy seed preserves every current identity and registered revision", async () => {
+  const { readCatalogCopy } = await import("../content/copy");
+  const { sources, archives, catalog } = readCatalogCopy();
+  const plan = await planCatalogSeed({ sources, archives, catalog });
+  assert.equal(
+    plan.heads.filter((h) => h.lifecycle === "published").length,
+    catalog.challenges.length,
   );
-  const revisions = Object.fromEntries(
-    sources.map((s) => [revisionId(s.revision), s.revision]),
+  assert.equal(plan.versions.length, Object.keys(archives).length);
+  assert.equal(
+    plan.objects.length,
+    sources.length + Object.keys(archives).length + 1,
   );
-  const archives = Object.fromEntries(
-    readdirSync(new URL("../../content/revisions", import.meta.url)).map(
-      (name) => [
-        `sha256:${name.slice(0, -5)}`,
-        JSON.parse(
-          readFileSync(
-            new URL(`../../content/revisions/${name}`, import.meta.url),
-            "utf8",
-          ),
-        ),
-      ],
-    ),
-  );
-  const plan = await planCatalogSeed({
-    sources,
-    archives,
-    catalog: {
-      schemaVersion: "1.0.0",
-      challenges: sources.map((s) => ({
-        ...s.metadata,
-        revision: revisionId(s.revision),
-      })),
-      revisions,
-    },
-  });
-  assert.equal(plan.heads.length, 69);
-  assert.equal(plan.versions.length, 117);
-  assert.equal(plan.objects.length, 187);
   for (const version of plan.versions)
     assert.equal(
       revisionId(
@@ -254,4 +233,52 @@ test("full frozen repository plan preserves all 69 current heads and 117 legacy 
       ),
       version.id,
     );
+});
+
+test("an archived registered head without a draft verifies after seed and repeat seed", async () => {
+  const { runtimePin } = await import("./runtime");
+  const metadata = {
+    ...source.metadata,
+    key: "PY-900",
+    title: "Synthetic archived fixture",
+  };
+  const revision = {
+    ...source.revision,
+    challenge: metadata.key,
+    publication: {
+      metadata,
+      runtime: await runtimePin(source.revision.language),
+    },
+  };
+  const archive = revisionId(revision);
+  const complete = {
+    ...input,
+    archives: { ...input.archives, [archive]: revision },
+  };
+  const f = fixture();
+  try {
+    await seedCatalog(f.storage, complete);
+    assert.equal((await f.storage.head("PY-900"))!.draft_object, null);
+    assert.deepEqual(await verifySeededCatalog(f.storage), {
+      verifiedLocalHeads: 2,
+      verifiedLocalArchives: 2,
+      activeChallenges: 1,
+    });
+    assert.equal(
+      (await seedCatalog(f.storage, complete)).status,
+      "already-initialized",
+    );
+    assert.equal(
+      (await verifySeededCatalog(f.storage)).verifiedLocalArchives,
+      2,
+    );
+    f.sql
+      .prepare(
+        "UPDATE challenge_heads SET lifecycle='published' WHERE challenge_key='PY-900'",
+      )
+      .run();
+    await assert.rejects(verifySeededCatalog(f.storage), /Local source digest/);
+  } finally {
+    f.sql.close();
+  }
 });

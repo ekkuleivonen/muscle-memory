@@ -98,9 +98,7 @@ const shot = async (name: string) => {
   if (screenshots)
     await page.screenshot({ path: `${screenshots}/${name}.png` });
 };
-const solution = readChallenge(
-  new URL("../../content/challenges/JS-002", import.meta.url).pathname,
-).private.solution;
+const solution = readChallenge("JS-002").private.solution;
 
 try {
   // Keyboard selection survives pointer movement, and quick start reflows at 320px.

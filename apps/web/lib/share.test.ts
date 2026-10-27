@@ -33,8 +33,8 @@ const refusal = async (file: SharedFile) => {
 
 test("shared code survives its fragment, and anything we would not have made is refused", async () => {
   const file = {
-    path: "count_words.py",
-    text: "def count_words(text):\n    return len(text.split())\n",
+    path: "fixture.py",
+    text: "print(\"synthetic sharing fixture\")\n",
   };
   const packed = await packedOf(file);
   assert.match(packed, /^[A-Za-z0-9_-]+$/);
