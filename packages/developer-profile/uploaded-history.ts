@@ -40,7 +40,9 @@ export function historyWindow(input: unknown): HistoryWindow {
   if (v.after) safeIdentifier(v.after);
   return { from: v.from, to: v.to, after: v.after };
 }
-/** Window discovers attempts with activity; selected attempts are read in full, across resumes. */
+/** Window discovers attempts with activity; selected attempts are read in full, across resumes.
+ * Join the unique conflict IDs: DataFusion cannot physically plan IN subqueries inside this aggregate CASE.
+ */
 export function historyQuery(
   participant: string,
   input: HistoryWindow,
@@ -55,13 +57,14 @@ export function historyQuery(
 ), conflicts AS (
  SELECT record_id FROM owner GROUP BY record_id HAVING COUNT(DISTINCT payload) > 1
 ), selected AS (
- SELECT attempt_id, COUNT(*) AS observations, SUM(length(payload)) AS bytes,
- MIN(occurred_at) AS first_at, MAX(occurred_at) AS last_at,
- SUM(CASE WHEN record_id IN (SELECT record_id FROM conflicts) THEN 1 ELSE 0 END) AS conflicts
- FROM owner GROUP BY attempt_id
- HAVING MAX(CASE WHEN occurred_at >= '${w.from}T00:00:00.000Z' AND occurred_at < '${end}T00:00:00.000Z' THEN 1 ELSE 0 END) = 1
- AND attempt_id > '${w.after}'
- ORDER BY attempt_id LIMIT ${HISTORY_PAGE_SIZE + 1}
+ SELECT o.attempt_id, COUNT(*) AS observations, SUM(length(o.payload)) AS bytes,
+ MIN(o.occurred_at) AS first_at, MAX(o.occurred_at) AS last_at,
+ SUM(CASE WHEN c.record_id IS NOT NULL THEN 1 ELSE 0 END) AS conflicts
+ FROM owner o LEFT JOIN conflicts c ON c.record_id = o.record_id
+ GROUP BY o.attempt_id
+ HAVING MAX(CASE WHEN o.occurred_at >= '${w.from}T00:00:00.000Z' AND o.occurred_at < '${end}T00:00:00.000Z' THEN 1 ELSE 0 END) = 1
+ AND o.attempt_id > '${w.after}'
+ ORDER BY o.attempt_id LIMIT ${HISTORY_PAGE_SIZE + 1}
 ), page AS (SELECT * FROM selected ORDER BY attempt_id LIMIT ${HISTORY_PAGE_SIZE})
 SELECT 'attempt' AS scope, attempt_id, observations, bytes, first_at, last_at, conflicts, NULL AS record_id, NULL AS payload FROM selected
 UNION ALL
