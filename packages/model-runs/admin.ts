@@ -11,6 +11,9 @@ import type { Claimed } from "./ledger";
 /** An OpenRouter model id, such as anthropic/claude-opus-5.5 or a/b:free. */
 export const MODEL_ID = /^~?[a-z0-9][a-z0-9._-]*\/[a-zA-Z0-9][a-zA-Z0-9._-]*(?::[a-z0-9-]+)?$/;
 
+/** Tries per target and live revision: each runs this many times, never more. */
+export const TRIES = 3;
+
 /** Reasoning efforts as OpenRouter names them, and `default` for leaving it to the model. */
 export const EFFORTS = ["default", "none", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
 export type Effort = (typeof EFFORTS)[number];

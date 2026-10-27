@@ -2,7 +2,7 @@
 
 Models play every challenge the way a person does, through a headless copy of practice, and everything they do is recorded as raw as a person's practice is: so people's work can be compared with models', and models with each other. Analysis comes later, from the raw data.
 
-**Built so far:** the recorded types (`packages/domain/model.ts`, `actor` in every envelope), headless practice, the model loop, the run ledger, storage, the price snapshot (`packages/model-runs/`, `tools/model-runs/`) and running from the admin (`/admin/benchmarks`). **Not yet:** applying the ledger migration in production; the publish hook (publishing still records `blocked_configuration`); the lookup condition; showing results.
+**Built so far:** the recorded types (`packages/domain/model.ts`, `actor` in every envelope), headless practice, the model loop, the run ledger, storage, the price snapshot (`packages/model-runs/`, `tools/model-runs/`) and running from the admin (`/admin/benchmarks`). **Not yet:** the lookup condition and showing results.
 
 ## Conditions
 
@@ -82,13 +82,14 @@ Runs are never uploaded through ingest, which refuses any `actor` but a person, 
 
 `/admin/benchmarks` (`apps/web/app/admin/benchmarks/benchmarks.tsx`) runs models from the operator's tab, behind the admin's Access check like every admin page.
 
-- **Roster and queue.** Add or retire models; queue every published revision for every model on the roster in one condition (a reasoning effort, or `default`) and a number of tries. Existing slots are left alone (`/admin/api/model-runs/roster`, `/backfill`).
+- **A to-do list.** The roster is a set of targets: a model at a reasoning effort (`default` leaves it to the model). Every target is run on every live challenge revision with the current harness, three tries each (`TRIES`), never more. Each model has a card with its coverage per reasoning level and harness version: challenges with every try finished, runs finished and completed, runs waiting, and what is left. Add a model at its default reasoning, then any reasoning level its OpenRouter listing offers; remove one to stop covering it (its finished runs stay and still show).
+- **Go is idempotent.** It first makes the queue exactly what the roster still needs (`sync` in `packages/model-runs/ledger.ts`, `/admin/api/model-runs/sync`): missing slots are queued; slots still waiting that are no longer needed (a target removed, a revision no longer live) are dropped; slots that ran or are running are never touched. Then it works through the queue, first tries first, so coverage grows evenly across challenges. Pressing it again, or from another tab, never repeats a finished run. A challenge's new revision is new work; so is a new harness version, whose earlier results stay on the card as earlier.
 - **Running.** Paste an OpenRouter key and choose how many runs at a time (1 to 4). Each worker claims a slot under a fresh run id (`/claim`, which returns only the public revision), plays it in this page with `BrowserPractice` and the loop, and hands in its records (`/<runId>`). The request asks for the condition's effort and for logprobs where the model's listing supports them (`packages/model-runs/admin.ts`). The key lives only in the component's memory and goes only to OpenRouter; it is never stored or recorded.
 - **Hidden tab.** Browsers slow timers in hidden tabs to once a minute, which would distort what is recorded, so workers wait while the tab is hidden and claim nothing new.
 - **Handing in.** The server checks every record against the slot (the model's participant, this run's session, this revision, `actor: "model"`, no Terms, unique ids), writes the rows once to `model-runs/outbox/<runId>.ndjson` in the private content bucket, then finishes the slot. A harness failure marks the slot to run again. A run still marked running two hours after it started (a closed tab) is claimed again under a new id, and the old id can no longer hand in.
 - **Storing.** `.github/workflows/model-runs-store.yml` (on demand) appends the bucket's outbox to `default.model_events` and moves each object to `model-runs/stored/`.
 
-`MODEL_RUNS_FIXTURE=1 node tools/browser/admin-check.mjs` (after `npm run build:cloudflare`) does one run through the built Worker in Chromium, with OpenRouter answered by a scripted model writing the reference solution: roster, queue, claim, play, hand in, the rows in R2, the ledger, and that the key is in no stored row.
+`MODEL_RUNS_FIXTURE=1 node tools/browser/admin-check.mjs` (after `npm run build:cloudflare`) does one run through the built Worker in Chromium, with OpenRouter answered by a scripted model writing the reference solution: adding a model, Go, one run handed in, the coverage shown, a second sync that changes nothing, the rows in R2, the ledger, and that the key is in no stored row.
 
 ## Price history
 
@@ -105,7 +106,7 @@ Runs are never uploaded through ingest, which refuses any `actor` but a person, 
 
 ## Not yet
 
-- **Applying the migration** `0002_model_runs.sql` to the catalog database, before the Benchmarks page can work in production; and, for the snapshot's roster and endpoint statistics, the `MODEL_RUNS_D1_TOKEN` and `OPENROUTER_API_KEY` secrets.
-- **Publishing:** queue a new revision's slots instead of recording `blocked_configuration`.
+- **Secrets for the snapshot:** `MODEL_RUNS_D1_TOKEN` (its roster) and `OPENROUTER_API_KEY` (endpoint statistics).
+- **Publishing** still records `blocked_configuration`. Nothing more is needed to cover a new revision: the next Go queues it.
 - **The lookup condition:** a `search_web` tool as a separate condition, once hidden cases and solutions have left the repository.
 - **Showing results** to people after they complete, from a daily aggregate of the runs.
