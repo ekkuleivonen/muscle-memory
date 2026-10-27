@@ -2,6 +2,7 @@
  * The account as it exists so far: a profile in this browser's storage, and a
  * cookie that stands in for a session. Browser-only; the server sees just the cookie.
  */
+import { notifyPrivateBoundary } from "./private-boundary";
 import { openPracticeStore } from "../../../packages/browser/practice-store";
 import { eraseUploaded, requestAccess } from "./ingest";
 import { PROGRESS_CHANGE, PROGRESS_KEY } from "./progress";
@@ -53,7 +54,8 @@ export function saveProfile(profile: Profile): StoredProfile | null {
   if (!stored) return null;
   const at = new Date().toISOString();
   const asked = { ...stored.asked };
-  for (const id of Object.keys(profile) as (keyof Profile)[]) asked[id] = { answeredAt: at };
+  for (const id of Object.keys(profile) as (keyof Profile)[])
+    asked[id] = { answeredAt: at };
   const next = { ...stored, profile, asked };
   write(next);
   return next;
@@ -114,15 +116,21 @@ export function logOut() {
  * the device identity stay, so anything already uploaded can still be deleted later.
  */
 export async function resetProgress(identity = false) {
-  localStorage.removeItem(PROGRESS_KEY);
-  localStorage.removeItem("muscle-memory.practice-view"); // app/practice/continuity.ts
-  window.dispatchEvent(new Event(PROGRESS_CHANGE));
-  const store = await openPracticeStore();
+  notifyPrivateBoundary("start");
   try {
-    await store.clear(identity);
+    const store = await openPracticeStore();
+    try {
+      await store.clear(identity);
+    } finally {
+      store.close();
+    }
   } finally {
-    store.close();
+    notifyPrivateBoundary("finish");
   }
+  // Notify this tab and other tabs only after private raw evidence and summaries are gone.
+  localStorage.removeItem(PROGRESS_KEY);
+  localStorage.removeItem("muscle-memory.practice-view");
+  window.dispatchEvent(new Event(PROGRESS_CHANGE));
 }
 
 /**
@@ -144,15 +152,20 @@ export async function requestUploadedCopy(): Promise<string | null> {
  * forgetting the secret would leave the uploaded records undeletable.
  */
 export async function deleteAccount() {
-  const store = await openPracticeStore();
+  notifyPrivateBoundary("start");
   try {
-    await eraseUploaded(store);
+    const store = await openPracticeStore();
+    try {
+      await eraseUploaded(store);
+    } finally {
+      store.close();
+    }
+    await resetProgress(true);
+    localStorage.removeItem(PROFILE_KEY);
+    localStorage.removeItem(STARS_KEY);
+    window.dispatchEvent(new Event(ACCOUNT_CHANGE));
+    logOut();
   } finally {
-    store.close();
+    notifyPrivateBoundary("finish");
   }
-  await resetProgress(true);
-  localStorage.removeItem(PROFILE_KEY);
-  localStorage.removeItem(STARS_KEY);
-  window.dispatchEvent(new Event(ACCOUNT_CHANGE));
-  logOut();
 }

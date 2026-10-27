@@ -82,7 +82,7 @@ Not recorded: visits before the Terms are accepted, keystrokes in text fields ot
 
 - **Recorder.** `packages/capture/recorder.ts` assigns positions at once and writes ordered batches asynchronously, so storage never blocks typing. It buffers up to 1,000 records or 4 MiB; failed writes retry with backoff under the same IDs, so partial writes deduplicate, and a changed payload under an existing ID is a conflict, never an overwrite. When the buffer is full the observation is dropped but its position stays used, and a `capture-gap` discloses the range once there is room.
 - **Store.** `packages/browser/practice-store.ts` (IndexedDB `muscle-memory-local-practice`, version 5): settings (the participant ID, the device secret, the referral code), `records`, and the `outbox`, which queues every new record in the same transaction that stores it.
-- **Compaction.** Once an upload empties the outbox, the store forgets what practice no longer needs (`packages/browser/compaction.ts`): uploaded site records, and practice records and code copies of every attempt but each challenge's latest. The latest attempt stays, for restoring its code and for its result card; anything still queued stays whatever it is. One person's storage therefore grows with the challenges they have touched, not with time.
+- **Compaction.** Once an upload empties the outbox, the store forgets what practice no longer needs (`packages/browser/compaction.ts`): uploaded site records, and practice records and code copies of every attempt but each challenge's latest. The latest attempt stays, for restoring its code and for its result card; anything still queued stays whatever it is. One person's uploaded raw storage therefore grows with the challenges they have touched, not with time; history summary retention remains disabled under the current disclosure.
 - **Progress** lives beside it in localStorage, so it survives compaction: per challenge the current attempt, when it started and completed, and how many times it was completed (`muscle-memory.progress`); stars (`muscle-memory.stars`).
 
 ## Upload
@@ -177,3 +177,11 @@ Running over every tombstone each day catches rows the pipeline was still holdin
 - Abuse checks beyond validation and rate limits, such as spotting impossible timing in a stream.
 - Typed derived tables, and the first interpretations (active time, typing pace) as versioned transforms.
 - Experiments: `assignments` is in every envelope, empty until the first one.
+
+## Private developer profile
+
+`/stats` derives the [observed developer profile](developer-profile.md) locally, without new capture or uploads. Historical summary retention is disabled (`PROFILE_HISTORY_ENABLED = false`) to preserve the current Privacy Notice’s latest-attempt-only promise. The future path is implemented and tested: when separately approved and enabled, the same IndexedDB transaction can retain versioned, code-free summaries before older attempts are compacted. Attempts with queued observations stay whole until summarizable. If enabled, these private summaries travel in backups and are removed by reset or deletion; history compacted before this feature cannot be recovered here. Human/model comparisons remain unavailable.
+
+### Private uploaded statistics (ENG-340 draft)
+
+The optional explicit history reader reuses existing uploaded practice observations and the existing deterministic metric registry. It adds no events or persistent store and keeps current raw retention/erasure. It returns only code-free owner summaries after fresh original-secret verification and a tombstone check before and after derivation. See [the approved binding and exact bounds](eng-340-private-history.md). Local historical summary retention remains disabled. The exact verification binding is owner-approved and prepared in source. It has not been deployed from this draft.

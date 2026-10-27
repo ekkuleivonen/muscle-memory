@@ -2,7 +2,7 @@
 
 Models play every challenge the way a person does, through a headless copy of practice, and everything they do is recorded as raw as a person's practice is: so people's work can be compared with models', and models with each other. Analysis comes later, from the raw data.
 
-**Built so far:** the recorded types (`packages/domain/model.ts`, `actor` in every envelope), headless practice, the model loop, the run ledger, storage, the price snapshot (`packages/model-runs/`, `tools/model-runs/`) and running from the admin (`/admin/benchmarks`). **Not yet:** the lookup condition and showing results.
+**Built so far:** the recorded types (`packages/domain/model.ts`, `actor` in every envelope), headless practice, the model loop, the run ledger, storage, the price snapshot (`packages/model-runs/`, `tools/model-runs/`) and running from the admin (`/admin/benchmarks`). **Also implemented in ENG-340:** a bounded allowlisted stored-receipt lookup and task-matched reference display in `/stats` and after completion; missing/incompatible evidence remains explicit. See [developer profile](developer-profile.md#root-review-corrections-and-model-receipt-boundary).
 
 ## Conditions
 

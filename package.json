@@ -16,6 +16,7 @@
     "test:browser": "node tools/browser/sandbox-check.mjs && node --import tsx tools/browser/content-check.ts",
     "pretest": "npm run build:content",
     "catalog:pull": "node --import tsx tools/pull-catalog.ts",
+    "test:owner-rpc": "node tools/owner-rpc-check.mjs",
     "test:catalog-contracts": "node --import tsx --test packages/content/copy.test.ts"
   },
   "devDependencies": {

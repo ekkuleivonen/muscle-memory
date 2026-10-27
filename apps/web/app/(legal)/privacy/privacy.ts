@@ -4,7 +4,7 @@
  */
 export const PRIVACY = `## The short version
 
-- Muscle Memory is coding practice without AI, and **recording how you work is the product**: we study how people write code. Your progress and results are yours now; community comparisons, model benchmarks and research publications are planned.
+- Muscle Memory is coding practice without AI, and **recording how you work is the product**: we study how people write code. Your progress and private observed practice statistics are yours now. Stored model tries may be shown separately; community comparisons and research publications are planned.
 - You're a random ID in your browser. We don't ask for your name or email.
 - Other people never see your results unless you share a result link yourself. Future community comparisons will use aggregates, such as percentiles and averages.
 - We may publish **insights**: statistics and findings about how people code, never your records or your code. Don't want to count towards them? **Go stealth** in Settings, no questions asked. (Fair warning: stealth works both ways, so you won't see other people's stats either.)
@@ -33,7 +33,7 @@ That's the gist. The rest is the detail, which the law (reasonably) wants writte
 - **Your setup, coarsely**: browser and operating system family, mouse or touch, language, time zone, and what a few keys on your keyboard type (its layout). Never your exact browser version or anything that singles out your device.
 - **Your profile answers**, each time you give one.
 - **How you found us and what you share**: the first page you landed on and when, and if a shared result link brought you, its referral code. When you share a result: which result and how (copy link, X, LinkedIn or your device's share sheet).
-- **A random ID** for your browser, so records from the same person stay together without saying who that person is, and a secret only your browser knows, which proves that ID is yours when it sends records or asks us to delete them. Also a separate random **referral code**, which goes into result links you share.
+- **A random ID** for your browser, so records from the same person stay together without saying who that person is, and a secret only your browser knows, which proves that ID is yours when it sends records, loads private uploaded statistics or asks us to delete them. Also a separate random **referral code**, which goes into result links you share.
 
 Keys are heard only inside the editor, never anywhere else on the page or outside it, and we never read your clipboard. Typing rhythm can tell people apart, the way handwriting can. We record it to study how people work, not to identify anyone, and we won't use it for that.
 
@@ -59,7 +59,7 @@ We don't collect your name, email, precise location or contacts, and we don't ru
 
 The law asks for a reason (a "legal basis") for everything. Here are ours:
 
-1. **Running the product.** Your progress, stars, result cards and suggestions for what to work on next. This is the thing you signed up for. *Basis: performing our contract with you (GDPR Art. 6(1)(b)).*
+1. **Running the product.** Your progress, private practice statistics, stars, result cards and suggestions for what to work on next. This is the thing you signed up for. *Basis: performing our contract with you (GDPR Art. 6(1)(b)).*
 2. **Making better challenges.** Which challenges are too hard or too easy, where people get stuck, and what to write next. *Basis: our legitimate interest in improving Muscle Memory (Art. 6(1)(f)).*
 3. **Publishing insights.** We think the world could use real evidence on how people solve engineering problems, and how that compares with LLMs. So we may publish statistics and findings drawn from what's recorded. *Basis: legitimate interest (Art. 6(1)(f)), with an opt-out in Settings (going stealth).* More on how below.
 4. **Security and abuse.** Spotting bots, cheating and attacks. *Basis: legitimate interest (Art. 6(1)(f)).*
@@ -67,15 +67,23 @@ The law asks for a reason (a "legal basis") for everything. Here are ours:
 
 ## Comparisons, and the LLMs
 
-**Community comparisons and model benchmarks are planned.** Nothing compares you with anyone yet.
+**Human comparisons remain unavailable until suitable cohorts and privacy safeguards are ready.** Where a verified model receipt exists for the same task revision, the dashboard can show that exact model/version, reasoning setting, tools and observed outcome. A single try is not a stable success probability. Human elapsed time and model latency are different measures.
 
 When they come, comparisons with other people will be aggregates: "faster than 70% of people on this challenge", never a comparison with one named or identifiable person.
 
-Comparisons are a two-way street. If you go stealth, you're left out of everyone else's comparisons, and you don't see other people's stats in return. As planned today, that includes comparisons with LLMs: stealth means no comparisons at all.
+Comparisons are a two-way street. If you go stealth, you're left out of everyone else's comparisons, and you don't see other people's stats in return. That includes comparisons with LLMs: stealth means no comparisons at all.
 
 Comparing you with LLMs doesn't involve sending your data to them. The models solve the same challenges separately, and we compare the results. No AI model sees what you do here, while you practise or afterwards.
 
-Until any of this exists, we look at your records only ourselves: for example, how many people started and solved each challenge, to make better ones. That's internal, so it includes everyone, stealth or not.
+Your private dashboard can summarize your own recorded practice. Separately, we look at records internally: for example, how many people started and solved each challenge, to make better ones. That's internal, so it includes everyone, stealth or not.
+
+## Your private uploaded history
+
+The dashboard starts with evidence retained on this device. **Load uploaded history** asks for code-free summaries of your existing uploaded records. Your browser proves ownership using its private secret; a participant ID or upload proof alone is not enough. No one else’s activity is returned. The summaries describe observed practice, missing evidence and recorded conditions; they do not measure intelligence, attention or dependence on AI.
+
+The reader adds no new activity collection or permanent summary storage. It processes existing records under the retention periods below. Summaries contain counts, timestamps, recorded runtime/editor conditions, bounded checkpoint labels and optional post-completion answers, not code, raw keys or outputs. Uploaded summaries exist only in request memory and the open dashboard’s memory; they are not saved in browser history storage or included in backup files. Loading history is not code recovery or device sync.
+
+**Reset** clears the current view and device progress without deleting existing uploads. History never reloads automatically after reset; you can explicitly ask to view uploads again. Logout, account deletion and privacy changes also clear the view and discard pending responses. Account deletion blocks further uploaded-history reads immediately, while existing server erasure completes within 30 days. Stealth keeps your own private statistics available and hides human and model comparisons. Upload delays, missing records and read limits are shown as limitations, never as invented zeroes.
 
 ## Publishing insights, carefully
 

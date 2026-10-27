@@ -90,3 +90,27 @@ test("a dump restores elsewhere as the same identity, records and upload queue",
     to.close();
   }
 });
+
+test("private-history identity reads create no identity or retained summaries; reset preserves only ownership", async () => {
+  const factory = new IDBFactory();
+  const store = await openPracticeStore(factory);
+  try {
+    assert.equal(await store.existingIdentity(), null);
+    assert.deepEqual((await store.dump()).settings, {});
+    const participant = await store.participantId(),
+      secret = await store.deviceSecret();
+    assert.deepEqual(await store.existingIdentity(), { participant, secret });
+    await store.clear(false);
+    assert.deepEqual(await store.existingIdentity(), { participant, secret });
+    assert.ok(
+      !Object.hasOwn(
+        (await store.dump()).settings,
+        "developer-profile-summaries",
+      ),
+    );
+    await store.clear(true);
+    assert.equal(await store.existingIdentity(), null);
+  } finally {
+    store.close();
+  }
+});

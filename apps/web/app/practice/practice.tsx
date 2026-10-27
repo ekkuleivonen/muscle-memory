@@ -79,6 +79,7 @@ import { privateCheckFailure } from "./check-feedback";
 import { checkFeedbackOf } from "../../lib/check-feedback";
 import { diagnose } from "../../lib/diagnosis";
 import { CheckFeedbackView } from "../_components/review";
+import { CompletionModelComparisons } from "../stats/model-comparisons";
 import { CopyChallengeLink, ShareOutcome } from "../_components/share";
 import { nextProblem } from "../../lib/next-problem";
 import { isPracticePath, practiceHref } from "../../lib/paths";
@@ -868,12 +869,14 @@ export function Practice({
                         </button>}
                       </>
                     )}
+                    <p className="faint">Human comparisons await an approved cohort policy; stored model tries are shown separately below. <Link href="/stats#comparisons">View your observed profile and comparison availability →</Link></p>
                     <AfterQuestions
                       key={attempt.id}
                       onAnswer={(question, answer) =>
                         session.current?.answered(question, answer)
                       }
                     />
+                    {shareRecords && <CompletionModelComparisons records={shareRecords} challenge={challenge.key} revision={challenge.revision} attempt={attempt.id}/>}
                     {shareRecords && (
                       <ShareOutcome
                         challenge={challenge}

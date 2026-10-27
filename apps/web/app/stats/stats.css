@@ -1,0 +1,120 @@
+.stats-content {
+  max-width: 110ch;
+  margin: 0 auto;
+  padding-bottom: 32px;
+}
+.stats h1,
+.stats h2,
+.stats h3 {
+  font: inherit;
+  font-weight: 700;
+}
+.stats h1 {
+  margin: 2.4em 0 0.8em;
+  color: var(--t-accent);
+}
+.stats h2,
+.stats h3 {
+  margin-top: 1.6em;
+}
+.stats p,
+.stats li {
+  overflow-wrap: anywhere;
+}
+.stats-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1em 3ch;
+  margin: 1.6em 0;
+  align-items: center;
+}
+.stats select,
+.stats input {
+  background: var(--t-bar);
+  color: var(--t-fg);
+  border: 1px solid var(--t-line);
+  font: inherit;
+  padding: 4px 1ch;
+  max-width: 100%;
+}
+.stats-observations {
+  padding-left: 2ch;
+}
+.stats-observations li {
+  margin: 0.8em 0;
+}
+.stats-section {
+  border-top: 1px solid var(--t-line);
+  padding: 1em 0;
+}
+.stats summary {
+  cursor: pointer;
+  padding: 0.4em 0;
+}
+.stats summary:focus-visible,
+.stats select:focus-visible,
+.stats input:focus-visible {
+  outline: 1px solid var(--t-accent);
+  outline-offset: 3px;
+}
+.stats-section > summary {
+  font-weight: 700;
+}
+.stats summary .t-dim {
+  font-weight: 400;
+}
+.stats-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 3ch;
+}
+.stats-metric {
+  padding: 0.4em 0;
+  border-bottom: 1px solid var(--t-line);
+  min-width: 0;
+}
+.stats-metric strong {
+  display: block;
+  color: var(--t-accent);
+  margin-left: 2ch;
+}
+.stats-metric small {
+  font-size: inherit;
+  font-weight: 400;
+  color: var(--t-dim);
+}
+.stats-coverage {
+  display: flex;
+  gap: 1ch 2ch;
+  flex-wrap: wrap;
+  margin: 0.6em 0;
+}
+.stats-coverage > :first-child {
+  min-width: 20ch;
+}
+.stats-attempt {
+  border-left: 1px solid var(--t-line);
+  padding-left: 2ch;
+  margin: 1em 0;
+  scroll-margin: 2em;
+}
+.stats-attempt:target {
+  border-color: var(--t-accent);
+}
+.stats-attempt time {
+  color: var(--t-dim);
+}
+.stats-warning {
+  color: var(--t-warn);
+}
+@media (max-width: 700px) {
+  .stats-metrics {
+    grid-template-columns: 1fr;
+  }
+  .stats-coverage > :first-child {
+    min-width: 100%;
+  }
+  .stats h1 {
+    margin-top: 1.6em;
+  }
+}

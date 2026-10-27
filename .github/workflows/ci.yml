@@ -18,6 +18,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:catalog-contracts
+      - run: npm run test:owner-rpc
   web:
     # Only code pushed by trusted repository writers may read private authoring material.
     # Never use pull_request_target to hydrate a fork's checkout.

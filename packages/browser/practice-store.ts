@@ -8,6 +8,8 @@ import { randomId } from "./random-id";
 import type { StoredRecord } from "../domain/records";
 import type { CaptureSink, WriteOutcome } from "../capture/recorder";
 import { compactable } from "./compaction";
+import { deriveAttempts, type AttemptSummary } from "../developer-profile/derive";
+import { SUMMARY_KEY, METRIC_VERSION, PROFILE_HISTORY_ENABLED } from "../developer-profile/registry";
 
 const DATABASE = "muscle-memory-local-practice";
 
@@ -22,6 +24,25 @@ export interface StoreDump {
 
 export class PracticeStore implements CaptureSink {
   constructor(private readonly database: IDBDatabase) {}
+
+  /** Read without creating an identity merely to view statistics. */
+  existingIdentity(): Promise<{ participant: string; secret: string } | null> {
+    return new Promise((resolve, reject) => {
+      const tx = this.database.transaction("settings", "readonly"),
+        settings = tx.objectStore("settings");
+      const participant = settings.get("participantId"),
+        secret = settings.get("deviceSecret");
+      tx.oncomplete = () =>
+        resolve(
+          typeof participant.result === "string" &&
+            typeof secret.result === "string"
+            ? { participant: participant.result, secret: secret.result }
+            : null,
+        );
+      tx.onabort = () =>
+        reject(tx.error ?? new Error("Device identity could not be read."));
+    });
+  }
 
   participantId(): Promise<string> {
     return this.setting("participantId", randomId);
@@ -209,23 +230,79 @@ export class PracticeStore implements CaptureSink {
 
   /**
    * Forgets what is uploaded and no longer needed here (./compaction.ts), in one transaction.
-   * Returns how many records went.
+   * Returns how many records went. Summary retention is release-gated by the privacy
+   * disclosure; the explicit override exercises the future path in synthetic tests only.
    */
-  compact(): Promise<number> {
+  compact(retainProfileSummaries: boolean = PROFILE_HISTORY_ENABLED): Promise<number> {
     return new Promise((resolve, reject) => {
-      const transaction = this.database.transaction(["records", "outbox"], "readwrite");
+      const transaction = this.database.transaction(
+        ["records", "outbox", "settings"],
+        "readwrite",
+      );
       const stored = transaction.objectStore("records");
+      const summaries = transaction.objectStore("settings").get(SUMMARY_KEY);
       let removed = 0;
       const records = stored.getAll();
       const queued = transaction.objectStore("outbox").getAll();
       queued.onsuccess = () => {
-        const ids = compactable(records.result as StoredRecord[], new Set(queued.result as string[]));
-        for (const id of ids) stored.delete(id);
-        removed = ids.length;
+        const ids = compactable(
+          records.result as StoredRecord[],
+          new Set(queued.result as string[]),
+        );
+        if (!ids.length) return;
+        if (!retainProfileSummaries) {
+          for (const id of ids) stored.delete(id);
+          removed = ids.length;
+          return;
+        }
+        try {
+          const all = records.result as StoredRecord[];
+          const removedIds = new Set(ids);
+          const removedAttempts = new Set(
+            all
+              .filter((r) => removedIds.has(r.recordId))
+              .flatMap((r) => {
+                try {
+                  const o = JSON.parse(r.payload);
+                  return o.attemptId ? [o.attemptId] : [];
+                } catch {
+                  return [];
+                }
+              }),
+          );
+          const previous = JSON.parse(
+            summaries.result ?? "[]",
+          ) as AttemptSummary[];
+          const next = previous.filter((s) => s.version === METRIC_VERSION);
+          for (const participant of new Set(all.map((r) => r.participantId))) {
+            for (const summary of deriveAttempts(all, participant)) {
+              if (!removedAttempts.has(summary.attempt)) continue;
+              const index = next.findIndex(
+                (s) =>
+                  s.participant === summary.participant &&
+                  s.attempt === summary.attempt &&
+                  s.revision === summary.revision,
+              );
+              if (index < 0) next.push(summary);
+              else next[index] = summary;
+            }
+          }
+          transaction
+            .objectStore("settings")
+            .put(JSON.stringify(next), SUMMARY_KEY);
+          for (const id of ids) stored.delete(id);
+          removed = ids.length;
+        } catch {
+          // Fail atomically: never discard raw evidence if its summary cannot be retained.
+          transaction.abort();
+        }
       };
       transaction.oncomplete = () => resolve(removed);
       transaction.onabort = () =>
-        reject(transaction.error ?? new Error("Saved practice could not be compacted."));
+        reject(
+          transaction.error ??
+            new Error("Saved practice could not be compacted."),
+        );
     });
   }
 
@@ -251,6 +328,7 @@ export class PracticeStore implements CaptureSink {
         "readwrite",
       );
       if (identity) transaction.objectStore("settings").clear();
+      else transaction.objectStore("settings").delete(SUMMARY_KEY);
       transaction.objectStore("records").clear();
       transaction.objectStore("outbox").clear();
       transaction.oncomplete = () => resolve();

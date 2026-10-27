@@ -68,7 +68,7 @@ test("uploaded site records and earlier attempts go; each challenge's latest att
 
 test("nothing still queued for upload is forgotten", () => {
   const queued = new Set([records[0].recordId, records[1].recordId, "practice-a.code.0"]);
-  assert.deepEqual(compactable(records, queued), [records[3].recordId]);
+  assert.deepEqual(compactable(records, queued), [], "a queued attempt stays whole until its summary can be retained");
 });
 
 test("the store compacts in place and keeps the upload queue", async () => {
