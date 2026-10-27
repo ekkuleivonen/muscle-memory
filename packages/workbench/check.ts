@@ -1,6 +1,7 @@
 /**
- * The workbench's read-only check (docs/admin-sql.md), on the syntax tree of R2 SQL's own
- * parser: datafusion-sqlparser-rs with DataFusion's default (generic) dialect, as WebAssembly.
+ * The workbench's read-only check (docs/admin-sql.md), on the syntax tree of the parser family
+ * R2 SQL uses: datafusion-sqlparser-rs, pinned to 0.63.0, with DataFusion's default (generic)
+ * dialect, as WebAssembly.
  * Reading the tree, not the text, means strings, comments, aliases and keywords used as names
  * are whatever the engine takes them to be, and every table reference is a node to check.
  *
@@ -49,10 +50,19 @@ function variant(v: unknown): [string, unknown] | null {
 }
 
 /** Offsets of each line start, to turn the parser's (line, column) spans into offsets. */
-function lineStarts(text: string): number[] {
+export function lineStarts(text: string): number[] {
   const starts = [0];
   for (let i = 0; i < text.length; i++) if (text[i] === "\n") starts.push(i + 1);
   return starts;
+}
+
+/** A 1-based (line, column) in code points, as the parser and engine report, as a UTF-16 offset. */
+export function offsetAt(text: string, starts: number[], line: number, column: number): number | null {
+  if (line < 1 || column < 1 || line > starts.length) return null;
+  let at = starts[line - 1];
+  for (let c = 1; c < column && at < text.length && text[at] !== "\n"; c++)
+    at += String.fromCodePoint(text.codePointAt(at) ?? 0).length;
+  return at;
 }
 
 /** The first span found in a node: where to point at it. Columns count characters. */
@@ -65,13 +75,8 @@ function spanOf(node: unknown, text: string, starts: number[]): number | null {
       const span = v.span;
       if (isNode(span) && isNode(span.start)) {
         const { line, column } = span.start as { line: number; column: number };
-        if (line >= 1 && column >= 1 && line <= starts.length) {
-          // Columns are code points; walk them to a UTF-16 offset.
-          let at = starts[line - 1];
-          for (let c = 1; c < column && at < text.length; c++)
-            at += String.fromCodePoint(text.codePointAt(at) ?? 0).length;
-          return at;
-        }
+        const at = offsetAt(text, starts, line, column);
+        if (at !== null) return at;
       }
       stack.push(...Object.values(v));
     }
@@ -160,6 +165,13 @@ function walk(node: unknown, text: string, starts: number[]) {
         const setExpr = key === "body" ? "locks" in v || "pipe_operators" in v : "set_quantifier" in v;
         if (b && setExpr && !READ_BODIES.has(b[0]))
           throw new SqlRejected(`Only reads run here, not ${b[0].toUpperCase()}.`, where(child)());
+      } else if ((key === "pipe_operators" || key === "lateral_views") && Array.isArray(child) && child.length) {
+        // Pipe syntax (|> CALL …) and LATERAL VIEW can produce rows from functions outside any
+        // table position; neither is needed here.
+        throw new SqlRejected(
+          key === "pipe_operators" ? "Pipe syntax (|>) is not available here." : "LATERAL VIEW is not available here.",
+          where(child)(),
+        );
       } else if (key === "into" && isNode(child)) {
         throw new SqlRejected("SELECT INTO writes a table; only reads run here.", where(child)());
       }
@@ -182,12 +194,7 @@ export function checkQuery(text: string, parse: SqlParse, maxLength = 20000): Ch
   } catch (cause) {
     const message = String(cause instanceof Error ? cause.message : cause).replace(/^ParserError:\s*/, "");
     const place = /Line: (\d+), Column: (\d+)/.exec(message);
-    let at: number | null = null;
-    if (place) {
-      const line = Number(place[1]);
-      const column = Number(place[2]);
-      if (line >= 1 && line <= starts.length) at = Math.min(text.length, starts[line - 1] + column - 1);
-    }
+    const at = place ? offsetAt(text, starts, Number(place[1]), Number(place[2])) : null;
     throw new SqlRejected(message || "R2 SQL's parser could not read this.", at);
   }
   if (!statements.length) throw new SqlRejected("There is no statement to run.");
@@ -214,17 +221,25 @@ export function checkQuery(text: string, parse: SqlParse, maxLength = 20000): Ch
         throw new SqlRejected("EXPLAIN works on a query here (SELECT, WITH or VALUES).", where());
       break;
     }
-    case "ShowDatabases":
+    case "ShowDatabases": {
       kind = "show";
+      const b = body as Node;
+      if (b.terse || b.history || Object.values((b.show_options as Node) ?? {}).some((v) => v != null))
+        throw new SqlRejected("Use SHOW DATABASES on its own.", where());
       break;
+    }
     case "ShowTables": {
       kind = "show";
       const options = (body as Node).show_options as Node | undefined;
       const showIn = options?.show_in as Node | undefined;
       const parent = objectName(showIn?.parent_name);
+      const flags = ["terse", "history", "extended", "full", "external"].every((k) => !(body as Node)[k]);
       const ok =
+        flags &&
         parent?.length === 1 &&
         isNamespace(parent[0]) &&
+        showIn?.clause === "IN" &&
+        showIn.parent_type == null &&
         Object.entries(options ?? {}).every(([k, v]) => k === "show_in" || v == null);
       if (!ok) throw new SqlRejected(`Use SHOW TABLES IN ${NAMESPACE}.`, where());
       break;

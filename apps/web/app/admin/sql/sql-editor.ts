@@ -296,11 +296,13 @@ export class SqlEditor {
       const baseLine = doc.lineAt(base);
       const target = baseLine.number + line - 1;
       if (target <= doc.lines) {
+        // Line 1 of the sent text starts where it was taken from; columns count code points.
         const l = doc.line(target);
-        const col =
-          Math.max(0, (column ?? 1) - 1) +
-          (line === 1 ? base - baseLine.from : 0);
-        from = Math.min(l.to, l.from + col);
+        const text = l.text;
+        let at = line === 1 ? base - baseLine.from : 0;
+        for (let c = 1; c < (column ?? 1) && at < text.length; c++)
+          at += String.fromCodePoint(text.codePointAt(at) ?? 0).length;
+        from = l.from + Math.min(at, text.length);
       }
     }
     if (from === null || from > doc.length) return this.clearMarks();

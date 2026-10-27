@@ -123,6 +123,12 @@ test("writes, other namespaces, table functions and several statements are refus
   rejected("SELECT * FROM read_parquet('s3://bucket/x')", /Table functions/);
   rejected("SELECT * FROM UNNEST([1, 2])", /UNNEST is not available/);
   rejected("SHOW TABLES IN secrets", /SHOW TABLES IN default/);
+  // Round 5: rows from functions outside table positions, and loose SHOW forms.
+  rejected("SELECT * FROM default.events |> CALL read_parquet('x')", /Pipe syntax/);
+  rejected("SELECT * FROM default.events LATERAL VIEW read_parquet('x') t AS x", /LATERAL VIEW/);
+  rejected("SHOW TABLES IN ACCOUNT default", /SHOW TABLES IN default/);
+  rejected("SHOW TERSE TABLES IN default", /SHOW TABLES IN default/);
+  rejected("SHOW DATABASES IN secrets", /SHOW DATABASES on its own/);
   rejected("DESCRIBE secrets.keys", /not "secrets"/);
   rejected("", /no statement/);
   rejected("-- only a comment", /no statement/);
@@ -134,13 +140,16 @@ test("refusals and parse errors say where", () => {
     ["SELECT 1;\nDROP TABLE x", 10],
     ["SELECT *\nFROM secrets.keys", 14],
     ["SELECT (1\n  FROM x", 12],
+    // Columns count code points: after two emoji (four UTF-16 units) FROM is at offset 18.
+    ["SELECT '\u{1F600}\u{1F600}', (1 FROM default.events", 18],
+    ["SELECT 1,\n  '\u{1F600}', (1 FROM x", 21],
   ] as const) {
     try {
       check(sql);
       assert.fail(sql);
     } catch (e) {
       assert.ok(e instanceof SqlRejected, String(e));
-      assert.ok(e.at !== null && e.at >= at && e.at <= at + 4, `${sql}: ${e.at} (${e.message})`);
+      assert.ok(e.at !== null && e.at >= at && e.at <= at + (sql.includes("\u{1F600}") ? 0 : 4), `${sql}: ${e.at} (${e.message})`);
     }
   }
 });
@@ -295,6 +304,8 @@ test("scan figures appear only when the response carries them", async () => {
 
 test("rejected SQL never reaches R2 SQL", async () => {
   const { f, calls } = fakeFetch(() => Response.json({ success: true }));
+  for (const sql of ["SELECT * FROM default.events |> CALL read_parquet('x')", "SELECT * FROM default.events LATERAL VIEW read_parquet('x') t AS x"])
+    await assert.rejects(runQuery("test-token", sql, parseSql, DEFAULT_LIMITS, f), (e: unknown) => e instanceof QueryFailed && e.failure.kind === "rejected");
   await assert.rejects(runQuery("test-token", "DROP TABLE default.events", parseSql, DEFAULT_LIMITS, f), (e: unknown) =>
     e instanceof QueryFailed && e.failure.kind === "rejected",
   );
