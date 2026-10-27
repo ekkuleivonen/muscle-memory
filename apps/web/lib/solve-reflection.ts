@@ -5,12 +5,17 @@ export interface ReflectionState {
   dismissed: boolean;
 }
 const questions: AfterQuestion[] = ["difficulty", "confidence", "would-use-ai"];
-/** A single stable rotation across solves, saved with the latest local challenge progress. */
+/** UI-only cooldown: at most one offer every five completed solves, starting at solve five. */
+export const REFLECTION_SOLVE_INTERVAL = 5;
 export function reflectionFor(progress: Progress): ReflectionState {
   const solves = Object.values(progress).reduce((n, p) => n + p.completions, 0);
   return {
-    question: questions[Math.max(0, solves - 1) % questions.length],
-    dismissed: false,
+    question:
+      questions[
+        Math.max(0, Math.floor(solves / REFLECTION_SOLVE_INTERVAL) - 1) %
+          questions.length
+      ],
+    dismissed: solves === 0 || solves % REFLECTION_SOLVE_INTERVAL !== 0,
   };
 }
 export function parseReflection(value: unknown): ReflectionState | undefined {

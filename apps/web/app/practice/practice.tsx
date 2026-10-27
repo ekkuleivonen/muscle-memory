@@ -26,7 +26,6 @@ import type { Json } from "../../../../packages/domain/json";
 import {
   engineFor,
   Runner,
-  type CaseResult,
   type LoadProgress,
 } from "../../../../packages/runner/runner";
 import { readProfile } from "../../lib/account";
@@ -51,7 +50,7 @@ import {
 import { Markdown } from "../_components/markdown";
 import { loadEditorModes, type Keymap } from "./editor";
 import { checksTypes, TypeChecker } from "./type-checker";
-import { caseLabel, transcript } from "./transcript";
+import { transcript } from "./transcript";
 import { recoveryMessage, saveBadge } from "./save-state";
 import {
   RUN_TIMEOUT_MS,
@@ -71,7 +70,6 @@ import {
   Splitter,
   usePracticeLayout,
 } from "./splitter";
-import { privateCheckFailure } from "./check-feedback";
 import { checkFeedbackOf } from "../../lib/check-feedback";
 import { diagnose } from "../../lib/diagnosis";
 import { CheckFeedbackView } from "../_components/review";
@@ -151,7 +149,7 @@ export function Practice({
     () => JSON.parse(revisionJson) as Revision,
     [revisionJson],
   );
-  const [outputOpen, setOutputOpen] = useState(true);
+  const [canSubmit, setCanSubmit] = useState(false);
   const reflectionNow = useRef<ReflectionState | undefined>(undefined);
   const reflectionAttempt = useRef<string | null>(null);
   const [reflection, setReflection] = useState<ReflectionState>();
@@ -168,14 +166,12 @@ export function Practice({
   const savedScope = useRef<string | null>(null);
   /** A saved place waiting for the editor to mount. */
   const pendingPlace = useRef<Place | null>(null);
-  const outputNow = useRef(false);
-  outputNow.current = outputOpen;
   const persistView = () => {
     if (savedScope.current && session.current)
       writeView({
         scope: savedScope.current,
         place: pendingPlace.current ?? session.current.place(),
-        outputOpen: outputNow.current,
+        outputOpen: true,
         savedAt: new Date().toISOString(),
       });
   };
@@ -219,9 +215,19 @@ export function Practice({
   >(null);
 
   function submit(how: "pointer" | "keyboard") {
-    if (runner.current?.running || runtimeNow.current.state !== "ready") return;
+    if (
+      runner.current?.running ||
+      runtimeNow.current.state !== "ready" ||
+      !session.current?.canSubmit
+    )
+      return;
     setStale(false);
     void session.current?.submit(how);
+  }
+
+  function runExamples(how: "pointer" | "keyboard") {
+    if (runner.current?.running || runtimeNow.current.state !== "ready") return;
+    void session.current?.run("examples", how);
   }
 
   const mainRef = useRef<HTMLElement>(null);
@@ -341,6 +347,7 @@ export function Practice({
   const generation = useRef(0);
   function startRuntime() {
     if (!challenge.runnable || !engine) return;
+    setCanSubmit(false);
     runner.current?.dispose();
     const next = new Runner(engine, sandboxHost.current!, {
       timeoutMs: RUN_TIMEOUT_MS,
@@ -475,7 +482,6 @@ export function Practice({
         saveReflection(answered ? { ...selected, dismissed: true } : selected);
       }
       if (saved) {
-        setOutputOpen(saved.outputOpen);
         pendingPlace.current =
           saved.place && fitPlace(saved.place, code.length);
       }
@@ -507,21 +513,24 @@ export function Practice({
         ),
         // Read at use time, so a runtime reloaded with Retry is the one that runs.
         runner: () => runner.current!,
-        onSubmit: (how) => submit(how),
+        onRunExamples: (how) => runExamples(how),
         suggestNext: () => nextRef.current?.key ?? null,
         onCompleted: () => void completed(opened, attemptId),
         onRun: (next) => {
           setRun(next);
+          setCanSubmit(opened.canSubmit);
           if (next.status === "queued") {
             completionRead.current++;
             setShareRecords(null);
-            setOutputOpen(true);
             if (resultsBody.current) resultsBody.current.scrollTop = 0;
           }
           setStale(next.revision !== session.current?.currentRevision);
           if (next.purpose === "submit" && next.verdict) setSubmission(next);
         },
-        onEditedAfterRun: () => setStale(true),
+        onEditedAfterRun: () => {
+          setStale(true);
+          setCanSubmit(false);
+        },
         onSaveStatus: showSaveStatus,
         onVimMode: setVimMode,
         entry: entryPath(),
@@ -645,16 +654,6 @@ export function Practice({
       ? diagnose(submission?.outcome ?? null, revision.cases)
       : null,
   });
-  /** Practise this challenge again: a new attempt from the starting code. */
-  const again = () => {
-    noteStart({
-      key: challenge.key,
-      from: "again",
-      query: null,
-      position: null,
-    });
-    window.location.assign(practiceHref(challenge.key));
-  };
   return (
     <div className="practice tui" onClickCapture={persistView}>
       <nav className="practice-nav" aria-label="Practice panes">
@@ -810,13 +809,26 @@ export function Practice({
                       );
                     }}
                   >
-                    {running && run?.purpose === "examples"
-                      ? "Cancel check"
-                      : "Run examples"}
+                    {running && run?.purpose === "examples" ? (
+                      "Cancel check"
+                    ) : (
+                      <>
+                        Run examples <Shortcut />
+                      </>
+                    )}
                   </button>
                   <button
                     className={`btn${done ? "" : " primary"}`}
-                    disabled={!ready}
+                    disabled={
+                      !ready ||
+                      (running && run?.purpose !== "submit") ||
+                      (!running && !canSubmit)
+                    }
+                    title={
+                      !canSubmit
+                        ? "Pass examples for this code before submitting"
+                        : undefined
+                    }
                     aria-disabled={running && run?.purpose !== "submit"}
                     onClick={(event) => {
                       if (running) {
@@ -827,13 +839,9 @@ export function Practice({
                       submit(event.detail === 0 ? "keyboard" : "pointer");
                     }}
                   >
-                    {running && run?.purpose === "submit" ? (
-                      "Cancel check"
-                    ) : (
-                      <>
-                        Submit <Shortcut />
-                      </>
-                    )}
+                    {running && run?.purpose === "submit"
+                      ? "Cancel check"
+                      : "Submit"}
                   </button>
                   {done &&
                     (next ? (
@@ -857,11 +865,6 @@ export function Practice({
                         Explore challenges
                       </Link>
                     ))}
-                  {done && allowRepeat && (
-                    <button type="button" className="btn" onClick={again}>
-                      Practise this again
-                    </button>
-                  )}
                 </>
               )}
             </div>
@@ -897,37 +900,23 @@ export function Practice({
             )}
             {opening.state === "open" && (
               <div className="practice-feedback">
-                {run?.purpose === "examples" ? (
-                  <>
-                    <h2>Example feedback</h2>
-                    <Tests
-                      revision={revision}
-                      run={run}
-                      stale={stale}
-                      challenge={challenge}
-                      runtime={runtime}
-                      onRetry={startRuntime}
-                    />
-                  </>
-                ) : (
+                {run?.purpose === "submit" && !run.verdict?.complete && (
                   <CheckFeedbackView feedback={check} />
                 )}
+                {!run && (
+                  <p className="faint">Run examples to check your code.</p>
+                )}
                 {run && (
-                  <details
-                    open={outputOpen}
-                    onToggle={(event) =>
-                      setOutputOpen(event.currentTarget.open)
-                    }
-                  >
-                    <summary>
-                      {stale ? "Last run output — code edited since" : "Output"}
-                    </summary>
+                  <section aria-label="Output">
+                    <h2>
+                      {stale ? "Last output · code edited since" : "Output"}
+                    </h2>
                     <Output
                       run={run}
                       revision={revision}
                       runtime={engine?.label ?? challenge.language}
                     />
-                  </details>
+                  </section>
                 )}
                 {done &&
                   !stale &&
@@ -948,6 +937,14 @@ export function Practice({
                     className="practice-completion"
                     aria-label="After solving"
                   >
+                    {shareRecords && (
+                      <ShareOutcome
+                        challenge={challenge}
+                        attemptId={attempt.id}
+                        records={shareRecords}
+                        revision={revision}
+                      />
+                    )}
                     {reflection && (
                       <Reflection
                         state={reflection}
@@ -961,18 +958,6 @@ export function Practice({
                         }}
                       />
                     )}
-                    <details>
-                      <summary>Share this result</summary>
-                      {shareRecords && (
-                        <ShareOutcome
-                          challenge={challenge}
-                          attemptId={attempt.id}
-                          records={shareRecords}
-                          revision={revision}
-                        />
-                      )}
-                    </details>
-                    <Link href="/stats">Your practice report →</Link>
                   </section>
                 )}
               </div>
@@ -982,8 +967,9 @@ export function Practice({
       </main>
       <p className="tui-status">
         <span>
-          <Shortcut /> submits · Esc, then Tab leaves the editor · 1 2 3 switch
-          panes · <Link href="/settings/profile/editor">editor keys</Link>
+          <Shortcut /> runs examples · Esc, then Tab leaves the editor · 1 2 3
+          switch panes ·{" "}
+          <Link href="/settings/profile/editor">editor keys</Link>
           {(challenge.language === "javascript" ||
             challenge.language === "typescript") && (
             <>
@@ -1019,151 +1005,6 @@ function exampleAnnouncement(run: RunView | null, revision: Revision): string {
     outcome.cases,
   );
   return `Examples: ${feedback.correct} passed, ${feedback.total - feedback.correct} failed.`;
-}
-
-function Tests({
-  revision,
-  run,
-  stale,
-  challenge,
-  runtime,
-  onRetry,
-}: {
-  revision: Revision;
-  run: RunView | null;
-  stale: boolean;
-  challenge: PracticeChallenge;
-  runtime: Runtime;
-  onRetry(): void;
-}) {
-  /** The examples, which Run examples runs. */
-  const visible = casesRun(revision.cases, "examples").length;
-  if (!challenge.runnable)
-    return (
-      <p className="faint">
-        {languageLabel(challenge.language)} can&apos;t run in the browser yet.
-        Your edits are saved as you go.
-      </p>
-    );
-  if (runtime.state === "unavailable")
-    return (
-      <p className="error" role="alert">
-        Your environment couldn&apos;t be set up.{" "}
-        <button type="button" className="link-button" onClick={onRetry}>
-          Retry
-        </button>
-      </p>
-    );
-  if (!run)
-    return (
-      <p className="faint">
-        Change the code to meet the requirements, then run the {visible}{" "}
-        {visible === 1 ? "example" : "examples"} as often as you like. Submit (
-        <Shortcut />) checks every case.
-      </p>
-    );
-  const o = run.outcome;
-  if (!o) return <p className="faint">Running…</p>;
-  if (o.status === "timeout")
-    return (
-      <p className="error">
-        Stopped after {o.timeoutMs / 1000} s. Look for a loop that never ends.
-      </p>
-    );
-  if (o.status === "cancelled") return <p className="faint">Run cancelled.</p>;
-  if (o.status === "runner-error")
-    return (
-      <p className="error">
-        The test runner crashed; this wasn&apos;t your code. Run the tests
-        again.
-      </p>
-    );
-  if (o.error && o.phase !== "tests")
-    return (
-      <pre className="run-trace">
-        {o.error.traceback.text || `${o.error.type}: ${o.error.message}`}
-      </pre>
-    );
-  const cases = casesRun(revision.cases, run.purpose);
-  const feedback = runFeedback(cases, o.cases);
-  const failed = feedback.total - feedback.correct;
-  return (
-    <div>
-      <p className="run-label faint">Public examples</p>
-      <p className={`run-summary ${failed ? "fail" : "pass"}`}>
-        {failed ? "✘" : "✔"} {feedback.correct} passed
-        {failed > 0 && `, ${failed} failed`} · {o.durationMs} ms
-        {stale && <span className="faint"> · you&apos;ve edited since</span>}
-      </p>
-      <ol className="run-cases">
-        {cases.map((check, index) => (
-          <Case
-            key={index}
-            index={index}
-            label={
-              !check.hidden
-                ? (check.name ?? caseLabel(revision, check.input))
-                : `Additional check ${index + 1}`
-            }
-            visible={!check.hidden}
-            expected={!check.hidden ? check.expected : undefined}
-            passed={feedback.passed[index]}
-            result={o.cases[index]}
-          />
-        ))}
-      </ol>
-    </div>
-  );
-}
-
-function Case({
-  index,
-  label,
-  expected,
-  visible,
-  passed,
-  result,
-}: {
-  index: number;
-  label: string;
-  expected?: unknown;
-  visible: boolean;
-  passed: boolean;
-  result?: CaseResult;
-}) {
-  return (
-    <li className={passed ? "pass" : "fail"}>
-      <span className="run-case-mark">{passed ? "✔" : "✘"}</span>
-      <span className="run-case-body">
-        <code>{label}</code>
-        {!passed && !visible && (
-          <span className="run-case-detail">{privateCheckFailure(result)}</span>
-        )}
-        {!passed && visible && (
-          <span className="run-case-detail">
-            <span>
-              expected <code>{JSON.stringify(expected)}</code>
-            </span>
-            {result?.error ? (
-              <pre className="run-trace">{result.error.traceback.text}</pre>
-            ) : result?.conversionError ? (
-              <pre className="run-trace">
-                {result.conversionError.traceback.text ||
-                  `${result.conversionError.type}: ${result.conversionError.message}`}
-              </pre>
-            ) : (
-              <span>
-                got <code>{result?.repr?.text ?? "nothing"}</code>
-                {result?.unserializable &&
-                  ` (not JSON: ${result.unserializable})`}
-              </span>
-            )}
-          </span>
-        )}
-      </span>
-      <span className="run-case-index faint">#{index + 1}</span>
-    </li>
-  );
 }
 
 /** The languages in the person's profile, for suggestions after the current one's run out. */
