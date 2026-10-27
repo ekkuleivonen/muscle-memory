@@ -2,14 +2,17 @@
  * Human cohorts for the /stats report (ENG-374): how other people did on the exact same challenge
  * revision, under the same recorded runtime and diagnostics, as suppressed aggregates only.
  *
- * DISABLED DRAFT. The minimum group size and this player-facing read await the owner's policy
- * decision (docs/human-cohorts.md). While COHORTS_ENABLED is false the route answers "disabled"
- * without any SQL. Nothing here accepts a participant, demographic filter or SQL from a caller.
+ * Policy approved by Ekku on 27 October 2026 (via dot): at least 20 eligible distinct browsers, same
+ * revision and compatible conditions, first attempts apart from repeats, current stealth excluded,
+ * under-18s never mixed with adults, no narrow slices or individual records. A conservative floor,
+ * not a statistical guarantee. Still DISABLED: the player-facing read itself awaits root's review
+ * (docs/human-cohorts.md). While COHORTS_ENABLED is false the route answers "disabled" without SQL.
+ * Nothing here accepts a participant, demographic filter or SQL from a caller.
  */
 import { CHALLENGE_KEY, REVISION } from "../domain/records";
 
 export const COHORTS_ENABLED = false;
-/** Proposed, not approved: the smallest number of distinct browsers behind any published figure. */
+/** Approved policy: the smallest number of eligible distinct browsers behind any published figure. */
 export const MIN_COHORT = 20;
 /** Shares are published rounded to this step, so one person joining can't be read off a change. */
 export const SHARE_STEP = 0.05;
@@ -31,10 +34,23 @@ export interface CohortGroup {
   /** Submissions needed by those who finished; null below MIN_COHORT finishers. */
   submissions: { p25: number; p50: number; p75: number } | null;
 }
+/**
+ * Who is counted, stated with every read so nothing implies more than is known. Age is optional:
+ * browsers that declared 16–17 are excluded, and browsers that never answered are counted (the
+ * Terms require 16 or older, so an unanswered browser may still be 16–17). Counts are browsers,
+ * not people.
+ */
+export const ELIGIBILITY = {
+  unit: "distinct browsers, not people",
+  ages: "declared 16–17 excluded; no age answer included",
+  stealth: "excluded by each browser's latest uploaded privacy setting",
+  attempts: "one first attempt and, separately, one repeat per browser",
+} as const;
 export interface CohortRead {
   state: "disabled" | "ready" | "unavailable";
   version: typeof COHORT_VERSION;
   minimum: number;
+  eligibility: typeof ELIGIBILITY;
   readAt: string;
   groups: CohortGroup[];
 }
@@ -180,7 +196,7 @@ export function cohortResult(rows: unknown, minimum = MIN_COHORT, readAt = new D
           : null,
     });
   }
-  return { state: "ready", version: COHORT_VERSION, minimum, readAt, groups: out };
+  return { state: "ready", version: COHORT_VERSION, minimum, eligibility: ELIGIBILITY, readAt, groups: out };
 }
 
 /** The group matching one attempt's recorded conditions, or null: never a nearest or pooled stand-in. */

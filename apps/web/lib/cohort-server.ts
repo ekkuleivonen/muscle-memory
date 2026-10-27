@@ -3,6 +3,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import {
   COHORTS_ENABLED,
   COHORT_VERSION,
+  ELIGIBILITY,
   MIN_COHORT,
   cohortQuery,
   cohortResult,
@@ -20,6 +21,7 @@ const empty = (state: CohortRead["state"]): CohortRead => ({
   state,
   version: COHORT_VERSION,
   minimum: MIN_COHORT,
+  eligibility: ELIGIBILITY,
   readAt: new Date().toISOString(),
   groups: [],
 });

@@ -381,4 +381,8 @@ test("people cells: disabled reason, matched aggregate, checked-too-small group,
   assert.equal(people({ [a.revision]: cohortResult([row(12, 1, 2)]) }), "fewer than 20 comparable people");
   assert.equal(people({ [a.revision]: read }, { ...a, conditions: [] }), "your conditions weren't recorded");
   assert.equal(people({ [a.revision]: "unavailable" }), "can't be read");
+  const details = chapter<ComparisonChapter>(buildReport(input({ attempts: device(a), cohorts: { [a.revision]: read } })), "minds")!.evidence.details.join(" ");
+  assert.match(details, /at least 20 distinct browsers, not people/);
+  assert.match(details, /declared 16–17 excluded; no age answer included/);
+  assert.doesNotMatch(details, /not compared yet|needs an approved/);
 });

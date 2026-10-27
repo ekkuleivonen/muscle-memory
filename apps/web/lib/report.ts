@@ -579,6 +579,16 @@ function peopleCell(read: CohortRead | "loading" | "unavailable" | undefined, a:
   const solved = `${Math.round(group.solved * 100)}% solved`;
   return group.submissions ? `${solved} · median ${plural(group.submissions.p50, "submission")}` : solved;
 }
+/** What a people figure counts, from the read itself; the disabled reason when there is none. */
+function peopleDetails(cohorts: ReportInput["cohorts"]): string[] {
+  const read = Object.values(cohorts ?? {}).find((r): r is CohortRead => typeof r === "object" && r.state === "ready");
+  if (!read) return [`People: ${PEOPLE.reason}`];
+  const e = read.eligibility;
+  return [
+    `People: groups of at least ${read.minimum} ${e.unit}, on the same challenge version, runtime and diagnostics; ${e.attempts}.`,
+    `Ages: ${e.ages}. Stealth: ${e.stealth}. Sizes are shown as bands and shares rounded to 5%; a smaller group isn't shown.`,
+  ];
+}
 function minds(input: ReportInput): {
   chapter: ComparisonChapter | null;
   wanted: Report["comparisonRevisions"];
@@ -690,7 +700,7 @@ function minds(input: ReportInput): {
         details: [
           "A model result counts only when its recorded runtime and editor diagnostics match yours; otherwise it's withheld.",
           "Models use edit, run and submit tools rather than a keyboard. Outside help on either side isn't recorded.",
-          `People: ${PEOPLE.reason}`,
+          ...peopleDetails(input.cohorts),
         ],
       },
     },

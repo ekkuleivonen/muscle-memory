@@ -90,7 +90,7 @@ test("a group of enough browsers publishes rounded shares and submission quantil
   assert.equal(g.firstTry, 0, "the fixture's first submission fails");
   assert.deepEqual(g.submissions, { p25: 2, p50: 2, p75: 2 });
   const text = JSON.stringify(result);
-  assert.doesNotMatch(text, /"b\d+"|participantId|attempt|record|payload/, "no identifiers or rows leave the server");
+  assert.doesNotMatch(text, /"b\d+"|participantId|attempt_id|attemptId|record_id|payload/, "no identifiers or rows leave the server");
 });
 
 test("a group below the minimum is withheld entirely, not shown as small or zero", () => {
@@ -148,4 +148,13 @@ test("an attempt matches only the group with its exact runtime, diagnostics and 
   assert.equal(matchingGroup(read, attempt.conditions, "repeat"), null);
   assert.equal(matchingGroup(read, ['Runtime: {"engine":"python"}', attempt.conditions[0]], "first"), null);
   assert.equal(matchingGroup(read, [], "first"), null, "unknown conditions never borrow a group");
+});
+
+test("every read states who is counted, including that unanswered ages are included", () => {
+  const read = cohortResult(run(many(25)));
+  assert.equal(read.eligibility.unit, "distinct browsers, not people");
+  assert.match(read.eligibility.ages, /declared 16–17 excluded; no age answer included/);
+  const unanswered = many(25);
+  unanswered.push(profile("b0", { experience: "some" }, "2026-10-26T00:00:00.000Z"));
+  assert.equal(cohortResult(run(unanswered)).groups[0].participants, "20–49", "no age answer is counted, not dropped or guessed");
 });

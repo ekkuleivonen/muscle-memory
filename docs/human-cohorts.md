@@ -1,6 +1,16 @@
 # Human cohorts in the report (ENG-374): implementation and security proposal
 
-Status: **disabled draft.** `COHORTS_ENABLED = false` in `packages/statistics/cohort.ts`. The route answers `{ state: "disabled" }` without running any SQL, and the report makes no cohort request. Enabling it needs the owner's policy decision (root has proposed it to Ekku) and a new Privacy Notice version. Code and synthetic tests are in place so enabling is a reviewed one-line change.
+Status: **policy approved, read still disabled.** On 27 October 2026 Ekku approved (via dot) the initial comparison policy:
+- at least 20 eligible distinct browser participants;
+- the same challenge revision and language, under compatible conditions;
+- first attempts kept separate from repeats;
+- current stealth data excluded;
+- under-18s never mixed with adults;
+- no narrow demographic slices and no individual records.
+
+It is a conservative product floor, not a statistical guarantee. The implementation below enforces it.
+
+`COHORTS_ENABLED` stays `false` in `packages/statistics/cohort.ts` until root has reviewed this player-facing read and the release steps below are done. Until then the route answers `{ state: "disabled" }` without running SQL, and the report makes no cohort request.
 
 ## What a player sees
 
@@ -36,7 +46,9 @@ Never a nearest group, a pooled total, a percentile of one person, or a zero. Ed
 
 - **Deduplication:** records are deduplicated by `record_id`. A record with conflicting copies is dropped.
 - **People only:** only `actor = person`, so model runs never fill a human group.
-- **Stealth and 16–17:** a browser is excluded when its **latest** uploaded `site.profile` says `stealth: true` or `age: 16-17`. Turning stealth on removes all of that browser's history from every group at the next refresh. Minors are excluded entirely in v1; a separate 16–17 cohort would need its own approval.
+- **Stealth and 16–17:** a browser is excluded when its **latest** uploaded `site.profile` says `stealth: true` or `age: 16-17`. Turning stealth on removes all of that browser's history from every group at the next refresh.
+  - **Under-18s:** browsers that declared 16–17 are excluded from every group, so they are never mixed with adults. A separate 16–17 cohort is not built.
+  - **No age answer:** age is optional, and these browsers are counted. The Terms require 16 or older, so an unanswered browser may still be 16–17. Every read states this in its `eligibility` field, and the report's details repeat it. Excluding unanswered browsers too would be stricter but would make groups much smaller; that is root's call.
 - **Deletion:** erasure removes a deleted browser's rows daily at 03:17 UTC. A browser can therefore remain inside a ≥20 aggregate for up to about 25 hours after deletion (erasure lag plus the 1-hour cache). Closing that gap would mean extending the approved `ParticipantOwner` RPC with a read-only "deleted IDs" method; that would broaden the binding, so it is not proposed unless required.
 - **Synthetic QA revisions:** never a cohort.
 
@@ -44,6 +56,8 @@ Never a nearest group, a pooled total, a percentile of one person, or a zero. Ed
 
 ```json
 { "state": "ready", "version": "cohort-1", "minimum": 20, "readAt": "…",
+  "eligibility": { "unit": "distinct browsers, not people", "ages": "declared 16–17 excluded; no age answer included",
+    "stealth": "excluded by each browser's latest uploaded privacy setting", "attempts": "one first attempt and, separately, one repeat per browser" },
   "groups": [{ "runtime": {"engine": "javascript", "version": "…"}, "diagnostics": false,
     "practice": "first", "participants": "20–49", "solved": 0.8, "firstTry": 0.35,
     "submissions": { "p25": 1, "p50": 2, "p75": 4 } }] }
@@ -88,10 +102,12 @@ Never a nearest group, a pooled total, a percentile of one person, or a zero. Ed
 
 **Before enabling,** run the query once through the authenticated SQL workbench on a synthetic revision. SQLite does not prove that DataFusion can plan it (the ENG-340 history query taught this), and `json_get_json` output formatting (`'[]'`, `'true'`) must be confirmed against Basin.
 
-## Decisions needed to enable
+## Remaining before enabling
 
-1. **Policy:** the minimum (20 proposed), browser-ID counting, minors excluded, no demographic slices, and the ~25-hour deletion lag (or approval to extend the RPC).
-2. **This player-facing read:** using the existing token for aggregate queries triggered by players' visits.
+1. **Policy (approved):** the floor, matching, first/repeat split, stealth and under-18 rules above. Still open:
+   - whether browsers with no age answer stay included, as implemented and disclosed;
+   - the ~25-hour deletion lag (or approval to extend the ownership-check RPC with a deleted-IDs read).
+2. **This player-facing read (root review):** web's existing `ADMIN_STATS_SQL_TOKEN` would run fixed aggregate queries when players visit. This adds no new credential, binding, token scope or persistent store; the only state is in-memory cache.
 3. **A Privacy Notice version** saying comparisons with people are live, replacing "Human comparisons remain unavailable…".
 
 Enabling: set `COHORTS_ENABLED = true`, run the workbench check, deploy. Disabling is the reverse, and nothing is stored.
