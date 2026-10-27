@@ -5,6 +5,7 @@
  * practice.completed); this is what lets the device know it after those records were uploaded
  * and compacted away.
  */
+import { parseReflection, type ReflectionState } from "./solve-reflection";
 import { CHALLENGE_KEY } from "../../../packages/domain/records";
 
 export const PROGRESS_KEY = "muscle-memory.progress";
@@ -21,6 +22,8 @@ export interface ChallengeProgress {
   readonly completedAt: string | null;
   /** Attempts completed, this one included. */
   readonly completions: number;
+  /** UI-only choice/dismissal for this attempt; never uploaded or used as an answer. */
+  readonly reflection?: ReflectionState;
 }
 
 /** By challenge key, such as PY-003. */
@@ -49,7 +52,19 @@ export function parseProgress(raw: string | null): Progress {
         (p.completedAt === null || typeof p.completedAt === "string") &&
         Number.isSafeInteger(p.completions) &&
         p.completions! >= 0
-          ? [[key, p as ChallengeProgress]]
+          ? [
+              [
+                key,
+                {
+                  ...Object.fromEntries(
+                    Object.entries(p).filter(([key]) => key !== "reflection"),
+                  ),
+                  ...(parseReflection(p.reflection)
+                    ? { reflection: parseReflection(p.reflection) }
+                    : {}),
+                } as ChallengeProgress,
+              ],
+            ]
           : [],
       ),
     );
@@ -123,4 +138,17 @@ export function readProgress(): Progress {
 export function writeProgress(progress: Progress): void {
   localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
   window.dispatchEvent(new Event(PROGRESS_CHANGE));
+}
+
+/** Keeps one reflection decision only for the latest attempt, including after view eviction. */
+export function withReflection(
+  progress: Progress,
+  key: string,
+  attempt: string,
+  reflection: ReflectionState,
+): Progress {
+  const current = progress[key];
+  return current?.attempt === attempt
+    ? { ...progress, [key]: { ...current, reflection } }
+    : progress;
 }

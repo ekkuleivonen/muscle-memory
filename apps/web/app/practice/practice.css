@@ -529,3 +529,18 @@
 .after-answer[aria-pressed="true"]::before {
   content: "❯";
 }
+
+/* Secondary completion content follows the output in DOM and visual order. */
+.completion-comparisons, .practice-completion {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.completion-models { display: grid; gap: 6px; }
+.completion-model { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 2ch; }
+.completion-model > span:first-child { overflow-wrap: anywhere; flex: 1 1 22ch; }
+.completion-model strong { font-weight: normal; color: var(--fg); }
+.completion-comparisons details { margin-top: 8px; }
+.reflection-choices { display: flex; flex-wrap: wrap; gap: 4px 1ch; }
+.reflection-choices .after-answer { min-height: 32px; }
+.practice-completion > a { display: inline-block; margin-top: 12px; }

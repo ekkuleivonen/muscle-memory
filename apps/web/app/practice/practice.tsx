@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import {
-  Fragment,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -23,10 +22,6 @@ import {
   runFeedback,
   type StoredRecord,
 } from "../../../../packages/domain/records";
-import {
-  AFTER_QUESTIONS,
-  type AfterQuestion,
-} from "../../../../packages/domain/practice";
 import type { Json } from "../../../../packages/domain/json";
 import {
   engineFor,
@@ -43,6 +38,7 @@ import {
   complete,
   readProgress,
   writeProgress,
+  withReflection,
 } from "../../lib/progress";
 import { useProgress, useStars } from "../../lib/progress-hooks";
 import { noteStart, takeStart } from "../../lib/start";
@@ -79,7 +75,8 @@ import { privateCheckFailure } from "./check-feedback";
 import { checkFeedbackOf } from "../../lib/check-feedback";
 import { diagnose } from "../../lib/diagnosis";
 import { CheckFeedbackView } from "../_components/review";
-import { CompletionModelComparisons } from "../stats/model-comparisons";
+import { CompletionModelComparisons } from "./model-comparisons";
+import { Reflection, reflectionFor, type ReflectionState } from "./reflection";
 import { CopyChallengeLink, ShareOutcome } from "../_components/share";
 import { nextProblem } from "../../lib/next-problem";
 import { isPracticePath, practiceHref } from "../../lib/paths";
@@ -150,8 +147,24 @@ export function Practice({
   candidates: ChallengeSummary[];
   challenge: PracticeChallenge;
 }) {
-  const revision = useMemo(() => JSON.parse(revisionJson) as Revision, [revisionJson]);
-  const [outputOpen, setOutputOpen] = useState(false);
+  const revision = useMemo(
+    () => JSON.parse(revisionJson) as Revision,
+    [revisionJson],
+  );
+  const [outputOpen, setOutputOpen] = useState(true);
+  const reflectionNow = useRef<ReflectionState | undefined>(undefined);
+  const reflectionAttempt = useRef<string | null>(null);
+  const [reflection, setReflection] = useState<ReflectionState>();
+  function saveReflection(value: ReflectionState) {
+    reflectionNow.current = value;
+    setReflection(value);
+    const progress = readProgress();
+    const current = progress[challenge.key];
+    if (current && current.attempt === reflectionAttempt.current)
+      writeProgress(
+        withReflection(progress, challenge.key, current.attempt, value),
+      );
+  }
   const savedScope = useRef<string | null>(null);
   /** A saved place waiting for the editor to mount. */
   const pendingPlace = useRef<Place | null>(null);
@@ -199,6 +212,7 @@ export function Practice({
     id: string;
     completed: boolean;
   } | null>(null);
+  const completionRead = useRef(0);
   /** The store's records once the attempt completed, for the share card. */
   const [shareRecords, setShareRecords] = useState<
     readonly StoredRecord[] | null
@@ -264,11 +278,7 @@ export function Practice({
       )
         return;
       const target = event.target as HTMLElement | null;
-      if (
-        !target ||
-        !target.closest(".practice") ||
-        target.closest("dialog")
-      )
+      if (!target || !target.closest(".practice") || target.closest("dialog"))
         return;
       if (
         target?.closest(
@@ -291,9 +301,13 @@ export function Practice({
   const starred = stars.includes(challenge.key);
   const star = () => {
     writeStars(toggleStar(stars, challenge.key));
-    void logStar({ key: challenge.key, revision: challenge.revision }, !starred, {
-      from: "practice",
-    });
+    void logStar(
+      { key: challenge.key, revision: challenge.revision },
+      !starred,
+      {
+        from: "practice",
+      },
+    );
   };
   const completedKeys = useMemo(
     () =>
@@ -352,14 +366,22 @@ export function Practice({
   /** The attempt completed: progress says so, and the share card reads the records. */
   async function completed(current: PracticeSession, attemptId: string) {
     writeProgress(
-      complete(readProgress(), challenge.key, attemptId, new Date().toISOString()),
+      complete(
+        readProgress(),
+        challenge.key,
+        attemptId,
+        new Date().toISOString(),
+      ),
     );
     if (session.current !== current) return;
     setAttempt({ id: attemptId, completed: true });
+    if (!reflectionNow.current) saveReflection(reflectionFor(readProgress()));
+    const reading = ++completionRead.current;
     try {
       await current.recorder.flush();
       const records = await store.current!.records();
-      if (session.current === current) setShareRecords(records);
+      if (session.current === current && completionRead.current === reading)
+        setShareRecords(records);
     } catch (error) {
       console.warn("The result card could not be read.", error);
     }
@@ -373,7 +395,9 @@ export function Practice({
         account?.profile.editor === "vim" ? "vim" : "standard";
       setKeymap(keys);
       // Starts the editor's language and keymap downloading while the store opens.
-      void loadEditorModes(challenge.language as FileLanguage, keys).catch(() => {});
+      void loadEditorModes(challenge.language as FileLanguage, keys).catch(
+        () => {},
+      );
       store.current ??= await openPracticeStore();
       const participantId = await store.current.participantId();
       const environment = await environmentOf();
@@ -384,10 +408,15 @@ export function Practice({
       const progress = readProgress();
       const localAttempt = progress[challenge.key];
       // Another tab may have changed progress after the continuation gate resolved.
-      if ((!allowRepeat && (!localAttempt || localAttempt.completedAt)) ||
-          (localAttempt?.revision && localAttempt.revision !== challenge.revision &&
-            !(localAttempt.completedAt && allowRepeat)))
-        throw new Error("The saved attempt changed. Reload to open its exact challenge version.");
+      if (
+        (!allowRepeat && (!localAttempt || localAttempt.completedAt)) ||
+        (localAttempt?.revision &&
+          localAttempt.revision !== challenge.revision &&
+          !(localAttempt.completedAt && allowRepeat))
+      )
+        throw new Error(
+          "The saved attempt changed. Reload to open its exact challenge version.",
+        );
       const start = allowRepeat ? takeStart(challenge.key) : null;
       const now = new Date().toISOString();
       const chosen = attemptFor(
@@ -398,11 +427,17 @@ export function Practice({
         randomAttempt,
         challenge.revision,
       );
-      if (!chosen.fresh && chosen.progress[challenge.key]?.revision &&
-          chosen.progress[challenge.key].revision !== challenge.revision)
-        throw new Error("Reload to open the saved attempt's exact challenge version.");
+      if (
+        !chosen.fresh &&
+        chosen.progress[challenge.key]?.revision &&
+        chosen.progress[challenge.key].revision !== challenge.revision
+      )
+        throw new Error(
+          "Reload to open the saved attempt's exact challenge version.",
+        );
       if (chosen.fresh) writeProgress(chosen.progress);
       const attemptId = chosen.attempt;
+      reflectionAttempt.current = attemptId;
       const done = chosen.progress[challenge.key]?.completedAt != null;
       setAttempt({ id: attemptId, completed: done });
       if (done) setShareRecords(records);
@@ -431,9 +466,18 @@ export function Practice({
       const code = recovered?.files[revision.file] ?? revision.starter;
       savedScope.current = `${participantId}:${challenge.key}:${attemptId}`;
       const saved = readView(savedScope.current);
+      const answered = observed.some((o) => o.type === "practice.answered");
+      if (chosen.progress[challenge.key]?.reflection || done) {
+        const selected = chosen.progress[challenge.key]?.reflection ?? {
+          ...reflectionFor(progress),
+          dismissed: true,
+        };
+        saveReflection(answered ? { ...selected, dismissed: true } : selected);
+      }
       if (saved) {
         setOutputOpen(saved.outputOpen);
-        pendingPlace.current = saved.place && fitPlace(saved.place, code.length);
+        pendingPlace.current =
+          saved.place && fitPlace(saved.place, code.length);
       }
       const opened: PracticeSession = new PracticeSession({
         participantId,
@@ -468,6 +512,12 @@ export function Practice({
         onCompleted: () => void completed(opened, attemptId),
         onRun: (next) => {
           setRun(next);
+          if (next.status === "queued") {
+            completionRead.current++;
+            setShareRecords(null);
+            setOutputOpen(true);
+            if (resultsBody.current) resultsBody.current.scrollTop = 0;
+          }
           setStale(next.revision !== session.current?.currentRevision);
           if (next.purpose === "submit" && next.verdict) setSubmission(next);
         },
@@ -531,7 +581,8 @@ export function Practice({
   }, []);
 
   useEffect(
-    () => setChallengeContext({ key: challenge.key, revision: challenge.revision }),
+    () =>
+      setChallengeContext({ key: challenge.key, revision: challenge.revision }),
     [challenge.key, challenge.revision],
   );
 
@@ -587,7 +638,7 @@ export function Practice({
   const done = !!attempt?.completed;
   const check = checkFeedbackOf({
     running: running && run?.purpose === "submit",
-    completed: done && !stale && (!verdict || verdict.complete),
+    completed: done && !running && !stale && (!verdict || verdict.complete),
     edited: stale && !!verdict,
     verdict,
     diagnosis: verdict
@@ -596,7 +647,12 @@ export function Practice({
   });
   /** Practise this challenge again: a new attempt from the starting code. */
   const again = () => {
-    noteStart({ key: challenge.key, from: "again", query: null, position: null });
+    noteStart({
+      key: challenge.key,
+      from: "again",
+      query: null,
+      position: null,
+    });
     window.location.assign(practiceHref(challenge.key));
   };
   return (
@@ -779,6 +835,33 @@ export function Practice({
                       </>
                     )}
                   </button>
+                  {done &&
+                    (next ? (
+                      <Link
+                        className="btn primary"
+                        href={practiceHref(next.key)}
+                        title={next.title}
+                        onClick={() =>
+                          noteStart({
+                            key: next.key,
+                            from: "next",
+                            query: null,
+                            position: null,
+                          })
+                        }
+                      >
+                        Next challenge →
+                      </Link>
+                    ) : (
+                      <Link className="btn primary" href="/challenges">
+                        Explore challenges
+                      </Link>
+                    ))}
+                  {done && allowRepeat && (
+                    <button type="button" className="btn" onClick={again}>
+                      Practise this again
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -829,64 +912,6 @@ export function Practice({
                 ) : (
                   <CheckFeedbackView feedback={check} />
                 )}
-                {done && attempt && (
-                  <section
-                    className="practice-next"
-                    aria-label="Next challenge"
-                  >
-                    <h2>Next challenge</h2>
-                    {next ? (
-                      <>
-                        <p>Next: {next.title}</p>
-                        <Link
-                          className="btn primary"
-                          href={practiceHref(next.key)}
-                          onClick={() =>
-                            noteStart({
-                              key: next.key,
-                              from: "next",
-                              query: null,
-                              position: null,
-                            })
-                          }
-                        >
-                          Next challenge →
-                        </Link>{" "}
-                        {allowRepeat && <button type="button" className="btn" onClick={again}>
-                          Practise this again
-                        </button>}
-                        <p className="faint">
-                          Suggested by language and difficulty.
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <Link className="btn primary" href="/challenges">
-                          Explore challenges
-                        </Link>{" "}
-                        {allowRepeat && <button type="button" className="btn" onClick={again}>
-                          Practise this again
-                        </button>}
-                      </>
-                    )}
-                    <p className="faint">Human comparisons await an approved cohort policy; stored model tries are shown separately below. <Link href="/stats#comparisons">View your observed profile and comparison availability →</Link></p>
-                    <AfterQuestions
-                      key={attempt.id}
-                      onAnswer={(question, answer) =>
-                        session.current?.answered(question, answer)
-                      }
-                    />
-                    {shareRecords && <CompletionModelComparisons records={shareRecords} challenge={challenge.key} revision={challenge.revision} attempt={attempt.id}/>}
-                    {shareRecords && (
-                      <ShareOutcome
-                        challenge={challenge}
-                        attemptId={attempt.id}
-                        records={shareRecords}
-                        revision={revision}
-                      />
-                    )}
-                  </section>
-                )}
                 {run && (
                   <details
                     open={outputOpen}
@@ -903,6 +928,52 @@ export function Practice({
                       runtime={engine?.label ?? challenge.language}
                     />
                   </details>
+                )}
+                {done &&
+                  !stale &&
+                  !running &&
+                  run?.verdict?.complete &&
+                  attempt &&
+                  shareRecords && (
+                    <CompletionModelComparisons
+                      key={attempt.id}
+                      records={shareRecords}
+                      challenge={challenge.key}
+                      revision={challenge.revision}
+                      attempt={attempt.id}
+                    />
+                  )}
+                {done && attempt && (
+                  <section
+                    className="practice-completion"
+                    aria-label="After solving"
+                  >
+                    {reflection && (
+                      <Reflection
+                        state={reflection}
+                        onDismiss={(answer) => {
+                          saveReflection({ ...reflection, dismissed: true });
+                          if (answer !== undefined)
+                            session.current?.answered(
+                              reflection.question,
+                              answer,
+                            );
+                        }}
+                      />
+                    )}
+                    <details>
+                      <summary>Share this result</summary>
+                      {shareRecords && (
+                        <ShareOutcome
+                          challenge={challenge}
+                          attemptId={attempt.id}
+                          records={shareRecords}
+                          revision={revision}
+                        />
+                      )}
+                    </details>
+                    <Link href="/stats">Your practice report →</Link>
+                  </section>
                 )}
               </div>
             )}
@@ -925,63 +996,6 @@ export function Practice({
       </p>
       <TermFooter trail={trail} />
       <div ref={sandboxHost} hidden />
-    </div>
-  );
-}
-
-const ASKED: { id: AfterQuestion; message: string; labels: string[] }[] = [
-  {
-    id: "difficulty",
-    message: "How hard was it?",
-    labels: ["too easy", "about right", "hard", "too hard"],
-  },
-  {
-    id: "confidence",
-    message: "Before you submitted, how sure were you it would pass?",
-    labels: ["sure", "fairly sure", "unsure", "guessing"],
-  },
-  {
-    id: "would-use-ai",
-    message: "At work, would you have used AI for this?",
-    labels: ["yes", "maybe", "no"],
-  },
-];
-
-/** Three optional questions after completing, answered with a click each, for this attempt. */
-function AfterQuestions({
-  onAnswer,
-}: {
-  onAnswer(question: AfterQuestion, answer: string): void;
-}) {
-  const [answers, setAnswers] = useState<
-    Partial<Record<AfterQuestion, string>>
-  >({});
-  return (
-    <div className="after-questions" aria-label="A few questions, all optional">
-      {ASKED.map((question) => (
-        <p key={question.id} className="after-question">
-          <span className="after-mark">?</span> {question.message}{" "}
-          {AFTER_QUESTIONS[question.id].map((value, index) => (
-            <Fragment key={value}>
-              {index > 0 && <span className="faint">·</span>}
-              <button
-                type="button"
-                className="after-answer"
-                aria-pressed={answers[question.id] === value}
-                onClick={() => {
-                  setAnswers((current) => ({
-                    ...current,
-                    [question.id]: value,
-                  }));
-                  onAnswer(question.id, value);
-                }}
-              >
-                {question.labels[index]}
-              </button>
-            </Fragment>
-          ))}
-        </p>
-      ))}
     </div>
   );
 }
@@ -1027,8 +1041,8 @@ function Tests({
   if (!challenge.runnable)
     return (
       <p className="faint">
-        {languageLabel(challenge.language)} can&apos;t run in the browser yet. Your
-        edits are saved as you go.
+        {languageLabel(challenge.language)} can&apos;t run in the browser yet.
+        Your edits are saved as you go.
       </p>
     );
   if (runtime.state === "unavailable")

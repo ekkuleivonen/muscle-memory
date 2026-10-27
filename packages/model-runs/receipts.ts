@@ -4,6 +4,7 @@ import { modelParticipant, MODEL_CAPTURE_VERSION } from "../domain/model";
 import { PRACTICE_CAPTURE_VERSION } from "../domain/practice";
 import { orderSource } from "../domain/source-order";
 import { HARNESS_VERSION, SYSTEM_PROMPT, TOOLS } from "./tools";
+import { codeLength } from "./comparison";
 import { EFFORTS, MODEL_ID } from "./admin";
 export const RECEIPT_BYTES = 8 * 1024 * 1024;
 export interface ReceiptSlot {
@@ -20,6 +21,9 @@ export interface ModelReceipt {
   model: string;
   reportedModels: string[];
   reasoning: string;
+  /** From the run-start listing, never inferred from a successful outcome. */
+  defaultReasoning: string | null;
+  finalCodeLength: number | null;
   harness: string;
   try: number;
   state:
@@ -52,6 +56,8 @@ export function emptyReceipt(
     model: slot.model,
     reportedModels: [],
     reasoning: effort,
+    defaultReasoning: effort === "default" ? "default" : null,
+    finalCodeLength: null,
     harness: slot.harness_version,
     try: slot.try,
     state,
@@ -98,10 +104,22 @@ export function modelReceipt(
       throw new Error();
     const unique = new Map<string, string>();
     const observations: any[] = [];
+    const artifacts = new Map<string, any>();
     for (const line of text.split("\n")) {
       if (!line.trim()) continue;
       const row = JSON.parse(line);
-      if (row.kind !== "observation") continue;
+      if (row.kind !== "observation") {
+        if (row.kind === "artifact") {
+          const artifact = JSON.parse(row.payload);
+          if (artifact.type === "artifact.code-revision") {
+            const prior = artifacts.get(artifact.artifactId);
+            if (prior && canonical(prior) !== canonical(artifact))
+              throw new Error();
+            artifacts.set(artifact.artifactId, artifact);
+          }
+        }
+        continue;
+      }
       if (typeof row.record_id !== "string" || typeof row.payload !== "string")
         throw new Error();
       const prior = unique.get(row.record_id);
@@ -279,8 +297,42 @@ export function modelReceipt(
       .map((o) => o.data.model)
       .filter(safeModel);
     if (new Set(reports).size > 8) throw new Error();
+    const catalogs = observations.filter(
+      (o) => o.type === "model.catalog" && o.data.at === "start",
+    );
+    const entry =
+      catalogs.length === 1 && catalogs[0].data.listing?.status === 200
+        ? catalogs[0].data.listing.entry
+        : null;
+    const declared =
+      entry?.id === slot.model ? entry.reasoning?.default_effort : null;
+    const defaultReasoning =
+      effort === "default"
+        ? "default"
+        : EFFORTS.includes(declared)
+          ? declared
+          : null;
+    const completion = observations.find(
+      (o) => o.type === "practice.completed",
+    );
+    const final =
+      completion &&
+      submitted.find(
+        (o) =>
+          o.data.runId === completion.data.runId &&
+          o.source.id === completion.source.id,
+      );
+    const artifact = final && artifacts.get(final.data.codeArtifactId);
+    const finalCodeLength =
+      end.outcome === "completed" &&
+      artifact?.artifactId === completion?.data.codeArtifactId &&
+      artifact?.revision === final?.data.revision
+        ? codeLength(artifact, modelParticipant(slot.model))
+        : null;
     return {
       ...base,
+      defaultReasoning,
+      finalCodeLength,
       state: end.outcome,
       reportedModels: [...new Set(reports)].sort(),
       submissions: end.submissions,
