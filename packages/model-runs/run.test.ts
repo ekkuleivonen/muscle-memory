@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import type { ChallengeMetadata, Revision } from "../../packages/content/model";
-import type { StoredRecord } from "../../packages/domain/records";
+import type { ChallengeMetadata, Revision } from "../content/model";
+import type { StoredRecord } from "../domain/records";
 import { addLine, assembled, settle } from "./openrouter";
-import type { Edited, Ran, Range } from "./page";
+import type { Edited, Ran, Range } from "./practice";
 import { runModel, type Practice } from "./run";
 import { parseCall } from "./tools";
 

@@ -5,12 +5,12 @@
  * and after a Submit the feedback above it (lib/check-feedback.ts). Hidden cases appear only
  * as practice shows them: by position and failure category.
  */
-import { casesRun, type ChallengeMetadata, type Revision } from "../../packages/content/model";
+import { casesRun, type ChallengeMetadata, type Revision } from "../content/model";
 import { checkFeedbackOf } from "../../apps/web/lib/check-feedback";
 import { diagnose } from "../../apps/web/lib/diagnosis";
 import { transcript, toolchain } from "../../apps/web/app/practice/transcript";
 import type { TypeDiagnostic } from "../../apps/web/app/practice/type-checker";
-import type { Edited, Ran } from "./page";
+import type { Edited, Ran } from "./practice";
 
 /** A value on one line when it fits, indented JSON when not: as the examples pane shows it. */
 function compactJson(value: unknown): string {

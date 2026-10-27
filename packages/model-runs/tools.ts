@@ -3,7 +3,7 @@
  * practice, and nothing else. Changing any of them changes what a run means, so it changes
  * HARNESS_VERSION, and a new version runs as a series of its own.
  */
-import type { Json } from "../../packages/domain/json";
+import type { Json } from "../domain/json";
 
 export const HARNESS_VERSION = "harness-1";
 

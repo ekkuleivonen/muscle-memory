@@ -1,13 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, readdir } from "node:fs/promises";
 import { readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { blobArtifact, blobRecord, modelObservation } from "../../packages/domain/model";
-import { envelope, toRecord } from "../../packages/domain/records";
-import { PRACTICE_CAPTURE_VERSION } from "../../packages/domain/practice";
-import { rowOf, writeOutbox } from "./store";
+import { blobArtifact, blobRecord, modelObservation } from "../domain/model";
+import { envelope, toRecord } from "../domain/records";
+import { PRACTICE_CAPTURE_VERSION } from "../domain/practice";
+import { rowOf, runNdjson } from "./rows";
 
 const input = {
   participantId: "model:test_model",
@@ -37,15 +34,11 @@ test("a run's rows have exactly the events table's columns", () => {
   assert.deepEqual([artifact.kind, artifact.type, artifact.sequence], ["artifact", "artifact.blob", null]);
 });
 
-test("the outbox holds one file per run, and never a person's record", async () => {
-  // Scratch space for this test only; removed with the OS's temporary files.
-  const outbox = await mkdtemp(join(tmpdir(), "mm-outbox-"));
-  const path = await writeOutbox(outbox, "run-1", [ended, blob], "2026-10-27T10:01:00.000Z");
-  assert.deepEqual(await readdir(outbox), ["run-1.ndjson"]);
-  const lines = (await readFile(path, "utf8")).trim().split("\n").map((l) => JSON.parse(l));
+test("a run's NDJSON is one row per record, and never a person's record", () => {
+  const lines = runNdjson([ended, blob], "2026-10-27T10:01:00.000Z").trim().split("\n").map((l) => JSON.parse(l));
   assert.deepEqual(lines.map((l) => l.record_id), [ended.recordId, blob.recordId]);
   const person = toRecord(
     envelope("practice.closed", PRACTICE_CAPTURE_VERSION, { ...input, termsVersion: "2026-10-26" }, { reason: "left" as const }),
   );
-  await assert.rejects(() => writeOutbox(outbox, "run-2", [person], "2026-10-27T10:01:00.000Z"), /not a model's/);
+  assert.throws(() => runNdjson([person], "2026-10-27T10:01:00.000Z"), /not a model's/);
 });

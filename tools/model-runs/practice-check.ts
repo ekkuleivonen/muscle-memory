@@ -14,8 +14,9 @@ import { revisionId } from "../../packages/content/revision";
 import { readChallenges } from "../../packages/content/source";
 import { modelParticipant } from "../../packages/domain/model";
 import { MODEL_PRACTICE_CAPTURE_GAPS, PRACTICE_CAPTURE_GAPS, PRACTICE_CAPTURE_VERSION } from "../../packages/domain/practice";
-import { PracticeHost, runClock } from "./practice";
-import { edited, opening, ran } from "./render";
+import { runClock } from "../../packages/model-runs/practice";
+import { PracticeHost } from "./practice";
+import { edited, opening, ran } from "../../packages/model-runs/render";
 
 const root = resolve(import.meta.dirname, "../..");
 const only = process.argv.slice(2);

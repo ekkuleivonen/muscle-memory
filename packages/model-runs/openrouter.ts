@@ -4,8 +4,8 @@
  * error the stream carried). Parsing never drops a line it does not understand: the lines are
  * the record; the assembled message is only what the harness acts on.
  */
-import type { Json } from "../../packages/domain/json";
-import type { ChunkLine, HttpExchange } from "../../packages/domain/model";
+import type { Json } from "../domain/json";
+import type { ChunkLine, HttpExchange } from "../domain/model";
 
 export const OPENROUTER = "https://openrouter.ai/api/v1";
 

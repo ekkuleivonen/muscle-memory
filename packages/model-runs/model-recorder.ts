@@ -4,9 +4,9 @@
  * response is a handful of observations, not thousands. Everything is kept in memory, in
  * order, and stored with the run.
  */
-import { createHash } from "node:crypto";
-import type { Assignments, StoredRecord } from "../../packages/domain/records";
-import { toRecord } from "../../packages/domain/records";
+import { sha256 } from "../domain/ingest";
+import type { Assignments, StoredRecord } from "../domain/records";
+import { toRecord } from "../domain/records";
 import {
   blobArtifact,
   blobRecord,
@@ -15,7 +15,7 @@ import {
   type ModelData,
   type ModelObservation,
   type ModelType,
-} from "../../packages/domain/model";
+} from "../domain/model";
 
 const LINES_EVERY_MS = 1000;
 const LINES_AT_MOST = 200;
@@ -52,7 +52,10 @@ export class ModelRecorder {
 
   /** Stores text once under its SHA-256 and returns its artifact id. */
   blob(text: string, mediaType: string): { artifactId: string; bytes: number } {
-    const hash = createHash("sha256").update(text, "utf8").digest("hex");
+    // Synchronous, and the same in Node and the browser.
+    const hash = [...sha256(new TextEncoder().encode(text))]
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
     const blob = blobArtifact(this.options.participantId, mediaType, text, hash);
     if (!this.blobs.has(blob.artifactId)) {
       this.blobs.add(blob.artifactId);

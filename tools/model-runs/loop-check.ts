@@ -11,7 +11,7 @@ import { join, resolve } from "node:path";
 import { revisionId } from "../../packages/content/revision";
 import { readChallenges } from "../../packages/content/source";
 import { PracticeHost } from "./practice";
-import { runModel } from "./run";
+import { runModel } from "../../packages/model-runs/run";
 
 const root = resolve(import.meta.dirname, "../..");
 const only = process.argv.slice(2);

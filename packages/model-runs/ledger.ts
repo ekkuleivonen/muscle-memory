@@ -4,9 +4,9 @@
  * version, a condition and a try. Backfilling is queueing every slot the roster and the
  * published revisions call for; the slots already there are left alone.
  */
-import { canonical } from "../../packages/domain/json";
-import type { Assignments } from "../../packages/domain/records";
-import type { RunOutcome } from "../../packages/domain/model";
+import { canonical } from "../domain/json";
+import type { Assignments } from "../domain/records";
+import type { RunOutcome } from "../domain/model";
 
 /** What the ledger needs of a database: D1 over HTTP, or SQLite locally and in tests. */
 export interface Sql {

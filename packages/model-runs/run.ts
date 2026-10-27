@@ -5,35 +5,26 @@
  * without a tool call ends the run. Provider failures are retried and recorded; a model's own
  * failure (a refusal, a bad tool call, giving up) is a result and never retried.
  */
-import type { ChallengeMetadata, Revision } from "../../packages/content/model";
-import type { Json } from "../../packages/domain/json";
+import type { ChallengeMetadata, Revision } from "../content/model";
+import type { Json } from "../domain/json";
 import {
   MODEL_CAPTURE_GAPS,
   modelParticipant,
   type RunOutcome,
-} from "../../packages/domain/model";
+} from "../domain/model";
 import {
   MODEL_PRACTICE_CAPTURE_GAPS,
   PRACTICE_CAPTURE_GAPS,
-} from "../../packages/domain/practice";
-import type { Assignments, StoredRecord } from "../../packages/domain/records";
+} from "../domain/practice";
+import type { Assignments, StoredRecord } from "../domain/records";
 import { checksTypes, TYPE_CHECK_FEATURES } from "../../apps/web/app/practice/type-checker";
 import { ModelRecorder } from "./model-recorder";
 import { assistantMessage, exchange, OPENROUTER, stream } from "./openrouter";
-import type { Edited, Opened, OpenConfig, Ran, Range } from "./page";
-import { runClock } from "./practice";
+import { runClock, type OpenConfig, type Practice, type Range } from "./practice";
 import { edited, opening, ran } from "./render";
 import { HARNESS_VERSION, parseCall, SYSTEM_PROMPT, TOOLS } from "./tools";
 
-/** What the loop needs of practice: ./practice.ts in a browser, or a stand-in in tests. */
-export interface Practice {
-  readonly opened: Opened;
-  readonly records: readonly StoredRecord[];
-  edit(old: string, replacement: string): Promise<Edited>;
-  write(text: string): Promise<Edited>;
-  run(purpose: "examples" | "submit"): Promise<Ran>;
-  close(): Promise<Range>;
-}
+export type { Practice };
 
 export interface Budget {
   /** Model calls (turns), retries not counted. */

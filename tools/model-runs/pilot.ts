@@ -15,11 +15,11 @@ import { chromium } from "playwright";
 import { revisionId } from "../../packages/content/revision";
 import { readChallenges } from "../../packages/content/source";
 import type { Json } from "../../packages/domain/json";
-import { OPENROUTER } from "./openrouter";
+import { OPENROUTER } from "../../packages/model-runs/openrouter";
 import { PracticeHost } from "./practice";
-import { runModel } from "./run";
-import { writeOutbox } from "./store";
-import { HARNESS_VERSION } from "./tools";
+import { runModel } from "../../packages/model-runs/run";
+import { writeOutbox } from "./outbox";
+import { HARNESS_VERSION } from "../../packages/model-runs/tools";
 
 const root = resolve(import.meta.dirname, "../..");
 const [out, ...flags] = process.argv.slice(2);

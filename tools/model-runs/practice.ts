@@ -1,17 +1,22 @@
 /**
- * Headless practice for model runs: a local server for the page bundle (./page.ts) and the
- * pinned runtimes in apps/web/public, one headless Chromium, and one page per run. Every record
- * the session stores comes back here and is kept in memory, in write order, with the same
- * identical-or-conflict rule as the device's store.
+ * Headless practice for model runs from a work machine: a local server for the page bundle
+ * (./page.ts) and the pinned runtimes in apps/web/public, one headless Chromium, and one page
+ * per run. The page keeps the run's records; they come back here when practice closes.
  */
 import { createServer, type Server } from "node:http";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { build } from "esbuild";
 import { chromium, type Browser, type Page } from "playwright";
-import type { WriteOutcome } from "../../packages/capture/recorder";
 import type { StoredRecord } from "../../packages/domain/records";
-import type { Edited, Opened, OpenConfig, Ran, Range } from "./page";
+import type {
+  Edited,
+  Opened,
+  OpenConfig,
+  Practice,
+  Ran,
+  Range,
+} from "../../packages/model-runs/practice";
 
 const root = resolve(import.meta.dirname, "../..");
 
@@ -70,7 +75,6 @@ export class PracticeHost {
     const page = await context.newPage();
     page.setDefaultTimeout(120_000);
     const practice = new HeadlessPractice(page);
-    await page.exposeFunction("mmWrite", (records: StoredRecord[]) => practice.store(records));
     page.on("pageerror", (error) => practice.pageErrors.push(error.message));
     await page.goto(this.origin + "/");
     // As JSON: a revision is too deep for Playwright's argument types.
@@ -88,25 +92,13 @@ export class PracticeHost {
 }
 
 /** One run's practice page. */
-export class HeadlessPractice {
-  /** Every record stored, in write order. */
-  readonly records: StoredRecord[] = [];
+export class HeadlessPractice implements Practice {
+  /** Every record stored, in write order: filled when practice closes. */
+  records: StoredRecord[] = [];
   readonly pageErrors: string[] = [];
   opened!: Opened;
-  private readonly byId = new Map<string, string>();
 
   constructor(private readonly page: Page) {}
-
-  /** The device store's rule: an identical record is a duplicate, a changed one a conflict. */
-  store(records: readonly StoredRecord[]): WriteOutcome[] {
-    return records.map((record) => {
-      const stored = this.byId.get(record.recordId);
-      if (stored !== undefined) return stored === record.payload ? "duplicate" : "conflict";
-      this.byId.set(record.recordId, record.payload);
-      this.records.push(record);
-      return "written";
-    });
-  }
 
   code(): Promise<string> {
     return this.page.evaluate(() => window.harness.code());
@@ -124,15 +116,11 @@ export class HeadlessPractice {
     return this.page.evaluate((p) => window.harness.run(p), purpose);
   }
 
-  /** Records that the run ended, writes what is buffered, and closes the page. */
+  /** Records that the run ended, takes the run's records, and closes the page. */
   async close(): Promise<Range> {
     const range = await this.page.evaluate(() => window.harness.close());
+    this.records = await this.page.evaluate(() => [...window.harness.records()]);
     await this.page.context().close();
     return range;
   }
-}
-
-/** The run's clock: wall-clock-anchored and monotonic, the same formula as the page's. */
-export function runClock(): number {
-  return performance.timeOrigin + performance.now();
 }
