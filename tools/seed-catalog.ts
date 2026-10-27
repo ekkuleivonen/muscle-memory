@@ -2,7 +2,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { readChallenges } from "../packages/content/source";
+import { repositorySeed } from "./authoring-local";
 import { revisionId, verifyCatalog } from "../packages/content/revision";
 import type { Revision } from "../packages/content/model";
 import { digest } from "../packages/authoring/runtime";
@@ -11,7 +11,11 @@ import {
   type Head,
   type Version,
 } from "../packages/authoring/storage";
-import { planCatalogSeed, seedCatalog } from "../packages/authoring/seed";
+import {
+  planCatalogSeed,
+  seedCatalog,
+  verifySeededCatalog,
+} from "../packages/authoring/seed";
 
 const args = process.argv.slice(2);
 if (args.some((a) => a !== "--local"))
@@ -19,31 +23,8 @@ if (args.some((a) => a !== "--local"))
     "Supported option: --local. Remote seeding is not available.",
   );
 const root = fileURLToPath(new URL("../", import.meta.url));
-const sources = readChallenges(resolve(root, "content/challenges"));
-const revisions = Object.fromEntries(
-  sources.map((s) => [revisionId(s.revision), s.revision]),
-);
-const catalog = verifyCatalog({
-  schemaVersion: "1.0.0",
-  challenges: sources.map((s) => ({
-    ...s.metadata,
-    revision: revisionId(s.revision),
-  })),
-  revisions,
-});
-const archives: Record<string, Revision> = {};
-for (const file of (await readdir(resolve(root, "content/revisions"))).sort()) {
-  if (!/^[a-f0-9]{64}\.json$/.test(file))
-    throw new Error(`Unexpected archive filename: ${file}`);
-  archives[`sha256:${file.slice(0, -5)}`] = JSON.parse(
-    await readFile(resolve(root, "content/revisions", file), "utf8"),
-  );
-}
-if (sources.length !== 69 || Object.keys(archives).length !== 117)
-  throw new Error(
-    "Frozen seed inventory changed; expected 69 challenges and 117 revisions. Review before seeding.",
-  );
-const input = { catalog, archives, sources };
+const input = await repositorySeed(root);
+const { sources, catalog, archives } = input;
 const plan = await planCatalogSeed(input);
 console.log(
   JSON.stringify(
@@ -54,7 +35,7 @@ console.log(
       immutableObjects: plan.objects.length,
       catalogObject: plan.catalogObject,
       historicalMetadata:
-        "Current metadata context; historical titles are unknown.",
+        "Immutable publication metadata where available; current metadata for imported legacy revisions.",
       qa: "Imported publications; no fresh QA receipts.",
     },
     null,
@@ -111,41 +92,7 @@ if (args.includes("--local")) {
     }
     const storage = new CatalogStorage(db, bucket);
     console.log(JSON.stringify(await seedCatalog(storage, input)));
-    const versions = (
-      await db.prepare("SELECT * FROM published_versions").all<Version>()
-    ).results;
-    const heads = (
-      await db.prepare("SELECT * FROM challenge_heads").all<Head>()
-    ).results;
-    for (const version of versions) {
-      const revision = (await storage.readObject(
-        version.object_key,
-      )) as Revision;
-      if (revisionId(revision) !== version.revision)
-        throw new Error("Local archive hash verification failed.");
-    }
-    for (const head of heads) {
-      if (
-        !head.draft_object ||
-        !head.draft_digest ||
-        (await digest(await storage.readObject(head.draft_object))) !==
-          head.draft_digest
-      )
-        throw new Error("Local source digest verification failed.");
-    }
-    const state = await storage.catalogState();
-    if (!state?.active_object)
-      throw new Error("Local catalog pointer is missing.");
-    const published = verifyCatalog(
-      await storage.readObject(state.active_object),
-    );
-    console.log(
-      JSON.stringify({
-        verifiedLocalHeads: heads.length,
-        verifiedLocalArchives: versions.length,
-        activeChallenges: published.challenges.length,
-      }),
-    );
+    console.log(JSON.stringify(await verifySeededCatalog(storage)));
   } finally {
     await mf.dispose();
   }

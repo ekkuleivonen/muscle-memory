@@ -1,11 +1,9 @@
 /** Operator-only local fixtures. Never imports into the public app or contacts Cloudflare. */
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { Miniflare, convertV4MiniflareOptions } from "miniflare";
 import { CatalogStorage } from "../packages/authoring/storage";
-import { readChallenges } from "../packages/content/source";
-import { revisionId, verifyCatalog } from "../packages/content/revision";
-import type { Revision } from "../packages/content/model";
+import { readCatalogCopy } from "../packages/content/copy";
 export async function localAuthoring(root: string, persistence?: string) {
   const mf = new Miniflare(
     convertV4MiniflareOptions({
@@ -71,25 +69,8 @@ export async function initializeLocalCatalog(root: string, db: any) {
       );
   }
 }
+/** A local seed is always derived from the managed copy, including registered history. */
 export async function repositorySeed(root: string) {
-  const sources = readChallenges(resolve(root, "content/challenges"));
-  const catalog = verifyCatalog({
-    schemaVersion: "1.0.0",
-    challenges: sources.map((s) => ({
-      ...s.metadata,
-      revision: revisionId(s.revision),
-    })),
-    revisions: Object.fromEntries(
-      sources.map((s) => [revisionId(s.revision), s.revision]),
-    ),
-  });
-  const archives: Record<string, Revision> = {};
-  for (const name of await readdir(resolve(root, "content/revisions"))) {
-    if (!/^[a-f0-9]{64}\.json$/.test(name))
-      throw new Error("Unexpected archive name.");
-    archives["sha256:" + name.slice(0, -5)] = JSON.parse(
-      await readFile(resolve(root, "content/revisions", name), "utf8"),
-    );
-  }
+  const { sources, catalog, archives } = readCatalogCopy(root);
   return { sources, catalog, archives };
 }

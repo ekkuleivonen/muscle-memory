@@ -35,7 +35,7 @@ if (!out || !models.length || !keys.length || !apiKey)
   throw new Error("usage: OPENROUTER_API_KEY=… pilot.ts <out> --models … --challenges …");
 
 // Only the public revision: the private part (solutions) is never read here.
-const challenges = readChallenges(join(root, "content/challenges"))
+const challenges = readChallenges()
   .filter((c) => keys.includes(c.metadata.key))
   .map(({ metadata, revision }) => ({ metadata: { ...metadata, revision: revisionId(revision) }, revision }));
 const listing = (await (await fetch(`${OPENROUTER}/models`)).json()) as {

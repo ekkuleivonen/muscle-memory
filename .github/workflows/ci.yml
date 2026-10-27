@@ -7,7 +7,8 @@ concurrency:
   group: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'production' || github.run_id }}
   cancel-in-progress: false
 jobs:
-  web:
+  catalog-contracts:
+    # Public/fork PRs never receive catalog credentials, private copies or artifacts.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,17 +17,34 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - run: npm run test:catalog-contracts
+  web:
+    # Only code pushed by trusted repository writers may read private authoring material.
+    # Never use pull_request_target to hydrate a fork's checkout.
+    if: github.event_name == 'push' && github.repository == 'ekkuleivonen/muscle-memory'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Read private managed catalog (dedicated read access required)
+        run: npm run catalog:pull
+        env:
+          CATALOG_READ_TOKEN: ${{ secrets.CATALOG_READ_TOKEN }}
       # The Go, C# and Java runners are built from source in Docker; their builds are cached
       # by their inputs. The build still checks every file against its pinned hash.
       - uses: actions/cache@v4
         with:
           path: node_modules/.cache/muscle-memory-runtimes
           key: runtimes-${{ hashFiles('tools/build-runtimes.mjs', 'tools/runtimes/**') }}
-      - run: npm test
-      # Every revision the build made must be archived in the commit (tools/build-content.ts).
-      - run: test -z "$(git status --porcelain content/revisions)"
-      - run: npm run typecheck
-      - run: npm run build:cloudflare
+      # Logs can contain assertion diffs with private QA. Keep them local to the runner;
+      # never upload .local, catalog copies, test traces, or build output as public artifacts.
+      - run: node tools/private-check.mjs test
+      - run: node tools/private-check.mjs typecheck
+      - run: node tools/private-check.mjs build:cloudflare
         env:
           NEXT_TELEMETRY_DISABLED: '1'
           WRANGLER_SEND_METRICS: 'false'

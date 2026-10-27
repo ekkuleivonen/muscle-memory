@@ -5,6 +5,7 @@
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium, webkit, type Page } from "playwright";
+import { readChallenge } from "../../packages/content/source";
 import { LEGAL_VERSION } from "../../apps/web/lib/legal";
 
 const origin = process.env.POLISH_ORIGIN ?? "http://localhost:3060";
@@ -15,8 +16,7 @@ const output = process.env.POLISH_ARTIFACTS ?? "/tmp/mm-eng306";
 await mkdir(output, { recursive: true });
 const receipts: object[] = [];
 let uploads = 0;
-const correct =
-  "export function countWords(text) { const value = text.trim(); return value ? value.split(/\\s+/u).length : 0; }";
+const correct = readChallenge("JS-002").private.solution;
 
 async function ready(page: Page) {
   await page.locator(".practice-editor:not([hidden]) .cm-content").waitFor();

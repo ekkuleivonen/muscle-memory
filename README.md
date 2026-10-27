@@ -14,6 +14,8 @@ The product app uses Next.js and TypeScript. With Node.js 22+:
 
 ```sh
 npm ci
+# Authorized operator: uses existing Cloudflare read access; does not change cloud state.
+npm run catalog:pull
 npm run dev
 ```
 
@@ -27,9 +29,9 @@ npm run build
 npm run build:cloudflare
 ```
 
-See [Cloudflare build notes](docs/cloudflare-build.md). No account or deployment is required for local builds.
+See [Cloudflare build notes](docs/cloudflare-build.md). No deployment is required for local builds; they require an authorized gitignored managed catalog copy. Public synthetic loader tests run without it (`npm run test:catalog-contracts`).
 
-Challenges are folders of plain files in `content/challenges/<KEY>/` ([challenges](docs/challenges.md)); `npm run build:content` checks them and builds `content/catalog.json` (each revision hashed), before dev, builds and tests. An admin system with a database will replace the folders.
+Challenges are managed in the private D1/R2 catalog ([challenges](docs/challenges.md)). Development, builds, tests and model-run tools read its gitignored local copy. `npm run build:content` builds the public `content/catalog.json` projection without private QA; it does not create tracked archives. See [private catalog development](docs/private-catalog.md).
 
 ## Monorepo
 
@@ -40,7 +42,7 @@ Challenges are folders of plain files in `content/challenges/<KEY>/` ([challenge
 - `packages/capture`: bounded, ordered capture with retry and gap disclosure, and exact code restore.
 - `packages/browser`: device-local storage (IndexedDB), compaction and the uploader.
 - `packages/runner`: sandboxed in-browser runtimes, one engine per language (Pyodide, the browser's JavaScript engine with Sucrase, PGlite, linkedom, php-wasm, ruby.wasm, Yaegi for Go, Clang for C and C++, Roslyn on .NET for C#, teavm-javac for Java) behind one opaque-origin, network-denied iframe.
-- `content/challenges`: every challenge, one folder each.
+- `content/challenges`: retained public descriptions/starters for reference, not an authoring or build source.
 - `docs`: [getting started and sharing](docs/start.md), [challenges](docs/challenges.md), [practice and runners](docs/practice.md), [what we record](docs/telemetry.md), [the profile](docs/profile.md), [legal](docs/legal.md) and the planned [model runs](docs/model-runs.md).
 
 See [contributing](CONTRIBUTING.md) and [security](SECURITY.md). Licensed under MIT.

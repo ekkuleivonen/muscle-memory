@@ -8,21 +8,21 @@ import { runModel, type Practice } from "./run";
 import { parseCall } from "./tools";
 
 const revision: Revision = {
-  challenge: "PY-001",
-  task: "Count the words.",
+  challenge: "PY-900",
+  task: "Synthetic harness fixture: return the supplied value.",
   language: "python",
-  file: "count_words.py",
-  starter: "def count_words(text):\n    return 1\n",
-  entrypoint: "count_words",
+  file: "fixture.py",
+  starter: "def fixture(value):\n    return None\n",
+  entrypoint: "fixture",
   cases: [
-    { id: "a", name: "empty", input: "", expected: 0, hidden: false },
-    { id: "b", input: "a b", expected: 2, hidden: true },
+    { id: "a", name: "empty", input: 17, expected: 17, hidden: false },
+    { id: "b", input: 23, expected: 23, hidden: true },
   ],
   rules: [],
 } as unknown as Revision;
 const metadata = {
-  key: "PY-001",
-  title: "Count words",
+  key: "PY-900",
+  title: "Synthetic harness fixture",
   revision: "sha256:" + "c".repeat(64),
 } as unknown as ChallengeMetadata;
 
@@ -54,7 +54,7 @@ function fakePractice(): Practice & { calls: string[] } {
     },
     async run(purpose): Promise<Ran> {
       this.calls.push(purpose);
-      const complete = purpose === "submit" && code.includes("split");
+      const complete = purpose === "submit" && code.includes("return value");
       return {
         run: {
           runId: "r",
@@ -156,7 +156,7 @@ const decode = (records: readonly StoredRecord[]) =>
 
 test("a run that writes and submits: lines raw, reasoning passed back, accounting fetched", async () => {
   const practice = fakePractice();
-  const solution = "def count_words(text):\n    return len(text.split())\n";
+  const solution = "def fixture(value):\n    return value\n";
   const { fetcher, seen } = fakeFetch([
     () =>
       streamed(
@@ -213,7 +213,7 @@ test("a run that writes and submits: lines raw, reasoning passed back, accountin
   ]);
   assert.equal(second.messages[2].tool_calls[0].function.arguments, JSON.stringify({ text: solution }));
   assert.equal(second.messages[3].role, "tool");
-  assert.match(second.messages[3].content, /Edited count_words\.py/);
+  assert.match(second.messages[3].content, /Edited fixture\.py/);
   assert.equal(second.stream, true);
   // The key is sent, never recorded.
   assert.equal(seen[2].headers.authorization, "Bearer sk-test");

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { publishProblems } from "./publish";
 import { readChallenges } from "./source";
 
-const challenges = readChallenges(new URL("../../content/challenges", import.meta.url).pathname);
+const challenges = readChallenges();
 const of = (key: string) => challenges.find((c) => c.metadata.key === key)!;
 
 test("every challenge passes the publish checks", () => {
