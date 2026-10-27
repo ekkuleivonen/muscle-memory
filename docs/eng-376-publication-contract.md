@@ -1,5 +1,30 @@
 # ENG-376 publication/acknowledgement contract — draft implementation approved, live approval pending
 
+## Short activation approval sheet
+
+No live activation is performed by this document. Root can combine this privacy scope with the separate cache owner's exact handler/trigger receipt for one informed release approval.
+
+- **Allowed caller:** existing web Worker `muscle-memory` → existing ingest Worker `muscle-memory-ingest`, named entrypoint `ComparisonEligibility`, service binding `COMPARISON_ELIGIBILITY`. Only `check(members:string[]):Promise<(string|null)[]>` (≤100 unique IDs), `generation():Promise<string|null>`, and `authorize(generation:string):Promise<boolean>`. Storage failures throw the fixed “Comparisons unavailable” error; invalid/no-match/contended authorization returns false; a missing generation returns null. No public RPC or arbitrary storage/SQL access.
+- **CONTROL:** `comparison-publication/fence={generation,authorizationNonce}`; both server UUIDs. `authorize` changes only the nonce under an ETag condition for the requested generation. Every permissive/restrictive privacy update invalidates the old generation before acknowledging; deletion tombstones first, invalidates, then removes privacy state/proof before success. Maximum three CAS attempts with fresh reads, no lost invalidation, no success on incomplete writes. Earlier-authorized responses may arrive later.
+- **Browser:** original-secret `POST /ingest/v1/participants/<id>/comparison-privacy`. Read `{action:"read",secret}`; update `{action:"update",secret,expectedRevision:string|null,stealth:boolean,age:"adult"|"non-adult"|"unknown"}`. CONTROL `comparison-privacy/<id>={stealth,age,revision,acknowledged}`. 200 acknowledges/reads confirmed state (or absent state); 202 is pending/ineligible; 409 needs review; 400 malformed; unauthenticated absent/deleted IDs share generic 401; 410 only for deletion detected after ownership verification; 429 rate-limited; control failure 503, never confirmation.
+- **Human artifact:** `{version:"human-snapshot-1",challenge,revision,window,computedAt,expiresAt,generation,groups}`, one-hour expiry, aggregate-only groups with ≥20 distinct eligible known-adult browsers per published metric and exact revision/runtime/editor/diagnostics. No member IDs. Serve through conditional generation authorization; missing/expired/invalidated artifacts omit the FYI, with no stale/raw fallback or request-time SQL.
+- **Bounded refresh proposal (scheduler not implemented here):** one hourly invocation; fixed registry selection below, reject registry overflow above 100; at most one fixed event query per selected current revision (100 maximum), two active builds, and a 10-minute absolute invocation budget. Stop launching when exhausted, cancel supported I/O and discard any late result; never publish an incomplete/late artifact. Each event query is ≤90 server-selected days, ≤15 seconds for SQL/body, ≤1 MiB response, ≤1,000 member rows and ≤100 unique member checks. Failed/missing refreshes leave no FYI once the prior artifact expires or is invalidated. These are per-invocation/isolate work limits, **not** a global spending or scanned-byte cap. No automatic within-invocation SQL retry.
+- **Proposed live configuration:** ingest `COMPARISON_PRIVACY_ENABLED="true"`; web service binding `{binding:"COMPARISON_ELIGIBILITY",service:"muscle-memory-ingest",entrypoint:"ComparisonEligibility"}`. Browser source gate `apps/web/lib/comparison-privacy.ts:COMPARISON_PRIVACY_ENABLED` and human source gate `packages/statistics/cohort.ts:COHORTS_ENABLED` stay false until the reviewed release instruction. The cache owner must supply the exact existing-web custom-worker handler path, hourly cron/enable variables, total-budget enforcement and namespace wiring before combined activation approval. Existing CONTROL, web CATALOG_DB/CONTENT and server-only SQL token are reused; no credentials/token scopes/new service or direct web CONTROL binding.
+
+Fixed registry selection for the proposed bounded refresh, using existing web D1 (not caller SQL):
+
+```sql
+SELECT h.challenge_key, v.revision, v.published_at, v.metadata_json
+FROM challenge_heads h
+JOIN published_versions v
+  ON v.challenge_key = h.challenge_key AND v.revision = h.published_revision
+WHERE h.lifecycle = 'published' AND h.published_revision IS NOT NULL
+ORDER BY h.challenge_key
+LIMIT 101
+```
+
+Validate returned keys/revisions/window/runtime against the existing catalog contract; exclude synthetic-QA revisions; refuse an overflow instead of claiming a complete refresh. The current per-revision query/projection helpers are implemented. This batch selection/deadline plan remains a proposal for the separately owned scheduler, not a claim of deployed or implemented scheduling. Native Basin verification, disclosure review and independent security review remain release gates.
+
 ## Draft contract, pending live approval
 
 Publication means a comparison response's **server authorization**, not network delivery. After a server acknowledges a stealth/age-exclusion/deletion change, no new comparison may be authorized against the old privacy generation. A response authorized before that acknowledgement may still arrive afterward. Already downloaded aggregates cannot be recalled. Local changes are immediate, but an offline/pending change is not a server acknowledgement. The requester approved refining this contract in draft code; all live authority remains approval-gated. Two CONTROL checks do not establish it, or a stronger delivery-time guarantee.
@@ -12,7 +37,7 @@ Existing browser → **muscle-memory-ingest** route `POST /ingest/v1/participant
 
 - `{action:"read", secret}` returns only this browser's comparison state (or absence/pending), after ownership and tombstone checks. No arbitrary ID read without that ID's original secret. It never returns a proof or secret.
 - `{action:"update", secret, expectedRevision, stealth, age}` writes the same coarse existing preferences. `age` is `adult`, `non-adult`, or `unknown`. Conditional R2 ETag writes reject stale tabs. Unknown never means adult. A conflict is read for review, never blindly overwritten. No first-owner claim is added.
-- Current draft storage is `comparison-privacy/<id>` = `{stealth, age, revision}`. The fence protocol includes `acknowledged:boolean`, so an interrupted write cannot be mistaken for a completed exclusion acknowledgement by a later read. A pending state may disclose its revision to its authenticated owner for an explicit retry, but cannot yield a confirmed UI state. No client time, full profile, code, event, secret or proof is added.
+- Current draft storage is `comparison-privacy/<id>` = `{stealth, age, revision, acknowledged}`. The fence protocol includes `acknowledged:boolean`, so an interrupted write cannot be mistaken for a completed exclusion acknowledgement by a later read. A pending state may disclose its revision to its authenticated owner for an explicit retry, but cannot yield a confirmed UI state. No client time, full profile, code, event, secret or proof is added.
 
 Existing web **muscle-memory** → existing **muscle-memory-ingest**, separate named entrypoint **ComparisonEligibility**, proposed service binding **COMPARISON_ELIGIBILITY**:
 
