@@ -34,7 +34,7 @@ import { encodeOutcome } from "../../apps/web/lib/outcome";
 import { AuthoringService } from "../../packages/authoring/service";
 const legal = await readFile("apps/web/lib/legal.ts", "utf8");
 assert.ok(
-  legal.includes('LEGAL_VERSION = "2026-10-26.2"'),
+  legal.includes('LEGAL_VERSION = "2026-10-27"'),
   "review local consent fixture if Terms change",
 );
 const issuer = "https://eng354-fixture.cloudflareaccess.com";
@@ -392,7 +392,7 @@ try {
       await ctx.addCookies([
         {
           name: "mm_consent",
-          value: "2026-10-26.2",
+          value: "2026-10-27",
           url: "https://musclememory.run",
         },
       ]);
@@ -405,7 +405,7 @@ try {
               version: "2",
               createdAt: new Date().toISOString(),
               accepted: {
-                version: "2026-10-26.2",
+                version: "2026-10-27",
                 at: new Date().toISOString(),
               },
               stealth: true,

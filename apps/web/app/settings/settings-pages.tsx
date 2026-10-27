@@ -168,7 +168,7 @@ function Privacy() {
       tone: "dim",
       text: share
         ? "Your runs are eligible for future anonymised publications and community comparisons."
-        : "Done, you've gone stealth. We won't include you in our stats or comparisons from now on, including what you've already done, and you won't see other people's stats either.",
+        : "Done, you've gone stealth. We won't include you in published stats or comparisons from now on, including what you've already done, and you won't see other people's stats either.",
     });
   };
   return (

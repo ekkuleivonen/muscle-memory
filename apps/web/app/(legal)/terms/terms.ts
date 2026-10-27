@@ -17,33 +17,34 @@ These Terms are an agreement between you and **rowandreason.com** ("we", "us"). 
 
 - Your account is a random ID in your browser. No name, no email, no password.
 - One person per account, please.
-- **Right now your account lives in your browser.** Clear your storage or switch devices and it's gone. We're working on that.
+- **Your account lives in your browser.** Clear your storage and it's gone; what we received stays with us until you delete the account (which needs that browser, or an exported file). To move to another browser, \`export\` a file in **Settings** and \`import\` it there. We can't recover an account for you.
 - You can delete your account any time with \`delete\` in **Settings**.
 
 ## Playing fair
 
 You agree not to:
 
-- **use AI assistants, bots or someone else to solve challenges** while presenting the result as your own run. If you want to see what an LLM would do, that's what the LLM comparison is for;
+- **use AI assistants, bots or someone else to solve challenges** while presenting the result as your own run. If you want to see what an LLM would do, that's what the planned LLM comparisons are for;
 - automate accounts, scrape the catalog, or hammer the service;
 - attack, probe or reverse-engineer the service, except through responsible disclosure to **support@rowandreason.com** (thank you in advance);
 - **try to re-identify anyone** in published datasets, or combine them with other data to do so;
 - submit anything illegal, malicious, or that you don't have the right to share. **Don't paste your employer's code.** Their lawyers are much less fun than this page.
 
-If you break these rules, we may suspend or close your account. Where we reasonably can, we'll tell you why first.
+If you break these rules, we may refuse what your account sends, leave its records out of anything we publish or compare, or delete them. Since we don't know who you are, we usually can't tell you first.
 
 ## Your code and activity
 
 - **You keep the copyright** in the code you write here.
 - You give us a **worldwide, non-exclusive, royalty-free, perpetual and irrevocable licence** to use, store, copy, modify, analyse and publish what you submit and the activity data around it. That includes publishing it in **anonymised datasets** under open licences, and letting others use those datasets.
 - You confirm you have the right to give us that licence (see: your employer's code, above).
-- Going stealth in Settings means we leave you out of future releases and of comparisons, and you don't see other people's stats in return. Releases that already went out stay out there, anonymised.
+- Going stealth in Settings means we leave you out of future releases and of comparisons, and you don't see other people's stats in return. Releases that already went out stay out there, anonymised. Nothing has been published yet.
+- **Sharing a result is up to you.** A result link shows anyone who has it which challenge you completed and how its checks went, and your code only if you choose to include it. Once you've sent a link, we can't take it back.
 
 Why the broad licence? Because "anonymised dataset of how people solve challenges" only works if we may actually publish the solutions.
 
 ## Our stuff
 
-The challenges, descriptions, tests, design and code of Muscle Memory belong to us or our licensors. Use them to practise, as much as you like. Don't copy the catalog wholesale or run a clone of it.
+Muscle Memory's source code is open source under the **MIT licence**, which says what you may do with it; the licence comes with the code. **[The licence for the challenges, their descriptions and tests, to be confirmed.]** Until that's settled, use them to practise, as much as you like, and don't republish the catalog wholesale.
 
 ## Published datasets
 
