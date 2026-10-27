@@ -622,7 +622,8 @@ function minds(input: ReportInput): {
     if (m.cell.kind === "solved") t.solved++;
     tally.set(m.slot, t);
   }
-  const named = [...tally].slice(0, 3).map(([slot, t]) => `${slot.split(" · ")[0]} solved ${t.solved} of ${t.tried}`);
+  // The full slot (model · reasoning), so two settings of one model stay distinct.
+  const named = [...tally].slice(0, 3).map(([slot, t]) => `${slot} solved ${t.solved} of ${t.tried}`);
   const perModel = tally.size > 3 ? `${named.join(", ")} and ${tally.size - 3} more` : named.join(", ");
   const ready = rows.every((r) => r.state !== "loading");
   // A failed read is not an empty result: absence is claimed only for receipts actually read.
@@ -645,7 +646,15 @@ function minds(input: ReportInput): {
       rows,
       columns,
       evidence: {
-        basis: `${plural(rows.length, "challenge")} you tried, matched to model tries on the exact same version.`,
+        basis: (() => {
+          const read = rows.filter((r) => r.state === "ready").length;
+          const tried = `${plural(rows.length, "challenge")} you tried`;
+          if (!ready) return `${tried}; model results are being read.`;
+          if (!read) return `${tried}. Model results couldn't be read.`;
+          return read === rows.length
+            ? `${tried}, checked against model tries on the exact same version.`
+            : `${tried}; ${read} checked against model tries on the exact same version.`;
+        })(),
         caveat:
           "Each model cell is one observed try, not a success rate. Your time and a model's latency aren't a race.",
         details: [

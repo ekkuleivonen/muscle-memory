@@ -136,7 +136,7 @@ test("rich synthetic evidence tells all six chapters from what was recorded", ()
   const pyRow = m.rows.find((x) => x.challenge === "PY-001")!;
   assert.equal(jsRow.models[0].cell.kind, "solved");
   assert.equal(pyRow.models[0].cell.kind, "withheld", "a runtime mismatch withholds the outcome");
-  assert.match(m.headline, /You solved 2 of 2\. synthetic\/model solved 1 of 1\./);
+  assert.match(m.headline, /You solved 2 of 2\. synthetic\/model · high solved 1 of 1\./);
   assert.match(m.evidence.caveat!, /one observed try, not a success rate/);
   assert.match(m.evidence.details.join(" "), /needs an approved minimum group size/);
   assert.doesNotMatch(JSON.stringify(r.chapters), /not enough|too few/, "no cohort result is implied");
@@ -181,7 +181,7 @@ test("model cells keep loading, unavailable and missing slots distinct", () => {
     "minds",
   )!;
   assert.deepEqual(none.rows[0].models.map((m) => m.cell.kind), ["none", "not-solved"]);
-  assert.match(none.headline, /synthetic\/model solved 0 of 1|other\/model solved 0 of 1/);
+  assert.match(none.headline, /other\/model · high solved 0 of 1/);
 });
 
 test("stories never form from a trace without checks, and gaps are shortened, not named", () => {
@@ -254,6 +254,8 @@ test("failed receipt reads never become a claim that no model tried", () => {
     "minds",
   )!;
   assert.equal(all.headline, "Model results can't be read right now.");
+  assert.equal(all.evidence.basis, "2 challenges you tried. Model results couldn't be read.");
+  assert.doesNotMatch(all.evidence.basis, /checked against|matched/);
   assert.doesNotMatch(all.headline, /No model/);
   const some = chapter<ComparisonChapter>(
     buildReport(input({ attempts: device(a, b), receipts: { [a.revision]: [], [b.revision]: "unavailable" } })),
@@ -264,7 +266,7 @@ test("failed receipt reads never become a claim that no model tried", () => {
     buildReport(input({ attempts: device(a, b), receipts: { [a.revision]: [receipt()], [b.revision]: "unavailable" } })),
     "minds",
   )!;
-  assert.match(mixed.headline, /synthetic\/model solved 1 of 1\. 1 couldn't be read right now\./);
+  assert.match(mixed.headline, /synthetic\/model · high solved 1 of 1\. 1 couldn't be read right now\./);
   assert.equal(chapter<ComparisonChapter>(buildReport(input({ attempts: device(a), receipts: { [a.revision]: [] } })), "minds")!.headline,
     "No model has a comparable try on these exact challenges yet.");
 });
@@ -350,4 +352,14 @@ test("the real uploaded-history projection flows into the report beside device e
   assert.ok(o.languages[0].items[0].revisited, "two attempts on one challenge is a revisit");
   assert.ok(chapter<StoryChapter>(r, "story"));
   assert.doesNotMatch(JSON.stringify(r), /synthetic-artifact|"abc"|secret/, "no code or identifiers reach the report");
+});
+
+test("two reasoning settings of one model stay distinct in the headline", () => {
+  const a = summary("t1", "JS-001");
+  const m = chapter<ComparisonChapter>(
+    buildReport(input({ attempts: device(a), receipts: { [a.revision]: [receipt({ reasoning: "high" }), receipt({ reasoning: "low", state: "stopped" })] } })),
+    "minds",
+  )!;
+  assert.match(m.headline, /synthetic\/model · high solved 1 of 1, synthetic\/model · low solved 0 of 1/);
+  assert.equal(m.evidence.basis, "1 challenge you tried, checked against model tries on the exact same version.");
 });
