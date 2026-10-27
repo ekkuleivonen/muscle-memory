@@ -26,3 +26,5 @@ apps/web/public/runtime/
 /content/challenges/*/cases.json
 /content/challenges/*/private/
 /content/revisions/*.json
+# Historical blind-solve source is private QA, not a public fixture.
+/docs/eng-338/candidates/

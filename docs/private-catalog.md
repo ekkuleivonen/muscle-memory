@@ -21,3 +21,5 @@ Private-dependent checks put detailed logs in ephemeral `.local/checks` files, n
 ## Recovery and boundaries
 
 Before removal, all 69 tracked private sources and 117 tracked archives were byte-verified against their existing managed objects. The recovery export additionally preserved current registration: 69 discoverable challenges, 70 heads, 118 versions and 190 referenced objects. No cloud content was deleted or changed. Git history, earlier clones and search caches are outside scope; no full-erasure or complete-secrecy claim is made.
+
+A separate scan found real solutions in the old ENG-338 blind-solve candidate directory. Its 211 files were byte-verified into `.local/recovery/eng338-candidates` before removal from the public tree; the audit checklist, hashes and execution receipts remain tracked. Full-text scanning of 151 current reference/alternative implementations now finds no matches in tracked files. This is a scoped full-text check, not a guarantee against every equivalent algorithm or historical copy.
