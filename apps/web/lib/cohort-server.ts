@@ -8,15 +8,16 @@ import {
   type CohortRead,
 } from "../../../packages/statistics/cohort";
 import { cohortMemberQuery } from "../../../packages/statistics/current-cohort";
-import { engineFor } from "../../../packages/runner/engines";
-import { cohortWindow } from "../../../packages/statistics/cohort-window";
+import { readCohortBuildSpec } from "../../../packages/statistics/cohort-source";
 import {
   buildHumanSnapshot,
   type ComparisonControl,
   type HumanSnapshot,
 } from "../../../packages/statistics/human-snapshot";
-import { syntheticRevisions } from "../../../packages/statistics/exclusions";
-import type { CatalogDatabase } from "../../../packages/authoring/storage";
+import type {
+  CatalogDatabase,
+  ContentBucket,
+} from "../../../packages/authoring/storage";
 
 /** No result cache: every draft read consults current CONTROL state. */
 const recent = new Map<string, number>();
@@ -64,8 +65,9 @@ export async function precomputeCohort(
         >);
   const token = env.ADMIN_STATS_SQL_TOKEN;
   const db = env.CATALOG_DB as CatalogDatabase | undefined;
+  const content = env.CONTENT as ContentBucket | undefined;
   const checker = env.COMPARISON_ELIGIBILITY as ComparisonControl | undefined;
-  if (typeof token !== "string" || !token.trim() || !db || !checker)
+  if (typeof token !== "string" || !token.trim() || !db || !content || !checker)
     return null;
   const key = `${challenge}/${revision}`;
   const now = Date.now();
@@ -75,27 +77,10 @@ export async function precomputeCohort(
   const read = (async () => {
     active++;
     try {
-      // Synthetic QA revisions are never a human cohort.
-      const registry = await db
-        .prepare(
-          "SELECT challenge_key, revision, metadata_json, published_at FROM published_versions WHERE challenge_key = ? AND revision = ?",
-        )
-        .bind(challenge, revision)
-        .all<{
-          challenge_key: string;
-          revision: string;
-          metadata_json: string;
-          published_at: string;
-        }>();
-      if (syntheticRevisions(registry.results ?? []).length) return null;
-      if (registry.results?.length !== 1) return null;
-      const window = cohortWindow(registry.results[0].published_at);
-      const runtime = engineFor(
-        JSON.parse(registry.results[0].metadata_json).language,
-      )?.runtime;
-      if (!runtime) return null;
+      const spec = await readCohortBuildSpec(db, content, challenge, revision);
+      if (!spec) return null;
       return await buildHumanSnapshot(
-        { challenge, revision, window, runtime },
+        spec,
         async () => {
           const response = await fetch(
             "https://api.sql.cloudflarestorage.com/api/v1/accounts/166fd3dff06a9c3f1aef172a25db7ace/basin-sql/query/muscle-memory-events",
@@ -106,7 +91,7 @@ export async function precomputeCohort(
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                query: cohortMemberQuery(challenge, revision, window),
+                query: cohortMemberQuery(challenge, revision, spec.window),
               }),
               cache: "no-store",
               redirect: "manual",
