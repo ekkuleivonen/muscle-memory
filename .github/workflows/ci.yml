@@ -57,3 +57,5 @@ jobs:
       - run: pip install -r tools/erasure/requirements-test.txt
       - run: python -m unittest -v test_erase
         working-directory: tools/erasure
+      # The image the erasure Worker runs (apps/erasure); deployed by hand, so check it builds here.
+      - run: docker build --platform linux/amd64 tools/erasure

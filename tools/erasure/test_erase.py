@@ -2,7 +2,6 @@
 import json
 import tempfile
 import unittest
-from datetime import datetime, timezone
 from pathlib import Path
 
 import pyarrow as pa
@@ -12,6 +11,7 @@ from pyiceberg.types import DoubleType, LongType, NestedField, StringType
 
 import access
 import erase
+import server
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -43,23 +43,6 @@ def rows(participant: str, count: int, table_schema: Schema) -> pa.Table:
     return pa.Table.from_pydict(data, schema=table_schema.as_arrow())
 
 
-class FakeS3:
-    def __init__(self, keys):
-        self.objects = {k: b"{}" for k in keys}
-
-    def get_paginator(self, _):
-        objects = self.objects
-
-        class Pages:
-            def paginate(self, Bucket, Prefix):
-                yield {"Contents": [{"Key": k} for k in sorted(objects) if k.startswith(Prefix)]}
-
-        return Pages()
-
-    def put_object(self, Bucket, Key, Body, ContentType):
-        self.objects[Key] = Body
-
-
 class ErasureTest(unittest.TestCase):
     def test_tombstoned_participants_lose_every_row_and_others_keep_theirs(self):
         with tempfile.TemporaryDirectory() as warehouse:
@@ -72,24 +55,41 @@ class ErasureTest(unittest.TestCase):
             for participant, count in (("p-gone", 5), ("p-stays", 3), ("p-also-gone", 2)):
                 table.append(rows(participant, count, s))
 
-            s3 = FakeS3(["deleted/p-gone", "deleted/p-also-gone", "deleted/p-never-uploaded"])
-            ids = erase.tombstones(s3, "control")
-            self.assertEqual(ids, ["p-also-gone", "p-gone", "p-never-uploaded"])
-
+            ids = ["p-also-gone", "p-gone", "p-never-uploaded"]
             removed = erase.erase(table, ids)
             self.assertEqual(dict(removed), {"p-gone": 5, "p-also-gone": 2})
             left = table.scan().to_arrow().column("participant_id").to_pylist()
             self.assertEqual(sorted(set(left)), ["p-stays"])
             self.assertEqual(len(left), 3)
 
-            now = datetime(2026, 10, 25, 12, tzinfo=timezone.utc)
-            erase.record(s3, "control", removed, now)
-            self.assertIn("erased/p-gone/20261025T120000Z.json", s3.objects)
-            self.assertEqual(json.loads(s3.objects["erased/p-gone/20261025T120000Z.json"])["rows"], 5)
-
             # A later run finds nothing more to remove, and records nothing.
             again = erase.erase(table, ids)
             self.assertEqual(sum(again.values()), 0)
+
+
+class ServerTest(unittest.TestCase):
+    def test_an_erase_request_is_answered_with_the_rows_removed(self):
+        with tempfile.TemporaryDirectory() as warehouse:
+            catalog = SqlCatalog(
+                "local", uri=f"sqlite:///{warehouse}/catalog.db", warehouse=f"file://{warehouse}"
+            )
+            catalog.create_namespace("default")
+            s = schema()
+            table = catalog.create_table("default.events", schema=s)
+            table.append(rows("p-gone", 4, s))
+            table.append(rows("p-stays", 1, s))
+            body = json.dumps({"participants": ["p-gone", "p-gone", "p-never"]}).encode()
+            self.assertEqual(server.handle(body, lambda: table), (200, {"removed": {"p-gone": 4}}))
+            self.assertEqual(table.scan().to_arrow().column("participant_id").to_pylist(), ["p-stays"])
+
+    def test_malformed_and_empty_requests_never_open_the_catalog(self):
+        def never():
+            raise AssertionError("catalog opened")
+
+        self.assertEqual(server.handle(b"{}", never)[0], 400)
+        self.assertEqual(server.handle(b'{"participants": [1]}', never)[0], 400)
+        self.assertEqual(server.handle(b"not json", never)[0], 400)
+        self.assertEqual(server.handle(b'{"participants": []}', never), (200, {"removed": {}}))
 
 
 class AccessTest(unittest.TestCase):

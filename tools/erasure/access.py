@@ -8,13 +8,16 @@ the person emails us the reference. Run by the operator on their own machine:
 It writes every row the events table holds for that participant, one JSON object per line,
 deduplicated on `record_id` and in stream order, to send back. Nothing is uploaded anywhere.
 
-Environment: as erase.py.
+Environment: as erase.py, plus R2_ENDPOINT, R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY for the
+control bucket (CONTROL_BUCKET, default "muscle-memory-control"). Install requirements-access.txt.
 """
 from __future__ import annotations
 
 import json
 import os
 import sys
+
+import erase
 
 
 def participant(s3, bucket: str, reference: str) -> str:
@@ -40,7 +43,6 @@ def main(argv: list[str]) -> int:
         print("usage: access.py <reference> <output.ndjson>", file=sys.stderr)
         return 2
     import boto3
-    from pyiceberg.catalog.rest import RestCatalog
 
     reference, output = argv[1], argv[2]
     env = os.environ
@@ -57,10 +59,7 @@ def main(argv: list[str]) -> int:
     except KeyError:
         print(f"No request {reference}.", file=sys.stderr)
         return 1
-    catalog = RestCatalog(
-        name="events", uri=env["CATALOG_URI"], warehouse=env["WAREHOUSE"], token=env["CATALOG_TOKEN"]
-    )
-    table = catalog.load_table(env.get("EVENTS_TABLE", "default.events"))
+    table = erase.load_table(env)
     found = rows(table, participant_id)
     with open(output, "w", encoding="utf-8") as file:
         for row in found:

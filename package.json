@@ -7,8 +7,8 @@
   "scripts": {
     "dev": "npm run dev --workspace apps/web",
     "build": "npm run build --workspace apps/web",
-    "test": "node --import tsx --test packages/*/*.test.ts apps/web/app/*/*.test.ts apps/web/lib/*.test.ts apps/ingest/src/*.test.ts",
-    "typecheck": "tsc --noEmit -p apps/web && tsc --noEmit -p apps/ingest",
+    "test": "node --import tsx --test packages/*/*.test.ts apps/web/app/*/*.test.ts apps/web/lib/*.test.ts apps/ingest/src/*.test.ts apps/erasure/src/*.test.ts",
+    "typecheck": "tsc --noEmit -p apps/web && tsc --noEmit -p apps/ingest && tsc --noEmit -p apps/erasure",
     "check:publish": "node --import tsx tools/browser/content-check.ts",
     "build:content": "node --import tsx tools/build-content.ts",
     "build:cloudflare": "npm run build:cloudflare --workspace apps/web",
@@ -17,6 +17,8 @@
     "pretest": "npm run build:content"
   },
   "devDependencies": {
+    "@cloudflare/containers": "0.3.7",
+    "@cloudflare/workers-types": "5.20261027.1",
     "@types/node": "22.19.0",
     "esbuild": "0.25.12",
     "fake-indexeddb": "6.2.6",

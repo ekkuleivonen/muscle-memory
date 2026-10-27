@@ -114,10 +114,13 @@ Created on the Cloudflare account that hosts the app (`166fd3dff06a9c3f1aef172a2
 - R2 buckets `muscle-memory-control` and `muscle-memory-events`, with R2 Data Catalog on the events bucket (warehouse `166fd3dff06a9c3f1aef172a25db7ace_muscle-memory-events`) and snapshot expiration (older than 7 days, keeping the last 10).
 - Stream `muscle_memory_events` (id `e54c4a2140c94890b714985878beab26`, schema `apps/ingest/events.schema.json`, no HTTP endpoint), sink `muscle_memory_events_iceberg` (Iceberg table `default.events`, Parquet with zstd, a file every 5 minutes) and pipeline `muscle_memory_events_pipeline` (`INSERT INTO muscle_memory_events_iceberg SELECT * FROM muscle_memory_events`). A stream's schema is fixed when it is created. After changing the columns: delete the pipeline and stream, drop `default.events` through the catalog's REST API, delete the old table's files, create the stream from the schema file and the pipeline into the existing sink (which keeps its catalog token and creates the table on its first write), update the stream id in `apps/ingest/wrangler.jsonc`, and deploy the Worker. That was last done on 26 October 2026, for the 1.0.0 streams.
 - The Worker `muscle-memory-ingest` on the route `musclememory.run/ingest/*`. A route takes precedence over the app's Custom Domain on the same hostname, and Cloudflare Access covers it like the rest of the hostname.
-- An R2 API token (Admin Read & Write, which Data Catalog needs) for the sink and the erasure job, stored as the repository secrets `R2_CATALOG_TOKEN`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`, with `R2_CATALOG_URI`, `R2_WAREHOUSE` and `R2_ENDPOINT`.
+- An R2 API token (Admin Read & Write, which Data Catalog needs) for the sink, kept by the sink.
+- The Worker `muscle-memory-erasure` (`apps/erasure`), with no route, its Container `EraseJob`, and the secret `CATALOG_TOKEN`: an R2 API token with Admin Read & Write on `muscle-memory-events` only, used for nothing else. Data Catalog vends the storage credentials, so the container needs no S3 keys. Set it with `npx wrangler secret put CATALOG_TOKEN --config apps/erasure/wrangler.jsonc`.
 - The app is built with `NEXT_PUBLIC_INGEST_URL=/ingest` (`apps/web/.env.production`).
 
-CI deploys the Worker with every push to `main`, before the app ([Cloudflare build](cloudflare-build.md)). By hand: `npx wrangler deploy --config apps/ingest/wrangler.jsonc --env=""`. Wrangler needs Node.js 22.
+CI deploys the ingest Worker with every push to `main`, before the app ([Cloudflare build](cloudflare-build.md)). By hand: `npx wrangler deploy --config apps/ingest/wrangler.jsonc --env=""`. Wrangler needs Node.js 22.
+
+The erasure Worker is deployed by hand, with Docker running, since CI's token has no Containers permission and it rarely changes: `npx wrangler deploy --config apps/erasure/wrangler.jsonc`. CI runs its tests.
 
 ## Local development
 
@@ -157,13 +160,14 @@ ORDER BY sequence;
 
 ## Erasure
 
-A deletion request writes a tombstone, `deleted/<participant>`, in the control bucket, and the Worker refuses that participant's uploads from then on. `tools/erasure/erase.py` runs daily (`.github/workflows/erasure.yml`, also on demand) over every tombstone:
+A deletion request writes a tombstone, `deleted/<participant>`, in the control bucket, and the Worker refuses that participant's uploads from then on. The erasure Worker (`apps/erasure`) runs daily at 03:17 UTC, entirely on Cloudflare, over every tombstone:
 
-- It deletes the participants' rows from the events table with PyIceberg, in chunks of 500, retrying when a commit races the pipeline's own appends. Iceberg rewrites the affected Parquet files without those rows.
-- It records each erasure that removed rows as `erased/<participant>/<time>.json`, with the count.
+- It lists the tombstones through its R2 binding and sends their IDs to its Container (`tools/erasure/server.py`, built from `tools/erasure/Dockerfile`), which deletes the participants' rows from the events table with PyIceberg (`erase.py`), in chunks of 500, retrying when a commit races the pipeline's own appends. Iceberg rewrites the affected Parquet files without those rows.
+- The Worker records each erasure that removed rows as `erased/<participant>/<time>.json`, with the count. A failed run records nothing, and the next day's run tries again.
+- Its logs (Workers Logs) say how many requests and rows each run handled; a run without `CATALOG_TOKEN` fails at once.
 - R2 Data Catalog's snapshot expiration (7 days, keeping the last 10 snapshots) then removes the old files that still held the rows, so erased data is physically gone about a week after the request, inside the 30 days the Privacy Notice promises.
 
-Running over every tombstone each day catches rows the pipeline was still holding when the request came. `tools/erasure/test_erase.py` runs the same code against a local Iceberg catalog in CI.
+Running over every tombstone each day catches rows the pipeline was still holding when the request came. `tools/erasure/test_erase.py` runs the same Python against a local Iceberg catalog in CI, and `apps/erasure/src/erasure.test.ts` the Worker's part. `wrangler dev --config apps/erasure/wrangler.jsonc --test-scheduled` runs the whole thing locally with Docker (`curl "http://localhost:8787/__scheduled"`), with the secret in `apps/erasure/.dev.vars`.
 
 ## Not yet
 
