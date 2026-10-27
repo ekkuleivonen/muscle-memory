@@ -83,6 +83,56 @@ const statsCoverage = {
   last_observed: "2026-10-21T12:05:00.000Z",
   last_received: "2026-10-21T12:06:00.000Z",
 };
+// The SQL workbench's synthetic R2 SQL: invented rows only, never real players or code.
+const workbenchQueries = [];
+const eventColumns = JSON.parse(
+  await readFile("apps/ingest/events.schema.json", "utf8"),
+).fields;
+function syntheticRow(i) {
+  return {
+    id: i,
+    name: ["Zoë 🦊", "=HYPERLINK(\"https://evil.test\")", "two\nlines", "plain"][i % 4],
+    note: [null, "", 0, "x".repeat(600)][i % 4],
+    payload: JSON.stringify({ type: "synthetic.fixture", data: { n: i, nested: { list: [1, 2, { deep: true }] } } }),
+    extra_upstream_field: "NOT A SELECTED COLUMN",
+  };
+}
+async function workbenchSql(query) {
+  workbenchQueries.push(query);
+  const ok = (schema, rows, metrics = { bytes_scanned: 12_345_678, files_scanned: 3 }) =>
+    MFResponse.json({ success: true, result: { schema, rows, metrics } });
+  if (query === "SHOW TABLES IN default")
+    return ok(
+      [{ name: "namespace" }, { name: "table_name" }],
+      ["events", "model_events"].map((t) => ({ namespace: "default", table_name: t })),
+      { bytes_scanned: 0, files_scanned: 0 },
+    );
+  const describe = /^DESCRIBE default\.(\w+)$/.exec(query);
+  if (describe)
+    return ok(
+      [{ name: "column_name" }, { name: "type" }, { name: "required" }, { name: "doc" }],
+      eventColumns.map((f) => ({ column_name: f.name, type: f.type, required: f.required, doc: null })),
+      { bytes_scanned: 0, files_scanned: 0 },
+    );
+  if (query.includes("syntax_fixture"))
+    return MFResponse.json(
+      { success: false, errors: [{ code: 40001, message: "sql parser error: Expected: end of statement, found: syntax_fixture at Line: 2, Column: 3" }] },
+      { status: 400 },
+    );
+  if (query.includes("slow_fixture")) await new Promise((r) => setTimeout(r, 2500));
+  const limit = /LIMIT (\d+)\s*$/i.exec(query);
+  const count = query.includes("empty_fixture") ? 0 : limit ? Number(limit[1]) : 500;
+  return ok(
+    [
+      { name: "id", type: "Int64" },
+      { name: "name", type: "Utf8" },
+      { name: "note", type: "Utf8" },
+      { name: "payload", type: "Utf8" },
+    ],
+    Array.from({ length: count }, (_, i) => syntheticRow(i)),
+    query.includes("slow_fixture") ? { bytes_scanned: 1, files_scanned: 1 } : undefined,
+  );
+}
 const wrong = await sign({ email: "wrong@example.test" });
 const expired = await sign({ exp: now - 1 });
 const foreignKey = await generateKeyPair("RS256");
@@ -140,12 +190,14 @@ const mf = new Miniflare(
             statsFixture &&
             new URL(request.url).hostname === "api.sql.cloudflarestorage.com"
           ) {
-            statsCalls++;
             assert.match(
               request.headers.get("authorization") ?? "",
               /synthetic-local-fixture/,
             );
             const body = await request.json();
+            if (!body.query.startsWith("WITH record_groups AS"))
+              return workbenchSql(body.query);
+            statsCalls++;
             assert.match(body.query, /^WITH record_groups AS/);
             assert.match(body.query, /FROM default.events/);
             assert.match(
@@ -354,6 +406,184 @@ async function modelRun(page) {
   });
 }
 
+/** The SQL workbench in Chromium against the synthetic R2 SQL above. */
+async function workbench(page) {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const opened = workbenchQueries.length;
+  await page.getByRole("link", { name: "SQL", exact: true }).click();
+  await page.getByRole("heading", { name: "SQL workbench", exact: true }).waitFor();
+  if (!statsFixture) {
+    await page.getByText(/credential is not configured/).waitFor();
+    assert.equal(await page.getByRole("button", { name: /Run statement/ }).isDisabled(), true);
+    return;
+  }
+  const editor = page.getByRole("textbox", { name: "SQL query" });
+  const status = page.getByRole("status");
+  const runs = () => workbenchQueries.slice(opened).filter((q) => !/^(SHOW|DESCRIBE)/.test(q));
+  // Opening reads metadata once (no cached schema yet) and runs nothing else.
+  await page.getByRole("button", { name: "model_events", exact: true }).waitFor();
+  assert.equal(runs().length, 0, "opening the workbench runs no query");
+  assert.ok(workbenchQueries.includes("SHOW TABLES IN default"));
+  await page.getByLabel("Filter tables and columns").fill("occurred");
+  assert.equal(await page.getByRole("button", { name: "occurred_at", exact: true }).count(), 2);
+  await page.getByLabel("Filter tables and columns").fill("");
+
+  // Completion from the live schema, then the statement at the cursor runs.
+  await editor.click();
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.press("Delete");
+  await page.keyboard.type("SELECT 1 AS one;\n\nSELECT id, name, note, payload FROM default.ev");
+  await page.locator(".cm-tooltip-autocomplete").getByText("events", { exact: true }).waitFor();
+  await page.keyboard.press("Enter");
+  await page.keyboard.type(" LIMIT 1200");
+  assert.match(await editor.innerText(), /FROM default\.events LIMIT 1200/);
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await status.getByText(/1,200 rows/).waitFor();
+  assert.equal(runs().at(-1), "SELECT id, name, note, payload FROM default.events LIMIT 1200");
+  assert.match(await status.innerText(), /scanned 12\.3 MB in 3 files/);
+  const grid = page.getByRole("grid", { name: "Query results" });
+  assert.equal(await grid.getAttribute("aria-rowcount"), "1201");
+  // Virtualised: far fewer rows in the page than returned.
+  assert.ok((await grid.getByRole("row").count()) < 100);
+  assert.match(await grid.getByRole("columnheader").first().innerText(), /id\s*Int64/);
+  assert.equal(await grid.locator(".sql-null").count() > 0, true, "NULL is distinct");
+  assert.equal(await grid.locator(".sql-empty").count() > 0, true, "empty text is distinct");
+  assert.match(await grid.innerText(), /Zoë 🦊/);
+  assert.ok(!(await page.content()).includes("NOT A SELECTED COLUMN"));
+  await page.screenshot({ path: "/tmp/mm-eng373-sql-results.png" });
+
+  // Local sort and filter say they cover the returned rows.
+  await grid.getByRole("button", { name: /^id/ }).click();
+  await grid.getByRole("button", { name: /^id/ }).click();
+  assert.match(await page.locator(".sql-grid-tools").innerText(), /sorted by id ↓ here, among these rows/);
+  assert.match(await grid.getByRole("row").nth(1).innerText(), /1199/);
+  await page.getByPlaceholder("Filter returned rows").fill("Zoë");
+  assert.match(await page.locator(".sql-grid-tools").innerText(), /300 of 1200 returned rows/);
+  // The inspector shows JSON as a tree.
+  await grid.getByRole("gridcell").nth(3).dblclick();
+  const inspector = page.getByRole("complementary", { name: "Value inspector" });
+  await inspector.getByText("deep:").waitFor();
+  await page.screenshot({ path: "/tmp/mm-eng373-sql-inspector.png" });
+  await inspector.getByRole("button", { name: "Close the inspector" }).click();
+  // CSV of the shown rows: BOM, quoting, and formulas defused.
+  await page.getByPlaceholder("Filter returned rows").fill("");
+  const [csv] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "CSV", exact: true }).click()]);
+  const text = await readFile(await csv.path(), "utf8");
+  assert.ok(text.startsWith("\uFEFFid,name,note,payload\r\n"));
+  assert.match(text, /"'=HYPERLINK\(""https:\/\/evil\.test""\)"/);
+  assert.match(text, /"two\nlines"/);
+  assert.equal(text.trim().split("\r\n").length, 1201);
+
+  // No LIMIT: R2 SQL's own 500-row default is pointed out.
+  const replace = async (sql) => {
+    await editor.click();
+    await page.keyboard.press("ControlOrMeta+a");
+    await page.keyboard.press("Delete");
+    await page.keyboard.insertText(sql);
+  };
+  await replace("SELECT id FROM default.events");
+  await page.getByRole("button", { name: /Run statement/ }).click();
+  await page.getByText(/R2 SQL returns at most 500 rows without one/).waitFor();
+
+  // Refused here: nothing is sent, and the editor marks where.
+  const sent = runs().length;
+  await replace("SELECT 1;\nDELETE FROM default.events");
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.getByRole("button", { name: "Run selection" }).click();
+  await status.getByText(/Not run: Run one statement at a time/).waitFor();
+  assert.equal(runs().length, sent);
+  await page.locator(".cm-lintRange-error").waitFor();
+  // An engine error: its message, and its place marked.
+  await replace("SELECT 1\n  syntax_fixture");
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await status.getByText(/R2 SQL error: sql parser error/).waitFor();
+  assert.equal(await page.locator(".cm-lintRange-error").innerText(), "syntax_fixture");
+  await page.screenshot({ path: "/tmp/mm-eng373-sql-error.png" });
+
+  // Stop waiting, then a newer query: the older answer never replaces it.
+  await replace("SELECT id FROM default.events WHERE 'slow_fixture' = 'slow_fixture'");
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await status.getByText(/Running the statement/).waitFor();
+  await page.getByRole("button", { name: "Stop waiting" }).click();
+  await status.getByText(/Stopped waiting.*R2 SQL cannot cancel a query/).waitFor();
+  await replace("SELECT id FROM default.events LIMIT 3");
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await status.getByText(/^3 rows/).waitFor();
+  await page.waitForTimeout(3000);
+  assert.match(await status.innerText(), /^3 rows/, "a stopped query's late answer is ignored");
+  // Run while running: queued, then run.
+  await replace("SELECT id FROM default.events WHERE 'slow_fixture' = 'slow_fixture'");
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await status.getByText(/Running the statement/).waitFor();
+  await replace("SELECT id FROM default.events LIMIT 4");
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await status.getByText(/then line 1/).waitFor();
+  await status.getByText(/^4 rows/).waitFor({ timeout: 10000 });
+  await replace("SELECT 1 AS empty_fixture LIMIT 0");
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await page.getByText("No rows.").waitFor();
+
+  // Formatting keeps strings exactly.
+  await replace("select type,'a  ;  b' as s from default.events where kind='x' and n between 1 and 2 limit 5");
+  await page.getByRole("button", { name: /^Format/ }).click();
+  assert.equal(
+    (await editor.innerText()).trimEnd(),
+    "SELECT\n  type,\n  'a  ;  b' AS s\nFROM default.events\nWHERE kind = 'x'\n  AND n BETWEEN 1 AND 2\nLIMIT 5",
+  );
+  // Each tab has its own undo history: undo in a new tab never brings back another tab's text.
+  // The document's text, without the placeholder an empty editor shows.
+  const docText = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll(".cm-content .cm-line")]
+        .map((line) => (line.querySelector(".cm-placeholder") ? "" : line.textContent))
+        .join("\n")
+        .trim(),
+    );
+  await page.getByRole("button", { name: "New tab" }).click();
+  await page.keyboard.type("SELECT 2");
+  for (let i = 0; i < 6; i++) await page.keyboard.press("ControlOrMeta+z");
+  assert.equal(await docText(), "", "undo stops at the new tab's own start");
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  assert.equal(await docText(), "SELECT 2", "redo restores the new tab's own text");
+  await page.getByRole("tab", { name: "Query 1" }).click();
+  await page.keyboard.press("ControlOrMeta+z");
+  const undone = await docText();
+  assert.match(undone, /^select type,'a {2};/, `Query 1 keeps its own history (undoes its format): ${JSON.stringify(undone)}`);
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  // Closing the only other tab, and the sole remaining one, leaves a fresh empty tab.
+  page.once("dialog", (d) => d.accept());
+  await page.getByRole("button", { name: "Close Query 2" }).click();
+  page.once("dialog", (d) => d.accept());
+  await page.getByRole("button", { name: "Close Query 1" }).click();
+  assert.equal(await docText(), "");
+  await page.keyboard.press("ControlOrMeta+z");
+  assert.equal(await docText(), "", "a fresh tab has nothing to undo");
+  await page.keyboard.insertText("select type,'a  ;  b' as s from default.events where kind='x' and n between 1 and 2 limit 5");
+  await page.getByRole("button", { name: /^Format/ }).click();
+  // Tabs and drafts survive a reload; results do not, and are never stored.
+  await page.getByRole("button", { name: "New tab" }).click();
+  await page.keyboard.insertText("SELECT 'second tab draft'");
+  await page.waitForTimeout(600);
+  const stored = await page.evaluate(() => JSON.stringify({ ...localStorage }));
+  assert.ok(!stored.includes("Zoë"), "results are not persisted");
+  await page.reload();
+  await page.getByRole("heading", { name: "SQL workbench", exact: true }).waitFor();
+  await page.getByText("SELECT 'second tab draft'").waitFor();
+  await page.getByRole("tab", { name: "Query 1" }).click();
+  await page.getByText("'a  ;  b' AS s").waitFor();
+  assert.equal(await page.getByRole("grid").count(), 0, "results are not restored");
+  await page.getByRole("tab", { name: "History" }).click();
+  await page.getByText(/SELECT id FROM default\.events LIMIT 4/).waitFor();
+  await page.screenshot({ path: "/tmp/mm-eng373-sql-history.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.equal(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    true,
+    "mobile workbench overflow",
+  );
+  await page.screenshot({ path: "/tmp/mm-eng373-sql-mobile.png", fullPage: true });
+}
+
 let browser;
 let closing = false;
 const routeErrors = [];
@@ -424,8 +654,71 @@ try {
         !c.cases,
     ),
   );
-  for (const section of ["authoring", "benchmarks", "statistics"])
+  for (const section of ["authoring", "benchmarks", "statistics", "sql"])
     await check(`/admin/${section}`, valid, 200);
+  // The SQL workbench's endpoints: Access, identity and origin, then the read-only check.
+  const sameOrigin = {
+    origin: "https://musclememory.run",
+    "sec-fetch-site": "same-origin",
+    "content-type": "application/json",
+  };
+  for (const path of ["/admin/sql", "/admin/api/sql/query", "/admin/api/sql/schema"])
+    for (const token of [null, wrong, expired, forged]) {
+      await check(path, token, 403);
+      await check(path, token, 403, { method: "POST", headers: sameOrigin, body: '{"sql":"SELECT 1"}' });
+    }
+  for (const path of ["/admin/api/sql/query", "/admin/api/sql/schema"]) {
+    await check(path, valid, 403, {
+      method: "POST",
+      headers: { ...sameOrigin, origin: "https://evil.test", "sec-fetch-site": "cross-site" },
+      body: '{"sql":"SELECT 1"}',
+    });
+    await check(path, valid, 403, { method: "POST", body: '{"sql":"SELECT 1"}' });
+    await check(path, valid, 405);
+  }
+  const before = workbenchQueries.length;
+  for (const sql of [
+    "DROP TABLE default.events",
+    "SELECT 1; DELETE FROM default.events",
+    "SELECT * FROM other_namespace.secrets",
+    "SELECT 'a\\'; DROP TABLE default.events; --'",
+    "WITH x AS (DELETE FROM default.events) SELECT 1",
+  ]) {
+    const denied = JSON.parse(
+      await check("/admin/api/sql/query", valid, statsFixture ? 400 : 503, {
+        method: "POST",
+        headers: sameOrigin,
+        body: JSON.stringify({ sql }),
+      }),
+    );
+    if (statsFixture) assert.equal(denied.error.kind, "rejected", sql);
+  }
+  assert.equal(workbenchQueries.length, before, "rejected SQL never reaches R2 SQL");
+  if (statsFixture) {
+    const read = await check("/admin/api/sql/query", valid, 200, {
+      method: "POST",
+      headers: sameOrigin,
+      body: JSON.stringify({ sql: "SELECT id, name FROM default.events LIMIT 2" }),
+    });
+    assert.ok(!read.includes("synthetic-local-fixture-not-a-credential"), "no credential in responses");
+    assert.ok(!read.includes("NOT A SELECTED COLUMN"), "only the reported columns pass");
+    assert.equal(JSON.parse(read).rows.length, 2);
+    // R2 SQL's own parser decides: another namespace is refused in any SQL form, before
+    // anything is sent; a string, comment or alias spelled like one is just text.
+    const reads = workbenchQueries.length;
+    for (const sql of ["((SELECT 1) UNION SELECT 1 FROM private_fixture.t)", "SELECT * FROM (private_fixture.t a CROSS JOIN default.events b)"]) {
+      const refused = JSON.parse(
+        await check("/admin/api/sql/query", valid, 400, { method: "POST", headers: sameOrigin, body: JSON.stringify({ sql }) }),
+      );
+      assert.equal(refused.error.kind, "rejected", sql);
+    }
+    assert.equal(workbenchQueries.length, reads, "refused before any data query");
+    await check("/admin/api/sql/query", valid, 200, {
+      method: "POST",
+      headers: sameOrigin,
+      body: JSON.stringify({ sql: "SELECT 'private_fixture.t' AS private_fixture FROM default.events AS private_fixture -- private_fixture.t\nLIMIT 1" }),
+    });
+  }
   for (const section of ["constructor", "toString", "__proto__"])
     await check(`/admin/${section}`, valid, 404);
   await check("/admin/api/catalog", valid, 403, {
@@ -605,9 +898,9 @@ try {
     await page.getByText(/No supported challenge activity/).waitFor();
     statsMode = "error";
     await page.getByRole("button", { name: "Load statistics" }).click();
-    await page.getByRole("alert").waitFor();
+    await page.locator("main").getByRole("alert").waitFor();
     assert.match(
-      await page.getByRole("alert").innerText(),
+      await page.locator("main").getByRole("alert").innerText(),
       /unavailable, not zero/,
     );
     assert.ok(!(await page.content()).includes("PRIVATE UPSTREAM ERROR"));
@@ -626,6 +919,7 @@ try {
       true,
     );
   }
+  await workbench(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("link", { name: "Challenges", exact: true }).click();
   await page
