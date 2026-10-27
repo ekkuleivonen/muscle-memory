@@ -1,6 +1,6 @@
 # ENG-340: minimal longitudinal history proposal
 
-**Option A direction approved by Ekku via dot on 27 October 2026. Exact new binding approval remains pending.** See [the implemented boundary and approval request](eng-340-private-history.md), which supersede the proposed budgets, route placement and release status below. Option B remains unapproved and disabled.
+**Option A direction approved by Ekku via dot on 27 October 2026. The exact verification binding and existing-token use are now approved through dot; prepared in source, not deployed from this branch.** See [the implemented boundary and approval request](eng-340-private-history.md), which supersede the proposed budgets, route placement and release status below. Option B remains unapproved and disabled.
 
 Historical proposal: The comprehensive dashboard scope stays intact. The existing latest-attempt view is an immediate evidence source, not the final longitudinal architecture. No route, credential, disclosure, consent version, collection event or production retention setting is changed by this proposal.
 

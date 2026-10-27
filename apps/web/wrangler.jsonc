@@ -27,5 +27,7 @@
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
   "services": [
     { "binding": "WORKER_SELF_REFERENCE", "service": "muscle-memory" },
+    // ENG-340: owner-approved verification-only RPC; SQL credential stays in web.
+    { "binding": "PARTICIPANT_OWNER", "service": "muscle-memory-ingest", "entrypoint": "ParticipantOwner" },
   ],
 }

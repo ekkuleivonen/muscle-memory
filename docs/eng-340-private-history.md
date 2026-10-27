@@ -1,8 +1,8 @@
 # ENG-340: approved option A implementation and binding approval
 
-Ekku approved **option A's direction** on 27 October 2026 via dot: reuse existing uploads, owner-only code-free summaries, no new collection or persistent storage, unchanged retention, explicit loading, reset/deletion/stealth safeguards and revised disclosure. Local historical retention remains disabled. This is **not** approval to install a binding, merge or deploy.
+Ekku approved **option A's direction** on 27 October 2026 via dot: reuse existing uploads, owner-only code-free summaries, no new collection or persistent storage, unchanged retention, explicit loading, reset/deletion/stealth safeguards and revised disclosure. Local historical retention remains disabled. Ekku subsequently approved the exact verification binding and existing-token use through dot on 27 October. The binding is now prepared in source. Dashboard merge/deployment still require final review and a subsequent release instruction. Any live binding-only rollout must be coordinated with dot.
 
-## Exact remaining security-boundary approval
+## Approved security boundary
 
 | Item | Proposed configuration / capability |
 | --- | --- |
@@ -17,13 +17,13 @@ Ekku approved **option A's direction** on 27 October 2026 via dot: reuse existin
 | SQL authority | Existing `muscle-memory-admin-statistics-read` token stays solely in web's encrypted `ADMIN_STATS_SQL_TOKEN`, with exactly Basin SQL Read, Basin Catalog Read and Workers R2 Storage Read |
 | Scope caveat | That existing token is account-wide. Fixed application queries are **not** a narrower token capability. No token copy or scope change is proposed |
 
-**Do not install yet.** The production config addition, after explicit approval, would be this entry in `apps/web/wrangler.jsonc`'s `services` array:
+**Approved configuration, prepared but not deployed here.** The entry is now present in `apps/web/wrangler.jsonc`'s `services` array:
 
 ```json
 { "binding": "PARTICIPANT_OWNER", "service": "muscle-memory-ingest", "entrypoint": "ParticipantOwner" }
 ```
 
-The entry is deliberately absent. Ingest's implementation entry module changes from `src/index.ts` to `src/worker.ts` to export the named RPC class alongside the unchanged public ingest handler. That is source preparation, not a deployment. A separately authorized deployment would update ingest first, then web with the approved binding. No new token, secret installation, bucket permission, CONTROL binding in web, service, database or job is needed. An absent service binding or SQL secret returns an explicit unavailable state and performs no SQL read. Disabling/removing the service binding disables the reader without deleting records. Credentials have not been retrieved or changed.
+The entry is committed for review; it has not been installed live from this branch. Ingest's implementation entry module changes from `src/index.ts` to `src/worker.ts` to export the named RPC class alongside the unchanged public ingest handler. That is source preparation, not a deployment. A coordinated binding-only rollout must update ingest first and preserve the currently approved web application; it must not deploy this unreviewed dashboard. Normal eventual dashboard release also updates ingest before web. No new token, secret installation, bucket permission, CONTROL binding in web, service, database or job is needed. An absent service binding or SQL secret returns an explicit unavailable state and performs no SQL read. Disabling/removing the service binding disables the reader without deleting records. Credentials have not been retrieved or changed.
 
 ## Read path and limits
 
@@ -53,8 +53,12 @@ The pipeline may lag by minutes. Local evidence and uploaded history are deliber
 | Stealth | Own private history remains accessible after explicit action; human/model comparisons hidden; no public human aggregate is enabled. Future publication must exclude all historical data using current stealth |
 | Backup | Uploaded response is never saved in backups; existing ownership secret in a private backup can authorize the same participant; no ID-only recovery |
 
-The actual Privacy Notice is revised in this draft and `LEGAL_VERSION` is bumped to `2026-10-27.2`, following the existing process for renewed acceptance on eventual release. No live notice, consent or collection setting has changed. Disclosure and security review remain release gates, as does integrating ENG-371's final merged loader/hydration/CI changes. Human cohorts stay suppressed pending a separately approved minimum and eligible data, including separate safeguards for 16–17-year-olds.
+The actual Privacy Notice is revised in this draft and `LEGAL_VERSION` is bumped to `2026-10-27.2`, following the existing process for renewed acceptance on eventual release. No live notice, consent or collection setting has changed. Disclosure and security review remain release gates. ENG-371 / PR65's actual merge `4676f4326655c4938f85aedaba6a55061ee496a4` is integrated, preserving its private loaders/hydration/CI changes. Human cohorts stay suppressed pending a separately approved minimum and eligible data, including separate safeguards for 16–17-year-olds.
 
 ## Verification evidence
 
-Synthetic tests execute the actual fixed SQL in SQLite (table namespace adapted; no claim of live Basin execution). They cover owner isolation, whole-attempt window selection, pagination, record-ID duplicates/conflicts across attempts, gaps, mixed revisions, invalid filters, budget limits, code-free projection, absent/wrong/proof-only ownership, deletion during query, reset then failed reread, fetch/stream deadlines and response-size limits. Ingest verifier tests exercise fresh proof rotation, tombstone races, rate limits and no writes. Browser fixtures exercise the mounted explicit-load, stale/error and privacy/reset paths without uploading anything. Live RPC/Basin verification remains unavailable until the specific binding is approved and a separate deployment is authorized.
+Synthetic tests execute the actual fixed SQL in SQLite (table namespace adapted; no claim of live Basin execution). They cover owner isolation, whole-attempt window selection, pagination, record-ID duplicates/conflicts across attempts, gaps, mixed revisions, invalid filters, budget limits, code-free projection, absent/wrong/proof-only ownership, deletion during query, reset then failed reread, fetch/stream deadlines and response-size limits. Ingest verifier tests exercise fresh proof rotation, tombstone races, rate limits and no writes. Browser fixtures exercise the mounted explicit-load, stale/error and privacy/reset paths without uploading anything. Live RPC/Basin verification remains a coordinated rollout check; the binding and existing-token use are approved, but this dashboard remains undeployed pending independent security/product review and subsequent release instruction.
+
+## Native runtime contract check
+
+`npm run test:owner-rpc` compiles the actual ingest entry module, validates the exact service binding in the production source configuration, and exercises the named entrypoint through local Workers RPC and a synthetic R2 bucket. It checks original-secret ownership, wrong-secret/upload-hash rejection, participant isolation, tombstone precedence even after proof removal, rejection of bucket/SQL methods and absence of a public ingest history route. It requires no private catalog, credentials or network/cloud reads and runs with the public catalog-contract CI job. This is native local runtime evidence, not a claim of live rollout verification.
