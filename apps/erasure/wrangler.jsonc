@@ -16,13 +16,15 @@
     "WAREHOUSE": "166fd3dff06a9c3f1aef172a25db7ace_muscle-memory-events",
     "EVENTS_TABLE": "default.events",
   },
+  // The "durable_object" scheduling policy (the only one this account may use): the image and
+  // the instance size are picked when EraseJob starts the container (src/index.ts).
   "containers": [
     {
       "class_name": "EraseJob",
-      "image": "../../tools/erasure/Dockerfile",
-      "image_build_context": "../../tools/erasure",
-      "instance_type": "standard-1",
-      "max_instances": 1,
+      "scheduling_policy": "durable_object",
+      "images": {
+        "job": { "dockerfile": "../../tools/erasure/Dockerfile", "build_context": "../../tools/erasure" },
+      },
     },
   ],
   "durable_objects": { "bindings": [{ "name": "JOB", "class_name": "EraseJob" }] },

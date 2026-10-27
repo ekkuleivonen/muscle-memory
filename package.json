@@ -17,7 +17,6 @@
     "pretest": "npm run build:content"
   },
   "devDependencies": {
-    "@cloudflare/containers": "0.3.7",
     "@cloudflare/workers-types": "5.20261027.1",
     "@types/node": "22.19.0",
     "esbuild": "0.25.12",
