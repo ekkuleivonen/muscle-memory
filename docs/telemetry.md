@@ -180,7 +180,7 @@ Running over every tombstone each day catches rows the pipeline was still holdin
 
 ## Private developer profile
 
-`/stats` derives the [observed developer profile](developer-profile.md) locally, without new capture or uploads. Historical summary retention is disabled (`PROFILE_HISTORY_ENABLED = false`) to preserve the current Privacy Notice’s latest-attempt-only promise. The future path is implemented and tested: when separately approved and enabled, the same IndexedDB transaction can retain versioned, code-free summaries before older attempts are compacted. Attempts with queued observations stay whole until summarizable. If enabled, these private summaries travel in backups and are removed by reset or deletion; history compacted before this feature cannot be recovered here. Human/model comparisons remain unavailable.
+`/stats` derives the [observed developer profile](developer-profile.md) locally, without new capture or uploads. Historical summary retention is disabled (`PROFILE_HISTORY_ENABLED = false`) to preserve the current Privacy Notice’s latest-attempt-only promise. The future path is implemented and tested: when separately approved and enabled, the same IndexedDB transaction can retain versioned, code-free summaries before older attempts are compacted. Attempts with queued observations stay whole until summarizable. If enabled, these private summaries travel in backups and are removed by reset or deletion; history compacted before this feature cannot be recovered here. The report also reads the owner's uploaded summaries automatically through the secret-verified private-history reader and stored model receipts; stealth reads nothing. Human comparisons remain unavailable.
 
 ### Private uploaded statistics (ENG-340 draft)
 

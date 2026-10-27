@@ -38,7 +38,7 @@ If you break these rules, we may refuse what your account sends, leave its recor
 - You give us a **worldwide, non-exclusive, royalty-free licence** to store, copy, run, analyse and otherwise use what you submit and the activity around it, to run Muscle Memory, improve it, research how people code, and publish insights from that research: statistics and findings that don't quote your code or say anything about you in particular.
 - The licence ends when you delete your account, except for insights already published.
 - You confirm you have the right to give us that licence (see: your employer's code, above).
-- Going stealth in Settings means we leave you out of future insights and of comparisons, and you don't see other people's stats in return. Insights already published stay published. Nothing has been published yet.
+- Going stealth in Settings means we leave you out of future insights and of comparisons, and in return you don't see other people's stats or your own report. Insights already published stay published. Nothing has been published yet.
 - **Sharing a result is up to you.** A result link shows anyone who has it which challenge you completed and how its checks went, and your code only if you choose to include it. Once you've sent a link, we can't take it back.
 
 ## Our stuff

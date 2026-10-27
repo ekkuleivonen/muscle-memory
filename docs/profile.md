@@ -41,4 +41,4 @@ There are no accounts, so a backup file is how practice moves between browsers o
 
 ## Observed practice profile
 
-`/stats` shows private evidence from practice, separately from these self-reported answers: [developer profile definitions and limits](developer-profile.md). Optional comparison context links back to the same settings forms; no answer unlocks or withholds stats. It reads retained local attempts; the tested code-free history-summary path stays disabled pending approval of a storage disclosure. Older already-compacted history remains unavailable.
+`/stats` shows private evidence from practice, separately from these self-reported answers: [developer profile definitions and limits](developer-profile.md). Optional comparison context links back to the same settings forms; no answer unlocks or withholds stats. It reads retained local attempts and, automatically, code-free summaries of the owner's uploads; the local history-summary path stays disabled. The report offers the optional experience question only when it is unanswered, and nothing in it depends on the answer. Stealth turns the report off.

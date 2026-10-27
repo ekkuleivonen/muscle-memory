@@ -7,7 +7,7 @@ import { Dashboard } from "./stats";
 import "../_terminal/terminal.css";
 import "./stats.css";
 export const metadata: Metadata = {
-  title: "Your developer profile",
+  title: "Your report",
   robots: { index: false, follow: false },
 };
 export default async function StatsPage() {
@@ -16,7 +16,7 @@ export default async function StatsPage() {
   return (
     <>
       <Dashboard catalog={challenges.map(summarize)} />
-      <TermFooter trail={[{ label: "your profile", href: "/stats" }]} />
+      <TermFooter trail={[{ label: "your report", href: "/stats" }]} />
     </>
   );
 }
