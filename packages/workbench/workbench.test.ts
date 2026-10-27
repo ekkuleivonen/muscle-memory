@@ -28,6 +28,20 @@ test("reads are accepted, with comments, CTEs, joins and a trailing semicolon", 
     "SELECT * FROM default.events a LEFT JOIN default.model_events b ON a.x = b.x AND a.y IN (1, 2), default.model_catalog c",
     "SELECT E'it\\'s', X'ff' FROM default.events",
     "SHOW DATABASES",
+    "SELECT e.distinct FROM default.events e",
+    'WITH t AS (SELECT 1 AS "group") SELECT * FROM t a JOIN t b ON a."group" = b.group, default.events k',
+    "EXPLAIN ANALYZE SELECT count(*) FROM default.events",
+    "EXPLAIN FORMAT JSON SELECT 1",
+    "EXPLAIN VERBOSE WITH x AS (SELECT 1) SELECT * FROM x",
+    "SELECT * FROM DEFAULT.events",
+    'SELECT * FROM "default".events',
+    'SHOW TABLES IN "default"',
+    "SELECT substring((type) FROM 1 FOR 2) FROM default.events",
+    "SELECT trim((type) FROM 'foo') FROM default.events",
+    "SELECT * FROM default.events a JOIN default.events b ON a.type = b.type AND [1, 2] = [1, 2]",
+    "SELECT a IS NOT DISTINCT FROM b FROM default.events",
+    "SELECT ((SELECT 1)), x IN ((SELECT 2)) FROM default.events",
+    "SELECT 5 >> 3, 5 << 3, U&'d\\0061t' FROM default.events",
     "SHOW TABLES IN default",
     "DESCRIBE default.events",
     "EXPLAIN SELECT count(*) FROM default.events",
@@ -86,6 +100,21 @@ test("writes, sessions, other namespaces and several statements are rejected ser
   rejected("SELECT * FROM default.events WHERE x IN (FROM secrets.keys SELECT k)", /not "secrets"/);
   rejected("SELECT 1 UNION TABLE secrets.keys", /"TABLE" is not allowed/);
   rejected("SELECT * FROM", /table name is missing/);
+  // Review round 2: keywords as name parts, EXPLAIN around metadata, dialect names, quoting.
+  rejected("SELECT e.distinct FROM secrets.keys e", /not "secrets"/);
+  rejected('WITH t AS (SELECT 1 AS "group") SELECT * FROM t a JOIN t b ON a."group" = b.group, secrets.keys k', /not "secrets"/);
+  rejected("EXPLAIN DESCRIBE secrets.keys", /EXPLAIN works on a query/);
+  rejected("EXPLAIN SHOW TABLES IN secrets", /EXPLAIN works on a query/);
+  rejected("EXPLAIN ANALYZE DESCRIBE secrets.keys", /EXPLAIN works on a query/);
+  rejected("EXPLAIN FORMAT JSON SHOW TABLES IN secrets", /EXPLAIN works on a query/);
+  rejected("EXPLAIN ANALYZE SELECT * FROM secrets.keys", /not "secrets"/);
+  rejected("SELECT * FROM secrets@x.keys", /not "secrets@x"/);
+  rejected("SELECT * FROM secrets#x.keys", /not "secrets#x"/);
+  rejected('SELECT * FROM "DEFAULT".events', /not "DEFAULT"/);
+  rejected('SELECT * FROM "Default".events', /not "Default"/);
+  rejected('SHOW TABLES IN "DEFAULT"', /SHOW TABLES IN default/);
+  rejected("SELECT * FROM default.events a JOIN default.events b ON a.type = b.type AND [1, 2] = [1, 2], secrets.keys", /not "secrets"/);
+  rejected("SELECT * FROM default.events WHERE a IS DISTINCT FROM b UNION SELECT * FROM secrets.keys", /not "secrets"/);
   rejected("SHOW TABLES IN secrets", /SHOW TABLES IN default/);
   rejected("SHOW ALL", /SHOW TABLES IN default/);
   rejected("DESCRIBE secrets.keys", /not "secrets"/);
@@ -151,6 +180,9 @@ test("formatting changes only whitespace and reserved-word case", () => {
   // Strings, including their whitespace, are untouched.
   assert.match(formatSql(corpus[2]), /'multi\nline  string'/);
   assert.equal(formatSql("SELECT 'open"), "SELECT 'open");
+  // Golden outputs: compound operators and prefixed literals stay whole.
+  assert.equal(formatSql("select 5>>3, 5 << 3, a->>'k', b @> c"), "SELECT\n  5 >> 3,\n  5 << 3,\n  a ->> 'k',\n  b @> c\n");
+  assert.equal(formatSql("select U&'d\\0061t', E'x'"), "SELECT\n  U&'d\\0061t',\n  E'x'\n");
   assert.match(formatSql(corpus[4]), /'a  \nb',\n  'trailing  ',\n  "name  \nx"/);
   assert.match(formatSql(corpus[5]), /-- comment\n;/);
   assert.match(formatSql(corpus[6]), /E'hello\\nworld',\n  e'it\\'s',\n  X'ff'/);

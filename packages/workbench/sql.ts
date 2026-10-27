@@ -37,6 +37,20 @@ export class SqlRejected extends Error {
   }
 }
 
+const IDENT_PART = /[\p{L}\p{N}_$@#]/u;
+const OPERATORS = [
+  "->>", "#>>", "!~*", "||/", "<=>", "<<", ">>", "<=", ">=", "<>", "!=", "==", "||", "::", "=>",
+  "->", "#>", "@>", "<@", "&&", "!~", "~*", "~~", "^@", "|/", "@@",
+];
+
+/** Length of a literal's prefix (E, X, N, B or U&) when one starts a string at `i`, else 0. */
+function stringPrefix(text: string, i: number): number {
+  if (IDENT_PART.test(text[i - 1] ?? "")) return 0;
+  if (/[EeXxNnBb]/.test(text[i]) && text[i + 1] === "'") return 1;
+  if (/[Uu]/.test(text[i]) && text[i + 1] === "&" && text[i + 2] === "'") return 2;
+  return 0;
+}
+
 /**
  * Splits text into tokens. `backslash` reads `\` inside '…' as an escape, as some engines do;
  * the check reads both ways and refuses text where the two disagree.
@@ -72,10 +86,10 @@ export function tokenize(text: string, backslash = false): Token[] {
         i++;
       }
       push("comment", from);
-    } else if (c === "'" || (/[EeXxNnBb]/.test(c) && text[i + 1] === "'" && !/[\p{L}\p{N}_$]/u.test(text[i - 1] ?? ""))) {
-      // A prefix (E'…', X'…', N'…', B'…') belongs to its string; E strings always escape.
+    } else if (c === "'" || stringPrefix(text, i) > 0) {
+      // A prefix (E'…', X'…', N'…', B'…', U&'…') belongs to its string; E strings always escape.
       const escapes = backslash || c === "E" || c === "e";
-      i += c === "'" ? 1 : 2;
+      i += c === "'" ? 1 : stringPrefix(text, i) + 1;
       for (;;) {
         if (i >= text.length)
           throw new SqlRejected("This string is never closed.", from);
@@ -117,14 +131,13 @@ export function tokenize(text: string, backslash = false): Token[] {
         i++;
       }
       push("number", from);
-    } else if (/[\p{L}_]/u.test(c)) {
-      while (i < text.length && /[\p{L}\p{N}_$]/u.test(text[i])) i++;
+    } else if (/[\p{L}_]/u.test(c) || (/[#@]/.test(c) && IDENT_PART.test(text[i + 1] ?? ""))) {
+      // R2 SQL's dialect allows @, # and $ inside names: read the whole name as one word.
+      while (i < text.length && IDENT_PART.test(text[i])) i++;
       push("word", from);
     } else {
-      // Two-character operators stay together so the formatter keeps them whole.
-      const two = text.slice(i, i + 2);
-      i += ["<=", ">=", "<>", "!=", "||", "::", "=>", "->"].includes(two) ? 2 : 1;
-      if (two === "->" && text[i] === ">") i++;
+      // Operators are read longest first, so the formatter keeps them whole.
+      i += OPERATORS.find((op) => text.startsWith(op, i))?.length ?? 1;
       push("punct", from);
     }
   }
@@ -222,10 +235,11 @@ function meaningful(tokens: Token[]) {
   return tokens.filter((t) => t.kind !== "space" && t.kind !== "comment");
 }
 
+/** A name as the engine resolves it: unquoted names are lower-cased, quoted ones kept exactly. */
 function unquote(t: Token): string {
   return t.kind === "quoted"
     ? t.text.slice(1, -1).replaceAll(t.text[0] + t.text[0], t.text[0])
-    : t.text;
+    : t.text.toLowerCase();
 }
 
 /** A dotted name starting at `i`: its parts and the index after it. */
@@ -248,7 +262,7 @@ function checkRelation(parts: string[], at: number) {
       `Only tables in this bucket's "${NAMESPACE}" namespace can be read (namespace.table at most).`,
       at,
     );
-  if (parts.length === 2 && parts[0].toLowerCase() !== NAMESPACE)
+  if (parts.length === 2 && parts[0] !== NAMESPACE)
     throw new SqlRejected(
       `Only tables in the "${NAMESPACE}" namespace can be read, not "${parts[0]}".`,
       at,
@@ -318,13 +332,14 @@ export function checkQuery(text: string, maxLength = 20000): CheckedQuery {
   let kind: StatementKind = "select";
   if (word === "SHOW") {
     kind = "show";
-    const what = tokens.slice(1).map((t) => unquote(t).toUpperCase());
+    const what = tokens.slice(1).map((t) => (t.kind === "word" ? t.text.toUpperCase() : null));
     const ok =
       (what.length === 1 && (what[0] === "DATABASES" || what[0] === "NAMESPACES")) ||
       (what.length === 3 &&
         what[0] === "TABLES" &&
         what[1] === "IN" &&
-        what[2] === NAMESPACE.toUpperCase());
+        (tokens[3].kind === "word" || tokens[3].kind === "quoted") &&
+        unquote(tokens[3]) === NAMESPACE);
     if (!ok)
       throw new SqlRejected(
         `Use SHOW DATABASES, SHOW NAMESPACES or SHOW TABLES IN ${NAMESPACE}.`,
@@ -337,7 +352,18 @@ export function checkQuery(text: string, maxLength = 20000): CheckedQuery {
       throw new SqlRejected(`Use DESCRIBE ${NAMESPACE}.<table>.`, at(first));
     checkRelation(name.parts, at(tokens[1]));
   } else if (word === "EXPLAIN") {
+    // Only a query can be explained; options first (ANALYZE, VERBOSE, FORMAT x).
     kind = "explain";
+    let j = 1;
+    for (;;) {
+      const option = tokens[j]?.kind === "word" ? tokens[j].text.toUpperCase() : "";
+      if (option === "ANALYZE" || option === "VERBOSE") j++;
+      else if (option === "FORMAT" && tokens[j + 1]?.kind === "word") j += 2;
+      else break;
+    }
+    const body = tokens[j];
+    if (!body || !((body.kind === "word" && QUERY_START.has(body.text.toUpperCase()) && body.text.toUpperCase() !== "FROM") || body.text === "("))
+      throw new SqlRejected("EXPLAIN works on a query here (SELECT, WITH or VALUES).", at(body ?? first));
   }
 
   // Every table reference is checked, failing closed: after FROM or JOIN, after commas in a
@@ -348,23 +374,22 @@ export function checkQuery(text: string, maxLength = 20000): CheckedQuery {
   const query: boolean[] = [true];
   let depth = 0;
   let expect = false;
-  const opens = (j: number) => {
-    const next = tokens[j + 1];
-    return (
-      !!next &&
-      ((next.kind === "word" && QUERY_START.has(next.text.toUpperCase())) ||
-        (next.kind === "punct" && next.text === "("))
-    );
-  };
+  // A word right after a dot is part of a name (e.distinct, b.group), never a keyword.
+  const keyword = (j: number) =>
+    tokens[j]?.kind === "word" && !(tokens[j - 1]?.kind === "punct" && tokens[j - 1].text === ".")
+      ? tokens[j].text.toUpperCase()
+      : "";
+  // A parenthesis holds a query only when one starts right inside it; ((x) FROM 1) is an
+  // expression, and ((SELECT …)) is read when its inner parenthesis is.
+  const opens = (j: number) => QUERY_START.has(keyword(j + 1));
   for (let j = 0; j < tokens.length; j++) {
     const t = tokens[j];
-    const upper = t.kind === "word" ? t.text.toUpperCase() : "";
+    const upper = keyword(j);
     if (expect) {
       expect = false;
       if (t.kind === "punct" && t.text === "(") {
         // A subquery, or a parenthesised join whose first item is a table again.
-        const next = tokens[j + 1];
-        const subquery = next?.kind === "word" && QUERY_START.has(next.text.toUpperCase());
+        const subquery = opens(j);
         depth++;
         query[depth] = true;
         fromList[depth] = !subquery;
@@ -382,13 +407,13 @@ export function checkQuery(text: string, maxLength = 20000): CheckedQuery {
       j = name.next - 1;
       continue;
     }
-    if (t.text === "(" && t.kind === "punct") {
+    if (t.kind === "punct" && (t.text === "(" || t.text === "[" || t.text === "{")) {
       depth++;
       fromList[depth] = false;
-      query[depth] = opens(j);
+      query[depth] = t.text === "(" && opens(j);
       continue;
     }
-    if (t.text === ")" && t.kind === "punct") {
+    if (t.kind === "punct" && (t.text === ")" || t.text === "]" || t.text === "}")) {
       depth = Math.max(0, depth - 1);
       continue;
     }
@@ -400,7 +425,10 @@ export function checkQuery(text: string, maxLength = 20000): CheckedQuery {
     if (!query[depth]) continue;
     if (CLAUSE.has(upper)) fromList[depth] = false;
     // a IS [NOT] DISTINCT FROM b compares; it names no table.
-    const distinct = upper === "FROM" && tokens[j - 1]?.text.toUpperCase() === "DISTINCT";
+    const distinct =
+      upper === "FROM" &&
+      keyword(j - 1) === "DISTINCT" &&
+      (keyword(j - 2) === "IS" || (keyword(j - 2) === "NOT" && keyword(j - 3) === "IS"));
     if (upper === "FROM" && !distinct) {
       fromList[depth] = true;
       expect = true;
