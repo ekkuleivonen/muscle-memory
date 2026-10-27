@@ -8,6 +8,10 @@
  * (`sessionId`), its position in its source stream, when it happened (wall clock and a
  * monotonic clock), the Terms version accepted, the experiment assignments in force, and, when
  * it is about a challenge, the challenge, its exact revision and the attempt.
+ *
+ * Every observation also says who acted: a person, or a model run by the offline harness
+ * (tools/model-runs, docs/model-runs.md). A model accepts no Terms, so its observations carry
+ * no Terms version, and they are never uploaded through ingest or stored with people's.
  */
 import { boundText, CAPTURE_LIMIT_BYTES, safeIdentifier } from "./capture";
 import { canonical, type Json } from "./json";
@@ -29,6 +33,8 @@ export const TERMS_VERSION = /^\d{4}-\d{2}-\d{2}(\.\d+)?$/;
 
 /** Experiment arms in force, by experiment id. Empty until there are experiments. */
 export type Assignments = Readonly<Record<string, string>>;
+/** Who acted: a person in the app, or a model in the offline harness. */
+export type Actor = "person" | "model";
 
 export interface Envelope<T extends string, D> {
   readonly schemaVersion: "1.0.0";
@@ -42,8 +48,9 @@ export interface Envelope<T extends string, D> {
   /** Milliseconds since the source stream started, on a monotonic clock (0.1 ms steps). */
   readonly elapsedMs: number;
   readonly captureVersion: string;
-  /** The Terms and Privacy Notice version the participant accepted. */
-  readonly termsVersion: string;
+  readonly actor: Actor;
+  /** The Terms and Privacy Notice version the participant accepted; null for a model. */
+  readonly termsVersion: string | null;
   readonly assignments: Assignments;
   /** The challenge's key, such as PY-003, when the observation is about one. */
   readonly challenge: string | null;
@@ -62,7 +69,10 @@ export interface EnvelopeInput {
   readonly sequence: number;
   readonly occurredAt: string;
   readonly elapsedMs: number;
-  readonly termsVersion: string;
+  /** A person unless told otherwise. */
+  readonly actor?: Actor;
+  /** Required for a person, null for a model. */
+  readonly termsVersion: string | null;
   readonly assignments?: Assignments;
   readonly challenge?: { readonly key: string; readonly revision: string } | null;
   readonly attemptId?: string | null;
@@ -85,8 +95,11 @@ export function envelope<T extends string, D>(
   if (!Number.isFinite(elapsedMs) || elapsedMs < 0)
     throw new Error("Observations need their elapsed time.");
   if (Number.isNaN(Date.parse(occurredAt))) throw new Error("Observations need a time.");
-  if (!TERMS_VERSION.test(termsVersion))
+  const actor = input.actor ?? "person";
+  if (actor === "person" ? !TERMS_VERSION.test(termsVersion ?? "") : actor !== "model")
     throw new Error("Observations name the accepted Terms version.");
+  if (actor === "model" && termsVersion !== null)
+    throw new Error("A model accepts no Terms.");
   const challenge = input.challenge ?? null;
   if (challenge) {
     if (!CHALLENGE_KEY.test(challenge.key)) throw new Error("Observations name a challenge by its key.");
@@ -112,6 +125,7 @@ export function envelope<T extends string, D>(
     occurredAt,
     elapsedMs,
     captureVersion,
+    actor,
     termsVersion,
     assignments,
     challenge: challenge?.key ?? null,

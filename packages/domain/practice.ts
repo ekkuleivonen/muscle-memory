@@ -8,8 +8,13 @@
 import { runFeedback, type Envelope } from "./records";
 import type { Json } from "./json";
 
-/** 1.1: type tooltips in practice.assist may be opened by keyboard as well as pointer. */
-export const PRACTICE_CAPTURE_VERSION = "practice-capture-1.1.0";
+/**
+ * 1.2: every observation says who acted (`actor`: person or model), and a model's carry no
+ * Terms version. A model's attempt starts `from: "model-run"` and closes with `run-ended`; the
+ * harness records it with the same session code as a person's (docs/model-runs.md).
+ * 1.1: type tooltips in practice.assist may be opened by keyboard as well as pointer.
+ */
+export const PRACTICE_CAPTURE_VERSION = "practice-capture-1.2.0";
 /** An edit whose change set is larger than this is recorded without it, plus a snapshot. */
 export const EDIT_CHANGES_LIMIT_BYTES = 16384;
 /** What this capture does not record. Absence is a gap, not evidence of no activity. */
@@ -18,6 +23,16 @@ export const PRACTICE_CAPTURE_GAPS = [
   "pane-focus-and-layout",
   "activity-in-other-tabs-and-apps",
   "writes-cut-short-by-closing-the-page",
+] as const;
+/**
+ * What a model's practice stream also leaves out: a model has no keyboard, pointer, viewport or
+ * page, and is not asked the questions after completing. Its own activity is in its model
+ * stream (packages/domain/model.ts).
+ */
+export const MODEL_PRACTICE_CAPTURE_GAPS = [
+  "keys-selection-scroll-focus-and-clipboard-do-not-apply-to-a-model",
+  "page-state-does-not-apply-to-a-model",
+  "after-questions-not-asked",
 ] as const;
 
 /**
@@ -48,7 +63,7 @@ export type SubmitResult = "passed" | "failed" | "errored" | "cancelled";
 /**
  * Where a start came from: the picker, quick start, a shared result's invitation, the next challenge suggested
  * after completing one, practising a completed challenge again, or practice opened by its URL
- * with no attempt under way (direct).
+ * with no attempt under way (direct). A model's run starts `model-run`.
  */
 export type StartedFrom =
   | "picker"
@@ -56,7 +71,8 @@ export type StartedFrom =
   | "link"
   | "next"
   | "again"
-  | "direct";
+  | "direct"
+  | "model-run";
 
 /**
  * Asked after completing a challenge, every one optional: how hard it felt, how sure they were
@@ -242,7 +258,8 @@ export interface PracticeData {
   };
   /** Practice was left: navigating away in the app, or the page being closed. */
   "practice.closed": {
-    readonly reason: "left" | "page-hidden-for-unload";
+    /** A model's run ended: why is its model stream's `model.ended`. */
+    readonly reason: "left" | "page-hidden-for-unload" | "run-ended";
   };
   "practice.capture-gap": {
     /** Inclusive source positions whose observations were not stored. */

@@ -43,6 +43,7 @@ function observation(participantId: string, sequence: number, extra: Record<stri
     occurredAt: "2026-10-25T10:00:00.000Z",
     elapsedMs: 12.5 * sequence,
     captureVersion: PRACTICE_CAPTURE_VERSION,
+    actor: "person",
     termsVersion: "2026-10-25",
     assignments: {},
     challenge: "PY-002",
@@ -78,6 +79,8 @@ test("a batch becomes one row per record, the payload kept verbatim", async () =
     // A site record carries the site stream's version, not the practice one.
     observation(me.participantId, 4, { type: "site.page", captureVersion: PRACTICE_CAPTURE_VERSION }),
     observation(me.participantId, 5, { type: "site.page", captureVersion: SITE_CAPTURE_VERSION, challenge: null, challengeRevision: null, attemptId: null, data: { visible: true, focused: true, width: 1, height: 1 } }),
+    // A model's run is never uploaded, whatever else it gets right.
+    observation(me.participantId, 6, { actor: "model", termsVersion: null }),
   ];
   const response = await handle(
     post("/ingest/v1/batches", { protocol: INGEST_PROTOCOL, participantId: me.participantId, proof: me.proof, records }),
@@ -88,7 +91,7 @@ test("a batch becomes one row per record, the payload kept verbatim", async () =
   assert.equal(body.accepted, 3);
   assert.deepEqual(
     body.rejected.map((r: { reason: string }) => r.reason),
-    ["another participant", "unknown capture version", "unknown capture version"],
+    ["another participant", "unknown capture version", "unknown capture version", "not a person"],
   );
   assert.deepEqual(
     sent.map((r) => [r.kind, r.type, r.sequence, r.elapsed_ms, r.challenge, r.attempt_id, r.session_id, r.terms_version]),

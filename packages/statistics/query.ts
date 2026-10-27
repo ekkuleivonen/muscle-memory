@@ -81,7 +81,7 @@ export function statsQuery(
   SELECT *, json_get_str(json_get_json(payload, 'data'), 'runId') AS run_id,
     json_get_str(json_get_json(payload, 'data'), 'status') AS run_status
   FROM eligible
-  WHERE capture_version IN ('practice-capture-1.0.0', 'practice-capture-1.1.0')
+  WHERE capture_version IN ('practice-capture-1.0.0', 'practice-capture-1.1.0', 'practice-capture-1.2.0')
     AND type IN ('practice.started', 'practice.opened', 'practice.run', 'practice.submitted', 'practice.completed')
     AND participant_id IS NOT NULL AND participant_id <> ''
     AND attempt_id IS NOT NULL AND attempt_id <> ''
@@ -103,7 +103,7 @@ SELECT 'coverage' AS scope, NULL AS challenge, NULL AS challenge_revision,
   (SELECT COUNT(*) FROM record_groups WHERE variants <> 1) AS conflicts,
   (SELECT COUNT(*) FROM observations WHERE ${excluded}) AS known_synthetic,
   (SELECT COUNT(*) FROM observations WHERE type LIKE 'practice.%' AND (capture_version IS NULL OR capture_version NOT IN
-    ('practice-capture-1.0.0', 'practice-capture-1.1.0'))) AS unsupported,
+    ('practice-capture-1.0.0', 'practice-capture-1.1.0', 'practice-capture-1.2.0'))) AS unsupported,
   (SELECT MIN(occurred_at) FROM observations) AS first_observed,
   (SELECT MAX(occurred_at) FROM observations) AS last_observed,
   (SELECT MAX(received_at) FROM observations) AS last_received,

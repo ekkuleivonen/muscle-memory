@@ -43,6 +43,7 @@ async function setup() {
       occurredAt: "2026-10-25T10:00:00.000Z",
       elapsedMs: sequence,
       captureVersion: SITE_CAPTURE_VERSION,
+      actor: "person",
       termsVersion: "2026-10-25",
       challenge: null,
       data: { visible: true },
