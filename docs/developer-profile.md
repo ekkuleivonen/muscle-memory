@@ -1,8 +1,33 @@
-# Observed developer profile (ENG-340)
+# Your report (ENG-374) and the observed developer profile (ENG-340)
 
-`/stats` is a private, device-local dashboard behind the existing Terms gate. It uses the terminal typography, coverage bars, native expandable sections and links to the existing challenge picker and optional profile settings. After completion, practice links to comparison availability without delaying or changing the local verdict.
+`/stats` is a private report behind the existing Terms gate: a short story of six adaptive chapters, each one headline, one visual, one line of evidence and a disclosure for definitions. The full ENG-340 measurement inventory below sits one disclosure away ("All measurements"), with its language/attempt filters, metric definitions, eligible samples and checkpoint timelines. After completion, practice links to the report's model chapter without delaying or changing the local verdict.
 
-The overview combines a compact progress/coverage line with up to four evidence-backed personal observations about first-check outcomes, checkpoint use, edit sizes, recovery or completed-task reflections. Each expands to its definition, supporting sample, missingness, baseline and exact attempt links. Next actions target unresolved user errors or an untouched topic in a practiced language, with an explanation of the evidence added. Missing capture/history is never presented as repairable through demographic answers or another task. Language and attempt filters apply to descriptive metrics. Progress remains challenge-based; a previously completed challenge can also have an unfinished repeat. Unexplored is never failure. Metadata coverage describes the current catalog, not global ability or the metadata of an older revision.
+## The report
+
+`apps/web/lib/report.ts` builds the chapters from evidence, purely and deterministically (`report.test.ts`); `app/stats/report-data.ts` reads the evidence; `app/stats/report-view.tsx` draws it. A chapter without supporting evidence is left out rather than padded, so one attempt yields a short report that deepens with more.
+
+| Chapter | Built from | Shown only when | Never claims |
+| --- | --- | --- | --- |
+| 1. Could you still do it? | Device progress plus device/uploaded attempts: finished, open, revisited, languages; first-submit outcomes from complete traces | Anything was started | A global ability score; open is never failed. AI background shapes copy only when the person said they use AI daily or it writes most of their code |
+| 2. It wasn't a straight line. | One real attempt's checkpoints (starts, example runs, submissions with passing checks, leaving, returning, completion), placed by wall clock with gaps over 10 minutes shortened | An attempt has at least two checks or a submission, preferring a finished attempt that recovered from a failed submission | That idle time is thinking; no synthetic trace stands in |
+| 3. You have a way of working. | Small (≤20 units) vs bigger edits and checks per attempt, from complete traces; returns to unfinished work | At least one complete trace with edits | Personality, typo or attention judgements. Headline cut-offs (`SMALL_STEP_SHARE`, `LARGE_STEP_SHARE`, `FREQUENT_CHECKS`) choose wording, not norms. Human position: "not enough comparable participants yet" |
+| 4. Same challenge. Different minds. | Up to three of the person's exact revisions beside stored model receipts (one try per model/reasoning slot) | Any attempt on a published revision | Success rates or a speed race. Mismatched runtime/diagnostics withhold the model outcome; loading/unavailable/missing/stopped/refused stay distinct. People column: "too few yet" |
+| 5. The part you might not have noticed. | In order: low retrospective confidence on a clean first-submission pass; fewer submissions on a later finished attempt at the same revision and conditions; finishing after a failed first submission (not the chapter 2 attempt) | One of these holds | Prospective calibration, general improvement from a familiar task, or causal AI claims |
+| 6. What will you find out next? | Resume an open runnable challenge; otherwise a new topic in the main language, a new language, or any fresh task. Optional experience answer if unanswered. Optional share | Always | Unlock thresholds. Sharing copies only the sentences the person ticks to the clipboard; nothing is posted |
+
+The first screen is the chapter 1 takeaway, with a compact freshness line ("this device · uploads as of …"). Chapter progress is a sticky list of anchor links that highlights as chapters scroll in. Visuals are text-sized blocks and marks in the terminal palette; bars grow in only under `prefers-reduced-motion: no-preference`. Every visual has a text equivalent (screen-reader lists, `role="img"` labels or a table).
+
+A new player sees one invitation, a start action and a preview explicitly labelled "sample data, not yours". Stealth shows only what stealth means and a link to privacy settings.
+
+### Data, freshness and boundaries
+
+On an ordinary visit the report reads this device's evidence first and renders it. In parallel it reads the owner's uploaded summaries (the past 366 days, first page of five attempts, through the existing secret-verified `/api/private-history`) and model receipts for chapter 4's revisions (`/api/model-receipts`, at most three). Each arrives independently; a slow or failed read shows a one-line status, never a blocked report. "Read more uploads" continues the history pages. Uploaded summaries are kept in page memory for up to five minutes, keyed by participant, so moving around the site doesn't re-query; the server's one-read-per-minute limit shows as "try again in a minute".
+
+Device and uploaded attempts are deduplicated by attempt and revision (the trace with the later last observation wins, the device on a tie). Chapter 1 labels whether uploads contributed. Nothing read from uploads is written to progress, storage or backups.
+
+Reset, deletion and import start a private boundary: the report, pending reads and the in-memory copy are cleared synchronously and reads are blocked until the boundary finishes; then the report reads again. Because reset does not delete uploads, the report can show them again after a reset (the reset page and the Privacy Notice say so); deleting the account removes both. Logout, consent changes and stealth clear everything and read nothing. A boundary while `/stats` is closed still drops the in-memory copy (listeners are registered once per tab).
+
+**Stealth** means no report: no device read, no history request, no receipt request. Server-side, stealth is a browser setting the server cannot read without another owner-scoped query, so the private-history route does not enforce it; this is not a privacy gap, since that route returns only the verified owner's own summaries, and the receipt route returns no personal data. Exclusion of stealth participants from any future human aggregate must be enforced where aggregates are computed, using the uploaded stealth answer (`site.profile`), not by hiding UI.
 
 ## Evidence and definitions
 
@@ -63,7 +88,7 @@ No event, question, runtime tooling or model call is added. The draft Privacy No
 
 No changes restore private challenge sources removed by ENG-371/PR65. Existing benchmark ledger and erasure work are preserved. No new credentials, privileges, paid model runs, deployment or merge.
 
-## Verification and interaction walkthrough
+## Verification and interaction walkthrough (ENG-340 dashboard; see ENG-374 evidence for the report)
 
 Run `npm test`, `npm run typecheck`, `npm run build` and `npm run build:cloudflare` with Node 22. Pure synthetic traces exercise exact known values, record retry/order, gaps/conflicts, oversized changes, incomplete runs, infrastructure states, independent resume clocks, mixed revisions, repeats, compaction, backup and reset/deletion. The fixtures have no participant code or reference solutions.
 
@@ -90,4 +115,4 @@ The secret-authorized **player** history direction is approved and implemented w
 
 ## Approved private uploaded-history direction
 
-Option A and the exact `PARTICIPANT_OWNER` binding are approved by Ekku via dot. The binding is prepared in source; no live rollout from this branch is authorized before final review. See [the exact binding, query budgets, lifecycle, inventory and verification](eng-340-private-history.md). The local-retention flag remains false. Uploaded history explicitly drives the same metric registry/observations/repeat reducer without changing device progress or creating persistent summaries. Privacy version 2026-10-27.2 is drafted for release; no live collection or consent changes.
+Option A and the exact `PARTICIPANT_OWNER` binding are approved by Ekku via dot. See [the exact binding, query budgets, lifecycle, inventory and verification](eng-340-private-history.md). The local-retention flag remains false. Uploaded history drives the same metric registry and repeat reducer without changing device progress or creating persistent summaries. ENG-374 replaced the explicit load with the automatic read above (privacy version 2026-10-27.3); collection and retention are unchanged.

@@ -3,7 +3,7 @@
  * version before using the app; changing either page means a new version here, which asks
  * everyone again on their next visit (the session cookie carries it).
  */
-export const LEGAL_VERSION = "2026-10-27.2";
+export const LEGAL_VERSION = "2026-10-27.3";
 /** Shown on the legal pages and in settings. */
 export const LEGAL_UPDATED = "27 October 2026";
 

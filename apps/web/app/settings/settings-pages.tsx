@@ -170,7 +170,7 @@ function Privacy() {
       tone: "dim",
       text: share
         ? "Your runs count towards future published insights and community comparisons."
-        : "Done, you've gone stealth. We won't include you in published insights or comparisons from now on, including what you've already done, and you won't see other people's stats either.",
+        : "Done, you've gone stealth. We won't include you in published insights or comparisons from now on, including what you've already done, and you won't see other people's stats, or your own report, either.",
     });
   };
   return (
@@ -196,8 +196,8 @@ function Privacy() {
       </p>
       <p>
         Your runs may count towards future published insights (statistics
-        and findings, never your records or code) and community comparisons. Go stealth to be excluded from both. Recording
-        and uploads continue in stealth.
+        and findings, never your records or code) and community comparisons. Go stealth to be excluded from both; in return your report on /stats
+        is off too. Recording and uploads continue in stealth.
       </p>
       <p className="t-state">
         Right now you&apos;re{" "}
@@ -529,7 +529,7 @@ function Reset() {
       <p>
         This clears your progress and deletes saved practice and recorded activity
         from this browser. Your settings stay. Anything already uploaded stays
-        with us until you delete your account.
+        with us until you delete your account, and your report can still read it.
       </p>
       <Result result={result} />
       {!asking ? (
