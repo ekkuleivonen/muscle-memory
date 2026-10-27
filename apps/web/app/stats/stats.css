@@ -3,8 +3,6 @@
  * accent, real bars and marks built from text-sized blocks, and generous half-line spacing.
  */
 .stats-content {
-  max-width: 96ch;
-  margin: 0 auto;
   padding-bottom: 48px;
 }
 .stats h1,

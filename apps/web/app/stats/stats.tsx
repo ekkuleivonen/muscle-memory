@@ -1,11 +1,10 @@
 "use client";
 import Link from "next/link";
 import React, { useMemo, useState } from "react";
-import { buildReport, mergeEvidence, PEOPLE, type Report } from "../../lib/report";
+import { buildReport, mergeEvidence, type Report } from "../../lib/report";
 import type { ChallengeSummary } from "../../lib/challenges";
-import { useReportData, type HistoryStatus } from "./report-data";
+import { useReportData } from "./report-data";
 import { ChapterNav, ChapterView, Preview } from "./report-view";
-import { Measurements } from "./appendix";
 import type { AttemptSummary } from "../../../../packages/developer-profile/derive";
 
 const NONE: AttemptSummary[] = [];
@@ -18,10 +17,10 @@ export function StealthNotice() {
         You&apos;re in stealth, so there&apos;s no report here.
       </h1>
       <p>
-        Stealth leaves you out of comparisons and published insights. In
-        return, this page shows no stats: not your own, not other
-        people&apos;s, not the models&apos;. Practice works as usual, and
-        recording continues as the Privacy Notice describes.
+        Stealth leaves you out of comparisons and published insights. In return,
+        this page shows no stats: not your own, not other people&apos;s, not the
+        models&apos;. Practice works as usual, and recording continues as the
+        Privacy Notice describes.
       </p>
       <p>
         <Link className="t-cmd" href="/settings/privacy">
@@ -29,54 +28,6 @@ export function StealthNotice() {
         </Link>
       </p>
     </section>
-  );
-}
-
-function Freshness({
-  history,
-  at,
-  more,
-}: {
-  history: HistoryStatus;
-  at: string | null;
-  more: () => void;
-}) {
-  const time = (iso: string) =>
-    new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const uploads =
-    history.state === "ready"
-      ? history.value.attempts.length
-        ? `+${history.value.attempts.length} uploaded`
-        : "no uploads"
-      : history.state === "loading" || history.state === "idle"
-        ? "adding uploads…"
-        : history.state === "held"
-          ? "uploads not re-read"
-          : history.state === "no-uploads"
-            ? "no uploads linked"
-            : "uploads unavailable";
-  return (
-    <details className="report-sources">
-      <summary>
-        sources <span className="t-dim">· this device · {uploads}</span>
-      </summary>
-      <p role="status">
-        From this device{at ? `, read ${time(at)}` : ""}.{" "}
-        {history.state === "ready"
-          ? history.value.attempts.length
-            ? `Plus ${history.value.attempts.length} uploaded attempts, as of ${time(history.value.readAt)}.`
-            : `No uploads in the past year (checked ${time(history.value.readAt)}).`
-          : history.state === "loading" || history.state === "idle"
-            ? "Adding your uploads…"
-            : history.message}
-        {history.state === "ready" && history.notice ? ` ${history.notice}` : ""}
-      </p>
-      {history.state === "ready" && history.value.next && (
-        <button type="button" className="t-cmd" onClick={more}>
-          read more uploads
-        </button>
-      )}
-    </details>
   );
 }
 
@@ -119,13 +70,24 @@ export function ReportBody({
     <>
       {/* The reveal comes first; where the evidence came from and the chapter list follow it. */}
       <h1 className="sr-only">Your Muscle Memory report</h1>
-      <ChapterView chapter={report.chapters[0]} index={0} count={count} report={report} />
+      <ChapterView
+        chapter={report.chapters[0]}
+        index={0}
+        count={count}
+        report={report}
+      />
       <div className="report-after-lead">
         {status}
         <ChapterNav chapters={report.chapters} />
       </div>
       {report.chapters.slice(1).map((c, i) => (
-        <ChapterView key={c.id} chapter={c} index={i + 1} count={count} report={report} />
+        <ChapterView
+          key={c.id}
+          chapter={c}
+          index={i + 1}
+          count={count}
+          report={report}
+        />
       ))}
       {!report.chapters.some((c) => c.id === "story") && <Preview />}
     </>
@@ -135,7 +97,8 @@ export function ReportBody({
 export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
   // Chapter 4 picks the revisions; the data hook reads their receipts. Kept in state to break the cycle.
   const [wanted, setWanted] = useState<Report["comparisonRevisions"]>([]);
-  const { privacy, local, history, receipts, cohorts, more } = useReportData(wanted);
+  const { privacy, local, history, receipts, cohorts, more } =
+    useReportData(wanted);
   const device = local.value;
   const uploaded = history.state === "ready" ? history.value.attempts : NONE;
   const attempts = useMemo(
@@ -156,7 +119,8 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
         : null,
     [catalog, device, attempts, receipts, cohorts],
   );
-  const key = report?.comparisonRevisions.map((r) => r.revision).join("|") ?? "";
+  const key =
+    report?.comparisonRevisions.map((r) => r.revision).join("|") ?? "";
   if (key !== wanted.map((r) => r.revision).join("|"))
     setWanted(report?.comparisonRevisions ?? []);
   return (
@@ -166,18 +130,23 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
           <StealthNotice />
         ) : privacy === "signed-out" ? (
           <section className="report-quiet">
-            <h1 className="report-headline">Your report needs your account on this browser.</h1>
+            <h1 className="report-headline">
+              Your report needs your account on this browser.
+            </h1>
             <p>
               <Link className="t-cmd" href="/consent?next=/stats">
                 Sign in again →
               </Link>
             </p>
           </section>
-        ) : privacy === "error" || local.error ? (
+        ) : privacy === "error" || (local.error && !report) ? (
           <section className="report-quiet">
-            <h1 className="report-headline">Your practice couldn&apos;t be read on this browser.</h1>
+            <h1 className="report-headline">
+              Your practice couldn&apos;t be read on this browser.
+            </h1>
             <p className="t-dim">
-              Storage may be blocked or full. Nothing was changed; reload the page to try again.
+              Storage may be blocked or full. Nothing was changed; reload the
+              page to try again.
             </p>
           </section>
         ) : !report ? (
@@ -186,51 +155,17 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
           </p>
         ) : (
           <>
-            <ReportBody
-              report={report}
-              status={<Freshness history={history} at={device!.at} more={more} />}
-            />
-            {!report.empty && (
-              <Measurements
-                attempts={attempts}
-                catalog={catalog}
-                until={history.state === "ready" ? history.value.readAt : device!.at}
-              />
+            <ReportBody report={report} status={null} />
+            {history.state === "ready" && history.value.next && (
+              <button type="button" className="t-cmd" onClick={more}>
+                Earlier practice
+              </button>
             )}
-            <details className="report-appendix" id="about">
-              <summary>
-                About this report <span className="t-dim">/ sources, limits and privacy</span>
-              </summary>
-              <p>
-                It reads this device&apos;s practice and, automatically, code-free
-                summaries of what this browser uploaded in the past year. Your
-                browser&apos;s private secret proves the uploads are yours; nobody
-                else&apos;s activity is read. Summaries stay in this page&apos;s
-                memory while the report is open and for at most five minutes
-                after, and are never saved or restored into your progress.
+            {local.error && (
+              <p role="status" className="t-dim">
+                Some saved practice couldn&apos;t be read.
               </p>
-              <p>
-                Each upload read covers up to five attempts; &quot;read more
-                uploads&quot; continues. Uploads can lag by minutes. Attempts with
-                recording gaps are left out of a finding rather than counted as
-                zero.
-              </p>
-              <p>
-                Nothing here measures intelligence, attention or dependence on AI.
-                No recorded help in the editor doesn&apos;t mean no outside help.
-                Model results are single observed tries on the exact same
-                challenge version. {PEOPLE.reason}
-              </p>
-              <p>
-                Reset clears this device&apos;s progress, not your uploads; the
-                report reads them again the next time you open it. Deleting your
-                account removes both.
-                Going stealth turns this report off.{" "}
-                <Link className="t-cmd" href="/settings">
-                  Manage your data →
-                </Link>
-              </p>
-            </details>
+            )}
           </>
         )}
       </div>

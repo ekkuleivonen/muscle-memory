@@ -1,6 +1,8 @@
 # Your report (ENG-374) and the observed developer profile (ENG-340)
 
-`/stats` is a private report behind the existing Terms gate: a short story of six adaptive chapters, each one headline, one visual, one line of evidence and a disclosure for definitions. The full ENG-340 measurement inventory below sits one disclosure away ("All measurements"), with its language/attempt filters, metric definitions, eligible samples and checkpoint timelines. After completion, practice links to the report's model chapter without delaying or changing the local verdict.
+`/stats` is a private report behind the existing Terms gate: selected, understandable insights in six adaptive chapters. Measurement definitions, hashes, receipt protocols, cache timestamps and the full metric inventory below are internal documentation, not player-facing disclosures. The player report does not mount the raw measurement appendix. Required privacy controls remain in settings and the Privacy Notice.
+
+The report uses the shared terminal shell geometry. Device progress renders before IndexedDB interpretation. Its selective evidence read excludes code artifacts, the outbox and unrelated settings; an eight-second deadline bounds local storage/identity waits. Model reads run at most two at once, have an end-to-end twelve-second deadline, and retry an unavailable capacity result at most once after the batch. Private history remains independent of the useful local report; repeated pagination clicks cannot enqueue duplicate reads. No recording or retention semantics change.
 
 ## The report
 
@@ -77,7 +79,7 @@ The reader combines these summaries with current local records, with current rec
 
 Existing backup export/import carries summaries in the store settings. Reset clears them with observations while keeping the device proof so uploaded data stays deletable. Account deletion clears the identity and summaries too. Reset change notifications occur after the clear, so open dashboards cannot refresh before deletion finishes. No server derived store or public response is added, so existing server erasure needs no new propagation target.
 
-Stealth keeps own private stats available, hides all human/model comparison details and makes no comparison requests. Future aggregate release still must exclude stealth participants, including historical data, enforce approved minimum counts across combined slices, and keep 16–17-year-olds separate or excluded. None of that is bypassed by this dashboard.
+Stealth hides the entire report and makes no history or comparison requests. Future aggregate release still must exclude stealth participants, including historical data, enforce approved minimum counts across combined slices, and keep 16–17-year-olds separate or excluded. None of that is bypassed by this dashboard.
 
 No event, question, runtime tooling or model call is added. The draft Privacy Notice/version changes for eventual release; no live consent change is made. Local historical retention remains off under option A. Profile context uses existing editable/skippable settings, coordinated with ENG-333/356–367 by linking rather than creating a new prompt mechanism. No age nudge, demographics gate or promised percentile.
 

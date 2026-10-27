@@ -77,3 +77,19 @@ test("ordinary refresh errors may retain clearly stale data; account/privacy bou
   });
   assert.equal(view.getSnapshot().value, null);
 });
+
+test("available progress appears before a slow evidence read, but cannot cross a privacy boundary", async () => {
+  const view = privateView<string>();
+  view.prime("available progress");
+  const slow = deferred<string>();
+  const read = view.read(() => slow.promise);
+  assert.equal(view.getSnapshot().value, "available progress");
+  view.prime("must not replace an existing report");
+  assert.equal(view.getSnapshot().value, "available progress");
+  view.invalidate(true);
+  view.prime("must not appear during reset");
+  assert.equal(view.getSnapshot().value, null);
+  slow.resolve("old evidence");
+  await read;
+  assert.equal(view.getSnapshot().value, null);
+});
