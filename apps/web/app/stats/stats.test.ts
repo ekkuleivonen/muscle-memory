@@ -48,3 +48,34 @@ test("repeat-history availability keeps longitudinal delivery explicit without i
   assert.match(html, /External assistance remains unknown/);
   assert.match(html, /not statistical confidence/);
 });
+
+test("a matched model receipt renders real observed outcome, incompatible context withholds it", async () => {
+  const { ModelReceiptView } = await import("./model-comparisons");
+  const r = {
+    model: "synthetic/model",
+    reportedModels: ["synthetic/model-2026"],
+    reasoning: "high",
+    harness: "harness-1",
+    try: 1,
+    state: "completed" as const,
+    submissions: 2,
+    runtime: { id: "synthetic", version: "1" },
+    features: [],
+    budget: { turns: 50, submissions: 10 },
+  };
+  const conditions = [
+    'Runtime: {"id":"synthetic","version":"1"}',
+    "Editor: codemirror-6; features: syntax-highlighting",
+  ];
+  const matched = renderToStaticMarkup(
+    createElement(ModelReceiptView, { receipt: r, conditions }),
+  );
+  assert.match(matched, /Observed outcome: completed/);
+  assert.match(matched, /2 submissions/);
+  assert.match(matched, /synthetic\/model-2026/);
+  const mismatch = renderToStaticMarkup(
+    createElement(ModelReceiptView, { receipt: r, conditions: [] }),
+  );
+  assert.doesNotMatch(mismatch, /Observed outcome: completed/);
+  assert.match(mismatch, /Outcome withheld/);
+});

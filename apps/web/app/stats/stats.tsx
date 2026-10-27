@@ -1,6 +1,22 @@
 "use client";
 import Link from "next/link";
-import React, { useCallback, useEffect, useState } from "react";
+import { flushSync } from "react-dom";
+import { AttemptModelComparisons } from "./model-comparisons";
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import {
+  personalObservations,
+  evidenceActions,
+} from "../../lib/personal-observations";
+import { privateView } from "../../../../packages/developer-profile/private-view";
+import { listenPrivateBoundary } from "../../lib/private-boundary";
+import { PROFILE_KEY } from "../../lib/profile";
+import { PROGRESS_KEY } from "../../lib/progress";
+import { acceptsCurrent } from "../../lib/legal";
 import { openPracticeStore } from "../../../../packages/browser/practice-store";
 import { repeatHistory } from "../../../../packages/developer-profile/longitudinal";
 import { localHistory } from "../../../../packages/developer-profile/history";
@@ -60,47 +76,77 @@ function revealAttempt() {
   target.querySelector("summary")?.focus({ preventScroll: true });
 }
 export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
-  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
-  const [error, setError] = useState(false),
-    [loading, setLoading] = useState(true);
+  const [view] = useState(() => privateView<Snapshot>());
+  const state = useSyncExternalStore(
+    view.subscribe,
+    view.getSnapshot,
+    view.getSnapshot,
+  );
+  const { value: snapshot, error, loading } = state;
   const [language, setLanguage] = useState("all");
   const [practice, setPractice] = useState("all");
   const refresh = useCallback(async () => {
-    setLoading(true);
-    setError(false);
+    let account;
     try {
+      account = readProfile();
+    } catch {
+      view.invalidate();
+      await view.read(async () => {
+        throw new Error("Privacy settings could not be read.");
+      });
+      return;
+    }
+    if (!account || account.signedOut || !acceptsCurrent(account.accepted)) {
+      view.invalidate();
+      return;
+    }
+    await view.read(async () => {
       const store = await openPracticeStore();
       try {
         const dump = await store.dump();
-        setSnapshot({
+        return {
           attempts: localHistory(dump),
           progress: readProgress(),
           profile: readProfile(),
           at: new Date().toISOString(),
-        });
+        };
       } finally {
         store.close();
       }
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    });
+  }, [view]);
   useEffect(() => {
     void refresh();
-    const update = () => void refresh();
-    window.addEventListener("focus", update);
-    window.addEventListener("storage", update);
-    window.addEventListener(PROGRESS_CHANGE, update);
-    window.addEventListener(ACCOUNT_CHANGE, update);
-    return () => {
-      window.removeEventListener("focus", update);
-      window.removeEventListener("storage", update);
-      window.removeEventListener(PROGRESS_CHANGE, update);
-      window.removeEventListener(ACCOUNT_CHANGE, update);
+    const transient = () => void refresh();
+    const boundary = () => {
+      flushSync(() => view.invalidate());
+      void refresh();
     };
-  }, [refresh]);
+    const storage = (event: StorageEvent) => {
+      if (
+        event.key === null ||
+        event.key === PROFILE_KEY ||
+        event.key === PROGRESS_KEY
+      )
+        boundary();
+    };
+    const stop = listenPrivateBoundary((phase) => {
+      if (phase === "start") flushSync(() => view.invalidate(true));
+      else view.release(); // Completion events trigger a fresh read only after clearing succeeded.
+    });
+    window.addEventListener("focus", transient);
+    window.addEventListener("storage", storage);
+    window.addEventListener(PROGRESS_CHANGE, boundary);
+    window.addEventListener(ACCOUNT_CHANGE, boundary);
+    return () => {
+      stop();
+      view.invalidate();
+      window.removeEventListener("focus", transient);
+      window.removeEventListener("storage", storage);
+      window.removeEventListener(PROGRESS_CHANGE, boundary);
+      window.removeEventListener(ACCOUNT_CHANGE, boundary);
+    };
+  }, [refresh, view]);
   useEffect(() => {
     revealAttempt();
     window.addEventListener("hashchange", revealAttempt);
@@ -122,8 +168,8 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
     (c) => progress[c.key] && !progress[c.key].completedAt,
   );
   const unexplored = challenges.filter((c) => !progress[c.key]);
-  const eligible = attempts.filter((a) => !a.issues.length);
-  const next = unfinished[0] ?? unexplored[0];
+  const observations = personalObservations(attempts);
+  const actions = evidenceActions(challenges, progress, attempts);
   return (
     <main className="term stats">
       <div className="stats-content">
@@ -181,53 +227,53 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
           <>
             <section aria-labelledby="overview">
               <h2 id="overview"># At a glance</h2>
-              <ul className="stats-observations">
-                <li>
-                  <strong>{completed.length}</strong> challenges completed ·{" "}
-                  <strong>{unfinished.length}</strong> attempts unfinished ·{" "}
-                  <strong>{unexplored.length}</strong> challenges unexplored. A
-                  completed challenge can also have an unfinished repeat.
-                </li>
-                <li>
-                  <strong>{attempts.length}</strong> retained attempt/revision
-                  summaries; <strong>{eligible.length}</strong> have contiguous
-                  supported capture. Older uploaded history may already be
-                  absent.
-                </li>
-                <li>
-                  <strong>
-                    {attempts.filter((a) => a.practice === "repeat").length}
-                  </strong>{" "}
-                  observed repeat attempts. First-ever status is unknown when
-                  earlier history cannot be proved.
-                </li>
-                <li>
-                  {snapshot.profile?.stealth
-                    ? "Stealth is on. Your private evidence stays available; human and model comparisons are hidden."
-                    : "Human comparisons await an approved privacy threshold and eligible cohorts. Model comparisons await verified compatible receipts."}
-                </li>
-              </ul>
-              <p>
-                {next ? (
-                  <Link className="t-cmd" href={`/challenges/${next.key}`}>
-                    {unfinished.length
-                      ? `Return to ${next.key}`
-                      : `Explore ${next.key}`}{" "}
-                    →
-                  </Link>
-                ) : (
-                  <Link className="t-cmd" href="/challenges">
-                    Explore challenges →
-                  </Link>
-                )}{" "}
-                <span className="t-dim">
-                  {unfinished.length
-                    ? "Continue unresolved work; a return adds evidence about revisiting this task."
-                    : unexplored.length
-                      ? "A fresh task broadens task coverage; it does not unlock a rank."
-                      : "Later repeats add familiar-task evidence; keep them separate from fresh tasks."}
-                </span>
+              <p className="t-dim">
+                {completed.length} completed challenges · {unfinished.length}{" "}
+                unfinished attempts · {unexplored.length} unexplored.{" "}
+                {attempts.length} retained attempt/revision traces. First/repeat
+                status stays unknown when older history is missing.
               </p>
+              <div className="stats-observations">
+                {observations.map((o) => (
+                  <article className="stats-metric" key={o.id}>
+                    <p>
+                      <strong>{o.title}.</strong> {o.text}
+                    </p>
+                    <details>
+                      <summary>Definition and supporting evidence</summary>
+                      <p className="t-dim">
+                        Definition: {o.definition} Supporting sample:{" "}
+                        {o.evidence.length} / {attempts.length} retained
+                        attempts; {o.missing} missing/ineligible. Baseline: your
+                        own selected task mix only.
+                      </p>
+                      {o.evidence.map((a) => (
+                        <p key={`${a.attempt}:${a.revision}`}>
+                          <a
+                            className="t-cmd"
+                            href={`#${attemptAnchor(a)}`}
+                            onClick={() => queueMicrotask(revealAttempt)}
+                          >
+                            {a.challenge} ·{" "}
+                            {a.practice === "repeat"
+                              ? "repeat"
+                              : "first/repeat unknown"}
+                          </a>
+                        </p>
+                      ))}
+                    </details>
+                  </article>
+                ))}
+              </div>
+              <h3>What would add useful evidence</h3>
+              {actions.map((a) => (
+                <p key={a.href}>
+                  <Link className="t-cmd" href={a.href}>
+                    {a.label} →
+                  </Link>{" "}
+                  {a.why}
+                </p>
+              ))}
             </section>
             <details className="stats-section">
               <summary>
@@ -359,6 +405,10 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
             <details className="stats-section" id="comparisons">
               <summary>Human / model comparisons</summary>
               <Comparison stealth={!!snapshot.profile?.stealth} />
+              <AttemptModelComparisons
+                attempts={attempts}
+                stealth={!!snapshot.profile?.stealth}
+              />
               {!snapshot.profile?.stealth && (
                 <>
                   <p>
@@ -411,7 +461,9 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
               )}
             </details>
             <details className="stats-section">
-              <summary>Evidence coverage and privacy</summary>
+              <summary id="evidence-coverage">
+                Evidence coverage and privacy
+              </summary>
               <p>
                 {PROFILE_HISTORY_ENABLED
                   ? "Code-free summaries are retained before future raw compaction."
@@ -579,17 +631,11 @@ export function Comparison({ stealth }: { stealth: boolean }) {
             approved. There is no released eligible human baseline.
           </p>
           <p>
-            Models — unavailable. The operator ledger is not a verified
-            participant-facing receipt. Missing, queued, stopped,
-            budget-limited, refused and infrastructure-failed slots must stay
-            distinct. A single observed try per exact model/version and
-            reasoning setting is not a stable success probability.
-          </p>
-          <p className="t-dim">
-            No comparison fetch is attempted. There is no cached comparison to
-            show; refresh reads private local evidence only. Release needs an
-            allowlisted receipt reader with exact protocol/runtime/tool matching
-            (ENG-342).
+            Models — stored observed tries are loaded for the selected exact
+            task revision below. Missing, queued, stopped, budget-limited,
+            refused and infrastructure-failed slots stay distinct. A single
+            observed try per exact model/version and reasoning setting is not a
+            stable success probability.
           </p>
         </>
       )}
