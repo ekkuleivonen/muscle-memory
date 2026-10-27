@@ -15,7 +15,7 @@ That's the gist. The rest is the detail, which the law (reasonably) wants writte
 
 ## Who we are
 
-**rowandreason.com**, **Otsu, Shiga, Japan 520-0801**, is responsible for your data (the "controller", in GDPR-speak). Questions, requests and complaints go to **support@rowandreason.com**. A human reads it.
+**Ekku Leivonen**, a sole trader running Muscle Memory as rowandreason.com, at **Estemcourt 1002, 4-1-20 Nionohama, Otsu, Shiga 520-0801, Japan**, is responsible for your data (the "controller", in GDPR-speak). Questions, requests and complaints go to **support@rowandreason.com**. A human reads it.
 
 ## What we collect
 
@@ -101,7 +101,7 @@ That's the list. No data brokers, no advertisers.
 
 ## How long we keep it
 
-- **Your account and activity**: for as long as you have an account. Delete it and your browser's copy goes at once, our servers stop accepting anything from it straight away, and what they hold is erased within **[30]** days, old copies included. We keep a note that the random ID was deleted (so nothing can be uploaded under it again), the check value we used to recognise its secret, and how many records were erased. None of that says anything about you.
+- **Your account and activity**: for as long as you have an account. Delete it and your browser's copy goes at once, our servers stop accepting anything from it straight away, and what they hold is erased within **30** days, old copies included. We keep a note that the random ID was deleted (so nothing can be uploaded under it again) and how many records were erased. Neither says anything about you.
 - **Server logs**: 7 days.
 - **Published anonymised datasets** stay published. They aren't linked to you, so there's nothing to delete them by.
 
@@ -116,13 +116,13 @@ Depending on where you live (the EU and UK in particular), you can ask us to:
 
 Email **support@rowandreason.com**. We'll reply within a month. You can also complain to your data protection authority. We'd rather you talked to us first, but it's your call.
 
-You can do some of this yourself: \`delete\` in **Settings** deletes your account here and on our servers, and \`export\` downloads everything your browser holds as a file. \`reset\` only clears your progress in this browser; what was already sent stays until you delete your account.
+You can do some of this yourself: \`delete\` in **Settings** deletes your account here and on our servers, \`export\` downloads everything your browser holds as a file, and \`access\` asks us for a copy of what our servers hold: your browser proves the records are yours and gives you a reference to email us, and we reply with the copy. \`reset\` only clears your progress in this browser; what was already sent stays until you delete your account.
 
-Since we don't know who you are, we can only act on a request for records we can tie to you: we'll need your ID, and to check it's yours. Clearing your browser storage throws away the secret that proves the records are yours, so delete your account first, or export a backup file (it holds the secret, so keep it safe).
+Since we don't know who you are, we can only act on a request for records we can tie to you, which is what \`access\` does. We keep a note of each request (the random ID, a reference and when). Clearing your browser storage throws away the secret that proves the records are yours, so delete your account first, or export a backup file (it holds the secret, so keep it safe).
 
 ## Where it's stored
 
-In your browser, and on Cloudflare (our hosting and storage provider), in **[hosting region to be confirmed]**. Cloudflare and GitHub are US companies and may process data outside your country, including outside the EU/EEA; **[the legal safeguards for that transfer, to be confirmed]**. We're based in Japan.
+In your browser, and on Cloudflare (our hosting and storage provider), whose storage for your records is in its **Asia-Pacific** region. Cloudflare runs the site from wherever is nearest to you, and Cloudflare and GitHub are US companies, so your data may be processed outside your country, including outside the EU/EEA; **[the legal safeguards for that transfer, to be confirmed]**. We're based in Japan.
 
 Uploads are not a backup: they don't give you account recovery or sync between devices. An exported file is how you move to another browser.
 
@@ -136,5 +136,5 @@ When this notice changes, the version at the top changes too, and you'll be aske
 
 ## Contact
 
-**support@rowandreason.com**, or by post to **Otsu, Shiga, Japan 520-0801**.
+**support@rowandreason.com**, or by post to **Ekku Leivonen, Estemcourt 1002, 4-1-20 Nionohama, Otsu, Shiga 520-0801, Japan**.
 `;

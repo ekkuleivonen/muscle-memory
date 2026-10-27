@@ -34,11 +34,12 @@ Checked against the code on 27 October 2026 (ENG-339). Each line is what the not
 | Result links | Allowlisted outcome fields and referral code; code only when ticked, in the URL fragment, never sent to the server. | `apps/web/lib/outcome.ts`, `share.ts` |
 | Third parties | No analytics, trackers or ads; X and LinkedIn are plain links opened on click. | `apps/web/app/_components/share.tsx` |
 | Processors | Cloudflare (Workers, R2, Pipelines, R2 Data Catalog, D1 for the catalog, Access for the owner preview and admin). GitHub Actions runs the daily erasure, which reads the events table to rewrite it. | `wrangler.jsonc`, `.github/workflows/erasure.yml` |
-| Deletion | `delete` in Settings writes a tombstone; uploads are refused at once; `tools/erasure` deletes rows daily; snapshot expiry removes old files about a week later. The tombstone, the proof and `erased/<id>/<time>.json` (a row count) stay. | [telemetry](telemetry.md#erasure) |
-| Reset, export, import | Reset clears this browser only. Export downloads what this browser holds, secret included; import replaces it. There is no server-side export, recovery or sync. | `apps/web/lib/backup.ts` |
-| Access requests | By email only. The operator can find records by participant ID; how a requester proves the ID is theirs is not decided (see gates). | none yet |
+| Deletion | `delete` in Settings writes a tombstone and removes the proof; uploads are refused at once; `tools/erasure` deletes rows daily; snapshot expiry removes old files about a week later. The tombstone and `erased/<id>/<time>.json` (a row count) stay. | [telemetry](telemetry.md#erasure) |
+| Reset, export, import | Reset clears this browser only. Export downloads what this browser holds, secret included; import replaces it. There is no recovery or sync. | `apps/web/lib/backup.ts` |
+| Access requests | `access` in Settings proves the ID with the device secret and returns a reference; the person emails it, and the operator answers with `tools/erasure/access.py` on their own machine. The request note (`access/<reference>.json`) stays. | `apps/ingest/src/index.ts`, `tools/erasure/access.py` |
+| Storage location | Both R2 buckets report location APAC (checked with `wrangler r2 bucket info`, 27 October 2026); Workers run at Cloudflare's edge everywhere. | `wrangler r2 bucket info` |
 | Publication, comparisons, model runs | None exist. The notice describes them as planned, with the rules the first release must meet. Model runs never receive player data ([model runs](model-runs.md)). | none yet |
-| Licences | Repository code is MIT (`LICENSE`). The Terms take a broad licence to submitted code and activity. Challenge content has no stated licence. | `LICENSE` |
+| Licences | Repository code is MIT (`LICENSE`). The Terms take a broad licence to submitted code and activity. Challenge content is the operator's and is leaving the repository for R2 and D1 (owner, 27 October 2026); revisions already committed to the public repository were published under its MIT licence. | `LICENSE` |
 
 Anything new to record goes into this table, [telemetry](telemetry.md) and the notice together, with a new version.
 
@@ -47,13 +48,18 @@ Anything new to record goes into this table, [telemetry](telemetry.md) and the n
 - **2026-10-26**: starts, stars, copying from the challenge, the coarse environment, the optional profile answers (including an age band), the questions after completing; the browser keeps only what practice needs.
 - **2026-10-26.1**: drops the random handle: an account is only a random ID.
 - **2026-10-26.2**: the country uploads come from, worked out by Cloudflare; the IP address is never stored with records, and small countries are suppressed in anything published.
-- **2026-10-27** (ENG-339): reconciled with shipped behaviour. The Privacy Notice adds referral codes, arrivals and shares, what a result link exposes, the browser storage and `mm_consent` cookie, the pre-acceptance arrival note, rate limiting by IP, Workers Logs at 7 days (was a `[30]` placeholder), Cloudflare and GitHub as providers, what deletion leaves behind, `export` and how access requests are matched, that stealth does not stop recording and internal statistics include everyone, that stealth hides model comparisons too (following [model runs](model-runs.md); it used to say they kept working), that nothing is published yet, and transfers outside the EU/EEA as an open question. The Terms replace "we're working on" device moves with export and import, replace the "our stuff" clause that contradicted the MIT licence with a placeholder for the content licence, describe sharing results, and say enforcement means refusing, excluding or deleting records (there are no notices without contact details). Settings' stealth confirmation says "published stats" instead of "our stats", since internal statistics include stealth accounts.
+- **2026-10-27** (ENG-339): reconciled with shipped behaviour. The Privacy Notice adds referral codes, arrivals and shares, what a result link exposes, the browser storage and `mm_consent` cookie, the pre-acceptance arrival note, rate limiting by IP, Workers Logs at 7 days (was a `[30]` placeholder), Cloudflare and GitHub as providers, the operator's name and address, storage in Cloudflare's Asia-Pacific region, erasure within 30 days, what deletion leaves behind (no longer the proof), `export` and the new `access` request, that stealth does not stop recording and internal statistics include everyone, that stealth hides model comparisons too (following [model runs](model-runs.md); it used to say they kept working), that nothing is published yet, and transfers outside the EU/EEA as an open question. The Terms replace "we're working on" device moves with export and import, say the code is MIT while the challenges stay ours, describe sharing results, and say enforcement means refusing, excluding or deleting records (there are no notices without contact details). Settings' stealth confirmation says "published stats" instead of "our stats", since internal statistics include stealth accounts.
 
 ## Owner decisions and review status
 
 | Item | Status |
 | --- | --- |
-| Operator label, contact and locality | Supplied by the owner on 25 October 2026: rowandreason.com, support@rowandreason.com, Otsu, Shiga, Japan 520-0801. Not a verified legal entity name or full address. |
+| Operator | Owner, 27 October 2026: Ekku Leivonen, sole trader, running it as rowandreason.com; Estemcourt 1002, 4-1-20 Nionohama, Otsu, Shiga 520-0801, Japan; support@rowandreason.com. Update both pages (new version) if a company (R&R) is registered and takes over. |
+| Storage location | Owner, 27 October 2026: data need not stay in Japan. Buckets are APAC. |
+| Erasure within 30 days; tombstones and erasure counts kept indefinitely; proof removed on deletion | Proposed in ENG-339 and not objected to by the owner, 27 October 2026; confirm in review. |
+| Access requests via Settings → access | Owner, 27 October 2026. |
+| Challenge content not open-licensed | Owner, 27 October 2026: the challenges are leaving the repository. |
+| Erasure job on Cloudflare instead of GitHub Actions | Owner wants it if easy, 27 October 2026; a follow-up, since it needs a Container, a cron Worker and secrets. GitHub stays listed until then. |
 | Governing law and courts | Japan and Otsu, owner-supplied for the draft; not legally reviewed. |
 | Minimum age 16, self-declared | Shipped; not legally reviewed. |
 | Workers Logs retention | 7 days: Cloudflare's fixed retention on Workers Paid, not an owner choice. |
@@ -63,13 +69,12 @@ Anything new to record goes into this table, [telemetry](telemetry.md) and the n
 
 Launch (ENG-337) waits until each of these is closed and recorded here. None are assumed settled.
 
-1. **Controller identity.** The full legal name and registered address of the operator, replacing the domain label. Whether a GDPR Art. 27 EU representative (and a UK one) is needed for a Japan-based controller offering this to people in the EU/UK.
-2. **Hosting region and transfers.** The R2 buckets' location, and the safeguards for processing by Cloudflare and GitHub outside the EU/EEA (and Japan's APPI rules on providing data to third parties abroad). Fills both bracketed transfer lines in the notice.
-3. **Retention.** The owner confirms 30 days for erasure (`[30]`; the job achieves about a week), and how long tombstones, proofs and erasure counts are kept (indefinitely today).
-4. **Access and portability.** How someone proves a participant ID is theirs without sending the device secret by email, and what a server-side export contains. Until decided, the notice promises only that we need the ID and to check it.
-5. **Licences.** Whether the Terms' perpetual, irrevocable licence to submitted code and activity is the right scope; the licence for challenge content; the licence published datasets will carry.
-6. **Liability cap.** `[EUR 100]` and the consumer-law carve-out, reviewed for Japanese and EU consumer law.
-7. **Age.** Whether 16 and a self-declaration are adequate where the service is offered.
-8. **Publication boundaries.** Before the first release: new random IDs per dataset, coarsened times, no free text, small groups suppressed (countries included), stealth honoured in every export pipeline and comparison, including for data collected before going stealth, and other people's stats hidden from stealth accounts. Stealth is reciprocal by design; have the lawyer confirm that trade-off, since it comes attached to an objection right.
-9. **Typing rhythm.** Whether keystroke timing is biometric or otherwise special-category data in any jurisdiction offered, given the commitment not to use it to identify anyone.
-10. **Legal review** of both pages and the consent points, then `LEGAL_DRAFT` set to false in the same change as a new version.
+1. **EU/UK representatives.** Whether a GDPR Art. 27 EU representative (and a UK one) is needed for a Japan-based sole trader monitoring the behaviour of people in the EU/UK; likely yes, since keystroke capture is neither occasional nor low-risk.
+2. **Transfers.** The safeguards for processing by Cloudflare (APAC storage, edge everywhere) and GitHub outside the EU/EEA, and Japan's APPI rules on providing data to third parties abroad. Fills the bracketed transfer line in the notice.
+3. **Retention.** Review confirms 30 days for erasure (the job achieves about a week) and keeping tombstones, erasure counts and access-request notes indefinitely.
+4. **Licences.** Whether the Terms' perpetual, irrevocable licence to submitted code and activity is the right scope (proposed: until deletion for anything unpublished, perpetual only for what was published), and the licence published datasets will carry.
+5. **Liability cap.** `[EUR 100]` and the consumer-law carve-out, reviewed for Japanese and EU consumer law.
+6. **Age.** Whether 16 and a self-declaration are adequate where the service is offered.
+7. **Publication boundaries.** Before the first release: new random IDs per dataset, coarsened times, no free text, small groups suppressed (countries included), stealth honoured in every export pipeline and comparison, including for data collected before going stealth, and other people's stats hidden from stealth accounts. Stealth is reciprocal by design; have the lawyer confirm that trade-off, since it comes attached to an objection right. Raw key timings and edit streams can't honestly be called anonymous (typing rhythm is a fingerprint), so they go out only as pseudonymised data under a data use agreement, never in an open release; code is free text too (comments and names), so it is left out of open releases or reviewed first.
+8. **Typing rhythm.** Whether keystroke timing is biometric or otherwise special-category data in any jurisdiction offered, given the commitment not to use it to identify anyone.
+9. **Legal review** of both pages and the consent points, then `LEGAL_DRAFT` set to false in the same change as a new version.

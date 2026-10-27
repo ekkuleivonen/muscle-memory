@@ -11,7 +11,7 @@ export const TERMS = `## The short version
 - **Solve challenges yourself.** No AI assistants in your runs: comparing people with LLMs only works if the people are people.
 - It's an early product, provided as is. Things will change, and occasionally break.
 
-These Terms are an agreement between you and **rowandreason.com** ("we", "us"). By accepting them (before your first page, or when you start a challenge before that), you agree to them.
+These Terms are an agreement between you and **Ekku Leivonen**, a sole trader running Muscle Memory as rowandreason.com ("we", "us"). By accepting them (before your first page, or when you start a challenge before that), you agree to them.
 
 ## Your account
 
@@ -44,7 +44,7 @@ Why the broad licence? Because "anonymised dataset of how people solve challenge
 
 ## Our stuff
 
-Muscle Memory's source code is open source under the **MIT licence**, which says what you may do with it; the licence comes with the code. **[The licence for the challenges, their descriptions and tests, to be confirmed.]** Until that's settled, use them to practise, as much as you like, and don't republish the catalog wholesale.
+Muscle Memory's source code is open source under the **MIT licence**, which says what you may do with it; the licence comes with the code. The challenges, their descriptions and tests are ours and not part of that. Use them to practise, as much as you like. Don't copy the catalog wholesale or run a clone of it.
 
 ## Published datasets
 
@@ -74,5 +74,5 @@ These Terms are governed by the laws of **Japan**, and disputes go to the courts
 
 ## Contact
 
-**support@rowandreason.com**, or by post to **Otsu, Shiga, Japan 520-0801**.
+**support@rowandreason.com**, or by post to **Ekku Leivonen, Estemcourt 1002, 4-1-20 Nionohama, Otsu, Shiga 520-0801, Japan**.
 `;
