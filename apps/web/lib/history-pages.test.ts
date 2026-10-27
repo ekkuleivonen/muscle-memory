@@ -58,3 +58,15 @@ test("the 100-attempt bound counts unavailable slots and never silently claims f
   assert.equal(result.value.next, null);
   assert.match(result.notice!, /100/);
 });
+
+test("failed reads carry a fixed reason; only transient ones are retried", async () => {
+  const { failureReason, retryable } = await import("./history-pages");
+  assert.equal(failureReason(503, "storage-http-400"), "http-503:storage-http-400");
+  assert.equal(failureReason(503, undefined), "http-503", "a 503 without diagnostic stays distinct");
+  assert.equal(failureReason(503, "SELECT * FROM events"), "http-503", "free text never becomes a reason");
+  assert.equal(failureReason(503, "x".repeat(60)), "http-503");
+  for (const r of ["http-503:storage-http-400", "http-503", "http-502", "http-429", "timeout", "network", "identity"] as const)
+    assert.equal(retryable(r), true, r);
+  for (const r of ["http-401", "http-403", "http-410", "http-400", "http-413", "invalid-page"] as const)
+    assert.equal(retryable(r), false, r);
+});

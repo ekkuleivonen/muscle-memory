@@ -7,7 +7,11 @@
  */
 import {
   mergeHistoryPage,
+  HISTORY_AUTO_RETRIES,
   HISTORY_READ_INTERVAL_MS,
+  failureReason,
+  retryable,
+  type HistoryFailure,
   HISTORY_MAX_PAGES,
 } from "../../lib/history-pages";
 import { reportRead, reportReceipts } from "../../lib/report-reads";
@@ -59,11 +63,14 @@ export type HistoryStatus =
       value: UploadedHistory;
       notice?: string;
       retryAt?: number;
+      reason?: HistoryFailure;
     }
   | {
       state: "no-uploads" | "limited" | "unavailable" | "unauthorized" | "held";
       message: string;
       retryAt?: number;
+      /** Why the last read failed, as a fixed code; never shown as copy. */
+      reason?: HistoryFailure;
     };
 
 /** After the report closes, uploaded summaries stay in page memory at most this long, so returning to /stats doesn't re-query. */
@@ -216,6 +223,41 @@ export function useReportData(
       try {
         const live = () =>
           ticket === generation.current && !blocked.current && !boundaries;
+        const began = Date.now();
+        /**
+         * One failure path: keep pages already read, record a fixed reason (attribute and one
+         * console line, no request or identity), and retry transient failures at the read interval.
+         */
+        const fail = (reason: HistoryFailure, limited = false) => {
+          if (!live()) return;
+          console.info("Muscle Memory: earlier practice not added", {
+            reason,
+            ms: Date.now() - began,
+          });
+          const again = retryable(reason) && historyRetries.current < HISTORY_AUTO_RETRIES;
+          if (again) historyRetries.current++;
+          const retryAt = again
+            ? reason === "identity"
+              ? Date.now() + 10_000
+              : Math.max(nextHistoryReadAt, Date.now())
+            : undefined;
+          setHistory(
+            more && previous
+              ? {
+                  state: "ready",
+                  value: previous,
+                  notice: retryAt ? "Earlier practice is still being added…" : "More uploads unavailable right now.",
+                  retryAt,
+                  reason,
+                }
+              : {
+                  state: limited ? "limited" : "unavailable",
+                  message: "Your uploads can't be read right now, so the report uses this device only.",
+                  retryAt,
+                  reason,
+                },
+          );
+        };
         let identity;
         try {
           identity = await reportRead(
@@ -232,19 +274,7 @@ export function useReportData(
             8000,
           );
         } catch {
-          if (live())
-            setHistory({
-              ...(more && previous
-                ? {
-                    state: "ready" as const,
-                    value: previous,
-                    notice: "More uploads unavailable right now.",
-                  }
-                : {
-                    state: "unavailable" as const,
-                    message: "Your saved uploads couldn't be read.",
-                  }),
-            });
+          fail("identity");
           return;
         }
         if (!live()) return;
@@ -271,19 +301,6 @@ export function useReportData(
         setHistory((h) =>
           h.state === "ready" && more ? h : { state: "loading" },
         );
-        // A later page failing keeps the pages already read; live() still discards everything after a boundary.
-        const failed = (): HistoryStatus =>
-          more && previous
-            ? {
-                state: "ready",
-                value: previous,
-                notice: "More uploads unavailable right now.",
-              }
-            : {
-                state: "unavailable",
-                message:
-                  "Your uploads can't be read right now, so the report uses this device only.",
-              };
         const controller = new AbortController();
         aborts.current.add(controller);
         const to = previous?.window.to ?? new Date().toISOString().slice(0, 10);
@@ -317,34 +334,24 @@ export function useReportData(
                 message:
                   "Your uploads couldn't be verified as yours from this browser, so the report uses this device only.",
               });
-            } else if (response.status === 429) {
-              const retryAt =
-                historyRetries.current++ < 1 ? nextHistoryReadAt : undefined;
-              setHistory(
-                more && previous
-                  ? {
-                      state: "ready",
-                      value: previous,
-                      notice: retryAt
-                        ? "Earlier practice is still being added…"
-                        : "More uploads unavailable right now.",
-                      retryAt,
-                    }
-                  : {
-                      state: "limited",
-                      message:
-                        "Your uploads were read a moment ago. This device's evidence is shown meanwhile.",
-                      retryAt,
-                    },
-              );
-            } else setHistory(failed());
+            } else {
+              // Only the fixed diagnostic field is read from an error reply.
+              const body = await response.json().catch(() => null);
+              fail(failureReason(response.status, body?.diagnostic), response.status === 429);
+            }
             return;
           }
-          const page = (await response.json()) as UploadedHistory;
+          const page = (await response.json().catch(() => null)) as UploadedHistory | null;
           if (!live()) return;
+          if (!page) return fail("invalid-page");
           historyPages.current++;
           historyRetries.current = 0;
-          const merged = mergeHistoryPage(previous, page);
+          let merged;
+          try {
+            merged = mergeHistoryPage(previous, page);
+          } catch {
+            return fail("invalid-page");
+          }
           const value = merged.value;
           const stopped = Boolean(
             value.next && historyPages.current >= HISTORY_MAX_PAGES,
@@ -355,8 +362,8 @@ export function useReportData(
             : merged.notice;
           keep(identity.participant, value, notice);
           setHistory({ state: "ready", value, notice });
-        } catch {
-          if (live()) setHistory(failed());
+        } catch (error) {
+          fail(error instanceof DOMException && error.name === "TimeoutError" ? "timeout" : "network");
         } finally {
           aborts.current.delete(controller);
         }
@@ -561,5 +568,32 @@ export function useReportData(
     return () => clearTimeout(timer);
   }, [history, privacy, loadHistory]);
 
-  return { privacy, local, history, receipts, cohorts };
+  /**
+   * A person-initiated retry after automatic ones ran out, or on returning to the tab: paced to the
+   * server's read interval, so a click can't add reads; a boundary still blocks it.
+   */
+  const retryHistory = useCallback(() => {
+    if (privacy !== "ok" || blocked.current || boundaries) return;
+    setHistory((h) =>
+      (h.state === "unavailable" || h.state === "limited" || (h.state === "ready" && h.reason)) && !h.retryAt
+        ? { ...h, retryAt: Math.max(Date.now(), nextHistoryReadAt) }
+        : h,
+    );
+  }, [privacy]);
+  useEffect(() => {
+    if (privacy !== "ok") return;
+    const failed = (history.state === "unavailable" || history.state === "limited" || (history.state === "ready" && history.reason)) && !history.retryAt;
+    if (!failed) return;
+    const again = () => {
+      if (document.visibilityState === "visible" && Date.now() >= nextHistoryReadAt) retryHistory();
+    };
+    window.addEventListener("focus", again);
+    document.addEventListener("visibilitychange", again);
+    return () => {
+      window.removeEventListener("focus", again);
+      document.removeEventListener("visibilitychange", again);
+    };
+  }, [history, privacy, retryHistory]);
+
+  return { privacy, local, history, receipts, cohorts, retryHistory };
 }

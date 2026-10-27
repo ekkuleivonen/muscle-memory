@@ -53,3 +53,34 @@ export function mergeHistoryPage(
         : undefined,
   };
 }
+
+/** Automatic retries after a failed history read, each at the server's read interval. */
+export const HISTORY_AUTO_RETRIES = 2;
+/**
+ * A fixed, non-sensitive code for a failed read: the HTTP status and the server's fixed
+ * diagnostic stage, or where the browser failed. Never the request body, identity or response text.
+ */
+export type HistoryFailure =
+  | `http-${number}`
+  | `http-${number}:${string}`
+  | "timeout"
+  | "network"
+  | "identity"
+  | "invalid-page";
+const DIAGNOSTIC = /^[a-z0-9-]{1,40}$/;
+export function failureReason(status: number, diagnostic: unknown): HistoryFailure {
+  return typeof diagnostic === "string" && DIAGNOSTIC.test(diagnostic)
+    ? `http-${status}:${diagnostic}`
+    : `http-${status}`;
+}
+/**
+ * Whether a failed read may be tried again. Rate limits, server and storage failures, timeouts,
+ * network errors and a slow identity read can pass; ownership refusals and bad requests won't.
+ */
+export function retryable(reason: HistoryFailure): boolean {
+  if (reason === "invalid-page") return false;
+  const m = /^http-(\d+)/.exec(reason);
+  if (!m) return true;
+  const status = Number(m[1]);
+  return status === 429 || status >= 500;
+}
