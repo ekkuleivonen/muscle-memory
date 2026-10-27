@@ -538,6 +538,10 @@
     ) {
     display: none;
   }
+  /* Only the challenge shows: no empty grid tracks below it. The panes stay mounted. */
+  .practice:not(.solve-here) .tui-panes {
+    display: block;
+  }
 }
 
 /* Optional questions after completing: a line each, answers as inline choices. */

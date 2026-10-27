@@ -51,6 +51,14 @@ const DEVICES: Device[] = [
     phone: true,
   },
   { name: "tablet-820", width: 820, height: 1180, touch: true, phone: false },
+  // A narrow desktop window: a mouse, no touch. Not a phone, whatever its width.
+  {
+    name: "desktop-narrow-390",
+    width: 390,
+    height: 844,
+    touch: false,
+    phone: false,
+  },
   {
     name: "desktop-1280",
     width: 1280,
@@ -111,6 +119,26 @@ async function open(device: Device, stealth: boolean) {
     },
     [LEGAL_VERSION, stealth] as const,
   );
+  // The real clipboard, read back; the system share sheet as a recording stand-in that the
+  // person dismisses (AbortError, as browsers report it) unless __shareMode says "ok".
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], {
+    origin,
+  });
+  // No named functions inside: tsx would wrap them in a helper the page doesn't have.
+  await context.addInitScript(() => {
+    const w = window as unknown as {
+      __shares: ShareData[];
+      __shareMode: "dismiss" | "ok";
+    };
+    w.__shares = [];
+    w.__shareMode = "dismiss";
+    Navigator.prototype.share = function (data?: ShareData) {
+      w.__shares.push({ title: data?.title, url: data?.url });
+      return w.__shareMode === "ok"
+        ? Promise.resolve()
+        : Promise.reject(new DOMException("Share canceled", "AbortError"));
+    };
+  });
   const page = await context.newPage();
   page.setDefaultTimeout(60000);
   const errors: string[] = [];
@@ -136,7 +164,7 @@ try {
     await page.waitForURL(`**/challenges/${KEY}`);
 
     // A direct challenge link keeps its address and shows the challenge.
-    await page.goto(`${origin}/challenges/${KEY}`);
+    await page.goto(`${origin}/challenges/${KEY}?from=synthetic-eng386`);
     const title = page.locator(".practice-challenge h1");
     await title.waitFor();
     assert.equal(new URL(page.url()).pathname, `/challenges/${KEY}`);
@@ -157,18 +185,96 @@ try {
     await noOverflow(page, `${device.name} practice`);
     await shot("challenge");
 
+    // Copy and share send exactly the challenge's own address, nothing from this visit.
+    const canonical = `${origin}/challenges/${KEY}`;
+    const where = page.locator(
+      device.phone ? ".practice-desktop-first" : ".practice-challenge",
+    );
+    const copy = where.getByRole("button", { name: "Copy challenge link" });
+    await page.evaluate(() => navigator.clipboard.writeText("synthetic-empty"));
+    await copy.click();
+    await where.getByRole("button", { name: "Link copied" }).waitFor();
+    assert.equal(
+      await page.evaluate(() => navigator.clipboard.readText()),
+      canonical,
+      `${device.name} copied link`,
+    );
+
     if (device.phone) {
-      const copy = page
-        .locator(".practice-desktop-first")
-        .getByRole("button", { name: "Copy challenge link" });
       const box = await copy.boundingBox();
       assert.ok(
         box && box.height >= 44,
         `${device.name} copy target ${box?.height}`,
       );
+      // Dismissing the share sheet leaves the challenge as it was; sharing sends the same link.
+      const share = where.getByRole("button", { name: "Share link" });
+      await share.click();
+      await page.waitForFunction(() => (window as any).__shares.length === 1);
+      await page.evaluate(() => ((window as any).__shareMode = "ok"));
+      await share.click();
+      await page.waitForFunction(() => (window as any).__shares.length === 2);
+      assert.deepEqual(await page.evaluate(() => (window as any).__shares), [
+        { title: live.title, url: canonical },
+        { title: live.title, url: canonical },
+      ]);
+      assert.equal(
+        page.url(),
+        `${origin}/challenges/${KEY}?from=synthetic-eng386`,
+      );
+      assert.equal(await title.textContent(), live.title);
+      assert.equal(await notice.isVisible(), true, "notice after share");
+      // Reading only: nothing but the bar's room under the challenge, no empty editor tracks.
+      const blank = () =>
+        page.evaluate(() => {
+          const pane = document
+            .querySelector(".practice-challenge")!
+            .getBoundingClientRect();
+          const pad = parseFloat(
+            getComputedStyle(document.querySelector(".practice")!)
+              .paddingBottom,
+          );
+          return (
+            document.documentElement.scrollHeight -
+            (pane.bottom + scrollY) -
+            pad
+          );
+        });
+      assert.ok(
+        (await blank()) <= 1,
+        `${device.name} blank ${await blank()}px`,
+      );
+      // Rotating while reading keeps the same mounted editor and the note.
+      const mounted = await editor.elementHandle();
+      await page.setViewportSize({
+        width: device.height,
+        height: device.width,
+      });
+      await page.setViewportSize({
+        width: device.width,
+        height: device.height,
+      });
+      assert.equal(await mounted!.evaluate((n) => n.isConnected), true);
+      assert.equal(await notice.isVisible(), true, "notice after rotation");
+      assert.ok((await blank()) <= 1, `${device.name} blank after rotation`);
+      // The end of the page: the challenge, then only the bar. (A full-page capture would
+      // re-render without touch emulation, so scroll the real viewport instead.)
+      await page.evaluate(() =>
+        scrollTo({
+          top: document.documentElement.scrollHeight,
+          behavior: "instant",
+        }),
+      );
+      assert.equal(await notice.isVisible(), true);
+      await shot("challenge-end");
+      await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
       // Solving anyway shows the editor; it keeps the code across a rotation and Back.
       await page.getByRole("button", { name: "Solve here anyway" }).click();
       await editor.waitFor();
+      assert.equal(
+        await editor.evaluate((n, m) => n === m, mounted),
+        true,
+        "the editor shown is the one mounted while reading",
+      );
       await page.waitForFunction(() =>
         document.activeElement?.closest(".cm-content"),
       );
