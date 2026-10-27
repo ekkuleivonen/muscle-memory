@@ -20,7 +20,8 @@ export default async function AdminLayout({
           <a href="/admin">Challenges</a> ·{" "}
           <a href="/admin/authoring">Authoring</a> ·{" "}
           <a href="/admin/benchmarks">Benchmarks</a> ·{" "}
-          <a href="/admin/statistics">Statistics</a>
+          <a href="/admin/statistics">Statistics</a> ·{" "}
+          <a href="/admin/sql">SQL</a>
         </nav>
       </header>
       {children}
