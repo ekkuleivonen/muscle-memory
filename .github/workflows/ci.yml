@@ -57,3 +57,14 @@ jobs:
       - run: pip install -r tools/erasure/requirements-test.txt
       - run: python -m unittest -v test_erase
         working-directory: tools/erasure
+  model-runs-store:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      # The same Iceberg stack as the erasure job.
+      - run: pip install -r tools/erasure/requirements-test.txt
+      - run: python -m unittest -v test_store_events
+        working-directory: tools/model-runs

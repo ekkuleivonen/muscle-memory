@@ -2,7 +2,7 @@
 
 Models play every challenge the way a person does, through a headless copy of practice, and everything they do is recorded as raw as a person's practice is: so people's work can be compared with models', and models with each other. Analysis comes later, from the raw data.
 
-**Built so far:** the recorded types (`packages/domain/model.ts`, `actor` in every envelope) headless practice and the model loop (`tools/model-runs/`). **Not yet:** storage, the price snapshots, publishing and showing results.
+**Built so far:** the recorded types (`packages/domain/model.ts`, `actor` in every envelope) headless practice, the model loop, the run ledger and storage (`tools/model-runs/`). **Not yet:** the price snapshots, a worker that runs and stores claimed slots, publishing and showing results.
 
 ## Conditions
 
@@ -70,3 +70,8 @@ Runs are never uploaded through ingest, which refuses any `actor` but a person, 
 - **Credentials.** The API key goes in the authorization header and is never recorded.
 
 `tools/model-runs/run.test.ts` replays streams split at awkward places (keep-alive comments, lines cut across network reads, tool arguments in pieces, reasoning in pieces, a usage chunk repeating the finish reason, errors before and during the stream, malformed calls). `node --import tsx tools/model-runs/loop-check.ts [KEY …]` runs the whole loop in a real browser with a scripted stream writing the reference solution, and checks that every practice observation a tool call caused falls between that call and its result on the shared clock.
+
+## Storage
+
+- **The ledger** is in the catalog D1 database (`migrations/catalog/0002_model_runs.sql`, `tools/model-runs/ledger.ts`). `model_roster` lists the models to run; `model_runs` has one row per slot: revision, model, harness version, condition (experiment arms as canonical JSON) and try. Backfilling queues every slot the roster and the published revisions call for and leaves existing slots alone, so a new model, a new revision, a new harness version or a new condition is just new rows. A worker claims the oldest queued slot under a fresh run id. A finished row is a result: a trigger refuses any change to it. A harness failure (the sandbox, the network, the machine) marks the slot to run again under a new run id, up to three attempts, and then it waits for a person.
+- **The events** go to their own Iceberg table, `default.model_events`, in the events bucket's R2 Data Catalog, with exactly the events table's columns (`tools/model-runs/store.ts`): `received_at` is when the harness stored the run, and `country` is null. The harness writes one NDJSON file per run to an outbox, refusing anything that is not a model's; `tools/model-runs/store_events.py runs <outbox>` appends each file in one commit and moves it to `stored/`. A file already appended (its first record is in the table) is moved without appending again. Like the events table, read it deduplicated on `record_id`.
