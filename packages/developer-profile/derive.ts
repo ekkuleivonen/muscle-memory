@@ -224,6 +224,42 @@ function summarize(
       })
     );
   });
+  const terminalRuns = [...runMap.values()].flatMap((runs) =>
+    runs.filter(terminal).slice(0, 1),
+  );
+  const preTestUserError = (o: PracticeObservation) => {
+    const r = data(o, "practice.run");
+    const phase = (r?.outcome as { phase?: string } | undefined)?.phase;
+    return (
+      r?.status === "user-error" && (phase === "compile" || phase === "runtime")
+    );
+  };
+  const userFailed = (o: PracticeObservation) => {
+    const s = data(o, "practice.submitted")!;
+    return (
+      s.result === "errored" &&
+      (runMap.get(s.runId) ?? []).some(preTestUserError)
+    );
+  };
+  const recoverable = submissions.filter(
+    (o) => decided.includes(o) || userFailed(o),
+  );
+  const improves = (
+    before: PracticeObservation,
+    after: PracticeObservation,
+  ) => {
+    const b = data(before, "practice.submitted")!,
+      a = data(after, "practice.submitted")!;
+    return (
+      before.source.id === after.source.id &&
+      after.source.sequence > before.source.sequence &&
+      b.total === a.total &&
+      decided.includes(after) &&
+      (userFailed(before) ||
+        a.passed > b.passed ||
+        (b.rules.length > 0 && a.rules.length === 0 && a.result === "passed"))
+    );
+  };
   const edits = os.filter((o) => o.type === "practice.edit");
   const times: number[] = [],
     editCounts: number[] = [],
@@ -316,6 +352,13 @@ function summarize(
       "hover",
       "diagnostics",
       "recoveries",
+      "userErrors",
+      "userErrorRecoveries",
+      "unclassifiedErrors",
+      "runnerErrors",
+      "loadingFailures",
+      "timeouts",
+      "cancellations",
       "returns",
     ] as const)
       v[k] = 0;
@@ -361,7 +404,10 @@ function summarize(
         v[metric] = first.elapsedMs - start.elapsedMs;
     }
     const firstSubmit = submissions[0];
-    if (firstSubmit && decided.includes(firstSubmit))
+    if (
+      firstSubmit &&
+      (decided.includes(firstSubmit) || userFailed(firstSubmit))
+    )
       v.firstSubmit =
         data(firstSubmit, "practice.submitted")!.result === "passed" &&
         data(firstSubmit, "practice.submitted")!.rules.length === 0
@@ -396,36 +442,56 @@ function summarize(
       }
       if (o.type === "practice.closed") closed = true;
     }
-    for (let i = 1; i < decided.length; i++) {
-      const before = data(decided[i - 1], "practice.submitted")!,
-        after = data(decided[i], "practice.submitted")!;
-      if (
-        decided[i - 1].source.id === decided[i].source.id &&
-        before.total === after.total &&
-        (after.passed > before.passed ||
-          (before.rules.length > 0 &&
-            after.rules.length === 0 &&
-            after.result === "passed"))
-      )
-        v.recoveries!++;
-    }
-    const failed = decided.find(
+    v.unclassifiedErrors = submissions.filter((o) => {
+      const s = data(o, "practice.submitted")!;
+      if (s.result !== "errored" || userFailed(o)) return false;
+      return !(runMap.get(s.runId) ?? []).some((r) =>
+        ["runner-error", "timeout", "cancelled"].includes(
+          data(r, "practice.run")!.status,
+        ),
+      );
+    }).length;
+    v.userErrors = terminalRuns.filter(
+      (o) => data(o, "practice.run")!.status === "user-error",
+    ).length;
+    v.runnerErrors = terminalRuns.filter(
+      (o) => data(o, "practice.run")!.status === "runner-error",
+    ).length;
+    v.timeouts = terminalRuns.filter(
+      (o) => data(o, "practice.run")!.status === "timeout",
+    ).length;
+    v.cancellations = terminalRuns.filter(
+      (o) => data(o, "practice.run")!.status === "cancelled",
+    ).length;
+    v.loadingFailures = os.filter(
+      (o) => data(o, "practice.runtime")?.state === "unavailable",
+    ).length;
+    v.userErrorRecoveries = terminalRuns.filter(
+      (f) =>
+        preTestUserError(f) &&
+        terminalRuns.some(
+          (a) =>
+            a.source.id === f.source.id &&
+            a.source.sequence > f.source.sequence &&
+            data(a, "practice.run")!.purpose ===
+              data(f, "practice.run")!.purpose &&
+            ["result", "user-error"].includes(
+              data(a, "practice.run")!.status,
+            ) &&
+            (data(a, "practice.run")!.outcome as { phase?: string } | undefined)
+              ?.phase === "tests",
+        ),
+    ).length;
+    for (let i = 1; i < recoverable.length; i++)
+      if (improves(recoverable[i - 1], recoverable[i])) v.recoveries!++;
+    const failed = recoverable.find(
       (o) =>
+        userFailed(o) ||
         data(o, "practice.submitted")!.result === "failed" ||
         data(o, "practice.submitted")!.rules.length > 0,
     );
     if (failed) {
-      const f = data(failed, "practice.submitted")!;
-      const improved = decided.find(
-        (o) =>
-          o.source.id === failed.source.id &&
-          o.source.sequence > failed.source.sequence &&
-          data(o, "practice.submitted")!.total === f.total &&
-          (data(o, "practice.submitted")!.passed > f.passed ||
-            (f.rules.length > 0 &&
-              data(o, "practice.submitted")!.rules.length === 0 &&
-              data(o, "practice.submitted")!.result === "passed")),
-      );
+      const improved = recoverable.find((o) => improves(failed, o));
       if (improved) {
         v.recoveryChecks = new Set(
           os

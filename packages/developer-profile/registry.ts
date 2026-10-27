@@ -1,5 +1,6 @@
-/** Interpretation version, independent of capture. Change it when any definition changes. */
-export const METRIC_VERSION = "developer-profile-1";
+/** Interpretation version, independent of capture. v2 adds pre-test user-error recovery
+ * and separate infrastructure/unclassified failure categories; old summaries are not reinterpreted. */
+export const METRIC_VERSION = "developer-profile-2";
 /** Release gate: current Privacy Notice promises latest-attempt-only storage.
  * Enable only with approved retention disclosure/legal version; no consent change in ENG-340. */
 export const PROFILE_HISTORY_ENABLED = false;
@@ -58,7 +59,7 @@ export const METRICS = {
   firstSubmit: metric(
     SECTIONS[0],
     "First-submit success",
-    "1 when the first submission passed every case with no fired static rules, 0 when it failed or fired rules. Infrastructure failures, timeout, cancellation and undecided tests are ineligible.",
+    "1 when the first submission passed every case with no fired static rules, 0 when it failed or fired rules. A genuine pre-test user error is unsuccessful; infrastructure failures, timeout, cancellation and unclassified errors are ineligible.",
     "boolean",
   ),
   betweenRuns: metric(
@@ -167,23 +168,58 @@ export const METRICS = {
   ),
   recoveries: metric(
     SECTIONS[2],
-    "Submission improvements",
-    "Adjacent decided submissions in the same source with the same positive test total and increased passed count, or all cases passing with previously fired static rules cleared. Infrastructure failures are excluded.",
+    "User-check improvements",
+    "Same-source submission improvements: a genuine pre-test user compile/runtime failure reaches decided tests, or decided tests gain passes / clear fired rules with all cases passing. Runner/loading failures, cancellations and timeouts are separate.",
+  ),
+  userErrors: metric(
+    SECTIONS[2],
+    "User code errors",
+    "Distinct terminal user-error run IDs. Includes compile/runtime failures before tests and errors raised during tests; never runner failures, cancellations or timeouts.",
+  ),
+  userErrorRecoveries: metric(
+    SECTIONS[2],
+    "User errors reaching tests",
+    "Distinct pre-test user-error runs followed by a later run reaching the test phase in the same source and purpose. Reaching tests is not necessarily completion; observed failure-to-test transitions only.",
+  ),
+  unclassifiedErrors: metric(
+    SECTIONS[2],
+    "Unclassified submission errors",
+    "Errored submissions whose recorded terminal evidence cannot distinguish a pre-test user error from infrastructure or an unknown phase. Their recovery is unavailable, never silently counted as no recovery.",
+  ),
+  runnerErrors: metric(
+    SECTIONS[2],
+    "Runner failures",
+    "Distinct terminal runner-error runs; these are infrastructure failures, not mistakes in the submitted code.",
+  ),
+  loadingFailures: metric(
+    SECTIONS[2],
+    "Runtime loading failures",
+    "Recorded runtime unavailable observations, kept separate from user code errors.",
+  ),
+  timeouts: metric(
+    SECTIONS[2],
+    "Timed-out checks",
+    "Distinct terminal timeout run IDs; cause is not inferred and these are excluded from user-error recovery.",
+  ),
+  cancellations: metric(
+    SECTIONS[2],
+    "Cancelled checks",
+    "Distinct terminal cancelled run IDs, excluded from user-error recovery.",
   ),
   recoveryEdits: metric(
     SECTIONS[2],
     "Edits before improvement",
-    "Edit transactions between the first decided failed submission (including fired static rules) and a later improved submission in the same source.",
+    "Edit transactions between the first user-failed submission (pre-test user error, failed tests or fired static rules) and a later improved submission in the same source.",
   ),
   recoveryChecks: metric(
     SECTIONS[2],
     "Checks before improvement",
-    "Distinct queued run IDs between the first decided failed submission (including fired static rules) and a later improvement in the same source, including the improving check.",
+    "Distinct queued run IDs between the first user-failed submission (pre-test user error, failed tests or fired static rules) and a later improvement in the same source, including the improving check.",
   ),
   recoveryTime: metric(
     SECTIONS[2],
     "Time before improvement",
-    "Monotonic time between first decided failed submission (including fired static rules) and a later improved submission in the same source.",
+    "Monotonic time between first user-failed submission (pre-test user error, failed tests or fired static rules) and a later improved submission in the same source.",
     "ms",
   ),
   returns: metric(

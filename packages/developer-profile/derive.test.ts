@@ -287,3 +287,64 @@ test("future summary-path failure aborts compaction without discarding evidence"
   assert.equal((await store.records()).length, first.length + second.length);
   store.close();
 });
+
+test("pre-test compile/runtime user errors recover to tests, separately from infrastructure", () => {
+  for (const phase of ["compile", "runtime"]) {
+    const rs = trace().map((r) =>
+      change(r, (o) => {
+        if (
+          o.type === "practice.run" &&
+          o.data.runId === "r1" &&
+          o.data.status === "result"
+        ) {
+          o.data.status = "user-error";
+          o.data.outcome = { status: "user-error", phase };
+        }
+        if (
+          o.type === "practice.run" &&
+          o.data.runId === "r2" &&
+          o.data.status === "result"
+        )
+          o.data.outcome = { status: "completed", phase: "tests" };
+        if (o.type === "practice.submitted" && o.data.runId === "r1") {
+          o.data.result = "errored";
+          o.data.passed = 0;
+        }
+      }),
+    );
+    const v = derive(rs).values;
+    assert.equal(v.userErrors, 1);
+    assert.equal(v.userErrorRecoveries, 1);
+    assert.equal(v.recoveries, 1);
+    assert.equal(v.firstSubmit, 0);
+    assert.equal(v.recoveryTime, 3000);
+    assert.equal(v.recoveryEdits, 1);
+    assert.equal(v.runnerErrors, 0);
+  }
+});
+test("runner failure, timeout, cancellation and unknown errored submissions never become user recoveries", () => {
+  for (const status of ["runner-error", "timeout", "cancelled", "result"]) {
+    const rs = trace().map((r) =>
+      change(r, (o) => {
+        if (
+          o.type === "practice.run" &&
+          o.data.runId === "r1" &&
+          o.data.status === "result"
+        ) {
+          o.data.status = status;
+          o.data.outcome = { phase: "runtime" };
+        }
+        if (o.type === "practice.submitted" && o.data.runId === "r1")
+          o.data.result = "errored";
+      }),
+    );
+    const v = derive(rs).values;
+    assert.equal(v.userErrors, 0);
+    assert.equal(v.recoveries, 0);
+    assert.equal(v.userErrorRecoveries, 0);
+    assert.equal(v.firstSubmit, null);
+    assert.equal(v.runnerErrors, status === "runner-error" ? 1 : 0);
+    assert.equal(v.timeouts, status === "timeout" ? 1 : 0);
+    assert.equal(v.cancellations, status === "cancelled" ? 1 : 0);
+  }
+});
