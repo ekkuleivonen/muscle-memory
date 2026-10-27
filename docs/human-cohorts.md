@@ -10,7 +10,7 @@
 
 It is a conservative floor, not a statistical guarantee.
 
-**Access still disabled.** `COHORTS_ENABLED = false` in `packages/statistics/cohort.ts`. The route answers `{ state: "disabled" }` without running SQL, and the report makes no request. Enabling the player-facing read needs root's scoped approval and a Privacy Notice version.
+**Access still disabled.** `COHORTS_ENABLED = false` in `packages/statistics/cohort.ts`. The route answers `{ state: "disabled" }` without running SQL, and the report makes no request. It must stay off until current privacy state is authoritative (below). The report can ship without it, with comparisons with people honestly marked unavailable.
 
 ## Access
 
@@ -44,7 +44,7 @@ A browser counts only when its **latest uploaded `site.profile`** meets all of t
 - it states an adult band: 18–24, 25–34, 35–44, 45–54 or 55+;
 - it says `stealth: false`.
 
-That latest profile is the authoritative current state, and it applies to **all** of the browser's history, not just attempts recorded after it. The following are not counted:
+That latest profile applies to **all** of the browser's history, not just attempts recorded after it. It is the best current state SQL can see, but it is not authoritative (see below). The following are not counted:
 - no uploaded profile;
 - no age answer;
 - a 16–17 band;
@@ -62,15 +62,52 @@ On top of that:
 
 The report shows "adults: 80% solved · median 2 submissions". Its details carry the `eligibility` text.
 
-## Freshness and invalidation
+## Freshness and invalidation: not good enough to enable
 
-There is no push invalidation, and an expired aggregate is never served: a failed or over-limit refresh returns `unavailable`.
+Root's privacy review found that the uploaded `site.profile` is not authoritative current privacy state:
+- an upload can be delayed indefinitely, for example offline, or a tab closed before the outbox drains;
+- its `occurred_at` and `record_id` are client values, not a server sequence;
+- deletion tombstones live in the ingest Worker's CONTROL bucket, which this query cannot see, and erasure is a separate daily job.
 
-| Change | When it disappears from a cohort |
-| --- | --- |
-| Stealth on, or age removed or set to 16–17 | Once the new profile uploads (normally minutes), at the next refresh. A cached read is at most 1 hour old |
-| Account deletion | Uploads are refused at once. The browser's rows, including its profile, are erased by the daily job at 03:17 UTC, so it can remain in a group of 20+ for up to about 25 hours. Web has no read of deletion tombstones. Closing this needs a new read-only method on the approved `ParticipantOwner` RPC, which would broaden the binding; not proposed unless required |
-| Group falls below 20 | Dropped at the next refresh, within 1 hour |
+There is therefore **no guaranteed bound** on how long a browser that went stealth, became ineligible or was deleted could still be counted. Cohorts must stay disabled until the change below is in place.
+
+**Fixed in this draft:** a browser with any conflicting `site.profile` copy is excluded entirely (fail closed). It never falls back to an older eligible profile. Covered by the SQLite and DataFusion checks.
+
+## Proposed fix before activation (not implemented; needs root's exact approval)
+
+The smallest change that reuses existing pieces (the ingest Worker, its CONTROL bucket, device-secret proofs and the approved `PARTICIPANT_OWNER` service binding) and adds no new service, store or credential:
+
+1. **Authoritative current eligibility, written with the device secret.**
+   - New ingest route: `POST /ingest/v1/participants/<id>/privacy`, body `{ secret, stealth, adult }`.
+   - `adult` is `true` only for a stated 18+ band, `false` for 16–17, and `null` when unanswered.
+   - It verifies the secret against the existing proof, the same way deletion does, refuses after a tombstone and is rate-limited per participant.
+   - It writes CONTROL `privacy/<id>` = `{ stealth, adult, at: <server time> }` and bumps CONTROL `privacy/epoch` to the server time.
+   - Deletion also bumps the epoch.
+   - The browser sends it whenever stealth or age changes, and once to sync the current state. No new answers are collected; these are the same answers already uploaded, now with a server-ordered current value.
+2. **A bounded internal eligibility check on the existing binding.** Two new methods on the `ParticipantOwner` entrypoint, both read-only with no mutations:
+   - `epoch()` returns the epoch.
+   - `eligible(ids)` takes at most 1,000 IDs and returns only those with no tombstone and a privacy record of `{ stealth: false, adult: true }`. Missing, unknown or malformed records count as **not eligible**.
+3. **Cohort read uses it.**
+   - SQL returns per-browser outcome rows for the one revision: the pseudonymous browser ID plus the outcome fields, capped at 1,000 browsers, above which the result is unavailable.
+   - The web Worker asks `eligible(ids)`, aggregates only the browsers it returns, applies the 20 floor and drops the IDs from memory.
+   - The rows are cached (1 hour, per isolate) together with the epoch.
+   - **Every** request first calls `epoch()`, one CONTROL read. If the epoch changed, the Worker re-checks `eligible` on the cached rows and re-aggregates before answering.
+   - A cached aggregate therefore never includes someone who has since gone stealth, become ineligible or been deleted, once their write is acknowledged.
+   - If a group falls below 20 it disappears, and the player sees "fewer than 20 comparable adults". It is never kept at a stale size.
+4. **Bounds and cost.**
+   - Per uncached query: one SQL scan, plus up to 2,000 CONTROL reads (a tombstone and a privacy record per browser).
+   - Per request: one CONTROL read.
+   - The existing per-participant rate limiter covers the privacy write.
+5. **What still isn't covered.**
+   - A stealth change made offline counts only once its privacy write reaches ingest. The report and settings would say "pending" until it has been acknowledged.
+   - Browsers that never sync a privacy record are never counted.
+   - Requires a Privacy Notice version describing the stored current privacy state.
+
+Approvals this needs, none granted yet:
+- the new ingest route and CONTROL keys;
+- the two new `ParticipantOwner` methods;
+- web passing browser IDs to `eligible`;
+- the notice version.
 
 ## Cost: actual bounds
 
@@ -90,9 +127,10 @@ There is no push invalidation, and an expired aggregate is never served: a faile
 
 ## Enabling
 
-1. Root's scoped approval of this read.
-2. A Privacy Notice version saying comparisons with people are live, replacing "Human comparisons remain unavailable…".
-3. The workbench check above.
-4. Set `COHORTS_ENABLED = true` and deploy.
+1. Implement and approve the proposed fix above.
+2. Root's scoped approval of this read.
+3. A Privacy Notice version saying comparisons with people are live, replacing "Human comparisons remain unavailable…".
+4. The workbench check above.
+5. Set `COHORTS_ENABLED = true` and deploy.
 
 Disabling is the reverse; nothing is stored.

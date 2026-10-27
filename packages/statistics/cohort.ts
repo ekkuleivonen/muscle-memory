@@ -5,7 +5,8 @@
  * Policy approved by Ekku on 27 October 2026 (via dot): at least 20 eligible distinct browsers, same
  * revision and compatible conditions, first attempts apart from repeats, current stealth excluded,
  * under-18s never mixed with adults, no narrow slices or individual records. A conservative floor,
- * not a statistical guarantee. Still DISABLED: the player-facing read itself awaits root's review
+ * not a statistical guarantee. Still DISABLED: uploaded profiles are not authoritative current
+ * privacy state, so activation awaits the CONTROL-backed fix and root's approval
  * (docs/human-cohorts.md). While COHORTS_ENABLED is false the route answers "disabled" without SQL.
  * Nothing here accepts a participant, demographic filter or SQL from a caller.
  */
@@ -37,7 +38,9 @@ export interface CohortGroup {
 /**
  * Who is counted, stated with every read. Eligibility is positive: a browser counts only when its
  * latest uploaded profile states an adult band and says it is not stealth. Unknown is never adult,
- * never non-stealth. That latest profile is the current state, applied to all of its history.
+ * never non-stealth. That latest profile is applied to all of its history, but it is not
+ * authoritative: uploads can lag without bound and its order is client time. Must stay disabled
+ * until the CONTROL-backed eligibility check in docs/human-cohorts.md replaces it.
  */
 export const ELIGIBILITY = {
   unit: "distinct browsers, not people",
@@ -62,7 +65,8 @@ export interface CohortRead {
  * One fixed SELECT for one validated revision. It returns value counts, never a participant:
  * (runtime, diagnostics, practice, completed, first_pass, submissions) → number of browsers.
  * Counted only: browsers whose latest uploaded profile states an adult band and not-stealth (so a
- * later stealth or deletion removes every past attempt), person records with a Terms version and
+ * later stealth or deletion removes every past attempt) and none of whose profiles has conflicting
+ * copies, person records with a Terms version and
  * no conflicting copies, attempts with one runtime and a start whose origin was recorded. Window functions and joins only: DataFusion could not plan
  * an IN subquery inside an aggregate (see the ENG-340 history fix).
  */
@@ -80,13 +84,17 @@ export function cohortQuery(challenge: string, revision: string): string {
 ), observations AS (
   SELECT * FROM record_groups WHERE variants = 1
 ), profiles AS (
-  SELECT participant_id, json_get_json(json_get_json(payload, 'data'), 'answers') AS answers,
+  SELECT participant_id, variants, json_get_json(json_get_json(payload, 'data'), 'answers') AS answers,
     ROW_NUMBER() OVER (PARTITION BY participant_id ORDER BY occurred_at DESC, record_id DESC) AS latest
-  FROM observations WHERE type = 'site.profile'
+  FROM record_groups WHERE type = 'site.profile'
+), conflicted AS (
+  -- Fail closed: a profile with conflicting copies could be a newer stealth or minor answer, so
+  -- its browser is excluded rather than falling back to an older eligible profile.
+  SELECT DISTINCT participant_id FROM profiles WHERE variants > 1
 ), eligible AS (
-  SELECT participant_id FROM profiles
-  WHERE latest = 1 AND json_get_json(answers, 'stealth') = 'false'
-    AND json_get_str(answers, 'age') IN (${ADULT_BANDS.map((b) => `'${b}'`).join(", ")})
+  SELECT p.participant_id FROM profiles p LEFT JOIN conflicted c ON c.participant_id = p.participant_id
+  WHERE c.participant_id IS NULL AND p.latest = 1 AND json_get_json(p.answers, 'stealth') = 'false'
+    AND json_get_str(p.answers, 'age') IN (${ADULT_BANDS.map((b) => `'${b}'`).join(", ")})
 ), practice AS (
   SELECT o.*, json_get_json(o.payload, 'data') AS data
   FROM observations o JOIN eligible e ON e.participant_id = o.participant_id

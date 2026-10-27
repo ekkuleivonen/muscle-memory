@@ -121,3 +121,13 @@ test("unknown age, stealth, consent or start origin is never counted as an eligi
   ];
   for (const [name, events] of cases) assert.deepEqual(cohortResult(run(events)).groups, [], `${name}: 19 eligible stay withheld`);
 });
+
+test("a conflicting profile excludes its browser instead of falling back to an older eligible one", () => {
+  const events = many(20);
+  // b0 later uploaded a profile whose copies conflict: one says stealth, one says adult and not stealth.
+  const newer = profile("b0", { ...ADULT, stealth: true }, "2026-10-26T00:00:00.000Z");
+  const twin = { ...newer, payload: newer.payload!.replace('"stealth":true', '"stealth":false') };
+  assert.notEqual(twin.payload, newer.payload);
+  assert.deepEqual(cohortResult(run([...events, newer, twin])).groups, [], "20 − b0 = 19: withheld");
+  assert.equal(cohortResult(run(events)).groups.length, 1, "without the conflict, b0 counts");
+});

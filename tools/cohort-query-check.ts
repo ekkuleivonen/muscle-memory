@@ -22,6 +22,14 @@ const scenarios: { name: string; events: Event[]; browsers: number }[] = [
     browsers: 17,
   },
   {
+    name: "conflicting newer profile fails closed",
+    events: (() => {
+      const newer = profile("b0", { ...ADULT, stealth: true }, "2026-10-26T00:00:00.000Z");
+      return [...many(21), newer, { ...newer, payload: newer.payload!.replace('"stealth":true', '"stealth":false') }];
+    })(),
+    browsers: 20,
+  },
+  {
     name: "first and repeat",
     events: Array.from({ length: 21 }, (_, i) => [
       profile(`r${i}`, ADULT, at),
