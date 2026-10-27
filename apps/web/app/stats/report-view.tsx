@@ -75,6 +75,13 @@ function Outcomes({ c }: { c: OutcomesChapter }) {
   return (
     <>
       <h2 className="report-headline">{c.headline}</h2>
+      {c.resume && (
+        <p>
+          <Link className="report-action" href={c.resume.href}>
+            {c.resume.label} →
+          </Link>
+        </p>
+      )}
       <dl className="report-heroes">
         {c.heroes.map((h) => (
           <div key={h.label}>

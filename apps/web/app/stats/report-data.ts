@@ -172,6 +172,11 @@ export function useReportData(revisions: readonly { challenge: string; revision:
         return;
       }
       setHistory((h) => (h.state === "ready" && more ? h : { state: "loading" }));
+      // A later page failing keeps the pages already read; live() still discards everything after a boundary.
+      const failed = (): HistoryStatus =>
+        more && previous
+          ? { state: "ready", value: previous, notice: "More uploads unavailable right now." }
+          : { state: "unavailable", message: "Your uploads can't be read right now, so the report uses this device only." };
       const controller = new AbortController();
       aborts.current.add(controller);
       const to = new Date().toISOString().slice(0, 10);
@@ -202,11 +207,7 @@ export function useReportData(revisions: readonly { challenge: string; revision:
                 ? { state: "ready", value: previous, notice: "More uploads can be read in a minute." }
                 : { state: "limited", message: "Your uploads were read a moment ago. Try again in a minute; this device's evidence is shown meanwhile." },
             );
-          } else
-            setHistory({
-              state: "unavailable",
-              message: "Your uploads can't be read right now, so the report uses this device only.",
-            });
+          } else setHistory(failed());
           return;
         }
         const page = (await response.json()) as UploadedHistory;
@@ -229,11 +230,7 @@ export function useReportData(revisions: readonly { challenge: string; revision:
         keep(identity.participant, value);
         setHistory({ state: "ready", value });
       } catch {
-        if (live())
-          setHistory({
-            state: "unavailable",
-            message: "Your uploads can't be read right now, so the report uses this device only.",
-          });
+        if (live()) setHistory(failed());
       } finally {
         aborts.current.delete(controller);
       }

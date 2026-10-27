@@ -94,6 +94,7 @@ test("one unfinished attempt with no trace shows outcome and a resume action onl
   assert.equal(o.unexplored, 3);
   assert.match(o.evidence.caveat!, /isn't failed/);
   assert.equal(chapter<NextChapter>(r, "next")!.action?.href, "/challenges/JS-001");
+  assert.deepEqual(o.resume, { label: "Resume JS-001", href: "/challenges/JS-001" }, "resume sits with the opening message");
   assert.deepEqual(r.comparisonRevisions, []);
 });
 
@@ -114,6 +115,7 @@ test("rich synthetic evidence tells all six chapters from what was recorded", ()
   const o = chapter<OutcomesChapter>(r, "outcomes")!;
   assert.equal(o.headline, "You finished all 2 challenges you started.");
   assert.deepEqual(o.heroes[0], { value: "2/2", label: "finished" });
+  assert.equal(o.resume, null, "no resume button when nothing is open");
   assert.deepEqual(o.heroes[1], { value: "0/2", label: "passed first try" });
   assert.equal(o.languages.length, 2);
   assert.ok(o.languages[0].items[0].revisited, "two completions are a revisit");

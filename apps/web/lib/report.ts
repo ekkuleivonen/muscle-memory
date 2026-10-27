@@ -85,6 +85,8 @@ export interface OutcomesChapter {
   headline: string;
   /** A short label when the person said AI does much of their coding; the full sentence is in the details. */
   aiNote: string | null;
+  /** With nothing finished yet, the open challenge to resume, right beside the opening message. */
+  resume: { label: string; href: string } | null;
   heroes: { value: string; label: string }[];
   languages: { language: string; label: string; items: ChallengeOutcome[] }[];
   unexplored: number;
@@ -299,6 +301,10 @@ function outcomes(input: ReportInput): {
       title: "Could you still do it?",
       headline,
       aiNote: heavy ? "no AI in this editor" : null,
+      resume: (() => {
+        const open = done ? undefined : rows.find((r) => r.resumable);
+        return open ? { label: `Resume ${open.key}`, href: `/challenges/${open.key}` } : null;
+      })(),
       heroes: heroes.slice(0, 3),
       languages: languages.map((language) => ({
         language,
