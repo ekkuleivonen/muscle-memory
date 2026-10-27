@@ -19,6 +19,15 @@ let uploads = 0;
 const correct = readChallenge("JS-002").private.solution;
 
 async function ready(page: Page) {
+  // Phones get the desktop-first notice; this check solves on them anyway (ENG-386).
+  const solveHere = page.getByRole("button", { name: "Solve here anyway" });
+  await page
+    .locator(".practice-editor:not([hidden]) .cm-content")
+    .or(solveHere)
+    .filter({ visible: true })
+    .first()
+    .waitFor();
+  if (await solveHere.isVisible()) await solveHere.click();
   await page.locator(".practice-editor:not([hidden]) .cm-content").waitFor();
   await page.waitForFunction(
     () =>
