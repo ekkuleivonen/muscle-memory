@@ -15,7 +15,7 @@ import type {
   StoryChapter,
   SurpriseChapter,
 } from "../../lib/report";
-import { shareText } from "../../lib/report";
+import { PEOPLE, shareText } from "../../lib/report";
 
 const percent = (x: number) => `${Math.round(x * 1000) / 10}%`;
 
@@ -75,7 +75,6 @@ function Outcomes({ c }: { c: OutcomesChapter }) {
   return (
     <>
       <h2 className="report-headline">{c.headline}</h2>
-      {c.context && <p className="report-context">{c.context}</p>}
       <dl className="report-heroes">
         {c.heroes.map((h) => (
           <div key={h.label}>
@@ -84,6 +83,7 @@ function Outcomes({ c }: { c: OutcomesChapter }) {
           </div>
         ))}
       </dl>
+      {c.aiNote && <p className="report-chip">{c.aiNote}</p>}
       <div className="report-grid" role="group" aria-label="Challenges you started">
         {c.languages.map((l) => (
           <div className="report-grid-row" key={l.language}>
@@ -209,8 +209,7 @@ function Habits({ c }: { c: HabitChapter }) {
       )}
       {c.checks.length > 1 && <p className="t-dim report-caption">checks per attempt, oldest first</p>}
       <p className="report-cohort">
-        <span className="t-dim">People like you:</span> not enough comparable
-        participants yet. Your position appears here once there are.
+        <span className="t-dim">People:</span> {PEOPLE.label}
       </p>
       <EvidenceLine evidence={c.evidence} />
     </>
@@ -301,7 +300,7 @@ function Minds({ c }: { c: ComparisonChapter }) {
                   </td>
                 )}
                 <td>
-                  <span className="t-dim">too few yet</span>
+                  <span className="t-dim">{PEOPLE.label}</span>
                 </td>
               </tr>
             ))}

@@ -54,6 +54,7 @@ test("a rich report opens on a personal takeaway with chapters, visuals and evid
   assert.match(html, /chapter-story/);
   assert.match(html, /Checkpoints on JS-001, in order/);
   assert.match(html, /reading…/);
-  assert.match(html, /too few yet/);
+  assert.match(html, /not compared yet/);
+  assert.doesNotMatch(html, /too few|not enough comparable/);
   assert.doesNotMatch(html, /UTC|developer-profile-2/);
 });

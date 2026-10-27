@@ -41,7 +41,36 @@
 
 /* Lead and status */
 .report-hero {
-  margin: 2.4em 0 1.6em;
+  margin: 1.2em 0 1.6em;
+}
+.report-chapter:first-of-type {
+  padding-top: 0.8em;
+}
+.report-after-lead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 3ch;
+}
+.report-sources {
+  font-size: var(--text-sm, 13px);
+  color: var(--t-dim);
+  padding: 0.8em 0 0;
+}
+.report-sources summary {
+  padding: 0;
+}
+.report-sources p {
+  margin: 0.4em 0;
+  max-width: 72ch;
+}
+.report-chip {
+  display: inline-block;
+  font-size: var(--text-sm, 13px);
+  color: var(--t-dim);
+  border: 1px solid var(--t-line);
+  padding: 0 1ch;
+  margin: 0 0 0.8em;
 }
 .report-headline {
   font-size: clamp(1.35rem, 3.2vw, 2rem) !important;
@@ -96,10 +125,10 @@
   position: sticky;
   top: -24px;
   z-index: 1;
+  flex: 1 1 100%;
   background: var(--t-bg);
   border-bottom: 1px solid var(--t-line);
   padding: 0.6em 0;
-  margin-bottom: 1.6em;
   font-size: var(--text-sm, 13px);
 }
 .report-nav ol {
@@ -151,7 +180,7 @@
   align-items: flex-start;
   flex-wrap: wrap;
   gap: 1.2em 5ch;
-  margin: 1.6em 0;
+  margin: 1.2em 0;
 }
 .report-heroes div {
   display: flex;
@@ -586,7 +615,20 @@
     gap: 1ch;
   }
   .report-hero {
-    margin-top: 1.6em;
+    margin-top: 0.8em;
+  }
+  .report-heroes {
+    gap: 0.8em 3ch;
+  }
+  .report-heroes dd {
+    font-size: 1.8rem;
+  }
+  .report-heroes dt {
+    max-width: 14ch;
+    font-size: var(--text-sm, 13px);
+  }
+  .report-kicker {
+    margin: 0;
   }
   .report-nav-label {
     font-size: 0.95em;

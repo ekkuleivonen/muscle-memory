@@ -23,6 +23,17 @@ export type ReportAttempt = AttemptSummary & { source: Source };
 export const SMALL_STEP_SHARE = 0.75;
 export const LARGE_STEP_SHARE = 0.3;
 export const FREQUENT_CHECKS = 3;
+/**
+ * Comparisons with other people. There is no player-facing aggregate path and no approved minimum
+ * group size (docs/legal.md, publication boundaries), so the report states that reason; it never
+ * implies a cohort was checked and came back small. Replace with a real cohort read once both exist.
+ */
+export const PEOPLE = {
+  available: false,
+  label: "not compared yet",
+  reason:
+    "Comparing you with other people needs an approved minimum group size first. Until then the report shows no figure about anyone else.",
+} as const;
 /** At most this many tasks in the model comparison, so receipt reads stay bounded. */
 export const COMPARISON_TASKS = 3;
 
@@ -72,7 +83,8 @@ export interface OutcomesChapter {
   id: "outcomes";
   title: "Could you still do it?";
   headline: string;
-  context: string | null;
+  /** A short label when the person said AI does much of their coding; the full sentence is in the details. */
+  aiNote: string | null;
   heroes: { value: string; label: string }[];
   languages: { language: string; label: string; items: ChallengeOutcome[] }[];
   unexplored: number;
@@ -258,7 +270,7 @@ function outcomes(input: ReportInput): {
     profile?.aiUse === "daily" ||
     profile?.aiShare === "most" ||
     profile?.aiShare === "nearly-all";
-  const context = heavy
+  const aiDetail = heavy
     ? `You told us AI ${profile?.aiUse === "daily" ? "helps you code daily" : "writes much of the code you ship"}. The editor here offers no AI; what happens outside it isn't recorded.`
     : null;
   const firsts = attempts.filter(
@@ -270,7 +282,7 @@ function outcomes(input: ReportInput): {
   if (firsts.length)
     heroes.push({
       value: `${firsts.filter((a) => a.values.firstSubmit === 1).length}/${firsts.length}`,
-      label: "first submissions passed every check",
+      label: "passed first try",
     });
   if (revisited)
     heroes.push({ value: `${revisited}`, label: `revisited` });
@@ -286,7 +298,7 @@ function outcomes(input: ReportInput): {
       id: "outcomes",
       title: "Could you still do it?",
       headline,
-      context,
+      aiNote: heavy ? "no AI in this editor" : null,
       heroes: heroes.slice(0, 3),
       languages: languages.map((language) => ({
         language,
@@ -301,6 +313,7 @@ function outcomes(input: ReportInput): {
             ? "Open isn't failed: it's work you haven't finished yet."
             : undefined,
         details: [
+          ...(aiDetail ? [aiDetail] : []),
           "Finished means a submission passed every check and rule at least once. Open means started on this device or in your uploads without that.",
           "Revisited means more than one attempt or completion of the same challenge.",
           firsts.length
@@ -499,6 +512,7 @@ function habits(attempts: readonly ReportAttempt[]): HabitChapter | null {
           ? `Came back after leaving: ${returned.join(", ")}.`
           : "No recorded returns to an unfinished attempt.",
         "Attempts with recording gaps or oversized edits are left out rather than counted as zero.",
+        `People: ${PEOPLE.reason}`,
       ],
     },
   };
@@ -620,7 +634,7 @@ function minds(input: ReportInput): {
         details: [
           "A model result counts only when its recorded runtime and editor diagnostics match yours; otherwise it's withheld.",
           "Models use edit, run and submit tools rather than a keyboard. Outside help on either side isn't recorded.",
-          "People like you: not enough comparable participants yet. No cohort is shown until enough people share the same challenge version, language and conditions, and small groups stay hidden.",
+          `People: ${PEOPLE.reason}`,
         ],
       },
     },
@@ -762,7 +776,7 @@ function next(
       ? {
           label: "Add your coding experience (optional)",
           href: "/settings/profile/experience",
-          why: "When enough people take part, it lets the report compare you with developers like you. Skip it any time; nothing here depends on it.",
+          why: "Used only if comparisons with other people are switched on. Skip it any time; nothing here depends on it.",
         }
       : null;
   return {

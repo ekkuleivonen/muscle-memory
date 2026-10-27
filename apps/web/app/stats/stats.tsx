@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import React, { useMemo, useState } from "react";
-import { buildReport, mergeEvidence, type Report } from "../../lib/report";
+import { buildReport, mergeEvidence, PEOPLE, type Report } from "../../lib/report";
 import type { ChallengeSummary } from "../../lib/challenges";
 import { useReportData, type HistoryStatus } from "./report-data";
 import { ChapterNav, ChapterView, Preview } from "./report-view";
@@ -43,9 +43,20 @@ function Freshness({
 }) {
   const time = (iso: string) =>
     new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const uploads =
+    history.state === "ready"
+      ? history.value.attempts.length
+        ? `+${history.value.attempts.length} uploaded`
+        : "no uploads"
+      : history.state === "loading" || history.state === "idle"
+        ? "adding uploads…"
+        : "uploads unavailable";
   return (
-    <p className="report-status" role="status">
-      <span>
+    <details className="report-sources">
+      <summary>
+        sources <span className="t-dim">· this device · {uploads}</span>
+      </summary>
+      <p role="status">
         From this device{at ? `, read ${time(at)}` : ""}.{" "}
         {history.state === "ready"
           ? history.value.attempts.length
@@ -55,13 +66,13 @@ function Freshness({
             ? "Adding your uploads…"
             : history.message}
         {history.state === "ready" && history.notice ? ` ${history.notice}` : ""}
-      </span>
+      </p>
       {history.state === "ready" && history.value.next && (
         <button type="button" className="t-cmd" onClick={more}>
           read more uploads
         </button>
       )}
-    </p>
+    </details>
   );
 }
 
@@ -102,13 +113,15 @@ export function ReportBody({
   const count = report.chapters.length;
   return (
     <>
-      <header className="report-hero">
-        <h1 className="t-brand report-brand">muscle memory / your report</h1>
+      {/* The reveal comes first; where the evidence came from and the chapter list follow it. */}
+      <h1 className="sr-only">Your Muscle Memory report</h1>
+      <ChapterView chapter={report.chapters[0]} index={0} count={count} report={report} />
+      <div className="report-after-lead">
         {status}
-      </header>
-      <ChapterNav chapters={report.chapters} />
-      {report.chapters.map((c, i) => (
-        <ChapterView key={c.id} chapter={c} index={i} count={count} report={report} />
+        <ChapterNav chapters={report.chapters} />
+      </div>
+      {report.chapters.slice(1).map((c, i) => (
+        <ChapterView key={c.id} chapter={c} index={i + 1} count={count} report={report} />
       ))}
       {!report.chapters.some((c) => c.id === "story") && <Preview />}
     </>
@@ -201,8 +214,7 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
                 Nothing here measures intelligence, attention or dependence on AI.
                 No recorded help in the editor doesn&apos;t mean no outside help.
                 Model results are single observed tries on the exact same
-                challenge version. Comparisons with other people appear only once
-                enough comparable participants exist, with small groups hidden.
+                challenge version. {PEOPLE.reason}
               </p>
               <p>
                 Reset clears this device&apos;s progress, not your uploads, so the

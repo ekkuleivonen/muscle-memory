@@ -6,11 +6,14 @@ All populated screens use **explicitly synthetic** practice records (fixture par
 | --- | --- | --- |
 | Rich: chapter 1, first viewport | [outcomes](rich-desktop-1-outcomes.png) | [outcomes](rich-mobile-1-outcomes.png) |
 | Rich: chapter 2 timeline (fail → leave → return → finish, 3h gap shortened) | [story](rich-desktop-2-story.png) | [story](rich-mobile-2-story.png) |
-| Rich: chapter 4 result grid (solved, stopped, no receipt, "too few yet" people) | [models](rich-desktop-4-models.png) | [models](rich-mobile-4-models.png) |
+| Rich: chapter 3 habits, people "not compared yet" | [habits](rich-desktop-3-habits.png) | |
+| Rich: chapter 4 result grid (solved, stopped, no receipt; people "not compared yet") | [models](rich-desktop-4-models.png) | [models](rich-mobile-4-models.png) |
 | Rich: chapters 5–6 (quiet confidence; resume the open challenge) | [surprise + next](rich-desktop-5-6-surprise-next.png) | |
 | Partial: one unfinished attempt, no trace (the PDF case) | | [partial](partial-mobile.png) |
 | Empty: new player | [empty](empty-desktop.png) | |
 | Stealth | | [stealth](stealth-mobile.png) |
+
+After root's review, the first viewport leads with chapter 1's headline and hero numbers. Sources and freshness are a one-line disclosure (here showing "uploads unavailable", the honest state while the history SQL repair is pending), and chapter navigation follows chapter 1. The AI note is a short label, with the full sentence in the details. The outcomes, habits and models screenshots were recaptured; the story and surprise screenshots predate this layout change but their chapters are unchanged.
 
 Observed in the browser:
 

@@ -110,7 +110,7 @@ test("rich synthetic evidence tells all six chapters from what was recorded", ()
   const o = chapter<OutcomesChapter>(r, "outcomes")!;
   assert.equal(o.headline, "You finished all 2 challenges you started.");
   assert.deepEqual(o.heroes[0], { value: "2/2", label: "finished" });
-  assert.deepEqual(o.heroes[1], { value: "0/2", label: "first submissions passed every check" });
+  assert.deepEqual(o.heroes[1], { value: "0/2", label: "passed first try" });
   assert.equal(o.languages.length, 2);
   assert.ok(o.languages[0].items[0].revisited, "two completions are a revisit");
 
@@ -134,7 +134,8 @@ test("rich synthetic evidence tells all six chapters from what was recorded", ()
   assert.equal(pyRow.models[0].cell.kind, "withheld", "a runtime mismatch withholds the outcome");
   assert.match(m.headline, /You solved 2 of 2\. synthetic\/model solved 1 of 1\./);
   assert.match(m.evidence.caveat!, /one observed try, not a success rate/);
-  assert.match(m.evidence.details.join(" "), /not enough comparable participants/);
+  assert.match(m.evidence.details.join(" "), /needs an approved minimum group size/);
+  assert.doesNotMatch(JSON.stringify(r.chapters), /not enough|too few/, "no cohort result is implied");
 
   const u = chapter<SurpriseChapter>(r, "surprise")!;
   assert.equal(u.kind, "recovered");
@@ -195,9 +196,11 @@ test("stories never form from a trace without checks, and gaps are shortened, no
 
 test("AI background shapes copy only when the person said so", () => {
   const p = progressOf({ "JS-001": { completedAt: null, completions: 0 } });
-  assert.equal(chapter<OutcomesChapter>(buildReport(input({ progress: p })), "outcomes")!.context, null);
-  assert.equal(chapter<OutcomesChapter>(buildReport(input({ progress: p, profile: { aiUse: "rarely" } })), "outcomes")!.context, null);
-  const c = chapter<OutcomesChapter>(buildReport(input({ progress: p, profile: { aiUse: "daily" } })), "outcomes")!.context!;
+  assert.equal(chapter<OutcomesChapter>(buildReport(input({ progress: p })), "outcomes")!.aiNote, null);
+  assert.equal(chapter<OutcomesChapter>(buildReport(input({ progress: p, profile: { aiUse: "rarely" } })), "outcomes")!.aiNote, null);
+  const o = chapter<OutcomesChapter>(buildReport(input({ progress: p, profile: { aiUse: "daily" } })), "outcomes")!;
+  assert.equal(o.aiNote, "no AI in this editor");
+  const c = o.evidence.details[0];
   assert.match(c, /editor here offers no AI/);
   assert.doesNotMatch(c, /without AI|unaided|deteriorat/i);
 });
