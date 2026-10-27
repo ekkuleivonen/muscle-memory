@@ -29,7 +29,7 @@ execFileSync(
 );
 const legal = await readFile("apps/web/lib/legal.ts", "utf8");
 assert.ok(
-  legal.includes('LEGAL_VERSION = "2026-10-27"'),
+  legal.includes('LEGAL_VERSION = "2026-10-27.1"'),
   "review local consent fixture if Terms change",
 );
 const issuer = "https://eng353-fixture.cloudflareaccess.com";
@@ -319,7 +319,7 @@ try {
   });
   await check("/", null, 200);
   await check("/challenges", null, 200, {
-    headers: { cookie: "mm_consent=2026-10-27" },
+    headers: { cookie: "mm_consent=2026-10-27.1" },
   });
 
   browser = await chromium.launch({ headless: true });
@@ -333,14 +333,14 @@ try {
           version: "2",
           createdAt: new Date().toISOString(),
           profile: {},
-          accepted: { version: "2026-10-27", at: new Date().toISOString() },
+          accepted: { version: "2026-10-27.1", at: new Date().toISOString() },
         }),
       );
   });
   await context.addCookies([
     {
       name: "mm_consent",
-      value: "2026-10-27",
+      value: "2026-10-27.1",
       domain: "musclememory.run",
       path: "/",
       secure: true,
