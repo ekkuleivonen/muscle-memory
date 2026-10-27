@@ -47,7 +47,7 @@ const ready = async () => {
   await page.waitForFunction(
     () =>
       !document.querySelector<HTMLButtonElement>(
-        ".practice-controls button:last-child",
+        ".practice-controls button:first-of-type",
       )?.disabled,
   );
 };
