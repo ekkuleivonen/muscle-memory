@@ -158,7 +158,7 @@ export function editorFeatures(
       "undo-redo-history",
       "bracket-match-highlight",
       "line-numbers",
-      "mod-enter-submits",
+      "mod-enter-runs-examples",
       keys === "vim" ? "vim-keybindings" : "standard-keybindings",
       ...(typeChecked ? TYPE_CHECK_FEATURES : []),
     ],
@@ -263,8 +263,8 @@ function watch(view: EditorView, hooks: ActivityHooks): void {
 export interface EditorHooks {
   /** Called once per document-changing transaction, after it is applied. */
   onChange(transaction: Transaction, view: EditorView): void;
-  /** Mod-Enter: Submit. */
-  onSubmit(): void;
+  /** Mod-Enter: Run public examples. */
+  onRunExamples(): void;
   /** Vim mode changes: normal, insert, visual, replace. */
   onVimMode?(mode: string): void;
 }
@@ -309,7 +309,7 @@ export function createEditor(
           {
             key: "Mod-Enter",
             run: () => {
-              hooks.onSubmit();
+              hooks.onRunExamples();
               return true;
             },
           },

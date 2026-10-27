@@ -6,7 +6,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Reflection } from "./reflection";
 test("solves rotate through existing questions without rerender selecting another", () => {
-  const questions = [1, 2, 3, 4].map(
+  const questions = [5, 10, 15, 20].map(
     (completions) =>
       reflectionFor({
         "JS-900": {
@@ -70,7 +70,7 @@ test("solves rotate through existing questions without rerender selecting anothe
   );
 });
 test("one question with easy skip; answered or skipped never mounts a second question", () => {
-  const state = reflectionFor({});
+  const state = { ...reflectionFor({}), dismissed: false };
   const html = renderToStaticMarkup(
     createElement(Reflection, { state, onDismiss() {} }),
   );
@@ -86,4 +86,18 @@ test("one question with easy skip; answered or skipped never mounts a second que
     ),
     "",
   );
+});
+
+test("cooldown offers nothing on the first four solves or between fifth-solve milestones", () => {
+  for (let solves = 0; solves <= 15; solves++) {
+    const state = reflectionFor({
+      "JS-900": {
+        attempt: "a",
+        startedAt: "now",
+        completedAt: "now",
+        completions: solves,
+      },
+    });
+    assert.equal(state.dismissed, solves === 0 || solves % 5 !== 0);
+  }
 });

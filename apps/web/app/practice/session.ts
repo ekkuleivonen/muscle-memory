@@ -3,6 +3,7 @@
  * raw observations (the practice stream), and feedback is derived from the stored run outcome.
  * No React state is touched per keystroke.
  */
+import { ExampleGate } from "./example-gate";
 import { randomId } from "../../../../packages/browser/random-id";
 import { Text, Transaction, type ChangeSpec } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
@@ -113,8 +114,8 @@ export interface SessionOptions {
   /** The page's current runner; it changes when the runtime is reloaded. */
   readonly runner: () => Runner;
   readonly onRun: (run: RunView) => void;
-  /** Mod-Enter in the editor: the page decides whether Submit can run now. */
-  readonly onSubmit?: (via: "keyboard" | "pointer") => void;
+  /** Mod-Enter in the editor: run public examples. */
+  readonly onRunExamples?: (via: "keyboard" | "pointer") => void;
   /** A prior submission's feedback is shown; its first edit also marks it out of date. */
   readonly hasPreviousChecks?: boolean;
   /** Called once on the first edit after current or restored checks, to mark them stale. */
@@ -245,6 +246,12 @@ export class PracticeSession {
   }
 
   /** The challenge's file name, which observations and code copies name. */
+  private readonly exampleGate = new ExampleGate();
+
+  get canSubmit(): boolean {
+    return !this.closed && this.exampleGate.allows(this.revision, this.options.runner());
+  }
+
   private get file(): string {
     return this.options.challenge.revision.file;
   }
@@ -260,10 +267,10 @@ export class PracticeSession {
       this.doc.toString(),
       {
         onChange: (transaction) => this.recordEdit(transaction),
-        onSubmit: () =>
-          this.options.onSubmit
-            ? this.options.onSubmit("keyboard")
-            : void this.submit("keyboard"),
+        onRunExamples: () =>
+          this.options.onRunExamples
+            ? this.options.onRunExamples("keyboard")
+            : void this.run("examples", "keyboard"),
         onVimMode: this.options.onVimMode,
       },
       {
@@ -360,6 +367,9 @@ export class PracticeSession {
   ): Promise<void> {
     if (!this.view || !this.runnable || this.options.runner().running)
       return;
+    if (purpose === "submit" && this.options.actor !== "model" && !this.canSubmit) return;
+    const runner = this.options.runner();
+    const exampleGeneration = purpose === "examples" ? this.exampleGate.begin() : null;
     const revision = this.revision;
     const code = this.artifact();
     const challenge = this.options.challenge.revision;
@@ -387,7 +397,7 @@ export class PracticeSession {
       this.options.onRun(this.lastRun);
     };
     update("queued");
-    const outcome = await this.options.runner().run(
+    const outcome = await runner.run(
       {
         runId,
         code: text,
@@ -404,7 +414,10 @@ export class PracticeSession {
       () => update("running"),
     );
     // The outcome belongs to `revision`, even if the editor has moved on since.
-    if (purpose !== "submit") return update(statusOf(outcome), outcome);
+    if (purpose !== "submit") {
+      this.exampleGate.finish(exampleGeneration!, revision, this.revision, runner, this.options.runner(), challenge, outcome);
+      return update(statusOf(outcome), outcome);
+    }
     const verdict = verdictOf(challenge, outcome, text);
     this.record("practice.submitted", {
       runId,
@@ -481,6 +494,7 @@ export class PracticeSession {
     state: "loading" | "ready" | "unavailable",
     message?: string,
   ): void {
+    if (state !== "ready") this.exampleGate.invalidate();
     this.record("practice.runtime", {
       state,
       ...(message ? { message } : {}),
@@ -590,6 +604,7 @@ export class PracticeSession {
 
   /** Records one applied transaction. Exposed for tests; the editor calls it per change. */
   recordEdit(transaction: Transaction): void {
+    if (transaction.docChanged) this.exampleGate.invalidate();
     this.revision++;
     this.doc = transaction.newDoc;
     const changes = transaction.changes.toJSON() as Json;
