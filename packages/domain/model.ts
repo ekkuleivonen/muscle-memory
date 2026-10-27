@@ -184,8 +184,10 @@ export interface HttpExchange {
   /** Null when no response came. */
   readonly status: number | null;
   readonly headers: Readonly<Record<string, string>>;
-  /** The body exactly as received, or the error when there was none. */
+  /** The body exactly as received; null when there was none, or when it is stored as a blob. */
   readonly body: string | null;
+  /** A large body stored once under its hash (`artifact.blob`), such as the full model list. */
+  readonly bodyArtifactId?: string;
   readonly error: string | null;
   readonly durationMs: number;
 }

@@ -2,7 +2,7 @@
 
 Models play every challenge the way a person does, through a headless copy of practice, and everything they do is recorded as raw as a person's practice is: so people's work can be compared with models', and models with each other. Analysis comes later, from the raw data.
 
-**Built so far:** the recorded types (`packages/domain/model.ts`, `actor` in every envelope) and headless practice (`tools/model-runs/`). **Not yet:** the model loop, storage, the price snapshots, publishing and showing results.
+**Built so far:** the recorded types (`packages/domain/model.ts`, `actor` in every envelope) headless practice and the model loop (`tools/model-runs/`). **Not yet:** storage, the price snapshots, publishing and showing results.
 
 ## Conditions
 
@@ -58,3 +58,15 @@ Runs are never uploaded through ingest, which refuses any `actor` but a person, 
 `tools/model-runs/render.ts` turns what practice shows into text: the challenge pane and numbered code on opening, the code and type errors after an edit, the Output panel (`transcript.ts`) after a run, and Submit's feedback (`lib/check-feedback.ts`) above it.
 
 `node --import tsx tools/model-runs/practice-check.ts [KEY …]` plays every challenge with a scripted player: the examples, the starter (it must fail), an edit that matches nothing (it must record nothing), the reference solution written and submitted (it must complete). The stream must be a person's in shape with `actor: "model"`: contiguous positions, the same envelope fields, `started` from `model-run`, runs `via: "tool"`, one `completed`, `closed` with `run-ended`, and no keys, selection, scrolling, focus, clipboard or page records. It reads the private reference solutions, so it is a check of the harness, never a run. Build the runtimes first (`node tools/build-runtimes.mjs`).
+
+## The loop
+
+`tools/model-runs/run.ts` runs one model on one revision once (`runModel`): a manual tool-use loop over OpenRouter's streaming chat completions (`tools/model-runs/openrouter.ts`), with the system prompt, tools and `HARNESS_VERSION` in `tools/model-runs/tools.ts`.
+
+- **Requests.** One fixed body per run (`model`, `stream: true`, any fixed parameters such as reasoning, then the messages and tools). The assistant's message goes back as it came, `reasoning_details` merged by index and unchanged, as providers require for tool use.
+- **Retries.** A network failure, a timeout, a status of 408, 409, 425, 429 or 5xx, or an error carried in the stream is retried up to three times per turn with backoff, each attempt recorded. After that the run ends as `error`. A model's own failures are results: a reply without a tool call ends the run as `stopped` (or `refused` on a refusal or content filter), and a malformed or unknown tool call is answered with an error and recorded with its arguments verbatim.
+- **Budget.** 50 turns and 10 submissions by default; reaching either ends the run as `budget`. A submission that completes ends the run as `completed` without another model call.
+- **Accounting after play.** Once the run ends, each generation's record is fetched from `/generation` (again after 1, 2, 4 and 8 seconds while it lags), then the listing is fetched again for `model.catalog` at `end`. The full model list is stored once as a blob.
+- **Credentials.** The API key goes in the authorization header and is never recorded.
+
+`tools/model-runs/run.test.ts` replays streams split at awkward places (keep-alive comments, lines cut across network reads, tool arguments in pieces, reasoning in pieces, a usage chunk repeating the finish reason, errors before and during the stream, malformed calls). `node --import tsx tools/model-runs/loop-check.ts [KEY …]` runs the whole loop in a real browser with a scripted stream writing the reference solution, and checks that every practice observation a tool call caused falls between that call and its result on the shared clock.
