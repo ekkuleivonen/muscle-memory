@@ -55,6 +55,8 @@ test("a matched model receipt renders real observed outcome, incompatible contex
     model: "synthetic/model",
     reportedModels: ["synthetic/model-2026"],
     reasoning: "high",
+    defaultReasoning: "high",
+    finalCodeLength: null,
     harness: "harness-1",
     try: 1,
     state: "completed" as const,

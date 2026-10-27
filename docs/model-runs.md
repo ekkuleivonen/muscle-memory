@@ -110,7 +110,7 @@ Runs are never uploaded through ingest, which refuses any `actor` but a person, 
 - **Secrets for the snapshot:** `MODEL_RUNS_D1_TOKEN` (its roster) and `OPENROUTER_API_KEY` (endpoint statistics).
 - **Publishing** still records `blocked_configuration`. Nothing more is needed to cover a new revision: the next Go queues it.
 - **The lookup condition:** a `search_web` tool as a separate condition, once hidden cases and solutions have left the repository.
-- **Showing results** to people after they complete, from a daily aggregate of the runs.
+- **Timing comparisons** need compatible start-to-success and execution measurement conditions. The post-solve practice strip currently exposes only safe default-run outcome metadata and submitted code-length deltas; see [practice](practice.md).
 
 ### Challenge source for local tools
 
