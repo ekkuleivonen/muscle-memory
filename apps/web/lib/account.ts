@@ -14,6 +14,7 @@ import {
   CONSENT_VALUE,
   PROFILE_KEY,
   PROFILE_VERSION,
+  updateProfileAnswers,
   type Profile,
   type StoredProfile,
 } from "./profile";
@@ -45,18 +46,19 @@ export function acceptance(): Acceptance {
   return { version: LEGAL_VERSION, at: new Date().toISOString() };
 }
 
-/**
- * The whole profile from settings, every question in it answered by the person. Keeps the
- * acceptance and everything else on file.
- */
-export function saveProfile(profile: Profile): StoredProfile | null {
+/** Save only explicitly changed questions, preserving unrelated answers and guesses. */
+export function saveProfile(
+  profile: Profile,
+  changed: readonly (keyof Profile)[],
+): StoredProfile | null {
   const stored = readProfile();
   if (!stored) return null;
-  const at = new Date().toISOString();
-  const asked = { ...stored.asked };
-  for (const id of Object.keys(profile) as (keyof Profile)[])
-    asked[id] = { answeredAt: at };
-  const next = { ...stored, profile, asked };
+  const next = updateProfileAnswers(
+    stored,
+    profile,
+    changed,
+    new Date().toISOString(),
+  );
   write(next);
   return next;
 }

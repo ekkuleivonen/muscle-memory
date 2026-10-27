@@ -21,7 +21,7 @@ Every question is optional and answered with a category, never free text, so gro
 | `age` | an age band (16–17, 18–24, up to 55 or older), never a birth date; 16–17 is its own band so anything published or compared can treat under-18s apart |
 | `editor` | editor keybindings: standard or Vim |
 
-They are asked in settings (`/settings/profile`, every question on one form, or one at `/settings/profile/<question>`). Quick start saves the language picked as a first guess at `languages` when there is none; that guess does not count as the person's answer.
+They are asked in settings (`/settings/profile`, every question on one form, or one at `/settings/profile/<question>`). Quick start saves the language picked as a first guess at `languages` when there is none; that guess does not count as the person's answer, including in Stats' usual-language grouping. Saving changes only explicitly edited questions. Each question has a Clear answer action; saving a cleared question removes its value and answered marker. Untouched answers and quick-start guesses are preserved, including when another tab has changed them.
 
 Adding a question: add it to `QUESTIONS` and to `Profile` (`apps/web/lib/profile.ts`); the settings form shows it. Say in the Privacy Notice that it is asked, which means a new legal version ([legal](legal.md)).
 
