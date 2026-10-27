@@ -10,8 +10,9 @@ import type { Json } from "./json";
 
 /**
  * 1.2: every observation says who acted (`actor`: person or model), and a model's carry no
- * Terms version. A model's attempt starts `from: "model-run"` and closes with `run-ended`; the
- * harness records it with the same session code as a person's (docs/model-runs.md).
+ * Terms version. A model's attempt starts `from: "model-run"`, its runs are started `via` a
+ * `tool`, and it closes with `run-ended`; the harness records it with the same session code as
+ * a person's (docs/model-runs.md).
  * 1.1: type tooltips in practice.assist may be opened by keyboard as well as pointer.
  */
 export const PRACTICE_CAPTURE_VERSION = "practice-capture-1.2.0";
@@ -209,7 +210,8 @@ export interface PracticeData {
   };
   "practice.run": {
     readonly runId: string;
-    readonly via: "pointer" | "keyboard";
+    /** A button, a keyboard shortcut, or a model's tool call. */
+    readonly via: "pointer" | "keyboard" | "tool";
     readonly purpose: RunPurpose;
     readonly revision: number;
     readonly codeArtifactId: string;

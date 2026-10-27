@@ -2,7 +2,7 @@
 
 Models play every challenge the way a person does, through a headless copy of practice, and everything they do is recorded as raw as a person's practice is: so people's work can be compared with models', and models with each other. Analysis comes later, from the raw data.
 
-**Built so far:** the recorded types (`packages/domain/model.ts`, `actor` in every envelope). **Not yet:** the headless session, the model loop, storage, the price snapshots, publishing and showing results.
+**Built so far:** the recorded types (`packages/domain/model.ts`, `actor` in every envelope) and headless practice (`tools/model-runs/`). **Not yet:** the model loop, storage, the price snapshots, publishing and showing results.
 
 ## Conditions
 
@@ -50,3 +50,11 @@ A run is one session with two source streams on one monotonic clock, so they int
 Prices are kept three ways: what each generation cost (`usage`, `/generation`), the listed prices when each run started and ended (`model.catalog`), and a daily snapshot of every listing.
 
 Runs are never uploaded through ingest, which refuses any `actor` but a person, and never stored in the `events` table that consent and erasure govern.
+
+## Headless practice
+
+`tools/model-runs/practice.ts` serves a bundle of `tools/model-runs/page.ts` and the pinned runtimes from `apps/web/public` on a local port, and opens one headless Chromium page per run. The page mounts the real `PracticeSession` with its editor, recorder, runner sandbox and, for TypeScript and JavaScript, the type checker, and exposes one call per tool. Edits are dispatched as editor transactions; runs go through `session.run(…, "tool")`. Every record the session stores comes back to Node through an exposed function and is kept in memory, by the same rule as the device's store: an identical record is a duplicate, a changed one a conflict. The session takes the run's id as its session id and the run's clock, so its stream lines up with the model stream. It does not focus the editor on mount (a model has no focus), and it waits for squiggles on the starter before the first tool call, as they appear for a person shortly after opening.
+
+`tools/model-runs/render.ts` turns what practice shows into text: the challenge pane and numbered code on opening, the code and type errors after an edit, the Output panel (`transcript.ts`) after a run, and Submit's feedback (`lib/check-feedback.ts`) above it.
+
+`node --import tsx tools/model-runs/practice-check.ts [KEY …]` plays every challenge with a scripted player: the examples, the starter (it must fail), an edit that matches nothing (it must record nothing), the reference solution written and submitted (it must complete). The stream must be a person's in shape with `actor: "model"`: contiguous positions, the same envelope fields, `started` from `model-run`, runs `via: "tool"`, one `completed`, `closed` with `run-ended`, and no keys, selection, scrolling, focus, clipboard or page records. It reads the private reference solutions, so it is a check of the harness, never a run. Build the runtimes first (`node tools/build-runtimes.mjs`).

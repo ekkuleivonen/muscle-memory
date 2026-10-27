@@ -56,6 +56,11 @@ export interface RecorderOptions {
   readonly now?: () => Date;
   /** A monotonic clock in milliseconds; performance.now() by default. */
   readonly monotonic?: () => number;
+  /**
+   * The clock reading the stream's elapsed time counts from; when the recorder is made by
+   * default. A model run's streams share one origin so they interleave exactly.
+   */
+  readonly origin?: number;
 }
 
 export interface CaptureStatus {
@@ -106,7 +111,7 @@ export class CaptureRecorder {
   private readonly origin: number;
 
   constructor(private readonly options: RecorderOptions) {
-    this.origin = this.clock();
+    this.origin = options.origin ?? this.clock();
     safeIdentifier(options.participantId);
     safeIdentifier(options.sourceId);
     this.maxRecords = options.maxRecords ?? 1000;
