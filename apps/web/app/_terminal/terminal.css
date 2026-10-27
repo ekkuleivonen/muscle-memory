@@ -445,6 +445,11 @@
   .t-row-name {
     white-space: normal;
   }
+  /* A menu's names are single words: the hint wraps beside them, never the word itself. */
+  .t-keymenu .t-row-name {
+    flex: none;
+    white-space: pre;
+  }
 }
 /* The row the ❯ is on, and the action a prompt suggests, read in the accent. */
 .t-current-row .t-row-name,

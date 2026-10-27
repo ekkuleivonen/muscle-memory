@@ -18,6 +18,7 @@ function fakes() {
         return value === undefined ? null : { text: async () => value };
       },
       put: async (key, value) => void objects.set(key, value),
+      delete: async (key) => void objects.delete(key),
     },
     EVENTS: { send: async (rows) => void sent.push(...rows) },
     ALLOWED_ORIGINS: "http://localhost:3000",
@@ -150,11 +151,37 @@ test("deleting needs the device secret, stops uploads, and leaves a tombstone fo
   const done = await handle(post(path, { secret: me.secret }), env);
   assert.deepEqual(await done.json(), { deleted: true, uploaded: true });
   assert.ok(objects.has(`deleted/${me.participantId}`));
+  // The tombstone refuses uploads now, so the proof is not kept.
+  assert.ok(!objects.has(`participants/${me.participantId}`));
   assert.equal((await handle(post("/ingest/v1/batches", batch), env)).status, 410);
+  assert.ok(!objects.has(`participants/${me.participantId}`));
   // A device that never uploaded has nothing to erase.
   const never = await device();
   const nothing = await handle(post(`/ingest/v1/participants/${never.participantId}/delete`, { secret: never.secret }), env);
   assert.deepEqual(await nothing.json(), { deleted: true, uploaded: false });
+});
+
+test("an access request needs the device secret and leaves a reference for the operator", async () => {
+  const { env, objects } = fakes();
+  const me = await device();
+  const batch = { protocol: INGEST_PROTOCOL, participantId: me.participantId, proof: me.proof, records: [observation(me.participantId, 1)] };
+  await handle(post("/ingest/v1/batches", batch), env);
+  const path = `/ingest/v1/participants/${me.participantId}/access`;
+  assert.equal((await handle(post(path, { secret: "w".repeat(40) }), env)).status, 401);
+  assert.equal((await handle(post(path, {}), env)).status, 400);
+  const asked = await handle(post(path, { secret: me.secret }), env);
+  const { uploaded, reference } = (await asked.json()) as { uploaded: boolean; reference: string };
+  assert.equal(uploaded, true);
+  assert.match(reference, /^MM-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+  const note = JSON.parse(objects.get(`access/${reference}.json`)!);
+  assert.equal(note.participantId, me.participantId);
+  // A device that never uploaded has nothing on the server to ask for.
+  const never = await device();
+  const nothing = await handle(post(`/ingest/v1/participants/${never.participantId}/access`, { secret: never.secret }), env);
+  assert.deepEqual(await nothing.json(), { uploaded: false });
+  // After deleting, there is nothing left to ask for.
+  await handle(post(`/ingest/v1/participants/${me.participantId}/delete`, { secret: me.secret }), env);
+  assert.equal((await handle(post(path, { secret: me.secret }), env)).status, 410);
 });
 
 test("malformed and oversized requests are refused; CORS only for listed origins", async () => {

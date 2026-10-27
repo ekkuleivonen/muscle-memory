@@ -5,6 +5,7 @@
  *
  *   POST /ingest/v1/batches                          a batch (packages/domain/ingest.ts)
  *   POST /ingest/v1/participants/<id>/delete         { secret }: stop and erase a participant
+ *   POST /ingest/v1/participants/<id>/access         { secret }: ask for a copy of their rows
  *
  * Bodies may be gzipped (header `x-mm-encoding: gzip`). Nothing here runs participant code.
  */
@@ -21,6 +22,7 @@ import { safeIdentifier } from "../../../packages/domain/capture";
 export interface Bucket {
   get(key: string): Promise<{ text(): Promise<string> } | null>;
   put(key: string, value: string): Promise<unknown>;
+  delete(key: string): Promise<unknown>;
 }
 
 /** A Workers rate limiting binding: approximate, counted per Cloudflare location. */
@@ -36,7 +38,7 @@ export interface Stream {
 export interface Env {
   /** The events stream; absent in local development, where rows go to CONTROL instead. */
   readonly EVENTS?: Stream;
-  /** Participant proofs, deletion tombstones, and (locally) the rows themselves. */
+  /** Participant proofs, deletion tombstones, access requests, and (locally) the rows themselves. */
   readonly CONTROL: Bucket;
   /** Origins allowed to call across origins (local development); comma-separated. */
   readonly ALLOWED_ORIGINS?: string;
@@ -78,6 +80,9 @@ export async function handle(request: Request, env: Env): Promise<Response> {
     const deletion = /^\/ingest\/v1\/participants\/([^/]+)\/delete$/.exec(path);
     if (request.method === "POST" && deletion)
       return await erase(request, env, decodeURIComponent(deletion[1]), reply);
+    const access = /^\/ingest\/v1\/participants\/([^/]+)\/access$/.exec(path);
+    if (request.method === "POST" && access)
+      return await requestAccess(request, env, decodeURIComponent(access[1]), reply);
     return reply(404, { error: "Not found." });
   } catch (cause) {
     if (cause instanceof Refusal)
@@ -177,6 +182,47 @@ async function erase(
   participantId: string,
   reply: (status: number, body: unknown) => Response,
 ): Promise<Response> {
+  // Nothing was ever uploaded (or the proof is already gone): there is nothing to erase.
+  if (!(await owned(request, env, participantId))) return reply(200, { deleted: true, uploaded: false });
+  if (!(await env.CONTROL.get(`deleted/${participantId}`)))
+    await env.CONTROL.put(
+      `deleted/${participantId}`,
+      JSON.stringify({ requestedAt: new Date().toISOString() }),
+    );
+  // The tombstone refuses uploads from now on, so the proof has no use left.
+  await env.CONTROL.delete(`participants/${participantId}`);
+  proofs.delete(participantId);
+  return reply(200, { deleted: true, uploaded: true });
+}
+
+/**
+ * An access request, with the device secret as proof: notes it under a short reference the
+ * person emails us, and the operator answers with a copy of their rows (docs/telemetry.md).
+ */
+async function requestAccess(
+  request: Request,
+  env: Env,
+  participantId: string,
+  reply: (status: number, body: unknown) => Response,
+): Promise<Response> {
+  const proven = await owned(request, env, participantId);
+  if (await env.CONTROL.get(`deleted/${participantId}`))
+    throw new Refusal(410, "This participant's data was deleted.");
+  if (!proven) return reply(200, { uploaded: false });
+  const reference = referenceCode();
+  await env.CONTROL.put(
+    `access/${reference}.json`,
+    JSON.stringify({ participantId, requestedAt: new Date().toISOString() }),
+  );
+  return reply(200, { uploaded: true, reference });
+}
+
+/**
+ * Whether the request's secret proves this participant ID: false when nothing was ever
+ * uploaded under it, so there is no proof to check against. Refuses a malformed request or a
+ * wrong secret.
+ */
+async function owned(request: Request, env: Env, participantId: string): Promise<boolean> {
   try {
     safeIdentifier(participantId);
   } catch {
@@ -191,17 +237,18 @@ async function erase(
   }
   if (typeof secret !== "string" || secret.length < 32) throw new Refusal(400, "No secret.");
   const stored = await env.CONTROL.get(`participants/${participantId}`);
-  // Nothing was ever uploaded: there is nothing to erase, and no proof to check against.
-  if (!stored) return reply(200, { deleted: true, uploaded: false });
+  if (!stored) return false;
   const { proof } = JSON.parse(await stored.text()) as { proof: string };
   if ((await sha256Hex(secret)) !== proof) throw new Refusal(401, "Wrong secret.");
-  if (!(await env.CONTROL.get(`deleted/${participantId}`)))
-    await env.CONTROL.put(
-      `deleted/${participantId}`,
-      JSON.stringify({ requestedAt: new Date().toISOString() }),
-    );
-  proofs.delete(participantId);
-  return reply(200, { deleted: true, uploaded: true });
+  return true;
+}
+
+/** A short random reference for an access request, easy to read out: MM-XXXX-XXXX. */
+function referenceCode(): string {
+  const alphabet = "ABCDEFGHJKMNPQRSTVWXYZ23456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  const chars = [...bytes].map((byte) => alphabet[byte % alphabet.length]).join("");
+  return `MM-${chars.slice(0, 4)}-${chars.slice(4)}`;
 }
 
 /** Refuses the request (429) when this key is over its limit. */

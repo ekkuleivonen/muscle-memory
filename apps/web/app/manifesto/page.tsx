@@ -137,7 +137,7 @@ export default function ManifestoPage() {
               as much as struggle.
             </p>
             <p>
-              With your consent, we record how you work through a challenge:
+              Once you accept the Terms, we record how you work through a challenge:
               your keystrokes and edits in the editor, your runs and their
               results, and the optional answers you give about yourself. We
               keep what happened apart from what we conclude from it. Nothing

@@ -32,3 +32,32 @@ export async function eraseUploaded(store: PracticeStore): Promise<void> {
   if (!response.ok)
     throw new Error("The server didn't confirm the deletion, so nothing was deleted. Try again later.");
 }
+
+/**
+ * Asks the server for a copy of this device's uploaded records, proving ownership with the
+ * device secret. The reference is what the person emails us; null when the server holds
+ * nothing from this browser. Throws when the server cannot confirm.
+ */
+export async function requestAccess(store: PracticeStore): Promise<string | null> {
+  if (!INGEST_URL) return null;
+  const participantId = await store.participantId();
+  const secret = await store.deviceSecret();
+  let response: Response;
+  try {
+    response = await fetch(
+      `${INGEST_URL}/v1/participants/${encodeURIComponent(participantId)}/access`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ secret }),
+        credentials: "same-origin",
+      },
+    );
+  } catch {
+    throw new Error("The server couldn't be reached, so nothing was requested. Try again when you're online.");
+  }
+  if (!response.ok)
+    throw new Error("The server didn't confirm the request. Try again later.");
+  const { reference } = (await response.json()) as { reference?: string };
+  return reference ?? null;
+}

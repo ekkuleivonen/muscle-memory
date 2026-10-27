@@ -13,6 +13,7 @@ import {
   deleteAccount,
   logOut,
   readProfile,
+  requestUploadedCopy,
   resetProgress,
   saveProfile,
   setStealth,
@@ -66,6 +67,7 @@ export function SettingsCommand({
 const PAGES: Record<Exclude<CommandName, "profile">, () => ReactNode> = {
   privacy: Privacy,
   export: Export,
+  access: Access,
   import: Import,
   logout: Logout,
   reset: Reset,
@@ -167,8 +169,8 @@ function Privacy() {
     setResult({
       tone: "dim",
       text: share
-        ? "Your runs are eligible for future anonymised publications and community comparisons."
-        : "Done, you've gone stealth. We won't include you in our stats or comparisons from now on, including what you've already done, and you won't see other people's stats either.",
+        ? "Your runs count towards future published insights and community comparisons."
+        : "Done, you've gone stealth. We won't include you in published insights or comparisons from now on, including what you've already done, and you won't see other people's stats either.",
     });
   };
   return (
@@ -193,8 +195,8 @@ function Privacy() {
         .
       </p>
       <p>
-        Your runs may be included in future anonymised publications and
-        community comparisons. Go stealth to be excluded from both. Recording
+        Your runs may count towards future published insights (statistics
+        and findings, never your records or code) and community comparisons. Go stealth to be excluded from both. Recording
         and uploads continue in stealth.
       </p>
       <p className="t-state">
@@ -207,7 +209,7 @@ function Privacy() {
         actions={[
           stealth
             ? {
-                label: "share my anonymised data",
+                label: "count me in again",
                 kind: "primary",
                 run: () => choose(true),
               }
@@ -294,6 +296,75 @@ function pickFile(accept: string): Promise<File | null> {
     input.addEventListener("cancel", () => resolve(null));
     input.click();
   });
+}
+
+function Access() {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ tone: Tone; text: ReactNode } | null>(
+    null,
+  );
+  const ask = async () => {
+    setBusy(true);
+    try {
+      const reference = await requestUploadedCopy();
+      setResult(
+        reference
+          ? {
+              tone: "ok",
+              text: (
+                <>
+                  Requested. Your reference is <strong>{reference}</strong>.
+                  Email it to{" "}
+                  <a className="t-cmd" href={`mailto:support@rowandreason.com?subject=${encodeURIComponent(`Data request ${reference}`)}`}>
+                    support@rowandreason.com
+                  </a>{" "}
+                  and we&apos;ll reply within a month with a copy of your records.
+                </>
+              ),
+            }
+          : {
+              tone: "dim",
+              text: "Our servers hold nothing from this browser, so there's nothing to request. Export has everything this browser keeps.",
+            },
+      );
+    } catch (cause) {
+      setResult({
+        tone: "err",
+        text:
+          cause instanceof Error
+            ? cause.message
+            : "Nothing was requested. Try again later.",
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <SettingsFrame title="Access">
+      <p>
+        Ask for a copy of everything our servers hold from this browser: the
+        records it uploaded, with when each arrived and the country it came
+        from. This browser proves the records are yours; you get a reference to
+        email us, and we reply with the copy as a file.
+      </p>
+      <p className="t-dim">
+        What this browser keeps is already yours to download with export. The
+        request doesn&apos;t send us your email; emailing us does.
+      </p>
+      <Result result={result} />
+      <Actions
+        id="access"
+        actions={[
+          {
+            label: "request my data",
+            kind: "primary",
+            disabled: busy && "requesting…",
+            run: () => void ask(),
+          },
+        ]}
+      />
+    </SettingsFrame>
+  );
 }
 
 function Import() {
@@ -537,7 +608,7 @@ function Delete() {
         This deletes your profile, progress, stars, saved practice and activity from this
         browser and from our servers, and signs you out.{" "}
         <span className="t-err">It can&apos;t be undone.</span> Published
-        anonymised datasets aren&apos;t linked to you, so they stay.
+        insights aren&apos;t about you, so they stay.
       </p>
       <label className="t-field">
         <span>

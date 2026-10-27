@@ -17,6 +17,7 @@ async function setup() {
     CONTROL: {
       get: async (key) => (objects.has(key) ? { text: async () => objects.get(key)! } : null),
       put: async (key, value) => void objects.set(key, value),
+      delete: async (key) => void objects.delete(key),
     },
     EVENTS: { send: async (sent) => void rows.push(...sent) },
   };
