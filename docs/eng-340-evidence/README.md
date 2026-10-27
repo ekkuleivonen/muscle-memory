@@ -57,3 +57,12 @@ Interaction walkthrough:
 The exact least-privilege service binding, account-wide SQL-token caveat, query budgets, source inventory, lifetime/reset/delete/stealth behavior and release decisions are in [eng-340-private-history.md](../eng-340-private-history.md). No binding, token, persistent summary store, local history retention, merge or deployment is enabled. Live verification and security/disclosure review remain release gates.
 
 Final option A local checks: **268 tests passed**, workspace typechecks passed; production/Cloudflare and ingest dry builds passed. Added explicit coverage for a deletion that coincides with a failed SQL read: deletion still takes precedence over the transient error. Missing completion for an over-budget attempt is reported as unavailable, never “unfinished.” Real `codemirror-6` fingerprints are preserved for matched history. Hosted CI and independent review are required on the pushed head.
+
+
+## Approved binding and integrated release
+
+Ekku approved the exact verification binding and existing-token use via dot. It is now prepared in source, with no production rollout from this branch. PR65's actual release merge `4676f4326655c4938f85aedaba6a55061ee496a4` is integrated; dot verified production run `40469560113` / version `bea90685-3939-4719-892d-1bea2c35aaa2`. The later merged ENG-373 workbench is preserved too. Earlier statements about an absent binding/pending PR65 describe the previous checkpoints.
+
+Post-integration checks: 110 focused history/browser/model/workbench tests, four synthetic managed-loader contracts, workspace typechecks and the native Workers RPC check pass. The native check compiles the actual ingest entrypoint and reads the exact approved binding from source config. It additionally attempts inherited/environment/CONTROL capability access and rejects it. No cloud requests, credentials or catalog copy are involved. Full catalog-backed tests/builds need an existing authorized ignored copy or trusted CI; the local export attempt failed, so the earlier 268/full-build baseline must not be relabelled as post-integration validation.
+
+Independent review is requested through [the security-review brief](../eng-340-security-review.md). Dashboard merge/deployment and live history verification remain separate gates. Any binding-only rollout must be coordinated with dot and preserve the currently approved web app, without this dashboard, API or disclosure revision.

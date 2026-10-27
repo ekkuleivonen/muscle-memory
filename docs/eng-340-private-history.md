@@ -62,3 +62,7 @@ Synthetic tests execute the actual fixed SQL in SQLite (table namespace adapted;
 ## Native runtime contract check
 
 `npm run test:owner-rpc` compiles the actual ingest entry module, validates the exact service binding in the production source configuration, and exercises the named entrypoint through local Workers RPC and a synthetic R2 bucket. It checks original-secret ownership, wrong-secret/upload-hash rejection, participant isolation, tombstone precedence even after proof removal, rejection of bucket/SQL methods and absence of a public ingest history route. It requires no private catalog, credentials or network/cloud reads and runs with the public catalog-contract CI job. This is native local runtime evidence, not a claim of live rollout verification.
+
+## Binding-only rollout coordination
+
+No live rollout is necessary to publish the review bundle. If dot chooses a binding-only rollout, prepare it from the currently approved main application using **only** ingest `owner.ts`, `worker.ts`, `rpc-runtime.d.ts`, the ingest `main` entry-module change and web's exact approved service-binding entry (plus their synthetic tests). Do not include the player history API, SQL reader, stats UI, Privacy Notice/version or any other dashboard implementation. Update ingest before web so the named entrypoint exists. Do not deploy this feature branch as a shortcut. The account token remains unchanged and uninspected in web; no secret copy is necessary. The independently reviewed dashboard can be released later only under subsequent explicit instruction.
