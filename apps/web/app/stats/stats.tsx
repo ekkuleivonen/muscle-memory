@@ -36,6 +36,8 @@ function Status({ history }: { history: HistoryStatus }) {
   const text =
     history.state === "loading" || history.state === "idle"
       ? "Adding your earlier practice…"
+      : history.state === "ready"
+        ? history.notice ?? (history.value.next ? "Earlier practice is still being added…" : history.value.unavailable.length ? "Some earlier practice could not be added." : null)
       : history.state === "unavailable" || history.state === "limited"
         ? "Your earlier practice couldn't be added right now; this shows this device only."
         : null;

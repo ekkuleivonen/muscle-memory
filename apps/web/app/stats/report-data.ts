@@ -5,6 +5,11 @@
  * arriving independently. Stealth reads nothing. Reset, deletion, import, logout and privacy
  * changes clear what is shown synchronously and discard every pending response.
  */
+import {
+  mergeHistoryPage,
+  HISTORY_READ_INTERVAL_MS,
+  HISTORY_MAX_PAGES,
+} from "../../lib/history-pages";
 import { reportRead, reportReceipts } from "../../lib/report-reads";
 import { flushSync } from "react-dom";
 import {
@@ -49,28 +54,40 @@ export interface DeviceEvidence {
 export type HistoryStatus =
   | { state: "idle" }
   | { state: "loading" }
-  | { state: "ready"; value: UploadedHistory; notice?: string }
+  | {
+      state: "ready";
+      value: UploadedHistory;
+      notice?: string;
+      retryAt?: number;
+    }
   | {
       state: "no-uploads" | "limited" | "unavailable" | "unauthorized" | "held";
       message: string;
+      retryAt?: number;
     };
 
 /** After the report closes, uploaded summaries stay in page memory at most this long, so returning to /stats doesn't re-query. */
 const HISTORY_TTL_MS = 5 * 60 * 1000;
 /** The report holds at most this many uploaded attempt revisions, as the ENG-340 reader promised. */
-export const HISTORY_MAX_ATTEMPTS = 100;
+export { HISTORY_MAX_ATTEMPTS } from "../../lib/history-pages";
 /** The private reader's widest window: the past year of uploaded activity. */
 export const HISTORY_DAYS = 366;
-let cache: { participant: string; value: UploadedHistory; at: number } | null =
-  null;
+let cache: {
+  participant: string;
+  value: UploadedHistory;
+  at: number;
+  notice?: string;
+} | null = null;
 let expiry: ReturnType<typeof setTimeout> | undefined;
+// Keep rate pacing across report remounts in this tab; no persistent history or identity.
+let nextHistoryReadAt = 0;
 const dropCache = () => {
   cache = null;
   clearTimeout(expiry);
 };
-const keep = (participant: string, value: UploadedHistory) => {
+const keep = (participant: string, value: UploadedHistory, notice?: string) => {
   clearTimeout(expiry);
-  cache = { participant, value, at: Date.now() };
+  cache = { participant, value, at: Date.now(), notice };
   expiry = setTimeout(dropCache, HISTORY_TTL_MS);
 };
 /**
@@ -136,12 +153,16 @@ export function useReportData(
   /** Set by a boundary while this report is open; a new visit (mount) starts without it. */
   const held = useRef(false);
   const historyFlight = useRef<number | null>(null);
+  const historyPages = useRef(0);
+  const historyRetries = useRef(0);
 
   /** Synchronously forget everything shown and everything in flight. */
   const clear = useCallback(
     (block = false) => {
       generation.current++;
       historyFlight.current = null;
+      historyPages.current = 0;
+      historyRetries.current = 0;
       for (const a of aborts.current) a.abort();
       aborts.current.clear();
       device.invalidate(block);
@@ -213,8 +234,16 @@ export function useReportData(
         } catch {
           if (live())
             setHistory({
-              state: "unavailable",
-              message: "Your saved uploads couldn't be read.",
+              ...(more && previous
+                ? {
+                    state: "ready" as const,
+                    value: previous,
+                    notice: "More uploads unavailable right now.",
+                  }
+                : {
+                    state: "unavailable" as const,
+                    message: "Your saved uploads couldn't be read.",
+                  }),
             });
           return;
         }
@@ -232,7 +261,11 @@ export function useReportData(
           cache?.participant === identity.participant &&
           Date.now() - cache.at < HISTORY_TTL_MS
         ) {
-          setHistory({ state: "ready", value: cache.value });
+          setHistory({
+            state: "ready",
+            value: cache.value,
+            notice: cache.notice,
+          });
           return;
         }
         setHistory((h) =>
@@ -253,11 +286,14 @@ export function useReportData(
               };
         const controller = new AbortController();
         aborts.current.add(controller);
-        const to = new Date().toISOString().slice(0, 10);
-        const from = new Date(Date.parse(to) - (HISTORY_DAYS - 1) * 86400000)
-          .toISOString()
-          .slice(0, 10);
+        const to = previous?.window.to ?? new Date().toISOString().slice(0, 10);
+        const from =
+          previous?.window.from ??
+          new Date(Date.parse(to) - (HISTORY_DAYS - 1) * 86400000)
+            .toISOString()
+            .slice(0, 10);
         try {
+          nextHistoryReadAt = Date.now() + HISTORY_READ_INTERVAL_MS;
           const response = await fetch("/api/private-history", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -282,17 +318,23 @@ export function useReportData(
                   "Your uploads couldn't be verified as yours from this browser, so the report uses this device only.",
               });
             } else if (response.status === 429) {
+              const retryAt =
+                historyRetries.current++ < 1 ? nextHistoryReadAt : undefined;
               setHistory(
                 more && previous
                   ? {
                       state: "ready",
                       value: previous,
-                      notice: "More uploads can be read in a minute.",
+                      notice: retryAt
+                        ? "Earlier practice is still being added…"
+                        : "More uploads unavailable right now.",
+                      retryAt,
                     }
                   : {
                       state: "limited",
                       message:
-                        "Your uploads were read a moment ago. Try again in a minute; this device's evidence is shown meanwhile.",
+                        "Your uploads were read a moment ago. This device's evidence is shown meanwhile.",
+                      retryAt,
                     },
               );
             } else setHistory(failed());
@@ -300,29 +342,19 @@ export function useReportData(
           }
           const page = (await response.json()) as UploadedHistory;
           if (!live()) return;
-          const merged = new Map(
-            [...(previous?.attempts ?? []), ...page.attempts].map((a) => [
-              `${a.attempt}:${a.revision}`,
-              a,
-            ]),
+          historyPages.current++;
+          historyRetries.current = 0;
+          const merged = mergeHistoryPage(previous, page);
+          const value = merged.value;
+          const stopped = Boolean(
+            value.next && historyPages.current >= HISTORY_MAX_PAGES,
           );
-          const unavailable = new Map(
-            [...(previous?.unavailable ?? []), ...page.unavailable].map((a) => [
-              a.attempt,
-              a,
-            ]),
-          );
-          const all = [...merged.values()];
-          const value: UploadedHistory = {
-            ...page,
-            // Freshness is only as good as the oldest page read.
-            readAt: previous?.readAt ?? page.readAt,
-            attempts: all.slice(0, HISTORY_MAX_ATTEMPTS),
-            next: all.length >= HISTORY_MAX_ATTEMPTS ? null : page.next,
-            unavailable: [...unavailable.values()],
-          };
-          keep(identity.participant, value);
-          setHistory({ state: "ready", value });
+          if (stopped) value.next = null;
+          const notice = stopped
+            ? "Some earlier practice could not be added."
+            : merged.notice;
+          keep(identity.participant, value, notice);
+          setHistory({ state: "ready", value, notice });
         } catch {
           if (live()) setHistory(failed());
         } finally {
@@ -507,10 +539,27 @@ export function useReportData(
     };
   }, [privacy, wanted, epoch]);
 
-  const more = useCallback(() => {
-    if (history.state === "ready" && history.value.next)
-      void loadHistory(true, history.value);
-  }, [history, loadHistory]);
+  // The first page is useful immediately. Continue at the existing server rate, never via a manual workflow.
+  useEffect(() => {
+    if (privacy !== "ok") return;
+    const previous = history.state === "ready" ? history.value : null;
+    const retryAt = "retryAt" in history ? history.retryAt : undefined;
+    if (
+      !retryAt &&
+      !(history.state === "ready" && history.value.next && !history.notice)
+    )
+      return;
+    const ticket = generation.current;
+    const timer = setTimeout(
+      () => {
+        if (ticket !== generation.current || blocked.current || boundaries)
+          return;
+        void loadHistory(Boolean(previous), previous);
+      },
+      Math.max(0, (retryAt ?? nextHistoryReadAt) - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [history, privacy, loadHistory]);
 
-  return { privacy, local, history, receipts, cohorts, more };
+  return { privacy, local, history, receipts, cohorts };
 }
