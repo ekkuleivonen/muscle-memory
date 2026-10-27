@@ -6,6 +6,10 @@ import {
   type ReceiptRead,
 } from "../../../packages/model-runs/read-receipts";
 import type { Sql } from "../../../packages/model-runs/ledger";
+import {
+  readModelSummary,
+  type SummaryBucket,
+} from "../../../packages/model-runs/summary-cache";
 const cache = new Map<string, { until: number; result: ReceiptRead }>();
 const inFlight = new Map<string, Promise<ReceiptRead>>();
 /** Uses existing catalog/content bindings; no new credentials or model execution. */
@@ -32,8 +36,18 @@ export async function modelReceipts(
           bind(...params: unknown[]): { all<T>(): Promise<{ results: T[] }> };
         };
       };
-      CONTENT?: ReceiptBucket;
+      CONTENT?: ReceiptBucket & SummaryBucket;
+      MODEL_SUMMARY_CACHE_ENABLED?: string;
     };
+    // In scheduled mode a request only reads the private code-free snapshot. Cold/error/expired
+    // snapshots never trigger ledger or raw receipt work on the player request path.
+    if (env.MODEL_SUMMARY_CACHE_ENABLED === "true") {
+      if (!env.CONTENT) return empty("unconfigured");
+      return (
+        (await readModelSummary(env.CONTENT, key, revision)) ??
+        empty("unavailable")
+      );
+    }
     if (!env.CATALOG_DB || !env.CONTENT) return empty("unconfigured");
     const cacheKey = `${key}:${revision}`;
     const found = cache.get(cacheKey);
