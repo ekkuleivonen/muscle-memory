@@ -1,4 +1,4 @@
-import { LEGAL_DRAFT, LEGAL_UPDATED, LEGAL_VERSION } from "../../lib/legal";
+import { LEGAL_UPDATED, LEGAL_VERSION } from "../../lib/legal";
 import { Markdown } from "../_components/markdown";
 import { TermFooter } from "../_terminal/footer";
 import "../_terminal/terminal.css";
@@ -26,13 +26,6 @@ export function LegalPage({
       <div className="term">
         <main className="t-prose">
           <article>
-            {LEGAL_DRAFT && (
-              <p className="t-line t-note" role="note">
-                <strong>! Draft.</strong> This hasn&apos;t been reviewed by a
-                lawyer yet, and the bits in [brackets] are placeholders.
-                Don&apos;t rely on it until this note is gone.
-              </p>
-            )}
             <h1 className="t-doc-title">{title}</h1>
             <p className="t-line t-dim">
               Last updated {LEGAL_UPDATED} · version {LEGAL_VERSION}
