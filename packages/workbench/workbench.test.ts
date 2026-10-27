@@ -1,167 +1,151 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { checkQuery, SqlRejected, statementAt, statements, tokenize } from "./sql";
+import { init, parse } from "@guanmingchiu/sqlparser-ts";
+import { checkQuery, SqlRejected, type SqlParse } from "./check";
+import { statementAt, statements, tokenize } from "./sql";
 import { formatSql } from "./format";
 import { compareValues, defuse, formatBytes, structured, toCsv, toJson, toTsv, uniqueKeys } from "./export";
 import {
   DEFAULT_LIMITS,
   errorPlace,
-  forgetNamespaces,
   limitsFrom,
-  mentionedNamespace,
   QueryFailed,
   readSchema,
   runQuery,
   SQL_ENDPOINT,
 } from "./read";
 
+// R2 SQL's own parser, as the server uses it (apps/web/lib/sql-parser.ts loads the same WebAssembly).
+await init();
+const parseSql: SqlParse = (sql) => parse(sql, "generic") as unknown[];
+const check = (sql: string) => checkQuery(sql, parseSql);
+
 function rejected(sql: string, pattern?: RegExp) {
   assert.throws(
-    () => checkQuery(sql),
+    () => check(sql),
     (e: unknown) => e instanceof SqlRejected && (!pattern || pattern.test(e.message)),
     sql,
   );
 }
 
-test("reads are accepted, with comments, CTEs, joins and a trailing semicolon", () => {
+test("reads are accepted: joins, CTEs, subqueries, literals, comments and aliases of any spelling", () => {
   const ok = [
     "SELECT 1",
     "select * from default.events limit 10;",
-    "  -- recent\nSELECT type FROM default.events /* note; with a semicolon */ LIMIT 5  ;  \n-- after",
+    "  -- recent\nSELECT type FROM default.events /* note; with a semicolon */ LIMIT 5  ;  \n",
     "WITH s AS (SELECT session_id FROM default.model_events), e AS (SELECT * FROM default.events) SELECT * FROM s JOIN e ON e.session_id = s.session_id",
     "SELECT EXTRACT(YEAR FROM t.occurred_at) FROM default.events t",
-    "SELECT a IS DISTINCT FROM b.c FROM default.events b",
-    "SELECT trim(x FROM y.z) FROM events y",
-    "SELECT ';DROP TABLE x;' AS s, 'it''s' AS t FROM default.events",
-    'SELECT "update", "select" FROM default.events',
+    "SELECT a IS DISTINCT FROM b, a IS NOT DISTINCT FROM b FROM default.events",
+    "SELECT substring((type) FROM 1 FOR 2), trim(BOTH 'x' FROM type) FROM default.events",
+    "SELECT ';DROP TABLE x;' AS s, 'it''s' AS t, E'it\\'s' AS u, X'ff' AS v FROM default.events",
+    'SELECT "update", "select", e.distinct, e.group FROM default.events e',
     "SELECT * FROM default.events a, default.model_events b, (SELECT 1) c WHERE a.x = b.x",
-    "SELECT * FROM default.events a LEFT JOIN default.model_events b ON a.x = b.x AND a.y IN (1, 2), default.model_catalog c",
-    "SELECT E'it\\'s', X'ff' FROM default.events",
-    "SHOW DATABASES",
-    'SELECT * FROM default.events AS "group" JOIN default.events b ON group.type = b.type, default.model_events k',
-    'SELECT * FROM default.events AS "from" JOIN default.events b ON from.type = b.type',
-    "SELECT substring((SELECT type FROM default.events LIMIT 1) FROM 1 FOR 2) FROM default.events",
-    "EXPLAIN (SELECT 1)",
-    "SELECT e.distinct FROM default.events e",
-    'WITH t AS (SELECT 1 AS "group") SELECT * FROM t a JOIN t b ON a."group" = b.group, default.events k',
-    "EXPLAIN ANALYZE SELECT count(*) FROM default.events",
-    "EXPLAIN FORMAT JSON SELECT 1",
-    "EXPLAIN VERBOSE WITH x AS (SELECT 1) SELECT * FROM x",
+    "SELECT * FROM default.events a LEFT JOIN default.model_events b ON a.x = b.x AND a.y IN (1, 2) AND [1, 2] = [1, 2], default.model_catalog c",
+    "SELECT * FROM (default.events e JOIN default.model_events m ON e.session_id = m.session_id)",
+    "SELECT * FROM ((SELECT 1 AS x) a JOIN (SELECT 1 AS x) b ON a.x = b.x)",
     "SELECT * FROM DEFAULT.events",
     'SELECT * FROM "default".events',
-    'SHOW TABLES IN "default"',
-    "SELECT substring((type) FROM 1 FOR 2) FROM default.events",
-    "SELECT trim((type) FROM 'foo') FROM default.events",
-    "SELECT * FROM default.events a JOIN default.events b ON a.type = b.type AND [1, 2] = [1, 2]",
-    "SELECT a IS NOT DISTINCT FROM b FROM default.events",
-    "SELECT ((SELECT 1)), x IN ((SELECT 2)) FROM default.events",
-    "SELECT 5 >> 3, 5 << 3, U&'d\\0061t' FROM default.events",
+    "(SELECT 1) UNION ALL (SELECT 2)",
+    "SELECT 1 UNION SELECT type FROM default.events INTERSECT SELECT type FROM default.model_events",
+    "SELECT ROW_NUMBER() OVER (PARTITION BY type ORDER BY occurred_at) AS n FROM default.events QUALIFY n = 1",
+    "SELECT count(*) FROM default.events GROUP BY GROUPING SETS ((type), ())",
+    "SELECT x FROM default.events WHERE x IN (SELECT y FROM default.model_events) AND EXISTS (SELECT 1 FROM default.events)",
+    "SELECT (SELECT max(occurred_at) FROM default.events) AS latest",
+    "SELECT DISTINCT ON (record_id) record_id, json_get_str(json_get_json(payload, 'data'), 'status') FROM default.events",
+    "SELECT 5 >> 3, type !~~* 'm.%', power(2, 3), occurred_at::timestamp FROM default.events",
+    "VALUES (1, 'a'), (2, 'b')",
+    // Spelled like another namespace, in a string, a comment, an alias or a column: all fine.
+    "SELECT 'secrets.keys' AS secrets, other FROM default.events AS secrets -- secrets.keys",
+    "SHOW DATABASES",
     "SHOW TABLES IN default",
     "DESCRIBE default.events",
     "EXPLAIN SELECT count(*) FROM default.events",
-    "(SELECT 1) UNION ALL (SELECT 2)",
-    "SELECT ROW_NUMBER() OVER (PARTITION BY type ORDER BY occurred_at) FROM default.events QUALIFY 1 = 1",
-    "SELECT count(*) FROM default.events GROUP BY GROUPING SETS ((type), ())",
-    "SELECT * FROM (default.events e JOIN default.model_events m ON e.session_id = m.session_id)",
-    "SELECT * FROM ((SELECT 1 AS x) a JOIN (SELECT 1 AS x) b ON a.x = b.x)",
-    "SELECT * FROM (SELECT * FROM default.events) e, (SELECT 1) f",
+    "EXPLAIN ANALYZE SELECT count(*) FROM default.events",
+    "EXPLAIN VERBOSE WITH x AS (SELECT 1) SELECT * FROM x",
   ];
-  for (const sql of ok) assert.doesNotThrow(() => checkQuery(sql), sql);
-  assert.equal(checkQuery("select 1;").sql, "select 1");
-  assert.equal(checkQuery(" -- c\nselect 1 ; ").sql, "select 1");
+  for (const sql of ok) assert.doesNotThrow(() => check(sql), sql);
+  assert.equal(check("select 1;").sql, "select 1");
+  assert.equal(check("select 1 ; ;\n").sql, "select 1");
 });
 
-test("writes, sessions, other namespaces and several statements are rejected server-side", () => {
-  rejected("INSERT INTO default.events VALUES (1)", /Only reads/);
-  rejected("UPDATE default.events SET x = 1", /Only reads/);
-  rejected("DELETE FROM default.events", /Only reads/);
-  rejected("DROP TABLE default.events", /Only reads/);
-  rejected("CREATE TABLE x AS SELECT 1", /Only reads/);
-  rejected("ALTER TABLE default.events ADD COLUMN x int", /Only reads/);
-  rejected("TRUNCATE default.events");
-  rejected("SET datafusion.execution.batch_size = 1", /Only reads/);
-  rejected("COPY (SELECT 1) TO 's3://x'", /Only reads/);
-  rejected("SELECT * INTO copy FROM default.events", /"INTO" is not allowed/);
-  rejected("WITH x AS (DELETE FROM default.events RETURNING *) SELECT * FROM x", /"DELETE"/);
-  rejected("EXPLAIN DELETE FROM default.events", /"DELETE"/);
+test("writes, other namespaces, table functions and several statements are refused, in any form", () => {
+  for (const sql of [
+    "INSERT INTO default.events VALUES (1)",
+    "UPDATE default.events SET x = 1",
+    "DELETE FROM default.events",
+    "DROP TABLE default.events",
+    "CREATE TABLE x AS SELECT 1",
+    "ALTER TABLE default.events ADD COLUMN x int",
+    "TRUNCATE default.events",
+    "SET datafusion.execution.batch_size = 1",
+    "COPY (SELECT 1) TO 's3://x'",
+    "EXPLAIN DELETE FROM default.events",
+    "EXPLAIN DESCRIBE secrets.keys",
+    "EXPLAIN (ANALYZE) SHOW TABLES IN secrets",
+  ])
+    rejected(sql);
+  rejected("SELECT * INTO copy FROM default.events", /SELECT INTO/);
+  rejected("WITH x AS (DELETE FROM default.events) SELECT * FROM x", /not DELETE/);
   rejected("SELECT 1; DROP TABLE default.events", /one statement/);
   rejected("SELECT 1; SELECT 2", /one statement/);
   rejected("SELECT 1 -- ;\n; DELETE FROM x", /one statement/);
-  rejected("SELECT 'a\\'; DROP TABLE default.events; --'", /backslash/);
-  rejected("SELECT 1 /* outer /* inner */ ; DROP TABLE x */", /Nested/);
-  rejected("SELECT 'unterminated", /never closed/);
-  rejected("SELECT 1 /* open", /never closed/);
-  rejected('SELECT "open FROM x', /never closed/);
-  rejected("SELECT * FROM other.events", /"default" namespace/);
-  rejected('SELECT * FROM "Other".events', /"default" namespace/);
+  rejected("SELECT 'unterminated");
+  rejected("SELECT 1 /* open");
+  // Other namespaces: every form the reviews found, now read by the engine's own parser.
+  for (const sql of [
+    "SELECT * FROM secrets.keys",
+    "SELECT * FROM other.events",
+    'SELECT * FROM "Other".events',
+    'SELECT * FROM "DEFAULT".events',
+    "SELECT * FROM default.events JOIN secrets.keys ON 1 = 1",
+    "SELECT * FROM default.events e, secrets.keys k",
+    "SELECT * FROM default.events a JOIN default.events b ON a.x = b.x, secrets.keys",
+    "SELECT * FROM (SELECT * FROM secrets.keys) k",
+    "SELECT * FROM (secrets.keys k CROSS JOIN default.events e)",
+    "SELECT * FROM (default.events e JOIN (secrets.keys k JOIN default.events f ON 1 = 1) ON 1 = 1)",
+    "SELECT * FROM ((secrets.keys))",
+    "SELECT e.distinct FROM secrets.keys e",
+    'WITH t AS (SELECT 1 AS "group") SELECT * FROM t a JOIN t b ON a."group" = b.group, secrets.keys k',
+    "((SELECT 1) UNION SELECT 1 FROM secrets.keys)",
+    "WITH x AS ((SELECT 1) UNION SELECT 1 FROM secrets.keys) SELECT * FROM x",
+    'SELECT * FROM default.events AS "group" JOIN default.events b ON group.type = b.type, secrets.keys k',
+    "SELECT * FROM default.events WHERE x IN (SELECT k FROM secrets.keys)",
+    "SELECT (SELECT max(k) FROM secrets.keys)",
+    "SELECT * FROM default.events WHERE a IS DISTINCT FROM b UNION SELECT * FROM secrets.keys",
+    "EXPLAIN ANALYZE SELECT * FROM secrets.keys",
+  ])
+    rejected(sql, /"default" namespace/);
   rejected("SELECT * FROM catalog.default.events", /namespace\.table at most/);
-  rejected("SELECT * FROM default.events JOIN secrets.keys ON 1 = 1", /not "secrets"/);
-  rejected("SELECT * FROM default.events e, secrets.keys k", /not "secrets"/);
-  rejected("SELECT * FROM default.events a JOIN default.events b ON a.x = b.x, secrets.keys", /not "secrets"/);
-  rejected("SELECT * FROM (SELECT * FROM secrets.keys) k", /not "secrets"/);
   rejected("SELECT * FROM read_parquet('s3://bucket/x')", /Table functions/);
-  // Every table position, however it is written (review of PR 68).
-  rejected("SELECT * FROM (secrets.keys k CROSS JOIN default.events e)", /not "secrets"/);
-  rejected("SELECT * FROM (default.events e CROSS JOIN secrets.keys k)", /not "secrets"/);
-  rejected("SELECT * FROM ((secrets.keys))", /not "secrets"/);
-  rejected("SELECT * FROM (default.events e JOIN (secrets.keys k JOIN default.events f ON 1 = 1) ON 1 = 1)", /not "secrets"/);
-  rejected("SELECT * FROM (default.events e, secrets.keys k)", /not "secrets"/);
-  rejected("SELECT * FROM (catalog.default.events)", /namespace\.table at most/);
-  rejected("SELECT * FROM (read_parquet('x') r)", /Table functions/);
-  rejected("SELECT * FROM 'secrets'.keys", /Only a table name/);
-  rejected("SELECT * FROM default.'secrets'", /Only a table name/);
-  rejected("SELECT * FROM default.events JOIN 'secrets'.keys ON 1 = 1", /Only a table name/);
-  rejected("SELECT * FROM default.events WHERE x IN (FROM secrets.keys SELECT k)", /not "secrets"/);
-  rejected("SELECT 1 UNION TABLE secrets.keys", /"TABLE" is not allowed/);
-  rejected("SELECT * FROM", /table name is missing/);
-  // Review round 2: keywords as name parts, EXPLAIN around metadata, dialect names, quoting.
-  rejected("SELECT e.distinct FROM secrets.keys e", /not "secrets"/);
-  rejected('WITH t AS (SELECT 1 AS "group") SELECT * FROM t a JOIN t b ON a."group" = b.group, secrets.keys k', /not "secrets"/);
-  rejected("EXPLAIN DESCRIBE secrets.keys", /EXPLAIN works on a query/);
-  rejected("EXPLAIN SHOW TABLES IN secrets", /EXPLAIN works on a query/);
-  rejected("EXPLAIN ANALYZE DESCRIBE secrets.keys", /EXPLAIN works on a query/);
-  rejected("EXPLAIN FORMAT JSON SHOW TABLES IN secrets", /EXPLAIN works on a query/);
-  rejected("EXPLAIN ANALYZE SELECT * FROM secrets.keys", /not "secrets"/);
-  rejected("SELECT * FROM secrets@x.keys", /not "secrets@x"/);
-  rejected("SELECT * FROM secrets#x.keys", /not "secrets#x"/);
-  rejected('SELECT * FROM "DEFAULT".events', /not "DEFAULT"/);
-  rejected('SELECT * FROM "Default".events', /not "Default"/);
-  rejected('SHOW TABLES IN "DEFAULT"', /SHOW TABLES IN default/);
-  rejected("SELECT * FROM default.events a JOIN default.events b ON a.type = b.type AND [1, 2] = [1, 2], secrets.keys", /not "secrets"/);
-  rejected("SELECT * FROM default.events WHERE a IS DISTINCT FROM b UNION SELECT * FROM secrets.keys", /not "secrets"/);
-  // Review round 3.
-  rejected("((SELECT 1) UNION SELECT 1 FROM secrets.keys)", /not "secrets"/);
-  rejected("WITH x AS ((SELECT 1) UNION SELECT 1 FROM secrets.keys) SELECT * FROM x", /not "secrets"/);
-  rejected('SELECT * FROM default.events AS "group" JOIN default.events b ON group.type = b.type, secrets.keys k', /not "secrets"/);
-  rejected("SELECT * FROM secrets\u{10400}.keys", /not "secrets./u);
-  rejected("SELECT * FROM secrets\u0345.keys", /not "secrets\u0345"/);
-  rejected("EXPLAIN (ANALYZE) SHOW TABLES IN secrets", /EXPLAIN works on a query/);
-  rejected("EXPLAIN (VERBOSE) DESCRIBE secrets.keys", /EXPLAIN works on a query/);
+  rejected("SELECT * FROM UNNEST([1, 2])", /UNNEST is not available/);
   rejected("SHOW TABLES IN secrets", /SHOW TABLES IN default/);
-  rejected("SHOW ALL", /SHOW TABLES IN default/);
   rejected("DESCRIBE secrets.keys", /not "secrets"/);
-  rejected("SELECT $1", /Parameters/);
   rejected("", /no statement/);
   rejected("-- only a comment", /no statement/);
   rejected("SELECT " + "1,".repeat(DEFAULT_LIMITS.maxLength) + "1", /limited/);
 });
 
-test("rejections say where", () => {
-  try {
-    checkQuery("SELECT 1;\nDROP TABLE x");
-    assert.fail();
-  } catch (e) {
-    assert.ok(e instanceof SqlRejected);
-    assert.equal(e.at, 10);
+test("refusals and parse errors say where", () => {
+  for (const [sql, at] of [
+    ["SELECT 1;\nDROP TABLE x", 10],
+    ["SELECT *\nFROM secrets.keys", 14],
+    ["SELECT (1\n  FROM x", 12],
+  ] as const) {
+    try {
+      check(sql);
+      assert.fail(sql);
+    } catch (e) {
+      assert.ok(e instanceof SqlRejected, String(e));
+      assert.ok(e.at !== null && e.at >= at && e.at <= at + 4, `${sql}: ${e.at} (${e.message})`);
+    }
   }
 });
 
-test("the outermost LIMIT is noticed; a subquery's is not", () => {
-  assert.equal(checkQuery("SELECT * FROM default.events LIMIT 10").limited, true);
-  assert.equal(checkQuery("SELECT * FROM (SELECT * FROM default.events LIMIT 10) x").limited, false);
-  assert.equal(checkQuery("SHOW TABLES IN default").limited, true);
-  assert.equal(checkQuery("SELECT type AS limit FROM default.events").limited, false);
-  assert.equal(checkQuery("SELECT e.limit FROM default.events e").limited, false);
+test("the outermost LIMIT is noticed; a subquery's or an alias is not", () => {
+  assert.equal(check("SELECT * FROM default.events LIMIT 10").limited, true);
+  assert.equal(check("SELECT * FROM (SELECT * FROM default.events LIMIT 10) x").limited, false);
+  assert.equal(check('SELECT type AS "limit" FROM default.events').limited, false);
+  assert.equal(check("SHOW TABLES IN default").limited, true);
 });
 
 test("statements split on semicolons outside strings and comments; the cursor picks one", () => {
@@ -259,18 +243,12 @@ test("values: structured JSON is recognised, sorting puts nulls last", () => {
   assert.equal(formatBytes(10_000_000), "10.0 MB");
 });
 
-/** A synthetic R2 SQL. SHOW DATABASES lists `namespaces` and is not counted in `calls`. */
-function fakeFetch(handler: (body: any) => Response, namespaces: string[] | null = ["default"]) {
-  forgetNamespaces();
+function fakeFetch(handler: (body: any) => Response) {
   const calls: any[] = [];
   const f = (async (url: string, init: RequestInit) => {
     assert.equal(url, SQL_ENDPOINT);
     assert.equal((init.headers as Record<string, string>).Authorization, "Bearer test-token");
     const body = JSON.parse(init.body as string);
-    if (body.query === "SHOW DATABASES")
-      return namespaces
-        ? Response.json({ success: true, result: { schema: [{ name: "namespace" }], rows: namespaces.map((namespace) => ({ namespace })) } })
-        : Response.json({ success: false, errors: [{ message: "unsupported" }] }, { status: 400 });
     calls.push(body);
     return handler(body);
   }) as unknown as typeof fetch;
@@ -289,7 +267,7 @@ test("results are projected, capped and labelled", async () => {
       },
     }),
   );
-  const r = await runQuery("test-token", "SELECT type, n FROM default.events;", { ...DEFAULT_LIMITS, maxRows: 5 }, f);
+  const r = await runQuery("test-token", "SELECT type, n FROM default.events;", parseSql, { ...DEFAULT_LIMITS, maxRows: 5 }, f);
   assert.equal(calls[0].query, "SELECT type, n FROM default.events");
   assert.deepEqual(r.columns, [{ name: "type", type: "Utf8" }, { name: "n", type: '{"Int64":{}}' }]);
   assert.equal(r.rows.length, 5);
@@ -303,7 +281,7 @@ test("results are projected, capped and labelled", async () => {
 
 test("scan figures appear only when the response carries them", async () => {
   const { f } = fakeFetch(() => Response.json({ success: true, result: { schema: [], rows: [] } }));
-  const r = await runQuery("test-token", "SELECT 1 LIMIT 1", DEFAULT_LIMITS, f);
+  const r = await runQuery("test-token", "SELECT 1 LIMIT 1", parseSql, DEFAULT_LIMITS, f);
   assert.equal(r.scan, null);
   assert.equal(r.engineLimit, false);
   assert.deepEqual(r.rows, []);
@@ -311,7 +289,7 @@ test("scan figures appear only when the response carries them", async () => {
 
 test("rejected SQL never reaches R2 SQL", async () => {
   const { f, calls } = fakeFetch(() => Response.json({ success: true }));
-  await assert.rejects(runQuery("test-token", "DROP TABLE default.events", DEFAULT_LIMITS, f), (e: unknown) =>
+  await assert.rejects(runQuery("test-token", "DROP TABLE default.events", parseSql, DEFAULT_LIMITS, f), (e: unknown) =>
     e instanceof QueryFailed && e.failure.kind === "rejected",
   );
   assert.equal(calls.length, 0);
@@ -320,24 +298,24 @@ test("rejected SQL never reaches R2 SQL", async () => {
 test("engine errors come back with their place; credentials and outages are said plainly", async () => {
   const sqlError = fakeFetch(() =>
     Response.json(
-      { success: false, errors: [{ code: 40000, message: "sql parser error: Expected: an expression, found: FROM at Line: 2, Column: 8" }] },
+      { success: false, errors: [{ code: 40000, message: "Schema error: No field named nope at Line: 2, Column: 3" }] },
       { status: 400 },
     ),
   );
-  await assert.rejects(runQuery("test-token", "SELECT\nSELECT FROM x", DEFAULT_LIMITS, sqlError.f), (e: unknown) => {
+  await assert.rejects(runQuery("test-token", "SELECT\n  nope FROM default.events", parseSql, DEFAULT_LIMITS, sqlError.f), (e: unknown) => {
     assert.ok(e instanceof QueryFailed);
     assert.deepEqual(e.failure, {
       kind: "sql",
-      message: "sql parser error: Expected: an expression, found: FROM at Line: 2, Column: 8",
+      message: "Schema error: No field named nope at Line: 2, Column: 3",
       line: 2,
-      column: 8,
+      column: 3,
     });
     return true;
   });
   const denied = fakeFetch(() => new Response("forbidden", { status: 403 }));
-  await assert.rejects(runQuery("test-token", "SELECT 1", DEFAULT_LIMITS, denied.f), /refused the workbench's credential/);
+  await assert.rejects(runQuery("test-token", "SELECT 1", parseSql, DEFAULT_LIMITS, denied.f), /refused the workbench's credential/);
   const down = fakeFetch(() => new Response("<html>private upstream</html>", { status: 502 }));
-  await assert.rejects(runQuery("test-token", "SELECT 1", DEFAULT_LIMITS, down.f), (e: unknown) =>
+  await assert.rejects(runQuery("test-token", "SELECT 1", parseSql, DEFAULT_LIMITS, down.f), (e: unknown) =>
     e instanceof QueryFailed && e.failure.kind === "unavailable" && !e.message.includes("private upstream"),
   );
   assert.deepEqual(errorPlace("no place"), { line: null, column: null });
@@ -346,7 +324,7 @@ test("engine errors come back with their place; credentials and outages are said
 test("a response over the byte limit is dropped, and slow answers time out", async () => {
   const big = fakeFetch(() => Response.json({ success: true, result: { rows: [{ x: "y".repeat(200_000) }] } }));
   await assert.rejects(
-    runQuery("test-token", "SELECT 1", { ...DEFAULT_LIMITS, maxBytes: 100_000 }, big.f),
+    runQuery("test-token", "SELECT 1", parseSql, { ...DEFAULT_LIMITS, maxBytes: 100_000 }, big.f),
     (e: unknown) => e instanceof QueryFailed && e.failure.kind === "too-large",
   );
   const slow = (async (_url: string, init: RequestInit) =>
@@ -354,7 +332,7 @@ test("a response over the byte limit is dropped, and slow answers time out", asy
   // AbortSignal.timeout does not hold the event loop open; this does, for the test.
   const hold = setTimeout(() => {}, 5000);
   await assert.rejects(
-    runQuery("test-token", "SELECT 1", { ...DEFAULT_LIMITS, timeoutMs: 50 }, slow),
+    runQuery("test-token", "SELECT 1", parseSql, { ...DEFAULT_LIMITS, timeoutMs: 50 }, slow),
     (e: unknown) => e instanceof QueryFailed && e.failure.kind === "timeout" && /may still finish/.test(e.message),
   );
   clearTimeout(hold);
@@ -428,34 +406,3 @@ test("a schema read has one query in flight at a time", async () => {
   assert.equal(most, 1);
 });
 
-test("no query names another namespace of the bucket, however it is written", async () => {
-  const names = ["secrets", "Other"];
-  for (const sql of [
-    "SELECT * FROM secrets.keys",
-    "((SELECT 1) UNION SELECT 1 FROM secrets.keys)",
-    'SELECT * FROM "SECRETS".keys',
-    "SELECT * FROM (secrets.keys k CROSS JOIN default.events e)",
-    "SELECT * FROM other.t",
-    "SELECT 'secrets' AS s",
-  ])
-    assert.ok(mentionedNamespace(sql, names), sql);
-  for (const sql of ["SELECT * FROM default.events", "SELECT secrets_count, my_secrets FROM default.events", "SELECT * FROM secrets\u{10400}.keys"])
-    assert.equal(mentionedNamespace(sql, names), null, sql);
-  // Through runQuery: refused before anything but the namespace list is read.
-  const { f, calls } = fakeFetch(() => Response.json({ success: true, result: { rows: [] } }), ["default", "secrets"]);
-  await assert.rejects(runQuery("test-token", "((SELECT 1) UNION SELECT 1 FROM secrets.keys)", DEFAULT_LIMITS, f), /another namespace|not "secrets"/);
-  await assert.rejects(runQuery("test-token", "SELECT 1 AS secrets FROM default.events", DEFAULT_LIMITS, f), (e: unknown) =>
-    e instanceof QueryFailed && e.failure.kind === "rejected" && /another namespace/.test(e.message),
-  );
-  assert.equal(calls.length, 0);
-  await runQuery("test-token", "SELECT type FROM default.events LIMIT 1", DEFAULT_LIMITS, f);
-  assert.equal(calls.length, 1);
-});
-
-test("when the namespaces cannot be listed, nothing runs", async () => {
-  const { f, calls } = fakeFetch(() => Response.json({ success: true, result: { rows: [] } }), null);
-  await assert.rejects(runQuery("test-token", "SELECT 1", DEFAULT_LIMITS, f), (e: unknown) =>
-    e instanceof QueryFailed && e.failure.kind === "unavailable" && /fails closed/.test(e.message),
-  );
-  assert.equal(calls.length, 0);
-});

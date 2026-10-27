@@ -3,7 +3,7 @@
  * bucket only, bounded in time, rows and bytes, and projected to what the page shows. The
  * upstream body is never logged; SQL errors go back to the operator who wrote the query.
  */
-import { checkQuery, NAMESPACE, SqlRejected, type CheckedQuery } from "./sql";
+import { checkQuery, NAMESPACE, SqlRejected, type CheckedQuery, type SqlParse } from "./check";
 
 /** The events bucket's warehouse. The URL fixes the bucket: no other bucket is reachable. */
 export const SQL_ENDPOINT =
@@ -165,87 +165,20 @@ async function readBounded(response: Response, maxBytes: number): Promise<string
 export async function runQuery(
   token: string,
   text: string,
+  parse: SqlParse,
   limits: Limits = DEFAULT_LIMITS,
   request: typeof fetch = fetch,
   signal?: AbortSignal,
 ): Promise<QueryResult> {
   let checked: CheckedQuery;
   try {
-    checked = checkQuery(text, limits.maxLength);
+    checked = checkQuery(text, parse, limits.maxLength);
   } catch (cause) {
     if (cause instanceof SqlRejected)
       throw new QueryFailed({ kind: "rejected", message: cause.message, at: cause.at });
     throw cause;
   }
-  // The second guard, independent of how the SQL parses: no other namespace's name at all.
-  if (checked.kind !== "show") {
-    const names = await otherNamespaces(token, limits, request, signal);
-    const found = mentionedNamespace(text, names);
-    if (found)
-      throw new QueryFailed({
-        kind: "rejected",
-        message: `"${found.name}" is another namespace in this bucket; only "${NAMESPACE}" can be read. (A column or string spelled the same is refused too: rename it with AS.)`,
-        at: found.at,
-      });
-  }
   return send(token, checked, limits, request, signal);
-}
-
-const NAME_CHAR = "[\\p{Alphabetic}\\p{M}\\p{N}_$@#]";
-const NAMESPACE_TTL = 5 * 60 * 1000;
-let namespaces: { names: string[]; at: number } | null = null;
-
-/** Forgets the cached namespace list (tests; a new namespace is otherwise seen within 5 min). */
-export function forgetNamespaces() {
-  namespaces = null;
-}
-
-/**
- * The bucket's namespaces other than `default`, from SHOW DATABASES, cached per isolate for
- * five minutes. Fails closed: when the list cannot be read, no query runs.
- */
-async function otherNamespaces(
-  token: string,
-  limits: Limits,
-  request: typeof fetch,
-  signal?: AbortSignal,
-): Promise<string[]> {
-  if (namespaces && Date.now() - namespaces.at < NAMESPACE_TTL) return namespaces.names;
-  let values: string[];
-  try {
-    const listed = await send(
-      token,
-      checkQuery("SHOW DATABASES"),
-      { ...limits, maxRows: 1000, maxBytes: 1024 * 1024 },
-      request,
-      signal,
-    );
-    const column = listed.columns.findIndex((c) => /namespace|database|schema|name/i.test(c.name));
-    values = listed.rows
-      .flatMap((row) => (column >= 0 ? [row[column]] : row))
-      .filter((v): v is string => typeof v === "string" && v.length > 0);
-  } catch {
-    values = [];
-  }
-  if (!values.includes(NAMESPACE))
-    throw new QueryFailed({
-      kind: "unavailable",
-      message: "The bucket's namespaces could not be listed, so no query runs (the namespace guard fails closed). Try again shortly.",
-    });
-  const names = [...new Set(values.filter((v) => v !== NAMESPACE))];
-  namespaces = { names, at: Date.now() };
-  return names;
-}
-
-/** Where `text` names one of `names` as a whole word (any case), quoted or not. */
-export function mentionedNamespace(text: string, names: string[]): { name: string; at: number } | null {
-  let first: { name: string; at: number } | null = null;
-  for (const name of names) {
-    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const m = new RegExp(`(?<!${NAME_CHAR})${escaped}(?!${NAME_CHAR})`, "iu").exec(text);
-    if (m && (!first || m.index < first.at)) first = { name, at: m.index };
-  }
-  return first;
 }
 
 async function send(
@@ -345,7 +278,9 @@ export async function readSchema(
   signal?: AbortSignal,
 ): Promise<Schema> {
   const metaLimits = { ...limits, maxRows: 1000, maxBytes: 1024 * 1024 };
-  const listed = await send(token, checkQuery(`SHOW TABLES IN ${NAMESPACE}`), metaLimits, request, signal);
+  // Fixed metadata statements, built here rather than checked.
+  const meta = (sql: string, kind: CheckedQuery["kind"]): CheckedQuery => ({ sql, kind, limited: true });
+  const listed = await send(token, meta(`SHOW TABLES IN ${NAMESPACE}`, "show"), metaLimits, request, signal);
   const nameColumn =
     listed.columns.findIndex((c) => /^(table_?name|name|table)$/i.test(c.name)) >= 0
       ? listed.columns.findIndex((c) => /^(table_?name|name|table)$/i.test(c.name))
@@ -364,7 +299,7 @@ export async function readSchema(
   // One at a time, so a schema read is one query in flight, like any other (the route's bound).
   for (const name of names) {
     try {
-      const d = await send(token, checkQuery(`DESCRIBE ${NAMESPACE}.${name}`), metaLimits, request, signal);
+      const d = await send(token, meta(`DESCRIBE ${NAMESPACE}.${name}`, "describe"), metaLimits, request, signal);
       const at = (pattern: RegExp) => d.columns.findIndex((c) => pattern.test(c.name));
       const col = at(/^(column_?name|name|field)$/i);
       const type = at(/^(type|data_?type)$/i);

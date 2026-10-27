@@ -8,6 +8,7 @@ import {
   type Limits,
 } from "../../../packages/workbench/read";
 import { jsonBody } from "./model-runs-server";
+import { sqlParser } from "./sql-parser";
 
 /**
  * The SQL workbench's server side (docs/admin-sql.md). It reuses the statistics view's
@@ -65,7 +66,9 @@ export async function workbenchQuery(request: Request): Promise<Response> {
   }
   if (typeof sql !== "string")
     return json({ error: { kind: "rejected", message: "Send {\"sql\": \"…\"}.", at: null } }, 400);
-  return bounded((token, limits) => runQuery(token, sql as string, limits, fetch, request.signal));
+  return bounded(async (token, limits) =>
+    runQuery(token, sql as string, await sqlParser(), limits, fetch, request.signal),
+  );
 }
 
 export async function workbenchSchema(request: Request): Promise<Response> {

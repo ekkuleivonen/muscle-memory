@@ -50,7 +50,8 @@ import {
   KEYWORDS,
   TYPES,
 } from "../../../../../packages/workbench/dialect";
-import { NAMESPACE, statementAt } from "../../../../../packages/workbench/sql";
+import { statementAt } from "../../../../../packages/workbench/sql";
+import { NAMESPACE } from "../../../../../packages/workbench/check";
 import type { Schema } from "../../../../../packages/workbench/read";
 
 export const r2Sql = SQLDialect.define({

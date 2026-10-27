@@ -30,6 +30,7 @@
     "@codemirror/state": "6.7.6",
     "@codemirror/view": "6.43.15",
     "@electric-sql/pglite": "0.5.11",
+    "@guanmingchiu/sqlparser-ts": "0.63.0",
     "@lezer/highlight": "1.2.5",
     "@replit/codemirror-vim": "6.4.0",
     "@ruby/3.4-wasm-wasi": "2.10.1",
