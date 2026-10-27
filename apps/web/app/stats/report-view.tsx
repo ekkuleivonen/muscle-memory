@@ -1,12 +1,11 @@
 "use client";
-/** The report's chapters: one headline, one visual, one line of evidence, details on request. */
+/** The report's chapters: one headline, one visual and, only when needed, one short line of context. */
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import type {
   Cell,
   Chapter,
   ComparisonChapter,
-  Evidence,
   HabitChapter,
   Marker,
   NextChapter,
@@ -15,16 +14,13 @@ import type {
   StoryChapter,
   SurpriseChapter,
 } from "../../lib/report";
-import { PEOPLE, shareText } from "../../lib/report";
+import { shareText } from "../../lib/report";
 
 const percent = (x: number) => `${Math.round(x * 1000) / 10}%`;
 
-export function EvidenceLine({ evidence }: { evidence: Evidence }) {
-  return (
-    <div className="report-evidence">
-      <p>{evidence.basis}</p>
-    </div>
-  );
+/** Context a player needs to read the finding correctly; nothing when there is none. */
+function Note({ text }: { text: string | null }) {
+  return text ? <p className="report-note">{text}</p> : null;
 }
 
 function Frame({
@@ -46,7 +42,9 @@ function Frame({
       data-chapter={chapter.id}
     >
       <p className="report-kicker">
-        <span className="t-accent">{String(index + 1).padStart(2, "0")}</span>
+        <span className="t-accent">
+          {String(index + 1).padStart(2, "0")}
+        </span>
         <span className="t-dim"> / {String(count).padStart(2, "0")}</span>{" "}
         <span id={`chapter-${chapter.id}-title`}>{chapter.title}</span>
       </p>
@@ -75,11 +73,7 @@ function Outcomes({ c }: { c: OutcomesChapter }) {
         ))}
       </dl>
       {c.aiNote && <p className="report-chip">{c.aiNote}</p>}
-      <div
-        className="report-grid"
-        role="group"
-        aria-label="Challenges you started"
-      >
+      <div className="report-grid" role="group" aria-label="Challenges you started">
         {c.languages.map((l) => (
           <div className="report-grid-row" key={l.language}>
             <span className="report-grid-label">{l.label}</span>
@@ -91,8 +85,7 @@ function Outcomes({ c }: { c: OutcomesChapter }) {
                   title={`${i.key} · ${i.title}: ${i.outcome === "completed" ? "finished" : "open"}${i.revisited ? ", revisited" : ""}${i.fromUploads ? ", from your uploads" : ""}`}
                 >
                   <span className="sr-only">
-                    {i.key} {i.title}:{" "}
-                    {i.outcome === "completed" ? "finished" : "open"}
+                    {i.key} {i.title}: {i.outcome === "completed" ? "finished" : "open"}
                     {i.revisited ? ", revisited" : ""}
                     {i.fromUploads ? ", from your uploads" : ""}
                   </span>
@@ -108,7 +101,7 @@ function Outcomes({ c }: { c: OutcomesChapter }) {
         <span className="report-cell is-completed is-revisited" /> revisited
         {c.unexplored > 0 ? ` · ${c.unexplored} more waiting` : ""}
       </p>
-      <EvidenceLine evidence={c.evidence} />
+      <Note text={c.note} />
     </>
   );
 }
@@ -141,29 +134,20 @@ function Story({ c }: { c: StoryChapter }) {
           </span>
         ))}
       </div>
-      <ol
-        className="sr-only"
-        aria-label={`Checkpoints on ${c.challenge}, in order`}
-      >
+      <ol className="sr-only" aria-label={`Checkpoints on ${c.challenge}, in order`}>
         {c.markers.map((m, i) => (
           <li key={i}>{m.label}</li>
         ))}
       </ol>
       {c.submissions.length > 0 && (
-        <div
-          className="report-bars"
-          aria-label="Checks passed by each submission"
-          role="list"
-        >
+        <div className="report-bars" aria-label="Checks passed by each submission" role="list">
           {c.submissions.map((s, i) => (
             <div className="report-bar-row" role="listitem" key={i}>
               <span className="t-dim">#{i + 1}</span>
               <span className="report-bar">
                 <span
                   className={`report-fill ${s.result === "passed" && s.passed === s.total ? "is-ok" : "is-err"}`}
-                  style={{
-                    width: s.total ? percent(s.passed / s.total) : "0%",
-                  }}
+                  style={{ width: s.total ? percent(s.passed / s.total) : "0%" }}
                 />
               </span>
               <span>
@@ -177,10 +161,10 @@ function Story({ c }: { c: StoryChapter }) {
       )}
       <p className="report-legend t-dim" aria-hidden>
         ▸ start · example run <span className="t-ok">●</span> passed{" "}
-        <span className="t-err">✗</span> not yet{" "}
-        <span className="t-warn">◆</span> error ‖ left ↻ came back ✔ done
+        <span className="t-err">✗</span> not yet <span className="t-warn">◆</span>{" "}
+        error ‖ left ↻ came back ✔ done
       </p>
-      <EvidenceLine evidence={c.evidence} />
+      <Note text={c.note} />
     </>
   );
 }
@@ -191,20 +175,12 @@ function Habits({ c }: { c: HabitChapter }) {
   return (
     <>
       <h2 className="report-headline">{c.headline}</h2>
-      <div
-        className="report-split"
-        aria-label={`${c.small} small edits and ${c.large} bigger edits`}
-        role="img"
-      >
+      <div className="report-split" aria-label={`${c.small} small edits and ${c.large} bigger edits`} role="img">
         <span className="report-split-small" style={{ flexGrow: c.small }}>
-          {c.small / total >= 0.12
-            ? `${Math.round((c.small / total) * 100)}% small`
-            : ""}
+          {c.small / total >= 0.12 ? `${Math.round((c.small / total) * 100)}% small` : ""}
         </span>
         <span className="report-split-large" style={{ flexGrow: c.large }}>
-          {c.large / total >= 0.12
-            ? `${Math.round((c.large / total) * 100)}% bigger`
-            : ""}
+          {c.large / total >= 0.12 ? `${Math.round((c.large / total) * 100)}% bigger` : ""}
         </span>
       </div>
       <p className="t-dim report-caption">
@@ -214,27 +190,14 @@ function Habits({ c }: { c: HabitChapter }) {
           : ""}
       </p>
       {c.checks.length > 1 && (
-        <div
-          className="report-spark"
-          role="img"
-          aria-label={`Checks per attempt: ${c.checks.map((x) => `${x.challenge} ${x.checks}`).join(", ")}`}
-        >
+        <div className="report-spark" role="img" aria-label={`Checks per attempt: ${c.checks.map((x) => `${x.challenge} ${x.checks}`).join(", ")}`}>
           {c.checks.map((x, i) => (
-            <span
-              key={i}
-              title={`${x.challenge}: ${x.checks} checks`}
-              style={{ height: `${Math.max(8, (x.checks / most) * 100)}%` }}
-            />
+            <span key={i} title={`${x.challenge}: ${x.checks} checks`} style={{ height: `${Math.max(8, (x.checks / most) * 100)}%` }} />
           ))}
         </div>
       )}
-      {c.checks.length > 1 && (
-        <p className="t-dim report-caption">checks per attempt, oldest first</p>
-      )}
-      <p className="report-cohort">
-        <span className="t-dim">People:</span> {PEOPLE.label}
-      </p>
-      <EvidenceLine evidence={c.evidence} />
+      {c.checks.length > 1 && <p className="t-dim report-caption">checks per attempt, oldest first</p>}
+      <Note text={c.note} />
     </>
   );
 }
@@ -243,37 +206,23 @@ const CELL: Record<Cell["kind"], string> = {
   solved: "✔",
   "not-solved": "✗",
   open: "…",
-  withheld: "≠",
-  none: "—",
 };
 function CellView({ cell }: { cell: Cell }) {
   return (
     <span className={`report-result is-${cell.kind}`}>
       <span aria-hidden>{CELL[cell.kind]}</span>{" "}
-      {cell.kind === "solved" ? (
-        <>
-          solved <span className="t-dim">· {cell.note}</span>
-        </>
-      ) : (
-        <span className={cell.kind === "not-solved" ? undefined : "t-dim"}>
-          {cell.note}
-        </span>
-      )}
+      {cell.kind === "solved" ? "solved" : cell.note}
+      {cell.kind === "solved" && cell.note ? <span className="t-dim"> · {cell.note}</span> : null}
     </span>
   );
 }
 function Minds({ c }: { c: ComparisonChapter }) {
   return (
     <>
-      {/* Practice's completion link (owned by ENG-375) still points here. */}
+      {/* Practice's completion link still points here. */}
       <span id="comparisons" />
       <h2 className="report-headline">{c.headline}</h2>
-      <div
-        className="report-table-wrap"
-        tabIndex={0}
-        role="region"
-        aria-label="Results on the same challenges"
-      >
+      <div className="report-table-wrap" tabIndex={0} role="region" aria-label="Results on the same challenges">
         <table className="report-table">
           <thead>
             <tr>
@@ -284,8 +233,7 @@ function Minds({ c }: { c: ComparisonChapter }) {
                   {col}
                 </th>
               ))}
-              {!c.columns.length && <th scope="col">Models</th>}
-              <th scope="col">People</th>
+              {c.people && <th scope="col">Adults</th>}
             </tr>
           </thead>
           <tbody>
@@ -300,41 +248,16 @@ function Minds({ c }: { c: ComparisonChapter }) {
                   <CellView cell={r.you} />
                 </td>
                 {c.columns.map((col) => {
-                  const m = r.models.find((x) => x.slot === col);
-                  return (
-                    <td key={col}>
-                      {r.state === "loading" ? (
-                        <span className="t-dim">reading…</span>
-                      ) : r.state === "unavailable" ? (
-                        <span className="t-dim">can&apos;t be read</span>
-                      ) : m ? (
-                        <CellView cell={m.cell} />
-                      ) : (
-                        <CellView cell={{ kind: "none", note: "not run" }} />
-                      )}
-                    </td>
-                  );
+                  const m = r.models.find((x) => x.model === col);
+                  return <td key={col}>{m ? <CellView cell={m.cell} /> : null}</td>;
                 })}
-                {!c.columns.length && (
-                  <td>
-                    <span className="t-dim">
-                      {r.state === "loading"
-                        ? "reading…"
-                        : r.state === "unavailable"
-                          ? "can't be read"
-                          : "no try yet"}
-                    </span>
-                  </td>
-                )}
-                <td>
-                  <span className="t-dim">{r.people}</span>
-                </td>
+                {c.people && <td className="t-dim">{r.people}</td>}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {/* Narrow screens: one card per challenge, so every model's outcome is visible without scrolling. */}
+      {/* Narrow screens: one card per challenge, so every result is visible without scrolling. */}
       <ul className="report-cards" aria-label="Results on the same challenges">
         {c.rows.map((r) => (
           <li key={r.revision}>
@@ -346,37 +269,25 @@ function Minds({ c }: { c: ComparisonChapter }) {
               <dd>
                 <CellView cell={r.you} />
               </dd>
-              {r.state !== "ready" ? (
-                <>
-                  <dt>Models</dt>
-                  <dd className="t-dim">
-                    {r.state === "loading"
-                      ? "reading…"
-                      : "can't be read right now"}
+              {r.models.map((m) => (
+                <React.Fragment key={m.model}>
+                  <dt>{m.model}</dt>
+                  <dd>
+                    <CellView cell={m.cell} />
                   </dd>
-                </>
-              ) : r.models.length ? (
-                r.models.map((m) => (
-                  <React.Fragment key={m.slot}>
-                    <dt>{m.slot}</dt>
-                    <dd>
-                      <CellView cell={m.cell} />
-                    </dd>
-                  </React.Fragment>
-                ))
-              ) : (
+                </React.Fragment>
+              ))}
+              {r.people && (
                 <>
-                  <dt>Models</dt>
-                  <dd className="t-dim">no try yet</dd>
+                  <dt>Adults</dt>
+                  <dd className="t-dim">{r.people}</dd>
                 </>
               )}
-              <dt>People</dt>
-              <dd className="t-dim">{r.people}</dd>
             </dl>
           </li>
         ))}
       </ul>
-      <EvidenceLine evidence={c.evidence} />
+      <Note text={c.note} />
     </>
   );
 }
@@ -398,18 +309,12 @@ function Surprise({ c }: { c: SurpriseChapter }) {
           <p className="report-big is-after">{c.after.value}</p>
         </div>
       </div>
-      <EvidenceLine evidence={c.evidence} />
+      <Note text={c.note} />
     </>
   );
 }
 
-function Share({
-  items,
-  report,
-}: {
-  items: NextChapter["shareable"];
-  report: Report;
-}) {
+function Share({ items, report }: { items: NextChapter["shareable"]; report: Report }) {
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [status, setStatus] = useState("");
   if (!items.length) return null;
@@ -427,8 +332,7 @@ function Share({
     <details className="report-share">
       <summary>Share a few findings (optional)</summary>
       <p className="t-dim">
-        Pick what to include. Only these sentences are copied: no code,
-        recordings or account.
+        Pick what to include. Only these sentences are copied: no code, recordings or account.
       </p>
       <fieldset>
         <legend className="sr-only">Findings to share</legend>
@@ -450,9 +354,7 @@ function Share({
         ))}
       </fieldset>
       {selected.size > 0 && (
-        <pre className="report-share-text">
-          {shareText(report, selected, "")}
-        </pre>
+        <pre className="report-share-text">{shareText(report, selected, "")}</pre>
       )}
       <button type="button" className="t-cmd" onClick={() => void copy()}>
         Copy to clipboard
@@ -489,17 +391,7 @@ function Next({ c, report }: { c: NextChapter; report: Report }) {
   );
 }
 
-export function ChapterView({
-  chapter,
-  index,
-  count,
-  report,
-}: {
-  chapter: Chapter;
-  index: number;
-  count: number;
-  report: Report;
-}) {
+export function ChapterView({ chapter, index, count, report }: { chapter: Chapter; index: number; count: number; report: Report }) {
   return (
     <Frame chapter={chapter} index={index} count={count}>
       {chapter.id === "outcomes" ? (
@@ -536,11 +428,7 @@ export function ChapterNav({ chapters }: { chapters: Chapter[] }) {
     const seen = new Map<string, boolean>();
     const observer = new IntersectionObserver(
       (entries) => {
-        for (const e of entries)
-          seen.set(
-            (e.target as HTMLElement).dataset.chapter!,
-            e.isIntersecting,
-          );
+        for (const e of entries) seen.set((e.target as HTMLElement).dataset.chapter!, e.isIntersecting);
         const first = ids.split(",").find((id) => seen.get(id));
         if (first) setActive(first as Chapter["id"]);
       },
@@ -586,10 +474,7 @@ export function Preview() {
     ["done", 1],
   ];
   return (
-    <figure
-      className="report-preview"
-      aria-label="Preview with sample data, not yours"
-    >
+    <figure className="report-preview" aria-label="Preview with sample data, not yours">
       <figcaption>
         <span className="report-evidence-tag">preview</span> sample data, not
         yours. After one challenge, your own version of this appears here.
@@ -604,18 +489,12 @@ export function Preview() {
       <div className="report-track" aria-hidden>
         <div className="report-track-line" />
         {marks.map(([k, x], i) => (
-          <span
-            key={i}
-            className={`report-mark is-${k}`}
-            style={{ left: percent(x) }}
-          >
+          <span key={i} className={`report-mark is-${k}`} style={{ left: percent(x) }}>
             {MARK[k]}
           </span>
         ))}
       </div>
-      <p className="report-preview-line">
-        Same challenge, beside the models that tried it
-      </p>
+      <p className="report-preview-line">Same challenge, beside the models that tried it</p>
     </figure>
   );
 }

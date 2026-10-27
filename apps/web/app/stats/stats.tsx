@@ -3,7 +3,7 @@ import Link from "next/link";
 import React, { useMemo, useState } from "react";
 import { buildReport, mergeEvidence, type Report } from "../../lib/report";
 import type { ChallengeSummary } from "../../lib/challenges";
-import { useReportData } from "./report-data";
+import { useReportData, type HistoryStatus } from "./report-data";
 import { ChapterNav, ChapterView, Preview } from "./report-view";
 import type { AttemptSummary } from "../../../../packages/developer-profile/derive";
 
@@ -17,10 +17,10 @@ export function StealthNotice() {
         You&apos;re in stealth, so there&apos;s no report here.
       </h1>
       <p>
-        Stealth leaves you out of comparisons and published insights. In return,
-        this page shows no stats: not your own, not other people&apos;s, not the
-        models&apos;. Practice works as usual, and recording continues as the
-        Privacy Notice describes.
+        Stealth leaves you out of comparisons and published insights. In
+        return, this page shows no stats: not your own, not other
+        people&apos;s, not the models&apos;. Practice works as usual, and
+        recording continues as the Privacy Notice describes.
       </p>
       <p>
         <Link className="t-cmd" href="/settings/privacy">
@@ -29,6 +29,21 @@ export function StealthNotice() {
       </p>
     </section>
   );
+}
+
+/** Only what changes how to read the page: earlier practice still arriving, or not added. */
+function Status({ history }: { history: HistoryStatus }) {
+  const text =
+    history.state === "loading" || history.state === "idle"
+      ? "Adding your earlier practice…"
+      : history.state === "unavailable" || history.state === "limited"
+        ? "Your earlier practice couldn't be added right now; this shows this device only."
+        : null;
+  return text ? (
+    <p className="report-status" role="status">
+      {text}
+    </p>
+  ) : null;
 }
 
 export function ReportBody({
@@ -70,24 +85,13 @@ export function ReportBody({
     <>
       {/* The reveal comes first; where the evidence came from and the chapter list follow it. */}
       <h1 className="sr-only">Your Muscle Memory report</h1>
-      <ChapterView
-        chapter={report.chapters[0]}
-        index={0}
-        count={count}
-        report={report}
-      />
+      <ChapterView chapter={report.chapters[0]} index={0} count={count} report={report} />
       <div className="report-after-lead">
         {status}
         <ChapterNav chapters={report.chapters} />
       </div>
       {report.chapters.slice(1).map((c, i) => (
-        <ChapterView
-          key={c.id}
-          chapter={c}
-          index={i + 1}
-          count={count}
-          report={report}
-        />
+        <ChapterView key={c.id} chapter={c} index={i + 1} count={count} report={report} />
       ))}
       {!report.chapters.some((c) => c.id === "story") && <Preview />}
     </>
@@ -97,8 +101,7 @@ export function ReportBody({
 export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
   // Chapter 4 picks the revisions; the data hook reads their receipts. Kept in state to break the cycle.
   const [wanted, setWanted] = useState<Report["comparisonRevisions"]>([]);
-  const { privacy, local, history, receipts, cohorts, more } =
-    useReportData(wanted);
+  const { privacy, local, history, receipts, cohorts } = useReportData(wanted);
   const device = local.value;
   const uploaded = history.state === "ready" ? history.value.attempts : NONE;
   const attempts = useMemo(
@@ -119,8 +122,7 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
         : null,
     [catalog, device, attempts, receipts, cohorts],
   );
-  const key =
-    report?.comparisonRevisions.map((r) => r.revision).join("|") ?? "";
+  const key = report?.comparisonRevisions.map((r) => r.revision).join("|") ?? "";
   if (key !== wanted.map((r) => r.revision).join("|"))
     setWanted(report?.comparisonRevisions ?? []);
   return (
@@ -130,9 +132,7 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
           <StealthNotice />
         ) : privacy === "signed-out" ? (
           <section className="report-quiet">
-            <h1 className="report-headline">
-              Your report needs your account on this browser.
-            </h1>
+            <h1 className="report-headline">Your report needs your account on this browser.</h1>
             <p>
               <Link className="t-cmd" href="/consent?next=/stats">
                 Sign in again →
@@ -141,12 +141,9 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
           </section>
         ) : privacy === "error" || (local.error && !report) ? (
           <section className="report-quiet">
-            <h1 className="report-headline">
-              Your practice couldn&apos;t be read on this browser.
-            </h1>
+            <h1 className="report-headline">Your practice couldn&apos;t be read on this browser.</h1>
             <p className="t-dim">
-              Storage may be blocked or full. Nothing was changed; reload the
-              page to try again.
+              Storage may be blocked or full. Nothing was changed; reload the page to try again.
             </p>
           </section>
         ) : !report ? (
@@ -155,17 +152,20 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
           </p>
         ) : (
           <>
-            <ReportBody report={report} status={null} />
-            {history.state === "ready" && history.value.next && (
-              <button type="button" className="t-cmd" onClick={more}>
-                Earlier practice
-              </button>
-            )}
-            {local.error && (
-              <p role="status" className="t-dim">
-                Some saved practice couldn&apos;t be read.
-              </p>
-            )}
+            <ReportBody
+              report={report}
+              status={<Status history={history} />}
+            />
+            {local.error && <p role="status" className="t-dim">Some saved practice couldn&apos;t be read.</p>}
+            <p className="report-footer">
+              <Link className="t-cmd" href="/privacy">
+                How your data is used
+              </Link>{" "}
+              ·{" "}
+              <Link className="t-cmd" href="/settings">
+                Your data settings
+              </Link>
+            </p>
           </>
         )}
       </div>

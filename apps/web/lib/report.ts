@@ -9,6 +9,7 @@ import {
   receiptMatch,
   type ModelReceipt,
 } from "../../../packages/model-runs/receipts";
+import { defaultComparisons } from "../../../packages/model-runs/comparison";
 import { languageLabel, type ChallengeSummary } from "./challenges";
 import { matchingGroup, type CohortRead } from "../../../packages/statistics/cohort";
 import type { Profile } from "./profile";
@@ -24,17 +25,6 @@ export type ReportAttempt = AttemptSummary & { source: Source };
 export const SMALL_STEP_SHARE = 0.75;
 export const LARGE_STEP_SHARE = 0.3;
 export const FREQUENT_CHECKS = 3;
-/**
- * Comparisons with other people. There is no player-facing aggregate path and no approved minimum
- * group size (docs/legal.md, publication boundaries), so the report states that reason; it never
- * implies a cohort was checked and came back small. Replace with a real cohort read once both exist.
- */
-export const PEOPLE = {
-  available: false,
-  label: "not compared yet",
-  reason:
-    "Comparing you with other people needs an approved minimum group size first. Until then the report shows no figure about anyone else.",
-} as const;
 /** At most this many tasks in the model comparison, so receipt reads stay bounded. */
 export const COMPARISON_TASKS = 3;
 
@@ -60,14 +50,6 @@ export function mergeEvidence(
   );
 }
 
-export interface Evidence {
-  /** One short line under the visual: what it is based on. */
-  basis: string;
-  /** Uncertainty that belongs next to the finding. */
-  caveat?: string;
-  /** Definitions, sample and conditions, behind a disclosure. */
-  details: string[];
-}
 
 export type Outcome = "completed" | "unfinished";
 export interface ChallengeOutcome {
@@ -91,7 +73,8 @@ export interface OutcomesChapter {
   heroes: { value: string; label: string }[];
   languages: { language: string; label: string; items: ChallengeOutcome[] }[];
   unexplored: number;
-  evidence: Evidence;
+  /** At most one short line of context a player needs to read the finding correctly. */
+  note: string | null;
 }
 export type MarkerKind =
   | "start"
@@ -120,7 +103,8 @@ export interface StoryChapter {
   markers: Marker[];
   submissions: { passed: number; total: number; result: string }[];
   breaks: number;
-  evidence: Evidence;
+  /** At most one short line of context a player needs to read the finding correctly. */
+  note: string | null;
 }
 export interface HabitChapter {
   id: "habits";
@@ -131,22 +115,20 @@ export interface HabitChapter {
   checks: { challenge: string; checks: number }[];
   editsBetween: number | null;
   returned: string[];
-  evidence: Evidence;
+  /** At most one short line of context a player needs to read the finding correctly. */
+  note: string | null;
 }
 export type Cell =
   | { kind: "solved"; note: string }
   | { kind: "not-solved"; note: string }
-  | { kind: "open"; note: string }
-  | { kind: "withheld"; note: string }
-  | { kind: "none"; note: string };
+  | { kind: "open"; note: string };
 export interface ComparisonRow {
   challenge: string;
   revision: string;
   you: Cell;
-  models: { slot: string; cell: Cell; receipt: ModelReceipt }[];
-  state: "loading" | "ready" | "unavailable";
-  /** Other people on the same revision and conditions, from a suppressed aggregate, or why not. */
-  people: string;
+  models: { model: string; cell: Cell; receipt: ModelReceipt }[];
+  /** A real suppressed figure for other adults, or null (the column is then left out). */
+  people: string | null;
 }
 export interface ComparisonChapter {
   id: "minds";
@@ -154,7 +136,9 @@ export interface ComparisonChapter {
   headline: string;
   rows: ComparisonRow[];
   columns: string[];
-  evidence: Evidence;
+  people: boolean;
+  /** At most one short line of context a player needs to read the finding correctly. */
+  note: string | null;
 }
 export interface SurpriseChapter {
   id: "surprise";
@@ -164,7 +148,8 @@ export interface SurpriseChapter {
   headline: string;
   before: { label: string; value: string };
   after: { label: string; value: string };
-  evidence: Evidence;
+  /** At most one short line of context a player needs to read the finding correctly. */
+  note: string | null;
 }
 export interface NextChapter {
   id: "next";
@@ -277,9 +262,6 @@ function outcomes(input: ReportInput): {
     profile?.aiUse === "daily" ||
     profile?.aiShare === "most" ||
     profile?.aiShare === "nearly-all";
-  const aiDetail = heavy
-    ? `You told us AI ${profile?.aiUse === "daily" ? "helps you code daily" : "writes much of the code you ship"}. The editor here offers no AI; what happens outside it isn't recorded.`
-    : null;
   const firsts = attempts.filter(
     (a) => clean(a) && typeof a.values.firstSubmit === "number",
   );
@@ -317,22 +299,7 @@ function outcomes(input: ReportInput): {
         items: rows.filter((r) => r.language === language),
       })),
       unexplored: catalog.length - rows.length,
-      evidence: {
-        basis: `${plural(done, "finished challenge")}, ${open} open${uploaded ? `, from this device and your uploads${rows.some((r) => r.fromUploads) ? ` (${rows.filter((r) => r.fromUploads).length} finished only in your uploads, not in this device's progress)` : ""}` : ", from this device"}.`,
-        caveat:
-          open > 0
-            ? "Open isn't failed: it's work you haven't finished yet."
-            : undefined,
-        details: [
-          ...(aiDetail ? [aiDetail] : []),
-          "Finished means a submission passed every check and rule at least once. Open means started on this device or in your uploads without that.",
-          "Revisited means more than one attempt or completion of the same challenge.",
-          firsts.length
-            ? `First submissions: ${plural(firsts.length, "attempt")} with a complete trace and a decided first submission. Runner failures, timeouts and cancellations don't count either way.`
-            : "First-submission outcomes need a complete trace with a decided first submission; none is available yet.",
-          "These are the challenges you chose, so they describe those tasks, not your ability in general.",
-        ],
-      },
+      note: open > 0 ? "Open isn't failed: it's work you haven't finished yet." : null,
     },
   };
 }
@@ -351,7 +318,7 @@ function story(attempts: readonly ReportAttempt[]): StoryChapter | null {
         (clean(a) ? 1 : 0);
       return { a, score, subs };
     })
-    .filter((s) => s.score >= 2 && s.a.timeline.length >= 3)
+    .filter((s) => s.score >= 2 && s.a.timeline.length >= 3 && clean(s.a))
     .sort(
       (x, y) =>
         y.score - x.score ||
@@ -453,22 +420,7 @@ function story(attempts: readonly ReportAttempt[]): StoryChapter | null {
     markers,
     submissions: subs.map(({ passed, total, result }) => ({ passed, total, result })),
     breaks,
-    evidence: {
-      basis: `One ${a.completed ? "finished" : "open"} attempt, ${plural(markers.length, "recorded checkpoint")}${a.source === "uploaded" ? ", from your uploads" : ""}.`,
-      caveat: a.issues.length
-        ? "Parts of this recording are missing, so some steps may not appear."
-        : breaks
-          ? `Gaps over 10 minutes are shortened (${plural(breaks, "break")}). Time away isn't labelled as anything.`
-          : undefined,
-      details: [
-        `Revision ${a.revision.slice(0, 19)}…, ${a.started ? `started ${a.started.slice(0, 10)}` : "start not recorded"}.`,
-        "Checkpoints are recorded events in order: example runs, submissions with their passing checks, leaving and coming back. No code is shown.",
-        between === null
-          ? "Edits between checks: unavailable for this attempt."
-          : `A median of ${plural(between, "edit")} between one check and the next.`,
-        ...a.issues,
-      ],
-    },
+    note: null,
   };
 }
 
@@ -520,75 +472,28 @@ function habits(attempts: readonly ReportAttempt[]): HabitChapter | null {
     checks: perAttempt,
     editsBetween: between,
     returned,
-    evidence: {
-      basis: `${plural(small + large, "edit")} across ${plural(eligible.length, "attempt")} with complete recordings.`,
-      caveat:
-        "A size, not a judgement: bigger edits include pastes and rewrites, and neither means a mistake or outside help.",
-      details: [
-        `Small means at most ${SMALL_EDIT_UNITS} characters inserted plus deleted in one edit; anything larger is a bigger piece.`,
-        `The headline picks the strongest true description: at least ${SMALL_STEP_SHARE * 100}% small edits with a median of ${FREQUENT_CHECKS}+ checks per attempt, or at least ${LARGE_STEP_SHARE * 100}% bigger pieces. These cut-offs choose wording; they aren't norms.`,
-        between === null
-          ? "Edits between checks: unavailable."
-          : `Median edits between one check and the next: ${number(between)}.`,
-        returned.length
-          ? `Came back after leaving: ${returned.join(", ")}.`
-          : "No recorded returns to an unfinished attempt.",
-        "Attempts with recording gaps or oversized edits are left out rather than counted as zero.",
-        `People: ${PEOPLE.reason}`,
-      ],
-    },
+    note: "Bigger pieces include pastes and rewrites; neither means a mistake.",
   };
 }
 
-const MODEL_STATE: Partial<Record<ModelReceipt["state"], string>> = {
-  stopped: "stopped",
-  budget: "ran out of budget",
-  refused: "refused",
-  error: "provider error",
-  "infrastructure-failed": "harness failed",
-  queued: "queued",
-  running: "running",
-  missing: "no receipt",
-  incompatible: "unverified",
-  "receipt-unavailable": "unreadable",
-};
-function modelCell(r: ModelReceipt, conditions: readonly string[]): Cell {
-  if (r.state === "completed" || ["stopped", "budget", "refused"].includes(r.state)) {
-    const match = receiptMatch(r, conditions);
-    if (match !== "matched")
-      return { kind: "withheld", note: match.replace("-", " ") };
-    return r.state === "completed"
-      ? { kind: "solved", note: r.submissions === null ? "submissions not recorded" : plural(r.submissions, "submission") }
-      : { kind: "not-solved", note: MODEL_STATE[r.state]! };
-  }
-  return { kind: "none", note: MODEL_STATE[r.state] ?? r.state };
-}
 /**
- * The people cell: a matched suppressed aggregate, a checked-and-too-small group, or the reason
- * there is no comparison. Never a nearest group, a pooled total or a zero.
+ * A model's single default-setting try, shown only when it is comparable: a decided outcome on the
+ * same runtime and diagnostics. Anything else is left out rather than explained.
  */
-function peopleCell(read: CohortRead | "loading" | "unavailable" | undefined, a: ReportAttempt): string {
-  if (read === "loading") return "reading…";
-  if (read === "unavailable") return "can't be read";
-  if (!read || read.state === "disabled") return PEOPLE.label;
-  if (read.state === "unavailable") return "can't be read";
-  if (read.state === "earlier-version") return "earlier version, not compared";
-  const known = (prefix: string) => a.conditions.filter((c) => c.startsWith(prefix)).length === 1;
-  if (!known("Runtime: ") || !known("Editor: ")) return "your conditions weren't recorded";
-  const group = matchingGroup(read, a.conditions, a.practice === "repeat" ? "repeat" : "first");
-  if (!group) return `fewer than ${read.minimum} comparable adults`;
-  const solved = `adults: ${Math.round(group.solved * 100)}% solved`;
-  return group.submissions ? `${solved} · median ${plural(group.submissions.p50, "submission")}` : solved;
+function modelCell(r: ModelReceipt | null, conditions: readonly string[]): Cell | null {
+  if (!r || !["completed", "stopped", "budget", "refused"].includes(r.state)) return null;
+  if (receiptMatch(r, conditions) !== "matched") return null;
+  return r.state === "completed"
+    ? { kind: "solved", note: r.submissions === null ? "" : plural(r.submissions, "submission") }
+    : { kind: "not-solved", note: "didn't solve" };
 }
-/** What a people figure counts, from the read itself; the disabled reason when there is none. */
-function peopleDetails(cohorts: ReportInput["cohorts"]): string[] {
-  const read = Object.values(cohorts ?? {}).find((r): r is CohortRead => typeof r === "object" && r.state === "ready");
-  if (!read) return [`People: ${PEOPLE.reason}`];
-  const e = read.eligibility;
-  return [
-    `People: groups of at least ${read.minimum} ${e.unit}, on the same challenge version, runtime and diagnostics; ${e.attempts}.`,
-    `Ages: ${e.ages}. Stealth: ${e.stealth}. Consent: ${e.consent}. Sizes are shown as bands and shares rounded to 5%; a smaller group isn't shown.`,
-  ];
+/** Other adults on the same revision and conditions, only when a real suppressed figure exists. */
+function peopleCell(read: CohortRead | "loading" | "unavailable" | undefined, a: ReportAttempt): string | null {
+  if (!read || typeof read !== "object" || read.state !== "ready") return null;
+  const group = matchingGroup(read, a.conditions, a.practice === "repeat" ? "repeat" : "first");
+  if (!group) return null;
+  const solved = `${Math.round(group.solved * 100)}% of adults solved it`;
+  return group.submissions ? `${solved} · median ${plural(group.submissions.p50, "submission")}` : solved;
 }
 function minds(input: ReportInput): {
   chapter: ComparisonChapter | null;
@@ -610,100 +515,45 @@ function minds(input: ReportInput): {
     .slice(0, COMPARISON_TASKS);
   if (!picked.length) return { chapter: null, wanted: [] };
   const wanted = picked.map((a) => ({ challenge: a.challenge, revision: a.revision }));
-  const rows: ComparisonRow[] = picked.map((a) => {
+  const rows: ComparisonRow[] = picked.flatMap((a) => {
+    const got = input.receipts[a.revision];
+    // One row per model, its declared default setting's first try (shared with practice, ENG-375).
+    const models = (Array.isArray(got) ? defaultComparisons(got) : []).flatMap(({ model, receipt }) => {
+      const cell = modelCell(receipt, a.conditions);
+      return cell && receipt ? [{ model, cell, receipt }] : [];
+    });
+    const people = peopleCell(input.cohorts?.[a.revision], a);
+    if (!models.length && !people) return [];
     const subs = submissions(a);
     const you: Cell = a.completed
-      ? {
-          kind: "solved",
-          note: subs.length
-            ? plural(subs.length, "submission")
-            : a.values.submissions === null
-              ? "submissions not recorded"
-              : plural(a.values.submissions, "submission"),
-        }
-      : { kind: "open", note: subs.length ? `${subs.at(-1)!.passed}/${subs.at(-1)!.total} so far` : "open" };
-    const got = input.receipts[a.revision];
-    const people = peopleCell(input.cohorts?.[a.revision], a);
-    if (!Array.isArray(got))
-      return {
-        challenge: a.challenge,
-        revision: a.revision,
-        you,
-        people,
-        models: [],
-        state: got === "unavailable" ? "unavailable" : "loading",
-      };
-    const slots = new Map<string, ModelReceipt>();
-    for (const r of got) {
-      const slot = `${r.model} · ${r.reasoning}`;
-      if (!slots.has(slot)) slots.set(slot, r);
-    }
-    return {
-      challenge: a.challenge,
-      revision: a.revision,
-      you,
-      people,
-      state: "ready",
-      models: [...slots].map(([slot, receipt]) => ({
-        slot,
-        receipt,
-        cell: modelCell(receipt, a.conditions),
-      })),
-    };
+      ? { kind: "solved", note: subs.length ? plural(subs.length, "submission") : "" }
+      : { kind: "open", note: subs.length ? `${subs.at(-1)!.passed}/${subs.at(-1)!.total} so far` : "not finished" };
+    return [{ challenge: a.challenge, revision: a.revision, you, models, people }];
   });
-  const columns = [...new Set(rows.flatMap((r) => r.models.map((m) => m.slot)))].sort();
-  const compared = rows.flatMap((r) =>
-    r.models.filter((m) => m.cell.kind === "solved" || m.cell.kind === "not-solved"),
-  );
-  // One count per model and setting: pooling different models' single tries would read like a rate.
+  // Pending or unreadable results and incomparable tries are omitted, not described.
+  if (!rows.length) return { chapter: null, wanted };
+  const columns = [...new Set(rows.flatMap((r) => r.models.map((m) => m.model)))].sort();
+  // One count per model: pooling different models' single tries would read like a rate.
   const tally = new Map<string, { solved: number; tried: number }>();
-  for (const m of compared) {
-    const t = tally.get(m.slot) ?? { solved: 0, tried: 0 };
+  for (const m of rows.flatMap((r) => r.models)) {
+    const t = tally.get(m.model) ?? { solved: 0, tried: 0 };
     t.tried++;
     if (m.cell.kind === "solved") t.solved++;
-    tally.set(m.slot, t);
+    tally.set(m.model, t);
   }
-  // The full slot (model · reasoning), so two settings of one model stay distinct.
-  const named = [...tally].slice(0, 3).map(([slot, t]) => `${slot} solved ${t.solved} of ${t.tried}`);
+  const named = [...tally].slice(0, 3).map(([model, t]) => `${model} solved ${t.solved} of ${t.tried}`);
   const perModel = tally.size > 3 ? `${named.join(", ")} and ${tally.size - 3} more` : named.join(", ");
-  const ready = rows.every((r) => r.state !== "loading");
-  // A failed read is not an empty result: absence is claimed only for receipts actually read.
-  const unreadable = rows.filter((r) => r.state === "unavailable").length;
-  const headline = !ready
-    ? "Checking which models tried the same challenges…"
-    : unreadable === rows.length
-      ? "Model results can't be read right now."
-      : !compared.length
-        ? unreadable
-          ? `No model has a comparable try on the challenges that could be read; ${unreadable} couldn't be read right now.`
-          : "No model has a comparable try on these exact challenges yet."
-        : `You solved ${rows.filter((r) => r.you.kind === "solved").length} of ${rows.length}. ${perModel}.${unreadable ? ` ${unreadable} couldn't be read right now.` : ""}`;
+  const yours = `You solved ${rows.filter((r) => r.you.kind === "solved").length} of ${rows.length}.`;
   return {
     wanted,
     chapter: {
       id: "minds",
       title: "Same challenge. Different minds.",
-      headline,
+      headline: perModel ? `${yours} ${perModel}.` : yours,
       rows,
       columns,
-      evidence: {
-        basis: (() => {
-          const read = rows.filter((r) => r.state === "ready").length;
-          const tried = `${plural(rows.length, "challenge")} you tried`;
-          if (!ready) return `${tried}; model results are being read.`;
-          if (!read) return `${tried}. Model results couldn't be read.`;
-          return read === rows.length
-            ? `${tried}, checked against model tries on the exact same version.`
-            : `${tried}; ${read} checked against model tries on the exact same version.`;
-        })(),
-        caveat:
-          "Each model cell is one observed try, not a success rate. Your time and a model's latency aren't a race.",
-        details: [
-          "A model result counts only when its recorded runtime and editor diagnostics match yours; otherwise it's withheld.",
-          "Models use edit, run and submit tools rather than a keyboard. Outside help on either side isn't recorded.",
-          ...peopleDetails(input.cohorts),
-        ],
-      },
+      people: rows.some((r) => r.people),
+      note: tally.size ? "Each model result is a single try." : null,
     },
   };
 }
@@ -727,14 +577,7 @@ function surprise(
       headline: `You said you were ${quiet.answers.confidence === "guessing" ? "guessing" : "unsure"} on ${quiet.challenge}. Your first submission passed every check.`,
       before: { label: "How sure you felt afterwards", value: quiet.answers.confidence },
       after: { label: "First submission", value: "passed everything" },
-      evidence: {
-        basis: "Your optional answer after finishing, beside that attempt's first submission.",
-        caveat:
-          "You answered after finishing, so this isn't a prediction or a calibration score.",
-        details: [
-          "Only finished attempts are asked, so these answers can't show how sure people feel before a failure.",
-        ],
-      },
+      note: null,
     };
   const groups = new Map<string, ReportAttempt[]>();
   for (const a of done) {
@@ -757,11 +600,7 @@ function surprise(
         headline: `Back on ${later.challenge}, you needed ${plural(later.values.submissions!, "submission")} instead of ${earlier.values.submissions}.`,
         before: { label: `First time (${(earlier.started ?? earlier.last).slice(0, 10)})`, value: plural(earlier.values.submissions!, "submission") },
         after: { label: `Latest (${(later.started ?? later.last).slice(0, 10)})`, value: plural(later.values.submissions!, "submission") },
-        evidence: {
-          basis: `${plural(sorted.length, "finished attempt")} at the same challenge version and conditions.`,
-          caveat: "Familiarity with this task helps; it doesn't show a general change.",
-          details: ["Repeats are compared only with the same version, runtime and editor tools."],
-        },
+        note: "It's the same challenge, so familiarity helps.",
       };
   }
   const recovered = done.find(
@@ -780,10 +619,7 @@ function surprise(
       headline: `${recovered.challenge} didn't pass at first. You finished it anyway.`,
       before: { label: "First submission", value: first.result === "errored" ? "an error in the code" : `${first.passed}/${first.total} checks` },
       after: { label: "In the end", value: "passed everything" },
-      evidence: {
-        basis: "Submissions recorded in that attempt.",
-        details: ["Runner failures and timeouts aren't counted as your failures."],
-      },
+      note: null,
     };
   return null;
 }
@@ -843,7 +679,7 @@ function next(
       ? {
           label: "Add your coding experience (optional)",
           href: "/settings/profile/experience",
-          why: "Used only if comparisons with other people are switched on. Skip it any time; nothing here depends on it.",
+          why: "It helps compare like with like. Optional, and nothing here depends on it.",
         }
       : null;
   return {
