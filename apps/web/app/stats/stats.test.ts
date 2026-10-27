@@ -49,7 +49,7 @@ test("a portrait is questions with answers, never inventories, chapters or inter
   const html = renderToStaticMarkup(createElement(ReportBody, { report, status: null }));
   assert.match(html, /<h1[^>]*>How you code<\/h1>/);
   assert.match(html, /How soon do you start typing\?/);
-  assert.match(html, /How fast do you type when you&#x27;re coding\?/);
+  assert.doesNotMatch(html, /How fast do you type/, "the fixture has no run of code characters, so typing is left out");
   assert.equal((html.match(/report-fyi/g) ?? []).length, 1, "one tiny model FYI, no comparison section");
   assert.match(html, /FYI: models that solved the same challenges needed 1 submission, typically\./);
   assert.doesNotMatch(

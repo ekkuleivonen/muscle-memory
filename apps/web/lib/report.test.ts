@@ -1,18 +1,19 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { deriveAttempts, type AttemptSummary } from "../../../packages/developer-profile/derive";
-import { trace } from "../../../packages/developer-profile/fixtures";
+import { trace, syntheticRevision } from "../../../packages/developer-profile/fixtures";
 import type { ModelReceipt } from "../../../packages/model-runs/receipts";
 import type { ChallengeSummary } from "./challenges";
 import type { Progress } from "./progress";
 import { buildReport, duration, mergeEvidence, type Question, type ReportAttempt, type ReportInput } from "./report";
 
-const challenge = (key: string, language: string, difficulty = "easy") =>
-  ({ key, title: `Synthetic ${key}`, language, tags: ["arrays"], difficulty, runnable: true }) as unknown as ChallengeSummary;
+const challenge = (key: string, language: string, difficulty = "easy", revision = syntheticRevision) =>
+  ({ key, title: `Synthetic ${key}`, language, tags: ["arrays"], difficulty, runnable: true, revision }) as unknown as ChallengeSummary;
+const revB = `sha256:${"b".repeat(64)}`;
 const catalog = [
   challenge("JS-001", "javascript", "easy"),
   challenge("JS-002", "javascript", "medium"),
-  challenge("PY-001", "python", "medium"),
+  challenge("PY-001", "python", "medium", revB),
   challenge("PY-002", "python", "hard"),
 ];
 const progressOf = (p: Record<string, { completedAt: string | null; completions: number; attempt?: string }>): Progress =>
@@ -63,18 +64,16 @@ test("something started but nothing answerable stays brief: one line and the res
 
 test("a solved trace answers the supported questions from recorded values only", () => {
   const js = summary("a1", "JS-001"),
-    py = summary("a2", "PY-001", `sha256:${"b".repeat(64)}`);
+    py = summary("a2", "PY-001", revB);
   const r = buildReport(input({ attempts: device(js, py) }));
-  assert.deepEqual(r.questions.map((x) => x.id), ["start", "iterate", "recovery", "rewrite", "typing", "difficulty", "languages"]);
-  // The fixture: first edit at 0.1 s, a 9.3 s session, 2 submissions, the first failed.
-  assert.equal(q(r, "start")!.answer, "About 1 s before your first edit, then 9 s to a solve.");
+  // The fixture's few keys never form a run of code characters, so typing is left out.
+  assert.deepEqual(r.questions.map((x) => x.id), ["start", "iterate", "recovery", "rewrite", "difficulty", "languages"]);
+  // The fixture: first edit at 0.1 s, 2 submissions, the first failed.
+  assert.equal(q(r, "start")!.answer, "Your first edit comes about 1 s in.");
   assert.equal(q(r, "iterate")!.answer, "A few checks per solve: 2 checks in a typical one.");
   assert.deepEqual(q(r, "iterate")!.visual, { kind: "bars", bars: [{ label: "2–3 checks", value: 2, display: "2 solves" }] });
   assert.equal(q(r, "recovery")!.answer, "2 solves came after a failed first submission, a median of 1 more check later.");
-  // 5 characters inserted, 2 deleted: 60% stays; all edits small.
-  assert.equal(q(r, "rewrite")!.answer, "You patch in small edits; about 60% of what you type stays.");
-  // 90 ms between keystrokes in a burst: 60000 / 90 / 5 = 133.
-  assert.equal(q(r, "typing")!.answer, "About 133 words a minute while you're typing.");
+  assert.equal(q(r, "rewrite")!.answer, "Mostly small edits: 100% change 20 characters or fewer.");
   assert.equal(q(r, "difficulty")!.answer, "easy 7 s, medium 7 s of active time, typically.");
   assert.equal(q(r, "languages")!.answer, "Mostly JavaScript, then Python.");
   assert.doesNotMatch(visible(r), /thinking|reading|finished \d|open|revisited|waiting|sha256|revision|harness|receipt|evidence/i);
@@ -161,4 +160,64 @@ test("the real uploaded-history projection flows into the portrait beside device
   const r = buildReport(input({ attempts: merged }));
   assert.match(q(r, "iterate")!.answer, /2 checks/);
   assert.doesNotMatch(JSON.stringify(r), /synthetic-artifact|"abc"|secret/, "no code or identifiers reach the report");
+});
+
+/** The fixture trace with its key batch replaced: [elapsedMs, key, modifiers] per keydown. */
+function withKeys(attempt: string, keys: [number, string, string][]): AttemptSummary {
+  const records = trace(attempt, `${attempt}-source`).map((r) => {
+    const o = JSON.parse(r.payload);
+    if (o.type !== "practice.keys") return r;
+    o.data.keys = keys.map(([at, key, mods]) => [at, "down", key, key.length === 1 ? `Key${key.toUpperCase()}` : key, mods, false]);
+    return { ...r, payload: JSON.stringify(o) };
+  });
+  return deriveAttempts(records, "synthetic-participant")[0];
+}
+
+test("typing speed counts only runs of code characters, pooled, never arrows, shortcuts or pauses", () => {
+  const typed = Array.from({ length: 61 }, (_, i) => [200 + i * 100, "abcdefghij"[i % 10], ""] as [number, string, string]);
+  const a = withKeys("k1", typed);
+  assert.equal(a.values.typedKeys, 60);
+  assert.equal(a.values.typingTime, 6000);
+  // 60 keys in 6 s: 600 a minute, 120 words.
+  assert.equal(q(buildReport(input({ attempts: device(a) })), "typing")!.answer, "About 120 words a minute while you're typing code.");
+  const arrows = withKeys("k2", Array.from({ length: 61 }, (_, i) => [200 + i * 100, "ArrowRight", ""] as [number, string, string]));
+  assert.equal(arrows.values.typedKeys, 0);
+  assert.equal(q(buildReport(input({ attempts: device(arrows) })), "typing"), undefined, "an arrow-only burst is not typing");
+  const shortcuts = withKeys("k3", Array.from({ length: 61 }, (_, i) => [200 + i * 100, "c", "C"] as [number, string, string]));
+  assert.equal(shortcuts.values.typedKeys, 0, "Ctrl+C is not a typed character");
+  const paused = withKeys("k4", Array.from({ length: 61 }, (_, i) => [200 + i * 2500, "a", ""] as [number, string, string]));
+  assert.equal(paused.values.typedKeys, 0, "keys 2.5 s apart are pauses, not typing");
+});
+
+test("the first-edit answer ignores resumes and idle time after a solve", () => {
+  const a = summary("p1", "JS-001");
+  const idle = { ...a, values: { ...a.values, elapsed: 6 * 3600_000 } };
+  assert.equal(q(buildReport(input({ attempts: device(idle) })), "start")!.answer, "Your first edit comes about 1 s in.");
+  assert.doesNotMatch(JSON.stringify(q(buildReport(input({ attempts: device(idle) })), "start")), /to a solve|6 h/);
+});
+
+test("deleting starter code or pasting changes edit sizes, never a claim about what survived", () => {
+  const a = summary("s1", "JS-001");
+  const starterAndPaste = { ...a, values: { ...a.values, deleted: 400, inserted: 600, smallEdits: 6, largeEdits: 4, paste: 2 } };
+  const r = q(buildReport(input({ attempts: device(starterAndPaste) })), "rewrite")!;
+  assert.equal(r.answer, "Often bigger pieces: 40% of your edits change more than 20 characters at once.");
+  assert.doesNotMatch(JSON.stringify(r), /stays|kept|surviv|rewrite intent/i);
+});
+
+test("repeated solves count each model try once in the FYI", () => {
+  const solves = [summary("x1", "JS-001"), summary("x2", "JS-001"), summary("x3", "JS-001"), summary("y1", "PY-001", revB)];
+  const receipts = {
+    [syntheticRevision]: [receipt({ submissions: 2 })],
+    [revB]: [receipt({ submissions: 6, runtime: { engine: "javascript", version: "synthetic" } })],
+  };
+  // Distinct tries [2, 6] give 4; counting JS-001's try three times would give 2.
+  assert.equal(q(buildReport(input({ attempts: device(...solves), receipts })), "iterate")!.fyi, "FYI: models that solved the same challenges needed 4 submissions, typically.");
+});
+
+test("an attempt on an earlier revision isn't classified with current difficulty or language", () => {
+  const old = summary("h1", "JS-001", `sha256:${"c".repeat(64)}`),
+    other = summary("h2", "PY-001", revB);
+  const r = buildReport(input({ attempts: device(old, other) }));
+  assert.equal(q(r, "difficulty"), undefined, "only PY-001 (medium) has matching metadata: one level");
+  assert.equal(q(r, "languages")!.answer, "All Python so far.");
 });

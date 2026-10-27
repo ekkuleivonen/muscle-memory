@@ -22,6 +22,8 @@ export const LARGE_STEP_SHARE = 0.3;
 export const COMPARISON_TASKS = 3;
 /** Keystrokes per word for words per minute, the usual typing-test convention. */
 export const KEYS_PER_WORD = 5;
+/** Below this many code-character keystrokes a typing rate is too noisy to show. */
+export const MIN_TYPED_KEYS = 50;
 
 /** One attempt per attempt/revision: the trace with the later last observation wins, the device on a tie. */
 export function mergeEvidence(
@@ -109,18 +111,21 @@ export function submissions(a: AttemptSummary) {
   });
 }
 
-/** Before the first edit vs from first edit to solved, over clean solves. Never "reading" or "thinking". */
+/**
+ * Time from the start to the first edit, on one clock (same page session), over clean solves.
+ * Nothing after it: the recorded session span includes pauses, runner waits and time after a
+ * solve, so it is not implementation time. Never called reading or thinking.
+ */
 function start(solved: ReportAttempt[]): Question | null {
-  const pairs = solved.filter((a) => num(a.values.firstEdit) && num(a.values.elapsed) && a.values.elapsed! > a.values.firstEdit!);
-  if (!pairs.length) return null;
-  const before = median(pairs.map((a) => a.values.firstEdit!))!;
-  const after = median(pairs.map((a) => a.values.elapsed! - a.values.firstEdit!))!;
+  const firsts = solved.filter((a) => num(a.values.firstEdit)).map((a) => a.values.firstEdit!);
+  if (!firsts.length) return null;
+  const m = median(firsts)!;
   return {
     id: "start",
     question: "How soon do you start typing?",
-    answer: `About ${duration(before)} before your first edit, then ${duration(after)} to a solve.`,
-    visual: { kind: "split", parts: [{ label: "before first edit", value: before }, { label: "first edit to solved", value: after }] },
-    note: pairs.length === 1 ? "From one solve so far." : null,
+    answer: `Your first edit comes about ${duration(m)} in.`,
+    visual: { kind: "number", value: duration(m), unit: "to your first edit" },
+    note: firsts.length === 1 ? "From one solve so far." : null,
     fyi: null,
   };
 }
@@ -162,12 +167,23 @@ function iterate(solved: ReportAttempt[], fyi: string | null): Question | null {
   };
 }
 
+/**
+ * Catalog metadata for an attempt only when it ran the challenge's current revision: an older
+ * revision may have had a different difficulty or language, so it is left out rather than guessed.
+ */
+function current<T>(catalog: readonly ChallengeSummary[], pick: (c: ChallengeSummary) => T) {
+  const byKey = new Map(catalog.map((c) => [c.key, c]));
+  return (a: AttemptSummary): T | undefined => {
+    const c = byKey.get(a.challenge);
+    return c && c.revision === a.revision ? pick(c) : undefined;
+  };
+}
 /** Active time (keystrokes, edits and selections, gaps over 30 s left out) by catalog difficulty. */
 function difficulty(solved: ReportAttempt[], catalog: readonly ChallengeSummary[]): Question | null {
-  const level = new Map(catalog.map((c) => [c.key, c.difficulty]));
+  const level = current(catalog, (c) => c.difficulty);
   const order = ["easy", "medium", "hard"];
   const groups = order
-    .map((d) => ({ d, times: solved.filter((a) => level.get(a.challenge) === d && num(a.values.active) && a.values.active! > 0).map((a) => a.values.active!) }))
+    .map((d) => ({ d, times: solved.filter((a) => level(a) === d && num(a.values.active) && a.values.active! > 0).map((a) => a.values.active!) }))
     .filter((g) => g.times.length);
   // A difference needs two levels; one level alone isn't an answer to "by difficulty".
   if (groups.length < 2) return null;
@@ -187,10 +203,10 @@ function difficulty(solved: ReportAttempt[], catalog: readonly ChallengeSummary[
 
 /** Languages by actual work: solves and active time per language. */
 function languages(attempts: readonly ReportAttempt[], catalog: readonly ChallengeSummary[]): Question | null {
-  const lang = new Map(catalog.map((c) => [c.key, c.language]));
+  const lang = current(catalog, (c) => c.language);
   const work = new Map<string, { active: number; solves: Set<string> }>();
   for (const a of attempts) {
-    const l = lang.get(a.challenge);
+    const l = lang(a);
     if (!l || !clean(a) || !num(a.values.active) || a.values.active <= 0) continue;
     const w = work.get(l) ?? { active: 0, solves: new Set<string>() };
     w.active += a.values.active;
@@ -211,40 +227,44 @@ function languages(attempts: readonly ReportAttempt[], catalog: readonly Challen
   };
 }
 
-/** Words per minute from keystroke rhythm inside typing bursts. Pastes aren't keystrokes. */
+/**
+ * Words per minute while typing code characters: all code-character keystroke intervals inside
+ * bursts, pooled (keys over time), at 5 characters a word. Arrows, Backspace, shortcuts, pastes
+ * and pauses over 2 s aren't counted.
+ */
 function typing(attempts: readonly ReportAttempt[]): Question | null {
-  const intervals = attempts.filter((a) => clean(a) && num(a.values.keyInterval) && a.values.keyInterval > 0).map((a) => a.values.keyInterval!);
-  if (!intervals.length) return null;
-  const wpm = Math.round(60_000 / median(intervals)! / KEYS_PER_WORD);
+  const usable = attempts.filter((a) => clean(a) && num(a.values.typedKeys) && num(a.values.typingTime));
+  const keys = usable.reduce((n, a) => n + a.values.typedKeys!, 0),
+    ms = usable.reduce((n, a) => n + a.values.typingTime!, 0);
+  if (keys < MIN_TYPED_KEYS || ms <= 0) return null;
+  const wpm = Math.round((keys / ms) * 60_000 / KEYS_PER_WORD);
   return {
     id: "typing",
     question: "How fast do you type when you're coding?",
-    answer: `About ${wpm} words a minute while you're typing.`,
+    answer: `About ${wpm} words a minute while you're typing code.`,
     visual: { kind: "number", value: `${wpm}`, unit: "wpm" },
-    note: "Pastes don't count; pauses between bursts don't either.",
+    note: "Pastes, arrows, deletions and pauses don't count.",
     fyi: null,
   };
 }
 
-/** Small patches vs bigger rewrites, and how much of what you write you later delete. */
+/**
+ * Edit sizes only: small edits vs bigger pieces. Inserted and deleted totals include starter text,
+ * pastes and replacements, so they can't say how much of what you typed survived.
+ */
 function rewrite(attempts: readonly ReportAttempt[]): Question | null {
-  const usable = attempts.filter(
-    (a) => clean(a) && num(a.values.smallEdits) && num(a.values.largeEdits) && num(a.values.inserted) && num(a.values.deleted),
-  );
+  const usable = attempts.filter((a) => clean(a) && num(a.values.smallEdits) && num(a.values.largeEdits));
   const small = usable.reduce((n, a) => n + a.values.smallEdits!, 0),
-    large = usable.reduce((n, a) => n + a.values.largeEdits!, 0),
-    inserted = usable.reduce((n, a) => n + a.values.inserted!, 0),
-    deleted = usable.reduce((n, a) => n + a.values.deleted!, 0);
-  if (small + large === 0 || inserted === 0) return null;
+    large = usable.reduce((n, a) => n + a.values.largeEdits!, 0);
+  if (small + large === 0) return null;
   const bigShare = large / (small + large);
-  const kept = Math.max(0, Math.round((1 - Math.min(deleted, inserted) / inserted) * 100));
   return {
     id: "rewrite",
-    question: "Do you patch or rewrite?",
+    question: "Small edits or bigger pieces?",
     answer:
       bigShare >= LARGE_STEP_SHARE
-        ? `You rewrite in bigger pieces; about ${kept}% of what you type stays.`
-        : `You patch in small edits; about ${kept}% of what you type stays.`,
+        ? `Often bigger pieces: ${Math.round(bigShare * 100)}% of your edits change more than ${SMALL_EDIT_UNITS} characters at once.`
+        : `Mostly small edits: ${Math.round((1 - bigShare) * 100)}% change ${SMALL_EDIT_UNITS} characters or fewer.`,
     visual: { kind: "split", parts: [{ label: `small edits (≤${SMALL_EDIT_UNITS} chars)`, value: small }, { label: "bigger pieces", value: large }] },
     note: "Bigger pieces include pastes; neither means a mistake.",
     fyi: null,
@@ -295,17 +315,20 @@ function repeat(solved: ReportAttempt[]): Question | null {
   return null;
 }
 
-/** One model FYI for the iterate answer: the median submissions of comparable model solves. */
+/**
+ * One model FYI for the iterate answer: the median submissions of comparable model solves. Each
+ * model try counts once, however many times you solved that challenge.
+ */
 function modelFyi(solved: ReportAttempt[], receipts: ReportInput["receipts"]): string | null {
-  const counts: number[] = [];
+  const tries = new Map<string, number>();
   for (const a of solved) {
     const got = receipts[a.revision];
     if (!Array.isArray(got)) continue;
     for (const { receipt } of defaultComparisons(got))
       if (receipt?.state === "completed" && num(receipt.submissions) && receiptMatch(receipt, a.conditions) === "matched")
-        counts.push(receipt.submissions);
+        tries.set(JSON.stringify([a.revision, receipt.model, receipt.reasoning, receipt.try]), receipt.submissions);
   }
-  const m = median(counts);
+  const m = median([...tries.values()]);
   return m === null ? null : `FYI: models that solved the same challenges needed ${plural(m, "submission")}, typically.`;
 }
 
