@@ -27,6 +27,16 @@ export interface TargetCoverage {
   readonly harnessFailures: number;
   /** Runs still to do for full coverage. */
   readonly todo: number;
+  /** USD reported by finished runs on live revisions, and how many reported a cost. */
+  readonly spent: number;
+  readonly priced: number;
+  /**
+   * Average cost and seconds per finished run: this level's own, or the model's other levels'
+   * (then `estimatedFrom` is `model`), or null before the model has run at all.
+   */
+  readonly costPerRun: number | null;
+  readonly secondsPerRun: number | null;
+  readonly estimatedFrom: "level" | "model" | null;
 }
 
 /** The effort a stored condition names. */
@@ -70,6 +80,10 @@ export function summarize(
       const sum = (match: (r: Coverage) => boolean) => onLive.filter(match).reduce((n, r) => n + r.runs, 0);
       const finished = sum((r) => r.status === "finished");
       const onRoster = roster.some((t) => t.model === model && t.effort === effort);
+      const finishedRows = onLive.filter((r) => r.status === "finished");
+      const spent = finishedRows.reduce((n, r) => n + (r.cost ?? 0), 0);
+      const priced = finishedRows.reduce((n, r) => n + (r.priced ?? 0), 0);
+      const seconds = finishedRows.reduce((n, r) => n + (r.seconds ?? 0), 0);
       return {
         model,
         effort,
@@ -87,6 +101,32 @@ export function summarize(
           onRoster && harness === harnessVersion
             ? [...live].reduce((n, revision) => n + Math.max(0, tries - (finishedBy.get(revision) ?? 0)), 0)
             : 0,
+        spent,
+        priced,
+        seconds,
+      };
+    })
+    .map((row, _, all) => {
+      // A level that hasn't run yet is estimated from the model's other levels, all versions.
+      const own = row.priced > 0;
+      const model = all.filter((r) => r.model === row.model);
+      const modelPriced = model.reduce((n, r) => n + r.priced, 0);
+      const modelFinished = model.reduce((n, r) => n + r.finished, 0);
+      const { seconds, ...rest } = row;
+      return {
+        ...rest,
+        costPerRun: own
+          ? row.spent / row.priced
+          : modelPriced
+            ? model.reduce((n, r) => n + r.spent, 0) / modelPriced
+            : null,
+        secondsPerRun:
+          row.finished > 0
+            ? seconds / row.finished
+            : modelFinished
+              ? model.reduce((n, r) => n + r.seconds, 0) / modelFinished
+              : null,
+        estimatedFrom: own ? ("level" as const) : modelPriced || modelFinished ? ("model" as const) : null,
       };
     })
     .sort(
@@ -99,3 +139,24 @@ export function summarize(
 }
 
 const EFFORT_ORDER = ["default", "none", "minimal", "low", "medium", "high", "xhigh", "max"];
+
+export interface Estimate {
+  /** USD still to spend, over the runs that can be estimated. */
+  readonly cost: number;
+  /** Seconds of run time still to go, one run at a time. */
+  readonly seconds: number;
+  /** Runs to do with no estimate yet: their model hasn't run. */
+  readonly unknown: number;
+}
+
+/** What the rows still to do will cost and take, from each row's averages. */
+export function estimate(rows: readonly TargetCoverage[]): Estimate {
+  return rows.reduce(
+    (sum, r) => ({
+      cost: sum.cost + (r.costPerRun ?? 0) * r.todo,
+      seconds: sum.seconds + (r.secondsPerRun ?? 0) * r.todo,
+      unknown: sum.unknown + (r.costPerRun === null || r.secondsPerRun === null ? r.todo : 0),
+    }),
+    { cost: 0, seconds: 0, unknown: 0 },
+  );
+}

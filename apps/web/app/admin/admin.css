@@ -96,16 +96,48 @@
   font-size: 13px;
 }
 .admin-todo {
-  font-size: 18px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+.admin-todo dt {
+  color: var(--dim);
+  font-size: 13px;
+}
+.admin-todo dd {
+  margin: 4px 0 0;
+  font-size: 20px;
+}
+.admin-todo dd .faint {
+  font-size: 13px;
 }
 .admin-model {
-  margin: 24px 0;
-  padding-top: 16px;
   border-top: 1px solid var(--line);
+  padding: 12px 0;
 }
-.admin-model h3 {
-  font-size: 16px;
+.admin-model summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  align-items: baseline;
+  cursor: pointer;
+}
+.admin-model-name {
+  font-weight: 600;
+}
+.admin-model-facts {
+  color: var(--dim);
 }
 .admin-model tr.faint {
   color: var(--dim);
+}
+.admin-tag {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: normal;
 }

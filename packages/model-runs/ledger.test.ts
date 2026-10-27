@@ -3,12 +3,14 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import {
+  addModel,
   addTarget,
   claim,
   coverage,
   finish,
   harnessFailed,
   recent,
+  removeModel,
   removeTarget,
   roster,
   running,
@@ -17,12 +19,12 @@ import {
   type Sql,
   type Target,
 } from "./ledger";
-import { summarize } from "./coverage";
+import { estimate, summarize } from "./coverage";
 
 /** The catalog database as migrated, in memory. */
 function database(): Sql {
   const db = new DatabaseSync(":memory:");
-  for (const file of ["0001_catalog.sql", "0002_model_runs.sql", "0003_model_run_targets.sql"])
+  for (const file of ["0001_catalog.sql", "0002_model_runs.sql", "0003_model_run_targets.sql", "0004_model_list_and_costs.sql"])
     db.exec(readFileSync(new URL(`../../migrations/catalog/${file}`, import.meta.url), "utf8"));
   return {
     all: async <T>(sql: string, params: readonly unknown[] = []) =>
@@ -68,13 +70,12 @@ test("sync queues exactly what the roster still needs, and is safe to repeat", a
   await play(db, "run-2");
   assert.deepEqual(await syncAll(db), { queued: 0, dropped: 0 });
 
-  // A removed target's waiting runs go; its finished ones stay.
+  // A removed target's waiting runs go with it; its finished ones stay, and sync has nothing to drop.
   await removeTarget(db, OPUS);
   const dropped = await syncAll(db);
   const left = await db.all<{ condition: string; status: string }>("SELECT condition, status FROM model_runs");
   assert.ok(left.every((r) => r.condition === '{"reasoning":"max"}' || r.status === "finished"));
-  assert.equal(dropped.queued, 0);
-  assert.ok(dropped.dropped > 0);
+  assert.deepEqual(dropped, { queued: 0, dropped: 0 });
 
   // A revision no longer live: its waiting runs go too. Fewer tries: the extra ones go.
   await syncAll(db, [R1], 1);
@@ -85,6 +86,24 @@ test("sync queues exactly what the roster still needs, and is safe to repeat", a
 
   // A new harness version is new work; the old version's results stay as they were.
   assert.equal((await syncAll(db, [R1, R2], 2, "harness-2")).queued, 4);
+});
+
+test("only targets on the roster run; removing one drops its waiting runs at once", async () => {
+  const db = database();
+  await addTarget(db, OPUS, NOW);
+  await addTarget(db, OPUS_MAX, NOW);
+  await syncAll(db, [R1], 1);
+  // Queued before a roster change and never synced since: still not claimed.
+  await db.run("DELETE FROM model_roster WHERE effort = 'max'");
+  const claimed = await claim(db, "run-1", NOW);
+  assert.equal(claimed?.condition, '{"reasoning":"default"}');
+  assert.equal(await claim(db, "run-2", NOW), null);
+  // Removing a target takes its waiting runs with it; finished and running ones stay.
+  await addTarget(db, OPUS_MAX, NOW);
+  await removeTarget(db, OPUS);
+  await removeTarget(db, OPUS_MAX);
+  const left = await db.all<{ condition: string; status: string }>("SELECT condition, status FROM model_runs");
+  assert.deepEqual(left.map((r) => [r.condition, r.status]), [['{"reasoning":"default"}', "running"]]);
 });
 
 test("first tries come first, so coverage grows evenly", async () => {
@@ -169,4 +188,46 @@ test("a run left running by a closed tab is claimed again once stale", async () 
   );
   await finish(db, "run-2", { outcome: "completed", reason: null, turns: 3, submissions: 1 }, "2026-10-27T13:05:00Z");
   assert.equal((await recent(db))[0].run_id, "run-2");
+});
+
+test("the model list holds models whatever levels run; taking one off drops its waiting runs", async () => {
+  const db = database();
+  await addModel(db, "b/two", NOW);
+  await addTarget(db, OPUS, NOW);
+  assert.deepEqual(await roster(db), ["a/one", "b/two"]);
+  await syncAll(db, [R1], 1);
+  await play(db, "run-1");
+  await addTarget(db, OPUS_MAX, NOW);
+  await syncAll(db, [R1], 1);
+  await removeModel(db, "a/one");
+  assert.deepEqual(await roster(db), ["b/two"]);
+  assert.deepEqual(await targets(db), []);
+  const left = await db.all<{ status: string }>("SELECT status FROM model_runs WHERE model = 'a/one'");
+  assert.deepEqual(left.map((r) => r.status), ["finished"]);
+});
+
+test("cost and time to finish come from the level's runs, else the model's", async () => {
+  const db = database();
+  await addTarget(db, OPUS, NOW);
+  await addTarget(db, OPUS_MAX, NOW);
+  await syncAll(db, [R1, R2], 1);
+  // One default run: $0.02 over 30 seconds.
+  const slot = await claim(db, "run-1", "2026-10-27T10:00:00Z");
+  assert.equal(slot?.condition, '{"reasoning":"default"}');
+  await finish(db, "run-1", { outcome: "completed", reason: null, turns: 2, submissions: 1, cost: 0.02 }, "2026-10-27T10:00:30Z");
+  const rows = summarize(await coverage(db), await targets(db), [R1.revision, R2.revision], "harness-1", 1);
+  const [own, other] = rows;
+  assert.deepEqual([own.effort, own.spent, own.costPerRun, own.estimatedFrom, own.todo], ["default", 0.02, 0.02, "level", 1]);
+  assert.ok(Math.abs(own.secondsPerRun! - 30) < 0.01);
+  // max hasn't run: estimated from the model's default runs.
+  assert.deepEqual([other.effort, other.costPerRun, other.estimatedFrom, other.todo], ["max", 0.02, "model", 2]);
+  const left = estimate(rows);
+  assert.ok(Math.abs(left.cost - 0.06) < 1e-9);
+  assert.ok(Math.abs(left.seconds - 90) < 0.01);
+  assert.equal(left.unknown, 0);
+  // A model that has never run can't be estimated yet.
+  await addTarget(db, { model: "c/new", effort: "high" }, NOW);
+  await syncAll(db, [R1, R2], 1);
+  const fresh = summarize(await coverage(db), await targets(db), [R1.revision, R2.revision], "harness-1", 1);
+  assert.equal(estimate(fresh.filter((r) => r.model === "c/new")).unknown, 2);
 });
