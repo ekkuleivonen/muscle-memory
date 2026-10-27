@@ -294,8 +294,13 @@ export function useReportData(revisions: readonly { challenge: string; revision:
 
   // Model receipts for the exact revisions chapter 4 shows; bounded by the report's task limit.
   const wanted = revisions.map((r) => `${r.challenge}/${r.revision}`).join("|");
+  /** Revisions read or being read since the last clear, so a changed selection only asks for new ones. */
+  const requested = useRef({ epoch: -1, revisions: new Set<string>() });
   useEffect(() => {
     if (privacy !== "ok" || !wanted) return;
+    if (requested.current.epoch !== epoch) requested.current = { epoch, revisions: new Set() };
+    const done = requested.current.revisions;
+    const pending = new Set<string>();
     const ticket = generation.current;
     const controller = new AbortController();
     aborts.current.add(controller);
@@ -303,6 +308,9 @@ export function useReportData(revisions: readonly { challenge: string; revision:
       ticket === generation.current && !blocked.current && !boundaries && !controller.signal.aborted;
     for (const pair of wanted.split("|")) {
       const [challenge, revision] = pair.split("/");
+      if (done.has(revision)) continue;
+      done.add(revision);
+      pending.add(revision);
       setReceipts((r) => (revision in r ? r : { ...r, [revision]: "loading" }));
       void fetch(
         `/api/model-receipts/${encodeURIComponent(challenge)}/${encodeURIComponent(revision)}`,
@@ -319,12 +327,15 @@ export function useReportData(revisions: readonly { challenge: string; revision:
         })
         .catch(() => {
           if (live()) setReceipts((r) => ({ ...r, [revision]: "unavailable" }));
-        });
+        })
+        .finally(() => pending.delete(revision));
     }
     const set = aborts.current;
     return () => {
       controller.abort();
       set.delete(controller);
+      // Reads cut short here never finished: let the next selection ask for them again.
+      for (const revision of pending) done.delete(revision);
     };
   }, [privacy, wanted, epoch]);
 

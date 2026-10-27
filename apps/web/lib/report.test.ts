@@ -301,3 +301,53 @@ test("errored and cancelled submissions keep their place in the story", () => {
     /your last submission was cancelled\. It's still open\./,
   );
 });
+
+test("the real uploaded-history projection flows into the report beside device evidence", async () => {
+  const { historyResult, historyWindow } = await import("../../../packages/developer-profile/uploaded-history");
+  const older = trace("older-attempt", "older-source", "JS-001"),
+    latest = trace("latest-attempt", "latest-source", "JS-001");
+  // Rows shaped like the fixed owner query's result: one attempt row each, then its observations.
+  const rows = [older, latest].flatMap((records) => {
+    const o = JSON.parse(records[0].payload),
+      times = records.map((r) => JSON.parse(r.payload).occurredAt).sort();
+    return [
+      {
+        scope: "attempt",
+        attempt_id: o.attemptId,
+        observations: records.length,
+        bytes: records.reduce((n, r) => n + r.payload.length, 0),
+        first_at: times[0],
+        last_at: times.at(-1),
+        conflicts: 0,
+        record_id: null,
+        payload: null,
+      },
+      ...records.map((r) => ({ scope: "observation", attempt_id: o.attemptId, record_id: r.recordId, payload: r.payload })),
+    ];
+  });
+  const page = historyResult(
+    "synthetic-participant",
+    historyWindow({ from: "2026-10-27", to: "2026-10-27", after: "" }),
+    rows,
+  );
+  assert.equal(page.attempts.length, 2);
+  // The device still holds only the latest attempt; the older one survives only in uploads.
+  const device = deriveAttempts(latest, "synthetic-participant");
+  const merged = mergeEvidence(device, page.attempts);
+  assert.equal(merged.length, 2, "the shared attempt is counted once");
+  assert.deepEqual(merged.map((a) => [a.attempt, a.source]), [
+    ["latest-attempt", "device"],
+    ["older-attempt", "uploaded"],
+  ]);
+  const r = buildReport(
+    input({
+      attempts: merged,
+      progress: progressOf({ "JS-001": { completedAt: "2026-10-27T10:00:09Z", completions: 1, attempt: "latest-attempt" } }),
+    }),
+  );
+  const o = chapter<OutcomesChapter>(r, "outcomes")!;
+  assert.match(o.evidence.basis, /from this device and your uploads/);
+  assert.ok(o.languages[0].items[0].revisited, "two attempts on one challenge is a revisit");
+  assert.ok(chapter<StoryChapter>(r, "story"));
+  assert.doesNotMatch(JSON.stringify(r), /synthetic-artifact|"abc"|secret/, "no code or identifiers reach the report");
+});
