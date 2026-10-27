@@ -181,6 +181,48 @@ test("missing, malformed and unavailable control never authorizes", async () => 
     authorizeComparisonGeneration(env, crypto.randomUUID()),
   );
 });
+for (const failFirst of [false, true])
+  test(`enabled → disabled deletion → re-enabled cannot authorize a cached generation; failed-write retry=${failFirst}`, async () => {
+    const { env, objects, update } = await fixture();
+    assert.equal((await update(null)).status, 200);
+    const cachedGeneration = await comparisonGeneration(env);
+    assert.equal(
+      await authorizeComparisonGeneration(env, cachedGeneration),
+      true,
+    );
+    assert.ok((await checkComparisonMembers(env, [id]))[0]);
+    const disabled = { ...env, COMPARISON_PRIVACY_ENABLED: "false" };
+    const request = () =>
+      new Request(
+        `https://example.invalid/ingest/v1/participants/${id}/delete`,
+        {
+          method: "POST",
+          body: JSON.stringify({ secret }),
+        },
+      );
+    if (failFirst) {
+      const put = env.CONTROL.put;
+      env.CONTROL.put = async (key, text, options) =>
+        key === fence ? null : put(key, text, options);
+      assert.equal((await handle(request(), disabled)).status, 503);
+      assert.ok(objects.has(`deleted/${id}`));
+      assert.ok(
+        objects.has(`participants/${id}`),
+        "failure keeps ownership proof for retry even while disabled",
+      );
+      env.CONTROL.put = put;
+    }
+    assert.equal((await handle(request(), disabled)).status, 200);
+    assert.notEqual(await comparisonGeneration(env), cachedGeneration);
+    assert.ok(!objects.has(`participants/${id}`));
+    assert.ok(!objects.has(`comparison-privacy/${id}`));
+    const reenabled = { ...disabled, COMPARISON_PRIVACY_ENABLED: "true" };
+    assert.equal(
+      await authorizeComparisonGeneration(reenabled, cachedGeneration),
+      false,
+    );
+    assert.deepEqual(await checkComparisonMembers(reenabled, [id]), [null]);
+  });
 test("failed finalization leaves old generation invalid and state pending; superseding update cannot be acknowledged as the earlier preference", async () => {
   const { env, objects, update, read } = await fixture();
   const first = await update(null);

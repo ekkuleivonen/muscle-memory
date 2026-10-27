@@ -17,7 +17,7 @@ import {
   type EventRow,
 } from "../../../packages/domain/ingest";
 import { safeIdentifier } from "../../../packages/domain/capture";
-import { advanceComparisonGeneration } from "./comparison-fence";
+import { advanceComparisonGeneration, comparisonGeneration } from "./comparison-fence";
 import { comparisonPrivacy } from "./comparison-privacy";
 
 /** The parts of an R2 bucket this Worker uses. */
@@ -202,7 +202,9 @@ async function erase(
       JSON.stringify({ requestedAt: new Date().toISOString() }),
     );
   // Keep the proof until invalidation succeeds, so an interrupted deletion remains retryable.
-  if (env.COMPARISON_PRIVACY_ENABLED === "true") {
+  // Disabling new privacy/RPC operations must not preserve a previously usable snapshot fence.
+  // A never-enabled installation with no fence does not initialize one just for deletion.
+  if (env.COMPARISON_PRIVACY_ENABLED === "true" || (await comparisonGeneration(env)) !== null) {
     await advanceComparisonGeneration(env);
     await env.CONTROL.delete(`comparison-privacy/${participantId}`);
   }

@@ -187,7 +187,8 @@ export function cohortQuery(
   SELECT a.*, CASE WHEN c.solved_at IS NOT NULL THEN 1 ELSE 0 END AS completed,
     MAX(CASE WHEN s.nth=1 THEN s.passed END) AS first_pass,
     COUNT(DISTINCT CASE WHEN s.run_id IS NOT NULL AND s.run_id<>'' AND (c.solved_at IS NULL OR s.nth<=c.solved_at) THEN s.run_id END) AS submissions,
-    MAX(CASE WHEN s.nth IS NOT NULL AND (s.sources>1 OR s.variants<>1 OR s.run_id IS NULL OR s.run_id='') THEN 1 ELSE 0 END) AS bad_submissions
+    MAX(CASE WHEN s.nth IS NOT NULL AND (s.sources>1 OR s.variants<>1 OR s.run_id IS NULL OR s.run_id='' OR
+      (json_get_str(s.data,'result') IN ('passed','failed') AND s.passed IS NULL)) THEN 1 ELSE 0 END) AS bad_submissions
   FROM attempts a LEFT JOIN submissions s ON s.participant_id=a.participant_id AND s.attempt_id=a.attempt_id
   LEFT JOIN completions c ON c.participant_id=a.participant_id AND c.attempt_id=a.attempt_id
   GROUP BY a.participant_id,a.attempt_id,a.started,a.starts,a.again,a.known_start,a.runtimes,a.runtime,a.editors,a.editor,a.diagnostics,a.unknown_conditions,c.solved_at
