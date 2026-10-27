@@ -115,7 +115,8 @@ test("rich synthetic evidence tells all six chapters from what was recorded", ()
   assert.ok(o.languages[0].items[0].revisited, "two completions are a revisit");
 
   const s = chapter<StoryChapter>(r, "story")!;
-  assert.match(s.headline, /first submission passed 1 of 3 checks\. Next time, all of them did/);
+  assert.match(s.headline, /first graded submission passed 1 of 3 checks\. Next time, all of them did/);
+  assert.equal(s.title, "It wasn't a straight line.");
   assert.deepEqual(s.submissions.map((x) => `${x.passed}/${x.total}`), ["1/3", "3/3"]);
   assert.deepEqual(s.markers.map((m) => m.kind), ["start", "fail", "pass", "done"], "opening isn't a return");
   assert.equal(s.markers[0].x, 0);
@@ -131,7 +132,7 @@ test("rich synthetic evidence tells all six chapters from what was recorded", ()
   const pyRow = m.rows.find((x) => x.challenge === "PY-001")!;
   assert.equal(jsRow.models[0].cell.kind, "solved");
   assert.equal(pyRow.models[0].cell.kind, "withheld", "a runtime mismatch withholds the outcome");
-  assert.match(m.headline, /Models solved 1 of the 1 comparable try/);
+  assert.match(m.headline, /You solved 2 of 2\. Models solved 1 of 1 comparable try/);
   assert.match(m.evidence.caveat!, /one observed try, not a success rate/);
   assert.match(m.evidence.details.join(" "), /not enough comparable participants/);
 
@@ -175,7 +176,7 @@ test("model cells keep loading, unavailable and missing slots distinct", () => {
     "minds",
   )!;
   assert.deepEqual(none.rows[0].models.map((m) => m.cell.kind), ["none", "not-solved"]);
-  assert.match(none.headline, /Models solved 0 of the 1 comparable try/);
+  assert.match(none.headline, /Models solved 0 of 1 comparable try/);
 });
 
 test("stories never form from a trace without checks, and gaps are shortened, not named", () => {

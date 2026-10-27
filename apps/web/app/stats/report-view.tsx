@@ -122,7 +122,7 @@ const MARK: Record<Marker["kind"], string> = {
   leave: "‖",
   examples: "·",
   pass: "●",
-  fail: "●",
+  fail: "✗",
   error: "◆",
   done: "✔",
   gap: "?",
@@ -171,7 +171,7 @@ function Story({ c }: { c: StoryChapter }) {
       )}
       <p className="report-legend t-dim" aria-hidden>
         ▸ start · example run <span className="t-ok">●</span> passed{" "}
-        <span className="t-err">●</span> not yet <span className="t-warn">◆</span>{" "}
+        <span className="t-err">✗</span> not yet <span className="t-warn">◆</span>{" "}
         error ‖ left ↻ came back ✔ done
       </p>
       <EvidenceLine evidence={c.evidence} />
@@ -241,6 +241,9 @@ function Minds({ c }: { c: ComparisonChapter }) {
   return (
     <>
       <h2 className="report-headline">{c.headline}</h2>
+      <p className="report-scroll-hint t-dim" aria-hidden>
+        scroll sideways for every model →
+      </p>
       <div className="report-table-wrap" tabIndex={0} role="region" aria-label="Results on the same challenges">
         <table className="report-table">
           <thead>
@@ -315,7 +318,7 @@ function Minds({ c }: { c: ComparisonChapter }) {
                     ? `reported ${m.receipt.reportedModels.join(", ")}`
                     : "resolved version not recorded"}
                   {m.receipt.budget ? ` · budget ${m.receipt.budget.turns} turns / ${m.receipt.budget.submissions} submissions` : ""}
-                  {m.receipt.runtime ? ` · runtime ${JSON.stringify(m.receipt.runtime)}` : ""}
+                  {m.receipt.runtime ? ` · runtime ${Object.values(m.receipt.runtime).join(" ")}` : ""}
                   <span className="t-dim"> · revision {r.revision.slice(0, 19)}…</span>
                 </li>
               )),

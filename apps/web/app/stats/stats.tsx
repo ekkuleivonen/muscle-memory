@@ -45,12 +45,14 @@ function Freshness({
     new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   return (
     <p className="report-status" role="status">
-      <span>this device{at ? ` · ${time(at)}` : ""}</span>
       <span>
+        From this device{at ? `, read ${time(at)}` : ""}.{" "}
         {history.state === "ready"
-          ? `uploads · as of ${time(history.value.readAt)}${history.value.attempts.length ? ` · ${history.value.attempts.length} attempts` : " · none in the past year"}`
+          ? history.value.attempts.length
+            ? `Plus ${history.value.attempts.length} uploaded attempts, as of ${time(history.value.readAt)}.`
+            : `No uploads in the past year (checked ${time(history.value.readAt)}).`
           : history.state === "loading" || history.state === "idle"
-            ? "adding your uploads…"
+            ? "Adding your uploads…"
             : history.message}
       </span>
       {history.state === "ready" && history.value.next && (
@@ -100,7 +102,7 @@ export function ReportBody({
   return (
     <>
       <header className="report-hero">
-        <p className="t-brand">muscle memory / your report</p>
+        <h1 className="t-brand report-brand">muscle memory / your report</h1>
         {status}
       </header>
       <ChapterNav chapters={report.chapters} />

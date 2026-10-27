@@ -65,8 +65,14 @@
   font-size: var(--text-sm, 13px);
   color: var(--t-dim);
 }
-.report-status > span + span::before {
-  content: "· ";
+.report-brand {
+  font-size: inherit !important;
+  margin: 0;
+}
+.report-scroll-hint {
+  display: none;
+  font-size: var(--text-sm, 13px);
+  margin-bottom: 0;
 }
 .report-quiet {
   margin: 3.2em 0;
@@ -142,7 +148,7 @@
 }
 .report-heroes {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   flex-wrap: wrap;
   gap: 1.2em 5ch;
   margin: 1.6em 0;
@@ -558,6 +564,9 @@
 }
 
 @media (max-width: 700px) {
+  .report-scroll-hint {
+    display: block;
+  }
   .stats-metrics {
     grid-template-columns: 1fr;
   }

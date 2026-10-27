@@ -4,7 +4,7 @@
 
 ## The report
 
-`apps/web/lib/report.ts` builds the chapters from evidence, purely and deterministically (`report.test.ts`); `app/stats/report-data.ts` reads the evidence; `app/stats/report-view.tsx` draws it. A chapter without supporting evidence is left out rather than padded, so one attempt yields a short report that deepens with more.
+`apps/web/lib/report.ts` builds the chapters from evidence, purely and deterministically (`report.test.ts`); `app/stats/report-data.ts` reads the evidence; `app/stats/report-view.tsx` draws it. A chapter without supporting evidence is left out rather than padded, so one attempt yields a short report that deepens with more. Chapters 2 and 3 keep their approved titles only when the evidence fits them ("How one attempt went." for an attempt without a failed-then-passed turn, "How you worked." for a mixed edit pattern).
 
 | Chapter | Built from | Shown only when | Never claims |
 | --- | --- | --- | --- |

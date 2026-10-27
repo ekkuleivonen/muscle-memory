@@ -96,7 +96,8 @@ export interface Marker {
 }
 export interface StoryChapter {
   id: "story";
-  title: "It wasn't a straight line.";
+  /** The approved title only when the attempt actually turned; otherwise a plain one. */
+  title: "It wasn't a straight line." | "How one attempt went.";
   challenge: string;
   headline: string;
   markers: Marker[];
@@ -106,7 +107,7 @@ export interface StoryChapter {
 }
 export interface HabitChapter {
   id: "habits";
-  title: "You have a way of working.";
+  title: "You have a way of working." | "How you worked.";
   headline: string;
   small: number;
   large: number;
@@ -396,7 +397,7 @@ function story(attempts: readonly ReportAttempt[]): StoryChapter | null {
     last = decided.at(-1);
   let headline: string;
   if (a.completed && first && first.result !== "passed")
-    headline = `On ${a.challenge}, your first submission passed ${first.passed} of ${first.total} checks. ${decided.length > 2 ? `${decided.length - 1} submissions later` : "Next time"}, all of them did.`;
+    headline = `On ${a.challenge}, your first graded submission passed ${first.passed} of ${first.total} checks. ${decided.length > 2 ? `${decided.length - 1} submissions later` : "Next time"}, all of them did.`;
   else if (a.completed && runs)
     headline = `On ${a.challenge}, you ran the examples ${plural(runs, "time")} before a submission that passed everything.`;
   else if (a.completed)
@@ -408,7 +409,7 @@ function story(attempts: readonly ReportAttempt[]): StoryChapter | null {
   const between = a.values.editsBetweenRuns;
   return {
     id: "story",
-    title: "It wasn't a straight line.",
+    title: a.completed && first && first.result !== "passed" ? "It wasn't a straight line." : "How one attempt went.",
     challenge: a.challenge,
     headline,
     markers,
@@ -464,7 +465,7 @@ function habits(attempts: readonly ReportAttempt[]): HabitChapter | null {
   const share = small / (small + large);
   const headline =
     share >= SMALL_STEP_SHARE && checkMedian >= FREQUENT_CHECKS
-      ? "Small edits, frequent checks."
+      ? "Small edits, checked as you go."
       : 1 - share >= LARGE_STEP_SHARE
         ? "You write in bigger pieces."
         : returned.length
@@ -474,7 +475,7 @@ function habits(attempts: readonly ReportAttempt[]): HabitChapter | null {
             : "A mix of small edits and bigger pieces.";
   return {
     id: "habits",
-    title: "You have a way of working.",
+    title: headline.startsWith("A mix") ? "How you worked." : "You have a way of working.",
     headline,
     small,
     large,
@@ -584,7 +585,7 @@ function minds(input: ReportInput): {
     ? "Checking which models tried the same challenges…"
     : !compared.length
       ? "No model has a comparable try on these exact challenges yet."
-      : `Models solved ${solvedByModels} of the ${plural(compared.length, "comparable try", "comparable tries")} on your challenges.`;
+      : `You solved ${rows.filter((r) => r.you.kind === "solved").length} of ${rows.length}. Models solved ${solvedByModels} of ${plural(compared.length, "comparable try", "comparable tries")} on the same challenges.`;
   return {
     wanted,
     chapter: {
