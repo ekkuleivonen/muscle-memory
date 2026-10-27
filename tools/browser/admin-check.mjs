@@ -63,6 +63,11 @@ async function sign(claims = {}, key = privateKey) {
 const valid = await sign();
 // Optional synthetic-only SQL service. No Cloudflare credentials or network requests.
 const statsFixture = process.env.ADMIN_STATS_FIXTURE === "1";
+// Model runs from the admin, with OpenRouter answered by a scripted "model" that writes each
+// challenge's reference solution and submits it. No key, network or spending.
+const modelRunsFixture = process.env.MODEL_RUNS_FIXTURE === "1";
+const fixtureKey = "sk-or-local-fixture-not-a-credential";
+const openRouterCalls = [];
 let statsCalls = 0;
 let statsMode = "data";
 const statsRevision = "sha256:" + "a".repeat(64);
@@ -199,7 +204,7 @@ const mf = new Miniflare(
 );
 const receipts = [];
 async function check(path, token, expected, extra = {}) {
-  const { host = "musclememory.run", method = "GET", headers = {} } = extra;
+  const { host = "musclememory.run", method = "GET", headers = {}, body: sent } = extra;
   // The local bridge also validates Origin against its loopback listener; restore
   // the original supplied Origin only inside the fixture ingress, before real app code.
   const transportedHeaders = new Headers(headers);
@@ -213,6 +218,7 @@ async function check(path, token, expected, extra = {}) {
   const response = await mf.dispatchFetch(`https://${host}${path}`, {
     method,
     redirect: "manual",
+    ...(sent ? { body: sent } : {}),
     headers: {
       host,
       ...(token ? { "cf-access-jwt-assertion": token } : {}),
@@ -241,11 +247,101 @@ async function check(path, token, expected, extra = {}) {
   receipts.push({ path, method, host, status: response.status });
   return body;
 }
+/** OpenRouter as a scripted model: write the reference solution, then submit. */
+const solutions = new Map();
+async function scriptedOpenRouter(incoming, url) {
+  openRouterCalls.push({
+    path: url.pathname,
+    authorization: incoming.headers()["authorization"] ?? null,
+  });
+  const headers = { "access-control-allow-origin": "*" };
+  if (incoming.method() === "OPTIONS") return { status: 204, headers: { ...headers, "access-control-allow-headers": "*" } };
+  if (url.pathname === "/api/v1/models")
+    return { status: 200, headers, contentType: "application/json", body: JSON.stringify({ data: [{ id: "scripted/reference", supported_parameters: ["tools"] }] }) };
+  if (url.pathname !== "/api/v1/chat/completions")
+    return { status: 200, headers, contentType: "application/json", body: '{"data":{}}' };
+  const body = JSON.parse(incoming.postData());
+  const opening = body.messages[1].content;
+  if (!solutions.size)
+    for (const key of await readdir("content/challenges")) {
+      const dir = resolve("content/challenges", key);
+      const { title, file } = JSON.parse(await readFile(`${dir}/challenge.json`, "utf8"));
+      const solution = (await readdir(`${dir}/private`)).find((f) => f.startsWith("solution."));
+      solutions.set(file + "\u0000" + title, await readFile(`${dir}/private/${solution}`, "utf8"));
+    }
+  const solution = [...solutions].find(([k]) => {
+    const [file, title] = k.split("\u0000");
+    return opening.startsWith(`# ${title}\n`) && opening.includes(`## Your code: ${file} (`);
+  })?.[1];
+  assert.ok(solution, "the scripted model knows the challenge");
+  const turn = body.messages.filter((m) => m.role === "assistant").length;
+  const [name, args] = turn === 0 ? ["write_code", { text: solution }] : ["submit", {}];
+  const lines = [
+    ": OPENROUTER PROCESSING",
+    `data: ${JSON.stringify({ id: `gen-${turn}`, model: "scripted/reference", choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: `call-${turn}`, type: "function", function: { name, arguments: JSON.stringify(args) } }] } }] })}`,
+    `data: ${JSON.stringify({ id: `gen-${turn}`, choices: [{ index: 0, delta: { content: "" }, finish_reason: "tool_calls" }], usage: { prompt_tokens: 1, completion_tokens: 1, cost: 0.000001 } })}`,
+    "data: [DONE]",
+    "",
+  ];
+  return { status: 200, headers, contentType: "text/event-stream", body: lines.join("\n") };
+}
+
+/** One model run from the Benchmarks page: roster, queue, run, hand in, stored. */
+async function modelRun(page) {
+  await page.getByLabel("Model (as OpenRouter names it)").fill("scripted/reference");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByText("scripted/reference", { exact: true }).first().waitFor();
+  await page.getByLabel("Tries").fill("1");
+  await page.getByRole("button", { name: "Queue", exact: true }).click();
+  await page.getByText("Queued 69 runs (reasoning default, 1 tries).").waitFor();
+  await page.getByLabel("OpenRouter key").fill(fixtureKey);
+  await page.getByLabel("Runs at a time").fill("1");
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await page.getByRole("button", { name: "Stop after the current runs" }).click();
+  await page.getByText(/→ (completed|stopped|budget|refused|error|harness failure)/).waitFor({ timeout: 180000 });
+  const log = await page.getByRole("list", { name: "Runner log" }).innerText();
+  assert.match(log, /→ completed, 2 turns, 1 submissions/, log);
+  await page.getByText("Not running.").waitFor();
+  const overview = JSON.parse(await check("/admin/api/model-runs", valid, 200));
+  const finished = overview.recent.find((r) => r.status === "finished");
+  assert.equal(finished.outcome, "completed");
+  assert.equal(overview.recent.length, 1, "one run was claimed");
+  const bucket = await mf.getR2Bucket("CONTENT");
+  const stored = await bucket.get(`model-runs/outbox/${finished.run_id}.ndjson`);
+  assert.ok(stored, "the run's rows are in private R2");
+  const text = await stored.text();
+  assert.ok(!text.includes(fixtureKey), "the key is never stored");
+  const rows = text.trim().split("\n").map((line) => JSON.parse(line));
+  const observations = rows.filter((r) => r.kind === "observation").map((r) => JSON.parse(r.payload));
+  assert.ok(observations.every((o) => o.actor === "model" && o.termsVersion === null));
+  assert.ok(observations.some((o) => o.type === "practice.completed"));
+  assert.ok(observations.some((o) => o.type === "model.generation"));
+  assert.ok(
+    openRouterCalls.filter((c) => c.path === "/api/v1/chat/completions").every((c) => c.authorization === `Bearer ${fixtureKey}`),
+  );
+  // A finished run can't be finished again, or with another tab's records.
+  await check(`/admin/api/model-runs/${finished.run_id}`, valid, 409, {
+    method: "POST",
+    headers: { origin: "https://musclememory.run", "sec-fetch-site": "same-origin", "content-type": "application/json" },
+    body: JSON.stringify({ action: "failed", error: "a second tab" }),
+  });
+}
+
 let browser;
 let closing = false;
 const routeErrors = [];
 try {
   await mf.ready;
+  if (modelRunsFixture) {
+    const db = await mf.getD1Database("CATALOG_DB");
+    const migration = await readFile("migrations/catalog/0002_model_runs.sql", "utf8");
+    for (const statement of migration
+      .replace(/--[^\n]*\n/g, "\n")
+      .split(/;\s*\n(?=CREATE)/)
+      .map((s) => s.trim().replace(/;$/, ""))
+      .filter(Boolean))
+      await db.prepare(statement).run();
+  }
   if (statsFixture) {
     const db = await mf.getD1Database("CATALOG_DB");
     await db.exec(
@@ -353,6 +449,10 @@ try {
     try {
       const incoming = route.request();
       const url = new URL(incoming.url());
+      if (modelRunsFixture && url.origin === "https://openrouter.ai") {
+        await route.fulfill(await scriptedOpenRouter(incoming, url));
+        return;
+      }
       assert.equal(
         url.origin,
         "https://musclememory.run",
@@ -419,10 +519,8 @@ try {
   await page
     .getByRole("heading", { name: "Benchmarks", exact: true })
     .waitFor();
-  assert.match(
-    await page.locator("main").innerText(),
-    /No benchmark service is connected/,
-  );
+  assert.match(await page.locator("main").innerText(), /Harness harness-\d+/);
+  if (modelRunsFixture) await modelRun(page);
   await page.getByRole("link", { name: "Statistics", exact: true }).click();
   await page
     .getByRole("heading", { name: "Challenge statistics", exact: true })

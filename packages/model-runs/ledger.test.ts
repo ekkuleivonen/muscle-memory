@@ -2,7 +2,19 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import { backfill, claim, conditionOf, finish, harnessFailed, roster, type Sql } from "./ledger";
+import {
+  backfill,
+  claim,
+  conditionOf,
+  finish,
+  harnessFailed,
+  recent,
+  roster,
+  running,
+  setRoster,
+  summary,
+  type Sql,
+} from "./ledger";
 
 /** The catalog database as migrated, in memory. */
 function database(): Sql {
@@ -72,4 +84,32 @@ test("a slot is claimed once; a result stays; a harness failure runs again under
   await claim(db, "run-5", "2026-10-27T10:07:00Z");
   await harnessFailed(db, "run-5", "and again", "2026-10-27T10:08:00Z");
   assert.equal(await claim(db, "run-6", "2026-10-27T10:09:00Z"), null);
+});
+
+test("a run left running by a closed tab is claimed again once stale; the roster changes in place", async () => {
+  const db = database();
+  await setRoster(db, "a/one", false, "2026-10-27");
+  await setRoster(db, "b/two", false, "2026-10-27");
+  await setRoster(db, "b/two", true, "2026-10-28");
+  assert.deepEqual(await roster(db), ["a/one"]);
+  await setRoster(db, "b/two", false, "2026-10-29");
+  assert.deepEqual(await roster(db), ["a/one", "b/two"]);
+
+  await backfill(db, { ...plan(["a/one"], [R1]), tries: 1 });
+  await claim(db, "run-1", "2026-10-27T10:00:00Z");
+  assert.equal((await running(db, "run-1"))?.challengeKey, "PY-001");
+  // Still fresh: nothing to claim.
+  assert.equal(await claim(db, "run-2", "2026-10-27T10:30:00Z", { staleBefore: "2026-10-27T09:30:00Z" }), null);
+  // Stale: claimed again, and the old run id can no longer finish.
+  assert.equal((await claim(db, "run-2", "2026-10-27T13:00:00Z", { staleBefore: "2026-10-27T11:00:00Z" }))?.runId, "run-2");
+  assert.equal(await running(db, "run-1"), null);
+  await assert.rejects(() =>
+    finish(db, "run-1", { outcome: "stopped", reason: null, turns: 1, submissions: 0 }, "2026-10-27T13:01:00Z"),
+  );
+  await finish(db, "run-2", { outcome: "completed", reason: null, turns: 3, submissions: 1 }, "2026-10-27T13:05:00Z");
+  assert.deepEqual(
+    (await summary(db)).map((s) => [s.model, s.status, s.outcome, s.runs]),
+    [["a/one", "finished", "completed", 1]],
+  );
+  assert.equal((await recent(db))[0].run_id, "run-2");
 });

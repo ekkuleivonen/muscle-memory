@@ -17,6 +17,7 @@ import { readChallenges } from "../../packages/content/source";
 import type { Json } from "../../packages/domain/json";
 import { OPENROUTER } from "../../packages/model-runs/openrouter";
 import { PracticeHost } from "./practice";
+import { requestFor } from "../../packages/model-runs/admin";
 import { runModel } from "../../packages/model-runs/run";
 import { writeOutbox } from "./outbox";
 import { HARNESS_VERSION } from "../../packages/model-runs/tools";
@@ -53,11 +54,7 @@ const summary: Json[] = [];
 for (const model of models) {
   const supported = listing.data.find((m) => m.id === model)?.supported_parameters ?? [];
   if (!supported.includes("tools")) throw new Error(`${model} is not listed with tool calling`);
-  // Some providers of a model ignore logprobs; requiring every parameter routes only to
-  // providers that return them.
-  const request: Record<string, Json> = supported.includes("logprobs")
-    ? { logprobs: true, top_logprobs: 20, provider: { require_parameters: true } }
-    : {};
+  const request = requestFor({ reasoning: "default" }, supported);
   for (const challenge of challenges) {
     const runId = `pilot-${new Date().toISOString().replace(/[-:.TZ]/g, "")}-${challenge.metadata.key.toLowerCase()}`;
     const started = Date.now();

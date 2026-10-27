@@ -2,14 +2,14 @@
 
 Models play every challenge the way a person does, through a headless copy of practice, and everything they do is recorded as raw as a person's practice is: so people's work can be compared with models', and models with each other. Analysis comes later, from the raw data.
 
-**Built so far:** the recorded types (`packages/domain/model.ts`, `actor` in every envelope), headless practice, the model loop, the run ledger, storage and the price snapshot (`tools/model-runs/`). **Not yet:** a worker that claims slots, runs them and stores them; the publish hook (publishing still records `blocked_configuration`); the lookup condition; showing results. Nothing has called a model yet.
+**Built so far:** the recorded types (`packages/domain/model.ts`, `actor` in every envelope), headless practice, the model loop, the run ledger, storage, the price snapshot (`packages/model-runs/`, `tools/model-runs/`) and running from the admin (`/admin/benchmarks`). **Not yet:** applying the ledger migration in production; the publish hook (publishing still records `blocked_configuration`); the lookup condition; showing results.
 
 ## Conditions
 
 A model run is held to a person's conditions:
 
 - **Same revision, same knowledge.** The model gets what practice shows on opening: the title, the task, the data schema for SQL, the examples and the starter code. It learns about hidden cases only from Submit's feedback, as a person does. Never the reference solution, rule examples, other attempts or the internet.
-- **Same session code.** The harness runs the real practice session (`apps/web/app/practice/session.ts`), editor and runner sandbox in headless Chromium. Edits are real editor transactions; runs and submissions go through the same runner and verdict.
+- **Same session code.** The harness runs the real practice session (`apps/web/app/practice/session.ts`), editor and runner sandbox in a browser: the operator's tab in the admin, or headless Chromium on a work machine. Edits are real editor transactions; runs and submissions go through the same runner and verdict.
 - **Same feedback.** Tool results are the text practice shows: the Output panel (`transcript.ts`) and Submit's feedback (`lib/check-feedback.ts`). Type errors, where a person sees them as squiggles (TypeScript and JavaScript), come back with every edit without being asked for.
 - **No nudging.** A reply without a tool call ends the run, as a person leaves. The harness never asks the model to continue.
 
@@ -78,6 +78,18 @@ Runs are never uploaded through ingest, which refuses any `actor` but a person, 
 - **The ledger** is in the catalog D1 database (`migrations/catalog/0002_model_runs.sql`, `packages/model-runs/ledger.ts`). `model_roster` lists the models to run; `model_runs` has one row per slot: revision, model, harness version, condition (experiment arms as canonical JSON) and try. Backfilling queues every slot the roster and the published revisions call for and leaves existing slots alone, so a new model, a new revision, a new harness version or a new condition is just new rows. A worker claims the oldest queued slot under a fresh run id. A finished row is a result: a trigger refuses any change to it. A harness failure (the sandbox, the network, the machine) marks the slot to run again under a new run id, up to three attempts, and then it waits for a person.
 - **The events** go to their own Iceberg table, `default.model_events`, in the events bucket's R2 Data Catalog, with exactly the events table's columns (`packages/model-runs/rows.ts`): `received_at` is when the harness stored the run, and `country` is null. The harness writes one NDJSON file per run to an outbox, refusing anything that is not a model's; `tools/model-runs/store_events.py runs <outbox>` appends each file in one commit and moves it to `stored/`. A file already appended (its first record is in the table) is moved without appending again. Like the events table, read it deduplicated on `record_id`.
 
+## Running from the admin
+
+`/admin/benchmarks` (`apps/web/app/admin/benchmarks/benchmarks.tsx`) runs models from the operator's tab, behind the admin's Access check like every admin page.
+
+- **Roster and queue.** Add or retire models; queue every published revision for every model on the roster in one condition (a reasoning effort, or `default`) and a number of tries. Existing slots are left alone (`/admin/api/model-runs/roster`, `/backfill`).
+- **Running.** Paste an OpenRouter key and choose how many runs at a time (1 to 4). Each worker claims a slot under a fresh run id (`/claim`, which returns only the public revision), plays it in this page with `BrowserPractice` and the loop, and hands in its records (`/<runId>`). The request asks for the condition's effort and for logprobs where the model's listing supports them (`packages/model-runs/admin.ts`). The key lives only in the component's memory and goes only to OpenRouter; it is never stored or recorded.
+- **Hidden tab.** Browsers slow timers in hidden tabs to once a minute, which would distort what is recorded, so workers wait while the tab is hidden and claim nothing new.
+- **Handing in.** The server checks every record against the slot (the model's participant, this run's session, this revision, `actor: "model"`, no Terms, unique ids), writes the rows once to `model-runs/outbox/<runId>.ndjson` in the private content bucket, then finishes the slot. A harness failure marks the slot to run again. A run still marked running two hours after it started (a closed tab) is claimed again under a new id, and the old id can no longer hand in.
+- **Storing.** `.github/workflows/model-runs-store.yml` (on demand) appends the bucket's outbox to `default.model_events` and moves each object to `model-runs/stored/`.
+
+`MODEL_RUNS_FIXTURE=1 node tools/browser/admin-check.mjs` (after `npm run build:cloudflare`) does one run through the built Worker in Chromium, with OpenRouter answered by a scripted model writing the reference solution: roster, queue, claim, play, hand in, the rows in R2, the ledger, and that the key is in no stored row.
+
 ## Price history
 
 `.github/workflows/model-catalog.yml` runs `tools/model-runs/snapshot.ts` on demand (daily once the owner says so): OpenRouter's whole model list (no key needed) and the endpoints of every model on the roster, each HTTP exchange verbatim, one row per request in `default.model_catalog` (`tools/model-runs/catalog.schema.json`). With the `MODEL_RUNS_D1_TOKEN` secret the roster is read from D1; without it, the snapshot is the list alone. With `OPENROUTER_API_KEY`, endpoint latency and throughput figures are included; OpenRouter gives them only to a signed-in caller. The first run creates the table.
@@ -88,12 +100,12 @@ Runs are never uploaded through ingest, which refuses any `actor` but a person, 
 - **Log probabilities** are requested wherever a model's listing supports them (`logprobs`, `top_logprobs`), and kept in the raw stream.
 - **Three tries** per revision, model and condition; **50 turns and 10 submissions** per run.
 - **Spending** is capped on the OpenRouter key itself, not in the harness.
-- **Still open:** the roster.
+- **Roster:** Claude Opus 5.5, GPT-6.1 Terra, DeepSeek V4.1 Flash (1017) and Gemini 3.8 Flash.
+- **Runs happen in the admin**, from the operator's browser with a temporary key.
 
 ## Not yet
 
-- **The worker:** claim a slot, run it, write the outbox, finish or mark a harness failure; and where it runs (a work machine, or CI with Docker for the runtimes).
-- **Applying the migration** to the catalog database, and the `MODEL_RUNS_D1_TOKEN` and `OPENROUTER_API_KEY` secrets.
+- **Applying the migration** `0002_model_runs.sql` to the catalog database, before the Benchmarks page can work in production; and, for the snapshot's roster and endpoint statistics, the `MODEL_RUNS_D1_TOKEN` and `OPENROUTER_API_KEY` secrets.
 - **Publishing:** queue a new revision's slots instead of recording `blocked_configuration`.
 - **The lookup condition:** a `search_web` tool as a separate condition, once hidden cases and solutions have left the repository.
 - **Showing results** to people after they complete, from a daily aggregate of the runs.
