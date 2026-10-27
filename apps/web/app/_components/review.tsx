@@ -3,6 +3,7 @@ import {
   failureText,
   type CheckRow,
   type Diagnosis,
+  type FailureCategory,
 } from "../../lib/diagnosis";
 import type { CheckFeedback } from "../../lib/check-feedback";
 import { Markdown } from "./markdown";
@@ -67,7 +68,22 @@ function stageText(stage: "compile" | "runtime"): string {
     : "The code raised an error before the checks finished. Run examples to see it.";
 }
 
-/** The failing cases: the public ones in full, the hidden ones by name and how they failed. */
+function FailedRow({ row }: { row: CheckRow }) {
+  return (
+    <li>
+      <span className="mark" aria-hidden>
+        ✘
+      </span>
+      <div>
+        <b>{row.name}</b>
+        {!row.visible && <HiddenCase />}
+        <CaseDiff row={row} />
+      </div>
+    </li>
+  );
+}
+
+/** Public failures stay explicit; repeated hidden failures share safe category summaries. */
 export function FailedChecks({ diagnosis }: { diagnosis: Diagnosis | null }) {
   if (diagnosis?.kind === "error")
     return (
@@ -82,21 +98,50 @@ export function FailedChecks({ diagnosis }: { diagnosis: Diagnosis | null }) {
       </p>
     );
   if (diagnosis?.kind !== "tests" || !diagnosis.failed.length) return null;
+  const publicRows = diagnosis.failed.filter((row) => row.visible);
+  const hiddenRows = diagnosis.failed.filter((row) => !row.visible);
+  const categories = new Map<FailureCategory, number>();
+  for (const row of hiddenRows) {
+    const category = row.failure?.category ?? "no-result";
+    categories.set(category, (categories.get(category) ?? 0) + 1);
+  }
   return (
-    <ul className="ci-failing">
-      {diagnosis.failed.map((row, i) => (
-        <li key={i}>
-          <span className="mark" aria-hidden>
-            ✘
-          </span>
-          <div>
-            <b>{row.name}</b>
-            {!row.visible && <HiddenCase />}
-            <CaseDiff row={row} />
-          </div>
-        </li>
-      ))}
-    </ul>
+    <>
+      {publicRows.length > 0 && (
+        <ul className="ci-failing">
+          {publicRows.map((row, i) => (
+            <FailedRow key={i} row={row} />
+          ))}
+        </ul>
+      )}
+      {hiddenRows.length > 0 && (
+        <div className="hidden-checks">
+          <p>
+            {hiddenRows.length} hidden{" "}
+            {hiddenRows.length === 1 ? "check failed" : "checks failed"}.
+          </p>
+          <ul className="ci-hidden-summary">
+            {[...categories].map(([category, count]) => (
+              <li key={category}>
+                {count} {count === 1 ? "case" : "cases"}:{" "}
+                {failureText({ category })}
+              </li>
+            ))}
+          </ul>
+          <details>
+            <summary>
+              Details for {hiddenRows.length} hidden{" "}
+              {hiddenRows.length === 1 ? "check" : "checks"}
+            </summary>
+            <ul className="ci-failing">
+              {hiddenRows.map((row, i) => (
+                <FailedRow key={i} row={row} />
+              ))}
+            </ul>
+          </details>
+        </div>
+      )}
+    </>
   );
 }
 

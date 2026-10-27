@@ -215,6 +215,41 @@ export function Practice({
   const { layout, update: resize } = usePracticeLayout();
   const challengeBody = useRef<HTMLDivElement>(null);
   const resultsBody = useRef<HTMLDivElement>(null);
+  const paneScroll = useRef({ challenge: 0, code: 0, feedback: 0 });
+  function focusPane(pane: "challenge" | "code" | "feedback") {
+    const bodies = {
+      challenge: challengeBody.current,
+      code: editorHost.current?.querySelector<HTMLElement>(".cm-content"),
+      feedback: resultsBody.current,
+    };
+    const node = bodies[pane];
+    if (!node) return;
+    const mobile = window.matchMedia("(max-width: 760px)").matches;
+    const margin =
+      (mainRef.current?.parentElement?.querySelector<HTMLElement>(
+        ".practice-nav",
+      )?.offsetHeight ?? 0) + 12;
+    if (mobile) {
+      for (const key of ["challenge", "code", "feedback"] as const) {
+        const box = bodies[key]?.closest(".pane")?.getBoundingClientRect();
+        if (box && box.top <= margin && box.bottom > margin)
+          paneScroll.current[key] = Math.max(0, margin - box.top);
+      }
+    }
+    // Keep the editor mounted and its cursor/internal scroll intact when moving away/back.
+    node.focus({ preventScroll: true });
+    if (mobile) {
+      const box = node.closest(".pane")?.getBoundingClientRect();
+      if (box)
+        window.scrollTo({
+          top: Math.max(
+            0,
+            window.scrollY + box.top - margin + paneScroll.current[pane],
+          ),
+          behavior: "instant",
+        });
+    }
+  }
   // 1, 2 and 3 move between the panes, lazygit-style, whenever focus is not somewhere that
   // types: Escape then Tab leaves the editor first. Never a chord inside the editor, where
   // AltGr and Ctrl with digits already type characters or switch browser tabs.
@@ -230,7 +265,7 @@ export function Practice({
       const target = event.target as HTMLElement | null;
       if (
         !target ||
-        !mainRef.current?.contains(target) ||
+        !target.closest(".practice") ||
         target.closest("dialog")
       )
         return;
@@ -240,16 +275,12 @@ export function Practice({
         )
       )
         return;
-      const pane = {
-        "1": () => challengeBody.current,
-        "2": () =>
-          editorHost.current?.querySelector<HTMLElement>(".cm-content"),
-        "3": () => resultsBody.current,
-      }[event.key];
-      const node = pane?.();
-      if (!node) return;
+      const pane = (
+        { "1": "challenge", "2": "code", "3": "feedback" } as const
+      )[event.key as "1" | "2" | "3"];
+      if (!pane) return;
       event.preventDefault();
-      node.focus();
+      focusPane(pane);
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
@@ -569,6 +600,29 @@ export function Practice({
   };
   return (
     <div className="practice tui" onClickCapture={persistView}>
+      <nav className="practice-nav" aria-label="Practice panes">
+        <button
+          type="button"
+          aria-controls="practice-challenge"
+          onClick={() => focusPane("challenge")}
+        >
+          Challenge
+        </button>
+        <button
+          type="button"
+          aria-controls="practice-code"
+          onClick={() => focusPane("code")}
+        >
+          Code
+        </button>
+        <button
+          type="button"
+          aria-controls="practice-feedback"
+          onClick={() => focusPane("feedback")}
+        >
+          Feedback
+        </button>
+      </nav>
       <main
         className="tui-panes"
         ref={mainRef}
@@ -635,7 +689,11 @@ export function Practice({
           onChange={(width) => resize({ challenge: width })}
           onReset={() => resize({ challenge: null })}
         />
-        <section className="pane practice-work" aria-label="Your code">
+        <section
+          className="pane practice-work"
+          id="practice-code"
+          aria-label="Your code"
+        >
           <div className="pane-title">
             <kbd>[2]</kbd> code{" "}
             <span className="faint">
@@ -833,7 +891,9 @@ export function Practice({
                       setOutputOpen(event.currentTarget.open)
                     }
                   >
-                    <summary>Output</summary>
+                    <summary>
+                      {stale ? "Last run output — code edited since" : "Output"}
+                    </summary>
                     <Output
                       run={run}
                       revision={revision}
