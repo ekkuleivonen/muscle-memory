@@ -63,6 +63,51 @@ class StoreTest(unittest.TestCase):
             self.assertEqual(name, "default.model_catalog")
             self.assertEqual(table.schema().find_field(key).name, "snapshot_id")
 
+    def test_runs_from_r2_are_pulled_and_moved_once_stored(self):
+        class FakeS3:
+            def __init__(self, objects):
+                self.objects = dict(objects)
+
+            def get_paginator(self, _):
+                objects = self.objects
+
+                class Pages:
+                    def paginate(self, Bucket, Prefix):
+                        yield {"Contents": [{"Key": k} for k in sorted(objects) if k.startswith(Prefix)]}
+
+                return Pages()
+
+            def get_object(self, Bucket, Key):
+                body = self.objects[Key]
+
+                class Body:
+                    def read(self):
+                        return body
+
+                return {"Body": Body()}
+
+            def copy_object(self, Bucket, Key, CopySource):
+                self.objects[Key] = self.objects[CopySource["Key"]]
+
+            def delete_object(self, Bucket, Key):
+                del self.objects[Key]
+
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            catalog = SqlCatalog("local", uri=f"sqlite:///{root}/catalog.db", warehouse=f"file://{root}")
+            name, schema_path, key = store_events.TABLES["runs"]
+            table = store_events.table_for(catalog, name, store_events.schema(schema_path))
+            s3 = FakeS3({
+                "model-runs/outbox/run-a.ndjson": (json.dumps(row("model-a.1", "run-a")) + "\n").encode(),
+                "model-runs/elsewhere.txt": b"",
+            })
+            outbox = root / "pulled"
+            self.assertEqual(store_events.pull(s3, "content", outbox), ["model-runs/outbox/run-a.ndjson"])
+            done = store_events.append(table, outbox, key)
+            store_events.mark_stored(s3, "content", done)
+            self.assertEqual(sorted(s3.objects), ["model-runs/elsewhere.txt", "model-runs/stored/run-a.ndjson"])
+            self.assertEqual(table.scan().to_arrow().num_rows, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

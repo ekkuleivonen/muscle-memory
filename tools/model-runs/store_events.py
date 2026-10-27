@@ -8,8 +8,13 @@ appended before the move failed; it is moved without appending again.
 
     python store_events.py runs <outbox>       # default.model_events
     python store_events.py catalog <outbox>    # default.model_catalog
+    python store_events.py runs-r2 <bucket>    # the admin's finished runs, from private R2
 
-Environment: CATALOG_URI, WAREHOUSE, CATALOG_TOKEN (R2 Data Catalog).
+Runs from the admin are in `model-runs/outbox/` in the private content bucket; `runs-r2` pulls
+them into a local outbox, appends them, and moves each stored object to `model-runs/stored/`.
+
+Environment: CATALOG_URI, WAREHOUSE, CATALOG_TOKEN (R2 Data Catalog); for runs-r2 also
+R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY.
 """
 from __future__ import annotations
 
@@ -71,19 +76,65 @@ def append(table, outbox: Path, key: str) -> list[str]:
     return done
 
 
+R2_OUTBOX = "model-runs/outbox/"
+R2_STORED = "model-runs/stored/"
+
+
+def pull(s3, bucket: str, outbox: Path) -> list[str]:
+    """Downloads every finished run in the bucket's outbox; returns their keys."""
+    outbox.mkdir(parents=True, exist_ok=True)
+    keys: list[str] = []
+    for page in s3.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=R2_OUTBOX):
+        for item in page.get("Contents", []):
+            name = item["Key"].removeprefix(R2_OUTBOX)
+            if not name.endswith(".ndjson") or "/" in name:
+                continue
+            body = s3.get_object(Bucket=bucket, Key=item["Key"])["Body"].read()
+            (outbox / name).write_bytes(body)
+            keys.append(item["Key"])
+    return keys
+
+
+def mark_stored(s3, bucket: str, names: list[str]) -> None:
+    """Moves stored runs out of the bucket's outbox."""
+    for name in names:
+        source = R2_OUTBOX + name
+        s3.copy_object(Bucket=bucket, Key=R2_STORED + name, CopySource={"Bucket": bucket, "Key": source})
+        s3.delete_object(Bucket=bucket, Key=source)
+
+
 def main() -> int:
     from pyiceberg.catalog.rest import RestCatalog
 
-    if len(sys.argv) != 3 or sys.argv[1] not in TABLES:
+    mode = sys.argv[1] if len(sys.argv) == 3 else ""
+    if mode not in (*TABLES, "runs-r2"):
         print(__doc__)
         return 2
-    name, schema_path, key = TABLES[sys.argv[1]]
+    name, schema_path, key = TABLES["runs" if mode == "runs-r2" else mode]
     env = os.environ
     catalog = RestCatalog(
         name="events", uri=env["CATALOG_URI"], warehouse=env["WAREHOUSE"], token=env["CATALOG_TOKEN"]
     )
     table = table_for(catalog, name, schema(schema_path))
-    done = append(table, Path(sys.argv[2]), key)
+    if mode == "runs-r2":
+        import tempfile
+
+        import boto3
+
+        s3 = boto3.client(
+            "s3",
+            endpoint_url=env["R2_ENDPOINT"],
+            aws_access_key_id=env["R2_ACCESS_KEY_ID"],
+            aws_secret_access_key=env["R2_SECRET_ACCESS_KEY"],
+            region_name="auto",
+        )
+        bucket = sys.argv[2]
+        with tempfile.TemporaryDirectory() as scratch:
+            pull(s3, bucket, Path(scratch))
+            done = append(table, Path(scratch), key)
+            mark_stored(s3, bucket, done)
+    else:
+        done = append(table, Path(sys.argv[2]), key)
     print(f"Stored {len(done)} files in {name}.")
     return 0
 
