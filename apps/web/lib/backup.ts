@@ -5,7 +5,11 @@
  * this file is the account. It carries the device secret, which can delete what was uploaded,
  * so it is to be kept private.
  */
-import { openPracticeStore, type StoreDump } from "../../../packages/browser/practice-store";
+import { notifyPrivateBoundary } from "./private-boundary";
+import {
+  openPracticeStore,
+  type StoreDump,
+} from "../../../packages/browser/practice-store";
 import type { StoredRecord } from "../../../packages/domain/records";
 import { ACCOUNT_CHANGE, acceptConsent, parseStoredProfile } from "./account";
 import { PROGRESS_CHANGE } from "./progress";
@@ -57,9 +61,12 @@ export function parseBackup(text: string): Backup | Error {
     return new Error("That file isn't a Muscle Memory backup: it isn't JSON.");
   }
   const backup = value as Partial<Backup> | null;
-  if (backup?.kind !== BACKUP_KIND) return new Error("That file isn't a Muscle Memory backup.");
+  if (backup?.kind !== BACKUP_KIND)
+    return new Error("That file isn't a Muscle Memory backup.");
   if (backup.version !== BACKUP_VERSION)
-    return new Error(`That backup is version ${String(backup.version)}; this site reads version ${BACKUP_VERSION}.`);
+    return new Error(
+      `That backup is version ${String(backup.version)}; this site reads version ${BACKUP_VERSION}.`,
+    );
   const store = backup.store as Partial<StoreDump> | undefined;
   const ok =
     isString(backup.exportedAt) &&
@@ -71,7 +78,10 @@ export function parseBackup(text: string): Backup | Error {
     store.records.every(isRecord) &&
     Array.isArray(store.outbox) &&
     store.outbox.every(isString);
-  if (!ok) return new Error("That backup is damaged: some of it is missing or malformed.");
+  if (!ok)
+    return new Error(
+      "That backup is damaged: some of it is missing or malformed.",
+    );
   return backup as Backup;
 }
 
@@ -88,7 +98,8 @@ export async function makeBackup(): Promise<Backup> {
   const local: Record<string, string> = {};
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i)!;
-    if (key.startsWith(PREFIX) && !TRANSIENT.has(key)) local[key] = localStorage.getItem(key)!;
+    if (key.startsWith(PREFIX) && !TRANSIENT.has(key))
+      local[key] = localStorage.getItem(key)!;
   }
   const store = await openPracticeStore();
   try {
@@ -105,11 +116,17 @@ export async function makeBackup(): Promise<Backup> {
 }
 
 /** This browser's own participant ID and how many records it holds, before a restore. */
-export async function current(): Promise<{ participantId: string | null; records: number }> {
+export async function current(): Promise<{
+  participantId: string | null;
+  records: number;
+}> {
   const store = await openPracticeStore();
   try {
     const dump = await store.dump();
-    return { participantId: dump.settings.participantId ?? null, records: dump.records.length };
+    return {
+      participantId: dump.settings.participantId ?? null,
+      records: dump.records.length,
+    };
   } finally {
     store.close();
   }
@@ -120,19 +137,29 @@ export async function current(): Promise<{ participantId: string | null; records
  * the current Terms (otherwise /consent asks). The caller reloads the app afterwards.
  */
 export async function restoreBackup(backup: Backup): Promise<void> {
-  const store = await openPracticeStore();
+  notifyPrivateBoundary("start");
+  let released = false;
   try {
-    await store.restore(backup.store);
+    const store = await openPracticeStore();
+    try {
+      await store.restore(backup.store);
+    } finally {
+      store.close();
+    }
+    for (const key of Object.keys(localStorage))
+      if (key.startsWith(PREFIX)) localStorage.removeItem(key);
+    for (const [key, value] of Object.entries(backup.local))
+      localStorage.setItem(key, value);
+    notifyPrivateBoundary("finish");
+    released = true;
+    window.dispatchEvent(new Event(ACCOUNT_CHANGE));
+    window.dispatchEvent(new Event(PROGRESS_CHANGE));
+    const profile = parseStoredProfile(backup.local[PROFILE_KEY] ?? null);
+    if (profile && !profile.signedOut && acceptsCurrent(profile.accepted))
+      acceptConsent();
   } finally {
-    store.close();
+    if (!released) notifyPrivateBoundary("finish");
   }
-  for (const key of Object.keys(localStorage))
-    if (key.startsWith(PREFIX)) localStorage.removeItem(key);
-  for (const [key, value] of Object.entries(backup.local)) localStorage.setItem(key, value);
-  window.dispatchEvent(new Event(ACCOUNT_CHANGE));
-  window.dispatchEvent(new Event(PROGRESS_CHANGE));
-  const profile = parseStoredProfile(backup.local[PROFILE_KEY] ?? null);
-  if (profile && !profile.signedOut && acceptsCurrent(profile.accepted)) acceptConsent();
 }
 
 /** The file name a backup downloads as. */
