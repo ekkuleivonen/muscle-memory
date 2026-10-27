@@ -128,6 +128,8 @@ Uploads are not a backup: they don't give you account recovery or sync between d
 
 Muscle Memory is for people **16 and older**. If you're younger, please come back in a bit; the challenges will still be here.
 
+If you're 16 or 17, you get the same protections as everyone, and we've kept them high for that reason: no ads, no third-party trackers, nothing shared with other people, every profile question optional, and stealth and deletion one command away. Nothing here pushes you to give more than you want to. If you give your age band, we treat 16 and 17 separately in anything we publish or compare.
+
 ## Changes
 
 When this notice changes, the version at the top changes too, and you'll be asked to accept the new one on your next visit. No sneaky edits.

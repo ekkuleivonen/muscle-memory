@@ -38,7 +38,7 @@ export interface Profile {
   /** Whether they type without looking at the keys: keystroke timing depends on it. */
   touchTyping?: "yes" | "mostly" | "no";
   /** An age band, never a birth date. */
-  age?: "16-24" | "25-34" | "35-44" | "45-54" | "55+";
+  age?: "16-17" | "18-24" | "25-34" | "35-44" | "45-54" | "55+";
   editor?: "standard" | "vim";
 }
 

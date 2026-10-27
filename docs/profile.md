@@ -18,7 +18,7 @@ Every question is optional and answered with a category, never free text, so gro
 | `aiShare` | about how much of the code they ship an AI wrote |
 | `goal` | what brings them here |
 | `touchTyping` | whether they type without looking at the keys |
-| `age` | an age band (16–24 up to 55 or older), never a birth date |
+| `age` | an age band (16–17, 18–24, up to 55 or older), never a birth date; 16–17 is its own band so anything published or compared can treat under-18s apart |
 | `editor` | editor keybindings: standard or Vim |
 
 They are asked in settings (`/settings/profile`, every question on one form, or one at `/settings/profile/<question>`). Quick start saves the language picked as a first guess at `languages` when there is none; that guess does not count as the person's answer.

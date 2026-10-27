@@ -51,9 +51,9 @@ Muscle Memory is provided **"as is" and "as available"**, without warranties of 
 
 ## Liability
 
-To the extent the law allows, we're not liable for indirect or consequential losses, or for lost data, profits or time. Our total liability is limited to **[EUR 100]**, or what you paid us in the past 12 months if that's more (today that's nothing).
+To the extent the law allows, we're not liable for indirect or consequential losses, or for lost data, profits or time. Our total liability is limited to **¥10,000**, or what you paid us in the past 12 months if that's more (today that's nothing).
 
-Nothing here limits liability that can't legally be limited, such as for gross negligence, intent, or your rights as a consumer under mandatory law.
+None of this limits our liability for intent or gross negligence, or anything else that can't legally be limited, including your rights as a consumer under mandatory law.
 
 ## Changes
 
