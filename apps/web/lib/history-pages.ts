@@ -84,3 +84,58 @@ export function retryable(reason: HistoryFailure): boolean {
   const status = Number(m[1]);
   return status === 429 || status >= 500;
 }
+
+/**
+ * One read per interval and one retry budget for the whole tab, kept outside any report mount, so
+ * remounting /stats can't add reads or refill the budget. Only a successful page refills it.
+ */
+export class HistoryPacer {
+  private next = 0;
+  private retriesUsed = 0;
+  constructor(private readonly interval = HISTORY_READ_INTERVAL_MS) {}
+  /** When the next read may start: now, or the end of the current interval. */
+  readyAt(now: number) {
+    return Math.max(now, this.next);
+  }
+  /** Record that a read is starting; returns false (and starts nothing) inside the interval. */
+  begin(now: number) {
+    if (now < this.next) return false;
+    this.next = now + this.interval;
+    return true;
+  }
+  /** After a failed read: when to retry automatically, or undefined once the budget is spent. */
+  retryAt(reason: HistoryFailure, now: number, identityDelay = 10_000) {
+    if (!retryable(reason) || this.retriesUsed >= HISTORY_AUTO_RETRIES) return undefined;
+    this.retriesUsed++;
+    // No read was made for an identity failure, so the interval doesn't apply to it.
+    return reason === "identity" ? now + identityDelay : this.readyAt(now);
+  }
+  succeeded() {
+    this.retriesUsed = 0;
+  }
+}
+
+/** A page body that couldn't be parsed or validated. Transport failures are thrown as they are. */
+export class MalformedPage extends Error {}
+/**
+ * Reads a history reply body. Truncated or slow bodies reject with the fetch's own error (abort,
+ * timeout or network), so the caller still treats them as transient; only bytes that arrived
+ * completely but aren't a JSON object are MalformedPage.
+ */
+export async function readPageBody(response: Response): Promise<UploadedHistory> {
+  const text = await response.text();
+  let page: unknown;
+  try {
+    page = JSON.parse(text);
+  } catch {
+    throw new MalformedPage("History page isn't JSON.");
+  }
+  if (!page || typeof page !== "object" || Array.isArray(page)) throw new MalformedPage("History page isn't an object.");
+  return page as UploadedHistory;
+}
+/** The fixed reason for an exception from a history read: a stream or fetch failure, or a malformed page. */
+export function thrownReason(error: unknown): HistoryFailure {
+  if (error instanceof MalformedPage) return "invalid-page";
+  if (error instanceof DOMException && error.name === "TimeoutError") return "timeout";
+  return "network";
+}

@@ -7,10 +7,10 @@
  */
 import {
   mergeHistoryPage,
-  HISTORY_AUTO_RETRIES,
-  HISTORY_READ_INTERVAL_MS,
+  HistoryPacer,
   failureReason,
-  retryable,
+  readPageBody,
+  thrownReason,
   type HistoryFailure,
   HISTORY_MAX_PAGES,
 } from "../../lib/history-pages";
@@ -57,7 +57,7 @@ export interface DeviceEvidence {
 }
 export type HistoryStatus =
   | { state: "idle" }
-  | { state: "loading" }
+  | { state: "loading"; retryAt?: number }
   | {
       state: "ready";
       value: UploadedHistory;
@@ -86,8 +86,9 @@ let cache: {
   notice?: string;
 } | null = null;
 let expiry: ReturnType<typeof setTimeout> | undefined;
-// Keep rate pacing across report remounts in this tab; no persistent history or identity.
-let nextHistoryReadAt = 0;
+// One read per interval and one retry budget for the whole tab, across report remounts; no
+// persistent history or identity.
+const pacer = new HistoryPacer();
 const dropCache = () => {
   cache = null;
   clearTimeout(expiry);
@@ -161,7 +162,6 @@ export function useReportData(
   const held = useRef(false);
   const historyFlight = useRef<number | null>(null);
   const historyPages = useRef(0);
-  const historyRetries = useRef(0);
 
   /** Synchronously forget everything shown and everything in flight. */
   const clear = useCallback(
@@ -169,7 +169,6 @@ export function useReportData(
       generation.current++;
       historyFlight.current = null;
       historyPages.current = 0;
-      historyRetries.current = 0;
       for (const a of aborts.current) a.abort();
       aborts.current.clear();
       device.invalidate(block);
@@ -234,13 +233,7 @@ export function useReportData(
             reason,
             ms: Date.now() - began,
           });
-          const again = retryable(reason) && historyRetries.current < HISTORY_AUTO_RETRIES;
-          if (again) historyRetries.current++;
-          const retryAt = again
-            ? reason === "identity"
-              ? Date.now() + 10_000
-              : Math.max(nextHistoryReadAt, Date.now())
-            : undefined;
+          const retryAt = pacer.retryAt(reason, Date.now());
           setHistory(
             more && previous
               ? {
@@ -298,6 +291,14 @@ export function useReportData(
           });
           return;
         }
+        // Inside the interval (a remount, a click, a focus): wait for it rather than reading early.
+        if (!pacer.begin(Date.now())) {
+          const retryAt = pacer.readyAt(Date.now());
+          setHistory((h) =>
+            more && previous ? { state: "ready", value: previous, retryAt } : h.state === "ready" ? h : { state: "loading", retryAt },
+          );
+          return;
+        }
         setHistory((h) =>
           h.state === "ready" && more ? h : { state: "loading" },
         );
@@ -310,7 +311,6 @@ export function useReportData(
             .toISOString()
             .slice(0, 10);
         try {
-          nextHistoryReadAt = Date.now() + HISTORY_READ_INTERVAL_MS;
           const response = await fetch("/api/private-history", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -341,11 +341,12 @@ export function useReportData(
             }
             return;
           }
-          const page = (await response.json().catch(() => null)) as UploadedHistory | null;
+          // A slow or cut-off body rejects to the transient classifier below; only a complete
+          // body that isn't a page object is invalid-page.
+          const page = await readPageBody(response);
           if (!live()) return;
-          if (!page) return fail("invalid-page");
           historyPages.current++;
-          historyRetries.current = 0;
+          pacer.succeeded();
           let merged;
           try {
             merged = mergeHistoryPage(previous, page);
@@ -363,7 +364,7 @@ export function useReportData(
           keep(identity.participant, value, notice);
           setHistory({ state: "ready", value, notice });
         } catch (error) {
-          fail(error instanceof DOMException && error.name === "TimeoutError" ? "timeout" : "network");
+          fail(thrownReason(error));
         } finally {
           aborts.current.delete(controller);
         }
@@ -563,7 +564,7 @@ export function useReportData(
           return;
         void loadHistory(Boolean(previous), previous);
       },
-      Math.max(0, (retryAt ?? nextHistoryReadAt) - Date.now()),
+      Math.max(0, (retryAt ?? pacer.readyAt(Date.now())) - Date.now()),
     );
     return () => clearTimeout(timer);
   }, [history, privacy, loadHistory]);
@@ -576,7 +577,7 @@ export function useReportData(
     if (privacy !== "ok" || blocked.current || boundaries) return;
     setHistory((h) =>
       (h.state === "unavailable" || h.state === "limited" || (h.state === "ready" && h.reason)) && !h.retryAt
-        ? { ...h, retryAt: Math.max(Date.now(), nextHistoryReadAt) }
+        ? { ...h, retryAt: pacer.readyAt(Date.now()) }
         : h,
     );
   }, [privacy]);
@@ -585,7 +586,8 @@ export function useReportData(
     const failed = (history.state === "unavailable" || history.state === "limited" || (history.state === "ready" && history.reason)) && !history.retryAt;
     if (!failed) return;
     const again = () => {
-      if (document.visibilityState === "visible" && Date.now() >= nextHistoryReadAt) retryHistory();
+      const now = Date.now();
+      if (document.visibilityState === "visible" && pacer.readyAt(now) === now) retryHistory();
     };
     window.addEventListener("focus", again);
     document.addEventListener("visibilitychange", again);
