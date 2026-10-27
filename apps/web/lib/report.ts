@@ -10,6 +10,7 @@ import { defaultComparisons } from "../../../packages/model-runs/comparison";
 import { languageLabel, type ChallengeSummary } from "./challenges";
 import type { Profile } from "./profile";
 import type { Progress } from "./progress";
+import { matchingGroup, ADULT_BANDS, type CohortRead } from "../../../packages/statistics/cohort";
 
 export type Source = "device" | "uploaded";
 export type ReportAttempt = AttemptSummary & { source: Source };
@@ -84,6 +85,7 @@ export interface ReportInput {
   profile: Profile | null;
   /** Model receipts by exact revision; absent means not requested. */
   receipts: Readonly<Record<string, ReceiptState>>;
+  cohorts?: Readonly<Record<string, CohortRead | "unavailable">>;
 }
 export interface Report {
   /** Nothing started on this device or in uploaded history. */
@@ -391,6 +393,27 @@ function modelFyi(solved: ReportAttempt[], receipts: ReportInput["receipts"]): s
   return m === null ? null : `Models that solved the same challenges needed ${plural(m, "submission")}, typically.`;
 }
 
+/** One exact-task observation, never a personality score or an inferred demographic peer group. */
+function humanFyi(solved: ReportAttempt[], input: ReportInput): string | null {
+  const age = input.profile?.age;
+  const adult = age && (ADULT_BANDS as readonly string[]).includes(age);
+  if (!adult) return null;
+  for (const attempt of [...solved].reverse()) {
+    if (attempt.practice === "unknown") continue;
+    const read = input.cohorts?.[attempt.revision];
+    if (!read || read === "unavailable" || read.state !== "ready" || read.minimum < 20) continue;
+    const group = matchingGroup(read, attempt.conditions, attempt.practice, "adult");
+    const user = toSolve(attempt)?.submissions;
+    const typical = group?.submissions?.p50;
+    if (!user || !typical || !Number.isFinite(typical) || typical < 1) continue;
+    const delta = Math.round((user - typical) / typical * 100);
+    return delta === 0
+      ? "About as many submissions as a typical recorded solve on this challenge."
+      : `${Math.abs(delta)}% ${delta < 0 ? "fewer" : "more"} submissions than a typical recorded solve on this challenge.`;
+  }
+  return null;
+}
+
 function next(input: ReportInput, started: Set<string>): NextStep | null {
   const { catalog, progress } = input;
   const open = catalog.find((c) => progress[c.key] && !progress[c.key].completedAt && c.runnable);
@@ -409,7 +432,7 @@ export function buildReport(input: ReportInput): Report {
   ).values()].slice(0, COMPARISON_TASKS);
   const questions = [
     start(solved),
-    iterate(solved, modelFyi(solved, input.receipts)),
+    iterate(solved, humanFyi(solved, input) ?? modelFyi(solved, input.receipts)),
     recovery(solved),
     // Per-keystroke change sizes do not establish a person's revision style.
     typing(input.attempts),

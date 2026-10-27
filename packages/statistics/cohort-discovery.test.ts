@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { syntheticRevision } from "../developer-profile/fixtures";
 import { syntheticWindow } from "./cohort-fixtures";
-import { cohortDiscoveryQuery, selectHourlyCohorts } from "./cohort-discovery";
+import { cohortDiscoveryQuery, selectHourlyCohorts, MAX_HOURLY_COHORT_BUILDS } from "./cohort-discovery";
 
 const current = Array.from({ length: 69 }, (_, i) => ({
   challenge: `JS-${String(i + 1).padStart(3, "0")}`,
@@ -22,8 +22,8 @@ test("hourly selection bounds exact scans and covers a stable candidate set with
       current,
       new Date(+now + hour * 3_600_000),
     );
-    assert.equal(selected.length, 12);
-    assert.equal(new Set(selected.map((r) => r.challenge)).size, 12);
+    assert.equal(selected.length, Math.min(current.length, MAX_HOURLY_COHORT_BUILDS));
+    assert.equal(new Set(selected.map((r) => r.challenge)).size, selected.length);
     selected.forEach((r) => seen.add(r.challenge));
   }
   assert.equal(seen.size, 69);

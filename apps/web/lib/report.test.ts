@@ -5,6 +5,7 @@ import { trace, syntheticRevision } from "../../../packages/developer-profile/fi
 import type { ModelReceipt } from "../../../packages/model-runs/receipts";
 import type { ChallengeSummary } from "./challenges";
 import type { Progress } from "./progress";
+import { cohortResult } from "../../../packages/statistics/cohort";
 import { buildReport, duration, mergeEvidence, type Question, type ReportAttempt, type ReportInput } from "./report";
 
 const challenge = (key: string, language: string, difficulty = "easy", revision = syntheticRevision) =>
@@ -101,6 +102,18 @@ test("the model comparison is one tiny FYI on the iterate answer, only from comp
   assert.equal(fyi({ [a.revision]: [receipt({ reasoning: "low", defaultReasoning: "high" })] }), null, "only the default setting counts");
   const r = buildReport(input({ attempts: device(a), receipts: { [a.revision]: [receipt()] } }));
   assert.equal(r.questions.filter((x) => x.fyi).length, 1, "never a comparison section");
+});
+
+test("a human comparison is one exact-task nugget with adult and matching-condition guards", () => {
+  const a = { ...summary("human-fyi", "JS-001"), practice: "first" as const };
+  const cohort = cohortResult([{ runtime: JSON.stringify({engine:"javascript",version:"synthetic"}), editor: JSON.stringify({name:"CodeMirror",features:["syntax-highlighting"]}), diagnostics:0, practice:"first", completed:1, first_pass:1, submissions:4, browsers:20 }]);
+  const args = input({ attempts:device(a), profile:{age:"25-34"}, cohorts:{[a.revision]:cohort} });
+  assert.equal(q(buildReport(args), "iterate")?.fyi, "50% fewer submissions than a typical recorded solve on this challenge.");
+  assert.equal(q(buildReport({...args, profile:{age:"16-17"}}), "iterate")?.fyi, null);
+  assert.equal(q(buildReport({...args, profile:{}}), "iterate")?.fyi, null);
+  assert.equal(q(buildReport({...args, attempts:device({...a, practice:"repeat"})}), "iterate")?.fyi, null);
+  assert.equal(q(buildReport({...args, cohorts:{[a.revision]:{...cohort, groups:[]}}}), "iterate")?.fyi, null);
+  assert.equal(q(buildReport({...args, cohorts:{[a.revision]:{...cohort, state:"unavailable"}}}), "iterate")?.fyi, null);
 });
 
 /** Replace an attempt's submissions with the given verdicts, in order; "pass" solves. */

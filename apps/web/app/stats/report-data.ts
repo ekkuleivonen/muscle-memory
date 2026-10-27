@@ -36,6 +36,7 @@ import {
 import type { ReceiptState } from "../../lib/report";
 import {
   COHORTS_ENABLED,
+  ADULT_BANDS,
   type CohortRead,
 } from "../../../../packages/statistics/cohort";
 
@@ -469,6 +470,8 @@ export function useReportData(
   // Human cohorts: no request at all while switched off (docs/human-cohorts.md).
   useEffect(() => {
     if (!COHORTS_ENABLED || privacy !== "ok" || !wanted) return;
+    const age = privacyOf().profile?.profile.age;
+    if (!age || !(ADULT_BANDS as readonly string[]).includes(age)) return;
     const ticket = generation.current;
     const controller = new AbortController();
     aborts.current.add(controller);
@@ -483,7 +486,7 @@ export function useReportData(
         `/api/cohort/${encodeURIComponent(challenge)}/${encodeURIComponent(revision)}`,
         {
           cache: "no-store",
-          signal: controller.signal,
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12000)]),
           redirect: "error",
         },
       )

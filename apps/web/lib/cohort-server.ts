@@ -9,6 +9,7 @@ import {
 } from "../../../packages/statistics/cohort";
 import { cohortMemberQuery } from "../../../packages/statistics/current-cohort";
 import { readCohortBuildSpec } from "../../../packages/statistics/cohort-source";
+import { readHumanSummary, type HumanSummaryEnvironment } from "../../../packages/statistics/scheduled-cohorts";
 import {
   buildHumanSnapshot,
   type ComparisonControl,
@@ -39,12 +40,18 @@ export const empty = (state: CohortRead["state"]): CohortRead => ({
  */
 /** Page requests never launch SQL. Scheduled artifact serving is owned by the cache follow-up. */
 export async function cohort(
-  _challenge: string,
-  _revision: string,
+  challenge: string,
+  revision: string,
   current: boolean,
+  runtime?: Record<string, string>,
 ): Promise<CohortRead> {
   if (!COHORTS_ENABLED) return empty("disabled");
-  return empty(current ? "unavailable" : "earlier-version");
+  if (!current) return empty("earlier-version");
+  if (!runtime) return empty("unavailable");
+  try {
+    const env = (await getCloudflareContext({ async: true })).env as unknown as HumanSummaryEnvironment;
+    return (await readHumanSummary(env, challenge, revision, runtime)) ?? empty("unavailable");
+  } catch { return empty("unavailable"); }
 }
 
 /** Internal candidate computation only; no HTTP caller or scheduler is added here. */

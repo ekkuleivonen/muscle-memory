@@ -4,7 +4,8 @@ import { MIN_COHORT } from "./cohort";
 import { checkCohortWindow, type CohortWindow } from "./cohort-window";
 
 export const MAX_CURRENT_COHORT_REVISIONS = 100;
-export const MAX_HOURLY_COHORT_BUILDS = 12;
+/** One discovery + at most 99 exact scans keeps the hourly run at 100 SQL queries. */
+export const MAX_HOURLY_COHORT_BUILDS = 99;
 export interface CurrentCohortRevision {
   challenge: string;
   revision: string;
@@ -69,8 +70,8 @@ ORDER BY e.challenge, e.challenge_revision
 LIMIT ${MAX_CURRENT_COHORT_REVISIONS + 1}`;
 }
 
-/** Complete, bounded discovery result -> at most 12 exact builds, rotating without new storage.
- * No truncation of an incomplete/overflow response. Over 12 candidates means some FYIs expire;
+/** Complete, bounded discovery result -> at most 99 exact builds, rotating without new storage.
+ * No truncation of an incomplete/overflow response. Over 99 candidates means some FYIs expire;
  * this intentionally bounds work, not a promise of hourly coverage of every eligible revision.
  */
 export function selectHourlyCohorts(
