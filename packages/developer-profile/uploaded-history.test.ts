@@ -10,6 +10,7 @@ import {
   historyWindow,
   ownerHistory,
   readUploadedHistory,
+  HistoryRefusal,
   HISTORY_MAX_RECORDS,
   type OwnerVerifier,
   type UploadedHistory,
@@ -54,6 +55,36 @@ function result(records = trace()) {
   return historyResult(participant, window, rows(records));
 }
 const ready = (): Promise<UploadedHistory> => Promise.resolve(result());
+
+test("operational diagnostics expose fixed stages, never upstream or record contents", async () => {
+  const canary = "synthetic-private-canary-never-return";
+  for (const [response, diagnostic] of [
+    [Response.json({ error: canary }, { status: 400 }), "storage-http-400"],
+    [Response.json({ success: false, error: canary }), "storage-result"],
+    [new Response(canary), "response-json"],
+    [
+      Response.json({ success: true, result: { rows: [{ scope: canary }] } }),
+      "row-shape",
+    ],
+  ] as const) {
+    await assert.rejects(
+      readUploadedHistory(
+        "synthetic-token",
+        participant,
+        window,
+        (async () => response) as typeof fetch,
+      ),
+      (error: unknown) => {
+        assert.ok(error instanceof HistoryRefusal);
+        assert.equal(error.status, 503);
+        assert.equal(error.diagnostic, diagnostic);
+        assert.ok(!JSON.stringify(error).includes(canary));
+        assert.ok(!error.message.includes(canary));
+        return true;
+      },
+    );
+  }
+});
 
 test("fixed query selects only owner and whole attempts, not arbitrary date fragments", () => {
   const a = trace();
@@ -288,7 +319,7 @@ test("transport projects only summaries, refuses upstream errors, bounds bytes a
       (async () => new Promise(() => {})) as typeof fetch,
       10,
     ),
-    /timed out/,
+    { diagnostic: "timeout" },
   );
   const stalled = (async () =>
     new Response(
@@ -300,7 +331,7 @@ test("transport projects only summaries, refuses upstream errors, bounds bytes a
     )) as typeof fetch;
   await assert.rejects(
     readUploadedHistory("synthetic-token", participant, window, stalled, 10),
-    /timed out/,
+    { diagnostic: "timeout" },
   );
   let cancelled = false;
   const large = (async () =>
@@ -316,7 +347,7 @@ test("transport projects only summaries, refuses upstream errors, bounds bytes a
     )) as typeof fetch;
   await assert.rejects(
     readUploadedHistory("synthetic-token", participant, window, large),
-    /too large/,
+    { diagnostic: "response-size" },
   );
   assert.equal(cancelled, true);
 });
