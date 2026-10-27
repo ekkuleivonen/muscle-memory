@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { checkQuery, SqlRejected, statementAt, statements, tokenize } from "./sql";
 import { formatSql } from "./format";
-import { compareValues, defuse, formatBytes, structured, toCsv, toJson, toTsv } from "./export";
+import { compareValues, defuse, formatBytes, structured, toCsv, toJson, toTsv, uniqueKeys } from "./export";
 import { DEFAULT_LIMITS, errorPlace, limitsFrom, QueryFailed, readSchema, runQuery, SQL_ENDPOINT } from "./read";
 
 function rejected(sql: string, pattern?: RegExp) {
@@ -156,6 +156,12 @@ test("CSV quotes newlines and commas, keeps Unicode, and defuses formulas", () =
 
 test("JSON keeps nulls and duplicate columns; TSV flattens tabs and newlines", () => {
   assert.deepEqual(JSON.parse(toJson(["a", "a", "b"], [[1, 2, null]])), [{ a: 1, a_2: 2, b: null }]);
+  // Generated keys never collide with real column names, in any order.
+  assert.deepEqual(uniqueKeys(["x", "x", "x_2"]), ["x", "x_3", "x_2"]);
+  assert.deepEqual(uniqueKeys(["x_2", "x", "x", "x"]), ["x_2", "x", "x_3", "x_4"]);
+  assert.deepEqual(uniqueKeys(["x", "x", "x", "x_3"]), ["x", "x_2", "x_4", "x_3"]);
+  for (const cols of [["x", "x", "x_2"], ["a", "a_2", "a", "a", "a_3"]])
+    assert.equal(Object.keys(JSON.parse(toJson(cols, [cols.map((_, i) => i)]))[0]).length, cols.length);
   assert.equal(toTsv(["a", "b"], [["x\ty\nz", null]]), "a\tb\nx y z\t");
 });
 

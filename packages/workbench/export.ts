@@ -61,12 +61,20 @@ export function toJson(columns: string[], rows: readonly unknown[][]): string {
   );
 }
 
+/** Keys for JSON rows: a repeated name gets the first free `_2`, `_3`, … not used by any column. */
 export function uniqueKeys(columns: string[]): string[] {
-  const used = new Map<string, number>();
+  const taken = new Set(columns);
+  const seen = new Set<string>();
   return columns.map((c) => {
-    const n = used.get(c) ?? 0;
-    used.set(c, n + 1);
-    return n ? `${c}_${n + 1}` : c;
+    if (!seen.has(c)) {
+      seen.add(c);
+      return c;
+    }
+    let n = 2;
+    while (taken.has(`${c}_${n}`)) n++;
+    const key = `${c}_${n}`;
+    taken.add(key);
+    return key;
   });
 }
 

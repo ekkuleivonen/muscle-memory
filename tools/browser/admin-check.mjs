@@ -531,6 +531,36 @@ async function workbench(page) {
     (await editor.innerText()).trimEnd(),
     "SELECT\n  type,\n  'a  ;  b' AS s\nFROM default.events\nWHERE kind = 'x'\n  AND n BETWEEN 1 AND 2\nLIMIT 5",
   );
+  // Each tab has its own undo history: undo in a new tab never brings back another tab's text.
+  // The document's text, without the placeholder an empty editor shows.
+  const docText = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll(".cm-content .cm-line")]
+        .map((line) => (line.querySelector(".cm-placeholder") ? "" : line.textContent))
+        .join("\n")
+        .trim(),
+    );
+  await page.getByRole("button", { name: "New tab" }).click();
+  await page.keyboard.type("SELECT 2");
+  for (let i = 0; i < 6; i++) await page.keyboard.press("ControlOrMeta+z");
+  assert.equal(await docText(), "", "undo stops at the new tab's own start");
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  assert.equal(await docText(), "SELECT 2", "redo restores the new tab's own text");
+  await page.getByRole("tab", { name: "Query 1" }).click();
+  await page.keyboard.press("ControlOrMeta+z");
+  const undone = await docText();
+  assert.match(undone, /^select type,'a {2};/, `Query 1 keeps its own history (undoes its format): ${JSON.stringify(undone)}`);
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  // Closing the only other tab, and the sole remaining one, leaves a fresh empty tab.
+  page.once("dialog", (d) => d.accept());
+  await page.getByRole("button", { name: "Close Query 2" }).click();
+  page.once("dialog", (d) => d.accept());
+  await page.getByRole("button", { name: "Close Query 1" }).click();
+  assert.equal(await docText(), "");
+  await page.keyboard.press("ControlOrMeta+z");
+  assert.equal(await docText(), "", "a fresh tab has nothing to undo");
+  await page.keyboard.insertText("select type,'a  ;  b' as s from default.events where kind='x' and n between 1 and 2 limit 5");
+  await page.getByRole("button", { name: /^Format/ }).click();
   // Tabs and drafts survive a reload; results do not, and are never stored.
   await page.getByRole("button", { name: "New tab" }).click();
   await page.keyboard.insertText("SELECT 'second tab draft'");

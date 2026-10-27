@@ -265,7 +265,7 @@ export function Workbench({
       const text = state.sliceDoc(range.from, range.to);
       const formatted = formatSql(text).replace(/\n$/, text.endsWith("\n") ? "\n" : "");
       if (formatted === text) return;
-      ed.view.dispatch({ changes: { from: range.from, to: range.to, insert: formatted }, selection: { anchor: range.from, head: range.from + formatted.length } });
+      ed.replaceRange(range.from, range.to, formatted, true);
       return;
     }
     const doc = state.doc.toString();
@@ -359,8 +359,8 @@ export function Workbench({
     setActive(id);
     activeRef.current = id;
     const kept = states.current.get(id);
-    if (kept) ed.view.setState(kept);
-    else ed.replace(list.find((t) => t.id === id)?.sql ?? "");
+    // Each tab keeps its own state, so undo never reaches another tab's text.
+    ed.view.setState(kept ?? ed.fresh(list.find((t) => t.id === id)?.sql ?? ""));
     ed.setSchema(schema);
     ed.clearMarks();
     setStale(true);

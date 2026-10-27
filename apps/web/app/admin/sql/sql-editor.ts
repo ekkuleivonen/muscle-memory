@@ -3,7 +3,12 @@
  * the documented functions, brackets, search, and error marks. Admin only; practice's editor
  * (with no completion, by design) is separate and shares only the colours.
  */
-import { Compartment, EditorState, Prec, type Extension } from "@codemirror/state";
+import {
+  Compartment,
+  EditorState,
+  Prec,
+  type Extension,
+} from "@codemirror/state";
 import {
   drawSelection,
   EditorView,
@@ -13,8 +18,20 @@ import {
   lineNumbers,
   placeholder,
 } from "@codemirror/view";
-import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
-import { bracketMatching, HighlightStyle, indentOnInput, indentUnit, syntaxHighlighting } from "@codemirror/language";
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  indentWithTab,
+  isolateHistory,
+} from "@codemirror/commands";
+import {
+  bracketMatching,
+  HighlightStyle,
+  indentOnInput,
+  indentUnit,
+  syntaxHighlighting,
+} from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import {
   autocompletion,
@@ -28,7 +45,11 @@ import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
 import { lintGutter, setDiagnostics, type Diagnostic } from "@codemirror/lint";
 import { sql, SQLDialect, type SQLNamespace } from "@codemirror/lang-sql";
 import { highlight } from "../../practice/highlight";
-import { FUNCTIONS, KEYWORDS, TYPES } from "../../../../../packages/workbench/dialect";
+import {
+  FUNCTIONS,
+  KEYWORDS,
+  TYPES,
+} from "../../../../../packages/workbench/dialect";
 import { NAMESPACE, statementAt } from "../../../../../packages/workbench/sql";
 import type { Schema } from "../../../../../packages/workbench/read";
 
@@ -43,7 +64,9 @@ export const r2Sql = SQLDialect.define({
 });
 
 /** lang-sql tags documented functions as standard names. */
-const builtins = HighlightStyle.define([{ tag: tags.standard(tags.name), color: "var(--syn-function)" }]);
+const builtins = HighlightStyle.define([
+  { tag: tags.standard(tags.name), color: "var(--syn-function)" },
+]);
 
 const functions = new Map(FUNCTIONS.map((f) => [f.name, f]));
 
@@ -83,11 +106,19 @@ function cteCompletions(context: CompletionContext) {
   const statement = statementAt(text, context.pos);
   if (!statement) return null;
   const names = new Set<string>();
-  for (const m of statement.text.matchAll(/(?:\bWITH|,)\s+([A-Za-z_][\w]*)\s+AS\s*\(/gi)) names.add(m[1]);
+  for (const m of statement.text.matchAll(
+    /(?:\bWITH|,)\s+([A-Za-z_][\w]*)\s+AS\s*\(/gi,
+  ))
+    names.add(m[1]);
   if (!names.size) return null;
   return {
     from: before.from,
-    options: [...names].map((label) => ({ label, type: "class", detail: "CTE", boost: 1 })),
+    options: [...names].map((label) => ({
+      label,
+      type: "class",
+      detail: "CTE",
+      boost: 1,
+    })),
     validFor: /^[\w$]*$/,
   };
 }
@@ -102,8 +133,15 @@ export interface SqlEditorHooks {
 export class SqlEditor {
   readonly view: EditorView;
   private language = new Compartment();
+  private extensions: Extension[];
+  private schema: Schema | null;
 
-  constructor(parent: HTMLElement, doc: string, hooks: SqlEditorHooks, schema: Schema | null) {
+  constructor(
+    parent: HTMLElement,
+    doc: string,
+    hooks: SqlEditorHooks,
+    schema: Schema | null,
+  ) {
     const run = () => {
       hooks.onRun();
       return true;
@@ -112,63 +150,70 @@ export class SqlEditor {
       hooks.onFormat();
       return true;
     };
-    this.view = new EditorView({
-      parent,
-      state: EditorState.create({
-        doc,
-        extensions: [
-          Prec.highest(
-            keymap.of([
-              { key: "Mod-Enter", run },
-              { key: "Shift-Alt-f", run: format },
-            ]),
-          ),
-          // Escape, then Tab, leaves the editor (Tab indents otherwise).
-          Prec.highest(
-            EditorView.domEventHandlers({
-              keydown(event, view) {
-                if (event.key === "Escape") view.setTabFocusMode(2000);
-                return false;
-              },
-            }),
-          ),
-          lineNumbers(),
-          highlightActiveLineGutter(),
-          highlightActiveLine(),
-          drawSelection({ cursorBlinkRate: 0 }),
-          indentUnit.of("  "),
-          history(),
-          indentOnInput(),
-          bracketMatching(),
-          closeBrackets(),
-          highlightSelectionMatches(),
-          lintGutter(),
-          syntaxHighlighting(highlight),
-          syntaxHighlighting(builtins),
-          this.language.of(this.languageFor(schema)),
-          autocompletion({ activateOnTyping: true, maxRenderedOptions: 80 }),
-          r2Sql.language.data.of({ autocomplete: cteCompletions }),
-          placeholder("SELECT … — Ctrl/⌘-Enter runs the statement at the cursor"),
-          keymap.of([
-            ...closeBracketsKeymap,
-            ...completionKeymap,
-            ...searchKeymap,
-            indentWithTab,
-            ...historyKeymap,
-            ...defaultKeymap,
-          ]),
-          EditorView.contentAttributes.of({
-            "aria-label": "SQL query",
-            spellcheck: "false",
-            autocorrect: "off",
-            autocapitalize: "off",
-          }),
-          EditorView.updateListener.of((update) => {
-            if (update.docChanged) hooks.onChange(update.view);
-            if (update.selectionSet || update.docChanged) hooks.onSelection(update.view);
-          }),
-        ],
+    this.schema = schema;
+    this.extensions = [
+      Prec.highest(
+        keymap.of([
+          { key: "Mod-Enter", run },
+          { key: "Shift-Alt-f", run: format },
+        ]),
+      ),
+      // Escape, then Tab, leaves the editor (Tab indents otherwise).
+      Prec.highest(
+        EditorView.domEventHandlers({
+          keydown(event, view) {
+            if (event.key === "Escape") view.setTabFocusMode(2000);
+            return false;
+          },
+        }),
+      ),
+      lineNumbers(),
+      highlightActiveLineGutter(),
+      highlightActiveLine(),
+      drawSelection({ cursorBlinkRate: 0 }),
+      indentUnit.of("  "),
+      history(),
+      indentOnInput(),
+      bracketMatching(),
+      closeBrackets(),
+      highlightSelectionMatches(),
+      lintGutter(),
+      syntaxHighlighting(highlight),
+      syntaxHighlighting(builtins),
+      autocompletion({ activateOnTyping: true, maxRenderedOptions: 80 }),
+      r2Sql.language.data.of({ autocomplete: cteCompletions }),
+      placeholder("SELECT … — Ctrl/⌘-Enter runs the statement at the cursor"),
+      keymap.of([
+        ...closeBracketsKeymap,
+        ...completionKeymap,
+        ...searchKeymap,
+        indentWithTab,
+        ...historyKeymap,
+        ...defaultKeymap,
+      ]),
+      EditorView.contentAttributes.of({
+        "aria-label": "SQL query",
+        spellcheck: "false",
+        autocorrect: "off",
+        autocapitalize: "off",
       }),
+      EditorView.updateListener.of((update) => {
+        if (update.docChanged) hooks.onChange(update.view);
+        if (update.selectionSet || update.docChanged)
+          hooks.onSelection(update.view);
+      }),
+    ];
+    this.view = new EditorView({ parent, state: this.fresh(doc) });
+  }
+
+  /** A new document with its own undo history, as each tab has. */
+  fresh(doc: string): EditorState {
+    return EditorState.create({
+      doc,
+      extensions: [
+        ...this.extensions,
+        this.language.of(this.languageFor(this.schema)),
+      ],
     });
   }
 
@@ -183,14 +228,26 @@ export class SqlEditor {
   }
 
   setSchema(schema: Schema | null) {
-    this.view.dispatch({ effects: this.language.reconfigure(this.languageFor(schema)) });
+    this.schema = schema;
+    this.view.dispatch({
+      effects: this.language.reconfigure(this.languageFor(schema)),
+    });
   }
 
-  /** Replaces the document as one undoable change (switching tabs restores whole states). */
+  /** Replaces the whole document as its own undo step. */
   replace(text: string) {
+    this.replaceRange(0, this.view.state.doc.length, text, false);
+  }
+
+  /** Replaces a range as its own undo step (formatting), selecting the result when asked. */
+  replaceRange(from: number, to: number, text: string, select: boolean) {
     this.view.dispatch({
-      changes: { from: 0, to: this.view.state.doc.length, insert: text },
-      selection: { anchor: Math.min(this.view.state.selection.main.head, text.length) },
+      changes: { from, to, insert: text },
+      selection: select
+        ? { anchor: from, head: from + text.length }
+        : { anchor: Math.min(this.view.state.selection.main.head, from + text.length) },
+      annotations: isolateHistory.of("full"),
+      userEvent: "format",
     });
   }
 
@@ -205,19 +262,32 @@ export class SqlEditor {
   }
 
   /** The selection if there is one, else the statement at the cursor; with its offset. */
-  target(): { text: string; from: number; to: number; selection: boolean } | null {
+  target(): {
+    text: string;
+    from: number;
+    to: number;
+    selection: boolean;
+  } | null {
     const { state } = this.view;
     const range = state.selection.main;
     if (!range.empty) {
       const text = state.sliceDoc(range.from, range.to);
-      return text.trim() ? { text, from: range.from, to: range.to, selection: true } : null;
+      return text.trim()
+        ? { text, from: range.from, to: range.to, selection: true }
+        : null;
     }
     const statement = statementAt(state.doc.toString(), range.head);
     return statement ? { ...statement, selection: false } : null;
   }
 
   /** Marks an error at an offset (or a line and column) in the document. */
-  mark(message: string, at: number | null, line: number | null = null, column: number | null = null, base = 0) {
+  mark(
+    message: string,
+    at: number | null,
+    line: number | null = null,
+    column: number | null = null,
+    base = 0,
+  ) {
     const { doc } = this.view.state;
     let from: number | null = null;
     if (at !== null) from = base + at;
@@ -226,12 +296,16 @@ export class SqlEditor {
       const target = baseLine.number + line - 1;
       if (target <= doc.lines) {
         const l = doc.line(target);
-        const col = Math.max(0, (column ?? 1) - 1) + (line === 1 ? base - baseLine.from : 0);
+        const col =
+          Math.max(0, (column ?? 1) - 1) +
+          (line === 1 ? base - baseLine.from : 0);
         from = Math.min(l.to, l.from + col);
       }
     }
     if (from === null || from > doc.length) return this.clearMarks();
-    const wordEnd = /^[\w$]+|^./.exec(doc.sliceString(from, Math.min(doc.length, from + 80)));
+    const wordEnd = /^[\w$]+|^./.exec(
+      doc.sliceString(from, Math.min(doc.length, from + 80)),
+    );
     const diagnostic: Diagnostic = {
       from,
       to: Math.min(doc.length, from + (wordEnd?.[0].length ?? 0)),
