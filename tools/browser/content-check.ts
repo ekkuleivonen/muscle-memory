@@ -18,7 +18,7 @@ import { runFeedback } from "../../packages/domain/records";
 
 const root = resolve(import.meta.dirname, "../..");
 const only = process.argv.slice(2);
-const challenges = readChallenges(join(root, "content/challenges")).filter(
+const challenges = readChallenges().filter(
   (c) => !only.length || only.includes(c.metadata.key),
 );
 if (only.length && challenges.length !== only.length)

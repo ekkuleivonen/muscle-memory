@@ -1,6 +1,6 @@
 # Challenges
 
-What a challenge is, how it is written and checked, and where it is stored. The model is in `packages/content` (types in `model.ts`, the folder reader in `source.ts`, validation, revision hashing, rules and publish checks). Challenges live in `content/challenges/<KEY>/`; `tools/build-content.ts` builds them into `content/catalog.json`, which the app reads. The catalog is a build output: it is made before dev, builds and tests, and never committed.
+What a challenge is, how it is written and checked, and where it is stored. The model is in `packages/content` (types in `model.ts`, the managed-copy reader in `source.ts`, validation, revision hashing, rules and publish checks). Challenges live in managed D1/private R2. `npm run catalog:pull` exports an authorized gitignored copy; `tools/build-content.ts` verifies it and emits the public `content/catalog.json` before development, builds and tests. Missing or invalid copies fail closed. See [private catalog development](private-catalog.md).
 
 ## Principles
 
@@ -57,27 +57,11 @@ Helpers in the file count too: a rule that a helper must be used looks for a cal
 
 ## The folder
 
-```text
-content/challenges/PY-003/
-  challenge.json   { title, summary, difficulty, tags, file, entrypoint, parameters? }
-  task.md          what to do
-  tally.py         the starter, under the file's own name
-  cases.json       [{ name?, input, expected, hidden? }]
-  rules.json       optional: [{ id, message, when }]
-  schema.sql       SQL only
-  adapter.<ext>    C, C++ and Java only
-  private/
-    solution.py
-    alternative-1.py, …     other correct designs
-    wrong-1.py, …           plausible mistakes, each with a comment saying what is wrong
-    rules/<rule-id>/fires-1.py, quiet-1.py, …
-```
-
-The language comes from the key's code (`PY` is Python). Every code file is a whole file, so it opens with highlighting in any editor and runs as it is.
+Authoring sources contain metadata, the task and starter, cases, optional rules/schema/adapter and private QA (reference, alternatives, wrong implementations and rule examples). They are edited through the authenticated admin and stored as immutable private objects. Local tooling uses the same sources from `.local/catalog-copy.json`; it does not read the retained public descriptions in `content/challenges/`.
 
 ## Keys
 
-A challenge's key is its language's code and a three-digit number: `PY-003`, `JS-012`, `CPP-001` (`packages/content/keys.ts`). It names the challenge's folder and is its only identifier: permanent, never moved or reused, and a new challenge takes the next free number in its language. Keys appear in URLs (`/challenges/PY-003`), shared links, progress and recorded data (every observation about a challenge carries it as `challenge`).
+A challenge's key is its language's code and a three-digit number: `PY-003`, `JS-012`, `CPP-001` (`packages/content/keys.ts`). It is the challenge's only identifier: permanent, never moved or reused, and a new challenge takes the next free number in its language. Keys appear in URLs (`/challenges/PY-003`), shared links, progress and recorded data (every observation about a challenge carries it as `challenge`).
 
 ## Revisions and live metadata
 
@@ -87,11 +71,11 @@ A challenge's key is its language's code and a three-digit number: `PY-003`, `JS
 
 Saving a change to revision content makes a new revision under its own hash; there is no version number to choose. Recorded work names the revision it ran against, so it stays readable after the challenge changes. Retire and replace a challenge, rather than revising it, when the problem itself changes substance.
 
-**The archive.** The build also writes every revision it makes to `content/revisions/<hex>.json`, once, and those files are committed (CI fails when one is missing). The catalog holds only live revisions; the archive holds every revision ever published, so recorded data that names an older hash can still be read against exactly what was practised. An archived file is never rewritten.
+**The archive.** Every published revision remains registered in D1 and immutable private R2 storage, including archived challenges. The managed local copy includes all registered revisions and verifies their content hashes. The build does not create or commit `content/revisions/` files.
 
 ## The private part
 
-`private/` is never written to the catalog: a **solution**, optional **alternatives** (other correct designs, which must pass) and **wrong solutions** (plausible mistakes, which must fail), and for each rule **examples** that must fire it and must not. The build refuses a challenge whose private part fails the publish checks (`packages/content/publish.ts`):
+Private QA is never written to the public catalog: a **solution**, optional **alternatives** (other correct designs, which must pass) and **wrong solutions** (plausible mistakes, which must fail), and for each rule **examples** that must fire it and must not. The build refuses a challenge whose private part fails the publish checks (`packages/content/publish.ts`):
 
 - the solution is not the starter;
 - every rule has examples both ways, and fires on neither the solution nor any alternative (a rule may not insist on one correct design);
@@ -101,17 +85,10 @@ Saving a change to revision content makes a new revision under its own hash; the
 
 ## Adding a challenge
 
-Make `content/challenges/<KEY>/` with the next free key in its language: a clear task, difficulty and tags, the file's name and entry point, a starter, cases with their edge cases (mark the hidden ones), any rules with examples, and `private/`. `npm run build:content` checks it (`--dry-run` checks without writing), and `npm run check:publish` runs it. [The catalog audit](catalog-audit.md) lists what exists and what is missing.
+Use the authenticated admin with the next free permanent key: clear task, difficulty/tags, one editable file, starter, cases, optional rules and private QA. Validate in the operator browser and publish explicitly. For local runtime QA, refresh the managed copy, then run `npm run build:content` and `npm run check:publish`. See [admin management](admin-challenge-management.md).
 
 ## Where it will be stored
 
-Today the catalog is a file built from the folders. Later:
+## Storage
 
-| What | Where |
-| --- | --- |
-| Challenges, revisions, private parts, change log | a database (Cloudflare D1) behind an admin UI and Cloudflare Access |
-| Published revisions | `content/revisions/` today; R2, one immutable object per revision, later |
-| What is live | a small index object: every live challenge's metadata and revision id |
-| Derived stats (solve rate, measured difficulty) | the analysis store, recomputed from observations, never written into challenges |
-
-The admin flow: an AI or human draft, a person's edit with a live preview in real practice, the publish checks, approval by someone who did not draft it, then published (live), retired (out of lists, recorded work stays valid) or disabled (now, with a reason).
+Managed D1 stores lifecycle and immutable version registration; private R2 stores authoring sources, published snapshots and the live index. Derived analytics are separate and do not alter challenge content. This change removes private challenge files from the current Git tree, not Git history, prior clones or search caches. Browser-served cases remain inspectable because the sandbox needs them to run.

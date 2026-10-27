@@ -118,7 +118,7 @@ def cyclic():
     value = []
     value.append(value)
     return value
-def frequency_map(items):
+def runtime_fixture(items):
     if items == ["ok"]:
         return {"ok": 1}
     if items == ["broad"]:
@@ -134,15 +134,13 @@ def frequency_map(items):
         return cyclic()
     raise BadStr()
 `;
-const SOLUTION = `def frequency_map(items):
-    counts = {}
-    for item in items:
-        counts[item] = counts.get(item, 0) + 1
-    return counts
+// Synthetic runtime control, deliberately unrelated to a published challenge answer.
+const SOLUTION = `def runtime_fixture(items):
+    return {"fixture_length": len(items)}
 `;
 const TESTS = [
-  { input: ["a", "b", "a"], expected: { a: 2, b: 1 } },
-  { input: [], expected: {} },
+  { input: ["a", "b", "a"], expected: { fixture_length: 3 } },
+  { input: [], expected: { fixture_length: 0 } },
 ];
 // Every channel we know of, from inside the worker. Requests are issued, then the run stays
 // alive for 2 s so an allowed request would certainly reach a server.
@@ -235,7 +233,7 @@ async function check(browserType) {
         runId,
         code,
         inputs: tests.map((test) => test.input),
-        entrypoint: "frequency_map",
+        entrypoint: "runtime_fixture",
         filename: "solution.py",
         language: "python",
       });
@@ -244,15 +242,15 @@ async function check(browserType) {
       results.firstRun = await time(() => runner.run(request("r1", SOLUTION)));
       results.warmRun = await time(() => runner.run(request("r2", SOLUTION)));
       results.syntax = await runner.run(
-        request("r3", "def frequency_map(items)\n  return {}"),
+        request("r3", "def runtime_fixture(items)\n  return {}"),
       );
       results.runtime = await runner.run(
-        request("r4", "def frequency_map(items):\n    return 1 / 0"),
+        request("r4", "def runtime_fixture(items):\n    return 1 / 0"),
       );
       results.escapes = await runner.run(
         request(
           "r5",
-          ESCAPES + "\ndef frequency_map(items):\n    return {}\n",
+          ESCAPES + "\ndef runtime_fixture(items):\n    return {}\n",
           [],
         ),
       );
@@ -263,7 +261,7 @@ async function check(browserType) {
       const cancelled = runner.run(
         request(
           "r8",
-          "def frequency_map(items):\n    while True:\n        pass\n",
+          "def runtime_fixture(items):\n    while True:\n        pass\n",
         ),
       );
       setTimeout(() => runner.cancel(), 300);
@@ -281,7 +279,7 @@ async function check(browserType) {
           ["cyclic"],
           ["raise"],
         ],
-        entrypoint: "frequency_map",
+        entrypoint: "runtime_fixture",
         filename: "solution.py",
         language: "python",
       });
@@ -290,24 +288,24 @@ async function check(browserType) {
       const multi = (rate) =>
         runner.run({
           runId: "r12-" + rate,
-          code: "from shop.money import cents\nimport rates\ndef frequency_map(items):\n    return cents(rates.RATE * len(items))\n",
+          code: "from shop.money import cents\nimport rates\ndef runtime_fixture(items):\n    return cents(rates.RATE * len(items))\n",
           files: {
             "shop/__init__.py": "",
             "shop/money.py": "def cents(amount):\n    return round(amount * 100)\n",
             "src/rates.py": `RATE = ${rate}\n`,
           },
           inputs: [[["a", "b"]]],
-          entrypoint: "frequency_map",
+          entrypoint: "runtime_fixture",
           parameters: ["items"],
           filename: "src/solution.py",
           language: "python",
         });
       results.pyMultiError = await runner.run({
         runId: "r13",
-        code: "from shop.money import cents\ndef frequency_map(items):\n    return cents(None)\n",
+        code: "from shop.money import cents\ndef runtime_fixture(items):\n    return cents(None)\n",
         files: { "shop/__init__.py": "", "shop/money.py": "def cents(amount):\n    return round(amount * 100)\n" },
         inputs: [[[]]],
-        entrypoint: "frequency_map",
+        entrypoint: "runtime_fixture",
         parameters: ["items"],
         filename: "src/solution.py",
         language: "python",
@@ -317,7 +315,7 @@ async function check(browserType) {
       results.flood = await runner.run(
         request(
           "r10",
-          "print('x' * 1000000)\ndef frequency_map(items):\n    return {}\n",
+          "print('x' * 1000000)\ndef runtime_fixture(items):\n    return {}\n",
           [],
         ),
       );
@@ -417,7 +415,7 @@ async function authCheck(browserType) {
           runId: "auth",
           code: SOLUTION,
           inputs: [["a", "b", "a"]],
-          entrypoint: "frequency_map",
+          entrypoint: "runtime_fixture",
           filename: "solution.py",
           language: "python",
         });
@@ -450,7 +448,7 @@ async function authCheck(browserType) {
       signedIn.hits.assets.every((asset) => asset.signedIn),
     "signed in: bootstrap and a synthetic run succeed":
       signedIn.outcome.status === "completed" &&
-      signedIn.outcome.cases[0]?.output?.text === '{"a": 2, "b": 1}',
+      signedIn.outcome.cases[0]?.output?.text === '{"fixture_length": 3}',
     "signed in: the cookie never reaches another origin":
       signedIn.hits.outsideCookies.length === 0 &&
       signedIn.hits.outside.length === 0,

@@ -2,6 +2,7 @@
  * Run after npm run build:cloudflare. No network, credentials, or production writes.
  */
 import assert from "node:assert/strict";
+import { tsImport } from "tsx/esm/api";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import { readFile, readdir, writeFile } from "node:fs/promises";
@@ -262,13 +263,11 @@ async function scriptedOpenRouter(incoming, url) {
     return { status: 200, headers, contentType: "application/json", body: '{"data":{}}' };
   const body = JSON.parse(incoming.postData());
   const opening = body.messages[1].content;
-  if (!solutions.size)
-    for (const key of await readdir("content/challenges")) {
-      const dir = resolve("content/challenges", key);
-      const { title, file } = JSON.parse(await readFile(`${dir}/challenge.json`, "utf8"));
-      const solution = (await readdir(`${dir}/private`)).find((f) => f.startsWith("solution."));
-      solutions.set(file + "\u0000" + title, await readFile(`${dir}/private/${solution}`, "utf8"));
-    }
+  if (!solutions.size) {
+    const { readChallenges } = await tsImport("../../packages/content/source.ts", import.meta.url);
+    for (const source of readChallenges())
+      solutions.set(source.revision.file + "\u0000" + source.metadata.title, source.private.solution);
+  }
   const solution = [...solutions].find(([k]) => {
     const [file, title] = k.split("\u0000");
     return opening.startsWith(`# ${title}\n`) && opening.includes(`## Your code: ${file} (`);
