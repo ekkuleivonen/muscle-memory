@@ -177,7 +177,75 @@ export async function runQuery(
       throw new QueryFailed({ kind: "rejected", message: cause.message, at: cause.at });
     throw cause;
   }
+  // The second guard, independent of how the SQL parses: no other namespace's name at all.
+  if (checked.kind !== "show") {
+    const names = await otherNamespaces(token, limits, request, signal);
+    const found = mentionedNamespace(text, names);
+    if (found)
+      throw new QueryFailed({
+        kind: "rejected",
+        message: `"${found.name}" is another namespace in this bucket; only "${NAMESPACE}" can be read. (A column or string spelled the same is refused too: rename it with AS.)`,
+        at: found.at,
+      });
+  }
   return send(token, checked, limits, request, signal);
+}
+
+const NAME_CHAR = "[\\p{Alphabetic}\\p{M}\\p{N}_$@#]";
+const NAMESPACE_TTL = 5 * 60 * 1000;
+let namespaces: { names: string[]; at: number } | null = null;
+
+/** Forgets the cached namespace list (tests; a new namespace is otherwise seen within 5 min). */
+export function forgetNamespaces() {
+  namespaces = null;
+}
+
+/**
+ * The bucket's namespaces other than `default`, from SHOW DATABASES, cached per isolate for
+ * five minutes. Fails closed: when the list cannot be read, no query runs.
+ */
+async function otherNamespaces(
+  token: string,
+  limits: Limits,
+  request: typeof fetch,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  if (namespaces && Date.now() - namespaces.at < NAMESPACE_TTL) return namespaces.names;
+  let values: string[];
+  try {
+    const listed = await send(
+      token,
+      checkQuery("SHOW DATABASES"),
+      { ...limits, maxRows: 1000, maxBytes: 1024 * 1024 },
+      request,
+      signal,
+    );
+    const column = listed.columns.findIndex((c) => /namespace|database|schema|name/i.test(c.name));
+    values = listed.rows
+      .flatMap((row) => (column >= 0 ? [row[column]] : row))
+      .filter((v): v is string => typeof v === "string" && v.length > 0);
+  } catch {
+    values = [];
+  }
+  if (!values.includes(NAMESPACE))
+    throw new QueryFailed({
+      kind: "unavailable",
+      message: "The bucket's namespaces could not be listed, so no query runs (the namespace guard fails closed). Try again shortly.",
+    });
+  const names = [...new Set(values.filter((v) => v !== NAMESPACE))];
+  namespaces = { names, at: Date.now() };
+  return names;
+}
+
+/** Where `text` names one of `names` as a whole word (any case), quoted or not. */
+export function mentionedNamespace(text: string, names: string[]): { name: string; at: number } | null {
+  let first: { name: string; at: number } | null = null;
+  for (const name of names) {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const m = new RegExp(`(?<!${NAME_CHAR})${escaped}(?!${NAME_CHAR})`, "iu").exec(text);
+    if (m && (!first || m.index < first.at)) first = { name, at: m.index };
+  }
+  return first;
 }
 
 async function send(

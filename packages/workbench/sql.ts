@@ -37,15 +37,19 @@ export class SqlRejected extends Error {
   }
 }
 
-const IDENT_PART = /[\p{L}\p{N}_$@#]/u;
+/** Name characters as R2 SQL's dialect reads them: letters (any script, with marks), digits, _ $ @ #. */
+const IDENT_START = /^[\p{Alphabetic}_]$/u;
+const IDENT_PART = /^[\p{Alphabetic}\p{M}\p{N}_$@#]$/u;
+/** The whole code point at `i` (one or two UTF-16 units), so names in any script are read whole. */
+const codePoint = (text: string, i: number) => String.fromCodePoint(text.codePointAt(i) ?? 0);
 const OPERATORS = [
-  "->>", "#>>", "!~*", "||/", "<=>", "<<", ">>", "<=", ">=", "<>", "!=", "==", "||", "::", "=>",
-  "->", "#>", "@>", "<@", "&&", "!~", "~*", "~~", "^@", "|/", "@@",
+  "!~~*", "->>", "#>>", "!~*", "!~~", "~~*", "||/", "<=>", "<<", ">>", "<=", ">=", "<>", "!=",
+  "==", "||", "::", ":=", "=>", "->", "#>", "@>", "<@", "&&", "!~", "~*", "~~", "^@", "|/", "@@",
 ];
 
 /** Length of a literal's prefix (E, X, N, B or U&) when one starts a string at `i`, else 0. */
 function stringPrefix(text: string, i: number): number {
-  if (IDENT_PART.test(text[i - 1] ?? "")) return 0;
+  if (i > 0 && IDENT_PART.test(text[i - 1])) return 0;
   if (/[EeXxNnBb]/.test(text[i]) && text[i + 1] === "'") return 1;
   if (/[Uu]/.test(text[i]) && text[i + 1] === "&" && text[i + 2] === "'") return 2;
   return 0;
@@ -131,9 +135,12 @@ export function tokenize(text: string, backslash = false): Token[] {
         i++;
       }
       push("number", from);
-    } else if (/[\p{L}_]/u.test(c) || (/[#@]/.test(c) && IDENT_PART.test(text[i + 1] ?? ""))) {
+    } else if (
+      IDENT_START.test(codePoint(text, i)) ||
+      (/[#@]/.test(c) && i + 1 < text.length && IDENT_PART.test(codePoint(text, i + 1)))
+    ) {
       // R2 SQL's dialect allows @, # and $ inside names: read the whole name as one word.
-      while (i < text.length && IDENT_PART.test(text[i])) i++;
+      while (i < text.length && IDENT_PART.test(codePoint(text, i))) i += codePoint(text, i).length;
       push("word", from);
     } else {
       // Operators are read longest first, so the formatter keeps them whole.
@@ -362,7 +369,10 @@ export function checkQuery(text: string, maxLength = 20000): CheckedQuery {
       else break;
     }
     const body = tokens[j];
-    if (!body || !((body.kind === "word" && QUERY_START.has(body.text.toUpperCase()) && body.text.toUpperCase() !== "FROM") || body.text === "("))
+    const starts = (t: Token | undefined) =>
+      t?.kind === "word" && ["SELECT", "WITH", "VALUES"].includes(t.text.toUpperCase());
+    // A parenthesis must open a query, not an option list: EXPLAIN (ANALYZE) SHOW … is refused.
+    if (!starts(body) && !(body?.kind === "punct" && body.text === "(" && starts(tokens[j + 1])))
       throw new SqlRejected("EXPLAIN works on a query here (SELECT, WITH or VALUES).", at(body ?? first));
   }
 
@@ -374,11 +384,10 @@ export function checkQuery(text: string, maxLength = 20000): CheckedQuery {
   const query: boolean[] = [true];
   let depth = 0;
   let expect = false;
-  // A word right after a dot is part of a name (e.distinct, b.group), never a keyword.
+  // A word next to a dot is part of a name (e.distinct, group.type), never a keyword.
+  const dot = (j: number) => tokens[j]?.kind === "punct" && tokens[j].text === ".";
   const keyword = (j: number) =>
-    tokens[j]?.kind === "word" && !(tokens[j - 1]?.kind === "punct" && tokens[j - 1].text === ".")
-      ? tokens[j].text.toUpperCase()
-      : "";
+    tokens[j]?.kind === "word" && !dot(j - 1) && !dot(j + 1) ? tokens[j].text.toUpperCase() : "";
   // A parenthesis holds a query only when one starts right inside it; ((x) FROM 1) is an
   // expression, and ((SELECT …)) is read when its inner parenthesis is.
   const opens = (j: number) => QUERY_START.has(keyword(j + 1));
@@ -422,6 +431,8 @@ export function checkQuery(text: string, maxLength = 20000): CheckedQuery {
       expect = true;
       continue;
     }
+    // A query can also start later at this depth: ((SELECT 1) UNION SELECT … FROM t).
+    if (upper === "SELECT" || upper === "WITH" || upper === "VALUES") query[depth] = true;
     if (!query[depth]) continue;
     if (CLAUSE.has(upper)) fromList[depth] = false;
     // a IS [NOT] DISTINCT FROM b compares; it names no table.
@@ -439,10 +450,12 @@ export function checkQuery(text: string, maxLength = 20000): CheckedQuery {
   // LIMIT at the outermost level (not inside a subquery or CTE).
   depth = 0;
   let limited = false;
-  for (const t of tokens) {
+  for (let j = 0; j < tokens.length; j++) {
+    const t = tokens[j];
     if (t.kind === "punct" && t.text === "(") depth++;
     else if (t.kind === "punct" && t.text === ")") depth--;
-    else if (depth === 0 && t.kind === "word" && t.text.toUpperCase() === "LIMIT") limited = true;
+    // The clause, not a name: not an alias (AS limit) or part of a qualified name.
+    else if (depth === 0 && keyword(j) === "LIMIT" && keyword(j - 1) !== "AS") limited = true;
   }
   return { sql, kind, limited: kind !== "select" || limited };
 }

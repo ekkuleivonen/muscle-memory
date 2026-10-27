@@ -100,6 +100,12 @@ async function workbenchSql(query) {
   workbenchQueries.push(query);
   const ok = (schema, rows, metrics = { bytes_scanned: 12_345_678, files_scanned: 3 }) =>
     MFResponse.json({ success: true, result: { schema, rows, metrics } });
+  if (query === "SHOW DATABASES")
+    return ok(
+      [{ name: "namespace" }],
+      [{ namespace: "default" }, { namespace: "private_fixture" }],
+      { bytes_scanned: 0, files_scanned: 0 },
+    );
   if (query === "SHOW TABLES IN default")
     return ok(
       [{ name: "namespace" }, { name: "table_name" }],
@@ -704,6 +710,15 @@ try {
     assert.ok(!read.includes("synthetic-local-fixture-not-a-credential"), "no credential in responses");
     assert.ok(!read.includes("NOT A SELECTED COLUMN"), "only the reported columns pass");
     assert.equal(JSON.parse(read).rows.length, 2);
+    // The namespace guard: another namespace of the bucket is refused however it is written.
+    const reads = workbenchQueries.length;
+    for (const sql of ["((SELECT 1) UNION SELECT 1 FROM private_fixture.t)", "SELECT 1 AS private_fixture"]) {
+      const refused = JSON.parse(
+        await check("/admin/api/sql/query", valid, 400, { method: "POST", headers: sameOrigin, body: JSON.stringify({ sql }) }),
+      );
+      assert.equal(refused.error.kind, "rejected", sql);
+    }
+    assert.equal(workbenchQueries.length, reads, "refused before any data query");
   }
   for (const section of ["constructor", "toString", "__proto__"])
     await check(`/admin/${section}`, valid, 404);
