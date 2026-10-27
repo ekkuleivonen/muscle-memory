@@ -70,7 +70,7 @@ const receipt = (over: Partial<ModelReceipt> = {}): ModelReceipt =>
   runtime: { engine: "javascript", version: "synthetic" },
   features: [],
   budget: { turns: 50, submissions: 10 },
-  defaultReasoning: null,
+  defaultReasoning: "high",
   finalCodeLength: null,
   ...over,
   }) as ModelReceipt;
@@ -92,7 +92,7 @@ test("one unfinished attempt with no trace shows outcome and a resume action onl
   const o = chapter<OutcomesChapter>(r, "outcomes")!;
   assert.equal(o.headline, "You've started 1 challenge. It's still open.");
   assert.equal(o.unexplored, 3);
-  assert.match(o.evidence.caveat!, /isn't failed/);
+  assert.equal(o.note, "Open isn't failed: it's work you haven't finished yet.");
   assert.equal(chapter<NextChapter>(r, "next")!.action?.href, "/challenges/JS-001");
   assert.deepEqual(o.resume, { label: "Resume JS-001", href: "/challenges/JS-001" }, "resume sits with the opening message");
   assert.deepEqual(r.comparisonRevisions, []);
@@ -134,14 +134,14 @@ test("rich synthetic evidence tells all six chapters from what was recorded", ()
   assert.equal(h.headline, "Mostly small edits.", "2 checks per attempt isn't frequent");
 
   const m = chapter<ComparisonChapter>(r, "minds")!;
-  const jsRow = m.rows.find((x) => x.challenge === "JS-001")!;
-  const pyRow = m.rows.find((x) => x.challenge === "PY-001")!;
-  assert.equal(jsRow.models[0].cell.kind, "solved");
-  assert.equal(pyRow.models[0].cell.kind, "withheld", "a runtime mismatch withholds the outcome");
-  assert.match(m.headline, /You solved 2 of 2\. synthetic\/model · high solved 1 of 1\./);
-  assert.match(m.evidence.caveat!, /one observed try, not a success rate/);
-  assert.match(m.evidence.details.join(" "), /needs an approved minimum group size/);
-  assert.doesNotMatch(JSON.stringify(r.chapters), /not enough|too few/, "no cohort result is implied");
+  assert.deepEqual(m.rows.map((x) => x.challenge), ["JS-001"], "a runtime mismatch is omitted, not explained");
+  assert.equal(m.rows[0].models[0].cell.kind, "solved");
+  assert.deepEqual(m.columns, ["synthetic/model"], "one column per model, no setting or protocol label");
+  assert.equal(m.headline, "You solved 1 of 1. synthetic/model solved 1 of 1.");
+  assert.equal(m.note, "Each model result is a single try.");
+  assert.equal(m.people, false, "no people column without a real figure");
+  const visible = r.chapters.flatMap((c) => [c.title, c.headline, "note" in c ? c.note : null]).join(" ");
+  assert.doesNotMatch(visible, /not enough|too few|not compared|sha256|harness|withheld|mismatch/);
 
   const u = chapter<SurpriseChapter>(r, "surprise")!;
   assert.equal(u.kind, "recovered");
@@ -154,7 +154,7 @@ test("quiet confidence leads the surprise only for a clean first-submission pass
   const r = buildReport(input({ attempts: device(clean) }));
   const u = chapter<SurpriseChapter>(r, "surprise")!;
   assert.equal(u.kind, "quiet-confidence");
-  assert.match(u.evidence.caveat!, /isn't a prediction/);
+  assert.equal(u.note, null);
   const gapped = { ...clean, issues: ["Recording gap."] };
   assert.equal(chapter(buildReport(input({ attempts: device(gapped) })), "surprise"), undefined);
 });
@@ -165,25 +165,22 @@ test("fewer submissions compares only the same version and conditions", () => {
   const r = buildReport(input({ attempts: device(first, later) }));
   const u = chapter<SurpriseChapter>(r, "surprise")!;
   assert.equal(u.kind, "fewer-submissions");
-  assert.match(u.evidence.caveat!, /doesn't show a general change/);
+  assert.equal(u.note, "It's the same challenge, so familiarity helps.");
   const other = { ...later, conditions: ["Runtime: {}"] };
   const r2 = buildReport(input({ attempts: device(first, other) }));
   assert.notEqual(chapter<SurpriseChapter>(r2, "surprise")?.kind, "fewer-submissions");
 });
 
-test("model cells keep loading, unavailable and missing slots distinct", () => {
+test("pending, unreadable and incomparable model results leave the chapter out", () => {
   const a = summary("m1", "JS-001");
-  const loading = chapter<ComparisonChapter>(buildReport(input({ attempts: device(a), receipts: { [a.revision]: "loading" } })), "minds")!;
-  assert.equal(loading.rows[0].state, "loading");
-  assert.match(loading.headline, /Checking/);
-  const down = chapter<ComparisonChapter>(buildReport(input({ attempts: device(a), receipts: { [a.revision]: "unavailable" } })), "minds")!;
-  assert.equal(down.rows[0].state, "unavailable");
-  const none = chapter<ComparisonChapter>(
-    buildReport(input({ attempts: device(a), receipts: { [a.revision]: [receipt({ state: "missing", submissions: null }), receipt({ model: "other/model", state: "refused" })] } })),
-    "minds",
-  )!;
-  assert.deepEqual(none.rows[0].models.map((m) => m.cell.kind), ["none", "not-solved"]);
-  assert.match(none.headline, /other\/model · high solved 0 of 1/);
+  const minds = (receipts: ReportInput["receipts"]) => chapter<ComparisonChapter>(buildReport(input({ attempts: device(a), receipts })), "minds");
+  assert.equal(minds({ [a.revision]: "loading" }), undefined);
+  assert.equal(minds({ [a.revision]: "unavailable" }), undefined);
+  assert.equal(minds({ [a.revision]: [] }), undefined);
+  assert.equal(minds({ [a.revision]: [receipt({ state: "missing", submissions: null }), receipt({ model: "x/model", state: "infrastructure-failed" })] }), undefined);
+  const decided = minds({ [a.revision]: [receipt({ state: "missing", submissions: null }), receipt({ model: "other/model", state: "refused" })] })!;
+  assert.deepEqual(decided.rows[0].models.map((m) => [m.model, m.cell.kind, m.cell.note]), [["other/model", "not-solved", "didn't solve"]]);
+  assert.equal(decided.headline, "You solved 1 of 1. other/model solved 0 of 1.");
 });
 
 test("stories never form from a trace without checks, and gaps are shortened, not named", () => {
@@ -194,7 +191,7 @@ test("stories never form from a trace without checks, and gaps are shortened, no
   };
   const s = chapter<StoryChapter>(buildReport(input({ attempts: device(late) })), "story")!;
   assert.equal(s.breaks, 1);
-  assert.match(s.evidence.caveat!, /shortened/);
+  assert.equal(s.note, null);
   assert.doesNotMatch(JSON.stringify(s), /thinking|distract|confus/i);
   const quiet = { ...a, completed: false, timeline: a.timeline.slice(0, 2), values: { ...a.values, submissions: 0, examples: 0 } };
   assert.equal(chapter(buildReport(input({ attempts: device(quiet) })), "story"), undefined);
@@ -206,9 +203,7 @@ test("AI background shapes copy only when the person said so", () => {
   assert.equal(chapter<OutcomesChapter>(buildReport(input({ progress: p, profile: { aiUse: "rarely" } })), "outcomes")!.aiNote, null);
   const o = chapter<OutcomesChapter>(buildReport(input({ progress: p, profile: { aiUse: "daily" } })), "outcomes")!;
   assert.equal(o.aiNote, "no AI in this editor");
-  const c = o.evidence.details[0];
-  assert.match(c, /editor here offers no AI/);
-  assert.doesNotMatch(c, /without AI|unaided|deteriorat/i);
+  assert.doesNotMatch(JSON.stringify(o), /without AI|unaided|deteriorat/i);
 });
 
 test("device and uploaded evidence is deduplicated by attempt and revision", () => {
@@ -245,33 +240,8 @@ test("a finish known only from uploads is marked, not presented as device progre
   const r = buildReport(input({ attempts: [a] }));
   const o = chapter<OutcomesChapter>(r, "outcomes")!;
   assert.equal(o.languages[0].items[0].fromUploads, true);
-  assert.match(o.evidence.basis, /1 finished only in your uploads/);
 });
 
-test("failed receipt reads never become a claim that no model tried", () => {
-  const a = summary("f1", "JS-001"),
-    b = summary("f2", "PY-001", `sha256:${"d".repeat(64)}`);
-  const all = chapter<ComparisonChapter>(
-    buildReport(input({ attempts: device(a, b), receipts: { [a.revision]: "unavailable", [b.revision]: "unavailable" } })),
-    "minds",
-  )!;
-  assert.equal(all.headline, "Model results can't be read right now.");
-  assert.equal(all.evidence.basis, "2 challenges you tried. Model results couldn't be read.");
-  assert.doesNotMatch(all.evidence.basis, /checked against|matched/);
-  assert.doesNotMatch(all.headline, /No model/);
-  const some = chapter<ComparisonChapter>(
-    buildReport(input({ attempts: device(a, b), receipts: { [a.revision]: [], [b.revision]: "unavailable" } })),
-    "minds",
-  )!;
-  assert.match(some.headline, /challenges that could be read; 1 couldn't be read right now/);
-  const mixed = chapter<ComparisonChapter>(
-    buildReport(input({ attempts: device(a, b), receipts: { [a.revision]: [receipt()], [b.revision]: "unavailable" } })),
-    "minds",
-  )!;
-  assert.match(mixed.headline, /synthetic\/model · high solved 1 of 1\. 1 couldn't be read right now\./);
-  assert.equal(chapter<ComparisonChapter>(buildReport(input({ attempts: device(a), receipts: { [a.revision]: [] } })), "minds")!.headline,
-    "No model has a comparable try on these exact challenges yet.");
-});
 
 test("errored and cancelled submissions keep their place in the story", () => {
   const a = summary("e1", "JS-001");
@@ -350,40 +320,42 @@ test("the real uploaded-history projection flows into the report beside device e
     }),
   );
   const o = chapter<OutcomesChapter>(r, "outcomes")!;
-  assert.match(o.evidence.basis, /from this device and your uploads/);
   assert.ok(o.languages[0].items[0].revisited, "two attempts on one challenge is a revisit");
   assert.ok(chapter<StoryChapter>(r, "story"));
   assert.doesNotMatch(JSON.stringify(r), /synthetic-artifact|"abc"|secret/, "no code or identifiers reach the report");
 });
 
-test("two reasoning settings of one model stay distinct in the headline", () => {
+test("one row per model: its declared default setting's first try, as practice shows it", () => {
   const a = summary("t1", "JS-001");
   const m = chapter<ComparisonChapter>(
-    buildReport(input({ attempts: device(a), receipts: { [a.revision]: [receipt({ reasoning: "high" }), receipt({ reasoning: "low", state: "stopped" })] } })),
+    buildReport(input({ attempts: device(a), receipts: { [a.revision]: [receipt({ reasoning: "low", state: "stopped" }), receipt({ reasoning: "high" })] } })),
     "minds",
   )!;
-  assert.match(m.headline, /synthetic\/model · high solved 1 of 1, synthetic\/model · low solved 0 of 1/);
-  assert.equal(m.evidence.basis, "1 challenge you tried, checked against model tries on the exact same version.");
+  assert.equal(m.rows[0].models.length, 1);
+  assert.equal(m.headline, "You solved 1 of 1. synthetic/model solved 1 of 1.", "the low setting isn't shown");
 });
 
-test("people cells: disabled reason, matched aggregate, checked-too-small group, unknown conditions", async () => {
+test("people appear only as a real suppressed figure; otherwise nothing is said", async () => {
   const { cohortResult } = await import("../../../packages/statistics/cohort");
   const a = summary("h1", "JS-001");
-  const people = (cohorts?: ReportInput["cohorts"], attempt = a) =>
-    chapter<ComparisonChapter>(buildReport(input({ attempts: device(attempt), cohorts })), "minds")!.rows[0].people;
-  assert.equal(people(), "not compared yet");
-  assert.equal(people({ [a.revision]: { ...cohortResult([]), state: "disabled" } }), "not compared yet");
+  const minds = (cohorts?: ReportInput["cohorts"], attempt = a) =>
+    chapter<ComparisonChapter>(buildReport(input({ attempts: device(attempt), receipts: { [attempt.revision]: [receipt()] }, cohorts })), "minds")!;
   const row = (n: number, completed: number, submissions: number) => ({
     runtime: '{"engine":"javascript","version":"synthetic"}', diagnostics: 0, practice: "first", completed, first_pass: 0, submissions, browsers: n,
   });
   const read = cohortResult([row(14, 1, 2), row(10, 1, 4), row(6, 0, 3)]);
-  assert.equal(people({ [a.revision]: read }), "adults: 80% solved · median 2 submissions");
-  assert.equal(people({ [a.revision]: cohortResult([row(12, 1, 2)]) }), "fewer than 20 comparable adults");
-  assert.equal(people({ [a.revision]: { ...cohortResult([]), state: "earlier-version" } }), "earlier version, not compared");
-  assert.equal(people({ [a.revision]: read }, { ...a, conditions: [] }), "your conditions weren't recorded");
-  assert.equal(people({ [a.revision]: "unavailable" }), "can't be read");
-  const details = chapter<ComparisonChapter>(buildReport(input({ attempts: device(a), cohorts: { [a.revision]: read } })), "minds")!.evidence.details.join(" ");
-  assert.match(details, /at least 20 distinct browsers, not people/);
-  assert.match(details, /adults only.*16–17 and unanswered are not counted/);
-  assert.doesNotMatch(details, /not compared yet|needs an approved/);
+  assert.equal(minds({ [a.revision]: read }).rows[0].people, "80% of adults solved it · median 2 submissions");
+  assert.equal(minds({ [a.revision]: read }).people, true);
+  for (const absent of [
+    undefined,
+    { [a.revision]: { ...cohortResult([]), state: "disabled" as const } },
+    { [a.revision]: cohortResult([row(12, 1, 2)]) },
+    { [a.revision]: { ...cohortResult([]), state: "earlier-version" as const } },
+    { [a.revision]: "unavailable" as const },
+  ]) {
+    const m = minds(absent);
+    assert.equal(m.rows[0].people, null);
+    assert.equal(m.people, false);
+  }
+  assert.equal(minds({ [a.revision]: read }, { ...a, conditions: [] }), undefined, "unknown conditions: no model or people match, so no chapter");
 });

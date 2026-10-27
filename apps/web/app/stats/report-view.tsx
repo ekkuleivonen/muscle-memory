@@ -1,12 +1,11 @@
 "use client";
-/** The report's chapters: one headline, one visual, one line of evidence, details on request. */
+/** The report's chapters: one headline, one visual and, only when needed, one short line of context. */
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import type {
   Cell,
   Chapter,
   ComparisonChapter,
-  Evidence,
   HabitChapter,
   Marker,
   NextChapter,
@@ -15,30 +14,13 @@ import type {
   StoryChapter,
   SurpriseChapter,
 } from "../../lib/report";
-import { PEOPLE, shareText } from "../../lib/report";
+import { shareText } from "../../lib/report";
 
 const percent = (x: number) => `${Math.round(x * 1000) / 10}%`;
 
-export function EvidenceLine({ evidence }: { evidence: Evidence }) {
-  return (
-    <div className="report-evidence">
-      <p>
-        <span className="report-evidence-tag" aria-hidden>
-          evidence
-        </span>{" "}
-        {evidence.basis}
-        {evidence.caveat ? <span className="t-dim"> {evidence.caveat}</span> : null}
-      </p>
-      <details>
-        <summary>How this was worked out</summary>
-        <ul>
-          {evidence.details.map((d) => (
-            <li key={d}>{d}</li>
-          ))}
-        </ul>
-      </details>
-    </div>
-  );
+/** Context a player needs to read the finding correctly; nothing when there is none. */
+function Note({ text }: { text: string | null }) {
+  return text ? <p className="report-note">{text}</p> : null;
 }
 
 function Frame({
@@ -119,7 +101,7 @@ function Outcomes({ c }: { c: OutcomesChapter }) {
         <span className="report-cell is-completed is-revisited" /> revisited
         {c.unexplored > 0 ? ` · ${c.unexplored} more waiting` : ""}
       </p>
-      <EvidenceLine evidence={c.evidence} />
+      <Note text={c.note} />
     </>
   );
 }
@@ -182,7 +164,7 @@ function Story({ c }: { c: StoryChapter }) {
         <span className="t-err">✗</span> not yet <span className="t-warn">◆</span>{" "}
         error ‖ left ↻ came back ✔ done
       </p>
-      <EvidenceLine evidence={c.evidence} />
+      <Note text={c.note} />
     </>
   );
 }
@@ -215,10 +197,7 @@ function Habits({ c }: { c: HabitChapter }) {
         </div>
       )}
       {c.checks.length > 1 && <p className="t-dim report-caption">checks per attempt, oldest first</p>}
-      <p className="report-cohort">
-        <span className="t-dim">People:</span> {PEOPLE.label}
-      </p>
-      <EvidenceLine evidence={c.evidence} />
+      <Note text={c.note} />
     </>
   );
 }
@@ -227,27 +206,20 @@ const CELL: Record<Cell["kind"], string> = {
   solved: "✔",
   "not-solved": "✗",
   open: "…",
-  withheld: "≠",
-  none: "—",
 };
 function CellView({ cell }: { cell: Cell }) {
   return (
     <span className={`report-result is-${cell.kind}`}>
       <span aria-hidden>{CELL[cell.kind]}</span>{" "}
-      {cell.kind === "solved" ? (
-        <>
-          solved <span className="t-dim">· {cell.note}</span>
-        </>
-      ) : (
-        <span className={cell.kind === "not-solved" ? undefined : "t-dim"}>{cell.note}</span>
-      )}
+      {cell.kind === "solved" ? "solved" : cell.note}
+      {cell.kind === "solved" && cell.note ? <span className="t-dim"> · {cell.note}</span> : null}
     </span>
   );
 }
 function Minds({ c }: { c: ComparisonChapter }) {
   return (
     <>
-      {/* Practice's completion link (owned by ENG-375) still points here. */}
+      {/* Practice's completion link still points here. */}
       <span id="comparisons" />
       <h2 className="report-headline">{c.headline}</h2>
       <div className="report-table-wrap" tabIndex={0} role="region" aria-label="Results on the same challenges">
@@ -261,8 +233,7 @@ function Minds({ c }: { c: ComparisonChapter }) {
                   {col}
                 </th>
               ))}
-              {!c.columns.length && <th scope="col">Models</th>}
-              <th scope="col">People</th>
+              {c.people && <th scope="col">Adults</th>}
             </tr>
           </thead>
           <tbody>
@@ -277,41 +248,16 @@ function Minds({ c }: { c: ComparisonChapter }) {
                   <CellView cell={r.you} />
                 </td>
                 {c.columns.map((col) => {
-                  const m = r.models.find((x) => x.slot === col);
-                  return (
-                    <td key={col}>
-                      {r.state === "loading" ? (
-                        <span className="t-dim">reading…</span>
-                      ) : r.state === "unavailable" ? (
-                        <span className="t-dim">can&apos;t be read</span>
-                      ) : m ? (
-                        <CellView cell={m.cell} />
-                      ) : (
-                        <CellView cell={{ kind: "none", note: "not run" }} />
-                      )}
-                    </td>
-                  );
+                  const m = r.models.find((x) => x.model === col);
+                  return <td key={col}>{m ? <CellView cell={m.cell} /> : null}</td>;
                 })}
-                {!c.columns.length && (
-                  <td>
-                    <span className="t-dim">
-                      {r.state === "loading"
-                        ? "reading…"
-                        : r.state === "unavailable"
-                          ? "can't be read"
-                          : "no try yet"}
-                    </span>
-                  </td>
-                )}
-                <td>
-                  <span className="t-dim">{r.people}</span>
-                </td>
+                {c.people && <td className="t-dim">{r.people}</td>}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {/* Narrow screens: one card per challenge, so every model's outcome is visible without scrolling. */}
+      {/* Narrow screens: one card per challenge, so every result is visible without scrolling. */}
       <ul className="report-cards" aria-label="Results on the same challenges">
         {c.rows.map((r) => (
           <li key={r.revision}>
@@ -323,54 +269,25 @@ function Minds({ c }: { c: ComparisonChapter }) {
               <dd>
                 <CellView cell={r.you} />
               </dd>
-              {r.state !== "ready" ? (
+              {r.models.map((m) => (
+                <React.Fragment key={m.model}>
+                  <dt>{m.model}</dt>
+                  <dd>
+                    <CellView cell={m.cell} />
+                  </dd>
+                </React.Fragment>
+              ))}
+              {r.people && (
                 <>
-                  <dt>Models</dt>
-                  <dd className="t-dim">{r.state === "loading" ? "reading…" : "can't be read right now"}</dd>
-                </>
-              ) : r.models.length ? (
-                r.models.map((m) => (
-                  <React.Fragment key={m.slot}>
-                    <dt>{m.slot}</dt>
-                    <dd>
-                      <CellView cell={m.cell} />
-                    </dd>
-                  </React.Fragment>
-                ))
-              ) : (
-                <>
-                  <dt>Models</dt>
-                  <dd className="t-dim">no try yet</dd>
+                  <dt>Adults</dt>
+                  <dd className="t-dim">{r.people}</dd>
                 </>
               )}
-              <dt>People</dt>
-              <dd className="t-dim">{r.people}</dd>
             </dl>
           </li>
         ))}
       </ul>
-      {c.rows.some((r) => r.models.length) && (
-        <details className="report-receipts">
-          <summary>Exact models, versions and conditions</summary>
-          <ul>
-            {c.rows.flatMap((r) =>
-              r.models.map((m) => (
-                <li key={`${r.revision}:${m.slot}`}>
-                  {r.challenge} · {m.receipt.model} · reasoning {m.receipt.reasoning} · try {m.receipt.try}
-                  {" — "}
-                  {m.receipt.reportedModels.length
-                    ? `reported ${m.receipt.reportedModels.join(", ")}`
-                    : "resolved version not recorded"}
-                  {m.receipt.budget ? ` · budget ${m.receipt.budget.turns} turns / ${m.receipt.budget.submissions} submissions` : ""}
-                  {m.receipt.runtime ? ` · runtime ${Object.values(m.receipt.runtime).join(" ")}` : ""}
-                  <span className="t-dim"> · revision {r.revision.slice(0, 19)}…</span>
-                </li>
-              )),
-            )}
-          </ul>
-        </details>
-      )}
-      <EvidenceLine evidence={c.evidence} />
+      <Note text={c.note} />
     </>
   );
 }
@@ -392,7 +309,7 @@ function Surprise({ c }: { c: SurpriseChapter }) {
           <p className="report-big is-after">{c.after.value}</p>
         </div>
       </div>
-      <EvidenceLine evidence={c.evidence} />
+      <Note text={c.note} />
     </>
   );
 }

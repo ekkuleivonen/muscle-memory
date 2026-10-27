@@ -1,11 +1,10 @@
 "use client";
 import Link from "next/link";
 import React, { useMemo, useState } from "react";
-import { buildReport, mergeEvidence, PEOPLE, type Report } from "../../lib/report";
+import { buildReport, mergeEvidence, type Report } from "../../lib/report";
 import type { ChallengeSummary } from "../../lib/challenges";
 import { useReportData, type HistoryStatus } from "./report-data";
 import { ChapterNav, ChapterView, Preview } from "./report-view";
-import { Measurements } from "./appendix";
 import type { AttemptSummary } from "../../../../packages/developer-profile/derive";
 
 const NONE: AttemptSummary[] = [];
@@ -32,52 +31,19 @@ export function StealthNotice() {
   );
 }
 
-function Freshness({
-  history,
-  at,
-  more,
-}: {
-  history: HistoryStatus;
-  at: string | null;
-  more: () => void;
-}) {
-  const time = (iso: string) =>
-    new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const uploads =
-    history.state === "ready"
-      ? history.value.attempts.length
-        ? `+${history.value.attempts.length} uploaded`
-        : "no uploads"
-      : history.state === "loading" || history.state === "idle"
-        ? "adding uploads…"
-        : history.state === "held"
-          ? "uploads not re-read"
-          : history.state === "no-uploads"
-            ? "no uploads linked"
-            : "uploads unavailable";
-  return (
-    <details className="report-sources">
-      <summary>
-        sources <span className="t-dim">· this device · {uploads}</span>
-      </summary>
-      <p role="status">
-        From this device{at ? `, read ${time(at)}` : ""}.{" "}
-        {history.state === "ready"
-          ? history.value.attempts.length
-            ? `Plus ${history.value.attempts.length} uploaded attempts, as of ${time(history.value.readAt)}.`
-            : `No uploads in the past year (checked ${time(history.value.readAt)}).`
-          : history.state === "loading" || history.state === "idle"
-            ? "Adding your uploads…"
-            : history.message}
-        {history.state === "ready" && history.notice ? ` ${history.notice}` : ""}
-      </p>
-      {history.state === "ready" && history.value.next && (
-        <button type="button" className="t-cmd" onClick={more}>
-          read more uploads
-        </button>
-      )}
-    </details>
-  );
+/** Only what changes how to read the page: earlier practice still arriving, or not added. */
+function Status({ history }: { history: HistoryStatus }) {
+  const text =
+    history.state === "loading" || history.state === "idle"
+      ? "Adding your earlier practice…"
+      : history.state === "unavailable" || history.state === "limited"
+        ? "Your earlier practice couldn't be added right now; this shows this device only."
+        : null;
+  return text ? (
+    <p className="report-status" role="status">
+      {text}
+    </p>
+  ) : null;
 }
 
 export function ReportBody({
@@ -135,7 +101,7 @@ export function ReportBody({
 export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
   // Chapter 4 picks the revisions; the data hook reads their receipts. Kept in state to break the cycle.
   const [wanted, setWanted] = useState<Report["comparisonRevisions"]>([]);
-  const { privacy, local, history, receipts, cohorts, more } = useReportData(wanted);
+  const { privacy, local, history, receipts, cohorts } = useReportData(wanted);
   const device = local.value;
   const uploaded = history.state === "ready" ? history.value.attempts : NONE;
   const attempts = useMemo(
@@ -188,49 +154,17 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
           <>
             <ReportBody
               report={report}
-              status={<Freshness history={history} at={device!.at} more={more} />}
+              status={<Status history={history} />}
             />
-            {!report.empty && (
-              <Measurements
-                attempts={attempts}
-                catalog={catalog}
-                until={history.state === "ready" ? history.value.readAt : device!.at}
-              />
-            )}
-            <details className="report-appendix" id="about">
-              <summary>
-                About this report <span className="t-dim">/ sources, limits and privacy</span>
-              </summary>
-              <p>
-                It reads this device&apos;s practice and, automatically, code-free
-                summaries of what this browser uploaded in the past year. Your
-                browser&apos;s private secret proves the uploads are yours; nobody
-                else&apos;s activity is read. Summaries stay in this page&apos;s
-                memory while the report is open and for at most five minutes
-                after, and are never saved or restored into your progress.
-              </p>
-              <p>
-                Each upload read covers up to five attempts; &quot;read more
-                uploads&quot; continues. Uploads can lag by minutes. Attempts with
-                recording gaps are left out of a finding rather than counted as
-                zero.
-              </p>
-              <p>
-                Nothing here measures intelligence, attention or dependence on AI.
-                No recorded help in the editor doesn&apos;t mean no outside help.
-                Model results are single observed tries on the exact same
-                challenge version. {PEOPLE.reason}
-              </p>
-              <p>
-                Reset clears this device&apos;s progress, not your uploads; the
-                report reads them again the next time you open it. Deleting your
-                account removes both.
-                Going stealth turns this report off.{" "}
-                <Link className="t-cmd" href="/settings">
-                  Manage your data →
-                </Link>
-              </p>
-            </details>
+            <p className="report-footer">
+              <Link className="t-cmd" href="/privacy">
+                How your data is used
+              </Link>{" "}
+              ·{" "}
+              <Link className="t-cmd" href="/settings">
+                Your data settings
+              </Link>
+            </p>
           </>
         )}
       </div>

@@ -380,9 +380,6 @@ export function useReportData(revisions: readonly { challenge: string; revision:
     };
   }, [privacy, wanted, epoch]);
 
-  const more = useCallback(() => {
-    if (history.state === "ready" && history.value.next) void loadHistory(true, history.value);
-  }, [history, loadHistory]);
 
-  return { privacy, local, history, receipts, cohorts, more };
+  return { privacy, local, history, receipts, cohorts };
 }

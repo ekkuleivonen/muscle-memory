@@ -50,24 +50,24 @@ test("a rich report opens on a personal takeaway with chapters, visuals and evid
   const first = html.indexOf("<h2");
   assert.ok(first > 0);
   assert.match(html.slice(first, first + 200), /You finished the challenge you started/);
-  assert.ok(html.indexOf("You finished") < html.indexOf("How this was worked out"), "takeaway before method");
   assert.match(html, /aria-label="Report chapters"/);
   assert.match(html, /chapter-story/);
   assert.match(html, /Checkpoints on JS-001, in order/);
-  assert.match(html, /reading…/);
-  assert.match(html, /not compared yet/);
-  assert.doesNotMatch(html, /too few|not enough comparable/);
-  assert.doesNotMatch(html, /UTC|developer-profile-2/);
+  // Insights only: no measurement internals, methods or diagnostics anywhere, even collapsed.
+  assert.doesNotMatch(
+    html,
+    /How this was worked out|evidence|sha256|[Rr]evision|harness|receipt|UTC|developer-profile|definition|median of|reading…|not compared|withheld|mismatch|<details(?! class="report-share")/,
+  );
 });
 
 test("narrow screens get one comparison card per challenge with every model outcome", () => {
   const attempts = deriveAttempts(trace(), "synthetic-participant").map((a) => ({ ...a, source: "device" as const }));
-  const receipt = { model: "synthetic/model", reportedModels: ["synthetic/model-2026"], reasoning: "high", harness: "h", try: 1, state: "completed" as const, submissions: 1, runtime: { engine: "javascript", version: "synthetic" }, features: [], budget: null, defaultReasoning: null, finalCodeLength: null } as ModelReceipt;
+  const receipt = { model: "synthetic/model", reportedModels: ["synthetic/model-2026"], reasoning: "high", harness: "h", try: 1, state: "completed" as const, submissions: 1, runtime: { engine: "javascript", version: "synthetic" }, features: [], budget: null, defaultReasoning: "high", finalCodeLength: null } as ModelReceipt;
   const report = buildReport({ catalog, progress: {}, attempts, profile: null, receipts: { [attempts[0].revision]: [receipt] } });
   const html = renderToStaticMarkup(createElement(ReportBody, { report, status: null }));
   const cards = html.slice(html.indexOf('class="report-cards"'));
-  assert.match(cards, /<dt>synthetic\/model · high<\/dt><dd><span class="report-result is-solved">/);
-  assert.match(cards, /<dt>People<\/dt><dd class="t-dim">not compared yet<\/dd>/);
+  assert.match(cards, /<dt>synthetic\/model<\/dt><dd><span class="report-result is-solved">/);
+  assert.doesNotMatch(cards, /People|Adults|high|sha256/);
 });
 
 test("a matched model receipt renders real observed outcome, incompatible context withholds it", async () => {
@@ -101,14 +101,4 @@ test("a matched model receipt renders real observed outcome, incompatible contex
   );
   assert.doesNotMatch(mismatch, /Observed outcome: completed/);
   assert.match(mismatch, /Outcome withheld/);
-});
-
-test("repeat history in the measurements appendix never invents growth", async () => {
-  const { RepeatHistory } = await import("./appendix");
-  const html = renderToStaticMarkup(
-    createElement(RepeatHistory, { attempts: [], until: "2026-10-27T00:00:00Z" }),
-  );
-  assert.match(html, /playing more cannot\s+reconstruct/);
-  assert.match(html, /External\s+assistance remains unknown/);
-  assert.match(html, /not statistical confidence/);
 });
