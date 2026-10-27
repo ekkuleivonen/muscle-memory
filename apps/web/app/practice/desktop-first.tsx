@@ -2,21 +2,22 @@
 import { useEffect, useState } from "react";
 import { CopyLink } from "../_components/share";
 import { practiceHref } from "../../lib/paths";
+import { readSolveHere, rememberSolveHere } from "./solve-here";
 
-/** Set for the tab once someone chooses to solve on a phone anyway. */
-const SOLVE_HERE_KEY = "muscle-memory.solve-here";
-
-/** Whether this tab chose to solve on a phone anyway; read after mount, so hydration agrees. */
+/**
+ * Whether this tab chose to solve on a phone anyway; read after mount, so hydration agrees.
+ * The choice takes effect at once; storage only carries it to the next page, when it can.
+ */
 export function useSolveHere(): [boolean, () => void] {
   const [solveHere, setSolveHere] = useState(false);
   useEffect(() => {
-    if (sessionStorage.getItem(SOLVE_HERE_KEY) === "1") setSolveHere(true);
+    if (readSolveHere()) setSolveHere(true);
   }, []);
   return [
     solveHere,
     () => {
-      sessionStorage.setItem(SOLVE_HERE_KEY, "1");
       setSolveHere(true);
+      rememberSolveHere();
     },
   ];
 }

@@ -276,6 +276,42 @@ try {
     await context.close();
   }
 
+  // Session storage that throws on read and write still lets a phone solve here.
+  for (const device of DEVICES.filter((d) => d.phone)) {
+    const { context, page, errors } = await open(device, true);
+    // No named functions inside: tsx would wrap them in a helper the page doesn't have.
+    await page.addInitScript(() => {
+      const getItem = Storage.prototype.getItem;
+      const setItem = Storage.prototype.setItem;
+      Storage.prototype.getItem = function (key: string) {
+        if (key === "muscle-memory.solve-here")
+          throw new DOMException("Synthetic: storage blocked", "SecurityError");
+        return getItem.call(this, key);
+      };
+      Storage.prototype.setItem = function (key: string, value: string) {
+        if (key === "muscle-memory.solve-here")
+          throw new DOMException(
+            "Synthetic: storage full",
+            "QuotaExceededError",
+          );
+        return setItem.call(this, key, value);
+      };
+    });
+    await page.goto(`${origin}/challenges/${KEY}`);
+    const notice = page.getByText("Open on a computer to solve.");
+    await notice.waitFor();
+    await page.getByRole("button", { name: "Solve here anyway" }).click();
+    await page.locator(".practice-editor .cm-content").waitFor();
+    assert.equal(
+      await notice.isVisible(),
+      false,
+      `${device.name} notice stuck`,
+    );
+    assert.deepEqual(errors, [], `${device.name} storage errors surfaced`);
+    results.push({ device: device.name, solveHereWithStorageThrowing: true });
+    await context.close();
+  }
+
   // Stats on phones, beyond stealth: empty, a report, uploads unavailable, storage unreadable.
   for (const device of DEVICES.filter((d) => d.phone)) {
     const { context, page, errors, shot } = await open(device, false);

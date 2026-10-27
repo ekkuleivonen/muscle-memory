@@ -33,3 +33,4 @@ Interactions asserted on phone 320, phone 390 and phone landscape, plus tablet a
 - The current location is marked, with `aria-current` `true` inside a section and `page` on it.
 - Touch targets in the menu and bar are at least 44px.
 - No page has horizontal overflow, and no page throws errors.
+- When session storage throws on read and write for the solve-here choice, *Solve here anyway* still reveals the editor, with no page errors. On the earlier build, practice failed to render at all.
