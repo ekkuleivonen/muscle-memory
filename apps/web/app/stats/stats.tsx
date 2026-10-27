@@ -135,7 +135,7 @@ export function ReportBody({
 export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
   // Chapter 4 picks the revisions; the data hook reads their receipts. Kept in state to break the cycle.
   const [wanted, setWanted] = useState<Report["comparisonRevisions"]>([]);
-  const { privacy, local, history, receipts, more } = useReportData(wanted);
+  const { privacy, local, history, receipts, cohorts, more } = useReportData(wanted);
   const device = local.value;
   const uploaded = history.state === "ready" ? history.value.attempts : NONE;
   const attempts = useMemo(
@@ -151,9 +151,10 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
             attempts,
             profile: device.profile.profile,
             receipts,
+            cohorts,
           })
         : null,
-    [catalog, device, attempts, receipts],
+    [catalog, device, attempts, receipts, cohorts],
   );
   const key = report?.comparisonRevisions.map((r) => r.revision).join("|") ?? "";
   if (key !== wanted.map((r) => r.revision).join("|"))

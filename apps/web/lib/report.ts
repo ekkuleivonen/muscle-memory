@@ -10,6 +10,7 @@ import {
   type ModelReceipt,
 } from "../../../packages/model-runs/receipts";
 import { languageLabel, type ChallengeSummary } from "./challenges";
+import { matchingGroup, type CohortRead } from "../../../packages/statistics/cohort";
 import type { Profile } from "./profile";
 import type { Progress } from "./progress";
 
@@ -144,6 +145,8 @@ export interface ComparisonRow {
   you: Cell;
   models: { slot: string; cell: Cell; receipt: ModelReceipt }[];
   state: "loading" | "ready" | "unavailable";
+  /** Other people on the same revision and conditions, from a suppressed aggregate, or why not. */
+  people: string;
 }
 export interface ComparisonChapter {
   id: "minds";
@@ -188,6 +191,8 @@ export interface ReportInput {
   profile: Profile | null;
   /** Model receipts by exact revision; absent means not requested. */
   receipts: Readonly<Record<string, ReceiptState>>;
+  /** Human cohorts by exact revision; absent while cohorts are switched off. */
+  cohorts?: Readonly<Record<string, CohortRead | "loading" | "unavailable">>;
 }
 export interface Report {
   /** Nothing started on this device or in uploaded history. */
@@ -558,6 +563,22 @@ function modelCell(r: ModelReceipt, conditions: readonly string[]): Cell {
   }
   return { kind: "none", note: MODEL_STATE[r.state] ?? r.state };
 }
+/**
+ * The people cell: a matched suppressed aggregate, a checked-and-too-small group, or the reason
+ * there is no comparison. Never a nearest group, a pooled total or a zero.
+ */
+function peopleCell(read: CohortRead | "loading" | "unavailable" | undefined, a: ReportAttempt): string {
+  if (read === "loading") return "reading…";
+  if (read === "unavailable") return "can't be read";
+  if (!read || read.state === "disabled") return PEOPLE.label;
+  if (read.state === "unavailable") return "can't be read";
+  const known = (prefix: string) => a.conditions.filter((c) => c.startsWith(prefix)).length === 1;
+  if (!known("Runtime: ") || !known("Editor: ")) return "your conditions weren't recorded";
+  const group = matchingGroup(read, a.conditions, a.practice === "repeat" ? "repeat" : "first");
+  if (!group) return `fewer than ${read.minimum} comparable people`;
+  const solved = `${Math.round(group.solved * 100)}% solved`;
+  return group.submissions ? `${solved} · median ${plural(group.submissions.p50, "submission")}` : solved;
+}
 function minds(input: ReportInput): {
   chapter: ComparisonChapter | null;
   wanted: Report["comparisonRevisions"];
@@ -591,11 +612,13 @@ function minds(input: ReportInput): {
         }
       : { kind: "open", note: subs.length ? `${subs.at(-1)!.passed}/${subs.at(-1)!.total} so far` : "open" };
     const got = input.receipts[a.revision];
+    const people = peopleCell(input.cohorts?.[a.revision], a);
     if (!Array.isArray(got))
       return {
         challenge: a.challenge,
         revision: a.revision,
         you,
+        people,
         models: [],
         state: got === "unavailable" ? "unavailable" : "loading",
       };
@@ -608,6 +631,7 @@ function minds(input: ReportInput): {
       challenge: a.challenge,
       revision: a.revision,
       you,
+      people,
       state: "ready",
       models: [...slots].map(([slot, receipt]) => ({
         slot,

@@ -304,7 +304,7 @@ function Minds({ c }: { c: ComparisonChapter }) {
                   </td>
                 )}
                 <td>
-                  <span className="t-dim">{PEOPLE.label}</span>
+                  <span className="t-dim">{r.people}</span>
                 </td>
               </tr>
             ))}
@@ -344,7 +344,7 @@ function Minds({ c }: { c: ComparisonChapter }) {
                 </>
               )}
               <dt>People</dt>
-              <dd className="t-dim">{PEOPLE.label}</dd>
+              <dd className="t-dim">{r.people}</dd>
             </dl>
           </li>
         ))}

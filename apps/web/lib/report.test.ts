@@ -365,3 +365,20 @@ test("two reasoning settings of one model stay distinct in the headline", () => 
   assert.match(m.headline, /synthetic\/model · high solved 1 of 1, synthetic\/model · low solved 0 of 1/);
   assert.equal(m.evidence.basis, "1 challenge you tried, checked against model tries on the exact same version.");
 });
+
+test("people cells: disabled reason, matched aggregate, checked-too-small group, unknown conditions", async () => {
+  const { cohortResult } = await import("../../../packages/statistics/cohort");
+  const a = summary("h1", "JS-001");
+  const people = (cohorts?: ReportInput["cohorts"], attempt = a) =>
+    chapter<ComparisonChapter>(buildReport(input({ attempts: device(attempt), cohorts })), "minds")!.rows[0].people;
+  assert.equal(people(), "not compared yet");
+  assert.equal(people({ [a.revision]: { ...cohortResult([]), state: "disabled" } }), "not compared yet");
+  const row = (n: number, completed: number, submissions: number) => ({
+    runtime: '{"engine":"javascript","version":"synthetic"}', diagnostics: 0, practice: "first", completed, first_pass: 0, submissions, browsers: n,
+  });
+  const read = cohortResult([row(14, 1, 2), row(10, 1, 4), row(6, 0, 3)]);
+  assert.equal(people({ [a.revision]: read }), "80% solved · median 2 submissions");
+  assert.equal(people({ [a.revision]: cohortResult([row(12, 1, 2)]) }), "fewer than 20 comparable people");
+  assert.equal(people({ [a.revision]: read }, { ...a, conditions: [] }), "your conditions weren't recorded");
+  assert.equal(people({ [a.revision]: "unavailable" }), "can't be read");
+});

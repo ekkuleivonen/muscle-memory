@@ -28,6 +28,7 @@ import { acceptsCurrent } from "../../lib/legal";
 import { PROFILE_KEY, type StoredProfile } from "../../lib/profile";
 import { PROGRESS_CHANGE, PROGRESS_KEY, readProgress, type Progress } from "../../lib/progress";
 import type { ReceiptState } from "../../lib/report";
+import { COHORTS_ENABLED, type CohortRead } from "../../../../packages/statistics/cohort";
 
 export type Privacy = "reading" | "ok" | "stealth" | "signed-out" | "error";
 export interface DeviceEvidence {
@@ -103,6 +104,7 @@ export function useReportData(revisions: readonly { challenge: string; revision:
   const [privacy, setPrivacy] = useState<Privacy>("reading");
   const [history, setHistory] = useState<HistoryStatus>({ state: "idle" });
   const [receipts, setReceipts] = useState<Record<string, ReceiptState>>({});
+  const [cohorts, setCohorts] = useState<Record<string, CohortRead | "unavailable">>({});
   /** Bumped by every clear, so receipts are requested again for the same revisions. */
   const [epoch, setEpoch] = useState(0);
   const generation = useRef(0);
@@ -120,6 +122,7 @@ export function useReportData(revisions: readonly { challenge: string; revision:
       device.invalidate(block);
       setHistory({ state: "idle" });
       setReceipts({});
+      setCohorts({});
       setEpoch((e) => e + 1);
     },
     [device],
@@ -346,9 +349,40 @@ export function useReportData(revisions: readonly { challenge: string; revision:
     };
   }, [privacy, wanted, epoch]);
 
+  // Human cohorts: no request at all while switched off (docs/human-cohorts.md).
+  useEffect(() => {
+    if (!COHORTS_ENABLED || privacy !== "ok" || !wanted) return;
+    const ticket = generation.current;
+    const controller = new AbortController();
+    aborts.current.add(controller);
+    const live = () =>
+      ticket === generation.current && !blocked.current && !boundaries && !controller.signal.aborted;
+    for (const pair of wanted.split("|")) {
+      const [challenge, revision] = pair.split("/");
+      void fetch(`/api/cohort/${encodeURIComponent(challenge)}/${encodeURIComponent(revision)}`, {
+        cache: "no-store",
+        signal: controller.signal,
+        redirect: "error",
+      })
+        .then(async (response) => {
+          if (!response.ok) throw new Error();
+          const data = (await response.json()) as CohortRead;
+          if (live()) setCohorts((c) => ({ ...c, [revision]: Array.isArray(data.groups) ? data : "unavailable" }));
+        })
+        .catch(() => {
+          if (live()) setCohorts((c) => ({ ...c, [revision]: "unavailable" }));
+        });
+    }
+    const set = aborts.current;
+    return () => {
+      controller.abort();
+      set.delete(controller);
+    };
+  }, [privacy, wanted, epoch]);
+
   const more = useCallback(() => {
     if (history.state === "ready" && history.value.next) void loadHistory(true, history.value);
   }, [history, loadHistory]);
 
-  return { privacy, local, history, receipts, more };
+  return { privacy, local, history, receipts, cohorts, more };
 }
