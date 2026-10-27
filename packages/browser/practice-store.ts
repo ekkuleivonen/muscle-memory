@@ -8,8 +8,15 @@ import { randomId } from "./random-id";
 import type { StoredRecord } from "../domain/records";
 import type { CaptureSink, WriteOutcome } from "../capture/recorder";
 import { compactable } from "./compaction";
-import { deriveAttempts, type AttemptSummary } from "../developer-profile/derive";
-import { SUMMARY_KEY, METRIC_VERSION, PROFILE_HISTORY_ENABLED } from "../developer-profile/registry";
+import {
+  deriveAttempts,
+  type AttemptSummary,
+} from "../developer-profile/derive";
+import {
+  SUMMARY_KEY,
+  METRIC_VERSION,
+  PROFILE_HISTORY_ENABLED,
+} from "../developer-profile/registry";
 
 const DATABASE = "muscle-memory-local-practice";
 
@@ -62,7 +69,9 @@ export class PracticeStore implements CaptureSink {
    * separate from the participant ID, so a public link never reveals it.
    */
   referralCode(): Promise<string> {
-    return this.setting("referralCode", () => randomId().replace(/-/g, "").slice(0, 12));
+    return this.setting("referralCode", () =>
+      randomId().replace(/-/g, "").slice(0, 12),
+    );
   }
 
   private setting(key: string, make: () => string): Promise<string> {
@@ -90,7 +99,10 @@ export class PracticeStore implements CaptureSink {
    */
   write(records: readonly StoredRecord[]): Promise<WriteOutcome[]> {
     return new Promise((resolve, reject) => {
-      const transaction = this.database.transaction(["records", "outbox"], "readwrite");
+      const transaction = this.database.transaction(
+        ["records", "outbox"],
+        "readwrite",
+      );
       const store = transaction.objectStore("records");
       // Every new record is queued for upload in the same transaction, in write order.
       const outbox = transaction.objectStore("outbox");
@@ -144,7 +156,10 @@ export class PracticeStore implements CaptureSink {
     build: (records: readonly StoredRecord[]) => readonly StoredRecord[],
   ): Promise<boolean> {
     return new Promise((resolve, reject) => {
-      const transaction = this.database.transaction(["records", "outbox"], "readwrite");
+      const transaction = this.database.transaction(
+        ["records", "outbox"],
+        "readwrite",
+      );
       const stored = transaction.objectStore("records");
       let changed = false;
       let failure: unknown;
@@ -189,7 +204,10 @@ export class PracticeStore implements CaptureSink {
     maxBytes: number,
   ): Promise<{ keys: IDBValidKey[]; records: StoredRecord[] }> {
     return new Promise((resolve, reject) => {
-      const transaction = this.database.transaction(["outbox", "records"], "readonly");
+      const transaction = this.database.transaction(
+        ["outbox", "records"],
+        "readonly",
+      );
       const store = transaction.objectStore("records");
       const keys: IDBValidKey[] = [];
       const records: StoredRecord[] = [];
@@ -202,7 +220,8 @@ export class PracticeStore implements CaptureSink {
         get.onsuccess = () => {
           const record = get.result as StoredRecord | undefined;
           if (record) {
-            if (records.length && bytes + record.payload.length > maxBytes) return;
+            if (records.length && bytes + record.payload.length > maxBytes)
+              return;
             bytes += record.payload.length;
             records.push(record);
           }
@@ -212,7 +231,9 @@ export class PracticeStore implements CaptureSink {
       };
       transaction.oncomplete = () => resolve({ keys, records });
       transaction.onabort = () =>
-        reject(transaction.error ?? new Error("The upload queue could not be read."));
+        reject(
+          transaction.error ?? new Error("The upload queue could not be read."),
+        );
     });
   }
 
@@ -224,7 +245,10 @@ export class PracticeStore implements CaptureSink {
       for (const key of keys) outbox.delete(key);
       transaction.oncomplete = () => resolve();
       transaction.onabort = () =>
-        reject(transaction.error ?? new Error("The upload queue could not be updated."));
+        reject(
+          transaction.error ??
+            new Error("The upload queue could not be updated."),
+        );
     });
   }
 
@@ -233,7 +257,9 @@ export class PracticeStore implements CaptureSink {
    * Returns how many records went. Summary retention is release-gated by the privacy
    * disclosure; the explicit override exercises the future path in synthetic tests only.
    */
-  compact(retainProfileSummaries: boolean = PROFILE_HISTORY_ENABLED): Promise<number> {
+  compact(
+    retainProfileSummaries: boolean = PROFILE_HISTORY_ENABLED,
+  ): Promise<number> {
     return new Promise((resolve, reject) => {
       const transaction = this.database.transaction(
         ["records", "outbox", "settings"],
@@ -313,7 +339,9 @@ export class PracticeStore implements CaptureSink {
       const request = transaction.objectStore("outbox").count();
       transaction.oncomplete = () => resolve(request.result);
       transaction.onabort = () =>
-        reject(transaction.error ?? new Error("The upload queue could not be read."));
+        reject(
+          transaction.error ?? new Error("The upload queue could not be read."),
+        );
     });
   }
 
@@ -339,6 +367,52 @@ export class PracticeStore implements CaptureSink {
         );
     });
   }
+  /** Report evidence only: no code artifacts, upload queue or unrelated settings. */
+  evidence(signal?: AbortSignal): Promise<StoreDump> {
+    return new Promise((resolve, reject) => {
+      if (signal?.aborted) return reject(new Error("Practice read cancelled."));
+      const tx = this.database.transaction(["settings", "records"], "readonly");
+      const settings: Record<string, string> = {};
+      const records: StoredRecord[] = [];
+      const stop = () => {
+        try {
+          tx.abort();
+        } catch {}
+      };
+      signal?.addEventListener("abort", stop, { once: true });
+      const participant = tx.objectStore("settings").get("participantId");
+      const summaries = tx.objectStore("settings").get(SUMMARY_KEY);
+      participant.onsuccess = () => {
+        if (typeof participant.result !== "string") return;
+        settings.participantId = participant.result;
+        const cursor = tx.objectStore("records").openCursor();
+        cursor.onsuccess = () => {
+          const at = cursor.result;
+          if (!at) return;
+          const r = at.value as StoredRecord;
+          if (
+            r.kind === "observation" &&
+            r.participantId === settings.participantId
+          )
+            records.push(r);
+          at.continue();
+        };
+      };
+      summaries.onsuccess = () => {
+        if (typeof summaries.result === "string")
+          settings[SUMMARY_KEY] = summaries.result;
+      };
+      tx.oncomplete = () => {
+        signal?.removeEventListener("abort", stop);
+        resolve({ settings, records, outbox: [] });
+      };
+      tx.onabort = () => {
+        signal?.removeEventListener("abort", stop);
+        reject(tx.error ?? new Error("Practice could not be read."));
+      };
+    });
+  }
+
   dump(): Promise<StoreDump> {
     return new Promise((resolve, reject) => {
       const transaction = this.database.transaction(
@@ -363,9 +437,15 @@ export class PracticeStore implements CaptureSink {
         at.continue();
       };
       transaction.oncomplete = () =>
-        resolve({ settings, records: records.result as StoredRecord[], outbox });
+        resolve({
+          settings,
+          records: records.result as StoredRecord[],
+          outbox,
+        });
       transaction.onabort = () =>
-        reject(transaction.error ?? new Error("Saved practice could not be read."));
+        reject(
+          transaction.error ?? new Error("Saved practice could not be read."),
+        );
     });
   }
 
@@ -385,12 +465,15 @@ export class PracticeStore implements CaptureSink {
       settings.clear();
       stored.clear();
       outbox.clear();
-      for (const [key, value] of Object.entries(dump.settings)) settings.put(value, key);
+      for (const [key, value] of Object.entries(dump.settings))
+        settings.put(value, key);
       for (const record of dump.records) stored.put(record);
       for (const id of dump.outbox) outbox.add(id);
       transaction.oncomplete = () => resolve();
       transaction.onabort = () =>
-        reject(transaction.error ?? new Error("The backup could not be restored."));
+        reject(
+          transaction.error ?? new Error("The backup could not be restored."),
+        );
     });
   }
 
@@ -408,8 +491,10 @@ export function openPracticeStore(
       const database = request.result;
       const stores = database.objectStoreNames;
       if (!stores.contains("settings")) database.createObjectStore("settings");
-      if (!stores.contains("records")) database.createObjectStore("records", { keyPath: "recordId" });
-      if (!stores.contains("outbox")) database.createObjectStore("outbox", { autoIncrement: true });
+      if (!stores.contains("records"))
+        database.createObjectStore("records", { keyPath: "recordId" });
+      if (!stores.contains("outbox"))
+        database.createObjectStore("outbox", { autoIncrement: true });
     };
     request.onsuccess = () => resolve(new PracticeStore(request.result));
     request.onerror = () =>

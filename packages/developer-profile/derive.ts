@@ -271,7 +271,9 @@ function summarize(
     pauses = 0,
     corrections = 0,
     navigation = 0,
-    elapsed = 0;
+    elapsed = 0,
+    typedIntervals = 0,
+    typingMs = 0;
   for (const runs of runMap.values()) {
     const q = runs.find((o) => data(o, "practice.run")!.status === "queued");
     const ends = runs.filter(terminal),
@@ -285,16 +287,22 @@ function summarize(
       waitComplete = false;
     else wait += end.elapsedMs - q.elapsedMs;
   }
+  // Active time up to the completion: earlier page sessions whole, the completing one up to it.
+  const done = os.find((o) => o.type === "practice.completed");
+  let activeToSolve = 0,
+    afterDone = false;
   for (const source of orderedSources) {
     elapsed += Math.max(0, source.at(-1)!.elapsedMs - source[0].elapsedMs);
     let lastKey: number | null = null,
+      // The previous keydown, if it typed a code character; any other key breaks the chain.
+      lastTyped: number | null = null,
       lastInteraction: number | null = null,
       lastRun: PracticeObservation | null = null;
     const interactions: number[] = [];
     for (const o of source) {
       const keys = data(o, "practice.keys");
       if (keys)
-        for (const [at, kind, key, , , repeat] of keys.keys)
+        for (const [at, kind, key, , modifiers, repeat] of keys.keys)
           if (kind === "down" && !repeat) {
             if (
               !Number.isFinite(at) ||
@@ -308,6 +316,13 @@ function summarize(
               bursts++;
               if (lastKey !== null) pauses++;
             } else keyIntervals.push(at - lastKey);
+            // A code character: one character, typed without Ctrl, Alt or Meta (Shift is typing).
+            const typed = [...key].length === 1 && !/[CAM]/.test(modifiers ?? "");
+            if (typed && lastTyped !== null && at - lastTyped <= BURST_GAP_MS) {
+              typedIntervals++;
+              typingMs += at - lastTyped;
+            }
+            lastTyped = typed ? at : null;
             lastKey = at;
             interactions.push(at);
             if (key === "Backspace" || key === "Delete") corrections++;
@@ -337,6 +352,14 @@ function summarize(
         active += at - lastInteraction;
       lastInteraction = at;
     }
+    const cutoff = afterDone ? -Infinity : done && source.includes(done) ? done.elapsedMs : Infinity;
+    let lastBefore: number | null = null;
+    for (const at of interactions) {
+      if (at > cutoff) break;
+      if (lastBefore !== null && at - lastBefore <= ACTIVE_GAP_MS) activeToSolve += at - lastBefore;
+      lastBefore = at;
+    }
+    if (done && source.includes(done)) afterDone = true;
   }
   if (!issues.length) {
     for (const k of [
@@ -419,6 +442,12 @@ function summarize(
     v.bursts = bursts;
     v.pauses = pauses;
     v.keyInterval = median(keyIntervals);
+    // Vim normal mode turns letters into commands the editor still reports as keydowns, so a
+    // letter isn't proof of typed code there. Unsupported: unavailable, not guessed.
+    const vim = os.some((o) => data(o, "practice.opened")?.editor.features.includes("vim-keybindings"));
+    v.typedKeys = vim ? null : typedIntervals;
+    v.typingTime = vim ? null : typingMs;
+    v.activeToSolve = done ? activeToSolve : null;
     v.active = active;
     v.corrections = corrections;
     v.navigation = navigation;

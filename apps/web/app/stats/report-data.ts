@@ -5,6 +5,7 @@
  * arriving independently. Stealth reads nothing. Reset, deletion, import, logout and privacy
  * changes clear what is shown synchronously and discard every pending response.
  */
+import { reportRead, reportReceipts } from "../../lib/report-reads";
 import { flushSync } from "react-dom";
 import {
   useCallback,
@@ -26,9 +27,17 @@ import { listenPrivateBoundary } from "../../lib/private-boundary";
 import { ACCOUNT_CHANGE, readProfile } from "../../lib/account";
 import { acceptsCurrent } from "../../lib/legal";
 import { PROFILE_KEY, type StoredProfile } from "../../lib/profile";
-import { PROGRESS_CHANGE, PROGRESS_KEY, readProgress, type Progress } from "../../lib/progress";
+import {
+  PROGRESS_CHANGE,
+  PROGRESS_KEY,
+  readProgress,
+  type Progress,
+} from "../../lib/progress";
 import type { ReceiptState } from "../../lib/report";
-import { COHORTS_ENABLED, type CohortRead } from "../../../../packages/statistics/cohort";
+import {
+  COHORTS_ENABLED,
+  type CohortRead,
+} from "../../../../packages/statistics/cohort";
 
 export type Privacy = "reading" | "ok" | "stealth" | "signed-out" | "error";
 export interface DeviceEvidence {
@@ -41,7 +50,10 @@ export type HistoryStatus =
   | { state: "idle" }
   | { state: "loading" }
   | { state: "ready"; value: UploadedHistory; notice?: string }
-  | { state: "no-uploads" | "limited" | "unavailable" | "unauthorized" | "held"; message: string };
+  | {
+      state: "no-uploads" | "limited" | "unavailable" | "unauthorized" | "held";
+      message: string;
+    };
 
 /** After the report closes, uploaded summaries stay in page memory at most this long, so returning to /stats doesn't re-query. */
 const HISTORY_TTL_MS = 5 * 60 * 1000;
@@ -49,7 +61,8 @@ const HISTORY_TTL_MS = 5 * 60 * 1000;
 export const HISTORY_MAX_ATTEMPTS = 100;
 /** The private reader's widest window: the past year of uploaded activity. */
 export const HISTORY_DAYS = 366;
-let cache: { participant: string; value: UploadedHistory; at: number } | null = null;
+let cache: { participant: string; value: UploadedHistory; at: number } | null =
+  null;
 let expiry: ReturnType<typeof setTimeout> | undefined;
 const dropCache = () => {
   cache = null;
@@ -70,12 +83,14 @@ let boundaries = 0;
 if (typeof window !== "undefined") {
   listenPrivateBoundary((phase) => {
     dropCache();
-    boundaries = phase === "start" ? boundaries + 1 : Math.max(0, boundaries - 1);
+    boundaries =
+      phase === "start" ? boundaries + 1 : Math.max(0, boundaries - 1);
   });
   window.addEventListener(ACCOUNT_CHANGE, () => {
     try {
       const p = readProfile();
-      if (!p || p.stealth || p.signedOut || !acceptsCurrent(p.accepted)) dropCache();
+      if (!p || p.stealth || p.signedOut || !acceptsCurrent(p.accepted))
+        dropCache();
     } catch {
       dropCache();
     }
@@ -98,13 +113,21 @@ function privacyOf(): { privacy: Privacy; profile: StoredProfile | null } {
   return { privacy: "ok", profile };
 }
 
-export function useReportData(revisions: readonly { challenge: string; revision: string }[]) {
+export function useReportData(
+  revisions: readonly { challenge: string; revision: string }[],
+) {
   const [device] = useState(() => privateView<DeviceEvidence>());
-  const local = useSyncExternalStore(device.subscribe, device.getSnapshot, device.getSnapshot);
+  const local = useSyncExternalStore(
+    device.subscribe,
+    device.getSnapshot,
+    device.getSnapshot,
+  );
   const [privacy, setPrivacy] = useState<Privacy>("reading");
   const [history, setHistory] = useState<HistoryStatus>({ state: "idle" });
   const [receipts, setReceipts] = useState<Record<string, ReceiptState>>({});
-  const [cohorts, setCohorts] = useState<Record<string, CohortRead | "unavailable">>({});
+  const [cohorts, setCohorts] = useState<
+    Record<string, CohortRead | "unavailable">
+  >({});
   /** Bumped by every clear, so receipts are requested again for the same revisions. */
   const [epoch, setEpoch] = useState(0);
   const generation = useRef(0);
@@ -112,11 +135,13 @@ export function useReportData(revisions: readonly { challenge: string; revision:
   const blocked = useRef(false);
   /** Set by a boundary while this report is open; a new visit (mount) starts without it. */
   const held = useRef(false);
+  const historyFlight = useRef<number | null>(null);
 
   /** Synchronously forget everything shown and everything in flight. */
   const clear = useCallback(
     (block = false) => {
       generation.current++;
+      historyFlight.current = null;
       for (const a of aborts.current) a.abort();
       aborts.current.clear();
       device.invalidate(block);
@@ -129,113 +154,182 @@ export function useReportData(revisions: readonly { challenge: string; revision:
   );
 
   const readDevice = useCallback(
-    (profile: StoredProfile) =>
-      device.read(async () => {
-        const store = await openPracticeStore();
-        try {
-          const dump = await store.dump();
-          return {
-            attempts: localHistory(dump),
-            progress: readProgress(),
-            profile,
-            at: new Date().toISOString(),
-          };
-        } finally {
-          store.close();
-        }
-      }),
+    (profile: StoredProfile) => {
+      // Progress is already available locally: never hide it behind IndexedDB or interpretation.
+      device.prime({
+        attempts: [],
+        progress: readProgress(),
+        profile,
+        at: new Date().toISOString(),
+      });
+      return device.read(() =>
+        reportRead(
+          async (signal) => {
+            const store = await openPracticeStore();
+            try {
+              if (signal.aborted) throw new Error("Practice read cancelled.");
+              const dump = await store.evidence(signal);
+              return {
+                attempts: localHistory(dump),
+                progress: readProgress(),
+                profile,
+                at: new Date().toISOString(),
+              };
+            } finally {
+              store.close();
+            }
+          },
+          undefined,
+          8000,
+        ),
+      );
+    },
     [device],
   );
 
   const loadHistory = useCallback(
     async (more = false, previous: UploadedHistory | null = null) => {
       const ticket = generation.current;
-      const live = () => ticket === generation.current && !blocked.current && !boundaries;
-      let identity;
+      if (historyFlight.current === ticket) return;
+      historyFlight.current = ticket;
       try {
-        const store = await openPracticeStore();
+        const live = () =>
+          ticket === generation.current && !blocked.current && !boundaries;
+        let identity;
         try {
-          identity = await store.existingIdentity();
-        } finally {
-          store.close();
-        }
-      } catch {
-        identity = null;
-      }
-      if (!live()) return;
-      if (!identity) {
-        setHistory({
-          state: "no-uploads",
-          message: "No uploads are linked to this browser, so the report uses this device only.",
-        });
-        return;
-      }
-      if (!more && cache?.participant === identity.participant && Date.now() - cache.at < HISTORY_TTL_MS) {
-        setHistory({ state: "ready", value: cache.value });
-        return;
-      }
-      setHistory((h) => (h.state === "ready" && more ? h : { state: "loading" }));
-      // A later page failing keeps the pages already read; live() still discards everything after a boundary.
-      const failed = (): HistoryStatus =>
-        more && previous
-          ? { state: "ready", value: previous, notice: "More uploads unavailable right now." }
-          : { state: "unavailable", message: "Your uploads can't be read right now, so the report uses this device only." };
-      const controller = new AbortController();
-      aborts.current.add(controller);
-      const to = new Date().toISOString().slice(0, 10);
-      const from = new Date(Date.parse(to) - (HISTORY_DAYS - 1) * 86400000).toISOString().slice(0, 10);
-      try {
-        const response = await fetch("/api/private-history", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...identity,
-            window: historyWindow({ from, to, after: previous?.next ?? "" }),
-          }),
-          credentials: "same-origin",
-          cache: "no-store",
-          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]),
-        });
-        if (!live()) return;
-        if (!response.ok) {
-          if ([401, 403, 410].includes(response.status)) {
-            dropCache();
+          identity = await reportRead(
+            async (signal) => {
+              const store = await openPracticeStore();
+              try {
+                if (signal.aborted) throw new Error("Identity read cancelled.");
+                return await store.existingIdentity();
+              } finally {
+                store.close();
+              }
+            },
+            undefined,
+            8000,
+          );
+        } catch {
+          if (live())
             setHistory({
-              state: "unauthorized",
-              message: "Your uploads couldn't be verified as yours from this browser, so the report uses this device only.",
+              state: "unavailable",
+              message: "Your saved uploads couldn't be read.",
             });
-          } else if (response.status === 429) {
-            setHistory(
-              more && previous
-                ? { state: "ready", value: previous, notice: "More uploads can be read in a minute." }
-                : { state: "limited", message: "Your uploads were read a moment ago. Try again in a minute; this device's evidence is shown meanwhile." },
-            );
-          } else setHistory(failed());
           return;
         }
-        const page = (await response.json()) as UploadedHistory;
         if (!live()) return;
-        const merged = new Map(
-          [...(previous?.attempts ?? []), ...page.attempts].map((a) => [`${a.attempt}:${a.revision}`, a]),
+        if (!identity) {
+          setHistory({
+            state: "no-uploads",
+            message:
+              "No uploads are linked to this browser, so the report uses this device only.",
+          });
+          return;
+        }
+        if (
+          !more &&
+          cache?.participant === identity.participant &&
+          Date.now() - cache.at < HISTORY_TTL_MS
+        ) {
+          setHistory({ state: "ready", value: cache.value });
+          return;
+        }
+        setHistory((h) =>
+          h.state === "ready" && more ? h : { state: "loading" },
         );
-        const unavailable = new Map(
-          [...(previous?.unavailable ?? []), ...page.unavailable].map((a) => [a.attempt, a]),
-        );
-        const all = [...merged.values()];
-        const value: UploadedHistory = {
-          ...page,
-          // Freshness is only as good as the oldest page read.
-          readAt: previous?.readAt ?? page.readAt,
-          attempts: all.slice(0, HISTORY_MAX_ATTEMPTS),
-          next: all.length >= HISTORY_MAX_ATTEMPTS ? null : page.next,
-          unavailable: [...unavailable.values()],
-        };
-        keep(identity.participant, value);
-        setHistory({ state: "ready", value });
-      } catch {
-        if (live()) setHistory(failed());
+        // A later page failing keeps the pages already read; live() still discards everything after a boundary.
+        const failed = (): HistoryStatus =>
+          more && previous
+            ? {
+                state: "ready",
+                value: previous,
+                notice: "More uploads unavailable right now.",
+              }
+            : {
+                state: "unavailable",
+                message:
+                  "Your uploads can't be read right now, so the report uses this device only.",
+              };
+        const controller = new AbortController();
+        aborts.current.add(controller);
+        const to = new Date().toISOString().slice(0, 10);
+        const from = new Date(Date.parse(to) - (HISTORY_DAYS - 1) * 86400000)
+          .toISOString()
+          .slice(0, 10);
+        try {
+          const response = await fetch("/api/private-history", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ...identity,
+              window: historyWindow({ from, to, after: previous?.next ?? "" }),
+            }),
+            credentials: "same-origin",
+            cache: "no-store",
+            signal: AbortSignal.any([
+              controller.signal,
+              AbortSignal.timeout(20000),
+            ]),
+          });
+          if (!live()) return;
+          if (!response.ok) {
+            if ([401, 403, 410].includes(response.status)) {
+              dropCache();
+              setHistory({
+                state: "unauthorized",
+                message:
+                  "Your uploads couldn't be verified as yours from this browser, so the report uses this device only.",
+              });
+            } else if (response.status === 429) {
+              setHistory(
+                more && previous
+                  ? {
+                      state: "ready",
+                      value: previous,
+                      notice: "More uploads can be read in a minute.",
+                    }
+                  : {
+                      state: "limited",
+                      message:
+                        "Your uploads were read a moment ago. Try again in a minute; this device's evidence is shown meanwhile.",
+                    },
+              );
+            } else setHistory(failed());
+            return;
+          }
+          const page = (await response.json()) as UploadedHistory;
+          if (!live()) return;
+          const merged = new Map(
+            [...(previous?.attempts ?? []), ...page.attempts].map((a) => [
+              `${a.attempt}:${a.revision}`,
+              a,
+            ]),
+          );
+          const unavailable = new Map(
+            [...(previous?.unavailable ?? []), ...page.unavailable].map((a) => [
+              a.attempt,
+              a,
+            ]),
+          );
+          const all = [...merged.values()];
+          const value: UploadedHistory = {
+            ...page,
+            // Freshness is only as good as the oldest page read.
+            readAt: previous?.readAt ?? page.readAt,
+            attempts: all.slice(0, HISTORY_MAX_ATTEMPTS),
+            next: all.length >= HISTORY_MAX_ATTEMPTS ? null : page.next,
+            unavailable: [...unavailable.values()],
+          };
+          keep(identity.participant, value);
+          setHistory({ state: "ready", value });
+        } catch {
+          if (live()) setHistory(failed());
+        } finally {
+          aborts.current.delete(controller);
+        }
       } finally {
-        aborts.current.delete(controller);
+        if (historyFlight.current === ticket) historyFlight.current = null;
       }
     },
     [],
@@ -255,7 +349,8 @@ export function useReportData(revisions: readonly { challenge: string; revision:
     if (held.current)
       setHistory({
         state: "held",
-        message: "Not re-read after the reset or import. Open the report again to include your uploads.",
+        message:
+          "Not re-read after the reset or import. Open the report again to include your uploads.",
       });
     else void loadHistory();
   }, [clear, readDevice, loadHistory]);
@@ -268,7 +363,8 @@ export function useReportData(revisions: readonly { challenge: string; revision:
     };
     const deviceOnly = () => {
       const { privacy, profile } = privacyOf();
-      if (privacy === "ok" && profile && !blocked.current && !boundaries) void readDevice(profile);
+      if (privacy === "ok" && profile && !blocked.current && !boundaries)
+        void readDevice(profile);
     };
     const storage = (e: StorageEvent) => {
       if (e.key === null || e.key === PROFILE_KEY) destructive();
@@ -308,38 +404,59 @@ export function useReportData(revisions: readonly { challenge: string; revision:
   const requested = useRef({ epoch: -1, revisions: new Set<string>() });
   useEffect(() => {
     if (privacy !== "ok" || !wanted) return;
-    if (requested.current.epoch !== epoch) requested.current = { epoch, revisions: new Set() };
+    if (requested.current.epoch !== epoch)
+      requested.current = { epoch, revisions: new Set() };
     const done = requested.current.revisions;
     const pending = new Set<string>();
     const ticket = generation.current;
     const controller = new AbortController();
     aborts.current.add(controller);
     const live = () =>
-      ticket === generation.current && !blocked.current && !boundaries && !controller.signal.aborted;
-    for (const pair of wanted.split("|")) {
-      const [challenge, revision] = pair.split("/");
-      if (done.has(revision)) continue;
+      ticket === generation.current &&
+      !blocked.current &&
+      !boundaries &&
+      !controller.signal.aborted;
+    const pairs = wanted.split("|").filter((pair) => {
+      const revision = pair.split("/")[1];
+      if (done.has(revision)) return false;
       done.add(revision);
       pending.add(revision);
       setReceipts((r) => (revision in r ? r : { ...r, [revision]: "loading" }));
-      void fetch(
-        `/api/model-receipts/${encodeURIComponent(challenge)}/${encodeURIComponent(revision)}`,
-        { cache: "no-store", signal: controller.signal, redirect: "error" },
-      )
-        .then(async (response) => {
-          if (!response.ok) throw new Error();
-          const data = (await response.json()) as ReceiptRead;
-          if (!live()) return;
+      return true;
+    });
+    void reportReceipts(
+      pairs,
+      async (pair) => {
+        const [challenge, revision] = pair.split("/");
+        try {
+          const data = await reportRead(async (signal) => {
+            const response = await fetch(
+              `/api/model-receipts/${encodeURIComponent(challenge)}/${encodeURIComponent(revision)}`,
+              { cache: "no-store", signal, redirect: "error" },
+            );
+            if (!response.ok) {
+              if ([429, 503].includes(response.status)) return null;
+              throw new Error("Model result unavailable.");
+            }
+            return (await response.json()) as ReceiptRead;
+          }, controller.signal);
+          if (!live()) return true;
+          const available =
+            data?.state === "ready" && Array.isArray(data.receipts);
           setReceipts((r) => ({
             ...r,
-            [revision]: data.state === "ready" && Array.isArray(data.receipts) ? data.receipts : "unavailable",
+            [revision]: available ? data.receipts : "unavailable",
           }));
-        })
-        .catch(() => {
+          return data !== null && data.state !== "unavailable";
+        } catch {
           if (live()) setReceipts((r) => ({ ...r, [revision]: "unavailable" }));
-        })
-        .finally(() => pending.delete(revision));
-    }
+          return true; // A timed-out read is not retried automatically.
+        } finally {
+          pending.delete(revision);
+        }
+      },
+      controller.signal,
+    );
     const set = aborts.current;
     return () => {
       controller.abort();
@@ -356,18 +473,28 @@ export function useReportData(revisions: readonly { challenge: string; revision:
     const controller = new AbortController();
     aborts.current.add(controller);
     const live = () =>
-      ticket === generation.current && !blocked.current && !boundaries && !controller.signal.aborted;
+      ticket === generation.current &&
+      !blocked.current &&
+      !boundaries &&
+      !controller.signal.aborted;
     for (const pair of wanted.split("|")) {
       const [challenge, revision] = pair.split("/");
-      void fetch(`/api/cohort/${encodeURIComponent(challenge)}/${encodeURIComponent(revision)}`, {
-        cache: "no-store",
-        signal: controller.signal,
-        redirect: "error",
-      })
+      void fetch(
+        `/api/cohort/${encodeURIComponent(challenge)}/${encodeURIComponent(revision)}`,
+        {
+          cache: "no-store",
+          signal: controller.signal,
+          redirect: "error",
+        },
+      )
         .then(async (response) => {
           if (!response.ok) throw new Error();
           const data = (await response.json()) as CohortRead;
-          if (live()) setCohorts((c) => ({ ...c, [revision]: Array.isArray(data.groups) ? data : "unavailable" }));
+          if (live())
+            setCohorts((c) => ({
+              ...c,
+              [revision]: Array.isArray(data.groups) ? data : "unavailable",
+            }));
         })
         .catch(() => {
           if (live()) setCohorts((c) => ({ ...c, [revision]: "unavailable" }));
@@ -381,7 +508,8 @@ export function useReportData(revisions: readonly { challenge: string; revision:
   }, [privacy, wanted, epoch]);
 
   const more = useCallback(() => {
-    if (history.state === "ready" && history.value.next) void loadHistory(true, history.value);
+    if (history.state === "ready" && history.value.next)
+      void loadHistory(true, history.value);
   }, [history, loadHistory]);
 
   return { privacy, local, history, receipts, cohorts, more };

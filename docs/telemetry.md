@@ -189,3 +189,4 @@ The optional explicit history reader reuses existing uploaded practice observati
 ## Draft comparison privacy control (ENG-376)
 
 [The unconfigured approval proposal](eng-376-current-privacy.md) adds minimal persistent CONTROL privacy state and a separate internal eligibility RPC, with original-secret-authorized conditional writes. Telemetry never updates it. No live configuration or capture version changes: recorded observations retain their existing meaning. Human aggregate access stays disabled; publication fencing and native Basin synthetic verification remain release gates.
+Practice now records `mod-enter-runs-examples` instead of `mod-enter-submits` in the explicit `editorFeatures` list. The keyboard action is still recorded with its actual run purpose and `via: "keyboard"`; observation shapes and meanings are unchanged. The example-pass prerequisite and five-solve reflection cooldown add no observation types or fields.

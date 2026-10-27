@@ -60,7 +60,7 @@ On top of that:
 - one per browser per group;
 - the unit is browsers, not people.
 
-The report shows "adults: 80% solved · median 2 submissions". Its details carry the `eligibility` text.
+When enabled, the report would show a single FYI on the relevant answer; the `eligibility` text stays internal.
 
 ## Freshness and invalidation: not good enough to enable
 
