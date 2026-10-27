@@ -1,7 +1,9 @@
 /**
  * Prints read-only Basin SQL probes that isolate which part of the fixed private-history query
- * Basin rejects (ENG-340). For an operator with authorized SQL workbench access only. Every probe
+ * fails natively (ENG-340). For an operator with authorized SQL workbench access only. Every probe
  * returns counts or sizes, never payloads; the participant ID is a placeholder to fill in there.
+ * Limits: an aggregating wrapper is not byte-for-byte the shipped read (result transfer differs, and
+ * an engine may still prune differently), so a passing probe 5 doesn't clear the real request.
  *   node --import tsx tools/history-query-probes.ts
  */
 import { historyQuery } from "../packages/developer-profile/uploaded-history";
@@ -20,10 +22,14 @@ SELECT COUNT(*) AS attempts, SUM(n) AS observations, SUM(bytes) AS payload_bytes
     `WITH owner AS (${owner}) SELECT COUNT(*) AS conflicting_records FROM (SELECT record_id FROM owner GROUP BY record_id HAVING COUNT(DISTINCT payload) > 1) c`],
   ["3. Same conflict check without DISTINCT (MIN <> MAX is equivalent for non-null payloads)",
     `WITH owner AS (${owner}) SELECT COUNT(*) AS conflicting_records FROM (SELECT record_id FROM owner GROUP BY record_id HAVING MIN(payload) <> MAX(payload)) c`],
-  ["4. Window functions only, over per-attempt aggregates (no payload returned)",
-    `WITH owner AS (${owner}), per AS (SELECT attempt_id, COUNT(*) AS n FROM owner GROUP BY attempt_id ORDER BY attempt_id LIMIT 101)
-SELECT MAX(position) AS rows_ranked FROM (SELECT ROW_NUMBER() OVER (ORDER BY attempt_id) AS position, SUM(n) OVER (ORDER BY attempt_id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running FROM per) w`],
-  ["5. The full shipped query wrapped to return only a row count (run EXPLAIN on it too)",
-    `SELECT COUNT(*) AS rows FROM (${full}) q`],
+  ["4. The shipped window functions only (ROW_NUMBER, two running SUMs, LAG), each consumed so none is pruned; no payload returned",
+    `WITH owner AS (${owner}), per AS (SELECT attempt_id, COUNT(*) AS n, SUM(octet_length(payload)) AS bytes FROM owner GROUP BY attempt_id ORDER BY attempt_id LIMIT 101),
+ranked AS (SELECT attempt_id, ROW_NUMBER() OVER (ORDER BY attempt_id) AS position,
+ SUM(bytes) OVER (ORDER BY attempt_id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running_bytes,
+ SUM(n) OVER (ORDER BY attempt_id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running_records FROM per),
+lagged AS (SELECT *, LAG(position, 1, 0) OVER (ORDER BY position) AS previous FROM ranked)
+SELECT MAX(position) AS rows_ranked, MAX(running_bytes) AS bytes_total, MAX(running_records) AS records_total, SUM(previous) AS lag_check FROM lagged`],
+  ["5. The full shipped query, aggregated so payload must still be read (row count, payload bytes, scopes); compare EXPLAIN with the bare query",
+    `SELECT COUNT(*) AS rows, SUM(octet_length(payload)) AS payload_bytes, COUNT(record_id) AS observation_rows, MAX(scope) AS last_scope FROM (${full}) q`],
 ];
 for (const [title, sql] of probes) console.log(`-- ${title}\n${sql};\n`);
