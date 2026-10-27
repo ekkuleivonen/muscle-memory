@@ -17,7 +17,7 @@ const TTL_MS = 60 * 60 * 1000;
 const cache = new Map<string, { read: CohortRead; at: number }>();
 const inflight = new Map<string, Promise<CohortRead>>();
 let active = 0;
-const empty = (state: CohortRead["state"]): CohortRead => ({
+export const empty = (state: CohortRead["state"]): CohortRead => ({
   state,
   version: COHORT_VERSION,
   minimum: MIN_COHORT,
@@ -31,8 +31,10 @@ const empty = (state: CohortRead["state"]): CohortRead => ({
  * token (the admin statistics and private-history credential). No participant input. Disabled
  * until the owner approves the policy in docs/human-cohorts.md: then no SQL runs at all.
  */
-export async function cohort(challenge: string, revision: string): Promise<CohortRead> {
+export async function cohort(challenge: string, revision: string, current: boolean): Promise<CohortRead> {
   if (!COHORTS_ENABLED) return empty("disabled");
+  // Only each challenge's current revision is a cohort key: at most one per published challenge.
+  if (!current) return empty("earlier-version");
   const env =
     process.env.NODE_ENV === "development"
       ? (process.env as Record<string, unknown>)
@@ -45,7 +47,8 @@ export async function cohort(challenge: string, revision: string): Promise<Cohor
   if (hit && Date.now() - hit.at < TTL_MS) return hit.read;
   const pending = inflight.get(key);
   if (pending) return pending;
-  if (active >= 2) return hit?.read ?? empty("unavailable");
+  // Never serve an expired aggregate: it could still count someone who has since gone stealth.
+  if (active >= 2) return empty("unavailable");
   const read = (async () => {
     active++;
     try {
@@ -76,8 +79,9 @@ export async function cohort(challenge: string, revision: string): Promise<Cohor
       cache.set(key, { read: result, at: Date.now() });
       return result;
     } catch {
-      // SQL errors can quote private expressions. Never log or return them.
-      return hit?.read ?? empty("unavailable");
+      // SQL errors can quote private expressions. Never log or return them, and never fall back
+      // to an expired aggregate.
+      return empty("unavailable");
     } finally {
       active--;
       inflight.delete(key);

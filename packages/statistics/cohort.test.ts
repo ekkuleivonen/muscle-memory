@@ -2,54 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { trace, syntheticRevision } from "../developer-profile/fixtures";
+import { ADULT, browser, fields, many, profile, type Event } from "./cohort-fixtures";
 import { deriveAttempts } from "../developer-profile/derive";
-import type { StoredRecord } from "../domain/records";
 import { cohortQuery, cohortResult, matchingGroup, COHORTS_ENABLED, MIN_COHORT } from "./cohort";
-
-const fields = ["record_id", "type", "participant_id", "attempt_id", "challenge", "challenge_revision", "occurred_at", "kind", "payload"];
-type Event = Record<(typeof fields)[number], string | null>;
-const toEvent = (r: StoredRecord): Event => {
-  const o = JSON.parse(r.payload);
-  return {
-    record_id: r.recordId,
-    type: o.type,
-    participant_id: o.participantId,
-    attempt_id: o.attemptId ?? null,
-    challenge: o.challenge ?? null,
-    challenge_revision: o.challengeRevision ?? null,
-    occurred_at: o.occurredAt,
-    kind: r.kind,
-    payload: r.payload,
-  };
-};
-/** One synthetic browser's attempt: the shared fixture under its own IDs. */
-function browser(id: string, attempt = "a", options: { again?: boolean; actor?: string; at?: number } = {}): Event[] {
-  return trace(`${id}-${attempt}`, `${id}-${attempt}-source`).map((r) => {
-    const o = JSON.parse(r.payload);
-    o.participantId = id;
-    o.observationId = `${id}-${attempt}-${o.observationId}`;
-    if (options.actor) o.actor = options.actor;
-    if (options.again && o.type === "practice.started") o.data.from = "again";
-    if (options.at) o.occurredAt = new Date(Date.parse(o.occurredAt) + options.at).toISOString();
-    return toEvent({ ...r, recordId: o.observationId, participantId: id, payload: JSON.stringify(o) });
-  });
-}
-let n = 0;
-function profile(id: string, answers: Record<string, unknown>, at: string): Event {
-  const record = `profile-${++n}`;
-  return {
-    record_id: record,
-    type: "site.profile",
-    participant_id: id,
-    attempt_id: null,
-    challenge: null,
-    challenge_revision: null,
-    occurred_at: at,
-    kind: "observation",
-    payload: JSON.stringify({ type: "site.profile", actor: "person", participantId: id, observationId: record, occurredAt: at, data: { from: "settings", answers } }),
-  };
-}
-const many = (count: number, prefix = "b") => Array.from({ length: count }, (_, i) => browser(`${prefix}${i}`)).flat();
 
 /** Runs the actual fixed SELECT in SQLite; only the namespace is adapted. Not a live Basin proof. */
 function run(events: Event[], challenge = "JS-001", revision = syntheticRevision) {
@@ -98,22 +53,22 @@ test("a group below the minimum is withheld entirely, not shown as small or zero
   assert.equal(cohortResult(run(many(MIN_COHORT))).groups.length, 1);
 });
 
-test("current stealth and the 16–17 band are excluded by each browser's latest profile", () => {
+test("current stealth and the 16–17 band remove a browser's whole history, by its latest profile", () => {
   const events = many(25);
-  for (let i = 0; i < 6; i++) events.push(profile(`b${i}`, { stealth: true }, "2026-10-26T00:00:00.000Z"));
+  for (let i = 0; i < 6; i++) events.push(profile(`b${i}`, { ...ADULT, stealth: true }, "2026-10-26T00:00:00.000Z"));
   assert.deepEqual(cohortResult(run(events)).groups, [], "25 − 6 stealth = 19 < 20");
   // A later profile turning stealth off counts the browser again; latest wins.
-  for (let i = 0; i < 6; i++) events.push(profile(`b${i}`, { stealth: false }, "2026-10-27T00:00:00.000Z"));
+  for (let i = 0; i < 6; i++) events.push(profile(`b${i}`, ADULT, "2026-10-27T00:00:00.000Z"));
   assert.equal(cohortResult(run(events)).groups.length, 1);
   const minors = many(25);
-  for (let i = 0; i < 6; i++) minors.push(profile(`b${i}`, { age: "16-17" }, "2026-10-26T00:00:00.000Z"));
+  for (let i = 0; i < 6; i++) minors.push(profile(`b${i}`, { age: "16-17", stealth: false }, "2026-10-26T00:00:00.000Z"));
   assert.deepEqual(cohortResult(run(minors)).groups, []);
 });
 
 test("duplicate copies count once; conflicting copies and model actors are left out", () => {
   const events = many(20);
   assert.equal(cohortResult(run([...events, ...events])).groups[0].participants, "20–49");
-  const models = Array.from({ length: 5 }, (_, i) => browser(`m${i}`, "a", { actor: "model" })).flat();
+  const models = Array.from({ length: 5 }, (_, i) => [...browser(`m${i}`, "a", { actor: "model" }), profile(`m${i}`, ADULT, "2026-10-01T00:00:00.000Z")]).flat();
   assert.deepEqual(cohortResult(run([...many(19, "p"), ...models])).groups, [], "models never fill a human group");
   const conflicted = many(20);
   const started = conflicted.findIndex((e) => e.type === "practice.started");
@@ -123,6 +78,7 @@ test("duplicate copies count once; conflicting copies and model actors are left 
 
 test("first attempts and repeats are separate groups with one attempt per browser each", () => {
   const events = Array.from({ length: 22 }, (_, i) => [
+    profile(`r${i}`, ADULT, "2026-10-01T00:00:00.000Z"),
     ...browser(`r${i}`, "a"),
     ...browser(`r${i}`, "b", { again: true, at: 86400000 }),
     ...browser(`r${i}`, "c", { again: true, at: 2 * 86400000 }),
@@ -150,11 +106,18 @@ test("an attempt matches only the group with its exact runtime, diagnostics and 
   assert.equal(matchingGroup(read, [], "first"), null, "unknown conditions never borrow a group");
 });
 
-test("every read states who is counted, including that unanswered ages are included", () => {
+test("unknown age, stealth, consent or start origin is never counted as an eligible adult", () => {
   const read = cohortResult(run(many(25)));
   assert.equal(read.eligibility.unit, "distinct browsers, not people");
-  assert.match(read.eligibility.ages, /declared 16–17 excluded; no age answer included/);
-  const unanswered = many(25);
-  unanswered.push(profile("b0", { experience: "some" }, "2026-10-26T00:00:00.000Z"));
-  assert.equal(cohortResult(run(unanswered)).groups[0].participants, "20–49", "no age answer is counted, not dropped or guessed");
+  assert.match(read.eligibility.ages, /adults only/);
+  const withSix = (extra: (i: number) => Event[]) => [...many(19), ...Array.from({ length: 6 }, (_, i) => extra(i)).flat()];
+  const cases: [string, Event[]][] = [
+    ["no profile uploaded", withSix((i) => browser(`x${i}`))],
+    ["no age answer", withSix((i) => [...browser(`x${i}`), profile(`x${i}`, { stealth: false }, "2026-10-01T00:00:00.000Z")])],
+    ["stealth not recorded", withSix((i) => [...browser(`x${i}`), profile(`x${i}`, { age: "25-34" }, "2026-10-01T00:00:00.000Z")])],
+    ["an adult band answered earlier, unanswered now", withSix((i) => [...browser(`x${i}`), profile(`x${i}`, ADULT, "2026-10-01T00:00:00.000Z"), profile(`x${i}`, { stealth: false }, "2026-10-02T00:00:00.000Z")])],
+    ["no Terms version on the records", withSix((i) => [...browser(`x${i}`, "a", { noTerms: true }), profile(`x${i}`, ADULT, "2026-10-01T00:00:00.000Z")])],
+    ["a start without a recorded origin", withSix((i) => [...browser(`x${i}`, "a", { noOrigin: true }), profile(`x${i}`, ADULT, "2026-10-01T00:00:00.000Z")])],
+  ];
+  for (const [name, events] of cases) assert.deepEqual(cohortResult(run(events)).groups, [], `${name}: 19 eligible stay withheld`);
 });

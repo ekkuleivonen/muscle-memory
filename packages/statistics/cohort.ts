@@ -35,19 +35,22 @@ export interface CohortGroup {
   submissions: { p25: number; p50: number; p75: number } | null;
 }
 /**
- * Who is counted, stated with every read so nothing implies more than is known. Age is optional:
- * browsers that declared 16–17 are excluded, and browsers that never answered are counted (the
- * Terms require 16 or older, so an unanswered browser may still be 16–17). Counts are browsers,
- * not people.
+ * Who is counted, stated with every read. Eligibility is positive: a browser counts only when its
+ * latest uploaded profile states an adult band and says it is not stealth. Unknown is never adult,
+ * never non-stealth. That latest profile is the current state, applied to all of its history.
  */
 export const ELIGIBILITY = {
   unit: "distinct browsers, not people",
-  ages: "declared 16–17 excluded; no age answer included",
-  stealth: "excluded by each browser's latest uploaded privacy setting",
-  attempts: "one first attempt and, separately, one repeat per browser",
+  ages: "adults only: browsers whose latest uploaded profile states an 18+ band; 16–17 and unanswered are not counted",
+  stealth: "counted only when that latest profile says not stealth; stealth or unknown is not counted, including past attempts",
+  consent: "only records carrying an accepted Terms version",
+  attempts: "one first attempt and, separately, one repeat per browser; a start without a recorded origin is not counted",
 } as const;
+/** Age bands counted as adults. 16–17 has no cohort of its own yet, so it stays unavailable, never mixed in. */
+export const ADULT_BANDS = ["18-24", "25-34", "35-44", "45-54", "55+"] as const;
 export interface CohortRead {
-  state: "disabled" | "ready" | "unavailable";
+  /** earlier-version: cohorts cover each challenge's current revision only. */
+  state: "disabled" | "ready" | "unavailable" | "earlier-version";
   version: typeof COHORT_VERSION;
   minimum: number;
   eligibility: typeof ELIGIBILITY;
@@ -58,9 +61,9 @@ export interface CohortRead {
 /**
  * One fixed SELECT for one validated revision. It returns value counts, never a participant:
  * (runtime, diagnostics, practice, completed, first_pass, submissions) → number of browsers.
- * Excluded before counting: records with conflicting copies, model actors, browsers whose latest
- * uploaded profile is stealth or the 16–17 age band, attempts with more than one runtime and
- * attempts without a recorded start. Window functions and joins only: DataFusion could not plan
+ * Counted only: browsers whose latest uploaded profile states an adult band and not-stealth (so a
+ * later stealth or deletion removes every past attempt), person records with a Terms version and
+ * no conflicting copies, attempts with one runtime and a start whose origin was recorded. Window functions and joins only: DataFusion could not plan
  * an IN subquery inside an aggregate (see the ENG-340 history fix).
  */
 export function cohortQuery(challenge: string, revision: string): string {
@@ -80,19 +83,22 @@ export function cohortQuery(challenge: string, revision: string): string {
   SELECT participant_id, json_get_json(json_get_json(payload, 'data'), 'answers') AS answers,
     ROW_NUMBER() OVER (PARTITION BY participant_id ORDER BY occurred_at DESC, record_id DESC) AS latest
   FROM observations WHERE type = 'site.profile'
-), excluded AS (
+), eligible AS (
   SELECT participant_id FROM profiles
-  WHERE latest = 1 AND (json_get_json(answers, 'stealth') = 'true' OR json_get_str(answers, 'age') = '16-17')
+  WHERE latest = 1 AND json_get_json(answers, 'stealth') = 'false'
+    AND json_get_str(answers, 'age') IN (${ADULT_BANDS.map((b) => `'${b}'`).join(", ")})
 ), practice AS (
   SELECT o.*, json_get_json(o.payload, 'data') AS data
-  FROM observations o LEFT JOIN excluded e ON e.participant_id = o.participant_id
-  WHERE e.participant_id IS NULL AND o.attempt_id IS NOT NULL AND o.attempt_id <> ''
+  FROM observations o JOIN eligible e ON e.participant_id = o.participant_id
+  WHERE o.attempt_id IS NOT NULL AND o.attempt_id <> ''
     AND json_get_str(o.payload, 'actor') = 'person'
+    AND json_get_str(o.payload, 'termsVersion') IS NOT NULL AND json_get_str(o.payload, 'termsVersion') <> ''
     AND o.type IN ('practice.started', 'practice.opened', 'practice.submitted', 'practice.completed')
 ), attempts AS (
   SELECT participant_id, attempt_id,
     MIN(CASE WHEN type = 'practice.started' THEN occurred_at END) AS started,
     MAX(CASE WHEN type = 'practice.started' AND json_get_str(data, 'from') = 'again' THEN 1 ELSE 0 END) AS again,
+    MAX(CASE WHEN type = 'practice.started' AND json_get_str(data, 'from') IS NOT NULL THEN 1 ELSE 0 END) AS known_start,
     MAX(CASE WHEN type = 'practice.completed' THEN 1 ELSE 0 END) AS completed,
     COUNT(DISTINCT CASE WHEN type = 'practice.opened' THEN json_get_json(data, 'runtime') END) AS runtimes,
     MAX(CASE WHEN type = 'practice.opened' THEN json_get_json(data, 'runtime') END) AS runtime,
@@ -110,7 +116,7 @@ export function cohortQuery(challenge: string, revision: string): string {
   SELECT a.*, f.first_pass,
     ROW_NUMBER() OVER (PARTITION BY a.participant_id ORDER BY a.started, a.attempt_id) AS nth
   FROM attempts a LEFT JOIN first_results f ON f.participant_id = a.participant_id AND f.attempt_id = a.attempt_id
-  WHERE a.started IS NOT NULL AND a.runtimes = 1
+  WHERE a.started IS NOT NULL AND a.known_start = 1 AND a.runtimes = 1
 ), units AS (
   SELECT *, CASE WHEN nth = 1 AND again = 0 THEN 'first' ELSE 'repeat' END AS practice FROM ranked
 ), one_per_browser AS (

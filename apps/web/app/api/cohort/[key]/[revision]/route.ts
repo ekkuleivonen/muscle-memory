@@ -15,5 +15,6 @@ export async function GET(
   const { key, revision } = await params;
   if (!CHALLENGE_KEY.test(key) || !REVISION.test(revision) || !(await publicChallenge(key, revision).catch(() => null)))
     return Response.json({ error: "Revision not available." }, { status: 404, headers });
-  return Response.json(await cohort(key, revision), { headers });
+  const current = await publicChallenge(key).catch(() => null);
+  return Response.json(await cohort(key, revision, current?.metadata.revision === revision), { headers });
 }

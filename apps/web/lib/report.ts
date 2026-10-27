@@ -572,11 +572,12 @@ function peopleCell(read: CohortRead | "loading" | "unavailable" | undefined, a:
   if (read === "unavailable") return "can't be read";
   if (!read || read.state === "disabled") return PEOPLE.label;
   if (read.state === "unavailable") return "can't be read";
+  if (read.state === "earlier-version") return "earlier version, not compared";
   const known = (prefix: string) => a.conditions.filter((c) => c.startsWith(prefix)).length === 1;
   if (!known("Runtime: ") || !known("Editor: ")) return "your conditions weren't recorded";
   const group = matchingGroup(read, a.conditions, a.practice === "repeat" ? "repeat" : "first");
-  if (!group) return `fewer than ${read.minimum} comparable people`;
-  const solved = `${Math.round(group.solved * 100)}% solved`;
+  if (!group) return `fewer than ${read.minimum} comparable adults`;
+  const solved = `adults: ${Math.round(group.solved * 100)}% solved`;
   return group.submissions ? `${solved} · median ${plural(group.submissions.p50, "submission")}` : solved;
 }
 /** What a people figure counts, from the read itself; the disabled reason when there is none. */
@@ -586,7 +587,7 @@ function peopleDetails(cohorts: ReportInput["cohorts"]): string[] {
   const e = read.eligibility;
   return [
     `People: groups of at least ${read.minimum} ${e.unit}, on the same challenge version, runtime and diagnostics; ${e.attempts}.`,
-    `Ages: ${e.ages}. Stealth: ${e.stealth}. Sizes are shown as bands and shares rounded to 5%; a smaller group isn't shown.`,
+    `Ages: ${e.ages}. Stealth: ${e.stealth}. Consent: ${e.consent}. Sizes are shown as bands and shares rounded to 5%; a smaller group isn't shown.`,
   ];
 }
 function minds(input: ReportInput): {

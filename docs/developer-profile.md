@@ -17,7 +17,7 @@
 
 The first screen is the chapter 1 headline and hero numbers. A one-line "sources" disclosure (device, uploads, freshness, read more) and the chapter navigation follow chapter 1; the navigation is sticky from there and highlights chapters as they scroll in. When the person said AI does much of their coding, chapter 1 shows a short "no AI in this editor" label, with the full sentence in its details.
 
-**Comparisons with other people follow Ekku's approved policy (27 October 2026) but are still switched off.** While `COHORTS_ENABLED` is false, `PEOPLE` renders "not compared yet" with the reason in the details, and no cohort request is made. Once enabled, chapter 4's People cell shows a matched suppressed aggregate, "fewer than 20 comparable people" for a checked group, or why there is none. Design, exclusions, suppression and the decisions needed to enable it: [human cohorts](human-cohorts.md).
+**Comparisons with other people follow Ekku's approved policy (27 October 2026) but are still switched off.** While `COHORTS_ENABLED` is false, `PEOPLE` renders "not compared yet" with the reason in the details, and no cohort request is made. Once enabled, chapter 4's People cell shows a matched suppressed aggregate, "fewer than 20 comparable adults" for a checked group, or why there is none. Design, exclusions, suppression and the decisions needed to enable it: [human cohorts](human-cohorts.md).
 
 With nothing finished yet, chapter 1 puts the resume action beside its opening message. A new player sees one invitation, a start action and a preview explicitly labelled "sample data, not yours". Stealth shows only what stealth means and a link to privacy settings.
 

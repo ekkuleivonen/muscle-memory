@@ -1,6 +1,6 @@
-# Human cohorts in the report (ENG-374): implementation and security proposal
+# Human cohorts in the report (ENG-374)
 
-Status: **policy approved, read still disabled.** On 27 October 2026 Ekku approved (via dot) the initial comparison policy:
+**Policy approved** by Ekku on 27 October 2026, via dot:
 - at least 20 eligible distinct browser participants;
 - the same challenge revision and language, under compatible conditions;
 - first attempts kept separate from repeats;
@@ -8,106 +8,91 @@ Status: **policy approved, read still disabled.** On 27 October 2026 Ekku approv
 - under-18s never mixed with adults;
 - no narrow demographic slices and no individual records.
 
-It is a conservative product floor, not a statistical guarantee. The implementation below enforces it.
+It is a conservative floor, not a statistical guarantee.
 
-`COHORTS_ENABLED` stays `false` in `packages/statistics/cohort.ts` until root has reviewed this player-facing read and the release steps below are done. Until then the route answers `{ state: "disabled" }` without running SQL, and the report makes no cohort request.
+**Access still disabled.** `COHORTS_ENABLED = false` in `packages/statistics/cohort.ts`. The route answers `{ state: "disabled" }` without running SQL, and the report makes no request. Enabling the player-facing read needs root's scoped approval and a Privacy Notice version.
 
-## What a player sees
+## Access
 
-Chapter 4's People column, per challenge the player tried, shows one of these:
-- **A matched group:** "80% solved · median 2 submissions".
-- **A group that was checked and is too small:** "fewer than 20 comparable people".
-- **No recorded conditions:** "your conditions weren't recorded".
-- **A failed read:** "can't be read".
-
-Never a nearest group, a pooled total, a percentile of one person, or a zero. Edit habits (chapter 3) and time are not compared in this version.
-
-## Infrastructure: nothing new
-
-| Item | Choice |
+| | |
 | --- | --- |
-| Caller | Existing web Worker `muscle-memory`, route `GET /api/cohort/<key>/<revision>` |
-| Data | Existing `default.events` (Basin SQL over the events catalog), the same table admin statistics and private history read |
-| Credential | Existing `ADMIN_STATS_SQL_TOKEN` in web, unchanged. No new token, binding, service, store or permission |
-| Registry | Existing `CATALOG_DB` (`published_versions`), to refuse unpublished and `synthetic-qa` revisions |
-| Gate | Current Terms cookie; the revision must be a registered public one. The route takes no participant ID, filter, demographic or SQL |
+| Route | `GET /api/cohort/<key>/<revision>` on the existing web Worker. Requires the current Terms cookie. Takes no participant ID, filter, slice or SQL |
+| Keys | Only each published challenge's **current** revision; any other registered revision gets `earlier-version` with no SQL. Unregistered revisions get 404. `synthetic-qa` revisions return no groups |
+| Data and credential | One fixed SELECT (`cohortQuery`) over the existing `default.events`, using web's existing `ADMIN_STATS_SQL_TOKEN`. No new token, binding, scope, service or stored data |
+| Output of SQL | Value counts only: (runtime, diagnostics, first/repeat, finished, first try passed, submissions) → number of browsers. No ID, attempt, record or payload leaves SQL or the Worker |
 
-## Matching keys and unit
+## Response (`CohortRead`)
 
-- **Group key:** exact `challenge` + `challenge_revision` (which fixes the language), the attempt's recorded runtime (`practice.opened.runtime`, exactly as uploaded), whether type diagnostics were on, and first vs repeat.
-- **Excluded attempts:** those with more than one runtime, or with no recorded start.
-- **One attempt per browser per group:**
-  - *first:* a browser's earliest started attempt, if it wasn't started as "again".
-  - *repeat:* that browser's earliest later attempt.
-  - A browser therefore counts at most once in "first" and once in "repeat", never twice in the same group.
-- **What's counted:** distinct browser IDs, not people. One person with two browsers counts twice; the notice already describes participants as browser IDs.
+| Field | Meaning |
+| --- | --- |
+| `state` | `disabled`, `ready`, `unavailable`, or `earlier-version` |
+| `version`, `minimum`, `readAt` | `cohort-1`; 20; when the query ran |
+| `eligibility` | Who was counted, in words (below) |
+| `groups[]` | One per runtime × diagnostics × first/repeat, with at least 20 eligible browsers |
 
-## Exclusions, applied before counting
+Each group has:
+- `participants`: a band (20–49, 50–99, 100–249, 250+), never an exact count;
+- `solved`: share that finished, rounded to 5%;
+- `firstTry`: share whose first submission passed every check with no rule fired, rounded to 5%;
+- `submissions`: `p25`, `p50` and `p75` of submissions among finishers.
 
-- **Deduplication:** records are deduplicated by `record_id`. A record with conflicting copies is dropped.
-- **People only:** only `actor = person`, so model runs never fill a human group.
-- **Stealth and 16–17:** a browser is excluded when its **latest** uploaded `site.profile` says `stealth: true` or `age: 16-17`. Turning stealth on removes all of that browser's history from every group at the next refresh.
-  - **Under-18s:** browsers that declared 16–17 are excluded from every group, so they are never mixed with adults. A separate 16–17 cohort is not built.
-  - **No age answer:** age is optional, and these browsers are counted. The Terms require 16 or older, so an unanswered browser may still be 16–17. Every read states this in its `eligibility` field, and the report's details repeat it. Excluding unanswered browsers too would be stricter but would make groups much smaller; that is root's call.
-- **Deletion:** erasure removes a deleted browser's rows daily at 03:17 UTC. A browser can therefore remain inside a ≥20 aggregate for up to about 25 hours after deletion (erasure lag plus the 1-hour cache). Closing that gap would mean extending the approved `ParticipantOwner` RPC with a read-only "deleted IDs" method; that would broaden the binding, so it is not proposed unless required.
-- **Synthetic QA revisions:** never a cohort.
+`firstTry` and `submissions` are null unless their own subset also has at least 20 browsers. Groups below 20 are omitted without trace. No total across groups is published, so no figure can be subtracted from another to isolate a small group.
 
-## What is published (`CohortRead`)
+## Eligibility: positive, never assumed
 
-```json
-{ "state": "ready", "version": "cohort-1", "minimum": 20, "readAt": "…",
-  "eligibility": { "unit": "distinct browsers, not people", "ages": "declared 16–17 excluded; no age answer included",
-    "stealth": "excluded by each browser's latest uploaded privacy setting", "attempts": "one first attempt and, separately, one repeat per browser" },
-  "groups": [{ "runtime": {"engine": "javascript", "version": "…"}, "diagnostics": false,
-    "practice": "first", "participants": "20–49", "solved": 0.8, "firstTry": 0.35,
-    "submissions": { "p25": 1, "p50": 2, "p75": 4 } }] }
-```
+A browser counts only when its **latest uploaded `site.profile`** meets all of these:
+- it states an adult band: 18–24, 25–34, 35–44, 45–54 or 55+;
+- it says `stealth: false`.
 
-- **Group size:** `participants` is a band (20–49, 50–99, 100–249, 250+), never an exact count.
-- **`solved`:** share of the group that finished.
-- **`firstTry`:** share whose first submission passed every check with no fired rule. Null unless at least 20 browsers submitted.
-- **`submissions`:** nearest-rank quartiles of submissions among finishers. Null unless at least 20 finished.
-- Shares are rounded to 5%.
-- SQL returns only value counts: (runtime, diagnostics, practice, completed, first-pass, submissions) → number of browsers. The Worker turns these into the fields above and discards them. No participant ID, attempt, record or payload leaves SQL or the Worker.
+That latest profile is the authoritative current state, and it applies to **all** of the browser's history, not just attempts recorded after it. The following are not counted:
+- no uploaded profile;
+- no age answer;
+- a 16–17 band;
+- stealth set or unrecorded;
+- an earlier adult answer that was since cleared.
 
-## Small cells and differencing
+The 16–17 band has no cohort yet. It stays unavailable rather than being mixed with adults.
 
-- **Floor:** every published figure rests on at least `MIN_COHORT` = 20 distinct browsers (proposed; awaiting approval). Smaller groups are dropped entirely, and their existence isn't reported.
-- **Fixed partition, no totals:** the only cuts are runtime × diagnostics × first/repeat. No total across groups is published, so one figure can't be subtracted from another to isolate a smaller group.
-- **No demographic slices:** no experience, country or role cuts in v1.
-- **Over time:** bands, 5% rounding and an hourly refresh blunt "one more person joined" inference across snapshots. A caller can't choose its own cuts, time windows or filters. This is suppression plus rounding, not formal differential privacy.
+On top of that:
+- only `actor = person` records with a Terms version count, and records with conflicting copies are dropped;
+- an attempt counts only if it has one runtime and a start whose origin (direct, picker, again and so on) was recorded;
+- *first* is a browser's earliest such attempt on the revision, if it wasn't started as "again"; *repeat* is its earliest later attempt;
+- one per browser per group;
+- the unit is browsers, not people.
 
-## Freshness and cost
+The report shows "adults: 80% solved · median 2 submissions". Its details carry the `eligibility` text.
 
-- **Cache:** one query per revision per hour per isolate, held in memory (at most 64 revisions). Duplicate requests share one in-flight query, and at most two uncached queries run at once.
-- **Request:** 15-second timeout and a 1 MiB response limit. On failure the Worker returns its last cached result if it has one, otherwise "unavailable". It never logs or returns SQL error text.
-- **Cost:** each query scans one revision's events plus profile events, at Basin's 10 MB minimum or more.
-- **Client:** the report requests at most three revisions, the same ones as chapter 4's model results, and makes no request at all while cohorts are disabled.
+## Freshness and invalidation
 
-## Verification
+There is no push invalidation, and an expired aggregate is never served: a failed or over-limit refresh returns `unavailable`.
 
-`packages/statistics/cohort.test.ts` runs the actual fixed SELECT in SQLite on synthetic browsers. It covers:
-- the 20 floor: 19 browsers are withheld, 20 are shown;
-- stealth set on a profile, and later turned off again (the latest profile wins);
-- 16–17-year-olds excluded;
-- duplicate copies counted once and conflicting copies dropped;
-- model actors kept out of human groups;
-- first and repeat attempts kept apart, one per browser;
-- other revisions kept out;
-- injection-shaped IDs refused;
-- no identifiers in the output;
-- exact matching of runtime, diagnostics and first/repeat.
+| Change | When it disappears from a cohort |
+| --- | --- |
+| Stealth on, or age removed or set to 16–17 | Once the new profile uploads (normally minutes), at the next refresh. A cached read is at most 1 hour old |
+| Account deletion | Uploads are refused at once. The browser's rows, including its profile, are erased by the daily job at 03:17 UTC, so it can remain in a group of 20+ for up to about 25 hours. Web has no read of deletion tombstones. Closing this needs a new read-only method on the approved `ParticipantOwner` RPC, which would broaden the binding; not proposed unless required |
+| Group falls below 20 | Dropped at the next refresh, within 1 hour |
 
-`apps/web/lib/report.test.ts` covers every People cell state.
+## Cost: actual bounds
 
-**Before enabling,** run the query once through the authenticated SQL workbench on a synthetic revision. SQLite does not prove that DataFusion can plan it (the ENG-340 history query taught this), and `json_get_json` output formatting (`'[]'`, `'true'`) must be confirmed against Basin.
+| Bound | Value |
+| --- | --- |
+| Distinct keys | One per published challenge: 69 today |
+| Per isolate | One query per key per hour; at most 2 running at once; in-flight requests coalesced; 15 s timeout; 1 MiB response |
+| Per query | Basin's 10 MB minimum or more |
+| Worst case | 69 queries per hour **per isolate**, which is not a global cap: Cloudflare can run many isolates. A global cap would need a shared limiter (for example a Workers rate-limit binding), which is new configuration and not proposed |
+| Client | At most 3 revisions per report, and only when enabled |
 
-## Remaining before enabling
+## Engine validation
 
-1. **Policy (approved):** the floor, matching, first/repeat split, stealth and under-18 rules above. Still open:
-   - whether browsers with no age answer stay included, as implemented and disclosed;
-   - the ~25-hour deletion lag (or approval to extend the ownership-check RPC with a deleted-IDs read).
-2. **This player-facing read (root review):** web's existing `ADMIN_STATS_SQL_TOKEN` would run fixed aggregate queries when players visit. This adds no new credential, binding, token scope or persistent store; the only state is in-memory cache.
-3. **A Privacy Notice version** saying comparisons with people are live, replacing "Human comparisons remain unavailable…".
+- **SQLite unit tests:** `packages/statistics/cohort.test.ts` covers the floor at 19 vs 20; stealth on and then off, latest wins; 16–17 excluded; no profile, no age, stealth unrecorded or age cleared all excluded; no Terms version and no start origin excluded; duplicates and conflicts; model actors; first vs repeat; other revisions; injection-shaped IDs; no identifiers in the output; exact condition matching.
+- **DataFusion check:** `tools/cohort-query-check.ts` runs the same SELECT in **DataFusion 50.1.0** and compares the result with SQLite over synthetic scenarios: empty; eligible adults; duplicate deliveries; stealth, minors, unanswered ages and models; first and repeat. It passes locally and now runs in CI next to the history-query check. It uses Python stand-ins for Basin's JSON functions, so it proves the plan and execution, not Basin's native JSON output.
+- **Before enabling:** run `cohortQuery` for one synthetic revision once through the authenticated SQL workbench. That confirms Basin's `json_get_json` returns `'[]'` and `'false'` exactly as matched.
 
-Enabling: set `COHORTS_ENABLED = true`, run the workbench check, deploy. Disabling is the reverse, and nothing is stored.
+## Enabling
+
+1. Root's scoped approval of this read.
+2. A Privacy Notice version saying comparisons with people are live, replacing "Human comparisons remain unavailable…".
+3. The workbench check above.
+4. Set `COHORTS_ENABLED = true` and deploy.
+
+Disabling is the reverse; nothing is stored.

@@ -377,12 +377,13 @@ test("people cells: disabled reason, matched aggregate, checked-too-small group,
     runtime: '{"engine":"javascript","version":"synthetic"}', diagnostics: 0, practice: "first", completed, first_pass: 0, submissions, browsers: n,
   });
   const read = cohortResult([row(14, 1, 2), row(10, 1, 4), row(6, 0, 3)]);
-  assert.equal(people({ [a.revision]: read }), "80% solved · median 2 submissions");
-  assert.equal(people({ [a.revision]: cohortResult([row(12, 1, 2)]) }), "fewer than 20 comparable people");
+  assert.equal(people({ [a.revision]: read }), "adults: 80% solved · median 2 submissions");
+  assert.equal(people({ [a.revision]: cohortResult([row(12, 1, 2)]) }), "fewer than 20 comparable adults");
+  assert.equal(people({ [a.revision]: { ...cohortResult([]), state: "earlier-version" } }), "earlier version, not compared");
   assert.equal(people({ [a.revision]: read }, { ...a, conditions: [] }), "your conditions weren't recorded");
   assert.equal(people({ [a.revision]: "unavailable" }), "can't be read");
   const details = chapter<ComparisonChapter>(buildReport(input({ attempts: device(a), cohorts: { [a.revision]: read } })), "minds")!.evidence.details.join(" ");
   assert.match(details, /at least 20 distinct browsers, not people/);
-  assert.match(details, /declared 16–17 excluded; no age answer included/);
+  assert.match(details, /adults only.*16–17 and unanswered are not counted/);
   assert.doesNotMatch(details, /not compared yet|needs an approved/);
 });
