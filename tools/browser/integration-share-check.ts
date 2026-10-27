@@ -108,9 +108,7 @@ try {
       .count(),
     0,
   );
-  const challenge = readChallenge(
-    new URL("../../content/challenges/JS-002", import.meta.url).pathname,
-  );
+  const challenge = readChallenge("JS-002");
   const path = challenge.revision.file;
   const solution = challenge.private.solution;
   await editor().fill(solution);

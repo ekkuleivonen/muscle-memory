@@ -14,7 +14,9 @@
     "build:cloudflare": "npm run build:cloudflare --workspace apps/web",
     "build:logo": "node tools/build-logo.mjs",
     "test:browser": "node tools/browser/sandbox-check.mjs && node --import tsx tools/browser/content-check.ts",
-    "pretest": "npm run build:content"
+    "pretest": "npm run build:content",
+    "catalog:pull": "node --import tsx tools/pull-catalog.ts",
+    "test:catalog-contracts": "node --import tsx --test packages/content/copy.test.ts"
   },
   "devDependencies": {
     "@types/node": "22.19.0",

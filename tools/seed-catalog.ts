@@ -2,7 +2,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { readChallenges } from "../packages/content/source";
+import { repositorySeed } from "./authoring-local";
 import { revisionId, verifyCatalog } from "../packages/content/revision";
 import type { Revision } from "../packages/content/model";
 import { digest } from "../packages/authoring/runtime";
@@ -19,31 +19,8 @@ if (args.some((a) => a !== "--local"))
     "Supported option: --local. Remote seeding is not available.",
   );
 const root = fileURLToPath(new URL("../", import.meta.url));
-const sources = readChallenges(resolve(root, "content/challenges"));
-const revisions = Object.fromEntries(
-  sources.map((s) => [revisionId(s.revision), s.revision]),
-);
-const catalog = verifyCatalog({
-  schemaVersion: "1.0.0",
-  challenges: sources.map((s) => ({
-    ...s.metadata,
-    revision: revisionId(s.revision),
-  })),
-  revisions,
-});
-const archives: Record<string, Revision> = {};
-for (const file of (await readdir(resolve(root, "content/revisions"))).sort()) {
-  if (!/^[a-f0-9]{64}\.json$/.test(file))
-    throw new Error(`Unexpected archive filename: ${file}`);
-  archives[`sha256:${file.slice(0, -5)}`] = JSON.parse(
-    await readFile(resolve(root, "content/revisions", file), "utf8"),
-  );
-}
-if (sources.length !== 69 || Object.keys(archives).length !== 117)
-  throw new Error(
-    "Frozen seed inventory changed; expected 69 challenges and 117 revisions. Review before seeding.",
-  );
-const input = { catalog, archives, sources };
+const input = await repositorySeed(root);
+const { sources, catalog, archives } = input;
 const plan = await planCatalogSeed(input);
 console.log(
   JSON.stringify(
@@ -54,7 +31,7 @@ console.log(
       immutableObjects: plan.objects.length,
       catalogObject: plan.catalogObject,
       historicalMetadata:
-        "Current metadata context; historical titles are unknown.",
+        "Immutable publication metadata where available; current metadata for imported legacy revisions.",
       qa: "Imported publications; no fresh QA receipts.",
     },
     null,

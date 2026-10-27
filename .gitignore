@@ -21,3 +21,8 @@ apps/web/public/runtime/
 
 # Local authoring emulator state contains private drafts and QA evidence.
 .local/
+
+# Managed catalog material; never return these to the public repository.
+/content/challenges/*/cases.json
+/content/challenges/*/private/
+/content/revisions/*.json
