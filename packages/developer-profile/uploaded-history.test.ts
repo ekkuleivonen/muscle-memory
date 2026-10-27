@@ -6,6 +6,7 @@ import { deriveAttempts } from "./derive";
 import type { RunStatus, RunPurpose, SubmitResult } from "../domain/practice";
 import {
   historyQuery,
+  normalizeHistoryRows,
   historyResult,
   historyWindow,
   ownerHistory,
@@ -24,7 +25,12 @@ const window = historyWindow({
   to: "2026-10-27",
   after: "",
 });
-function rows(records: StoredRecord[], p = participant, w = window) {
+function rows(
+  records: StoredRecord[],
+  p = participant,
+  w = window,
+  joined = false,
+) {
   const events = records.map((r) => {
     const o = JSON.parse(r.payload);
     return {
@@ -40,6 +46,7 @@ function rows(records: StoredRecord[], p = participant, w = window) {
   const script = `import sqlite3,json,sys
 v=json.load(sys.stdin);c=sqlite3.connect(':memory:');c.row_factory=sqlite3.Row
 fields=['record_id','participant_id','kind','payload','type','attempt_id','occurred_at']
+c.create_function('octet_length',1,lambda v:len(v.encode('utf-8')) if v is not None else None)
 c.execute('CREATE TABLE events ('+', '.join(k+' TEXT' for k in fields)+')')
 c.executemany('INSERT INTO events VALUES ('+','.join('?' for k in fields)+')',[[r.get(k) for k in fields] for r in v['events']])
 print(json.dumps([dict(r) for r in c.execute(v['query'].replace('default.events','events'))]))`;
@@ -49,7 +56,11 @@ print(json.dumps([dict(r) for r in c.execute(v['query'].replace('default.events'
     maxBuffer: 8 * 1024 * 1024,
   });
   assert.equal(result.status, 0, result.stderr);
-  return JSON.parse(result.stdout);
+  return (
+    joined
+      ? JSON.parse(result.stdout)
+      : normalizeHistoryRows(JSON.parse(result.stdout))
+  ) as any;
 }
 function result(records = trace()) {
   return historyResult(participant, window, rows(records));
@@ -109,23 +120,24 @@ test("fixed query selects only owner and whole attempts, not arbitrary date frag
   assert.ok(!output.includes("codeArtifactId"));
 });
 test("pagination covers all selected attempts without merging revisions or local summaries", () => {
-  const records = Array.from({ length: 7 }, (_, i) =>
-    trace(`attempt-${i}`, `source-${i}`),
+  const records = Array.from({ length: 105 }, (_, i) =>
+    trace(`attempt-${String(i).padStart(3, "0")}`, `source-${i}`),
   ).flat();
   const page = historyResult(participant, window, rows(records));
-  assert.equal(page.attempts.length, 5);
-  assert.equal(page.next, "attempt-4");
+  assert.ok(page.attempts.length > 5);
+  assert.ok(page.attempts.length <= 100);
+  assert.ok(page.next);
   const nextWindow = { ...window, after: page.next! };
   const next = historyResult(
     participant,
     nextWindow,
     rows(records, participant, nextWindow),
   );
-  assert.equal(next.attempts.length, 2);
+  assert.ok(next.attempts.length > 0);
   assert.equal(next.next, null);
   assert.equal(
     new Set([...page.attempts, ...next.attempts].map((a) => a.attempt)).size,
-    7,
+    105,
   );
 });
 test("duplicate uploads deduplicate; conflicts across attempts invalidate affected values", () => {
@@ -508,4 +520,192 @@ test("uploaded timeline rejects unknown outcome vocabulary and arbitrary checkpo
   const projected = result(records).attempts[0].timeline;
   assert.ok(!JSON.stringify(projected).includes("synthetic-private-"));
   assert.ok(projected.some((t) => t.label === "started"));
+});
+
+test("large owned history returns a bounded summary prefix and an advancing cursor", () => {
+  const records = Array.from({ length: 30 }, (_, i) => {
+    const initial = trace(
+      `long-${String(i).padStart(3, "0")}`,
+      `long-source-${i}`,
+    );
+    const last = JSON.parse(initial.at(-1)!.payload);
+    for (let j = 0; j < 180; j++) {
+      const o = {
+        ...last,
+        observationId: `long-${i}-extra-${j}`,
+        type: "practice.run",
+        source: { ...last.source, sequence: initial.length + 1 },
+        data: {
+          runId: `extra-${j}`,
+          purpose: "examples",
+          status: "result",
+          runtime: { engine: "javascript" },
+          revision: 2,
+          timeoutMs: 5000,
+          via: "pointer",
+        },
+      };
+      initial.push({
+        ...initial[0],
+        recordId: o.observationId,
+        payload: JSON.stringify(o),
+      });
+    }
+    return initial;
+  }).flat();
+  const start = performance.now();
+  const page = historyResult(participant, window, rows(records));
+  assert.ok(Buffer.byteLength(JSON.stringify(page)) <= 256 * 1024);
+  assert.ok(page.attempts.length > 0);
+  assert.ok(page.attempts.length < 30);
+  assert.ok(page.next);
+  assert.ok(performance.now() - start < 15000);
+});
+
+test("near-budget prefixes measure their actual variable-length continuation cursor", () => {
+  const records = Array.from({ length: 30 }, (_, i) => {
+    const id =
+      i === 29 ? "z" : `a${String(i).padStart(3, "0")}` + "x".repeat(110);
+    const initial = trace(id, `source-${i}`);
+    for (const r of initial) {
+      const o = JSON.parse(r.payload);
+      if (o.type === "practice.opened") {
+        o.data.editor.features = ["x".repeat(443)];
+        (r as { payload: string }).payload = JSON.stringify(o);
+      }
+    }
+    const last = JSON.parse(initial.at(-1)!.payload);
+    for (let j = 0; j < 180; j++) {
+      const o = {
+        ...last,
+        observationId: `extra-${i}-${j}`,
+        type: "practice.run",
+        source: { ...last.source, sequence: initial.length + 1 },
+        data: {
+          runId: `extra-${j}`,
+          purpose: "examples",
+          status: "result",
+          runtime: { engine: "javascript" },
+          revision: 2,
+          timeoutMs: 5000,
+          via: "pointer",
+        },
+      };
+      initial.push({
+        ...initial[0],
+        recordId: o.observationId,
+        payload: JSON.stringify(o),
+      });
+    }
+    return initial;
+  }).flat();
+  // Measuring with the query page's final short ID used to admit an oversized prefix and then throw503.
+  const page = historyResult(
+    participant,
+    window,
+    rows(records),
+    "2026-10-27T12:00:00.000Z",
+  );
+  const bytes = Buffer.byteLength(JSON.stringify(page));
+  assert.ok(bytes > 240000 && bytes <= 256 * 1024);
+  assert.equal(page.attempts.length, 19);
+  assert.equal(page.next, page.attempts.at(-1)!.attempt);
+});
+
+test("native UNION failure is avoided by a single SELECT, including empty and oversized metadata-only reads", () => {
+  const query = historyQuery(participant, window);
+  assert.ok(!query.includes("UNION ALL"));
+  assert.match(query, /LEFT JOIN owner/);
+  assert.equal(
+    historyResult(
+      participant,
+      window,
+      normalizeHistoryRows(rows([], participant, window, true)),
+    ).attempts.length,
+    0,
+  );
+  const entry = {
+    scope: "entry",
+    attempt_id: "oversized",
+    observations: HISTORY_MAX_RECORDS + 1,
+    bytes: 1,
+    first_at: "2026-10-27T10:00:00Z",
+    last_at: "2026-10-27T10:00:00Z",
+    conflicts: 0,
+    record_id: null,
+    payload: null,
+  };
+  const value = historyResult(
+    participant,
+    window,
+    normalizeHistoryRows([entry]),
+  );
+  assert.equal(value.attempts.length, 0);
+  assert.equal(value.unavailable[0].attempt, "oversized");
+  assert.equal(value.next, null);
+});
+
+test("joined rows retain exact coverage and ordering, reject missing or contradictory observations", () => {
+  const joined = rows(
+    [...trace("b", "source-b"), ...trace("a", "source-a")],
+    participant,
+    window,
+    true,
+  );
+  const value = historyResult(
+    participant,
+    window,
+    normalizeHistoryRows([...joined].reverse()),
+  );
+  assert.deepEqual(
+    value.attempts.map((a) => a.attempt),
+    ["a", "b"],
+  );
+  assert.throws(
+    () =>
+      historyResult(participant, window, normalizeHistoryRows(joined.slice(1))),
+    /Incomplete/,
+  );
+  const altered = joined.map((r: any, i: number) =>
+    i === 1 ? { ...r, bytes: Number(r.bytes) + 1 } : r,
+  );
+  assert.throws(() => normalizeHistoryRows(altered), /coverage/);
+  assert.throws(
+    () =>
+      normalizeHistoryRows([
+        { ...joined[0], record_id: null, payload: "not-null" },
+      ]),
+    /Invalid observation/,
+  );
+});
+
+test("the actual transport accepts joined rows but never returns source payloads", async () => {
+  const value = await readUploadedHistory(
+    "synthetic-token",
+    participant,
+    window,
+    async () =>
+      Response.json({
+        success: true,
+        result: { rows: rows(trace(), participant, window, true) },
+      }),
+  );
+  assert.equal(value.attempts.length, 1);
+  assert.ok(!JSON.stringify(value).includes('"payload"'));
+  assert.ok(!JSON.stringify(value).includes('"record_id"'));
+  const entry = {
+    scope: "entry",
+    attempt_id: "budget",
+    observations: 1,
+    bytes: 1,
+    first_at: "2026-10-27T10:00:00Z",
+    last_at: "2026-10-27T10:00:00Z",
+    conflicts: 0,
+    record_id: "budget-row",
+    payload: "x".repeat(6 * 1024 * 1024 + 1),
+  };
+  assert.throws(
+    () => historyResult(participant, window, normalizeHistoryRows([entry])),
+    /input exceeds/,
+  );
 });

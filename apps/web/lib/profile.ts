@@ -26,7 +26,13 @@ export interface Profile {
   /** How they mostly learned to code. */
   learned?: "degree" | "bootcamp" | "self-taught" | "on-the-job";
   /** Where they write code most. */
-  context?: "company" | "startup" | "freelance" | "open-source" | "school" | "hobby";
+  context?:
+    | "company"
+    | "startup"
+    | "freelance"
+    | "open-source"
+    | "school"
+    | "hobby";
   languages?: LanguageId[];
   /** How often they code with AI help, in their own words: the context for everything else. */
   aiUse?: "daily" | "weekly" | "rarely" | "never";
@@ -80,9 +86,39 @@ export function safeNext(value: unknown, fallback: string): string {
   try {
     const base = "https://muscle-memory.invalid";
     const url = new URL(value, base);
-    if (url.origin !== base || url.pathname.startsWith("/consent")) return fallback;
+    if (url.origin !== base || url.pathname.startsWith("/consent"))
+      return fallback;
     return url.pathname + url.search + url.hash;
   } catch {
     return fallback;
   }
+}
+
+/** Apply only questions explicitly changed in this form; clearing also removes answer provenance. */
+export function updateProfileAnswers(
+  stored: StoredProfile,
+  answers: Profile,
+  changed: readonly (keyof Profile)[],
+  at: string,
+): StoredProfile {
+  const profile = { ...stored.profile };
+  const asked = { ...stored.asked };
+  for (const id of changed) {
+    const value = answers[id];
+    if (value === undefined || (Array.isArray(value) && !value.length)) {
+      delete profile[id];
+      delete asked[id];
+    } else {
+      Object.assign(profile, { [id]: value });
+      asked[id] = { answeredAt: at };
+    }
+  }
+  return { ...stored, profile, asked };
+}
+
+/** A quick-start language guess must not become self-reported familiarity. */
+export function reportProfile(stored: StoredProfile): Profile {
+  const profile = { ...stored.profile };
+  if (!stored.asked?.languages?.answeredAt) delete profile.languages;
+  return profile;
 }

@@ -5,7 +5,11 @@ import { AFTER_QUESTIONS } from "../domain/practice";
 import { deriveAttempts, type AttemptSummary } from "./derive";
 import { METRICS, type Values } from "./registry";
 
-export const HISTORY_PAGE_SIZE = 5;
+export const HISTORY_PAGE_SIZE = 100;
+export const HISTORY_BATCH_BYTES = 6 * 1024 * 1024;
+export const HISTORY_BATCH_RECORDS = 25_000;
+export const HISTORY_REPLY_BYTES = 256 * 1024;
+export const HISTORY_TRANSPORT_BYTES = 16 * 1024 * 1024;
 export const HISTORY_MAX_RECORDS = 10000;
 export const HISTORY_MAX_BYTES = 4 * 1024 * 1024;
 export interface HistoryWindow {
@@ -57,7 +61,7 @@ export function historyQuery(
 ), conflicts AS (
  SELECT record_id FROM owner GROUP BY record_id HAVING COUNT(DISTINCT payload) > 1
 ), selected AS (
- SELECT o.attempt_id, COUNT(*) AS observations, SUM(length(o.payload)) AS bytes,
+ SELECT o.attempt_id, COUNT(*) AS observations, SUM(octet_length(o.payload)) AS bytes,
  MIN(o.occurred_at) AS first_at, MAX(o.occurred_at) AS last_at,
  SUM(CASE WHEN c.record_id IS NOT NULL THEN 1 ELSE 0 END) AS conflicts
  FROM owner o LEFT JOIN conflicts c ON c.record_id = o.record_id
@@ -65,12 +69,24 @@ export function historyQuery(
  HAVING MAX(CASE WHEN o.occurred_at >= '${w.from}T00:00:00.000Z' AND o.occurred_at < '${end}T00:00:00.000Z' THEN 1 ELSE 0 END) = 1
  AND o.attempt_id > '${w.after}'
  ORDER BY o.attempt_id LIMIT ${HISTORY_PAGE_SIZE + 1}
-), page AS (SELECT * FROM selected ORDER BY attempt_id LIMIT ${HISTORY_PAGE_SIZE})
-SELECT 'attempt' AS scope, attempt_id, observations, bytes, first_at, last_at, conflicts, NULL AS record_id, NULL AS payload FROM selected
-UNION ALL
-SELECT 'observation' AS scope, o.attempt_id, NULL AS observations, NULL AS bytes, NULL AS first_at, NULL AS last_at, NULL AS conflicts, o.record_id, o.payload
-FROM owner o JOIN page p ON o.attempt_id = p.attempt_id
-WHERE p.observations <= ${HISTORY_MAX_RECORDS} AND p.bytes <= ${HISTORY_MAX_BYTES}`;
+), costs AS (
+ SELECT *, CASE WHEN observations <= ${HISTORY_MAX_RECORDS} AND bytes <= ${HISTORY_MAX_BYTES} THEN bytes ELSE 0 END AS read_bytes,
+ CASE WHEN observations <= ${HISTORY_MAX_RECORDS} AND bytes <= ${HISTORY_MAX_BYTES} THEN observations ELSE 0 END AS read_records
+ FROM selected
+), bounded AS (
+ SELECT *, ROW_NUMBER() OVER (ORDER BY attempt_id) AS position,
+ SUM(read_bytes) OVER (ORDER BY attempt_id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS batch_bytes,
+ SUM(read_records) OVER (ORDER BY attempt_id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS batch_records FROM costs
+), marked AS (
+ SELECT *, CASE WHEN position <= ${HISTORY_PAGE_SIZE} AND batch_bytes <= ${HISTORY_BATCH_BYTES} AND batch_records <= ${HISTORY_BATCH_RECORDS} THEN 1 ELSE 0 END AS readable FROM bounded
+), frontier AS (
+ SELECT *, LAG(readable,1,1) OVER (ORDER BY position) AS previous_readable FROM marked
+)
+SELECT CASE WHEN b.readable=1 THEN 'entry' ELSE 'continuation' END AS scope,
+ b.attempt_id,b.observations,b.bytes,b.first_at,b.last_at,b.conflicts,o.record_id,o.payload
+FROM frontier b LEFT JOIN owner o ON o.attempt_id=b.attempt_id AND b.readable=1
+ AND b.observations <= ${HISTORY_MAX_RECORDS} AND b.bytes <= ${HISTORY_MAX_BYTES}
+WHERE b.readable=1 OR b.previous_readable=1`;
 }
 
 type Row = {
@@ -84,6 +100,51 @@ type Row = {
   record_id: string;
   payload: string;
 };
+/** A single SELECT avoids Basin's distributed UNION partition failure under some input partitionings.
+ * Repeated metadata is checked before it is reduced to the existing private interpreter shape. */
+export function normalizeHistoryRows(rows: unknown): unknown {
+  if (
+    !Array.isArray(rows) ||
+    rows.length > HISTORY_BATCH_RECORDS + HISTORY_PAGE_SIZE + 1
+  )
+    throw new Error("History response exceeds its budget.");
+  const entries = new Map<string, Row>();
+  const normalized: Row[] = [];
+  const meta = [
+    "observations",
+    "bytes",
+    "first_at",
+    "last_at",
+    "conflicts",
+  ] as const;
+  for (const row of rows as Row[]) {
+    if (!row || typeof row !== "object")
+      throw new Error("Invalid history response.");
+    if (row.scope !== "entry") {
+      normalized.push(row);
+      continue;
+    }
+    const previous = entries.get(row.attempt_id);
+    if (previous && meta.some((k) => previous[k] !== row[k]))
+      throw new Error("Invalid attempt coverage.");
+    if (!previous) {
+      const entry = {
+        ...row,
+        scope: "attempt",
+        record_id: null,
+        payload: null,
+      } as unknown as Row;
+      entries.set(row.attempt_id, entry);
+      normalized.push(entry);
+    }
+    if (row.record_id === null && row.payload === null) continue;
+    if (typeof row.record_id !== "string" || typeof row.payload !== "string")
+      throw new Error("Invalid observation.");
+    normalized.push({ ...row, scope: "observation" });
+  }
+  return normalized;
+}
+
 /** Never forward arbitrary event strings: only defined reflection choices and typed checkpoints. */
 function project(a: AttemptSummary): AttemptSummary {
   const answers = Object.fromEntries(
@@ -154,12 +215,16 @@ export function historyResult(
   const window = historyWindow(input);
   if (
     !Array.isArray(rows) ||
-    rows.length >
-      HISTORY_PAGE_SIZE * HISTORY_MAX_RECORDS + HISTORY_PAGE_SIZE + 1
+    rows.length > HISTORY_BATCH_RECORDS + HISTORY_PAGE_SIZE + 1
   )
     throw new Error("History response exceeds its budget.");
   const rs = rows as Row[];
-  if (rs.some((r) => !r || !["attempt", "observation"].includes(r.scope)))
+  if (
+    rs.some(
+      (r) =>
+        !r || !["attempt", "observation", "continuation"].includes(r.scope),
+    )
+  )
     throw new Error("Invalid history response.");
   const entries = rs
     .filter((r) => r.scope === "attempt")
@@ -167,7 +232,7 @@ export function historyResult(
       a.attempt_id < b.attempt_id ? -1 : a.attempt_id > b.attempt_id ? 1 : 0,
     );
   if (
-    entries.length > HISTORY_PAGE_SIZE + 1 ||
+    entries.length > HISTORY_PAGE_SIZE ||
     new Set(entries.map((e) => e.attempt_id)).size !== entries.length
   )
     throw new Error("Invalid history page.");
@@ -179,29 +244,92 @@ export function historyResult(
       Number(e.observations) < 1 ||
       !Number.isSafeInteger(Number(e.bytes)) ||
       Number(e.bytes) < 1 ||
+      !Number.isSafeInteger(Number(e.conflicts)) ||
+      Number(e.conflicts) < 0 ||
       !Number.isFinite(Date.parse(e.first_at)) ||
       !Number.isFinite(Date.parse(e.last_at))
     )
       throw new Error("Invalid attempt coverage.");
   }
-  const page = entries.slice(0, HISTORY_PAGE_SIZE);
+  const continuation = rs.filter((r) => r.scope === "continuation");
+  if (continuation.length > 1 || (continuation.length && !entries.length))
+    throw new Error("Invalid history page.");
+  if (continuation.length) {
+    safeIdentifier(continuation[0].attempt_id);
+    if (continuation[0].attempt_id <= entries.at(-1)!.attempt_id)
+      throw new Error("Invalid history page.");
+  }
+  const page = entries;
   const attempts: AttemptSummary[] = [];
   const unavailable: UploadedHistory["unavailable"] = [];
+  const byAttempt = new Map<string, Row[]>();
+  const selectedIds = new Set(entries.map((e) => e.attempt_id));
+  let inputBytes = 0,
+    visited = 0;
+  for (const r of rs)
+    if (r.scope === "observation") {
+      if (!selectedIds.has(r.attempt_id) || typeof r.payload !== "string")
+        throw new Error("Invalid history response.");
+      inputBytes += new TextEncoder().encode(r.payload).length;
+      if (inputBytes > HISTORY_BATCH_BYTES)
+        throw new Error("History input exceeds its budget.");
+      const group = byAttempt.get(r.attempt_id) ?? [];
+      group.push(r);
+      byAttempt.set(r.attempt_id, group);
+    }
+  const append = (
+    added: AttemptSummary[],
+    missing: UploadedHistory["unavailable"],
+  ) => {
+    const candidate = {
+      state: "ready",
+      attempts: [...attempts, ...added],
+      unavailable: [...unavailable, ...missing],
+      next: page[visited]?.attempt_id ?? null,
+      readAt,
+      window,
+    };
+    if (
+      new TextEncoder().encode(JSON.stringify(candidate)).length >
+      HISTORY_REPLY_BYTES
+    ) {
+      if (visited) return false;
+      missing = [
+        {
+          attempt: page[0].attempt_id,
+          last: page[0].last_at,
+          reason:
+            "Attempt summary exceeds the private reader’s response budget.",
+        },
+      ];
+      added = [];
+    }
+    attempts.push(...added);
+    unavailable.push(...missing);
+    visited++;
+    return true;
+  };
   for (const e of page) {
-    const observations = rs.filter(
-      (r) => r.scope === "observation" && r.attempt_id === e.attempt_id,
-    );
+    const observations = byAttempt.get(e.attempt_id) ?? [];
     const budget =
       Number(e.observations) > HISTORY_MAX_RECORDS ||
       Number(e.bytes) > HISTORY_MAX_BYTES;
     if (budget) {
       // Missing completion is not "unfinished": do not invent an AttemptSummary.
-      unavailable.push({
-        attempt: e.attempt_id,
-        last: e.last_at,
-        reason:
-          "Attempt exceeds the private reader’s 10,000-observation / 4 MiB budget. Challenge, revision, completion and derived values are unavailable.",
-      });
+      if (
+        !append(
+          [],
+          [
+            {
+              attempt: e.attempt_id,
+              last: e.last_at,
+              reason:
+                "Attempt exceeds the private reader’s 10,000-observation / 4 MiB budget. Challenge, revision, completion and derived values are unavailable.",
+            },
+          ],
+        )
+      )
+        break;
       continue;
     }
     if (observations.length !== Number(e.observations))
@@ -244,17 +372,23 @@ export function historyResult(
           Object.keys(METRICS).map((k) => [k, null]),
         ) as Values;
       }
-    attempts.push(...summaries);
+    if (!append(summaries, [])) break;
   }
   const result: UploadedHistory = {
     state: "ready",
     attempts,
     unavailable,
-    next: entries.length > HISTORY_PAGE_SIZE ? page.at(-1)!.attempt_id : null,
+    next:
+      visited < page.length || continuation.length
+        ? page[visited - 1]!.attempt_id
+        : null,
     readAt,
     window,
   };
-  if (new TextEncoder().encode(JSON.stringify(result)).length > 256 * 1024)
+  if (
+    new TextEncoder().encode(JSON.stringify(result)).length >
+    HISTORY_REPLY_BYTES
+  )
     throw new Error("History summaries exceed their response budget.");
   return result;
 }
@@ -367,7 +501,7 @@ export async function readUploadedHistory(
         const { done, value } = await Promise.race([reader.read(), stopped]);
         if (done) break;
         bytes += value.byteLength;
-        if (bytes > 24 * 1024 * 1024) {
+        if (bytes > HISTORY_TRANSPORT_BYTES) {
           stage = "response-size";
           throw new Error("History response is too large.");
         }
@@ -388,7 +522,11 @@ export async function readUploadedHistory(
     stage = "storage-result";
     if (body?.success !== true) throw new Error("History is unavailable.");
     stage = "projection";
-    return historyResult(participant, window, body.result?.rows);
+    return historyResult(
+      participant,
+      window,
+      normalizeHistoryRows(body.result?.rows),
+    );
   } catch (cause) {
     // Only messages authored by our validator can refine the category. Nothing
     // from an upstream response or private record is logged or returned.

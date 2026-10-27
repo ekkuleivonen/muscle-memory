@@ -1,4 +1,5 @@
 "use client";
+import { reportProfile } from "../../lib/profile";
 import Link from "next/link";
 import React, { useMemo, useState } from "react";
 import { buildReport, mergeEvidence, type Report } from "../../lib/report";
@@ -36,6 +37,8 @@ function Status({ history }: { history: HistoryStatus }) {
   const text =
     history.state === "loading" || history.state === "idle"
       ? "Adding your earlier practice…"
+      : history.state === "ready"
+        ? history.notice ?? (history.value.next ? "Earlier practice is still being added…" : history.value.unavailable.length ? "Some earlier practice could not be added." : null)
       : history.state === "unavailable" || history.state === "limited"
         ? "Your earlier practice couldn't be added right now; this shows this device only."
         : null;
@@ -118,7 +121,7 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
             catalog,
             progress: device.progress,
             attempts,
-            profile: device.profile.profile,
+            profile: reportProfile(device.profile),
             receipts,
           })
         : null,

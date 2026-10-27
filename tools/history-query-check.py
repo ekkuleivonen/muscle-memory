@@ -6,6 +6,9 @@ This is a DataFusion compatibility check, not a claim to pin Cloudflare's engine
 import json
 import sqlite3
 import sys
+import time
+import resource
+measurements = []
 
 import datafusion
 import pyarrow as pa
@@ -20,9 +23,19 @@ for case in cases:
         names=fields,
     )
     ctx.register_record_batches("default.events", [[batch]])
+    started = time.perf_counter()
     actual = [row for result in ctx.sql(case["query"]).collect() for row in result.to_pylist()]
+    elapsed = (time.perf_counter() - started) * 1000
+    groups = len({row["attempt_id"] for row in actual if row["scope"] == "entry"})
+    more = sum(row["scope"] == "continuation" for row in actual)
+    payloads = [row["payload"] for row in actual if row["scope"] == "entry" and row["record_id"] is not None]
+    assert len(payloads) <= 25000 and sum(len(v.encode("utf-8")) for v in payloads) <= 6*1024*1024
+    if case.get("expected"):
+        assert {"attempts":groups,"continuation":more} == case["expected"], "Wrong bounded batch prefix."
+    measurements.append({"inputRows":len(case["events"]),"returnedObservations":len(payloads),"attempts":groups,"continuation":more,"queryMs":round(elapsed,2),"encodedResponseBytes":len(json.dumps({"success":True,"result":{"rows":actual}}).encode("utf-8"))})
     sql = sqlite3.connect(":memory:")
     sql.row_factory = sqlite3.Row
+    sql.create_function("octet_length", 1, lambda v: len(v.encode("utf-8")) if v is not None else None)
     sql.execute("CREATE TABLE events (" + ",".join(field + " TEXT" for field in fields) + ")")
     sql.executemany("INSERT INTO events VALUES (" + ",".join("?" for _ in fields) + ")",
                     [[event[field] for field in fields] for event in case["events"]])
@@ -31,4 +44,4 @@ for case in cases:
     normalize = lambda rows: sorted(json.dumps(row, sort_keys=True) for row in rows)
     assert normalize(actual) == normalize(expected), "Synthetic history query semantics differ."
     sql.close()
-print(json.dumps({"passed": len(cases)}))
+print(json.dumps({"passed": len(cases), "measurements": measurements, "peakRss":resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}))

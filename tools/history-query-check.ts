@@ -24,12 +24,16 @@ const scenarios = [
   base,
   [...base, ...base],
   [...base, ...other, ...foreign],
-  Array.from({ length: 7 }, (_, i) =>
+  Array.from({ length: 105 }, (_, i) =>
     trace(`attempt-${i}`, `source-${i}`),
   ).flat(),
 ];
 const window = { from: "2026-10-27", to: "2026-10-27", after: "" };
-const cases = scenarios.map((records) => ({
+const cases: {
+  query: string;
+  events: Record<string, string | null>[];
+  expected?: { attempts: number; continuation: number };
+}[] = scenarios.map((records) => ({
   query: historyQuery("synthetic-participant", window),
   events: records.map((r) => {
     const o = JSON.parse(r.payload);
@@ -51,6 +55,33 @@ cases.push({
     after: "attempt-4",
   }),
 });
+
+cases[4].expected = { attempts: 100, continuation: 1 };
+// Planner-only opaque payloads exercise aggregate record/UTF-8 byte limits, not practice grading.
+const budgetEvent = (attempt: string, record: number, payload: string) => ({
+  record_id: `${attempt}-${record}`,
+  participant_id: "synthetic-participant",
+  kind: "observation",
+  payload,
+  type: "practice.keys",
+  attempt_id: attempt,
+  occurred_at: "2026-10-27T10:00:00.000Z",
+});
+cases.push({
+  query: historyQuery("synthetic-participant", window),
+  events: Array.from({ length: 6 }, (_, i) =>
+    Array.from({ length: 9000 }, (_, j) => budgetEvent(`budget-${i}`, j, "{}")),
+  ).flat(),
+  expected: { attempts: 2, continuation: 1 },
+});
+cases.push({
+  query: historyQuery("synthetic-participant", window),
+  events: Array.from({ length: 3 }, (_, i) =>
+    budgetEvent(`unicode-${i}`, 0, "€".repeat(1024 * 1024)),
+  ),
+  expected: { attempts: 2, continuation: 1 },
+});
+
 const result = spawnSync(
   process.env.HISTORY_SQL_PYTHON ?? "python3",
   ["tools/history-query-check.py"],
@@ -62,6 +93,14 @@ const result = spawnSync(
 );
 assert.equal(result.status, 0, result.stderr);
 assert.equal(JSON.parse(result.stdout).passed, cases.length);
+console.log(
+  JSON.stringify({
+    measurements: JSON.parse(result.stdout).measurements,
+    enginePeakRssMiB:
+      JSON.parse(result.stdout).peakRss /
+      (process.platform === "darwin" ? 1024 * 1024 : 1024),
+  }),
+);
 console.log(
   `DataFusion physical execution agrees with SQLite on ${cases.length} synthetic history scenarios.`,
 );

@@ -653,12 +653,12 @@ function Delete() {
 
 /**
  * The profile questions as one form, current answers ticked; `only` shows just one. Saving
- * stores every answer shown, as the questions asked one at a time did. A question never
- * answered stays unanswered unless something is picked.
+ * stores only questions explicitly changed. Unchanged guesses stay guesses; cleared answers
+ * become unanswered after saving.
  */
 function ProfileForm({ only }: { only?: string }) {
   const [answers, setAnswers] = useState<Record<string, Answer> | null>(null);
-  const [saved, setSaved] = useState<Profile>({});
+  const [changed, setChanged] = useState<Set<keyof Profile>>(new Set());
   const options = useRef<HTMLDivElement>(null);
   const actions = useRef<{ focus(): void }>(null);
   const router = useRouter();
@@ -667,7 +667,6 @@ function ProfileForm({ only }: { only?: string }) {
   );
   useEffect(() => {
     const current = readProfile()?.profile ?? {};
-    setSaved(current);
     setAnswers({ ...current } as Record<string, Answer>);
   }, []);
   // The keyboard starts on the first option, as a prompt would.
@@ -706,6 +705,7 @@ function ProfileForm({ only }: { only?: string }) {
   const shown = QUESTIONS.filter((q) => !only || q.id === only);
   const pick = (id: string, value: string, multi: boolean) => {
     setResult(null);
+    setChanged((current) => new Set(current).add(id as keyof Profile));
     setAnswers((current) => {
       const next = { ...current };
       if (!multi) next[id] = value;
@@ -724,23 +724,24 @@ function ProfileForm({ only }: { only?: string }) {
   const save = () => {
     const next = { ...answers };
     for (const question of shown) {
-      if (question.kind !== "multiselect") continue;
-      const list = (next[question.id] as string[] | undefined) ?? [];
-      if (list.length >= question.min) continue;
-      // Never answered and still nothing picked: leave it unanswered.
-      if (saved[question.id as keyof Profile] === undefined && !list.length) {
-        delete next[question.id];
+      if (!changed.has(question.id) || question.kind !== "multiselect")
         continue;
+      const list = (next[question.id] as string[] | undefined) ?? [];
+      // No selections means an explicit cleared answer, not a validation error.
+      if (!list.length) delete next[question.id];
+      else if (list.length < question.min) {
+        setResult({
+          tone: "err",
+          text: `Pick at least ${question.min}: ${question.message}`,
+        });
+        return;
       }
-      setResult({
-        tone: "err",
-        text: `Pick at least ${question.min}: ${question.message}`,
-      });
-      return;
     }
-    saveProfile(toProfile(next));
-    void logProfile("settings");
-    setSaved(toProfile(next));
+    const stored = saveProfile(toProfile(next), [...changed]);
+    if (!stored) return;
+    if (changed.size) void logProfile("settings");
+    setAnswers({ ...stored.profile } as Record<string, Answer>);
+    setChanged(new Set());
     setResult({ tone: "ok", text: "Saved." });
   };
   return (
@@ -788,6 +789,22 @@ function ProfileForm({ only }: { only?: string }) {
                   </label>
                 );
               })}
+              <button
+                type="button"
+                className="t-cmd"
+                disabled={value === undefined}
+                onClick={() => {
+                  setResult(null);
+                  setChanged((current) => new Set(current).add(question.id));
+                  setAnswers((current) => {
+                    const next = { ...current };
+                    delete next[question.id];
+                    return next;
+                  });
+                }}
+              >
+                Clear answer
+              </button>
             </fieldset>
           );
         })}
