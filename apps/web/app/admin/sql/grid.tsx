@@ -15,7 +15,7 @@ const MAX_INITIAL = 360;
 const numbers = new Intl.NumberFormat("en-US", { maximumFractionDigits: 6 });
 
 function initialWidth(column: Column, rows: readonly unknown[][], index: number): number {
-  let chars = Math.max(column.name.length + 2, Math.min(column.type?.length ?? 0, 14));
+  let chars = column.name.length + Math.min(column.type?.length ?? 0, 14) + 3;
   for (let r = 0; r < Math.min(rows.length, 200); r++) {
     const v = rows[r][index];
     chars = Math.max(chars, Math.min(plain(v).length, 60));
@@ -50,7 +50,7 @@ function JsonTree({ value, depth = 0, name }: { value: unknown; depth?: number; 
       : Object.entries(value as Record<string, unknown>);
     const shown = entries.slice(0, 500);
     return (
-      <details open={depth < 2}>
+      <details open={depth < 6 && entries.length <= 50}>
         <summary>
           {label}
           {Array.isArray(value) ? `[${entries.length}]` : `{${entries.length}}`}
