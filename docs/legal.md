@@ -96,3 +96,5 @@ The draft Privacy Notice and `LEGAL_VERSION` 2026-10-27.2 describe explicit owne
 ## ENG-376 control proposal, not a disclosure release
 
 The [current-privacy proposal](eng-376-current-privacy.md) specifies new minimal persistent CONTROL state and internal eligibility authority requiring approval. No Legal version or live notice change is made here. Before activation, disclose pending/offline versus acknowledged exclusion, adult-only eligibility, unchanged retention/deletion timelines, and inability to retract already downloaded aggregates. Thresholds and rounding reduce risk without guaranteeing anonymity.
+
+The ENG-376 requester approved refining an authorization-point contract in draft code: after a server-acknowledged exclusion, a new comparison cannot use the prior privacy generation; an overlapping response authorized earlier may still arrive. The new persistent CONTROL fields, RPCs and acknowledgement/pending copy are specified in [the concrete proposal](eng-376-publication-contract.md). Implementation in a disabled branch is not live authority, disclosure-version or release approval.

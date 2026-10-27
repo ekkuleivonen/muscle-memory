@@ -166,18 +166,30 @@ test("other revisions never leak into a cohort", () => {
 test("an attempt matches only the group with its exact runtime, diagnostics and practice", () => {
   const read = cohortResult(run(many(25)));
   const attempt = deriveAttempts(trace(), "synthetic-participant")[0];
-  assert.ok(matchingGroup(read, attempt.conditions, "first"));
-  assert.equal(matchingGroup(read, attempt.conditions, "repeat"), null);
+  assert.ok(matchingGroup(read, attempt.conditions, "first", "adult"));
+  assert.equal(
+    matchingGroup(read, attempt.conditions, "first", "unknown"),
+    null,
+  );
+  assert.equal(
+    matchingGroup(read, attempt.conditions, "first", "non-adult"),
+    null,
+  );
+  assert.equal(
+    matchingGroup(read, attempt.conditions, "repeat", "adult"),
+    null,
+  );
   assert.equal(
     matchingGroup(
       read,
       ['Runtime: {"engine":"python"}', attempt.conditions[0]],
       "first",
+      "adult",
     ),
     null,
   );
   assert.equal(
-    matchingGroup(read, [], "first"),
+    matchingGroup(read, [], "first", "adult"),
     null,
     "unknown conditions never borrow a group",
   );

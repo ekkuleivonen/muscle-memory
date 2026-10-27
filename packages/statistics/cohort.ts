@@ -390,7 +390,9 @@ export function matchingGroup(
   read: CohortRead,
   conditions: readonly string[],
   practice: "first" | "repeat",
+  viewerAge: "adult" | "non-adult" | "unknown",
 ): CohortGroup | null {
+  if (viewerAge !== "adult") return null;
   const runtimes = conditions.filter((c) => c.startsWith("Runtime: "));
   const editors = conditions.filter((c) => c.startsWith("Editor: "));
   if (runtimes.length !== 1 || editors.length !== 1) return null;
