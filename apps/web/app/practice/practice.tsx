@@ -868,6 +868,7 @@ export function Practice({
                         </button>}
                       </>
                     )}
+                    <p className="faint">Human and model comparisons are unavailable until compatible baselines are released. <Link href="/stats#comparisons">View your observed profile and comparison availability →</Link></p>
                     <AfterQuestions
                       key={attempt.id}
                       onAnswer={(question, answer) =>
