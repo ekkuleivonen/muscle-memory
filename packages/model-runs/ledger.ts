@@ -1,8 +1,9 @@
 /**
- * The run ledger in D1 (migrations/catalog/0002_model_runs.sql): which runs exist, so nothing
- * runs twice and anything missing can be backfilled. A slot is a revision, a model, a harness
- * version, a condition and a try. Backfilling is queueing every slot the roster and the
- * published revisions call for; the slots already there are left alone.
+ * The run ledger in D1 (migrations/catalog/0002_model_runs.sql, 0003_model_run_targets.sql):
+ * which runs exist, so nothing runs twice. The roster is a list of targets (a model at a
+ * reasoning effort); a slot is a revision, a model, a harness version, a condition and a try.
+ * `sync` makes the queue exactly what the targets still need on the live revisions; workers
+ * claim slots one at a time, first tries first, so coverage grows evenly.
  */
 import { canonical } from "../domain/json";
 import type { Assignments } from "../domain/records";
@@ -32,42 +33,99 @@ export function conditionOf(assignments: Assignments = {}): string {
   return canonical(assignments as Record<string, string>);
 }
 
-/** The models on the roster now. */
-export async function roster(db: Sql): Promise<string[]> {
-  const rows = await db.all<{ model: string }>(
-    "SELECT model FROM model_roster WHERE retired_at IS NULL ORDER BY model",
-  );
-  return rows.map((r) => r.model);
+/** What to cover: a model at a reasoning effort (`default` leaves it to the model). */
+export interface Target {
+  readonly model: string;
+  readonly effort: string;
 }
 
+/** Every target on the roster. */
+export function targets(db: Sql): Promise<Target[]> {
+  return db.all<Target>("SELECT model, effort FROM model_roster ORDER BY model, effort");
+}
+
+/** The models with at least one target. */
+export async function roster(db: Sql): Promise<string[]> {
+  return [...new Set((await targets(db)).map((t) => t.model))];
+}
+
+export async function addTarget(db: Sql, target: Target, now: string): Promise<void> {
+  await db.run("INSERT OR IGNORE INTO model_roster (model, effort, added_at) VALUES (?, ?, ?)", [
+    target.model,
+    target.effort,
+    now,
+  ]);
+}
+
+/** Takes a target off the roster. Its finished runs stay; its waiting ones go at the next sync. */
+export async function removeTarget(db: Sql, target: Target): Promise<void> {
+  await db.run("DELETE FROM model_roster WHERE model = ? AND effort = ?", [target.model, target.effort]);
+}
+
+/** The condition a target runs under. */
+export function targetCondition(target: Target): string {
+  return conditionOf({ reasoning: target.effort });
+}
+
+/** Slots per insert: one JSON parameter each, well inside D1's statement limits. */
+const CHUNK = 500;
+
 /**
- * Queues every slot for these revisions, the roster, this harness version and condition, and
- * tries 1…tries. Returns how many were new.
+ * Makes the queue exactly what the roster still needs, for this harness version: every target
+ * × every live revision × tries 1…tries. Missing slots are queued; slots waiting to run that
+ * are no longer needed (a target removed, a revision no longer live, fewer tries) are dropped.
+ * Slots that ran or are running are never touched, and nothing finished runs again. Safe to
+ * call any time, any number of times.
  */
-export async function backfill(
+export async function sync(
   db: Sql,
   plan: {
     readonly revisions: readonly { readonly key: string; readonly revision: string }[];
-    readonly models: readonly string[];
+    readonly targets: readonly Target[];
     readonly harnessVersion: string;
-    readonly condition: string;
     readonly tries: number;
     readonly now: string;
   },
-): Promise<number> {
+): Promise<{ queued: number; dropped: number }> {
+  const wanted = plan.targets.flatMap((target) =>
+    plan.revisions.flatMap(({ key, revision }) =>
+      Array.from({ length: plan.tries }, (_, i) => ({
+        r: revision,
+        k: key,
+        m: target.model,
+        c: targetCondition(target),
+        t: i + 1,
+      })),
+    ),
+  );
   let queued = 0;
-  for (const { key, revision } of plan.revisions)
-    for (const model of plan.models)
-      for (let t = 1; t <= plan.tries; t++)
-        queued += (
-          await db.run(
-            `INSERT OR IGNORE INTO model_runs
-              (revision, challenge_key, model, harness_version, condition, try, status, queued_at)
-             VALUES (?, ?, ?, ?, ?, ?, 'queued', ?)`,
-            [revision, key, model, plan.harnessVersion, plan.condition, t, plan.now],
-          )
-        ).changes;
-  return queued;
+  for (let at = 0; at < wanted.length; at += CHUNK)
+    queued += (
+      await db.run(
+        `INSERT OR IGNORE INTO model_runs
+           (revision, challenge_key, model, harness_version, condition, try, status, queued_at)
+         SELECT json_extract(value, '$.r'), json_extract(value, '$.k'), json_extract(value, '$.m'),
+           ?, json_extract(value, '$.c'), json_extract(value, '$.t'), 'queued', ?
+         FROM json_each(?)`,
+        [plan.harnessVersion, plan.now, JSON.stringify(wanted.slice(at, at + CHUNK))],
+      )
+    ).changes;
+  const { changes: dropped } = await db.run(
+    `DELETE FROM model_runs
+     WHERE harness_version = ? AND status IN ('queued', 'harness-failed') AND (
+       try > ?
+       OR revision NOT IN (SELECT value FROM json_each(?))
+       OR NOT EXISTS (
+         SELECT 1 FROM json_each(?)
+         WHERE json_extract(value, '$.m') = model AND json_extract(value, '$.c') = condition))`,
+    [
+      plan.harnessVersion,
+      plan.tries,
+      JSON.stringify(plan.revisions.map((r) => r.revision)),
+      JSON.stringify(plan.targets.map((t) => ({ m: t.model, c: targetCondition(t) }))),
+    ],
+  );
+  return { queued, dropped };
 }
 
 /**
@@ -102,7 +160,7 @@ export async function claim(
            OR (status = 'harness-failed' AND harness_attempts < ?)
            OR (status = 'running' AND started_at < ? AND harness_attempts < ?))
          AND (? IS NULL OR harness_version = ?)
-       ORDER BY queued_at, revision, model, try LIMIT 1`,
+       ORDER BY try, queued_at, revision, model, condition LIMIT 1`,
       [
         filter.maxHarnessAttempts ?? 3,
         filter.staleBefore ?? "",
@@ -199,33 +257,21 @@ export async function running(db: Sql, runId: string): Promise<Claimed | null> {
     : null;
 }
 
-/** Adds a model to the roster, or retires it; retiring keeps its runs. */
-export async function setRoster(db: Sql, model: string, retired: boolean, now: string): Promise<void> {
-  if (retired)
-    await db.run("UPDATE model_roster SET retired_at = ? WHERE model = ? AND retired_at IS NULL", [now, model]);
-  else
-    await db.run(
-      `INSERT INTO model_roster (model, added_at) VALUES (?, ?)
-       ON CONFLICT(model) DO UPDATE SET retired_at = NULL`,
-      [model, now],
-    );
-}
-
-export interface SeriesCount {
+export interface Coverage {
   readonly model: string;
   readonly harness_version: string;
   readonly condition: string;
+  readonly revision: string;
   readonly status: string;
   readonly outcome: string | null;
   readonly runs: number;
 }
 
-/** How many slots each series has, by status and outcome. */
-export function summary(db: Sql): Promise<SeriesCount[]> {
-  return db.all<SeriesCount>(
-    `SELECT model, harness_version, condition, status, outcome, COUNT(*) AS runs
-     FROM model_runs GROUP BY model, harness_version, condition, status, outcome
-     ORDER BY model, harness_version, condition, status, outcome`,
+/** Slots by model, harness version, condition, revision, status and outcome. */
+export function coverage(db: Sql): Promise<Coverage[]> {
+  return db.all<Coverage>(
+    `SELECT model, harness_version, condition, revision, status, outcome, COUNT(*) AS runs
+     FROM model_runs GROUP BY model, harness_version, condition, revision, status, outcome`,
   );
 }
 

@@ -288,20 +288,35 @@ async function scriptedOpenRouter(incoming, url) {
 
 /** One model run from the Benchmarks page: roster, queue, run, hand in, stored. */
 async function modelRun(page) {
-  await page.getByLabel("Model (as OpenRouter names it)").fill("scripted/reference");
-  await page.getByRole("button", { name: "Add", exact: true }).click();
-  await page.getByText("scripted/reference", { exact: true }).first().waitFor();
-  await page.getByLabel("Tries").fill("1");
-  await page.getByRole("button", { name: "Queue", exact: true }).click();
-  await page.getByText("Queued 69 runs (reasoning default, 1 tries).").waitFor();
+  await page.getByLabel("Add a model (as OpenRouter names it)").fill("scripted/reference");
+  await page.getByRole("button", { name: "Add at its default reasoning" }).click();
+  await page.getByRole("region", { name: "scripted/reference coverage" }).waitFor();
+  await page.getByText("207 runs left of 207 (0% done)", { exact: false }).waitFor();
   await page.getByLabel("OpenRouter key").fill(fixtureKey);
   await page.getByLabel("Runs at a time").fill("1");
-  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await page.getByRole("button", { name: "Go", exact: true }).click();
+  await page.getByText("Queued 207 missing runs.").waitFor();
+  // Stop once the first run is under way: it finishes, and nothing more is claimed.
+  await page.getByText(/scripted\/reference · default · [A-Z]+-\d{3} · try 1/).waitFor();
   await page.getByRole("button", { name: "Stop after the current runs" }).click();
   await page.getByText(/→ (completed|stopped|budget|refused|error|harness failure)/).waitFor({ timeout: 180000 });
   const log = await page.getByRole("list", { name: "Runner log" }).innerText();
   assert.match(log, /→ completed, 2 turns, 1 submissions/, log);
   await page.getByText("Not running.").waitFor();
+  await page.getByText("206 runs left of 207", { exact: false }).waitFor();
+  assert.match(
+    await page.getByRole("region", { name: "scripted/reference coverage" }).innerText(),
+    /0 \/ 69 \(1 started\)/,
+  );
+  // Go is idempotent: the queue already holds exactly what is missing.
+  const again = JSON.parse(
+    await check("/admin/api/model-runs/sync", valid, 200, {
+      method: "POST",
+      headers: { origin: "https://musclememory.run", "sec-fetch-site": "same-origin", "content-type": "application/json" },
+      body: "{}",
+    }),
+  );
+  assert.deepEqual(again, { queued: 0, dropped: 0 });
   const overview = JSON.parse(await check("/admin/api/model-runs", valid, 200));
   const finished = overview.recent.find((r) => r.status === "finished");
   assert.equal(finished.outcome, "completed");
@@ -334,8 +349,8 @@ try {
   await mf.ready;
   if (modelRunsFixture) {
     const db = await mf.getD1Database("CATALOG_DB");
-    const migration = await readFile("migrations/catalog/0002_model_runs.sql", "utf8");
-    for (const statement of migration
+    for (const file of ["0002_model_runs.sql", "0003_model_run_targets.sql"])
+    for (const statement of (await readFile(`migrations/catalog/${file}`, "utf8"))
       .replace(/--[^\n]*\n/g, "\n")
       .split(/;\s*\n(?=CREATE)/)
       .map((s) => s.trim().replace(/;$/, ""))
@@ -519,7 +534,7 @@ try {
   await page
     .getByRole("heading", { name: "Benchmarks", exact: true })
     .waitFor();
-  assert.match(await page.locator("main").innerText(), /Harness harness-\d+/);
+  assert.match(await page.locator("main").innerText(), /with harness harness-\d+/);
   if (modelRunsFixture) await modelRun(page);
   await page.getByRole("link", { name: "Statistics", exact: true }).click();
   await page

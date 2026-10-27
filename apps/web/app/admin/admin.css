@@ -95,3 +95,17 @@
   font-family: var(--mono);
   font-size: 13px;
 }
+.admin-todo {
+  font-size: 18px;
+}
+.admin-model {
+  margin: 24px 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.admin-model h3 {
+  font-size: 16px;
+}
+.admin-model tr.faint {
+  color: var(--dim);
+}
