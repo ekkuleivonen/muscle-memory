@@ -58,6 +58,9 @@ for case in cases:
     expected = [dict(row) for row in sql.execute(case["query"].replace("default.events", "events"))]
     normalize = lambda rows: sorted(json.dumps({k: (int(v) if isinstance(v, bool) else v) for k, v in row.items()}, sort_keys=True) for row in rows)
     assert normalize(actual) == normalize(expected), (case["name"], actual, expected)
-    assert sum(int(r["browsers"]) for r in actual) == case["browsers"], (case["name"], actual)
+    if "expectedRows" in case:
+        assert normalize(actual) == normalize(case["expectedRows"]), (case["name"], actual)
+    else:
+        assert sum(int(r["browsers"]) for r in actual) == case["browsers"], (case["name"], actual)
     sql.close()
 print(json.dumps({"passed": len(cases)}))

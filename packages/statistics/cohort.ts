@@ -6,7 +6,8 @@
  * revision and compatible conditions, first attempts apart from repeats, current stealth excluded,
  * under-18s never mixed with adults, no narrow slices or individual records. A conservative floor,
  * not a statistical guarantee. Still DISABLED: uploaded profiles are not authoritative current
- * privacy state, so activation awaits the CONTROL-backed fix and root's approval
+ * privacy state. The disabled CONTROL fence is implemented; activation awaits independent review,
+ * native Basin verification, scheduled snapshot integration and root's approval
  * (docs/human-cohorts.md). While COHORTS_ENABLED is false the route answers "disabled" without SQL.
  * Nothing here accepts a participant, demographic filter or SQL from a caller.
  */
@@ -48,7 +49,8 @@ export interface CohortGroup {
 /**
  * Published eligibility requires current CONTROL state in addition to conservative uploaded
  * evidence. Client-ordered profiles cannot establish current privacy. The independent member
- * checks are in current-cohort.ts; publication fencing still blocks activation.
+ * checks are in current-cohort.ts; the implemented disabled fence and live approval are described
+ * in docs/eng-376-publication-contract.md.
  */
 export const ELIGIBILITY = {
   unit: "distinct browsers, not people",
@@ -75,8 +77,8 @@ export interface CohortRead {
  * One fixed SELECT for one validated revision. It returns value counts, never a participant:
  * (runtime, diagnostics, practice, completed, first_pass, submissions) → number of browsers.
  * Counted only: browsers whose latest uploaded profile states an adult band and not-stealth (so a
- * later stealth or deletion removes every past attempt) and none of whose profiles has conflicting
- * copies, person records with a Terms version and
+ * later uploaded stealth profile excludes past attempts within this window), with no conflicting
+ * profile copies, person records with a Terms version and
  * no conflicting copies, attempts with one runtime and a start whose origin was recorded. Window functions and joins only: DataFusion could not plan
  * an IN subquery inside an aggregate (see the ENG-340 history fix).
  */
