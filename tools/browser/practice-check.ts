@@ -1,7 +1,6 @@
 /**
  * Practice in a real browser, sandbox and runtime, with a synthetic participant: a start from
- * the picker, failing and passing submissions, completion, the next challenge, practising
- * again, stars and copying from the challenge, and what each records.
+ * the picker, failing and passing submissions, completion, the next challenge, reopening from the picker, stars and copying from the challenge, and what each records.
  * LOOP_ORIGIN=http://localhost:3000 node --import tsx tools/browser/practice-check.ts
  */
 import assert from "node:assert/strict";
@@ -48,15 +47,19 @@ const ready = async () => {
   await page.waitForFunction(
     () =>
       !document.querySelector<HTMLButtonElement>(
-        ".practice-controls button:last-child",
+        ".practice-controls button:first-of-type",
       )?.disabled,
   );
 };
-const submit = async () => {
+const runExamples = async () => {
   await editor().focus();
   await page.keyboard.press(
     process.platform === "darwin" ? "Meta+Enter" : "Control+Enter",
   );
+  await page.waitForFunction(() => /Examples: \d+ passed, 0 failed/.test(document.querySelector(".practice-results > .pane-body > [role=status]")?.textContent ?? ""));
+};
+const submit = async () => {
+  await page.getByRole("button", { name: "Submit", exact: true }).click();
 };
 const records = async () =>
   page.evaluate(async () => {
@@ -98,7 +101,8 @@ const shot = async (name: string) => {
   if (screenshots)
     await page.screenshot({ path: `${screenshots}/${name}.png` });
 };
-const solution = readChallenge("JS-002").private.solution;
+const source = readChallenge("JS-002");
+const solution = source.private.solution;
 
 try {
   // Keyboard selection survives pointer movement, and quick start reflows at 320px.
@@ -211,8 +215,11 @@ try {
   );
   // A failing submission: hidden cases say a category, never a value.
   await editor().fill(
-    'export function countWords(text) { return text.split(" ").length; }',
+    `export function countWords(text) { const examples = ${JSON.stringify(source.revision.cases.filter(c => !c.hidden).map(c => [c.input, c.expected]))}; return examples.find(([input]) => input === text)?.[1] ?? -987654321; }`,
   );
+  assert.equal(await page.getByRole("button", { name: "Submit", exact: true }).isDisabled(), true);
+  await runExamples();
+  assert.equal((await ofType("practice.submitted")).length, 0, "keyboard runs examples, never submits");
   await submit();
   await page.locator(".ci-failing").first().waitFor();
   await page.locator(".hidden-checks summary").click();
@@ -229,12 +236,11 @@ try {
   // Examples never complete; a passing submission does.
   await editor().fill(solution);
   const examples = page.getByRole("button", {
-    name: "Run examples",
-    exact: true,
+    name: /^Run examples/,
   });
   await examples.focus();
   await examples.press("Enter");
-  await page.locator(".run-summary.pass").waitFor();
+  await page.waitForFunction(() => /Examples: \d+ passed, 0 failed/.test(document.querySelector(".practice-results > .pane-body > [role=status]")?.textContent ?? ""));
   assert.equal(
     await examples.evaluate((button) => button === document.activeElement),
     true,
@@ -252,7 +258,7 @@ try {
   );
   await submit();
   await page
-    .getByRole("heading", { name: "Next challenge", exact: true })
+    .getByRole("link", { name: "Next challenge →", exact: true })
     .waitFor();
   const [completed] = await until("practice.completed");
   assert.equal(completed.attemptId, started.attemptId);
@@ -269,11 +275,10 @@ try {
     ).length,
     1,
   );
-  // The questions after completing are optional, one click each.
-  await page.getByRole("button", { name: "about right", exact: true }).click();
-  const [answered] = await until("practice.answered");
-  assert.deepEqual(answered.data, { question: "difficulty", answer: "right" });
-  assert.equal(answered.attemptId, started.attemptId);
+  assert.equal(await page.getByLabel("Optional reflection").count(), 0, "first solve has no prompt");
+  await page.getByRole("button", { name: "Share result", exact: true }).click();
+  assert.equal(await page.locator('.share-code input').isChecked(), false);
+  await page.keyboard.press("Escape");
   await shot("practice-after-completion");
 
   // A reload resumes the completed attempt; no new start.
@@ -281,7 +286,7 @@ try {
   await ready();
   assert.equal((await ofType("practice.started")).length, 1);
   await page
-    .getByRole("heading", { name: "Next challenge", exact: true })
+    .getByRole("link", { name: "Next challenge →", exact: true })
     .waitFor();
 
   // Stars from practice are recorded.
@@ -290,26 +295,28 @@ try {
     localStorage.getItem("muscle-memory.stars")?.includes("JS-002"),
   );
 
-  // Practising again begins a new attempt from the starting code.
-  await page
-    .getByRole("button", { name: "Practise this again", exact: true })
-    .click();
+  // A deliberate picker start begins another attempt; no repeat action in feedback.
+  assert.equal(await page.getByRole("button", { name: "Practise this again" }).count(), 0);
+  await page.goto(`${origin}/challenges`);
+  await search.fill("JS-002");
+  await search.press("Enter");
   await page.waitForURL(`${origin}/challenges/JS-002`);
   await ready();
   const starts = await until("practice.started", 2);
   assert.equal(starts.length, 2);
-  assert.equal(starts[1].data.from, "again");
+  assert.equal(starts[1].data.from, "picker");
   assert.notEqual(starts[1].attemptId, started.attemptId);
   assert.doesNotMatch(await editor().innerText(), /trim|\\s\+/);
   assert.equal((await until("site.starred")).length, 1);
 
   // The next challenge after completing again is recorded as such.
   await editor().fill(solution);
+  await runExamples();
   await submit();
   await page
-    .getByRole("heading", { name: "Next challenge", exact: true })
+    .getByRole("link", { name: "Next challenge →", exact: true })
     .waitFor();
-  const nextLink = page.locator(".practice-next a.btn.primary");
+  const nextLink = page.getByRole("link", { name: "Next challenge →", exact: true });
   const nextHref = (await nextLink.getAttribute("href"))!;
   await nextLink.click();
   await page.waitForURL(`${origin}${nextHref}`);
@@ -322,7 +329,7 @@ try {
     after.challenge,
   );
   console.log(
-    "PASS: picker start, challenge copy, failing and passing submissions, completion, questions after it, resume, star, practise again, next challenge",
+    "PASS: picker start, challenge copy, failing and passing submissions, completion, optional-prompt cooldown, direct share, resume, star, picker repeat, next challenge",
   );
 } catch (error) {
   console.error("at", page.url());

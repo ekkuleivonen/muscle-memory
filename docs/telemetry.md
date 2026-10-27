@@ -185,3 +185,5 @@ Running over every tombstone each day catches rows the pipeline was still holdin
 ### Private uploaded statistics (ENG-340 draft)
 
 The optional explicit history reader reuses existing uploaded practice observations and the existing deterministic metric registry. It adds no events or persistent store and keeps current raw retention/erasure. It returns only code-free owner summaries after fresh original-secret verification and a tombstone check before and after derivation. See [the approved binding and exact bounds](eng-340-private-history.md). Local historical summary retention remains disabled. The exact verification binding is owner-approved and prepared in source. It has not been deployed from this draft.
+
+Practice now records `mod-enter-runs-examples` instead of `mod-enter-submits` in the explicit `editorFeatures` list. The keyboard action is still recorded with its actual run purpose and `via: "keyboard"`; observation shapes and meanings are unchanged. The example-pass prerequisite and five-solve reflection cooldown add no observation types or fields.
