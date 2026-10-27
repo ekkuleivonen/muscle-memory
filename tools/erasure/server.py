@@ -9,6 +9,7 @@ goes wrong is a 500 with the error, so the Worker records nothing and the next r
 from __future__ import annotations
 
 import json
+import socketserver
 import sys
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -61,5 +62,16 @@ class Handler(BaseHTTPRequestHandler):
         sys.stderr.write("%s\n" % (format % args))
 
 
+class Server(ThreadingHTTPServer):
+    """
+    Skips HTTPServer's lookup of its own hostname (socket.getfqdn), which raises inside a
+    Cloudflare Container instead of failing quietly; nothing here uses the name.
+    """
+
+    def server_bind(self):
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = "erasure", self.server_address[1]
+
+
 if __name__ == "__main__":
-    ThreadingHTTPServer(("0.0.0.0", 8080), Handler).serve_forever()
+    Server(("0.0.0.0", 8080), Handler).serve_forever()

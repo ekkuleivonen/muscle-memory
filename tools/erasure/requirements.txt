@@ -1,2 +1,3 @@
-pyiceberg[pyarrow]==0.12.0
+pyiceberg[pyarrow,pyiceberg-core]==0.12.0
+pyiceberg-core==0.10.1
 pyarrow==26.0.0
