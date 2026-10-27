@@ -25,6 +25,25 @@ export interface StoreDump {
 export class PracticeStore implements CaptureSink {
   constructor(private readonly database: IDBDatabase) {}
 
+  /** Read without creating an identity merely to view statistics. */
+  existingIdentity(): Promise<{ participant: string; secret: string } | null> {
+    return new Promise((resolve, reject) => {
+      const tx = this.database.transaction("settings", "readonly"),
+        settings = tx.objectStore("settings");
+      const participant = settings.get("participantId"),
+        secret = settings.get("deviceSecret");
+      tx.oncomplete = () =>
+        resolve(
+          typeof participant.result === "string" &&
+            typeof secret.result === "string"
+            ? { participant: participant.result, secret: secret.result }
+            : null,
+        );
+      tx.onabort = () =>
+        reject(tx.error ?? new Error("Device identity could not be read."));
+    });
+  }
+
   participantId(): Promise<string> {
     return this.setting("participantId", randomId);
   }

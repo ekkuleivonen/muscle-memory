@@ -43,7 +43,7 @@ test("repeat-history availability keeps longitudinal delivery explicit without i
       until: "2026-10-27T00:00:00Z",
     }),
   );
-  assert.match(html, /approved private reader/);
+  assert.match(html, /Load uploaded history/);
   assert.match(html, /Playing more cannot reconstruct/);
   assert.match(html, /External assistance remains unknown/);
   assert.match(html, /not statistical confidence/);

@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { UploadedHistoryControl } from "./uploaded-history";
+import type { UploadedHistory } from "../../../../packages/developer-profile/uploaded-history";
 import { flushSync } from "react-dom";
 import { AttemptModelComparisons } from "./model-comparisons";
 import React, {
@@ -23,7 +25,6 @@ import { localHistory } from "../../../../packages/developer-profile/history";
 import type { AttemptSummary } from "../../../../packages/developer-profile/derive";
 import {
   GATED,
-  PROFILE_HISTORY_ENABLED,
   REPEAT_METRICS,
   REPEAT_MIN_ATTEMPTS,
   REPEAT_WINDOW_DAYS,
@@ -83,6 +84,7 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
     view.getSnapshot,
   );
   const { value: snapshot, error, loading } = state;
+  const [uploaded, setUploaded] = useState<UploadedHistory | null>(null);
   const [language, setLanguage] = useState("all");
   const [practice, setPractice] = useState("all");
   const refresh = useCallback(async () => {
@@ -156,7 +158,7 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
   const challenges = catalog.filter(
     (c) => language === "all" || c.language === language,
   );
-  const attempts = (snapshot?.attempts ?? []).filter(
+  const attempts = (uploaded?.attempts ?? snapshot?.attempts ?? []).filter(
     (s) =>
       (language === "all" || challenges.some((c) => c.key === s.challenge)) &&
       (practice === "all" || s.practice === practice),
@@ -169,7 +171,11 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
   );
   const unexplored = challenges.filter((c) => !progress[c.key]);
   const observations = personalObservations(attempts);
-  const actions = evidenceActions(challenges, progress, attempts);
+  const actions = evidenceActions(
+    challenges,
+    progress,
+    snapshot?.attempts ?? [],
+  );
   return (
     <main className="term stats">
       <div className="stats-content">
@@ -223,6 +229,7 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
               : `Read ${snapshot ? new Date(snapshot.at).toLocaleTimeString() : ""} · ${METRIC_VERSION}`}
           {error && snapshot ? " Previous view is stale." : ""}
         </p>
+        <UploadedHistoryControl onChange={setUploaded} />
         {snapshot && (
           <>
             <section aria-labelledby="overview">
@@ -230,8 +237,13 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
               <p className="t-dim">
                 {completed.length} completed challenges · {unfinished.length}{" "}
                 unfinished attempts · {unexplored.length} unexplored.{" "}
-                {attempts.length} retained attempt/revision traces. First/repeat
-                status stays unknown when older history is missing.
+                {attempts.length} {uploaded ? "uploaded" : "device-retained"}{" "}
+                attempt/revision traces. Progress counts above remain
+                device-local.{" "}
+                {uploaded
+                  ? "Uploaded history is separate, may span multiple pages and may lag recent activity."
+                  : ""}{" "}
+                First/repeat status stays unknown when older history is missing.
               </p>
               <div className="stats-observations">
                 {observations.map((o) => (
@@ -265,7 +277,7 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
                   </article>
                 ))}
               </div>
-              <h3>What would add useful evidence</h3>
+              <h3>What would add useful evidence / device progress</h3>
               {actions.map((a) => (
                 <p key={a.href}>
                   <Link className="t-cmd" href={a.href}>
@@ -368,7 +380,10 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
                 ))}
                 {section === "Reflection / growth" && (
                   <>
-                    <RepeatHistory attempts={attempts} until={snapshot.at} />
+                    <RepeatHistory
+                      attempts={attempts}
+                      until={uploaded?.readAt ?? snapshot.at}
+                    />
                     <h3>Optional reflections</h3>
                     <p className="t-dim">
                       Retrospective answers from successful completers only.
@@ -406,7 +421,9 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
               <summary>Human / model comparisons</summary>
               <Comparison stealth={!!snapshot.profile?.stealth} />
               <AttemptModelComparisons
-                attempts={attempts}
+                attempts={attempts.filter((a) =>
+                  a.revision.startsWith("sha256:"),
+                )}
                 stealth={!!snapshot.profile?.stealth}
               />
               {!snapshot.profile?.stealth && (
@@ -465,11 +482,11 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
                 Evidence coverage and privacy
               </summary>
               <p>
-                {PROFILE_HISTORY_ENABLED
-                  ? "Code-free summaries are retained before future raw compaction."
-                  : "History summary retention is disabled under the current latest-attempt-only Privacy Notice. Enabling it requires an approved storage disclosure; playing more cannot recover compacted history."}{" "}
-                Older compacted history cannot be reconstructed here. This is
-                not a complete account history or a server read path.
+                Local historical summary retention remains disabled. Browser
+                compaction keeps the latest uploaded attempt per challenge. Use
+                Load uploaded history to inspect earlier existing uploads; that
+                private view stays in page memory and never restores device
+                progress. Missing uploads cannot be recovered here.
               </p>
               <p>
                 Capture gaps, missing starts, conflicts and unsupported capture
@@ -479,9 +496,11 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
               </p>
               <p>
                 Summaries contain counts, conditions, optional attempt answers
-                and bounded checkpoint labels; no code, raw keys or output. They
-                stay on this device, travel in your private backup and are
-                removed by reset or account deletion. No player ID is treated as
+                and bounded checkpoint labels; no code, raw keys or output. The
+                uploaded view is not saved in your browser or backup. Reset,
+                logout, privacy changes and deletion clear it; further uploaded
+                reads require another explicit action. Existing raw-upload
+                retention is unchanged. No player ID is treated as
                 authentication. No public aggregate endpoint or derived server
                 store is added.
               </p>
@@ -701,9 +720,9 @@ export function RepeatHistory({
       {!history.groups.length && (
         <p>
           Matched repeated-task history is unavailable in the retained evidence.
-          It needs older uploaded history through an approved private reader, or
-          approved local summaries, plus repeats under the same recorded
-          conditions. Playing more cannot reconstruct already-compacted history.
+          Use Load uploaded history for earlier existing uploads, then look for
+          repeats under the same recorded conditions. Playing more cannot
+          reconstruct already-compacted history.
         </p>
       )}
       {history.groups.slice(0, 10).map((g, index) => (

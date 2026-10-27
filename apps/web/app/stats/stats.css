@@ -28,7 +28,8 @@
   margin: 1.6em 0;
   align-items: center;
 }
-.stats select {
+.stats select,
+.stats input {
   background: var(--t-bar);
   color: var(--t-fg);
   border: 1px solid var(--t-line);
@@ -51,7 +52,8 @@
   padding: 0.4em 0;
 }
 .stats summary:focus-visible,
-.stats select:focus-visible {
+.stats select:focus-visible,
+.stats input:focus-visible {
   outline: 1px solid var(--t-accent);
   outline-offset: 3px;
 }

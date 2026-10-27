@@ -1,12 +1,14 @@
 # ENG-340: minimal longitudinal history proposal
 
-**Proposal for Ekku via dot; not an approved retention or access change.** The comprehensive dashboard scope stays intact. The existing latest-attempt view is an immediate evidence source, not the final longitudinal architecture. No route, credential, disclosure, consent version, collection event or production retention setting is changed by this proposal.
+**Option A direction approved by Ekku via dot on 27 October 2026. Exact new binding approval remains pending.** See [the implemented boundary and approval request](eng-340-private-history.md), which supersede the proposed budgets, route placement and release status below. Option B remains unapproved and disabled.
+
+Historical proposal: The comprehensive dashboard scope stays intact. The existing latest-attempt view is an immediate evidence source, not the final longitudinal architecture. No route, credential, disclosure, consent version, collection event or production retention setting is changed by this proposal.
 
 ## Recommended decision: reuse uploaded records, derive privately on demand
 
 Choose **A: a device-secret-authorized private history reader over existing Cloudflare records**, without a new persistent summary store. It can recover earlier attempts that browser compaction already removed, where those uploads actually exist. Additional local retention cannot do that. Keep the implemented local-retention flag off.
 
-The current server already retains account activity for the account lifetime, with deletion within 30 days, while browser compaction keeps each challenge’s latest attempt. This proposal does **not** extend server raw-data retention. Existing records and purposes do not themselves authorize a new participant-facing API: the reader still needs explicit owner approval, security review, and a disclosure review before release. In particular the current Privacy Notice says records are currently looked at only by the operator and uploads do not provide recovery/sync. Clarify private statistics access without implying code recovery or device sync; any notice edit requires the repository’s legal-version process. No legal version changes in this PR.
+The current server already retains account activity for the account lifetime, with deletion within 30 days, while browser compaction keeps each challenge’s latest attempt. This proposal does **not** extend server raw-data retention. Existing records and purposes do not themselves authorize a new participant-facing API: the reader still needs explicit owner approval, security review, and a disclosure review before release. In particular the current Privacy Notice says records are currently looked at only by the operator and uploads do not provide recovery/sync. Clarify private statistics access without implying code recovery or device sync; any notice edit requires the repository’s legal-version process. The implementation now includes a draft disclosure revision and legal-version bump for eventual release; neither is deployed.
 
 | Decision | A — reuse existing server records (recommended) | B — additionally retain local summaries |
 | --- | --- | --- |
