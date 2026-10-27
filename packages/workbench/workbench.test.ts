@@ -54,6 +54,7 @@ test("reads are accepted: joins, CTEs, subqueries, literals, comments and aliase
     "SELECT DISTINCT ON (record_id) record_id, json_get_str(json_get_json(payload, 'data'), 'status') FROM default.events",
     "SELECT 5 >> 3, type !~~* 'm.%', power(2, 3), occurred_at::timestamp FROM default.events",
     "VALUES (1, 'a'), (2, 'b')",
+    "WITH t(n, select, from) AS (VALUES (1, 2, 3)) SELECT * FROM t",
     // Spelled like another namespace, in a string, a comment, an alias or a column: all fine.
     "SELECT 'secrets.keys' AS secrets, other FROM default.events AS secrets -- secrets.keys",
     "SHOW DATABASES",
@@ -113,6 +114,9 @@ test("writes, other namespaces, table functions and several statements are refus
     "SELECT (SELECT max(k) FROM secrets.keys)",
     "SELECT * FROM default.events WHERE a IS DISTINCT FROM b UNION SELECT * FROM secrets.keys",
     "EXPLAIN ANALYZE SELECT * FROM secrets.keys",
+    // Round 4: an alias named like a clause, and a quoted name with an escaped quote.
+    "SELECT * FROM default.events AS limit, secrets.keys",
+    'SELECT * FROM default.events AS limit, "a""b".keys',
   ])
     rejected(sql, /"default" namespace/);
   rejected("SELECT * FROM catalog.default.events", /namespace\.table at most/);
@@ -145,6 +149,8 @@ test("the outermost LIMIT is noticed; a subquery's or an alias is not", () => {
   assert.equal(check("SELECT * FROM default.events LIMIT 10").limited, true);
   assert.equal(check("SELECT * FROM (SELECT * FROM default.events LIMIT 10) x").limited, false);
   assert.equal(check('SELECT type AS "limit" FROM default.events').limited, false);
+  assert.equal(check("WITH limit AS (SELECT * FROM default.events) SELECT * FROM limit").limited, false);
+  assert.equal(check("SELECT limit FROM default.events").limited, false);
   assert.equal(check("SHOW TABLES IN default").limited, true);
 });
 
