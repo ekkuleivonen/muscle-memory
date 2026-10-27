@@ -53,7 +53,8 @@ export function saveProfile(profile: Profile): StoredProfile | null {
   if (!stored) return null;
   const at = new Date().toISOString();
   const asked = { ...stored.asked };
-  for (const id of Object.keys(profile) as (keyof Profile)[]) asked[id] = { answeredAt: at };
+  for (const id of Object.keys(profile) as (keyof Profile)[])
+    asked[id] = { answeredAt: at };
   const next = { ...stored, profile, asked };
   write(next);
   return next;
@@ -114,15 +115,16 @@ export function logOut() {
  * the device identity stay, so anything already uploaded can still be deleted later.
  */
 export async function resetProgress(identity = false) {
-  localStorage.removeItem(PROGRESS_KEY);
-  localStorage.removeItem("muscle-memory.practice-view"); // app/practice/continuity.ts
-  window.dispatchEvent(new Event(PROGRESS_CHANGE));
   const store = await openPracticeStore();
   try {
     await store.clear(identity);
   } finally {
     store.close();
   }
+  // Notify this tab and other tabs only after private raw evidence and summaries are gone.
+  localStorage.removeItem(PROGRESS_KEY);
+  localStorage.removeItem("muscle-memory.practice-view");
+  window.dispatchEvent(new Event(PROGRESS_CHANGE));
 }
 
 /**

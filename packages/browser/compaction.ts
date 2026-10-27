@@ -27,7 +27,14 @@ function parse(record: StoredRecord): Parsed {
       at: String(value.occurredAt ?? ""),
     };
   } catch {
-    return { record, type: "", source: null, challenge: null, attempt: null, at: "" };
+    return {
+      record,
+      type: "",
+      source: null,
+      challenge: null,
+      attempt: null,
+      at: "",
+    };
   }
 }
 
@@ -42,9 +49,21 @@ export function compactable(
   for (const p of parsed)
     if (p.type.startsWith("practice.") && p.challenge && p.attempt) {
       const seen = latest.get(p.challenge);
-      if (!seen || p.at > seen.at) latest.set(p.challenge, { attempt: p.attempt, at: p.at });
+      if (!seen || p.at > seen.at)
+        latest.set(p.challenge, { attempt: p.attempt, at: p.at });
     }
+  // Retain an entire queued attempt: its summary must be derived before any of it goes.
+  const queuedAttempts = new Set(
+    parsed
+      .filter((p) => queued.has(p.record.recordId) && p.attempt)
+      .map((p) =>
+        JSON.stringify([p.record.participantId, p.challenge, p.attempt]),
+      ),
+  );
   const keep = (p: Parsed) =>
+    queuedAttempts.has(
+      JSON.stringify([p.record.participantId, p.challenge, p.attempt]),
+    ) ||
     queued.has(p.record.recordId) ||
     (p.type.startsWith("practice.") &&
       p.challenge !== null &&
@@ -55,7 +74,9 @@ export function compactable(
     .filter((p) =>
       p.record.kind === "artifact"
         ? !queued.has(p.record.recordId) &&
-          ![...sources].some((source) => source && p.record.recordId.startsWith(`${source}.`))
+          ![...sources].some(
+            (source) => source && p.record.recordId.startsWith(`${source}.`),
+          )
         : !keep(p),
     )
     .map((p) => p.record.recordId);
