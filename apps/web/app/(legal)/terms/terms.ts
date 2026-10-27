@@ -7,7 +7,7 @@ export const TERMS = `## The short version
 - Muscle Memory gives you coding challenges to practise on. Use it to get better, have fun, and don't wreck it for anyone else.
 - **You have to be 16 or older.**
 - **We record what you do here**, because that's how the product works. The [Privacy Notice](/privacy) explains what we collect and why.
-- **Your code stays yours.** You give us a licence to use it and to publish it in anonymised datasets.
+- **Your code stays yours.** You give us a licence to use it to run Muscle Memory and learn from it. We publish insights, never your code.
 - **Solve challenges yourself.** No AI assistants in your runs: comparing people with LLMs only works if the people are people.
 - It's an early product, provided as is. Things will change, and occasionally break.
 
@@ -27,7 +27,7 @@ You agree not to:
 - **use AI assistants, bots or someone else to solve challenges** while presenting the result as your own run. If you want to see what an LLM would do, that's what the planned LLM comparisons are for;
 - automate accounts, scrape the catalog, or hammer the service;
 - attack, probe or reverse-engineer the service, except through responsible disclosure to **support@rowandreason.com** (thank you in advance);
-- **try to re-identify anyone** in published datasets, or combine them with other data to do so;
+- **try to identify anyone** from what we publish, or combine it with other data to do so;
 - submit anything illegal, malicious, or that you don't have the right to share. **Don't paste your employer's code.** Their lawyers are much less fun than this page.
 
 If you break these rules, we may refuse what your account sends, leave its records out of anything we publish or compare, or delete them. Since we don't know who you are, we usually can't tell you first.
@@ -35,20 +35,15 @@ If you break these rules, we may refuse what your account sends, leave its recor
 ## Your code and activity
 
 - **You keep the copyright** in the code you write here.
-- You give us a **worldwide, non-exclusive, royalty-free, perpetual and irrevocable licence** to use, store, copy, modify, analyse and publish what you submit and the activity data around it. That includes publishing it in **anonymised datasets** under open licences, and letting others use those datasets.
+- You give us a **worldwide, non-exclusive, royalty-free licence** to store, copy, run, analyse and otherwise use what you submit and the activity around it, to run Muscle Memory, improve it, research how people code, and publish insights from that research: statistics and findings that don't quote your code or say anything about you in particular.
+- The licence ends when you delete your account, except for insights already published.
 - You confirm you have the right to give us that licence (see: your employer's code, above).
-- Going stealth in Settings means we leave you out of future releases and of comparisons, and you don't see other people's stats in return. Releases that already went out stay out there, anonymised. Nothing has been published yet.
+- Going stealth in Settings means we leave you out of future insights and of comparisons, and you don't see other people's stats in return. Insights already published stay published. Nothing has been published yet.
 - **Sharing a result is up to you.** A result link shows anyone who has it which challenge you completed and how its checks went, and your code only if you choose to include it. Once you've sent a link, we can't take it back.
-
-Why the broad licence? Because "anonymised dataset of how people solve challenges" only works if we may actually publish the solutions.
 
 ## Our stuff
 
 Muscle Memory's source code is open source under the **MIT licence**, which says what you may do with it; the licence comes with the code. The challenges, their descriptions and tests are ours and not part of that. Use them to practise, as much as you like. Don't copy the catalog wholesale or run a clone of it.
-
-## Published datasets
-
-When we publish anonymised data, it comes with its own licence. Whatever that licence says, the rule against re-identifying people above still applies to you.
 
 ## The service, as is
 
@@ -66,7 +61,7 @@ When these Terms change, the version at the top changes too, and you'll be asked
 
 ## Ending things
 
-You can stop using Muscle Memory and delete your account at any time. We can end these Terms if you break them, or if we shut the service down. The licence to anything already published survives, since we can't un-publish it.
+You can stop using Muscle Memory and delete your account at any time. We can end these Terms if you break them, or if we shut the service down. Insights already published stay, since we can't un-publish them.
 
 ## Law and disputes
 

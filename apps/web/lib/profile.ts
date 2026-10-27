@@ -55,7 +55,7 @@ export interface StoredProfile {
   /** The Terms and Privacy Notice version accepted, and when. */
   accepted?: Acceptance;
   /**
-   * Stealth, the opt-out in settings: left out of published datasets and of comparisons, and
+   * Stealth, the opt-out in settings: left out of published insights and of comparisons, and
    * in return shown no one else's stats.
    */
   stealth?: boolean;

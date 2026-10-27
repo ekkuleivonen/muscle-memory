@@ -6,7 +6,7 @@ import { TERMS } from "./terms";
 export const metadata: Metadata = pageMetadata({
   title: "Terms",
   description:
-    "The terms for practising on Muscle Memory: your account, playing fair, your code and activity, and the datasets we may publish.",
+    "The terms for practising on Muscle Memory: your account, playing fair, your code and activity, and the insights we may publish.",
   path: "/terms",
 });
 

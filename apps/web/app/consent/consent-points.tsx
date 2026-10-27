@@ -16,8 +16,8 @@ export function ConsentPoints() {
           That&apos;s the product.
         </li>
         <li>
-          <strong>We may publish anonymised stats and datasets.</strong> Rather
-          not? Go stealth any time in settings.
+          <strong>We may publish insights from it,</strong> never your records
+          or your code. Rather not count? Go stealth any time in settings.
         </li>
         <li>
           <strong>Nobody else sees your results,</strong> and we don&apos;t sell
@@ -25,7 +25,7 @@ export function ConsentPoints() {
         </li>
         <li>
           <strong>Code you write stays yours;</strong> you give us a licence to
-          use and publish it.
+          use it to run the product and learn from it.
         </li>
       </ul>
       <p className="t-dim">

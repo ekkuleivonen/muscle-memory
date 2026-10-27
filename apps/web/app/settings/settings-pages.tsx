@@ -169,8 +169,8 @@ function Privacy() {
     setResult({
       tone: "dim",
       text: share
-        ? "Your runs are eligible for future anonymised publications and community comparisons."
-        : "Done, you've gone stealth. We won't include you in published stats or comparisons from now on, including what you've already done, and you won't see other people's stats either.",
+        ? "Your runs count towards future published insights and community comparisons."
+        : "Done, you've gone stealth. We won't include you in published insights or comparisons from now on, including what you've already done, and you won't see other people's stats either.",
     });
   };
   return (
@@ -195,8 +195,8 @@ function Privacy() {
         .
       </p>
       <p>
-        Your runs may be included in future anonymised publications and
-        community comparisons. Go stealth to be excluded from both. Recording
+        Your runs may count towards future published insights (statistics
+        and findings, never your records or code) and community comparisons. Go stealth to be excluded from both. Recording
         and uploads continue in stealth.
       </p>
       <p className="t-state">
@@ -209,7 +209,7 @@ function Privacy() {
         actions={[
           stealth
             ? {
-                label: "share my anonymised data",
+                label: "count me in again",
                 kind: "primary",
                 run: () => choose(true),
               }
@@ -608,7 +608,7 @@ function Delete() {
         This deletes your profile, progress, stars, saved practice and activity from this
         browser and from our servers, and signs you out.{" "}
         <span className="t-err">It can&apos;t be undone.</span> Published
-        anonymised datasets aren&apos;t linked to you, so they stay.
+        insights aren&apos;t about you, so they stay.
       </p>
       <label className="t-field">
         <span>
