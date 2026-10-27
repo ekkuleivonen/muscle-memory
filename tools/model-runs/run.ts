@@ -10,7 +10,6 @@ import type { Json } from "../../packages/domain/json";
 import {
   MODEL_CAPTURE_GAPS,
   modelParticipant,
-  type HttpExchange,
   type RunOutcome,
 } from "../../packages/domain/model";
 import {
@@ -344,16 +343,19 @@ export async function runModel(input: RunInput): Promise<RunResult> {
     }
   }
 
-  /** The model's listing and endpoints, as they are now. The full list is stored once by hash. */
+  /** The model's own listing entry and its endpoints, as they are now. */
   async function catalog(at: "start" | "end"): Promise<void> {
     const listed = await exchange(input.fetch, `${endpoint}/models`, auth, runClock);
     const [slug] = input.model.split(":");
     const endpoints = await exchange(input.fetch, `${endpoint}/models/${slug}/endpoints`, auth, runClock);
-    const listing: HttpExchange =
-      listed.body === null
-        ? listed
-        : { ...listed, body: null, bodyArtifactId: recorder.blob(listed.body, "application/json").artifactId };
-    recorder.observe("model.catalog", { at, listing, endpoints });
+    let entry: Json | null = null;
+    try {
+      const list = JSON.parse(listed.body ?? "null")?.data;
+      entry = (Array.isArray(list) && list.find((m: { id?: string }) => m?.id === input.model)) || null;
+    } catch {
+      // Not JSON: the exchange's status and error say what came back.
+    }
+    recorder.observe("model.catalog", { at, listing: { ...listed, body: null, entry }, endpoints });
   }
 }
 

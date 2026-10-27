@@ -227,11 +227,10 @@ test("a run that writes and submits: lines raw, reasoning passed back, accountin
   const generations = observations.filter((o) => o.type === "model.generation").map((o) => [o.data.generationId, o.data.fetch, o.data.exchange.status]);
   assert.deepEqual(generations, [["gen-1", 1, 404], ["gen-1", 2, 200], ["gen-call-2", 1, 404], ["gen-call-2", 2, 200]]);
 
-  // The model list is a blob, stored once for the start and the end.
+  // The model's own entry, at the start and the end; never the whole list.
   const blobs = result.records.filter((r) => r.kind === "artifact");
-  const catalogs = observations.filter((o) => o.type === "model.catalog").map((o) => o.data.listing.bodyArtifactId);
-  assert.equal(catalogs[0], catalogs[1]);
-  assert.equal(blobs.filter((b) => b.recordId === catalogs[0]).length, 1);
+  const catalogs = observations.filter((o) => o.type === "model.catalog").map((o) => o.data.listing);
+  assert.deepEqual(catalogs.map((l) => [l.body, l.entry]), [0, 1].map(() => [null, { id: "test/model", pricing: { prompt: "0.000001" } }]));
   // Request bodies are blobs too, cited by id.
   const request = observations.find((o) => o.type === "model.request").data;
   assert.ok(blobs.some((b) => b.recordId === request.bodyArtifactId));

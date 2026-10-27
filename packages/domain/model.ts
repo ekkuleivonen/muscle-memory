@@ -67,13 +67,15 @@ export interface ModelData {
     readonly captureGaps: readonly string[];
   };
   /**
-   * The model's listing when the run started and ended, verbatim: its entry in OpenRouter's
-   * model list (prices, context, parameters) and its endpoints (per-provider prices, latency,
-   * throughput, uptime). Prices change; these are the prices then.
+   * The model's listing when the run started and ended: its own entry in OpenRouter's model
+   * list (prices, context, parameters, as listed) and its endpoints verbatim (per-provider
+   * prices, latency, throughput, uptime). Prices change; these are the prices then. The whole
+   * list, close to a megabyte, is kept by the price snapshots instead (`model_catalog`).
    */
   "model.catalog": {
     readonly at: "start" | "end";
-    readonly listing: HttpExchange;
+    /** The list request without its body, and the entry for this model (null if not listed). */
+    readonly listing: HttpExchange & { readonly entry: Json | null };
     readonly endpoints: HttpExchange;
   };
   /** A request as sent: its body is an artifact (bodies grow every turn). */
@@ -189,10 +191,8 @@ export interface HttpExchange {
   /** Null when no response came. */
   readonly status: number | null;
   readonly headers: Readonly<Record<string, string>>;
-  /** The body exactly as received; null when there was none, or when it is stored as a blob. */
+  /** The body exactly as received; null when there was none or it is not kept. */
   readonly body: string | null;
-  /** A large body stored once under its hash (`artifact.blob`), such as the full model list. */
-  readonly bodyArtifactId?: string;
   readonly error: string | null;
   readonly durationMs: number;
 }
