@@ -9,12 +9,12 @@ All populated screens use **explicitly synthetic** practice records (fixture par
 | Rich: chapter 3 habits, people "not compared yet" | [habits](rich-desktop-3-habits.png) | |
 | Rich: chapter 4 result grid (solved, stopped, no receipt; people "not compared yet") | [models](rich-desktop-4-models.png) | [models](rich-mobile-4-models.png) |
 | Rich: chapters 5–6 (quiet confidence; resume the open challenge) | [surprise + next](rich-desktop-5-6-surprise-next.png) | |
-| Model reads failed: "Model results can't be read right now.", per-challenge cards | | [unreadable](models-unreadable-mobile.png) |
-| Partial: one unfinished attempt, no trace (the PDF case) | | [partial](partial-mobile.png) |
+| Model reads failed: "Model results can't be read right now.", evidence claims no match, per-challenge cards | | [unreadable](models-unreadable-mobile.png) |
+| Partial: one unfinished attempt, no trace (the PDF case): resume beside the opening | | [partial](partial-mobile.png) |
 | Empty: new player | [empty](empty-desktop.png) | |
 | Stealth | | [stealth](stealth-mobile.png) |
 
-After root's review, the first viewport leads with chapter 1's headline and hero numbers. Sources and freshness are a one-line disclosure (here showing "uploads unavailable", the honest state while the history SQL repair is pending), and chapter navigation follows chapter 1. The AI note is a short label, with the full sentence in the details. On narrow screens chapter 4 shows one card per challenge (you, each model, people) instead of a sideways-scrolling table. The story counts every submission in order, errors included. Mobile outcomes, story and models screenshots were recaptured after these changes; the desktop story and surprise screenshots predate the lead-layout change but their chapters are unchanged.
+After root's review, the first viewport leads with chapter 1's headline and hero numbers. Sources and freshness are a one-line disclosure (here showing "uploads unavailable", the honest state while the history SQL repair is pending), and chapter navigation follows chapter 1. The AI note is a short label, with the full sentence in the details. On narrow screens chapter 4 shows one card per challenge (you, each model, people) instead of a sideways-scrolling table. The story counts every submission in order, errors included. Mobile outcomes, story and models screenshots were recaptured after these changes, and partial and unreadable-models at final head after the resume and evidence-copy fixes; the desktop story and surprise screenshots predate the lead-layout change but their chapters are unchanged.
 
 Observed in the browser:
 
