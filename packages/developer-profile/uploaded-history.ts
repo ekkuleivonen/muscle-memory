@@ -100,7 +100,7 @@ type Row = {
   record_id: string;
   payload: string;
 };
-/** A single SELECT avoids Basin's distributed UNION partition failure when a branch is empty.
+/** A single SELECT avoids Basin's distributed UNION partition failure under some input partitionings.
  * Repeated metadata is checked before it is reduced to the existing private interpreter shape. */
 export function normalizeHistoryRows(rows: unknown): unknown {
   if (
