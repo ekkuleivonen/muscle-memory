@@ -269,6 +269,8 @@ export class HistoryRefusal extends Error {
   constructor(
     readonly status: number,
     message: string,
+    /** Fixed operational category only: never an upstream message, query or record. */
+    readonly diagnostic?: string,
   ) {
     super(message);
   }
@@ -323,6 +325,7 @@ export async function readUploadedHistory(
 ): Promise<UploadedHistory> {
   if (!token.trim()) throw new Error("History is not configured.");
   const controller = new AbortController();
+  let stage = "request";
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   const stopped = new Promise<never>((_, reject) =>
     controller.signal.addEventListener(
@@ -349,7 +352,11 @@ export async function readUploadedHistory(
         },
       ),
     ]);
-    if (!response.ok) throw new Error("History is unavailable.");
+    if (!response.ok) {
+      stage = `storage-http-${response.status}`;
+      throw new Error("History is unavailable.");
+    }
+    stage = "response-body";
     const reader = response.body?.getReader();
     if (!reader) throw new Error("History is unavailable.");
     const chunks: Uint8Array[] = [];
@@ -360,8 +367,10 @@ export async function readUploadedHistory(
         const { done, value } = await Promise.race([reader.read(), stopped]);
         if (done) break;
         bytes += value.byteLength;
-        if (bytes > 24 * 1024 * 1024)
+        if (bytes > 24 * 1024 * 1024) {
+          stage = "response-size";
           throw new Error("History response is too large.");
+        }
         chunks.push(value);
       }
     } catch (error) {
@@ -374,9 +383,36 @@ export async function readUploadedHistory(
       all.set(c, at);
       at += c.byteLength;
     }
+    stage = "response-json";
     const body = JSON.parse(new TextDecoder().decode(all));
+    stage = "storage-result";
     if (body?.success !== true) throw new Error("History is unavailable.");
+    stage = "projection";
     return historyResult(participant, window, body.result?.rows);
+  } catch (cause) {
+    // Only messages authored by our validator can refine the category. Nothing
+    // from an upstream response or private record is logged or returned.
+    const known = new Map([
+      ["Invalid history response.", "row-shape"],
+      ["Invalid history page.", "page-shape"],
+      ["Invalid attempt coverage.", "coverage"],
+      ["Incomplete history response.", "incomplete"],
+      ["Invalid observation.", "observation-shape"],
+      ["History identity mismatch.", "identity"],
+      ["History input exceeds its budget.", "input-budget"],
+      ["History summaries exceed their response budget.", "summary-budget"],
+      ["History response exceeds its budget.", "row-budget"],
+    ]);
+    const category = controller.signal.aborted
+      ? "timeout"
+      : stage === "projection" && cause instanceof Error
+        ? (known.get(cause.message) ?? stage)
+        : stage;
+    throw new HistoryRefusal(
+      503,
+      "Uploaded history could not be read. Your device evidence is still available.",
+      category,
+    );
   } finally {
     clearTimeout(timer);
   }

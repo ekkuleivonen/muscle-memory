@@ -10,8 +10,11 @@ export const dynamic = "force-dynamic";
 /** No subject in URL. Secret never logged, cached, stored or included in a response. */
 export async function POST(request: Request) {
   const headers = { "Cache-Control": "no-store", Vary: "Cookie, Origin" };
-  const reply = (status: number, error: string) =>
-    Response.json({ error }, { status, headers });
+  const reply = (status: number, error: string, diagnostic?: string) =>
+    Response.json(
+      { error, ...(diagnostic ? { diagnostic } : {}) },
+      { status, headers },
+    );
   if (request.headers.get("origin") !== new URL(request.url).origin)
     return reply(403, "Use the dashboard to load your private history.");
   if (!hasConsent((await cookies()).get(CONSENT_COOKIE)?.value))
@@ -64,7 +67,7 @@ export async function POST(request: Request) {
   } catch (error) {
     // Upstream SQL/RPC errors can contain raw payloads or credentials. Never log/render them.
     if (error instanceof HistoryRefusal)
-      return reply(error.status, error.message);
+      return reply(error.status, error.message, error.diagnostic);
     return reply(
       503,
       "Uploaded history could not be read. Your device evidence is still available.",
