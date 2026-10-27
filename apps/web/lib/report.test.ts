@@ -1,209 +1,122 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  deriveAttempts,
-  type AttemptSummary,
-} from "../../../packages/developer-profile/derive";
+import { deriveAttempts, type AttemptSummary } from "../../../packages/developer-profile/derive";
 import { trace } from "../../../packages/developer-profile/fixtures";
 import type { ModelReceipt } from "../../../packages/model-runs/receipts";
 import type { ChallengeSummary } from "./challenges";
 import type { Progress } from "./progress";
-import {
-  buildReport,
-  mergeEvidence,
-  shareText,
-  type ComparisonChapter,
-  type HabitChapter,
-  type NextChapter,
-  type OutcomesChapter,
-  type ReportAttempt,
-  type ReportInput,
-  type StoryChapter,
-  type SurpriseChapter,
-} from "./report";
+import { buildReport, duration, mergeEvidence, type Question, type ReportAttempt, type ReportInput } from "./report";
 
-const challenge = (key: string, language: string, tags: string[] = ["arrays"]) =>
-  ({
-    key,
-    title: `Synthetic ${key}`,
-    language,
-    tags,
-    difficulty: "easy",
-    runnable: true,
-  }) as unknown as ChallengeSummary;
+const challenge = (key: string, language: string, difficulty = "easy") =>
+  ({ key, title: `Synthetic ${key}`, language, tags: ["arrays"], difficulty, runnable: true }) as unknown as ChallengeSummary;
 const catalog = [
-  challenge("JS-001", "javascript"),
-  challenge("JS-002", "javascript", ["strings"]),
-  challenge("PY-001", "python"),
-  challenge("PY-002", "python", ["strings"]),
+  challenge("JS-001", "javascript", "easy"),
+  challenge("JS-002", "javascript", "medium"),
+  challenge("PY-001", "python", "medium"),
+  challenge("PY-002", "python", "hard"),
 ];
 const progressOf = (p: Record<string, { completedAt: string | null; completions: number; attempt?: string }>): Progress =>
   Object.fromEntries(
-    Object.entries(p).map(([k, v]) => [
-      k,
-      { attempt: v.attempt ?? `${k}-attempt`, startedAt: "2026-10-27T10:00:00Z", ...v },
-    ]),
+    Object.entries(p).map(([k, v]) => [k, { attempt: v.attempt ?? `${k}-attempt`, startedAt: "2026-10-27T10:00:00Z", ...v }]),
   );
 const summary = (attempt: string, key: string, revision?: string): AttemptSummary =>
   deriveAttempts(trace(attempt, `${attempt}-source`, key, revision), "synthetic-participant")[0];
 const device = (...a: AttemptSummary[]): ReportAttempt[] => a.map((x) => ({ ...x, source: "device" as const }));
-const input = (over: Partial<ReportInput> = {}): ReportInput => ({
-  catalog,
-  progress: {},
-  attempts: [],
-  profile: null,
-  receipts: {},
-  ...over,
-});
-const chapter = <T>(report: ReturnType<typeof buildReport>, id: string) =>
-  report.chapters.find((c) => c.id === id) as T | undefined;
-// Carries ENG-375's defaultReasoning/finalCodeLength; the assertion keeps it valid before and after that type change.
+const input = (over: Partial<ReportInput> = {}): ReportInput => ({ catalog, progress: {}, attempts: [], profile: null, receipts: {}, ...over });
+const q = (r: ReturnType<typeof buildReport>, id: Question["id"]) => r.questions.find((x) => x.id === id);
+// Carries ENG-375's receipt fields; the assertion keeps it valid across that type change.
 const receipt = (over: Partial<ModelReceipt> = {}): ModelReceipt =>
   ({
-  model: "synthetic/model",
-  reportedModels: ["synthetic/model-2026"],
-  reasoning: "high",
-  harness: "harness-1",
-  try: 1,
-  state: "completed",
-  submissions: 2,
-  runtime: { engine: "javascript", version: "synthetic" },
-  features: [],
-  budget: { turns: 50, submissions: 10 },
-  defaultReasoning: "high",
-  finalCodeLength: null,
-  ...over,
+    model: "synthetic/model",
+    reportedModels: ["synthetic/model-2026"],
+    reasoning: "high",
+    harness: "harness-1",
+    try: 1,
+    state: "completed",
+    submissions: 2,
+    runtime: { engine: "javascript", version: "synthetic" },
+    features: [],
+    budget: { turns: 50, submissions: 10 },
+    defaultReasoning: "high",
+    finalCodeLength: null,
+    ...over,
   }) as ModelReceipt;
+/** Everything a player reads: questions, answers, notes, FYIs, the waiting line and links. */
+const visible = (r: ReturnType<typeof buildReport>) =>
+  [r.waiting, r.next?.label, r.profile?.label, ...r.questions.flatMap((x) => [x.question, x.answer, x.note, x.fyi])].join(" ");
 
-test("a new player gets one inviting empty state, never zero-filled chapters", () => {
+test("a new player gets one line and a start, no empty cards", () => {
   const r = buildReport(input());
   assert.equal(r.empty, true);
-  assert.deepEqual(r.chapters.map((c) => c.id), ["next"]);
-  const next = r.chapters[0] as NextChapter;
-  assert.equal(next.action?.href, "/start");
-  assert.equal(next.profile, null, "no profile prompt before any evidence");
-  assert.doesNotMatch(JSON.stringify(r), /0\/0|percentile|score/i);
+  assert.deepEqual(r.questions, []);
+  assert.equal(r.next?.href, "/start");
+  assert.equal(r.profile, null);
 });
 
-test("one unfinished attempt with no trace shows outcome and a resume action only", () => {
+test("something started but nothing answerable stays brief: one line and the resume", () => {
   const r = buildReport(input({ progress: progressOf({ "JS-001": { completedAt: null, completions: 0 } }) }));
   assert.equal(r.empty, false);
-  assert.deepEqual(r.chapters.map((c) => c.id), ["outcomes", "next"]);
-  const o = chapter<OutcomesChapter>(r, "outcomes")!;
-  assert.equal(o.headline, "You've started 1 challenge. It's still open.");
-  assert.equal(o.unexplored, 3);
-  assert.equal(o.note, "Open isn't failed: it's work you haven't finished yet.");
-  assert.equal(chapter<NextChapter>(r, "next")!.action?.href, "/challenges/JS-001");
-  assert.deepEqual(o.resume, { label: "Resume JS-001", href: "/challenges/JS-001" }, "resume sits with the opening message");
-  assert.deepEqual(r.comparisonRevisions, []);
+  assert.deepEqual(r.questions, []);
+  assert.equal(r.waiting, "Solve a challenge and your answers start here.");
+  assert.equal(r.next?.href, "/challenges/JS-001");
 });
 
-test("rich synthetic evidence tells all six chapters from what was recorded", () => {
+test("a solved trace answers the supported questions from recorded values only", () => {
   const js = summary("a1", "JS-001"),
     py = summary("a2", "PY-001", `sha256:${"b".repeat(64)}`);
-  const r = buildReport(
-    input({
-      progress: progressOf({
-        "JS-001": { completedAt: "2026-10-27T10:00:09Z", completions: 2, attempt: "a1" },
-        "PY-001": { completedAt: "2026-10-27T10:00:09Z", completions: 1, attempt: "a2" },
-      }),
-      attempts: device(js, py),
-      receipts: { [js.revision]: [receipt()], [py.revision]: [receipt({ runtime: { engine: "python" } })] },
-    }),
-  );
-  assert.deepEqual(r.chapters.map((c) => c.id), ["outcomes", "story", "habits", "minds", "surprise", "next"]);
-  const o = chapter<OutcomesChapter>(r, "outcomes")!;
-  assert.equal(o.headline, "You finished all 2 challenges you started.");
-  assert.deepEqual(o.heroes[0], { value: "2/2", label: "finished" });
-  assert.equal(o.resume, null, "no resume button when nothing is open");
-  assert.deepEqual(o.heroes[1], { value: "0/2", label: "passed first try" });
-  assert.equal(o.languages.length, 2);
-  assert.ok(o.languages[0].items[0].revisited, "two completions are a revisit");
-
-  const s = chapter<StoryChapter>(r, "story")!;
-  assert.match(s.headline, /first submission passed 1 of 3 checks\. The next one passed them all\./);
-  assert.equal(s.title, "It wasn't a straight line.");
-  assert.deepEqual(s.submissions.map((x) => `${x.passed}/${x.total}`), ["1/3", "3/3"]);
-  assert.deepEqual(s.markers.map((m) => m.kind), ["start", "fail", "pass", "done"], "opening isn't a return");
-  assert.equal(s.markers[0].x, 0);
-  assert.equal(s.markers.at(-1)!.x, 1);
-
-  const h = chapter<HabitChapter>(r, "habits")!;
-  assert.equal(h.small, 4);
-  assert.equal(h.large, 0);
-  assert.equal(h.headline, "Mostly small edits.", "2 checks per attempt isn't frequent");
-
-  const m = chapter<ComparisonChapter>(r, "minds")!;
-  assert.deepEqual(m.rows.map((x) => x.challenge), ["JS-001"], "a runtime mismatch is omitted, not explained");
-  assert.equal(m.rows[0].models[0].cell.kind, "solved");
-  assert.deepEqual(m.columns, ["synthetic/model"], "one column per model, no setting or protocol label");
-  assert.equal(m.headline, "You solved 1 of 1. synthetic/model solved 1 of 1.");
-  assert.equal(m.note, "Each model result is a single try.");
-  assert.equal(m.people, false, "no people column without a real figure");
-  const visible = r.chapters.flatMap((c) => [c.title, c.headline, "note" in c ? c.note : null]).join(" ");
-  assert.doesNotMatch(visible, /not enough|too few|not compared|sha256|harness|withheld|mismatch/);
-
-  const u = chapter<SurpriseChapter>(r, "surprise")!;
-  assert.equal(u.kind, "recovered");
-  assert.notEqual(u.challenge, s.challenge, "the surprise doesn't repeat the story");
+  const r = buildReport(input({ attempts: device(js, py) }));
+  assert.deepEqual(r.questions.map((x) => x.id), ["start", "iterate", "recovery", "rewrite", "typing", "difficulty", "languages"]);
+  // The fixture: first edit at 0.1 s, a 9.3 s session, 2 submissions, the first failed.
+  assert.equal(q(r, "start")!.answer, "About 1 s before your first edit, then 9 s to a solve.");
+  assert.equal(q(r, "iterate")!.answer, "A few checks per solve: 2 checks in a typical one.");
+  assert.deepEqual(q(r, "iterate")!.visual, { kind: "bars", bars: [{ label: "2–3 checks", value: 2, display: "2 solves" }] });
+  assert.equal(q(r, "recovery")!.answer, "2 solves came after a failed first submission, a median of 1 more check later.");
+  // 5 characters inserted, 2 deleted: 60% stays; all edits small.
+  assert.equal(q(r, "rewrite")!.answer, "You patch in small edits; about 60% of what you type stays.");
+  // 90 ms between keystrokes in a burst: 60000 / 90 / 5 = 133.
+  assert.equal(q(r, "typing")!.answer, "About 133 words a minute while you're typing.");
+  assert.equal(q(r, "difficulty")!.answer, "easy 7 s, medium 7 s of active time, typically.");
+  assert.equal(q(r, "languages")!.answer, "Mostly JavaScript, then Python.");
+  assert.doesNotMatch(visible(r), /thinking|reading|finished \d|open|revisited|waiting|sha256|revision|harness|receipt|evidence/i);
 });
 
-test("quiet confidence leads the surprise only for a clean first-submission pass", () => {
-  const a = summary("q1", "JS-001");
-  const clean = { ...a, values: { ...a.values, firstSubmit: 1 } };
-  const r = buildReport(input({ attempts: device(clean) }));
-  const u = chapter<SurpriseChapter>(r, "surprise")!;
-  assert.equal(u.kind, "quiet-confidence");
-  assert.equal(u.note, null);
-  const gapped = { ...clean, issues: ["Recording gap."] };
-  assert.equal(chapter(buildReport(input({ attempts: device(gapped) })), "surprise"), undefined);
-});
-
-test("fewer submissions compares only the same version and conditions", () => {
-  const first = summary("r1", "JS-001"),
-    later = { ...summary("r2", "JS-001"), started: "2026-10-28T10:00:00Z", answers: {}, values: { ...first.values, submissions: 1, firstSubmit: 1 } };
-  const r = buildReport(input({ attempts: device(first, later) }));
-  const u = chapter<SurpriseChapter>(r, "surprise")!;
-  assert.equal(u.kind, "fewer-submissions");
-  assert.equal(u.note, "It's the same challenge, so familiarity helps.");
-  const other = { ...later, conditions: ["Runtime: {}"] };
-  const r2 = buildReport(input({ attempts: device(first, other) }));
-  assert.notEqual(chapter<SurpriseChapter>(r2, "surprise")?.kind, "fewer-submissions");
-});
-
-test("pending, unreadable and incomparable model results leave the chapter out", () => {
-  const a = summary("m1", "JS-001");
-  const minds = (receipts: ReportInput["receipts"]) => chapter<ComparisonChapter>(buildReport(input({ attempts: device(a), receipts })), "minds");
-  assert.equal(minds({ [a.revision]: "loading" }), undefined);
-  assert.equal(minds({ [a.revision]: "unavailable" }), undefined);
-  assert.equal(minds({ [a.revision]: [] }), undefined);
-  assert.equal(minds({ [a.revision]: [receipt({ state: "missing", submissions: null }), receipt({ model: "x/model", state: "infrastructure-failed" })] }), undefined);
-  const decided = minds({ [a.revision]: [receipt({ state: "missing", submissions: null }), receipt({ model: "other/model", state: "refused" })] })!;
-  assert.deepEqual(decided.rows[0].models.map((m) => [m.model, m.cell.kind, m.cell.note]), [["other/model", "not-solved", "didn't solve"]]);
-  assert.equal(decided.headline, "You solved 1 of 1. other/model solved 0 of 1.");
-});
-
-test("stories never form from a trace without checks, and gaps are shortened, not named", () => {
+test("gapped traces, one difficulty level and no failed first submission leave questions out", () => {
   const a = summary("g1", "JS-001");
-  const late = {
-    ...a,
-    timeline: a.timeline.map((t, i) => (i >= 3 ? { ...t, at: new Date(Date.parse(t.at) + 3 * 3600_000).toISOString() } : t)),
-  };
-  const s = chapter<StoryChapter>(buildReport(input({ attempts: device(late) })), "story")!;
-  assert.equal(s.breaks, 1);
-  assert.equal(s.note, null);
-  assert.doesNotMatch(JSON.stringify(s), /thinking|distract|confus/i);
-  const quiet = { ...a, completed: false, timeline: a.timeline.slice(0, 2), values: { ...a.values, submissions: 0, examples: 0 } };
-  assert.equal(chapter(buildReport(input({ attempts: device(quiet) })), "story"), undefined);
+  const gapped = { ...a, issues: ["Recording gap."] };
+  assert.deepEqual(buildReport(input({ attempts: device(gapped) })).questions, []);
+  const r = buildReport(input({ attempts: device(a) }));
+  assert.equal(q(r, "difficulty"), undefined, "one level isn't an answer to by-difficulty");
+  const clean = { ...a, values: { ...a.values, firstSubmit: 1 } };
+  assert.equal(q(buildReport(input({ attempts: device(clean) })), "recovery"), undefined);
 });
 
-test("AI background shapes copy only when the person said so", () => {
-  const p = progressOf({ "JS-001": { completedAt: null, completions: 0 } });
-  assert.equal(chapter<OutcomesChapter>(buildReport(input({ progress: p })), "outcomes")!.aiNote, null);
-  assert.equal(chapter<OutcomesChapter>(buildReport(input({ progress: p, profile: { aiUse: "rarely" } })), "outcomes")!.aiNote, null);
-  const o = chapter<OutcomesChapter>(buildReport(input({ progress: p, profile: { aiUse: "daily" } })), "outcomes")!;
-  assert.equal(o.aiNote, "no AI in this editor");
-  assert.doesNotMatch(JSON.stringify(o), /without AI|unaided|deteriorat/i);
+test("the model comparison is one tiny FYI on the iterate answer, only from comparable solves", () => {
+  const a = summary("m1", "JS-001");
+  const fyi = (receipts: ReportInput["receipts"]) => q(buildReport(input({ attempts: device(a), receipts })), "iterate")!.fyi;
+  assert.equal(fyi({ [a.revision]: [receipt()] }), "FYI: models that solved the same challenges needed 2 submissions, typically.");
+  assert.equal(fyi({}), null);
+  assert.equal(fyi({ [a.revision]: "loading" }), null);
+  assert.equal(fyi({ [a.revision]: "unavailable" }), null);
+  assert.equal(fyi({ [a.revision]: [receipt({ runtime: { engine: "python" } })] }), null, "a different runtime isn't comparable");
+  assert.equal(fyi({ [a.revision]: [receipt({ state: "stopped" })] }), null);
+  assert.equal(fyi({ [a.revision]: [receipt({ reasoning: "low", defaultReasoning: "high" })] }), null, "only the default setting counts");
+  const r = buildReport(input({ attempts: device(a), receipts: { [a.revision]: [receipt()] } }));
+  assert.equal(r.questions.filter((x) => x.fyi).length, 1, "never a comparison section");
+});
+
+test("a later solve with fewer submissions answers the repeat question; otherwise it's left out", () => {
+  const first = summary("r1", "JS-001"),
+    later = { ...summary("r2", "JS-001"), started: "2026-10-28T10:00:00Z", values: { ...first.values, submissions: 1, firstSubmit: 1 } };
+  assert.equal(q(buildReport(input({ attempts: device(first, later) })), "repeat")!.answer, "Back on JS-001, you needed 1 submission instead of 2.");
+  const other = { ...later, conditions: ["Runtime: {}"] };
+  assert.equal(q(buildReport(input({ attempts: device(first, other) })), "repeat"), undefined);
+});
+
+test("durations read in seconds, minutes or hours without false precision", () => {
+  assert.equal(duration(400), "1 s");
+  assert.equal(duration(42_000), "42 s");
+  assert.equal(duration(5 * 60_000 + 20_000), "5 min");
+  assert.equal(duration(95 * 60_000), "1 h 35 min");
 });
 
 test("device and uploaded evidence is deduplicated by attempt and revision", () => {
@@ -212,71 +125,11 @@ test("device and uploaded evidence is deduplicated by attempt and revision", () 
   const merged = mergeEvidence([a], [older, summary("d2", "PY-001")]);
   assert.equal(merged.length, 2);
   assert.equal(merged.find((x) => x.attempt === "d1")!.source, "device");
-  const newer = { ...a, last: "2026-10-28T00:00:00Z" };
-  assert.equal(mergeEvidence([a], [newer])[0].source, "uploaded");
-  const other = { ...a, revision: `sha256:${"c".repeat(64)}` };
-  assert.equal(mergeEvidence([a], [other]).length, 2, "revisions stay separate");
+  assert.equal(mergeEvidence([a], [{ ...a, last: "2026-10-28T00:00:00Z" }])[0].source, "uploaded");
+  assert.equal(mergeEvidence([a], [{ ...a, revision: `sha256:${"c".repeat(64)}` }]).length, 2, "revisions stay separate");
 });
 
-test("share text holds only selected safe findings", () => {
-  const a = summary("s1", "JS-001");
-  const r = buildReport(input({ attempts: device(a) }));
-  const next = chapter<NextChapter>(r, "next")!;
-  assert.ok(next.shareable.length >= 2);
-  assert.equal(shareText(r, new Set(), "https://example.test/"), "");
-  const text = shareText(r, new Set([next.shareable[0].id]), "https://example.test/");
-  assert.equal(text.split("\n").length, 3);
-  assert.doesNotMatch(text, /synthetic-participant|s1|sha256|abc/);
-});
-
-test("a cohort is never invented: chapters carry no human percentile or rank", () => {
-  const a = summary("c1", "JS-001");
-  const r = buildReport(input({ attempts: device(a), progress: progressOf({ "JS-001": { completedAt: "x", completions: 1 } }), receipts: { [a.revision]: [receipt()] } }));
-  assert.doesNotMatch(JSON.stringify(r.chapters), /percentile|faster than|top \d|rank|IQ|score/i);
-});
-
-test("a finish known only from uploads is marked, not presented as device progress", () => {
-  const a = { ...summary("u1", "JS-001"), source: "uploaded" as const };
-  const r = buildReport(input({ attempts: [a] }));
-  const o = chapter<OutcomesChapter>(r, "outcomes")!;
-  assert.equal(o.languages[0].items[0].fromUploads, true);
-});
-
-
-test("errored and cancelled submissions keep their place in the story", () => {
-  const a = summary("e1", "JS-001");
-  const at = (s: number) => new Date(Date.parse("2026-10-27T10:00:00Z") + s * 1000).toISOString();
-  const withSubs = (labels: string[], completed = true) => ({
-    ...a,
-    completed,
-    timeline: [
-      { at: at(0), label: "started" },
-      ...labels.map((label, i) => ({ at: at(10 + i * 10), label })),
-      ...(completed ? [{ at: at(100), label: "completed" }] : []),
-    ],
-  });
-  const failErrorPass = withSubs([
-    "failed: 1/3 checks; 0 static rules",
-    "errored: 0/3 checks; 0 static rules",
-    "passed: 3/3 checks; 0 static rules",
-  ]);
-  const s = chapter<StoryChapter>(buildReport(input({ attempts: device(failErrorPass) })), "story")!;
-  assert.equal(s.headline, "On JS-001, your first submission passed 1 of 3 checks. 2 submissions later, one passed them all.");
-  assert.deepEqual(s.submissions.map((x) => x.result), ["failed", "errored", "passed"]);
-  assert.deepEqual(s.markers.map((m) => m.kind), ["start", "fail", "error", "pass", "done"]);
-  const errorFirst = withSubs(["errored: 0/3 checks; 0 static rules", "passed: 3/3 checks; 0 static rules"]);
-  assert.match(
-    chapter<StoryChapter>(buildReport(input({ attempts: device(errorFirst) })), "story")!.headline,
-    /your first submission ended in an error\. The next one passed them all\./,
-  );
-  const openErr = withSubs(["failed: 2/3 checks; 0 static rules", "cancelled: 0/3 checks; 0 static rules"], false);
-  assert.match(
-    chapter<StoryChapter>(buildReport(input({ attempts: device(openErr) })), "story")!.headline,
-    /your last submission was cancelled\. It's still open\./,
-  );
-});
-
-test("the real uploaded-history projection flows into the report beside device evidence", async () => {
+test("the real uploaded-history projection flows into the portrait beside device evidence", async () => {
   const { historyResult, historyWindow } = await import("../../../packages/developer-profile/uploaded-history");
   const older = trace("older-attempt", "older-source", "JS-001"),
     latest = trace("latest-attempt", "latest-source", "JS-001");
@@ -299,63 +152,13 @@ test("the real uploaded-history projection flows into the report beside device e
       ...records.map((r) => ({ scope: "observation", attempt_id: o.attemptId, record_id: r.recordId, payload: r.payload })),
     ];
   });
-  const page = historyResult(
-    "synthetic-participant",
-    historyWindow({ from: "2026-10-27", to: "2026-10-27", after: "" }),
-    rows,
-  );
-  assert.equal(page.attempts.length, 2);
-  // The device still holds only the latest attempt; the older one survives only in uploads.
-  const device = deriveAttempts(latest, "synthetic-participant");
-  const merged = mergeEvidence(device, page.attempts);
-  assert.equal(merged.length, 2, "the shared attempt is counted once");
+  const page = historyResult("synthetic-participant", historyWindow({ from: "2026-10-27", to: "2026-10-27", after: "" }), rows);
+  const merged = mergeEvidence(deriveAttempts(latest, "synthetic-participant"), page.attempts);
   assert.deepEqual(merged.map((a) => [a.attempt, a.source]), [
     ["latest-attempt", "device"],
     ["older-attempt", "uploaded"],
   ]);
-  const r = buildReport(
-    input({
-      attempts: merged,
-      progress: progressOf({ "JS-001": { completedAt: "2026-10-27T10:00:09Z", completions: 1, attempt: "latest-attempt" } }),
-    }),
-  );
-  const o = chapter<OutcomesChapter>(r, "outcomes")!;
-  assert.ok(o.languages[0].items[0].revisited, "two attempts on one challenge is a revisit");
-  assert.ok(chapter<StoryChapter>(r, "story"));
+  const r = buildReport(input({ attempts: merged }));
+  assert.match(q(r, "iterate")!.answer, /2 checks/);
   assert.doesNotMatch(JSON.stringify(r), /synthetic-artifact|"abc"|secret/, "no code or identifiers reach the report");
-});
-
-test("one row per model: its declared default setting's first try, as practice shows it", () => {
-  const a = summary("t1", "JS-001");
-  const m = chapter<ComparisonChapter>(
-    buildReport(input({ attempts: device(a), receipts: { [a.revision]: [receipt({ reasoning: "low", state: "stopped" }), receipt({ reasoning: "high" })] } })),
-    "minds",
-  )!;
-  assert.equal(m.rows[0].models.length, 1);
-  assert.equal(m.headline, "You solved 1 of 1. synthetic/model solved 1 of 1.", "the low setting isn't shown");
-});
-
-test("people appear only as a real suppressed figure; otherwise nothing is said", async () => {
-  const { cohortResult } = await import("../../../packages/statistics/cohort");
-  const a = summary("h1", "JS-001");
-  const minds = (cohorts?: ReportInput["cohorts"], attempt = a) =>
-    chapter<ComparisonChapter>(buildReport(input({ attempts: device(attempt), receipts: { [attempt.revision]: [receipt()] }, cohorts })), "minds")!;
-  const row = (n: number, completed: number, submissions: number) => ({
-    runtime: '{"engine":"javascript","version":"synthetic"}', diagnostics: 0, practice: "first", completed, first_pass: 0, submissions, browsers: n,
-  });
-  const read = cohortResult([row(14, 1, 2), row(10, 1, 4), row(6, 0, 3)]);
-  assert.equal(minds({ [a.revision]: read }).rows[0].people, "80% of adults solved it · median 2 submissions");
-  assert.equal(minds({ [a.revision]: read }).people, true);
-  for (const absent of [
-    undefined,
-    { [a.revision]: { ...cohortResult([]), state: "disabled" as const } },
-    { [a.revision]: cohortResult([row(12, 1, 2)]) },
-    { [a.revision]: { ...cohortResult([]), state: "earlier-version" as const } },
-    { [a.revision]: "unavailable" as const },
-  ]) {
-    const m = minds(absent);
-    assert.equal(m.rows[0].people, null);
-    assert.equal(m.people, false);
-  }
-  assert.equal(minds({ [a.revision]: read }, { ...a, conditions: [] }), undefined, "unknown conditions: no model or people match, so no chapter");
 });

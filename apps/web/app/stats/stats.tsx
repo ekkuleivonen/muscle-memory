@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import { buildReport, mergeEvidence, type Report } from "../../lib/report";
 import type { ChallengeSummary } from "../../lib/challenges";
 import { useReportData, type HistoryStatus } from "./report-data";
-import { ChapterNav, ChapterView, Preview } from "./report-view";
+import { QuestionView } from "./report-view";
 import type { AttemptSummary } from "../../../../packages/developer-profile/derive";
 
 const NONE: AttemptSummary[] = [];
@@ -53,55 +53,50 @@ export function ReportBody({
   report: Report;
   status: React.ReactNode;
 }) {
-  if (report.empty) {
-    const next = report.chapters[0];
+  const next = report.next && (
+    <p>
+      <Link className="report-action" href={report.next.href}>
+        {report.next.label} →
+      </Link>
+    </p>
+  );
+  if (report.empty)
     return (
-      <>
-        <section className="report-hero" aria-labelledby="report-title">
-          <p className="t-brand">muscle memory / your report</p>
-          <h1 id="report-title" className="report-headline is-lead">
-            Your report starts with one challenge.
-          </h1>
-          <p className="report-context">
-            Solve something without AI and this page tells the story: what you
-            finished, how the attempt unfolded, and how models did on the same
-            task.
-          </p>
-          {next.id === "next" && next.action && (
-            <p>
-              <Link className="report-action" href={next.action.href}>
-                {next.action.label} →
-              </Link>
-            </p>
-          )}
-          {status}
-        </section>
-        <Preview />
-      </>
+      <section className="report-hero" aria-labelledby="report-title">
+        <h1 id="report-title" className="report-headline is-lead">
+          Your portrait starts with one challenge.
+        </h1>
+        {next}
+        {status}
+      </section>
     );
-  }
-  const count = report.chapters.length;
   return (
     <>
-      {/* The reveal comes first; where the evidence came from and the chapter list follow it. */}
-      <h1 className="sr-only">Your Muscle Memory report</h1>
-      <ChapterView chapter={report.chapters[0]} index={0} count={count} report={report} />
-      <div className="report-after-lead">
+      <header className="report-hero">
+        <h1 className="report-headline is-lead">How you code</h1>
         {status}
-        <ChapterNav chapters={report.chapters} />
-      </div>
-      {report.chapters.slice(1).map((c, i) => (
-        <ChapterView key={c.id} chapter={c} index={i + 1} count={count} report={report} />
+        {report.waiting && <p className="report-context">{report.waiting}</p>}
+        {report.waiting && next}
+      </header>
+      {report.questions.map((q) => (
+        <QuestionView key={q.id} q={q} />
       ))}
-      {!report.chapters.some((c) => c.id === "story") && <Preview />}
+      {!report.waiting && next}
+      {report.profile && (
+        <p className="report-note">
+          <Link className="t-cmd" href={report.profile.href}>
+            {report.profile.label}
+          </Link>
+        </p>
+      )}
     </>
   );
 }
 
 export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
-  // Chapter 4 picks the revisions; the data hook reads their receipts. Kept in state to break the cycle.
+  // The report picks the revisions for the model FYI; the data hook reads them. Kept in state to break the cycle.
   const [wanted, setWanted] = useState<Report["comparisonRevisions"]>([]);
-  const { privacy, local, history, receipts, cohorts } = useReportData(wanted);
+  const { privacy, local, history, receipts } = useReportData(wanted);
   const device = local.value;
   const uploaded = history.state === "ready" ? history.value.attempts : NONE;
   const attempts = useMemo(
@@ -117,10 +112,9 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
             attempts,
             profile: device.profile.profile,
             receipts,
-            cohorts,
           })
         : null,
-    [catalog, device, attempts, receipts, cohorts],
+    [catalog, device, attempts, receipts],
   );
   const key = report?.comparisonRevisions.map((r) => r.revision).join("|") ?? "";
   if (key !== wanted.map((r) => r.revision).join("|"))

@@ -28,46 +28,34 @@ test("before privacy and storage are read, nothing private or zero-filled render
   assert.doesNotMatch(html, /0\/0|finished|uploaded history|Load/);
 });
 
-test("the empty report leads with an invitation and a labelled preview", () => {
+test("the empty report is one line and a start, with no preview cards", () => {
   const report = buildReport({ catalog, progress: {}, attempts: [], profile: null, receipts: {} });
   const html = renderToStaticMarkup(createElement(ReportBody, { report, status: null }));
-  assert.match(html, /Your report starts with one challenge/);
+  assert.match(html, /Your portrait starts with one challenge/);
   assert.match(html, /href="\/start"/);
-  assert.match(html, /sample data, not\s+yours/);
-  assert.doesNotMatch(html, /UTC|Load uploaded history|developer-profile-2|sha256/);
+  assert.doesNotMatch(html, /sample data|report-question|<details/);
 });
 
-test("a rich report opens on a personal takeaway with chapters, visuals and evidence", () => {
+test("a portrait is questions with answers, never inventories, chapters or internals", () => {
   const attempts = deriveAttempts(trace(), "synthetic-participant").map((a) => ({ ...a, source: "device" as const }));
+  const receipt = { model: "synthetic/model", reportedModels: ["synthetic/model-2026"], reasoning: "high", harness: "h", try: 1, state: "completed" as const, submissions: 1, runtime: { engine: "javascript", version: "synthetic" }, features: [], budget: null, defaultReasoning: "high", finalCodeLength: null } as ModelReceipt;
   const report = buildReport({
     catalog,
     progress: { "JS-001": { attempt: "synthetic-attempt", startedAt: "2026-10-27T10:00:00Z", completedAt: "2026-10-27T10:00:09Z", completions: 1 } },
     attempts,
     profile: null,
-    receipts: { [attempts[0].revision]: "loading" },
+    receipts: { [attempts[0].revision]: [receipt] },
   });
   const html = renderToStaticMarkup(createElement(ReportBody, { report, status: null }));
-  const first = html.indexOf("<h2");
-  assert.ok(first > 0);
-  assert.match(html.slice(first, first + 200), /You finished the challenge you started/);
-  assert.match(html, /aria-label="Report chapters"/);
-  assert.match(html, /chapter-story/);
-  assert.match(html, /Checkpoints on JS-001, in order/);
-  // Insights only: no measurement internals, methods or diagnostics anywhere, even collapsed.
+  assert.match(html, /<h1[^>]*>How you code<\/h1>/);
+  assert.match(html, /How soon do you start typing\?/);
+  assert.match(html, /How fast do you type when you&#x27;re coding\?/);
+  assert.equal((html.match(/report-fyi/g) ?? []).length, 1, "one tiny model FYI, no comparison section");
+  assert.match(html, /FYI: models that solved the same challenges needed 1 submission, typically\./);
   assert.doesNotMatch(
     html,
-    /How this was worked out|evidence|sha256|[Rr]evision|harness|receipt|UTC|developer-profile|definition|median of|reading…|not compared|withheld|mismatch|<details(?! class="report-share")/,
+    /finished|unfinished|revisited|waiting|Could you still|chapter|Report chapters|evidence|sha256|[Rr]evision|harness|receipt|UTC|definition|withheld|mismatch|not compared|reading|thinking|<details|<table/,
   );
-});
-
-test("narrow screens get one comparison card per challenge with every model outcome", () => {
-  const attempts = deriveAttempts(trace(), "synthetic-participant").map((a) => ({ ...a, source: "device" as const }));
-  const receipt = { model: "synthetic/model", reportedModels: ["synthetic/model-2026"], reasoning: "high", harness: "h", try: 1, state: "completed" as const, submissions: 1, runtime: { engine: "javascript", version: "synthetic" }, features: [], budget: null, defaultReasoning: "high", finalCodeLength: null } as ModelReceipt;
-  const report = buildReport({ catalog, progress: {}, attempts, profile: null, receipts: { [attempts[0].revision]: [receipt] } });
-  const html = renderToStaticMarkup(createElement(ReportBody, { report, status: null }));
-  const cards = html.slice(html.indexOf('class="report-cards"'));
-  assert.match(cards, /<dt>synthetic\/model<\/dt><dd><span class="report-result is-solved">/);
-  assert.doesNotMatch(cards, /People|Adults|high|sha256/);
 });
 
 test("a matched model receipt renders real observed outcome, incompatible context withholds it", async () => {
