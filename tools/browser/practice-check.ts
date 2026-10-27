@@ -216,10 +216,12 @@ try {
     'export function countWords(text) { return text.split(" ").length; }',
   );
   await submit();
-  await page.locator(".ci-failing").waitFor();
+  await page.locator(".ci-failing").first().waitFor();
+  await page.locator(".hidden-checks summary").click();
   const hidden = page
     .locator(".ci-failing li")
     .filter({ hasText: "hidden case" });
+  assert.ok((await hidden.count()) > 0);
   assert.equal(await hidden.locator("code, pre, dl").count(), 0);
   const [failed] = await until("practice.submitted");
   assert.equal(failed.data.result, "failed");

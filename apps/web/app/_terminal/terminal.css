@@ -771,6 +771,12 @@
   .picker-key {
     display: none;
   }
+  .picker-title {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
 }
 /*
  * Text fields use a terminal's cursor, as the editor does: a steady block. Browsers without
