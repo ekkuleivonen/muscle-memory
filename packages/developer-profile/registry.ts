@@ -1,6 +1,8 @@
 /** Interpretation version, independent of capture. v2 adds pre-test user-error recovery
- * and separate infrastructure/unclassified failure categories; old summaries are not reinterpreted. */
-export const METRIC_VERSION = "developer-profile-2";
+ * and separate infrastructure/unclassified failure categories; v3 adds the code-character typing
+ * rate (typedKeys, typingTime; unavailable with Vim keybindings) and activeToSolve. Old summaries
+ * are not reinterpreted. */
+export const METRIC_VERSION = "developer-profile-3";
 /** Release gate: current Privacy Notice promises latest-attempt-only storage.
  * Enable only with approved retention disclosure/legal version; no consent change in ENG-340. */
 export const PROFILE_HISTORY_ENABLED = false;
@@ -129,6 +131,23 @@ export const METRICS = {
     SECTIONS[1],
     "Between-burst pauses",
     "Intervals over 2 seconds between non-repeat keydowns in one source; page exits are not measured pauses.",
+  ),
+  typedKeys: metric(
+    SECTIONS[1],
+    "Code-character keystrokes",
+    "Keydowns typing one character without Ctrl, Alt or Meta, each following another such keydown in the same source within 2 seconds. Arrows, Backspace and other keys break the run; pastes aren't keystrokes. Unavailable when Vim keybindings were on, since normal-mode letters are commands.",
+  ),
+  activeToSolve: metric(
+    SECTIONS[1],
+    "Interaction-active estimate to completion",
+    "The interaction-active estimate counting only interactions up to the completion observation: earlier page sessions whole, the completing session up to completion, none after. Unavailable without a completion.",
+    "ms",
+  ),
+  typingTime: metric(
+    SECTIONS[1],
+    "Code-character typing time",
+    "Sum of the intervals counted in Code-character keystrokes. The typing rate is typedKeys over typingTime; pauses over 2 seconds are not included.",
+    "ms",
   ),
   corrections: metric(
     SECTIONS[1],

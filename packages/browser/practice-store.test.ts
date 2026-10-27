@@ -55,7 +55,10 @@ test("every record written is queued for upload, oldest first, until sent", asyn
     await store.write([record("s.1", "{}"), record("s.2", "{}")]);
     assert.equal(await store.waiting(), 2);
     const { keys, records } = await store.pending(10, 1_000_000);
-    assert.deepEqual(records.map((r) => r.recordId), ["s.1", "s.2"]);
+    assert.deepEqual(
+      records.map((r) => r.recordId),
+      ["s.1", "s.2"],
+    );
     await store.sent(keys);
     assert.equal(await store.waiting(), 0);
     assert.ok((await store.deviceSecret()).length >= 32);
@@ -69,7 +72,11 @@ test("a dump restores elsewhere as the same identity, records and upload queue",
   const from = await openPracticeStore(new IDBFactory());
   const id = await from.participantId();
   const secret = await from.deviceSecret();
-  await from.write([record("s.1", "{}"), record("s.2", "{}"), record("s.3", "{}")]);
+  await from.write([
+    record("s.1", "{}"),
+    record("s.2", "{}"),
+    record("s.3", "{}"),
+  ]);
   const { keys } = await from.pending(1, 1_000_000);
   await from.sent(keys);
   const dump = await from.dump();
@@ -83,9 +90,15 @@ test("a dump restores elsewhere as the same identity, records and upload queue",
     await to.restore(dump);
     assert.equal(await to.participantId(), id);
     assert.equal(await to.deviceSecret(), secret);
-    assert.deepEqual((await to.records()).map((r) => r.recordId), ["s.1", "s.2", "s.3"]);
+    assert.deepEqual(
+      (await to.records()).map((r) => r.recordId),
+      ["s.1", "s.2", "s.3"],
+    );
     // What was already uploaded is not sent again; the rest is, oldest first.
-    assert.deepEqual((await to.pending(10, 1_000_000)).records.map((r) => r.recordId), ["s.2", "s.3"]);
+    assert.deepEqual(
+      (await to.pending(10, 1_000_000)).records.map((r) => r.recordId),
+      ["s.2", "s.3"],
+    );
   } finally {
     to.close();
   }
@@ -110,6 +123,43 @@ test("private-history identity reads create no identity or retained summaries; r
     );
     await store.clear(true);
     assert.equal(await store.existingIdentity(), null);
+  } finally {
+    store.close();
+  }
+});
+
+test("report evidence excludes artifacts, upload queue and unrelated private settings without changing storage", async () => {
+  const store = await openPracticeStore(new IDBFactory());
+  try {
+    const observation = record("practice.1", "{}");
+    const artifact: StoredRecord = {
+      ...record("artifact.1", "private synthetic code"),
+      kind: "artifact",
+    };
+    await store.restore({
+      settings: {
+        participantId: "p",
+        deviceSecret: "secret",
+        referral: "private",
+      },
+      records: [
+        observation,
+        artifact,
+        { ...record("foreign.1", "{}"), participantId: "other" },
+      ],
+      outbox: ["practice.1", "artifact.1"],
+    });
+    const before = await store.dump();
+    const evidence = await store.evidence();
+    assert.deepEqual(evidence, {
+      settings: { participantId: "p" },
+      records: [observation],
+      outbox: [],
+    });
+    assert.deepEqual(await store.dump(), before);
+    const stopped = new AbortController();
+    stopped.abort();
+    await assert.rejects(store.evidence(stopped.signal), /cancelled/);
   } finally {
     store.close();
   }

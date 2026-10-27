@@ -21,6 +21,11 @@ export function privateView<T>() {
         listeners.delete(listener);
       };
     },
+    /** An immediately available, already-authorized summary while a fuller read runs. */
+    prime(value: T) {
+      if (!blocked && state.value === null)
+        publish({ value, loading: false, error: false });
+    },
     invalidate(block = false) {
       generation++;
       if (block) blocked = true; // Only an explicit boundary finish may unblock reads.
