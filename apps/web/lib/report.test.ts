@@ -115,7 +115,7 @@ test("rich synthetic evidence tells all six chapters from what was recorded", ()
   assert.ok(o.languages[0].items[0].revisited, "two completions are a revisit");
 
   const s = chapter<StoryChapter>(r, "story")!;
-  assert.match(s.headline, /first graded submission passed 1 of 3 checks\. Next time, all of them did/);
+  assert.match(s.headline, /first submission passed 1 of 3 checks\. The next one passed them all\./);
   assert.equal(s.title, "It wasn't a straight line.");
   assert.deepEqual(s.submissions.map((x) => `${x.passed}/${x.total}`), ["1/3", "3/3"]);
   assert.deepEqual(s.markers.map((m) => m.kind), ["start", "fail", "pass", "done"], "opening isn't a return");
@@ -240,4 +240,60 @@ test("a finish known only from uploads is marked, not presented as device progre
   const o = chapter<OutcomesChapter>(r, "outcomes")!;
   assert.equal(o.languages[0].items[0].fromUploads, true);
   assert.match(o.evidence.basis, /1 finished only in your uploads/);
+});
+
+test("failed receipt reads never become a claim that no model tried", () => {
+  const a = summary("f1", "JS-001"),
+    b = summary("f2", "PY-001", `sha256:${"d".repeat(64)}`);
+  const all = chapter<ComparisonChapter>(
+    buildReport(input({ attempts: device(a, b), receipts: { [a.revision]: "unavailable", [b.revision]: "unavailable" } })),
+    "minds",
+  )!;
+  assert.equal(all.headline, "Model results can't be read right now.");
+  assert.doesNotMatch(all.headline, /No model/);
+  const some = chapter<ComparisonChapter>(
+    buildReport(input({ attempts: device(a, b), receipts: { [a.revision]: [], [b.revision]: "unavailable" } })),
+    "minds",
+  )!;
+  assert.match(some.headline, /challenges that could be read; 1 couldn't be read right now/);
+  const mixed = chapter<ComparisonChapter>(
+    buildReport(input({ attempts: device(a, b), receipts: { [a.revision]: [receipt()], [b.revision]: "unavailable" } })),
+    "minds",
+  )!;
+  assert.match(mixed.headline, /synthetic\/model solved 1 of 1\. 1 couldn't be read right now\./);
+  assert.equal(chapter<ComparisonChapter>(buildReport(input({ attempts: device(a), receipts: { [a.revision]: [] } })), "minds")!.headline,
+    "No model has a comparable try on these exact challenges yet.");
+});
+
+test("errored and cancelled submissions keep their place in the story", () => {
+  const a = summary("e1", "JS-001");
+  const at = (s: number) => new Date(Date.parse("2026-10-27T10:00:00Z") + s * 1000).toISOString();
+  const withSubs = (labels: string[], completed = true) => ({
+    ...a,
+    completed,
+    timeline: [
+      { at: at(0), label: "started" },
+      ...labels.map((label, i) => ({ at: at(10 + i * 10), label })),
+      ...(completed ? [{ at: at(100), label: "completed" }] : []),
+    ],
+  });
+  const failErrorPass = withSubs([
+    "failed: 1/3 checks; 0 static rules",
+    "errored: 0/3 checks; 0 static rules",
+    "passed: 3/3 checks; 0 static rules",
+  ]);
+  const s = chapter<StoryChapter>(buildReport(input({ attempts: device(failErrorPass) })), "story")!;
+  assert.equal(s.headline, "On JS-001, your first submission passed 1 of 3 checks. 2 submissions later, one passed them all.");
+  assert.deepEqual(s.submissions.map((x) => x.result), ["failed", "errored", "passed"]);
+  assert.deepEqual(s.markers.map((m) => m.kind), ["start", "fail", "error", "pass", "done"]);
+  const errorFirst = withSubs(["errored: 0/3 checks; 0 static rules", "passed: 3/3 checks; 0 static rules"]);
+  assert.match(
+    chapter<StoryChapter>(buildReport(input({ attempts: device(errorFirst) })), "story")!.headline,
+    /your first submission ended in an error\. The next one passed them all\./,
+  );
+  const openErr = withSubs(["failed: 2/3 checks; 0 static rules", "cancelled: 0/3 checks; 0 static rules"], false);
+  assert.match(
+    chapter<StoryChapter>(buildReport(input({ attempts: device(openErr) })), "story")!.headline,
+    /your last submission was cancelled\. It's still open\./,
+  );
 });

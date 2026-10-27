@@ -58,3 +58,13 @@ test("a rich report opens on a personal takeaway with chapters, visuals and evid
   assert.doesNotMatch(html, /too few|not enough comparable/);
   assert.doesNotMatch(html, /UTC|developer-profile-2/);
 });
+
+test("narrow screens get one comparison card per challenge with every model outcome", () => {
+  const attempts = deriveAttempts(trace(), "synthetic-participant").map((a) => ({ ...a, source: "device" as const }));
+  const receipt = { model: "synthetic/model", reportedModels: ["synthetic/model-2026"], reasoning: "high", harness: "h", try: 1, state: "completed" as const, submissions: 1, runtime: { engine: "javascript", version: "synthetic" }, features: [], budget: null };
+  const report = buildReport({ catalog, progress: {}, attempts, profile: null, receipts: { [attempts[0].revision]: [receipt] } });
+  const html = renderToStaticMarkup(createElement(ReportBody, { report, status: null }));
+  const cards = html.slice(html.indexOf('class="report-cards"'));
+  assert.match(cards, /<dt>synthetic\/model · high<\/dt><dd><span class="report-result is-solved">/);
+  assert.match(cards, /<dt>People<\/dt><dd class="t-dim">not compared yet<\/dd>/);
+});

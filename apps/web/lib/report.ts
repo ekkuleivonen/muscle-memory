@@ -408,24 +408,35 @@ function story(attempts: readonly ReportAttempt[]): StoryChapter | null {
       markers.push({ kind: "gap", x, label: "Recording gap" });
   }
   const runs = markers.filter((m) => m.kind === "examples").length;
-  const decided = subs.filter((s) => s.result === "passed" || s.result === "failed");
-  const first = decided[0],
-    last = decided.at(-1);
+  // Every submission keeps its place: an errored or cancelled one is still a submission.
+  const first = subs[0],
+    last = subs.at(-1);
+  const passAt = subs.findIndex((s) => s.result === "passed" && s.passed === s.total && s.rules === 0);
+  const outcome = (s: (typeof subs)[number], which: string) =>
+    s.result === "errored"
+      ? `${which} submission ended in an error`
+      : s.result === "cancelled"
+        ? `${which} submission was cancelled`
+        : `${which} submission passed ${s.passed} of ${s.total} checks`;
+  const turned = a.completed && passAt > 0;
   let headline: string;
-  if (a.completed && first && first.result !== "passed")
-    headline = `On ${a.challenge}, your first graded submission passed ${first.passed} of ${first.total} checks. ${decided.length > 2 ? `${decided.length - 1} submissions later` : "Next time"}, all of them did.`;
+  if (turned)
+    headline = `On ${a.challenge}, your ${outcome(first, "first")}. ${passAt === 1 ? "The next one" : `${passAt} submissions later, one`} passed them all.`;
   else if (a.completed && runs)
     headline = `On ${a.challenge}, you ran the examples ${plural(runs, "time")} before a submission that passed everything.`;
   else if (a.completed)
     headline = `On ${a.challenge}, you got there in ${plural(subs.length, "submission")}.`;
   else if (last)
-    headline = `You left ${a.challenge} at ${last.passed} of ${last.total} checks. It's still open.`;
+    headline =
+      last.result === "passed" || last.result === "failed"
+        ? `You left ${a.challenge} at ${last.passed} of ${last.total} checks. It's still open.`
+        : `On ${a.challenge}, your last ${outcome(last, "").trim()}. It's still open.`;
   else
     headline = `On ${a.challenge}, you ran ${plural(checks(a), "check")} so far. It's still open.`;
   const between = a.values.editsBetweenRuns;
   return {
     id: "story",
-    title: a.completed && first && first.result !== "passed" ? "It wasn't a straight line." : "How one attempt went.",
+    title: turned ? "It wasn't a straight line." : "How one attempt went.",
     challenge: a.challenge,
     headline,
     markers,
@@ -614,11 +625,17 @@ function minds(input: ReportInput): {
   const named = [...tally].slice(0, 3).map(([slot, t]) => `${slot.split(" · ")[0]} solved ${t.solved} of ${t.tried}`);
   const perModel = tally.size > 3 ? `${named.join(", ")} and ${tally.size - 3} more` : named.join(", ");
   const ready = rows.every((r) => r.state !== "loading");
+  // A failed read is not an empty result: absence is claimed only for receipts actually read.
+  const unreadable = rows.filter((r) => r.state === "unavailable").length;
   const headline = !ready
     ? "Checking which models tried the same challenges…"
-    : !compared.length
-      ? "No model has a comparable try on these exact challenges yet."
-      : `You solved ${rows.filter((r) => r.you.kind === "solved").length} of ${rows.length}. ${perModel}.`;
+    : unreadable === rows.length
+      ? "Model results can't be read right now."
+      : !compared.length
+        ? unreadable
+          ? `No model has a comparable try on the challenges that could be read; ${unreadable} couldn't be read right now.`
+          : "No model has a comparable try on these exact challenges yet."
+        : `You solved ${rows.filter((r) => r.you.kind === "solved").length} of ${rows.length}. ${perModel}.${unreadable ? ` ${unreadable} couldn't be read right now.` : ""}`;
   return {
     wanted,
     chapter: {

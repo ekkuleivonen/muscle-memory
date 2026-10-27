@@ -243,9 +243,6 @@ function Minds({ c }: { c: ComparisonChapter }) {
       {/* Practice's completion link (owned by ENG-375) still points here. */}
       <span id="comparisons" />
       <h2 className="report-headline">{c.headline}</h2>
-      <p className="report-scroll-hint t-dim" aria-hidden>
-        scroll sideways for every model →
-      </p>
       <div className="report-table-wrap" tabIndex={0} role="region" aria-label="Results on the same challenges">
         <table className="report-table">
           <thead>
@@ -279,7 +276,7 @@ function Minds({ c }: { c: ComparisonChapter }) {
                       {r.state === "loading" ? (
                         <span className="t-dim">reading…</span>
                       ) : r.state === "unavailable" ? (
-                        <span className="t-dim">unavailable</span>
+                        <span className="t-dim">can&apos;t be read</span>
                       ) : m ? (
                         <CellView cell={m.cell} />
                       ) : (
@@ -294,7 +291,7 @@ function Minds({ c }: { c: ComparisonChapter }) {
                       {r.state === "loading"
                         ? "reading…"
                         : r.state === "unavailable"
-                          ? "unavailable"
+                          ? "can't be read"
                           : "no try yet"}
                     </span>
                   </td>
@@ -307,6 +304,44 @@ function Minds({ c }: { c: ComparisonChapter }) {
           </tbody>
         </table>
       </div>
+      {/* Narrow screens: one card per challenge, so every model's outcome is visible without scrolling. */}
+      <ul className="report-cards" aria-label="Results on the same challenges">
+        {c.rows.map((r) => (
+          <li key={r.revision}>
+            <Link className="t-cmd" href={`/challenges/${r.challenge}`}>
+              {r.challenge}
+            </Link>
+            <dl>
+              <dt>You</dt>
+              <dd>
+                <CellView cell={r.you} />
+              </dd>
+              {r.state !== "ready" ? (
+                <>
+                  <dt>Models</dt>
+                  <dd className="t-dim">{r.state === "loading" ? "reading…" : "can't be read right now"}</dd>
+                </>
+              ) : r.models.length ? (
+                r.models.map((m) => (
+                  <React.Fragment key={m.slot}>
+                    <dt>{m.slot}</dt>
+                    <dd>
+                      <CellView cell={m.cell} />
+                    </dd>
+                  </React.Fragment>
+                ))
+              ) : (
+                <>
+                  <dt>Models</dt>
+                  <dd className="t-dim">no try yet</dd>
+                </>
+              )}
+              <dt>People</dt>
+              <dd className="t-dim">{PEOPLE.label}</dd>
+            </dl>
+          </li>
+        ))}
+      </ul>
       {c.rows.some((r) => r.models.length) && (
         <details className="report-receipts">
           <summary>Exact models, versions and conditions</summary>
