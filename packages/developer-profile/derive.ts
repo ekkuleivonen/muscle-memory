@@ -287,6 +287,10 @@ function summarize(
       waitComplete = false;
     else wait += end.elapsedMs - q.elapsedMs;
   }
+  // Active time up to the completion: earlier page sessions whole, the completing one up to it.
+  const done = os.find((o) => o.type === "practice.completed");
+  let activeToSolve = 0,
+    afterDone = false;
   for (const source of orderedSources) {
     elapsed += Math.max(0, source.at(-1)!.elapsedMs - source[0].elapsedMs);
     let lastKey: number | null = null,
@@ -348,6 +352,14 @@ function summarize(
         active += at - lastInteraction;
       lastInteraction = at;
     }
+    const cutoff = afterDone ? -Infinity : done && source.includes(done) ? done.elapsedMs : Infinity;
+    let lastBefore: number | null = null;
+    for (const at of interactions) {
+      if (at > cutoff) break;
+      if (lastBefore !== null && at - lastBefore <= ACTIVE_GAP_MS) activeToSolve += at - lastBefore;
+      lastBefore = at;
+    }
+    if (done && source.includes(done)) afterDone = true;
   }
   if (!issues.length) {
     for (const k of [
@@ -430,8 +442,12 @@ function summarize(
     v.bursts = bursts;
     v.pauses = pauses;
     v.keyInterval = median(keyIntervals);
-    v.typedKeys = typedIntervals;
-    v.typingTime = typingMs;
+    // Vim normal mode turns letters into commands the editor still reports as keydowns, so a
+    // letter isn't proof of typed code there. Unsupported: unavailable, not guessed.
+    const vim = os.some((o) => data(o, "practice.opened")?.editor.features.includes("vim-keybindings"));
+    v.typedKeys = vim ? null : typedIntervals;
+    v.typingTime = vim ? null : typingMs;
+    v.activeToSolve = done ? activeToSolve : null;
     v.active = active;
     v.corrections = corrections;
     v.navigation = navigation;

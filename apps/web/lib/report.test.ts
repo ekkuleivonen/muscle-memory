@@ -72,7 +72,7 @@ test("a solved trace answers the supported questions from recorded values only",
   assert.equal(q(r, "start")!.answer, "Your first edit comes about 1 s in.");
   assert.equal(q(r, "iterate")!.answer, "A few checks per solve: 2 checks in a typical one.");
   assert.deepEqual(q(r, "iterate")!.visual, { kind: "bars", bars: [{ label: "2–3 checks", value: 2, display: "2 solves" }] });
-  assert.equal(q(r, "recovery")!.answer, "2 solves came after a failed first submission, a median of 1 more check later.");
+  assert.equal(q(r, "recovery")!.answer, "You kept going: 2 solves came after a failed first submission.");
   assert.equal(q(r, "rewrite")!.answer, "Mostly small edits: 100% change 20 characters or fewer.");
   assert.equal(q(r, "difficulty")!.answer, "easy 7 s, medium 7 s of active time, typically.");
   assert.equal(q(r, "languages")!.answer, "Mostly JavaScript, then Python.");
@@ -163,9 +163,10 @@ test("the real uploaded-history projection flows into the portrait beside device
 });
 
 /** The fixture trace with its key batch replaced: [elapsedMs, key, modifiers] per keydown. */
-function withKeys(attempt: string, keys: [number, string, string][]): AttemptSummary {
+function withKeys(attempt: string, keys: [number, string, string][], features?: string[]): AttemptSummary {
   const records = trace(attempt, `${attempt}-source`).map((r) => {
     const o = JSON.parse(r.payload);
+    if (features && o.type === "practice.opened") return { ...r, payload: JSON.stringify({ ...o, data: { ...o.data, editor: { ...o.data.editor, features } } }) };
     if (o.type !== "practice.keys") return r;
     o.data.keys = keys.map(([at, key, mods]) => [at, "down", key, key.length === 1 ? `Key${key.toUpperCase()}` : key, mods, false]);
     return { ...r, payload: JSON.stringify(o) };
@@ -246,4 +247,46 @@ test("reproduction: 10 inserted and 100 deleted units make no survival claim", (
   const a = summary("i10d100", "JS-001");
   const r = q(buildReport(input({ attempts: device({ ...a, values: { ...a.values, inserted: 10, deleted: 100 } }) })), "rewrite")!;
   assert.doesNotMatch(JSON.stringify(r), /stays|%\s*of what you type/);
+});
+
+test("Vim keybindings make the typing rate unavailable: normal-mode letters are commands", () => {
+  const hjkl = Array.from({ length: 61 }, (_, i) => [200 + i * 100, "hjkl"[i % 4], ""] as [number, string, string]);
+  const vim = withKeys("v1", hjkl, ["syntax-highlighting", "vim-keybindings"]);
+  assert.equal(vim.values.typedKeys, null);
+  assert.equal(vim.values.typingTime, null);
+  assert.equal(q(buildReport(input({ attempts: device(vim) })), "typing"), undefined);
+  assert.equal(withKeys("v2", hjkl).values.typedKeys, 60, "the same letters count in the standard keymap");
+});
+
+test("editing after a solve doesn't change time by difficulty; the solve stays the cutoff", () => {
+  const base = trace("post-solve", "post-solve-source");
+  const last = JSON.parse(base.at(-1)!.payload);
+  // Five minutes of edits 20 s apart after completion: all inside the 30 s active gap.
+  const extra = Array.from({ length: 15 }, (_, i) => {
+    const o = {
+      ...last,
+      type: "practice.edit",
+      observationId: `post-solve-edit-${i}`,
+      source: { ...last.source, sequence: last.source.sequence + 1 + i },
+      elapsedMs: last.elapsedMs + 20_000 * (i + 1),
+      occurredAt: new Date(Date.parse(last.occurredAt) + 20_000 * (i + 1)).toISOString(),
+      data: { file: "synthetic.js", revision: 10 + i, changes: [7, [0, "z"]], changesBytes: 10, changesTruncated: false, userEvent: "input.type", selection: null, docLength: 8 + i },
+    };
+    return { ...base.at(-1)!, recordId: o.observationId, payload: JSON.stringify(o) };
+  });
+  const before = deriveAttempts(base, "synthetic-participant")[0],
+    after = deriveAttempts([...base, ...extra], "synthetic-participant")[0];
+  assert.ok(after.values.active! > before.values.active! + 200_000, "whole-attempt active time grew");
+  assert.equal(after.values.activeToSolve, before.values.activeToSolve, "time to the solve didn't");
+  const py = summary("post-solve-py", "PY-001", revB);
+  const answer = (a: AttemptSummary) => q(buildReport(input({ attempts: device(a, py) })), "difficulty")!.answer;
+  assert.equal(answer(after), answer(before));
+});
+
+test("recovery states solves after a failed first submission, never checks to a solve", () => {
+  const a = summary("rc1", "JS-001");
+  // recoveryChecks counts checks to the first improvement (0/3 to 1/3), not to 3/3.
+  const r = q(buildReport(input({ attempts: device({ ...a, values: { ...a.values, recoveryChecks: 1 } }) })), "recovery")!;
+  assert.equal(r.answer, "You kept going: 1 solve came after a failed first submission.");
+  assert.doesNotMatch(r.answer, /check/);
 });

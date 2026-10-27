@@ -178,12 +178,12 @@ function current<T>(catalog: readonly ChallengeSummary[], pick: (c: ChallengeSum
     return c && c.revision === a.revision ? pick(c) : undefined;
   };
 }
-/** Active time (keystrokes, edits and selections, gaps over 30 s left out) by catalog difficulty. */
+/** Active time up to the solve (keystrokes, edits and selections, gaps over 30 s left out) by difficulty. */
 function difficulty(solved: ReportAttempt[], catalog: readonly ChallengeSummary[]): Question | null {
   const level = current(catalog, (c) => c.difficulty);
   const order = ["easy", "medium", "hard"];
   const groups = order
-    .map((d) => ({ d, times: solved.filter((a) => level(a) === d && num(a.values.active) && a.values.active! > 0).map((a) => a.values.active!) }))
+    .map((d) => ({ d, times: solved.filter((a) => level(a) === d && num(a.values.activeToSolve) && a.values.activeToSolve! > 0).map((a) => a.values.activeToSolve!) }))
     .filter((g) => g.times.length);
   // A difference needs two levels; one level alone isn't an answer to "by difficulty".
   if (groups.length < 2) return null;
@@ -196,7 +196,7 @@ function difficulty(solved: ReportAttempt[], catalog: readonly ChallengeSummary[
     question: "How long do harder challenges take you?",
     answer: bars.map((b) => `${b.label} ${b.display}`).join(", ") + " of active time, typically.",
     visual: { kind: "bars", bars },
-    note: "Active time counts the minutes you were typing, editing or selecting.",
+    note: "Active time counts the minutes you were typing, editing or selecting before the solve.",
     fyi: null,
   };
 }
@@ -271,19 +271,17 @@ function rewrite(attempts: readonly ReportAttempt[]): Question | null {
   };
 }
 
-/** Failed first submission, then solved: how many checks it took to come back. */
+/**
+ * Solves whose first submission failed. Only the count: `recoveryChecks` measures checks to the
+ * first improvement, not to the solve, so it isn't presented as either here.
+ */
 function recovery(solved: ReportAttempt[]): Question | null {
   const back = solved.filter((a) => clean(a) && a.values.firstSubmit === 0);
   if (!back.length) return null;
-  const checks = back.filter((a) => num(a.values.recoveryChecks)).map((a) => a.values.recoveryChecks!);
-  const m = median(checks);
   return {
     id: "recovery",
     question: "What happens after a failed submission?",
-    answer:
-      m === null
-        ? `${plural(back.length, "solve")} came after a failed first submission.`
-        : `${plural(back.length, "solve")} came after a failed first submission, a median of ${plural(m, "more check")} later.`,
+    answer: `You kept going: ${plural(back.length, "solve")} came after a failed first submission.`,
     visual: { kind: "turn", from: "first submission failed", to: `solved ${back.length}×` },
     note: null,
     fyi: null,
