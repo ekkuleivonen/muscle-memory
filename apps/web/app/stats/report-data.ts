@@ -40,7 +40,7 @@ export type HistoryStatus =
   | { state: "idle" }
   | { state: "loading" }
   | { state: "ready"; value: UploadedHistory; notice?: string }
-  | { state: "no-uploads" | "limited" | "unavailable" | "unauthorized"; message: string };
+  | { state: "no-uploads" | "limited" | "unavailable" | "unauthorized" | "held"; message: string };
 
 /** After the report closes, uploaded summaries stay in page memory at most this long, so returning to /stats doesn't re-query. */
 const HISTORY_TTL_MS = 5 * 60 * 1000;
@@ -108,6 +108,8 @@ export function useReportData(revisions: readonly { challenge: string; revision:
   const generation = useRef(0);
   const aborts = useRef(new Set<AbortController>());
   const blocked = useRef(false);
+  /** Set by a boundary while this report is open; a new visit (mount) starts without it. */
+  const held = useRef(false);
 
   /** Synchronously forget everything shown and everything in flight. */
   const clear = useCallback(
@@ -161,7 +163,7 @@ export function useReportData(revisions: readonly { challenge: string; revision:
       if (!identity) {
         setHistory({
           state: "no-uploads",
-          message: "Nothing has been uploaded from this browser yet, so the report uses this device only.",
+          message: "No uploads are linked to this browser, so the report uses this device only.",
         });
         return;
       }
@@ -250,7 +252,12 @@ export function useReportData(revisions: readonly { challenge: string; revision:
       return;
     }
     void readDevice(profile);
-    void loadHistory();
+    if (held.current)
+      setHistory({
+        state: "held",
+        message: "Not re-read after the reset or import. Open the report again to include your uploads.",
+      });
+    else void loadHistory();
   }, [clear, readDevice, loadHistory]);
 
   useEffect(() => {
@@ -270,6 +277,9 @@ export function useReportData(revisions: readonly { challenge: string; revision:
     const stop = listenPrivateBoundary((phase) => {
       if (phase === "start") {
         blocked.current = true;
+        // Reset, import and deletion: this report re-reads only the device. Uploads return on a
+        // later visit (a new mount); deletion's tombstone and cleared identity refuse even that.
+        held.current = true;
         flushSync(() => clear(true));
       } else if (!boundaries) {
         // Only the outermost finish reopens reads; the module listener has already counted it.

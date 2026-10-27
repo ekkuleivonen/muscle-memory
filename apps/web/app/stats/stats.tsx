@@ -50,7 +50,11 @@ function Freshness({
         : "no uploads"
       : history.state === "loading" || history.state === "idle"
         ? "adding uploads…"
-        : "uploads unavailable";
+        : history.state === "held"
+          ? "uploads not re-read"
+          : history.state === "no-uploads"
+            ? "no uploads linked"
+            : "uploads unavailable";
   return (
     <details className="report-sources">
       <summary>
@@ -217,8 +221,9 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
                 challenge version. {PEOPLE.reason}
               </p>
               <p>
-                Reset clears this device&apos;s progress, not your uploads, so the
-                report can still read them; deleting your account removes both.
+                Reset clears this device&apos;s progress, not your uploads; the
+                report reads them again the next time you open it. Deleting your
+                account removes both.
                 Going stealth turns this report off.{" "}
                 <Link className="t-cmd" href="/settings">
                   Manage your data →
