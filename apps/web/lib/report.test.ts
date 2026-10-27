@@ -221,3 +221,29 @@ test("an attempt on an earlier revision isn't classified with current difficulty
   assert.equal(q(r, "difficulty"), undefined, "only PY-001 (medium) has matching metadata: one level");
   assert.equal(q(r, "languages")!.answer, "All Python so far.");
 });
+
+test("reproduction: a page observation an hour after completion doesn't change any answer", () => {
+  const base = trace("late-page", "late-page-source");
+  const last = JSON.parse(base.at(-1)!.payload);
+  const page = {
+    ...last,
+    type: "practice.page",
+    observationId: "late-page-observation",
+    source: { ...last.source, sequence: last.source.sequence + 1 },
+    elapsedMs: last.elapsedMs + 3600_000,
+    occurredAt: new Date(Date.parse(last.occurredAt) + 3600_000).toISOString(),
+    data: { visible: true, focused: true, width: 1280, height: 800 },
+  };
+  const later = [...base, { ...base.at(-1)!, recordId: page.observationId, payload: JSON.stringify(page) }];
+  const before = buildReport(input({ attempts: device(deriveAttempts(base, "synthetic-participant")[0]) }));
+  const after = buildReport(input({ attempts: device(deriveAttempts(later, "synthetic-participant")[0]) }));
+  assert.ok(deriveAttempts(later, "synthetic-participant")[0].values.elapsed! >= 3600_000, "the session span grew by an hour");
+  assert.deepEqual(after.questions.map((x) => x.answer), before.questions.map((x) => x.answer));
+  assert.doesNotMatch(after.questions.map((x) => x.answer).join(" "), /\bh\b|to a solve/);
+});
+
+test("reproduction: 10 inserted and 100 deleted units make no survival claim", () => {
+  const a = summary("i10d100", "JS-001");
+  const r = q(buildReport(input({ attempts: device({ ...a, values: { ...a.values, inserted: 10, deleted: 100 } }) })), "rewrite")!;
+  assert.doesNotMatch(JSON.stringify(r), /stays|%\s*of what you type/);
+});
