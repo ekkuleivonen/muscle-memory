@@ -2,7 +2,7 @@
 
 The Terms (`/terms`) and Privacy Notice (`/privacy`) are drafts, written to be read, and versioned together as `LEGAL_VERSION` in `apps/web/lib/legal.ts`. Every app page requires accepting them first ("I'm 16 or older and accept…"), at `/consent`, or by starting from quick start (`/start`); nothing is recorded before. The account stores the version and time, the consent cookie (`mm_consent`) carries the legal version, and every recorded observation carries it as `termsVersion`. A new version therefore sends everyone back to sign again on their next visit.
 
-The texts are not legal assurance. `LEGAL_DRAFT` stays true, with its banner on both pages, until every launch gate below is closed.
+The texts are not legal assurance. On 27 October 2026 the owner published them without the draft banner, from version 2026-10-27.1, before a legal review: the launch gates below that are still open stay open.
 
 ## Why no opt-in for recording
 
@@ -49,7 +49,7 @@ Anything new to record goes into this table, [telemetry](telemetry.md) and the n
 - **2026-10-26.1**: drops the random handle: an account is only a random ID.
 - **2026-10-26.2**: the country uploads come from, worked out by Cloudflare; the IP address is never stored with records, and small countries are suppressed in anything published.
 - **2026-10-27** (ENG-339): reconciled with shipped behaviour. The Privacy Notice adds referral codes, arrivals and shares, what a result link exposes, the browser storage and `mm_consent` cookie, the pre-acceptance arrival note, rate limiting by IP, Workers Logs at 7 days (was a `[30]` placeholder), Cloudflare and GitHub as providers, the operator's name and address, storage in Cloudflare's Asia-Pacific region, erasure within 30 days, what deletion leaves behind (no longer the proof), `export` and the new `access` request, that stealth does not stop recording and internal statistics include everyone, that stealth hides model comparisons too (following [model runs](model-runs.md); it used to say they kept working), that nothing is published yet, and transfers outside the EU/EEA as an open question. The Terms replace "we're working on" device moves with export and import, say the code is MIT while the challenges stay ours, describe sharing results, and say enforcement means refusing, excluding or deleting records (there are no notices without contact details). Publication is narrowed to insights (statistics and findings, never records or code) across the notice, the Terms, the consent points and settings, and the Terms' licence is no longer perpetual or irrevocable and drops open-licensed datasets. Settings' stealth confirmation says "published insights" instead of "our stats", since internal statistics include stealth accounts. The manifesto no longer says recording happens "with your consent": its basis is the contract and legitimate interest, not consent. The liability cap is ¥10,000 with an explicit carve-out for intent and gross negligence; the Privacy Notice adds what 16–17-year-olds can expect; the age band splits 16–17 from 18–24. The transfer safeguards replace their placeholder: Japan's adequacy, Cloudflare's DPA (SCCs, UK Addendum, DPF, Global CBPR) and GitHub's DPF certification.
-- **2026-10-27.1** (ENG-372): erasure runs on Cloudflare, so GitHub is no longer a provider and leaves the providers and transfers.
+- **2026-10-27.1** (ENG-372): erasure runs on Cloudflare, so GitHub is no longer a provider and leaves the providers and transfers. The pages drop the draft banner (owner's decision; not yet legally reviewed).
 
 ## Owner decisions and review status
 
@@ -66,6 +66,7 @@ Anything new to record goes into this table, [telemetry](telemetry.md) and the n
 | Minimum age 16, self-declared | Owner, 27 October 2026: keep 16, since high-school students are among the people it helps most. Not legally reviewed. The age band splits 16–17 from 18–24 so under-18s can be treated apart in anything published or compared. |
 | Liability cap | ¥10,000 (was `[EUR 100]`), with an explicit carve-out for intent and gross negligence, which Japan's Consumer Contract Act requires since 2023 for a partial limit to hold. Chosen in ENG-339 at the owner's request ("whatever makes sense"); not legally reviewed. |
 | Workers Logs retention | 7 days: Cloudflare's fixed retention on Workers Paid, not an owner choice. |
+| Draft banner removed | Owner, 27 October 2026, before a legal review. |
 | Everything else | Unreviewed: no lawyer has read either page. |
 
 ## Launch gates
@@ -84,4 +85,4 @@ Launch (ENG-337) waits until each of these is closed and recorded here. None are
 6. **Age.** Whether 16 and a self-declaration are adequate where the service is offered. 16–17-year-olds are children under the UK Age Appropriate Design Code (and under 18 in Japan, where minors can cancel contracts made without a parent's consent), so before launch: a written data protection impact assessment, which keystroke capture probably needs anyway; profile nudges (ENG-356 to ENG-367) that never pressure anyone to share more; and comparisons and insights that keep 16–17 apart or leave them out.
 7. **Publication boundaries.** Before the first insight goes out: a minimum group size for every published figure (suggested 10 participants, and countries under 20 merged into "other"), including combinations of profile answers; stealth honoured in every publication and comparison, including for data collected before going stealth, and other people's stats hidden from stealth accounts. Stealth is reciprocal by design; have the lawyer confirm that trade-off, since it comes attached to an objection right. Record-level releases are out of scope; if they come back, they need their own review (raw typing rhythm is a fingerprint, and code is free text) and a new version first.
 8. **Typing rhythm.** Whether keystroke timing is biometric or otherwise special-category data in any jurisdiction offered, given the commitment not to use it to identify anyone.
-9. **Legal review** of both pages and the consent points, then `LEGAL_DRAFT` set to false in the same change as a new version.
+9. **Legal review** of both pages and the consent points. The pages no longer say they are drafts (owner, 27 October 2026), so any change a review brings is a new version, which asks everyone again.

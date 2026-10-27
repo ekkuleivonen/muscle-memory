@@ -6,7 +6,6 @@
 export const LEGAL_VERSION = "2026-10-27.1";
 /** Shown on the legal pages and in settings. */
 export const LEGAL_UPDATED = "27 October 2026";
-export const LEGAL_DRAFT = true;
 
 export interface Acceptance {
   version: string;
