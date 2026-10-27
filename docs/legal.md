@@ -92,3 +92,7 @@ Launch (ENG-337) waits until each of these is closed and recorded here. None are
 ## ENG-340 disclosure revision awaiting release
 
 The draft Privacy Notice and `LEGAL_VERSION` 2026-10-27.2 describe explicit owner-only uploaded statistics, request/page-memory-only summaries, unchanged raw retention and reset/deletion/stealth semantics. This version is not deployed. Existing acceptance flow will request renewed acceptance on eventual release. The [specific verification binding](eng-340-private-history.md) is owner-approved and prepared in source, with live rollout coordinated separately through dot; this draft adds no collection or persistent history. Human publication thresholds and final disclosure/security review remain open.
+
+## ENG-376 control proposal, not a disclosure release
+
+The [current-privacy proposal](eng-376-current-privacy.md) specifies new minimal persistent CONTROL state and internal eligibility authority requiring approval. No Legal version or live notice change is made here. Before activation, disclose pending/offline versus acknowledged exclusion, adult-only eligibility, unchanged retention/deletion timelines, and inability to retract already downloaded aggregates. Thresholds and rounding reduce risk without guaranteeing anonymity.

@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { syntheticRevision } from "../packages/developer-profile/fixtures";
+import { cohortMemberQuery } from "../packages/statistics/current-cohort";
 import { cohortQuery } from "../packages/statistics/cohort";
 import { ADULT, browser, many, profile, type Event } from "../packages/statistics/cohort-fixtures";
 
@@ -41,7 +42,10 @@ const scenarios: { name: string; events: Event[]; browsers: number }[] = [
   },
 ];
 const run = spawnSync(process.env.COHORT_SQL_PYTHON ?? "python3", ["tools/cohort-query-check.py"], {
-  input: JSON.stringify(scenarios.map((s) => ({ ...s, query: cohortQuery("JS-001", syntheticRevision) }))),
+  input: JSON.stringify(scenarios.flatMap((s) => [
+    { ...s, query: cohortQuery("JS-001", syntheticRevision) },
+    { ...s, name: `${s.name} (internal members)`, query: cohortMemberQuery("JS-001", syntheticRevision) },
+  ])),
   encoding: "utf8",
   maxBuffer: 32 * 1024 * 1024,
 });

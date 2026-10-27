@@ -185,3 +185,7 @@ Running over every tombstone each day catches rows the pipeline was still holdin
 ### Private uploaded statistics (ENG-340 draft)
 
 The optional explicit history reader reuses existing uploaded practice observations and the existing deterministic metric registry. It adds no events or persistent store and keeps current raw retention/erasure. It returns only code-free owner summaries after fresh original-secret verification and a tombstone check before and after derivation. See [the approved binding and exact bounds](eng-340-private-history.md). Local historical summary retention remains disabled. The exact verification binding is owner-approved and prepared in source. It has not been deployed from this draft.
+
+## Draft comparison privacy control (ENG-376)
+
+[The unconfigured approval proposal](eng-376-current-privacy.md) adds minimal persistent CONTROL privacy state and a separate internal eligibility RPC, with original-secret-authorized conditional writes. Telemetry never updates it. No live configuration or capture version changes: recorded observations retain their existing meaning. Human aggregate access stays disabled; publication fencing and native Basin synthetic verification remain release gates.

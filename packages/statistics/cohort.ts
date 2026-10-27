@@ -36,11 +36,9 @@ export interface CohortGroup {
   submissions: { p25: number; p50: number; p75: number } | null;
 }
 /**
- * Who is counted, stated with every read. Eligibility is positive: a browser counts only when its
- * latest uploaded profile states an adult band and says it is not stealth. Unknown is never adult,
- * never non-stealth. That latest profile is applied to all of its history, but it is not
- * authoritative: uploads can lag without bound and its order is client time. Must stay disabled
- * until the CONTROL-backed eligibility check in docs/human-cohorts.md replaces it.
+ * Published eligibility requires current CONTROL state in addition to conservative uploaded
+ * evidence. Client-ordered profiles cannot establish current privacy. The independent member
+ * checks are in current-cohort.ts; publication fencing still blocks activation.
  */
 export const ELIGIBILITY = {
   unit: "distinct browsers, not people",
@@ -163,7 +161,7 @@ function quantile(counts: [number, number][], q: number) {
 /**
  * Every published figure rests on at least `minimum` distinct browsers. Groups are a fixed
  * partition (runtime × diagnostics × first/repeat) with no totals across them, so no published
- * figure can be subtracted from another to isolate a smaller group.
+ * figure supplies a cross-group total. Thresholds do not guarantee anonymity.
  */
 export function cohortResult(rows: unknown, minimum = MIN_COHORT, readAt = new Date().toISOString()): CohortRead {
   if (!Array.isArray(rows) || rows.length > 5000) throw new Error("Cohort response exceeds its budget.");

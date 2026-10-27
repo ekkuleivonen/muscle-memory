@@ -18,15 +18,15 @@ It is a conservative floor, not a statistical guarantee.
 | --- | --- |
 | Route | `GET /api/cohort/<key>/<revision>` on the existing web Worker. Requires the current Terms cookie. Takes no participant ID, filter, slice or SQL |
 | Keys | Only each published challenge's **current** revision; any other registered revision gets `earlier-version` with no SQL. Unregistered revisions get 404. `synthetic-qa` revisions return no groups |
-| Data and credential | One fixed SELECT (`cohortQuery`) over the existing `default.events`, using web's existing `ADMIN_STATS_SQL_TOKEN`. No new token, binding, scope, service or stored data |
-| Output of SQL | Value counts only: (runtime, diagnostics, first/repeat, finished, first try passed, submissions) → number of browsers. No ID, attempt, record or payload leaves SQL or the Worker |
+| Data and credential | One fixed SELECT (`cohortQuery`) over the existing `default.events`, using web's existing `ADMIN_STATS_SQL_TOKEN`. No new token or token scope; new CONTROL state and a separate RPC binding are proposed but unconfigured |
+| Output of SQL | Value counts only: (runtime, diagnostics, first/repeat, finished, first try passed, submissions) → number of browsers. Browser IDs and per-browser outcomes leave SQL only into trusted web memory for current CONTROL checks; no IDs, attempts, records or payloads leave the Worker |
 
 ## Response (`CohortRead`)
 
 | Field | Meaning |
 | --- | --- |
 | `state` | `disabled`, `ready`, `unavailable`, or `earlier-version` |
-| `version`, `minimum`, `readAt` | `cohort-1`; 20; when the query ran |
+| `version`, `minimum`, `readAt` | `cohort-2`; 20; when the query ran |
 | `eligibility` | Who was counted, in words (below) |
 | `groups[]` | One per runtime × diagnostics × first/repeat, with at least 20 eligible browsers |
 
@@ -36,7 +36,7 @@ Each group has:
 - `firstTry`: share whose first submission passed every check with no rule fired, rounded to 5%;
 - `submissions`: `p25`, `p50` and `p75` of submissions among finishers.
 
-`firstTry` and `submissions` are null unless their own subset also has at least 20 browsers. Groups below 20 are omitted without trace. No total across groups is published, so no figure can be subtracted from another to isolate a small group.
+`firstTry` and `submissions` are null unless their own subset also has at least 20 browsers. Groups below 20 are omitted without trace. No total across groups is published. Rounding and thresholds reduce disclosure risk but do not guarantee anonymity; results can change at rounding boundaries.
 
 ## Eligibility: positive, never assumed
 
@@ -73,51 +73,13 @@ There is therefore **no guaranteed bound** on how long a browser that went steal
 
 **Fixed in this draft:** a browser with any conflicting `site.profile` copy is excluded entirely (fail closed). It never falls back to an older eligible profile. Covered by the SQLite and DataFusion checks.
 
-## Proposed fix before activation (not implemented; needs root's exact approval)
+## ENG-376 draft, authority and activation blockers
 
-The smallest change that reuses existing pieces (the ingest Worker, its CONTROL bucket, device-secret proofs and the approved `PARTICIPANT_OWNER` service binding) and adds no new service, store or credential:
+The obsolete epoch/cache proposal is replaced by [the exact ENG-376 approval proposal](eng-376-current-privacy.md). Neither new persistent privacy writes nor the internal member-check service binding is approved/configured. `ParticipantOwner.verify` remains unchanged. Cohorts stay off.
 
-1. **Authoritative current eligibility, written with the device secret.**
-   - New ingest route: `POST /ingest/v1/participants/<id>/privacy`, body `{ secret, stealth, adult }`.
-   - `adult` is `true` only for a stated 18+ band, `false` for 16–17, and `null` when unanswered.
-   - It verifies the secret against the existing proof, the same way deletion does, refuses after a tombstone and is rate-limited per participant.
-   - It writes CONTROL `privacy/<id>` = `{ stealth, adult, at: <server time> }` and bumps CONTROL `privacy/epoch` to the server time.
-   - Deletion also bumps the epoch.
-   - The browser sends it whenever stealth or age changes, and once to sync the current state. No new answers are collected; these are the same answers already uploaded, now with a server-ordered current value.
-2. **A bounded internal eligibility check on the existing binding.** Two new methods on the `ParticipantOwner` entrypoint, both read-only with no mutations:
-   - `epoch()` returns the epoch.
-   - `eligible(ids)` takes at most 1,000 IDs and returns only those with no tombstone and a privacy record of `{ stealth: false, adult: true }`. Missing, unknown or malformed records count as **not eligible**.
-3. **Cohort read uses it.**
-   - SQL returns per-browser outcome rows for the one revision: the pseudonymous browser ID plus the outcome fields, capped at 1,000 browsers, above which the result is unavailable.
-   - The web Worker asks `eligible(ids)`, aggregates only the browsers it returns, applies the 20 floor and drops the IDs from memory.
-   - The rows are cached (1 hour, per isolate) together with the epoch.
-   - **Every** request first calls `epoch()`, one CONTROL read. If the epoch changed, the Worker re-checks `eligible` on the cached rows and re-aggregates before answering.
-   - A cached aggregate therefore never includes someone who has since gone stealth, become ineligible or been deleted, once their write is acknowledged.
-   - If a group falls below 20 it disappears, and the player sees "fewer than 20 comparable adults". It is never kept at a stale size.
-4. **Bounds and cost.**
-   - Per uncached query: one SQL scan, plus up to 2,000 CONTROL reads (a tombstone and a privacy record per browser).
-   - Per request: one CONTROL read.
-   - The existing per-participant rate limiter covers the privacy write.
-5. **What still isn't covered.**
-   - A stealth change made offline counts only once its privacy write reaches ingest. The report and settings would say "pending" until it has been acknowledged.
-   - Browsers that never sync a privacy record are never counted.
-   - Requires a Privacy Notice version describing the stored current privacy state.
+The draft uses original-secret-authorized conditional privacy writes in CONTROL, separate internal `ComparisonEligibility.check`, member IDs restricted to trusted server memory, two uncached checks and no aggregate cache. Missing/unknown/non-adult/stealth/deleted members fail closed. There is no 25-hour exclusion promise and erasure is not the exclusion mechanism. The remaining final-check/publication race is explicitly unresolved; do not enable this draft merely because its lookup tests pass.
 
-Approvals this needs, none granted yet:
-- the new ingest route and CONTROL keys;
-- the two new `ParticipantOwner` methods;
-- web passing browser IDs to `eligible`;
-- the notice version.
-
-## Cost: actual bounds
-
-| Bound | Value |
-| --- | --- |
-| Distinct keys | One per published challenge: 69 today |
-| Per isolate | One query per key per hour; at most 2 running at once; in-flight requests coalesced; 15 s timeout; 1 MiB response |
-| Per query | Basin's 10 MB minimum or more |
-| Worst case | 69 queries per hour **per isolate**, which is not a global cap: Cloudflare can run many isolates. A global cap would need a shared limiter (for example a Workers rate-limit binding), which is new configuration and not proposed |
-| Client | At most 3 revisions per report, and only when enabled |
+The draft caps unique members at 100, SQL rows at 1,000, SQL response streaming at 1 MiB, with a 15-second fetch deadline and up to 600 CONTROL reads for two passes. Web allows two concurrent queries and one query per revision per minute **per isolate**, not a global spending cap. Exact configuration, storage fields, callers, browser integration work, native Basin verification and date-window/tool-compatibility gates are listed in the proposal.
 
 ## Engine validation
 
