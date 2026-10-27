@@ -3,7 +3,7 @@
   // Receives practice records from browsers; see docs/telemetry.md. It shares the app's
   // hostname under /ingest/, so uploads are same-origin and behind the same Access gate.
   "name": "muscle-memory-ingest",
-  "main": "src/index.ts",
+  "main": "src/worker.ts",
   "workers_dev": false,
   "preview_urls": false,
   "routes": [{ "pattern": "musclememory.run/ingest/*", "zone_name": "musclememory.run" }],
