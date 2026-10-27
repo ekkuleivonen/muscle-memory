@@ -2,7 +2,7 @@
 
 Models play every challenge the way a person does, through a headless copy of practice, and everything they do is recorded as raw as a person's practice is: so people's work can be compared with models', and models with each other. Analysis comes later, from the raw data.
 
-**Built so far:** the recorded types (`packages/domain/model.ts`, `actor` in every envelope), headless practice, the model loop, the run ledger, storage and the daily price history (`tools/model-runs/`). **Not yet:** a worker that claims slots, runs them and stores them; the publish hook (publishing still records `blocked_configuration`); the lookup condition; showing results. Nothing has called a model: that needs an OpenRouter key, a spend cap and the decisions below.
+**Built so far:** the recorded types (`packages/domain/model.ts`, `actor` in every envelope), headless practice, the model loop, the run ledger, storage and the price snapshot (`tools/model-runs/`). **Not yet:** a worker that claims slots, runs them and stores them; the publish hook (publishing still records `blocked_configuration`); the lookup condition; showing results. Nothing has called a model yet.
 
 ## Conditions
 
@@ -47,7 +47,7 @@ A run is one session with two source streams on one monotonic clock, so they int
 | `model.tool-result` | the exact text sent back, how long the tool took, and the practice positions it caused |
 | `model.ended` | completed, stopped, budget, refused or error, with the reason |
 
-Prices are kept three ways: what each generation cost (`usage`, `/generation`), the listed prices when each run started and ended (`model.catalog`), and a daily snapshot of every listing.
+Prices are kept three ways: what each generation cost (`usage`, `/generation`), the listed prices when each run started and ended (`model.catalog`), and snapshots of every listing.
 
 Runs are never uploaded through ingest, which refuses any `actor` but a person, and never stored in the `events` table that consent and erasure govern.
 
@@ -78,17 +78,15 @@ Runs are never uploaded through ingest, which refuses any `actor` but a person, 
 
 ## Price history
 
-`.github/workflows/model-catalog.yml` runs `tools/model-runs/snapshot.ts` every day: OpenRouter's whole model list (no key needed) and the endpoints of every model on the roster, each HTTP exchange verbatim, one row per request in `default.model_catalog` (`tools/model-runs/catalog.schema.json`). With the `MODEL_RUNS_D1_TOKEN` secret the roster is read from D1; without it, the snapshot is the list alone. With `OPENROUTER_API_KEY`, endpoint latency and throughput figures are included; OpenRouter gives them only to a signed-in caller. The first run creates the table.
+`.github/workflows/model-catalog.yml` runs `tools/model-runs/snapshot.ts` on demand (daily once the owner says so): OpenRouter's whole model list (no key needed) and the endpoints of every model on the roster, each HTTP exchange verbatim, one row per request in `default.model_catalog` (`tools/model-runs/catalog.schema.json`). With the `MODEL_RUNS_D1_TOKEN` secret the roster is read from D1; without it, the snapshot is the list alone. With `OPENROUTER_API_KEY`, endpoint latency and throughput figures are included; OpenRouter gives them only to a signed-in caller. The first run creates the table.
 
-## Open decisions
+## Decided (27 October 2026)
 
-Before the first real runs:
-
-- **The roster:** which models.
-- **Reasoning:** each model's default, or one fixed effort for all (a fixed request parameter, recorded with every run).
-- **Log probabilities:** request them wherever a model supports them.
-- **Tries** per revision, model and condition.
-- **Budget:** the turn and submission limits (50 and 10 by default), and a spend cap per backfill.
+- **Reasoning effort is a condition**, like any other experiment arm: every model eventually runs at every effort it supports (`supported_efforts` in its listing), each a series of its own in the ledger. A model's default is one of them.
+- **Log probabilities** are requested wherever a model's listing supports them (`logprobs`, `top_logprobs`), and kept in the raw stream.
+- **Three tries** per revision, model and condition; **50 turns and 10 submissions** per run.
+- **Spending** is capped on the OpenRouter key itself, not in the harness.
+- **Still open:** the roster.
 
 ## Not yet
 

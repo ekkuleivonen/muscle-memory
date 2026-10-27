@@ -2,10 +2,9 @@ name: Model catalog
 
 # The daily price snapshot (tools/model-runs/snapshot.ts, docs/model-runs.md): OpenRouter's
 # model list and the roster's endpoints, verbatim, appended to default.model_catalog in the
-# events bucket's R2 Data Catalog (never the events table). Daily, and on demand.
+# events bucket's R2 Data Catalog (never the events table). On demand only for now; a daily
+# schedule (cron "41 5 * * *") waits for the owner's go-ahead.
 on:
-  schedule:
-    - cron: "41 5 * * *"
   workflow_dispatch:
 
 permissions:
