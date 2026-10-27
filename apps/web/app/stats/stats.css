@@ -165,6 +165,10 @@
   color: var(--t-accent);
   margin: 0.2em 0;
 }
+.report-figure .t-dim {
+  font-size: var(--text-sm, 13px);
+  font-weight: 400;
+}
 .report-turn {
   font-weight: 700;
 }

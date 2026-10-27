@@ -2,7 +2,7 @@
 
 `/stats` is a private report behind the existing Terms gate: a short story of six adaptive chapters, each one headline, one visual and, only where a player needs it to read the finding correctly, one short line of context.
 
-**Players see insights, not data** (owner direction, 27 October 2026). The page shows no revision hashes, harness or protocol versions, receipt or cache timestamps, formulas, matching or debug statuses, and no methodology disclaimers, not even behind a disclosure. A finding the evidence can't support is left out, not explained. The ENG-340 measurement inventory below (definitions, eligibility, sample rules) is internal documentation and is no longer rendered for players. Consent, privacy choices and the legal notices are separate and unchanged; the report links to the Privacy Notice and settings. After completion, practice links to the report's model chapter without delaying or changing the local verdict.
+**Players see insights, not data** (owner direction, 27 October 2026). The page shows no revision hashes, harness or protocol versions, receipt or cache timestamps, formulas, matching or debug statuses, and no methodology disclaimers, not even behind a disclosure. A finding the evidence can't support is left out, not explained. The ENG-340 measurement inventory below (definitions, eligibility, sample rules) is internal documentation and is no longer rendered for players. Consent, privacy choices and the legal notices are separate and unchanged; the report links to the Privacy Notice and settings.
 
 ## The report
 
@@ -20,6 +20,12 @@
 | Did coming back to a challenge change anything? | A later clean solve of the same challenge, version and conditions needing fewer submissions up to the solve (`toSolve`) | Such a pair exists | Improvement from optional submissions after a solve; general improvement (familiarity with that challenge helps) |
 
 The one FYI today is on "iterate": the median submissions of models that solved the same challenges, each model try counted once however often you solved that challenge, using each model's declared default setting's first try (`defaultComparisons`, shared with practice) and only tries on the same runtime and diagnostics. Pending, unreadable or incomparable model results add nothing. Human comparisons stay off (`COHORTS_ENABLED = false`, [human cohorts](human-cohorts.md), ENG-376); when enabled they would also be a single FYI on the relevant answer.
+
+**Caching, precisely.** Two short-lived caches exist, both from existing infrastructure:
+- uploaded-history summaries are kept in page memory, keyed by participant, while the report is open and for at most five minutes after (a timer drops them);
+- model receipt metadata is cached on the server for 60 seconds per Worker isolate (at most 32 revisions).
+
+There is **no** scheduled or durable global precomputation, and **no** new retained personal-summary cache: nothing about a player is stored for the report beyond what practice already keeps. A prefilled, clock-refreshed global bundle would need new scheduling or configuration and isn't built.
 
 A new player sees one line and a start. Someone who has started but has nothing answerable yet sees one line and a resume. Stealth shows only what stealth means and a link to privacy settings. The page uses the shared terminal geometry.
 
