@@ -408,8 +408,8 @@ function humanFyi(solved: ReportAttempt[], input: ReportInput): string | null {
     if (!user || !typical || !Number.isFinite(typical) || typical < 1) continue;
     const delta = Math.round((user - typical) / typical * 100);
     return delta === 0
-      ? "About as many submissions as a typical recorded solve on this challenge."
-      : `${Math.abs(delta)}% ${delta < 0 ? "fewer" : "more"} submissions than a typical recorded solve on this challenge.`;
+      ? `${attempt.challenge}: about as many submissions as a typical recorded solve.`
+      : `${attempt.challenge}: ${Math.abs(delta)}% ${delta < 0 ? "fewer" : "more"} submissions than a typical recorded solve.`;
   }
   return null;
 }

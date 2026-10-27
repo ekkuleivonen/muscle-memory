@@ -108,7 +108,7 @@ test("a human comparison is one exact-task nugget with adult and matching-condit
   const a = { ...summary("human-fyi", "JS-001"), practice: "first" as const };
   const cohort = cohortResult([{ runtime: JSON.stringify({engine:"javascript",version:"synthetic"}), editor: JSON.stringify({name:"CodeMirror",features:["syntax-highlighting"]}), diagnostics:0, practice:"first", completed:1, first_pass:1, submissions:4, browsers:20 }]);
   const args = input({ attempts:device(a), profile:{age:"25-34"}, cohorts:{[a.revision]:cohort} });
-  assert.equal(q(buildReport(args), "iterate")?.fyi, "50% fewer submissions than a typical recorded solve on this challenge.");
+  assert.equal(q(buildReport(args), "iterate")?.fyi, "JS-001: 50% fewer submissions than a typical recorded solve.");
   assert.equal(q(buildReport({...args, profile:{age:"16-17"}}), "iterate")?.fyi, null);
   assert.equal(q(buildReport({...args, profile:{}}), "iterate")?.fyi, null);
   assert.equal(q(buildReport({...args, attempts:device({...a, practice:"repeat"})}), "iterate")?.fyi, null);
