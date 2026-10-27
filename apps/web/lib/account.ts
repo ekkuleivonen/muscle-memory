@@ -2,6 +2,7 @@
  * The account as it exists so far: a profile in this browser's storage, and a
  * cookie that stands in for a session. Browser-only; the server sees just the cookie.
  */
+import { PRIVACY_SAVE } from "./comparison-privacy-controller";
 import { notifyPrivateBoundary } from "./private-boundary";
 import { openPracticeStore } from "../../../packages/browser/practice-store";
 import { eraseUploaded, requestAccess } from "./ingest";
@@ -58,6 +59,7 @@ export function saveProfile(profile: Profile): StoredProfile | null {
     asked[id] = { answeredAt: at };
   const next = { ...stored, profile, asked };
   write(next);
+  if (stored.profile.age !== profile.age) window.dispatchEvent(new Event(PRIVACY_SAVE));
   return next;
 }
 
@@ -98,7 +100,10 @@ export function guessLanguage(language: LanguageId): Profile {
 
 export function setStealth(stealth: boolean) {
   const stored = readProfile();
-  if (stored) write({ ...stored, stealth });
+  if (stored) {
+    write({ ...stored, stealth });
+    window.dispatchEvent(new Event(PRIVACY_SAVE));
+  }
 }
 
 /**

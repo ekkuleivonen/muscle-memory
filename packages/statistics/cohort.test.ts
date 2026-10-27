@@ -2,12 +2,31 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { trace, syntheticRevision } from "../developer-profile/fixtures";
-import { ADULT, browser, fields, many, profile, type Event } from "./cohort-fixtures";
+import {
+  syntheticWindow,
+  ADULT,
+  browser,
+  fields,
+  many,
+  profile,
+  type Event,
+} from "./cohort-fixtures";
 import { deriveAttempts } from "../developer-profile/derive";
-import { cohortQuery, cohortResult, matchingGroup, COHORTS_ENABLED, MIN_COHORT } from "./cohort";
+import {
+  cohortQuery,
+  cohortResult,
+  matchingGroup,
+  COHORTS_ENABLED,
+  MIN_COHORT,
+} from "./cohort";
 
 /** Runs the actual fixed SELECT in SQLite; only the namespace is adapted. Not a live Basin proof. */
-function run(events: Event[], challenge = "JS-001", revision = syntheticRevision) {
+function run(
+  events: Event[],
+  challenge = "JS-001",
+  revision = syntheticRevision,
+  window = syntheticWindow,
+) {
   const script = `import sqlite3,json,sys
 v=json.load(sys.stdin)
 c=sqlite3.connect(':memory:');c.row_factory=sqlite3.Row
@@ -20,7 +39,11 @@ c.create_function('json_get_json',2,lambda doc,key: None if get(doc,key) is None
 c.create_function('json_get_str',2,lambda doc,key: get(doc,key) if isinstance(get(doc,key),str) else None)
 print(json.dumps([dict(r) for r in c.execute(v['sql'].replace('default.events','events'))]))`;
   const out = spawnSync("python3", ["-c", script], {
-    input: JSON.stringify({ rows: events, fields, sql: cohortQuery(challenge, revision) }),
+    input: JSON.stringify({
+      rows: events,
+      fields,
+      sql: cohortQuery(challenge, revision, window),
+    }),
     encoding: "utf8",
     maxBuffer: 16 * 1024 * 1024,
   });
@@ -45,7 +68,11 @@ test("a group of enough browsers publishes rounded shares and submission quantil
   assert.equal(g.firstTry, 0, "the fixture's first submission fails");
   assert.deepEqual(g.submissions, { p25: 2, p50: 2, p75: 2 });
   const text = JSON.stringify(result);
-  assert.doesNotMatch(text, /"b\d+"|participantId|attempt_id|attemptId|record_id|payload/, "no identifiers or rows leave the server");
+  assert.doesNotMatch(
+    text,
+    /"b\d+"|participantId|attempt_id|attemptId|record_id|payload/,
+    "no identifiers or rows leave the server",
+  );
 });
 
 test("a group below the minimum is withheld entirely, not shown as small or zero", () => {
@@ -55,25 +82,57 @@ test("a group below the minimum is withheld entirely, not shown as small or zero
 
 test("current stealth and the 16–17 band remove a browser's whole history, by its latest profile", () => {
   const events = many(25);
-  for (let i = 0; i < 6; i++) events.push(profile(`b${i}`, { ...ADULT, stealth: true }, "2026-10-26T00:00:00.000Z"));
-  assert.deepEqual(cohortResult(run(events)).groups, [], "25 − 6 stealth = 19 < 20");
+  for (let i = 0; i < 6; i++)
+    events.push(
+      profile(`b${i}`, { ...ADULT, stealth: true }, "2026-10-26T00:00:00.000Z"),
+    );
+  assert.deepEqual(
+    cohortResult(run(events)).groups,
+    [],
+    "25 − 6 stealth = 19 < 20",
+  );
   // A later profile turning stealth off counts the browser again; latest wins.
-  for (let i = 0; i < 6; i++) events.push(profile(`b${i}`, ADULT, "2026-10-27T00:00:00.000Z"));
+  for (let i = 0; i < 6; i++)
+    events.push(profile(`b${i}`, ADULT, "2026-10-27T00:00:00.000Z"));
   assert.equal(cohortResult(run(events)).groups.length, 1);
   const minors = many(25);
-  for (let i = 0; i < 6; i++) minors.push(profile(`b${i}`, { age: "16-17", stealth: false }, "2026-10-26T00:00:00.000Z"));
+  for (let i = 0; i < 6; i++)
+    minors.push(
+      profile(
+        `b${i}`,
+        { age: "16-17", stealth: false },
+        "2026-10-26T00:00:00.000Z",
+      ),
+    );
   assert.deepEqual(cohortResult(run(minors)).groups, []);
 });
 
 test("duplicate copies count once; conflicting copies and model actors are left out", () => {
   const events = many(20);
-  assert.equal(cohortResult(run([...events, ...events])).groups[0].participants, "20–49");
-  const models = Array.from({ length: 5 }, (_, i) => [...browser(`m${i}`, "a", { actor: "model" }), profile(`m${i}`, ADULT, "2026-10-01T00:00:00.000Z")]).flat();
-  assert.deepEqual(cohortResult(run([...many(19, "p"), ...models])).groups, [], "models never fill a human group");
+  assert.equal(
+    cohortResult(run([...events, ...events])).groups[0].participants,
+    "20–49",
+  );
+  const models = Array.from({ length: 5 }, (_, i) => [
+    ...browser(`m${i}`, "a", { actor: "model" }),
+    profile(`m${i}`, ADULT, "2026-10-01T00:00:00.000Z"),
+  ]).flat();
+  assert.deepEqual(
+    cohortResult(run([...many(19, "p"), ...models])).groups,
+    [],
+    "models never fill a human group",
+  );
   const conflicted = many(20);
   const started = conflicted.findIndex((e) => e.type === "practice.started");
-  conflicted.push({ ...conflicted[started], payload: conflicted[started].payload!.replace('"direct"', '"picker"') });
-  assert.deepEqual(cohortResult(run(conflicted)).groups, [], "a conflicted start leaves that attempt unstarted, so 19 remain");
+  conflicted.push({
+    ...conflicted[started],
+    payload: conflicted[started].payload!.replace('"direct"', '"picker"'),
+  });
+  assert.deepEqual(
+    cohortResult(run(conflicted)).groups,
+    [],
+    "a conflicted start leaves that attempt unstarted, so 19 remain",
+  );
 });
 
 test("first attempts and repeats are separate groups with one attempt per browser each", () => {
@@ -91,43 +150,251 @@ test("first attempts and repeats are separate groups with one attempt per browse
 });
 
 test("other revisions never leak into a cohort", () => {
-  const other = many(25).map((e) => ({ ...e, challenge_revision: e.challenge_revision ? `sha256:${"b".repeat(64)}` : null }));
+  const other = many(25).map((e) => ({
+    ...e,
+    challenge_revision: e.challenge_revision
+      ? `sha256:${"b".repeat(64)}`
+      : null,
+  }));
   assert.deepEqual(cohortResult(run(other)).groups, []);
-  assert.throws(() => cohortQuery("JS-001' OR 1=1 --", syntheticRevision));
-  assert.throws(() => cohortQuery("JS-001", "sha256:short"));
+  assert.throws(() =>
+    cohortQuery("JS-001' OR 1=1 --", syntheticRevision, syntheticWindow),
+  );
+  assert.throws(() => cohortQuery("JS-001", "sha256:short", syntheticWindow));
 });
 
 test("an attempt matches only the group with its exact runtime, diagnostics and practice", () => {
   const read = cohortResult(run(many(25)));
   const attempt = deriveAttempts(trace(), "synthetic-participant")[0];
-  assert.ok(matchingGroup(read, attempt.conditions, "first"));
-  assert.equal(matchingGroup(read, attempt.conditions, "repeat"), null);
-  assert.equal(matchingGroup(read, ['Runtime: {"engine":"python"}', attempt.conditions[0]], "first"), null);
-  assert.equal(matchingGroup(read, [], "first"), null, "unknown conditions never borrow a group");
+  assert.ok(matchingGroup(read, attempt.conditions, "first", "adult"));
+  assert.equal(
+    matchingGroup(read, attempt.conditions, "first", "unknown"),
+    null,
+  );
+  assert.equal(
+    matchingGroup(read, attempt.conditions, "first", "non-adult"),
+    null,
+  );
+  assert.equal(
+    matchingGroup(read, attempt.conditions, "repeat", "adult"),
+    null,
+  );
+  assert.equal(
+    matchingGroup(
+      read,
+      ['Runtime: {"engine":"python"}', attempt.conditions[0]],
+      "first",
+      "adult",
+    ),
+    null,
+  );
+  assert.equal(
+    matchingGroup(read, [], "first", "adult"),
+    null,
+    "unknown conditions never borrow a group",
+  );
 });
 
 test("unknown age, stealth, consent or start origin is never counted as an eligible adult", () => {
   const read = cohortResult(run(many(25)));
   assert.equal(read.eligibility.unit, "distinct browsers, not people");
   assert.match(read.eligibility.ages, /adults only/);
-  const withSix = (extra: (i: number) => Event[]) => [...many(19), ...Array.from({ length: 6 }, (_, i) => extra(i)).flat()];
+  const withSix = (extra: (i: number) => Event[]) => [
+    ...many(19),
+    ...Array.from({ length: 6 }, (_, i) => extra(i)).flat(),
+  ];
   const cases: [string, Event[]][] = [
     ["no profile uploaded", withSix((i) => browser(`x${i}`))],
-    ["no age answer", withSix((i) => [...browser(`x${i}`), profile(`x${i}`, { stealth: false }, "2026-10-01T00:00:00.000Z")])],
-    ["stealth not recorded", withSix((i) => [...browser(`x${i}`), profile(`x${i}`, { age: "25-34" }, "2026-10-01T00:00:00.000Z")])],
-    ["an adult band answered earlier, unanswered now", withSix((i) => [...browser(`x${i}`), profile(`x${i}`, ADULT, "2026-10-01T00:00:00.000Z"), profile(`x${i}`, { stealth: false }, "2026-10-02T00:00:00.000Z")])],
-    ["no Terms version on the records", withSix((i) => [...browser(`x${i}`, "a", { noTerms: true }), profile(`x${i}`, ADULT, "2026-10-01T00:00:00.000Z")])],
-    ["a start without a recorded origin", withSix((i) => [...browser(`x${i}`, "a", { noOrigin: true }), profile(`x${i}`, ADULT, "2026-10-01T00:00:00.000Z")])],
+    [
+      "no age answer",
+      withSix((i) => [
+        ...browser(`x${i}`),
+        profile(`x${i}`, { stealth: false }, "2026-10-01T00:00:00.000Z"),
+      ]),
+    ],
+    [
+      "stealth not recorded",
+      withSix((i) => [
+        ...browser(`x${i}`),
+        profile(`x${i}`, { age: "25-34" }, "2026-10-01T00:00:00.000Z"),
+      ]),
+    ],
+    [
+      "an adult band answered earlier, unanswered now",
+      withSix((i) => [
+        ...browser(`x${i}`),
+        profile(`x${i}`, ADULT, "2026-10-01T00:00:00.000Z"),
+        profile(`x${i}`, { stealth: false }, "2026-10-02T00:00:00.000Z"),
+      ]),
+    ],
+    [
+      "no Terms version on the records",
+      withSix((i) => [
+        ...browser(`x${i}`, "a", { noTerms: true }),
+        profile(`x${i}`, ADULT, "2026-10-01T00:00:00.000Z"),
+      ]),
+    ],
+    [
+      "a start without a recorded origin",
+      withSix((i) => [
+        ...browser(`x${i}`, "a", { noOrigin: true }),
+        profile(`x${i}`, ADULT, "2026-10-01T00:00:00.000Z"),
+      ]),
+    ],
   ];
-  for (const [name, events] of cases) assert.deepEqual(cohortResult(run(events)).groups, [], `${name}: 19 eligible stay withheld`);
+  for (const [name, events] of cases)
+    assert.deepEqual(
+      cohortResult(run(events)).groups,
+      [],
+      `${name}: 19 eligible stay withheld`,
+    );
 });
 
 test("a conflicting profile excludes its browser instead of falling back to an older eligible one", () => {
   const events = many(20);
   // b0 later uploaded a profile whose copies conflict: one says stealth, one says adult and not stealth.
-  const newer = profile("b0", { ...ADULT, stealth: true }, "2026-10-26T00:00:00.000Z");
-  const twin = { ...newer, payload: newer.payload!.replace('"stealth":true', '"stealth":false') };
+  const newer = profile(
+    "b0",
+    { ...ADULT, stealth: true },
+    "2026-10-26T00:00:00.000Z",
+  );
+  const twin = {
+    ...newer,
+    payload: newer.payload!.replace('"stealth":true', '"stealth":false'),
+  };
   assert.notEqual(twin.payload, newer.payload);
-  assert.deepEqual(cohortResult(run([...events, newer, twin])).groups, [], "20 − b0 = 19: withheld");
-  assert.equal(cohortResult(run(events)).groups.length, 1, "without the conflict, b0 counts");
+  assert.deepEqual(
+    cohortResult(run([...events, newer, twin])).groups,
+    [],
+    "20 − b0 = 19: withheld",
+  );
+  assert.equal(
+    cohortResult(run(events)).groups.length,
+    1,
+    "without the conflict, b0 counts",
+  );
+});
+
+function editEvent(e: Event, change: (o: any) => void): Event {
+  const o = JSON.parse(e.payload!);
+  change(o);
+  return { ...e, occurred_at: o.occurredAt, payload: JSON.stringify(o) };
+}
+test("first-try and finisher denominators suppress independently; unknown is not a failed check", () => {
+  const unknown = many(20).map((e) =>
+    e.participant_id === "b0" &&
+    e.type === "practice.submitted" &&
+    JSON.parse(e.payload!).data.runId === "r1"
+      ? editEvent(e, (o) => {
+          o.data.result = "errored";
+          o.data.passed = 0;
+          o.data.total = 0;
+        })
+      : e,
+  );
+  const g = cohortResult(run(unknown)).groups[0];
+  assert.equal(g.firstTry, null);
+  assert.equal(g.denominators.firstTry, null);
+  assert.ok(g.submissions);
+  assert.equal(g.denominators.submissions, "20–49");
+  const incomplete = many(20).filter(
+    (e) =>
+      !(
+        e.participant_id === "b0" &&
+        ["practice.completed", "practice.answered"].includes(e.type!)
+      ),
+  );
+  const h = cohortResult(run(incomplete)).groups[0];
+  assert.equal(h.firstTry, 0);
+  assert.equal(h.submissions, null);
+  assert.equal(h.denominators.solved, "20–49");
+  assert.equal(h.denominators.firstTry, "20–49");
+  assert.equal(h.denominators.submissions, null);
+});
+test("submissions after solve are not counted as what the solve took", () => {
+  const events = many(20);
+  const extra = events
+    .filter((e) => e.type === "practice.answered")
+    .map((e) => {
+      const o = JSON.parse(e.payload!);
+      o.source.sequence++;
+      o.observationId += "-post-solve";
+      o.type = "practice.submitted";
+      o.occurredAt = new Date(Date.parse(o.occurredAt) + 10000).toISOString();
+      o.data = {
+        runId: "post-solve",
+        revision: 2,
+        codeArtifactId: "synthetic-artifact",
+        result: "passed",
+        passed: 3,
+        total: 3,
+        rules: [],
+      };
+      return {
+        ...e,
+        type: o.type,
+        record_id: o.observationId,
+        occurred_at: o.occurredAt,
+        payload: JSON.stringify(o),
+      };
+    });
+  assert.deepEqual(
+    cohortResult(run([...events, ...extra])).groups[0].submissions,
+    { p25: 2, p50: 2, p75: 2 },
+  );
+});
+test("exact editor features partition groups, changing tools or a capture gap withholds the attempt", () => {
+  const other = many(20, "v").map((e) =>
+    e.type === "practice.opened"
+      ? editEvent(e, (o) => {
+          o.data.editor.features.push("vim-keybindings");
+        })
+      : e,
+  );
+  const result = cohortResult(run([...many(20), ...other]));
+  assert.equal(result.groups.length, 2);
+  const gap = many(20).filter(
+    (e) => !(e.participant_id === "b0" && e.type === "practice.edit"),
+  );
+  assert.deepEqual(cohortResult(run(gap)).groups, []);
+  const missing = many(20).map((e) =>
+    e.participant_id === "b0" && e.type === "practice.opened"
+      ? editEvent(e, (o) => {
+          delete o.data.editor;
+        })
+      : e,
+  );
+  assert.deepEqual(cohortResult(run(missing)).groups, []);
+});
+test("window edges do not invent firsts: only evidenced repeats survive a truncated history", () => {
+  const events = Array.from({ length: 20 }, (_, i) => [
+    profile(`w${i}`, ADULT, "2026-10-27T00:00:00.000Z"),
+    ...browser(`w${i}`),
+    ...browser(`w${i}`, "repeat", { again: true, at: 86400000 }),
+  ]).flat();
+  const window = { ...syntheticWindow, from: "2026-10-26T00:00:00.000Z" };
+  const groups = cohortResult(
+    run(events, "JS-001", syntheticRevision, window),
+  ).groups;
+  assert.deepEqual(
+    groups.map((g) => g.practice),
+    ["repeat"],
+  );
+  const late = events.map((e) => ({
+    ...e,
+    received_at: "2026-11-02T00:00:00.000Z",
+  }));
+  assert.deepEqual(cohortResult(run(late)).groups, []);
+});
+test("unsubmitted eligible starts remain in the observed-completion denominator", () => {
+  const events = many(20).filter(
+    (e) =>
+      e.participant_id !== "b0" ||
+      e.type === "site.profile" ||
+      JSON.parse(e.payload!).source.sequence <= 2,
+  );
+  const g = cohortResult(run(events)).groups[0];
+  assert.ok(g);
+  assert.equal(g.firstTry, null);
+  assert.equal(g.submissions, null);
 });

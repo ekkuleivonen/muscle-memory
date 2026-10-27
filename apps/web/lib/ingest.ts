@@ -27,10 +27,10 @@ export async function eraseUploaded(store: PracticeStore): Promise<void> {
       },
     );
   } catch {
-    throw new Error("The server couldn't be reached, so nothing was deleted. Try again when you're online.");
+    throw new Error("The server couldn't confirm deletion. Your local data and deletion key were kept; retry when online.");
   }
   if (!response.ok)
-    throw new Error("The server didn't confirm the deletion, so nothing was deleted. Try again later.");
+    throw new Error("The server didn't confirm deletion. Your local data and deletion key were kept; retry later.");
 }
 
 /**
