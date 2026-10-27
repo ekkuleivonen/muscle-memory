@@ -42,7 +42,7 @@
   margin: 1.2em 0 1.6em;
 }
 .report-headline {
-  font-size: clamp(1.35rem, 3.2vw, 2rem) !important;
+  font-size: inherit;
   line-height: 1.25;
   color: var(--t-fg);
   margin: 0.4em 0 0.6em;
@@ -81,8 +81,8 @@
 }
 .report-kicker {
   font-size: var(--text-sm, 13px);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--t-dim);
 }
 .report-bars {
@@ -99,9 +99,9 @@
 }
 .report-bar {
   display: block;
-  height: 10px;
-  background: var(--t-bar);
-  border: 1px solid var(--t-line);
+  height: 0.8em;
+  background: radial-gradient(circle, var(--t-line) 1px, transparent 1.5px) 0
+    50% / 5px 5px;
 }
 .report-fill {
   display: block;
@@ -109,7 +109,8 @@
   transform-origin: left;
 }
 .report-fill.is-ok {
-  background: var(--t-ok);
+  background: radial-gradient(circle, var(--t-ok) 1px, transparent 1.5px) 0
+    50% / 5px 5px;
 }
 .report-fill.is-err {
   background: var(--t-err);
@@ -156,7 +157,7 @@
   margin: 0;
 }
 .report-question .report-headline {
-  font-size: clamp(1.1rem, 2.2vw, 1.4rem) !important;
+  font-size: inherit;
   margin: 0.4em 0 0.8em;
 }
 .report-figure {
@@ -212,4 +213,12 @@
   .report-kicker {
     margin: 0;
   }
+}
+
+.report-preview {
+  margin: 2.4em 0;
+  max-width: 72ch;
+}
+.report-hero .t-doc-title {
+  margin-top: 0;
 }

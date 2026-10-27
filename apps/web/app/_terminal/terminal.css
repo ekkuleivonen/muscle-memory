@@ -167,7 +167,7 @@
 /*
  * The trail as powerline segments: filled blocks with an arrow point on the right and a notch
  * on the left, overlapping so each point sits in the next notch with a sliver of bar between.
- * Home in the accent, steps in alternating greys, the page itself in amber.
+ * Muted segments keep ancestors recognizable without making the location look like a button.
  */
 .t-trail {
   --arrow: 9px;
@@ -200,10 +200,10 @@
   --seg: #34363e;
 }
 .t-trail li:first-child .t-footer-link {
-  --seg: var(--t-accent);
+  --seg: #353443;
   padding-left: 1.5ch;
-  color: var(--t-bg);
-  font-weight: 700;
+  color: var(--t-fg);
+  font-weight: 400;
   clip-path: polygon(
     0 0,
     calc(100% - var(--arrow)) 0,
@@ -213,12 +213,13 @@
   );
 }
 .t-trail li .t-footer-link[aria-current="page"] {
-  --seg: var(--t-warn);
-  color: var(--t-bg);
-  font-weight: 700;
+  --seg: #27292f;
+  color: #b0b3bc;
+  font-weight: 400;
+  cursor: default;
 }
 .t-trail li:first-child .t-footer-link[aria-current="page"] {
-  --seg: var(--t-accent);
+  --seg: #27292f;
 }
 .t-trail .t-footer-link:hover {
   background: var(--seg);

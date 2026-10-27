@@ -63,7 +63,7 @@ export function ReportBody({
   if (report.empty)
     return (
       <section className="report-hero" aria-labelledby="report-title">
-        <h1 id="report-title" className="report-headline is-lead">
+        <h1 id="report-title" className="t-doc-title">
           Your portrait starts with one challenge.
         </h1>
         {next}
@@ -73,13 +73,21 @@ export function ReportBody({
   return (
     <>
       <header className="report-hero">
-        <h1 className="report-headline is-lead">How you code</h1>
+        <h1 className="t-doc-title">How you code</h1>
         {status}
         {report.waiting && <p className="report-context">{report.waiting}</p>}
         {report.waiting && next}
       </header>
       {report.questions.map((q) => (
         <QuestionView key={q.id} q={q} />
+      ))}
+      {report.previews.map((preview) => (
+        <section className="report-preview t-md" key={preview.action.href}>
+          <h3>{preview.question}</h3>
+          <Link className="t-cmd" href={preview.action.href}>
+            {preview.action.label} →
+          </Link>
+        </section>
       ))}
       {!report.waiting && next}
       {report.profile && (

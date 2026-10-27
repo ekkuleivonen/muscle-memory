@@ -51,7 +51,7 @@ test("a portrait is questions with answers, never inventories, chapters or inter
   assert.match(html, /How soon do you start typing\?/);
   assert.doesNotMatch(html, /How fast do you type/, "the fixture has no run of code characters, so typing is left out");
   assert.equal((html.match(/report-fyi/g) ?? []).length, 1, "one tiny model FYI, no comparison section");
-  assert.match(html, /FYI: models that solved the same challenges needed 1 submission, typically\./);
+  assert.match(html, /Models that solved the same challenges needed 1 submission, typically\./);
   assert.doesNotMatch(
     html,
     /finished|unfinished|revisited|waiting|Could you still|chapter|Report chapters|evidence|sha256|[Rr]evision|harness|receipt|UTC|definition|withheld|mismatch|not compared|reading|thinking|<details|<table/,
