@@ -869,7 +869,7 @@ export function Practice({
                         </button>}
                       </>
                     )}
-                    <p className="faint">Human comparisons await an approved cohort policy; stored model tries are shown separately below. <Link href="/stats#chapter-minds">See it in your report →</Link></p>
+                    <p className="faint">Human comparisons await an approved cohort policy; stored model tries are shown separately below. <Link href="/stats#comparisons">View your observed profile and comparison availability →</Link></p>
                     <AfterQuestions
                       key={attempt.id}
                       onAnswer={(question, answer) =>

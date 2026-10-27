@@ -241,6 +241,8 @@ function CellView({ cell }: { cell: Cell }) {
 function Minds({ c }: { c: ComparisonChapter }) {
   return (
     <>
+      {/* Practice's completion link (owned by ENG-375) still points here. */}
+      <span id="comparisons" />
       <h2 className="report-headline">{c.headline}</h2>
       <p className="report-scroll-hint t-dim" aria-hidden>
         scroll sideways for every model →

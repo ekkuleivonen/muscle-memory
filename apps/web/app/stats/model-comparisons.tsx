@@ -236,6 +236,54 @@ export function ModelReceiptView({
     </details>
   );
 }
+export function AttemptModelComparisons({
+  attempts,
+  stealth,
+}: {
+  attempts: AttemptSummary[];
+  stealth: boolean;
+}) {
+  const [choice, setChoice] = useState("");
+  if (stealth) return null;
+  const selected =
+    attempts.find((a) => `${a.attempt}:${a.revision}` === choice) ??
+    [...attempts].sort((a, b) => b.last.localeCompare(a.last))[0];
+  if (!selected)
+    return (
+      <p>
+        No retained task/runtime context yet. Complete or start a challenge to
+        establish a task to compare; this does not guarantee a model result.
+      </p>
+    );
+  return (
+    <>
+      <label>
+        Task / attempt{" "}
+        <select
+          value={`${selected.attempt}:${selected.revision}`}
+          onChange={(e) => setChoice(e.target.value)}
+        >
+          {attempts.map((a) => (
+            <option
+              key={`${a.attempt}:${a.revision}`}
+              value={`${a.attempt}:${a.revision}`}
+            >
+              {a.challenge} ·{" "}
+              {a.practice === "repeat" ? "repeat" : "first/repeat unknown"} ·{" "}
+              {a.revision.slice(7, 15)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <ModelReceipts
+        key={`${selected.attempt}:${selected.revision}`}
+        challenge={selected.challenge}
+        revision={selected.revision}
+        conditions={selected.conditions}
+      />
+    </>
+  );
+}
 export function CompletionModelComparisons({
   records,
   challenge,
