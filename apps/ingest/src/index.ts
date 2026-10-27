@@ -17,11 +17,12 @@ import {
   type EventRow,
 } from "../../../packages/domain/ingest";
 import { safeIdentifier } from "../../../packages/domain/capture";
+import { comparisonPrivacy } from "./comparison-privacy";
 
 /** The parts of an R2 bucket this Worker uses. */
 export interface Bucket {
-  get(key: string): Promise<{ text(): Promise<string> } | null>;
-  put(key: string, value: string): Promise<unknown>;
+  get(key: string): Promise<{ text(): Promise<string>; etag?: string } | null>;
+  put(key: string, value: string, options?: { onlyIf: { etagMatches: string } | { etagDoesNotMatch: string } }): Promise<unknown>;
   delete(key: string): Promise<unknown>;
 }
 
@@ -40,6 +41,8 @@ export interface Env {
   readonly EVENTS?: Stream;
   /** Participant proofs, deletion tombstones, access requests, and (locally) the rows themselves. */
   readonly CONTROL: Bucket;
+  /** Draft only. No production variable enables this new write authority. */
+  readonly COMPARISON_PRIVACY_ENABLED?: string;
   /** Origins allowed to call across origins (local development); comma-separated. */
   readonly ALLOWED_ORIGINS?: string;
   /**
@@ -83,6 +86,13 @@ export async function handle(request: Request, env: Env): Promise<Response> {
     const access = /^\/ingest\/v1\/participants\/([^/]+)\/access$/.exec(path);
     if (request.method === "POST" && access)
       return await requestAccess(request, env, decodeURIComponent(access[1]), reply);
+    const privacy = /^\/ingest\/v1\/participants\/([^/]+)\/comparison-privacy$/.exec(path);
+    if (request.method === "POST" && privacy && env.COMPARISON_PRIVACY_ENABLED === "true") {
+      let input: unknown;
+      try { input = JSON.parse(await body(request)); } catch { return reply(400, { error: "Malformed request." }); }
+      const result = await comparisonPrivacy(env, decodeURIComponent(privacy[1]), input);
+      return reply(result.status, result.body);
+    }
     return reply(404, { error: "Not found." });
   } catch (cause) {
     if (cause instanceof Refusal)
@@ -95,7 +105,8 @@ export async function handle(request: Request, env: Env): Promise<Response> {
           ...(cause.status === 429 ? { "retry-after": "60" } : {}),
         },
       });
-    console.error("ingest failed", cause);
+    // Storage errors can include keys or request values. Keep logs code/secret-free.
+    console.error("ingest failed");
     // The device keeps the records and retries later.
     return reply(503, { error: "Try again later." });
   }
