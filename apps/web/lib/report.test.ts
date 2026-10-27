@@ -103,12 +103,37 @@ test("the model comparison is one tiny FYI on the iterate answer, only from comp
   assert.equal(r.questions.filter((x) => x.fyi).length, 1, "never a comparison section");
 });
 
-test("a later solve with fewer submissions answers the repeat question; otherwise it's left out", () => {
-  const first = summary("r1", "JS-001"),
-    later = { ...summary("r2", "JS-001"), started: "2026-10-28T10:00:00Z", values: { ...first.values, submissions: 1, firstSubmit: 1 } };
-  assert.equal(q(buildReport(input({ attempts: device(first, later) })), "repeat")!.answer, "Back on JS-001, you needed 1 submission instead of 2.");
+/** Replace an attempt's submissions with the given verdicts, in order; "pass" solves. */
+function withSubmissions(a: AttemptSummary, verdicts: ("pass" | "fail")[], started: string): ReportAttempt {
+  const at = (i: number) => new Date(Date.parse(started) + (i + 1) * 1000).toISOString();
+  const solved = verdicts.indexOf("pass");
+  const timeline = [
+    { at: started, label: "started" },
+    ...verdicts.flatMap((v, i) => [
+      { at: at(i), label: v === "pass" ? "passed: 3/3 checks; 0 static rules" : "failed: 1/3 checks; 0 static rules" },
+      ...(i === solved ? [{ at: at(i), label: "completed" }] : []),
+    ]),
+  ];
+  return { ...a, started, timeline, completed: solved >= 0, values: { ...a.values, submissions: verdicts.length }, source: "device" };
+}
+
+test("a later solve with fewer submissions to solve answers the repeat question; otherwise it's left out", () => {
+  const first = withSubmissions(summary("r1", "JS-001"), ["fail", "pass"], "2026-10-27T10:00:00.000Z"),
+    later = withSubmissions(summary("r2", "JS-001"), ["pass"], "2026-10-28T10:00:00.000Z");
+  assert.equal(q(buildReport(input({ attempts: [first, later] })), "repeat")!.answer, "Back on JS-001, you needed 1 submission instead of 2.");
   const other = { ...later, conditions: ["Runtime: {}"] };
-  assert.equal(q(buildReport(input({ attempts: device(first, other) })), "repeat"), undefined);
+  assert.equal(q(buildReport(input({ attempts: [first, other] })), "repeat"), undefined);
+});
+
+test("checks after a solve never count as needed: no false improvement, no extra iteration", () => {
+  // Solved in 1, then 5 optional submissions; later solved fresh in 2. Totals would read 6 → 2.
+  const first = withSubmissions(summary("q1", "JS-001"), ["pass", "fail", "fail", "pass", "pass", "pass"], "2026-10-27T10:00:00.000Z"),
+    later = withSubmissions(summary("q2", "JS-001"), ["fail", "pass"], "2026-10-28T10:00:00.000Z");
+  assert.equal(first.values.submissions, 6);
+  const r = buildReport(input({ attempts: [first, later] }));
+  assert.equal(q(r, "repeat"), undefined, "1 to solve, then 2: not an improvement");
+  // Checks to solve are 1 and 2, not 6 and 2.
+  assert.deepEqual(q(r, "iterate")!.visual, { kind: "bars", bars: [{ label: "1 check", value: 1, display: "1 solve" }, { label: "2–3 checks", value: 1, display: "1 solve" }] });
 });
 
 test("durations read in seconds, minutes or hours without false precision", () => {

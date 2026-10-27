@@ -22,6 +22,8 @@ export const LARGE_STEP_SHARE = 0.3;
 export const COMPARISON_TASKS = 3;
 /** Keystrokes per word for words per minute, the usual typing-test convention. */
 export const KEYS_PER_WORD = 5;
+/** derive keeps at most this many checkpoints per attempt. */
+const TIMELINE_CAP = 200;
 /** Below this many code-character keystrokes a typing rate is too noisy to show. */
 export const MIN_TYPED_KEYS = 50;
 
@@ -112,6 +114,26 @@ export function submissions(a: AttemptSummary) {
 }
 
 /**
+ * Checks and submissions up to the first fully passing submission, in recorded order: what a
+ * solve took, not what came after it. Unknown when the attempt isn't solved, or when its
+ * checkpoint list was cut to the latest 200 and could be missing earlier checks.
+ */
+export function toSolve(a: AttemptSummary): { checks: number; submissions: number } | null {
+  if (!a.completed || a.timeline.length >= TIMELINE_CAP) return null;
+  let checks = 0,
+    count = 0;
+  for (const t of a.timeline) {
+    if (t.label.startsWith("examples: ")) checks++;
+    const m = SUBMITTED.exec(t.label);
+    if (!m) continue;
+    checks++;
+    count++;
+    if (m[1] === "passed" && +m[2] === +m[3] && +m[4] === 0) return { checks, submissions: count };
+  }
+  return null;
+}
+
+/**
  * Time from the start to the first edit, on one clock (same page session), over clean solves.
  * Nothing after it: the recorded session span includes pauses, runner waits and time after a
  * solve, so it is not implementation time. Never called reading or thinking.
@@ -138,9 +160,10 @@ const CHECK_BUCKETS: [string, number, number][] = [
 ];
 /** Checks per solve and how often the first submission passed. */
 function iterate(solved: ReportAttempt[], fyi: string | null): Question | null {
-  const counted = solved.filter((a) => num(a.values.examples) && num(a.values.submissions));
+  // Checks up to the solve: checks made after it don't make a solve iterative.
+  const counted = solved.filter((a) => toSolve(a));
   if (!counted.length) return null;
-  const checks = counted.map((a) => a.values.examples! + a.values.submissions!);
+  const checks = counted.map((a) => toSolve(a)!.checks);
   const m = median(checks)!;
   const firsts = counted.filter((a) => num(a.values.firstSubmit));
   const oneShot = firsts.filter((a) => a.values.firstSubmit === 1).length;
@@ -296,16 +319,18 @@ function repeat(solved: ReportAttempt[]): Question | null {
     groups.set(key, [...(groups.get(key) ?? []), a]);
   }
   for (const group of groups.values()) {
-    const s = group.filter((a) => num(a.values.submissions)).sort((x, y) => (x.started ?? x.last).localeCompare(y.started ?? y.last));
+    // Submissions up to each solve; any checks after a solve aren't "needed".
+    const s = group.filter((a) => toSolve(a)).sort((x, y) => (x.started ?? x.last).localeCompare(y.started ?? y.last));
     if (s.length < 2) continue;
-    const first = s[0],
+    const before = toSolve(s[0])!.submissions,
+      after = toSolve(s[s.length - 1])!.submissions,
       last = s[s.length - 1];
-    if (last.values.submissions! >= first.values.submissions!) continue;
+    if (after >= before) continue;
     return {
       id: "repeat",
       question: "Did coming back to a challenge change anything?",
-      answer: `Back on ${last.challenge}, you needed ${plural(last.values.submissions!, "submission")} instead of ${first.values.submissions}.`,
-      visual: { kind: "turn", from: plural(first.values.submissions!, "submission"), to: plural(last.values.submissions!, "submission") },
+      answer: `Back on ${last.challenge}, you needed ${plural(after, "submission")} instead of ${before}.`,
+      visual: { kind: "turn", from: plural(before, "submission"), to: plural(after, "submission") },
       note: "Same challenge, so familiarity helps.",
       fyi: null,
     };
