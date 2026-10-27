@@ -81,3 +81,18 @@ export function checkRunRecords(records: unknown, slot: Claimed): StoredRecord[]
   }
   return records as StoredRecord[];
 }
+
+/**
+ * What a run's responses reported costing (OpenRouter's `usage.cost`, USD), read from its own
+ * records; null when none reported a cost.
+ */
+export function runCost(records: readonly StoredRecord[]): number | null {
+  let total: number | null = null;
+  for (const record of records) {
+    if (record.kind !== "observation" || !record.payload.includes('"model.response"')) continue;
+    const value = JSON.parse(record.payload) as { type?: string; data?: { usage?: { cost?: unknown } } };
+    const cost = value.type === "model.response" ? value.data?.usage?.cost : undefined;
+    if (typeof cost === "number" && Number.isFinite(cost)) total = (total ?? 0) + cost;
+  }
+  return total;
+}

@@ -1,18 +1,18 @@
 "use client";
 /**
- * Model runs from the operator's tab (docs/model-runs.md), as a to-do list. The roster is a set
- * of targets (a model at a reasoning effort); every target is run on every live challenge
- * revision with the current harness, a fixed number of tries, never more. Go makes the queue
- * exactly what is still missing and works through it in this tab, through the real practice
- * session. Safe to press any time. The OpenRouter key lives only in this component's memory:
+ * Model runs from the operator's tab (docs/model-runs.md), as a to-do list. Each model on the
+ * list shows every reasoning level its OpenRouter listing offers; the levels switched on run
+ * on every live challenge revision with the current harness, a fixed number of tries, never
+ * more. Go makes the queue exactly what is still missing and works through it in this tab,
+ * through the real practice session. Safe to press any time. The OpenRouter key lives only in this component's memory:
  * never stored, never sent anywhere but OpenRouter, never recorded.
  */
 import { useEffect, useRef, useState } from "react";
 import type { Catalog } from "../../../../../packages/content/model";
 import type { Json } from "../../../../../packages/domain/json";
 import type { Claimed, Coverage, Target } from "../../../../../packages/model-runs/ledger";
-import { EFFORTS, requestFor } from "../../../../../packages/model-runs/admin";
-import { summarize, type TargetCoverage } from "../../../../../packages/model-runs/coverage";
+import { requestFor } from "../../../../../packages/model-runs/admin";
+import { effortOf, estimate, summarize, type TargetCoverage } from "../../../../../packages/model-runs/coverage";
 import { OPENROUTER } from "../../../../../packages/model-runs/openrouter";
 import { BrowserPractice } from "../../../../../packages/model-runs/practice";
 import { runModel } from "../../../../../packages/model-runs/run";
@@ -21,6 +21,7 @@ interface Overview {
   harnessVersion: string;
   tries: number;
   live: string[];
+  models: string[];
   targets: Target[];
   coverage: Coverage[];
   recent: Record<string, string | number | null>[];
@@ -31,6 +32,7 @@ interface Listed {
   name: string;
   supported: string[];
   efforts: string[];
+  defaultEffort: string | null;
   prompt: number;
   completion: number;
 }
@@ -89,7 +91,7 @@ export function Benchmarks({ harnessVersion }: { harnessVersion: string }) {
       id: string;
       name: string;
       supported_parameters: string[];
-      reasoning?: { supported_efforts?: string[] };
+      reasoning?: { supported_efforts?: string[]; default_effort?: string };
       pricing?: { prompt?: string; completion?: string };
     }[];
     const listed = new Map(
@@ -99,6 +101,7 @@ export function Benchmarks({ harnessVersion }: { harnessVersion: string }) {
           name: m.name,
           supported: m.supported_parameters,
           efforts: m.reasoning?.supported_efforts ?? [],
+          defaultEffort: m.reasoning?.default_effort ?? null,
           prompt: Number(m.pricing?.prompt ?? NaN) * 1e6,
           completion: Number(m.pricing?.completion ?? NaN) * 1e6,
         },
@@ -125,8 +128,19 @@ export function Benchmarks({ harnessVersion }: { harnessVersion: string }) {
     }
   }
 
-  const setTarget = (target: Target, remove = false) =>
-    act(() => post("/admin/api/model-runs/roster", { ...target, remove }));
+  const change = (body: Record<string, string>) => act(() => post("/admin/api/model-runs/roster", body));
+
+  /** Adds a model with only its default reasoning level running. */
+  const addModel = (id: string) =>
+    act(async () => {
+      await post("/admin/api/model-runs/roster", { action: "add-model", model: id });
+      const listed = listing.get(id) ?? (await loadListing()).get(id);
+      await post("/admin/api/model-runs/roster", {
+        action: "run",
+        model: id,
+        effort: listed?.efforts.length ? (listed.defaultEffort ?? listed.efforts[0]) : "default",
+      });
+    });
 
   /** One worker: claim, play, hand in, until nothing is left or the operator stops. */
   async function worker(n: number, apiKey: string, listed: Map<string, Listed>) {
@@ -174,7 +188,7 @@ export function Benchmarks({ harnessVersion }: { harnessVersion: string }) {
         setSpent((total) => total + cost);
         note(
           n,
-          `→ ${result.outcome}${result.reason ? ` (${result.reason})` : ""}, ${result.turns} turns, ${result.submissions} submissions, $${cost.toFixed(4)}`,
+          `→ ${result.outcome}${result.reason ? ` (${result.reason})` : ""}, ${result.turns} turns, ${result.submissions} submissions, ${money(cost)}`,
         );
       } catch (cause) {
         await practice?.close().catch(() => undefined);
@@ -212,19 +226,23 @@ export function Benchmarks({ harnessVersion }: { harnessVersion: string }) {
     }
   }
 
+
   const tries = overview?.tries ?? 3;
   const rows = overview
     ? summarize(overview.coverage, overview.targets, overview.live, overview.harnessVersion, tries)
     : [];
-  const todo = rows.reduce((n, r) => n + r.todo, 0);
-  const target = rows.filter((r) => r.current && r.onRoster).length * (overview?.live.length ?? 0) * tries;
-  const models = [...new Set(rows.map((r) => r.model))];
+  const running = rows.filter((r) => r.current && r.onRoster);
+  const todo = running.reduce((n, r) => n + r.todo, 0);
+  const target = running.length * (overview?.live.length ?? 0) * tries;
+  const left = estimate(running);
+  const spentAll = rows.reduce((n, r) => n + r.spent, 0);
+  const models = [...new Set([...(overview?.models ?? []), ...rows.map((r) => r.model)])];
 
   return (
     <>
       <h1>Benchmarks</h1>
       <p>
-        Every model on the roster plays every live challenge at each of its reasoning levels, {tries}{" "}
+        Every model on the list plays every live challenge at each reasoning level switched on, {tries}{" "}
         {tries === 1 ? "time" : "times"} and never more, with harness <code>{harnessVersion}</code>, through
         the same practice session as people. Everything is recorded raw, apart from people&apos;s data.
       </p>
@@ -236,15 +254,41 @@ export function Benchmarks({ harnessVersion }: { harnessVersion: string }) {
 
       <section aria-labelledby="todo">
         <h2 id="todo">To do</h2>
-        <p className="admin-todo">
-          <strong>{overview ? todo : "…"}</strong> runs left of {target} ({percent(target - todo, target)} done)
-          across {overview?.targets.length ?? 0} targets on {overview?.live.length ?? 0} live challenges.
-        </p>
-        <p>
-          Go queues whatever is missing, drops waiting runs the roster no longer needs, and runs the rest in
-          this tab. Finished runs are never repeated, so press it whenever. Runs wait while the tab is hidden
-          (browsers slow hidden tabs down). The key stays in this page&apos;s memory and goes only to
-          OpenRouter: use one with a credit limit, and delete it when you are done.
+        {overview && (
+          <dl className="admin-todo">
+            <div>
+              <dt>Runs left</dt>
+              <dd>
+                {todo.toLocaleString()} <span className="faint">of {target.toLocaleString()} · {percent(target - todo, target)} done</span>
+              </dd>
+            </div>
+            <div>
+              <dt>Cost to finish</dt>
+              <dd>
+                {todo ? about(left.cost) : money(0)}
+                {left.unknown > 0 && <span className="faint"> + {left.unknown} runs not yet estimable</span>}
+              </dd>
+            </div>
+            <div>
+              <dt>Time to finish</dt>
+              <dd>
+                {todo ? `≈ ${duration(left.seconds / Math.max(1, workers))}` : "–"}{" "}
+                <span className="faint">at {workers} at a time</span>
+              </dd>
+            </div>
+            <div>
+              <dt>Spent so far</dt>
+              <dd>
+                {money(spentAll)} <span className="faint">full run {about(spentAll + left.cost)}</span>
+              </dd>
+            </div>
+          </dl>
+        )}
+        <p className="faint">
+          Go queues what is missing, drops waiting runs no longer needed, and runs the rest in this tab. Finished
+          runs are never repeated, so press it whenever. Runs wait while the tab is hidden. The key stays in this
+          page&apos;s memory and goes only to OpenRouter: use one with a credit limit. Estimates come from each
+          level&apos;s finished runs, or its model&apos;s other levels until it has some.
         </p>
         {hidden && active > 0 && <p className="error">This tab is hidden: runs wait until it is visible again.</p>}
         <form
@@ -287,19 +331,21 @@ export function Benchmarks({ harnessVersion }: { harnessVersion: string }) {
           )}
         </form>
         <p>
-          {active > 0 ? `${active} running.` : "Not running."} Spent this session: ${spent.toFixed(4)}.
+          {active > 0 ? `${active} running.` : "Not running."} Spent this session: {money(spent)}.
         </p>
-        <ol className="admin-run-log" aria-label="Runner log">
-          {log.map((entry, i) => (
-            <li key={i}>
-              <span className="faint">
-                {entry.at}
-                {entry.worker ? ` · ${entry.worker}` : ""}
-              </span>{" "}
-              {entry.text}
-            </li>
-          ))}
-        </ol>
+        {log.length > 0 && (
+          <ol className="admin-run-log" aria-label="Runner log">
+            {log.map((entry, i) => (
+              <li key={i}>
+                <span className="faint">
+                  {entry.at}
+                  {entry.worker ? ` · ${entry.worker}` : ""}
+                </span>{" "}
+                {entry.text}
+              </li>
+            ))}
+          </ol>
+        )}
       </section>
 
       <section aria-labelledby="models">
@@ -309,17 +355,20 @@ export function Benchmarks({ harnessVersion }: { harnessVersion: string }) {
             key={m}
             model={m}
             listed={listing.get(m)}
+            onList={overview?.models.includes(m) ?? false}
             rows={rows.filter((r) => r.model === m)}
+            live={overview?.live.length ?? 0}
             tries={tries}
-            onAdd={(effort) => setTarget({ model: m, effort })}
-            onRemove={(effort) => setTarget({ model: m, effort }, true)}
+            workers={workers}
+            onChange={(body) => change({ model: m, ...body })}
+            onAddBack={() => addModel(m)}
           />
         ))}
         <form
           className="admin-stats-filters"
           onSubmit={(event) => {
             event.preventDefault();
-            void setTarget({ model: model.trim(), effort: "default" });
+            void addModel(model.trim());
             setModel("");
           }}
         >
@@ -338,8 +387,9 @@ export function Benchmarks({ harnessVersion }: { harnessVersion: string }) {
               ))}
             </datalist>
           </label>
-          <button type="submit">Add at its default reasoning</button>
+          <button type="submit">Add model</button>
         </form>
+        <p className="faint">A new model runs its default reasoning level; switch on the others in its card.</p>
       </section>
 
       {overview && overview.recent.length > 0 && (
@@ -351,9 +401,9 @@ export function Benchmarks({ harnessVersion }: { harnessVersion: string }) {
                 <tr>
                   <th scope="col">Started</th>
                   <th scope="col">Model</th>
+                  <th scope="col">Level</th>
                   <th scope="col">Challenge</th>
-                  <th scope="col">Condition</th>
-                  <th scope="col">Status</th>
+                  <th scope="col">Result</th>
                   <th scope="col">Turns</th>
                   <th scope="col">Submissions</th>
                 </tr>
@@ -361,13 +411,11 @@ export function Benchmarks({ harnessVersion }: { harnessVersion: string }) {
               <tbody>
                 {overview.recent.map((r) => (
                   <tr key={String(r.run_id)}>
-                    <td>{String(r.started_at)}</td>
+                    <td>{new Date(String(r.started_at)).toLocaleString()}</td>
                     <td>{String(r.model)}</td>
+                    <td>{effortOf(String(r.condition))}</td>
                     <td>
-                      {String(r.challenge_key)} #{String(r.try)}
-                    </td>
-                    <td>
-                      <code>{String(r.condition)}</code>
+                      {String(r.challenge_key)} <span className="faint">try {String(r.try)}</span>
                     </td>
                     <td>
                       {String(r.outcome ?? r.status)}
@@ -388,112 +436,207 @@ export function Benchmarks({ harnessVersion }: { harnessVersion: string }) {
   );
 }
 
-/** One model: its coverage per reasoning level and harness version, and its targets. */
+const LEVEL_ORDER = ["none", "minimal", "low", "medium", "high", "xhigh", "max", "default"];
+
+function money(usd: number): string {
+  if (usd > 0 && usd < 0.01) return "under $0.01";
+  return `$${usd.toFixed(2)}`;
+}
+
+/** An estimate: "≈ $1.20", or "under $0.01". */
+function about(usd: number): string {
+  return usd > 0 && usd < 0.01 ? money(usd) : `≈ ${money(usd)}`;
+}
+
+function duration(seconds: number): string {
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 1) return "under a minute";
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  return hours < 48 ? `${hours} h ${minutes % 60} min` : `${Math.round(hours / 24)} days`;
+}
+
+/**
+ * One model, collapsed to a summary line; open, every reasoning level its listing offers (the
+ * model's default tagged), each with its coverage and a switch, and earlier harness versions
+ * dimmed beneath.
+ */
 function ModelCard({
   model,
   listed,
+  onList,
   rows,
+  live,
   tries,
-  onAdd,
-  onRemove,
+  workers,
+  onChange,
+  onAddBack,
 }: {
   model: string;
   listed: Listed | undefined;
+  onList: boolean;
   rows: TargetCoverage[];
+  live: number;
   tries: number;
-  onAdd(effort: string): void;
-  onRemove(effort: string): void;
+  workers: number;
+  onChange(body: Record<string, string>): Promise<unknown>;
+  onAddBack(): void;
 }) {
-  const offered = ["default", ...(listed?.efforts ?? [])];
-  const missing = EFFORTS.filter((e) => offered.includes(e) && !rows.some((r) => r.current && r.onRoster && r.effort === e));
-  const [effort, setEffort] = useState("");
+  // A switch shows its new state at once, and settles when the ledger answers.
+  const [pending, setPending] = useState<Record<string, boolean>>({});
+  const toggle = async (effort: string, running: boolean) => {
+    setPending((p) => ({ ...p, [effort]: !running }));
+    try {
+      await onChange({ action: running ? "stop" : "run", effort });
+    } finally {
+      setPending(({ [effort]: _, ...rest }) => rest);
+    }
+  };
+  const offered = listed ? (listed.efforts.length ? listed.efforts : ["default"]) : [];
+  const levels = [...new Set([...offered, ...rows.map((r) => r.effort)])].sort(
+    (a, b) => LEVEL_ORDER.indexOf(a) - LEVEL_ORDER.indexOf(b),
+  );
+  const current = (effort: string) => rows.find((r) => r.current && r.effort === effort);
+  const on = rows.filter((r) => r.current && r.onRoster);
+  const left = estimate(on);
+  const todo = on.reduce((n, r) => n + r.todo, 0);
+  const covered = on.reduce((n, r) => n + r.covered, 0);
+  const spent = rows.reduce((n, r) => n + r.spent, 0);
+  const isDefault = (effort: string) =>
+    listed ? (listed.efforts.length ? effort === listed.defaultEffort : effort === "default") : false;
   return (
-    <article className="admin-model" aria-labelledby={`model-${model}`}>
-      <h3 id={`model-${model}`}>
-        <code>{model}</code>
-        {listed && (
-          <span className="faint">
-            {" "}
-            · {listed.name}
-            {Number.isFinite(listed.prompt) &&
-              ` · $${listed.prompt.toFixed(2)} / $${listed.completion.toFixed(2)} per 1M tokens in / out`}
-          </span>
-        )}
-      </h3>
-      <div className="admin-inventory" role="region" aria-label={`${model} coverage`} tabIndex={0}>
+    <details className="admin-model">
+      <summary>
+        <span className="admin-model-name">
+          <code>{model}</code>
+          {listed && <span className="faint"> · {listed.name}</span>}
+        </span>
+        <span className="admin-model-facts">
+          {!onList ? (
+            "not on the list"
+          ) : on.length ? (
+            <>
+              {on.length} of {levels.length} levels on · {percent(covered, on.length * live)} covered · {todo} runs left
+              {todo > 0 &&
+                left.unknown < todo &&
+                ` · ${about(left.cost)} and ≈ ${duration(left.seconds / Math.max(1, workers))} to finish`}
+            </>
+          ) : (
+            "no levels on"
+          )}
+          {spent > 0 && ` · ${money(spent)} spent`}
+        </span>
+      </summary>
+      <p className="faint">
+        {listed && Number.isFinite(listed.prompt)
+          ? `$${listed.prompt.toFixed(2)} in / $${listed.completion.toFixed(2)} out per million tokens now. `
+          : listed
+            ? ""
+            : "Not in OpenRouter's list now. "}
+        Coverage counts a challenge once all {tries} tries have finished.
+      </p>
+      <div className="admin-inventory" role="region" aria-label={`${model} reasoning levels`} tabIndex={0}>
         <table>
           <thead>
             <tr>
-              <th scope="col">Reasoning</th>
-              <th scope="col">Harness</th>
-              <th scope="col">Challenges covered ({tries} tries each)</th>
-              <th scope="col">Runs finished</th>
+              <th scope="col">Runs</th>
+              <th scope="col">Reasoning level</th>
+              <th scope="col">Challenges covered</th>
+              <th scope="col">Finished</th>
               <th scope="col">Completed</th>
               <th scope="col">Waiting</th>
               <th scope="col">To do</th>
-              <th scope="col" />
+              <th scope="col">Spent</th>
+              <th scope="col">To finish</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={`${r.effort} ${r.harnessVersion}`} className={r.current && r.onRoster ? undefined : "faint"}>
-                <th scope="row">{r.effort}</th>
-                <td>
-                  <code>{r.harnessVersion}</code>
-                  {!r.current && " (earlier)"}
-                  {r.current && !r.onRoster && " (off the roster)"}
-                </td>
-                <td>
-                  <meter min={0} max={r.live} value={r.covered} aria-label={`${r.effort} coverage`} /> {r.covered} /{" "}
-                  {r.live}
-                  {r.started > r.covered && <span className="faint"> ({r.started} started)</span>}
-                </td>
-                <td>{r.finished}</td>
-                <td>
-                  {r.completed} {r.finished > 0 && <span className="faint">({percent(r.completed, r.finished)})</span>}
-                </td>
-                <td>
-                  {r.waiting}
-                  {r.harnessFailures > 0 && <span className="faint"> ({r.harnessFailures} harness failures)</span>}
-                </td>
-                <td>{r.todo}</td>
-                <td>
-                  {r.current && r.onRoster && (
-                    <button type="button" onClick={() => onRemove(r.effort)}>
-                      Remove
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
+            {levels.flatMap((effort) => {
+              const r = current(effort);
+              const running = !!r?.onRoster;
+              const earlier = rows.filter((x) => !x.current && x.effort === effort);
+              return [
+                <tr key={effort} className={running ? undefined : "faint"}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={pending[effort] ?? running}
+                      disabled={(!onList && !running) || effort in pending}
+                      aria-label={`Run ${model} at ${effort}`}
+                      onChange={() => void toggle(effort, running)}
+                    />
+                  </td>
+                  <th scope="row">
+                    {effort === "default" && !listed?.efforts.length ? "no reasoning setting" : effort}
+                    {isDefault(effort) && <span className="admin-tag">default</span>}
+                    {listed && !offered.includes(effort) && <span className="faint"> (no longer offered)</span>}
+                  </th>
+                  <td>
+                    <meter min={0} max={live} value={r?.covered ?? 0} aria-label={`${effort} coverage`} /> {r?.covered ?? 0} /{" "}
+                    {live}
+                    {r && r.started > r.covered && <span className="faint"> ({r.started} started)</span>}
+                  </td>
+                  <td>{r?.finished ?? 0}</td>
+                  <td>
+                    {r?.completed ?? 0}{" "}
+                    {r && r.finished > 0 && <span className="faint">({percent(r.completed, r.finished)})</span>}
+                  </td>
+                  <td>
+                    {r?.waiting ?? 0}
+                    {r && r.harnessFailures > 0 && <span className="faint"> ({r.harnessFailures} failed, to retry)</span>}
+                    {r && r.waiting > 0 && !running && <span className="faint"> (dropped at the next Go)</span>}
+                  </td>
+                  <td>{r?.todo ?? 0}</td>
+                  <td>{money(r?.spent ?? 0)}</td>
+                  <td>
+                    {r && r.todo > 0
+                      ? r.costPerRun === null
+                        ? "after its first run"
+                        : `${about(r.costPerRun * r.todo)}${r.estimatedFrom === "model" ? " (from other levels)" : ""}`
+                      : running
+                        ? "done"
+                        : ""}
+                  </td>
+                </tr>,
+                ...earlier.map((x) => (
+                  <tr key={`${effort} ${x.harnessVersion}`} className="faint">
+                    <td />
+                    <td>
+                      ↳ <code>{x.harnessVersion}</code> (earlier)
+                    </td>
+                    <td>
+                      {x.covered} / {live}
+                    </td>
+                    <td>{x.finished}</td>
+                    <td>{x.completed}</td>
+                    <td>{x.waiting}</td>
+                    <td />
+                    <td>{money(x.spent)}</td>
+                    <td />
+                  </tr>
+                )),
+              ];
+            })}
           </tbody>
         </table>
       </div>
-      {missing.length > 0 && (
-        <form
-          className="admin-stats-filters"
-          onSubmit={(event) => {
-            event.preventDefault();
-            onAdd(effort || missing[0]);
-            setEffort("");
-          }}
-        >
-          <label>
-            Reasoning level
-            <select value={effort || missing[0]} onChange={(e) => setEffort(e.target.value)}>
-              {missing.map((e) => (
-                <option key={e}>{e}</option>
-              ))}
-            </select>
-          </label>
-          <button type="submit">Add reasoning level</button>
-          {missing.length > 1 && (
-            <button type="button" onClick={() => missing.forEach((e) => onAdd(e))}>
-              Add all {missing.length}
-            </button>
-          )}
-        </form>
-      )}
-    </article>
+      <p>
+        {onList ? (
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm(`Take ${model} off the list? Its waiting runs go; finished runs stay.`))
+                onChange({ action: "remove-model" });
+            }}
+          >
+            Take off the list
+          </button>
+        ) : (
+          <button type="button" onClick={onAddBack}>
+            Put back on the list
+          </button>
+        )}
+      </p>
+    </details>
   );
 }

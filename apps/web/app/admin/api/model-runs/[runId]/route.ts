@@ -1,7 +1,7 @@
 import { adminRoute } from "../../../../../lib/admin-server";
 import { jsonBody, ledgerDb, storeRun } from "../../../../../lib/model-runs-server";
 import { finish, harnessFailed, running } from "../../../../../../../packages/model-runs/ledger";
-import { checkRunRecords } from "../../../../../../../packages/model-runs/admin";
+import { checkRunRecords, runCost } from "../../../../../../../packages/model-runs/admin";
 import { runNdjson } from "../../../../../../../packages/model-runs/rows";
 import type { RunOutcome } from "../../../../../../../packages/domain/model";
 export const dynamic = "force-dynamic";
@@ -44,7 +44,13 @@ export const POST = adminRoute(async (request) => {
   await finish(
     db,
     runId,
-    { outcome, reason: typeof body.reason === "string" ? body.reason.slice(0, 500) : null, turns, submissions },
+    {
+      outcome,
+      reason: typeof body.reason === "string" ? body.reason.slice(0, 500) : null,
+      turns,
+      submissions,
+      cost: runCost(records),
+    },
     now,
   );
   return Response.json({ ok: true });

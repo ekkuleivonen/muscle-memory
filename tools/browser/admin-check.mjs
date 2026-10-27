@@ -257,7 +257,7 @@ async function scriptedOpenRouter(incoming, url) {
   const headers = { "access-control-allow-origin": "*" };
   if (incoming.method() === "OPTIONS") return { status: 204, headers: { ...headers, "access-control-allow-headers": "*" } };
   if (url.pathname === "/api/v1/models")
-    return { status: 200, headers, contentType: "application/json", body: JSON.stringify({ data: [{ id: "scripted/reference", supported_parameters: ["tools"] }] }) };
+    return { status: 200, headers, contentType: "application/json", body: JSON.stringify({ data: [{ id: "scripted/reference", name: "Scripted reference", supported_parameters: ["tools", "reasoning"], reasoning: { supported_efforts: ["low", "high"], default_effort: "high" }, pricing: { prompt: "0.000001", completion: "0.000002" } }] }) };
   if (url.pathname !== "/api/v1/chat/completions")
     return { status: 200, headers, contentType: "application/json", body: '{"data":{}}' };
   const body = JSON.parse(incoming.postData());
@@ -288,26 +288,24 @@ async function scriptedOpenRouter(incoming, url) {
 
 /** One model run from the Benchmarks page: roster, queue, run, hand in, stored. */
 async function modelRun(page) {
+  const card = page.locator("details.admin-model");
   await page.getByLabel("Add a model (as OpenRouter names it)").fill("scripted/reference");
-  await page.getByRole("button", { name: "Add at its default reasoning" }).click();
-  await page.getByRole("region", { name: "scripted/reference coverage" }).waitFor();
-  await page.getByText("207 runs left of 207 (0% done)", { exact: false }).waitFor();
+  await page.getByRole("button", { name: "Add model", exact: true }).click();
+  // Added with only its default level on.
+  await card.getByText(/1 of 2 levels on · 0% covered · 207 runs left/).waitFor();
+  await page.getByText(/207 of 207/).waitFor();
   await page.getByLabel("OpenRouter key").fill(fixtureKey);
   await page.getByLabel("Runs at a time").fill("1");
   await page.getByRole("button", { name: "Go", exact: true }).click();
   await page.getByText("Queued 207 missing runs.").waitFor();
   // Stop once the first run is under way: it finishes, and nothing more is claimed.
-  await page.getByText(/scripted\/reference · default · [A-Z]+-\d{3} · try 1/).waitFor();
+  await page.getByText(/scripted\/reference · high · [A-Z]+-\d{3} · try 1/).waitFor();
   await page.getByRole("button", { name: "Stop after the current runs" }).click();
   await page.getByText(/→ (completed|stopped|budget|refused|error|harness failure)/).waitFor({ timeout: 180000 });
   const log = await page.getByRole("list", { name: "Runner log" }).innerText();
   assert.match(log, /→ completed, 2 turns, 1 submissions/, log);
   await page.getByText("Not running.").waitFor();
-  await page.getByText("206 runs left of 207", { exact: false }).waitFor();
-  assert.match(
-    await page.getByRole("region", { name: "scripted/reference coverage" }).innerText(),
-    /0 \/ 69 \(1 started\)/,
-  );
+  await page.getByText(/206 of 207/).waitFor();
   // Go is idempotent: the queue already holds exactly what is missing.
   const again = JSON.parse(
     await check("/admin/api/model-runs/sync", valid, 200, {
@@ -317,6 +315,19 @@ async function modelRun(page) {
     }),
   );
   assert.deepEqual(again, { queued: 0, dropped: 0 });
+  // The card: the default level tagged, its coverage and an estimate from its own run.
+  await card.locator("summary").click();
+  const levels = page.getByRole("region", { name: "scripted/reference reasoning levels" });
+  const high = levels.getByRole("row").filter({ hasText: /^.*high/ });
+  assert.match(await high.innerText(), /high\s*default/i);
+  assert.match(await high.innerText(), /0 \/ 69 \(1 started\)/);
+  assert.match(await high.innerText(), /≈ \$|under \$0\.01/);
+  // Switching on another level adds its runs to do, estimated from the model's other runs.
+  await page.getByLabel("Run scripted/reference at low").check();
+  await card.getByText(/2 of 2 levels on/).waitFor();
+  await page.getByText(/413 of 414/).waitFor();
+  assert.match(await levels.getByRole("row").filter({ hasText: /^.*low/ }).innerText(), /from other levels/);
+  await page.screenshot({ path: "/tmp/mm-eng342-benchmarks.png", fullPage: true });
   const overview = JSON.parse(await check("/admin/api/model-runs", valid, 200));
   const finished = overview.recent.find((r) => r.status === "finished");
   assert.equal(finished.outcome, "completed");
@@ -331,6 +342,8 @@ async function modelRun(page) {
   assert.ok(observations.every((o) => o.actor === "model" && o.termsVersion === null));
   assert.ok(observations.some((o) => o.type === "practice.completed"));
   assert.ok(observations.some((o) => o.type === "model.generation"));
+  const priced = overview.coverage.filter((c) => c.status === "finished");
+  assert.ok(priced.length === 1 && priced[0].cost > 0, "the run's cost is in the ledger");
   assert.ok(
     openRouterCalls.filter((c) => c.path === "/api/v1/chat/completions").every((c) => c.authorization === `Bearer ${fixtureKey}`),
   );
@@ -349,10 +362,10 @@ try {
   await mf.ready;
   if (modelRunsFixture) {
     const db = await mf.getD1Database("CATALOG_DB");
-    for (const file of ["0002_model_runs.sql", "0003_model_run_targets.sql"])
+    for (const file of ["0002_model_runs.sql", "0003_model_run_targets.sql", "0004_model_list_and_costs.sql"])
     for (const statement of (await readFile(`migrations/catalog/${file}`, "utf8"))
       .replace(/--[^\n]*\n/g, "\n")
-      .split(/;\s*\n(?=CREATE)/)
+      .split(/;\s*\n/)
       .map((s) => s.trim().replace(/;$/, ""))
       .filter(Boolean))
       await db.prepare(statement).run();
