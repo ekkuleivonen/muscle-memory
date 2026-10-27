@@ -14,6 +14,7 @@ import {
 import {
   envelope,
   toRecord,
+  type Actor,
   type Assignments,
   type CodeRevisionArtifact,
   type StoredRecord,
@@ -32,8 +33,10 @@ export interface RecorderOptions {
   /** The page load this recording belongs to. */
   readonly sessionId: string;
   readonly sourceId: string;
-  /** The accepted Terms version, such as 2026-10-25.1. */
-  readonly termsVersion: string;
+  /** The accepted Terms version, such as 2026-10-25.1; null for a model. */
+  readonly termsVersion: string | null;
+  /** A person unless told otherwise; the model-run harness records as a model. */
+  readonly actor?: Actor;
   readonly assignments?: Assignments;
   /** The challenge, the revision worked against, and the attempt. */
   readonly challenge: { readonly key: string; readonly revision: string };
@@ -53,6 +56,11 @@ export interface RecorderOptions {
   readonly now?: () => Date;
   /** A monotonic clock in milliseconds; performance.now() by default. */
   readonly monotonic?: () => number;
+  /**
+   * The clock reading the stream's elapsed time counts from; when the recorder is made by
+   * default. A model run's streams share one origin so they interleave exactly.
+   */
+  readonly origin?: number;
 }
 
 export interface CaptureStatus {
@@ -103,7 +111,7 @@ export class CaptureRecorder {
   private readonly origin: number;
 
   constructor(private readonly options: RecorderOptions) {
-    this.origin = this.clock();
+    this.origin = options.origin ?? this.clock();
     safeIdentifier(options.participantId);
     safeIdentifier(options.sourceId);
     this.maxRecords = options.maxRecords ?? 1000;
@@ -155,6 +163,7 @@ export class CaptureRecorder {
       sequence,
       occurredAt: (this.options.now?.() ?? new Date()).toISOString(),
       elapsedMs: this.elapsed(),
+      actor: this.options.actor,
       termsVersion: this.options.termsVersion,
       assignments: this.options.assignments,
       challenge: this.options.challenge,

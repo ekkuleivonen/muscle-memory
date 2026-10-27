@@ -4,7 +4,8 @@
  * of a secret only that device knows. The server keeps the first proof it sees for an ID and
  * refuses batches with any other, so nobody can add to someone else's data; deleting needs
  * the secret itself. Each accepted record becomes one row, with the stored payload kept
- * verbatim as the raw record.
+ * verbatim as the raw record. Only a person's observations are accepted: a model's are
+ * recorded by the offline harness and stored apart.
  */
 import { safeIdentifier } from "./capture";
 import { PRACTICE_CAPTURE_VERSION } from "./practice";
@@ -105,6 +106,8 @@ export function checkRecord(
   }
   if (!value || typeof value !== "object" || value.participantId !== participantId)
     return refuse("payload names another participant");
+  // Model runs are recorded offline and stored apart (docs/model-runs.md), never uploaded here.
+  if (record.kind === "observation" && value.actor !== "person") return refuse("not a person");
   const type = String(value.type ?? "");
   const capture = typeof value.captureVersion === "string" ? value.captureVersion : null;
   if (record.kind === "artifact") {

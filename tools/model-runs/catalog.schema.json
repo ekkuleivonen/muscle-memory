@@ -1,0 +1,44 @@
+{
+  "fields": [
+    {
+      "name": "snapshot_id",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "fetched_at",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "url",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "status",
+      "type": "int64",
+      "required": false
+    },
+    {
+      "name": "headers",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "body",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "error",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "duration_ms",
+      "type": "float64",
+      "required": true
+    }
+  ]
+}

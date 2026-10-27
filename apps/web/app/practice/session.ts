@@ -4,9 +4,10 @@
  * No React state is touched per keystroke.
  */
 import { randomId } from "../../../../packages/browser/random-id";
-import { Text, Transaction } from "@codemirror/state";
+import { Text, Transaction, type ChangeSpec } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { CaptureRecorder } from "../../../../packages/capture/recorder";
+import type { Actor } from "../../../../packages/domain/records";
 import type {
   CaptureSink,
   CaptureStatus,
@@ -66,8 +67,24 @@ export interface RunView {
 
 export interface SessionOptions {
   readonly participantId: string;
-  /** The accepted Terms version, such as 2026-10-25.1. */
-  readonly termsVersion: string;
+  /** The accepted Terms version, such as 2026-10-25.1; null for a model. */
+  readonly termsVersion: string | null;
+  /** A person unless told otherwise; the model-run harness plays as a model. */
+  readonly actor?: Actor;
+  /** The page load by default; a model run's own id in the harness. */
+  readonly sessionId?: string;
+  /** This stream's source id; `practice-<random>` by default. */
+  readonly sourceId?: string;
+  /** Clock and origin for elapsed times, shared with a model run's other stream. */
+  readonly clock?: { readonly monotonic: () => number; readonly origin: number };
+  /**
+   * The editor and gaps `opened` records, when they are not the editor's own: the harness
+   * says what its tools give a model and what does not apply to one.
+   */
+  readonly editor?: { readonly name: string; readonly features: readonly string[] };
+  readonly captureGaps?: readonly string[];
+  /** Focus the editor once mounted, as practice does for a person; the harness has no focus. */
+  readonly focusOnMount?: boolean;
   /** The challenge and the revision worked against; recorded with every observation. */
   readonly challenge: { readonly key: string; readonly revision: Revision; readonly revisionId: string };
   /** The attempt this session belongs to. */
@@ -127,7 +144,7 @@ export interface SaveStatus extends CaptureStatus {
 
 export class PracticeSession {
   readonly recorder: CaptureRecorder;
-  readonly sourceId = `practice-${randomId()}`;
+  readonly sourceId: string;
   private view?: EditorView;
   /** The code now, kept per transaction so snapshots never lag. */
   private doc: Text;
@@ -160,11 +177,14 @@ export class PracticeSession {
 
   constructor(private readonly options: SessionOptions) {
     this.staleNotified = !options.hasPreviousChecks;
+    this.sourceId = options.sourceId ?? `practice-${randomId()}`;
     this.recorder = new CaptureRecorder({
       participantId: options.participantId,
-      sessionId: PAGE_SESSION_ID,
+      sessionId: options.sessionId ?? PAGE_SESSION_ID,
       sourceId: this.sourceId,
+      actor: options.actor,
       termsVersion: options.termsVersion,
+      ...(options.clock ? { monotonic: options.clock.monotonic, origin: options.clock.origin } : {}),
       challenge: { key: options.challenge.key, revision: options.challenge.revisionId },
       attemptId: options.attemptId,
       sink: options.sink,
@@ -183,13 +203,15 @@ export class PracticeSession {
           profile: options.profile ?? null,
           viewport: options.viewport ?? null,
           environment: options.environment ?? null,
-          editor: editorFeatures(
-            options.language ?? "python",
-            options.keymap ?? "standard",
-            Boolean(options.types),
-          ),
+          editor:
+            options.editor ??
+            editorFeatures(
+              options.language ?? "python",
+              options.keymap ?? "standard",
+              Boolean(options.types),
+            ),
           runtime: this.runtime,
-          captureGaps: PRACTICE_CAPTURE_GAPS,
+          captureGaps: options.captureGaps ?? PRACTICE_CAPTURE_GAPS,
         },
         [code],
       ),
@@ -252,7 +274,7 @@ export class PracticeSession {
         activity: this.activity(),
       },
     );
-    focusInPlace(this.view);
+    if (this.options.focusOnMount !== false) focusInPlace(this.view);
   }
 
   private restoring = false;
@@ -296,10 +318,20 @@ export class PracticeSession {
   }
 
   /**
+   * Changes the code as one editor transaction with this user event, recorded like typing:
+   * how the model-run harness edits. False when the editor is not mounted.
+   */
+  apply(changes: ChangeSpec, userEvent: string): boolean {
+    if (!this.view || this.closed) return false;
+    this.view.dispatch({ changes, userEvent });
+    return true;
+  }
+
+  /**
    * Submits this exact code: a run of every case, then the verdict (cases and rules) and, when
    * it holds, completion.
    */
-  submit(via: "pointer" | "keyboard" = "pointer"): Promise<void> {
+  submit(via: "pointer" | "keyboard" | "tool" = "pointer"): Promise<void> {
     return this.run("submit", via);
   }
 
@@ -324,7 +356,7 @@ export class PracticeSession {
 
   async run(
     purpose: RunPurpose = "examples",
-    via: "pointer" | "keyboard" = "pointer",
+    via: "pointer" | "keyboard" | "tool" = "pointer",
   ): Promise<void> {
     if (!this.view || !this.runnable || this.options.runner().running)
       return;
@@ -403,14 +435,17 @@ export class PracticeSession {
    * Records that practice was left, writes everything still buffered, then stops capture.
    * `discard` stops at once without writing, for when the caller is about to delete the data.
    */
-  async close(discard = false): Promise<void> {
+  async close(
+    discard = false,
+    reason: PracticeData["practice.closed"]["reason"] = "left",
+  ): Promise<void> {
     // Practice may already have dropped its runner when it unmounts.
     this.options.runner()?.cancel();
     if (!discard && !this.closed) {
       this.closed = true;
       this.settle();
       this.writeKeys();
-      this.record("practice.closed", { reason: "left" });
+      this.record("practice.closed", { reason });
       await this.recorder.flush().catch(() => undefined);
     }
     this.view?.destroy();
