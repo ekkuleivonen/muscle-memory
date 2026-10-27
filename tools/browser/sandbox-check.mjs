@@ -448,7 +448,7 @@ async function authCheck(browserType) {
       signedIn.hits.assets.every((asset) => asset.signedIn),
     "signed in: bootstrap and a synthetic run succeed":
       signedIn.outcome.status === "completed" &&
-      signedIn.outcome.cases[0]?.output?.text === '{"a": 2, "b": 1}',
+      signedIn.outcome.cases[0]?.output?.text === '{"fixture_length": 3}',
     "signed in: the cookie never reaches another origin":
       signedIn.hits.outsideCookies.length === 0 &&
       signedIn.hits.outside.length === 0,

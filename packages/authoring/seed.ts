@@ -5,7 +5,13 @@ import { revisionId, verifyCatalog } from "../content/revision";
 import { canonical, type Json } from "../domain/json";
 import { digest, runtimePin } from "./runtime";
 import { normalizeStoredSource } from "../content/copy";
-import { AuthoringConflict, CatalogStorage, type Statement } from "./storage";
+import {
+  AuthoringConflict,
+  CatalogStorage,
+  type Statement,
+  type Head,
+  type Version,
+} from "./storage";
 
 export interface SeedInput {
   catalog: Catalog;
@@ -253,5 +259,53 @@ export async function seedCatalog(
     challenges: plan.heads.length,
     revisions: plan.versions.length,
     catalogObject: plan.catalogObject,
+  };
+}
+
+/** Verify local restored history; an archived head may intentionally have no editable draft. */
+export async function verifySeededCatalog(storage: CatalogStorage) {
+  const versions = (
+    await storage.db.prepare("SELECT * FROM published_versions").all<Version>()
+  ).results;
+  const heads = (
+    await storage.db.prepare("SELECT * FROM challenge_heads").all<Head>()
+  ).results;
+  for (const version of versions)
+    if (
+      revisionId((await storage.readObject(version.object_key)) as Revision) !==
+      version.revision
+    )
+      throw new Error("Local archive hash verification failed.");
+  for (const head of heads) {
+    const registered = versions.some(
+      (v) =>
+        v.challenge_key === head.challenge_key &&
+        v.revision === head.published_revision,
+    );
+    if (
+      head.lifecycle === "archived" &&
+      head.draft_object === null &&
+      head.draft_digest === null &&
+      registered
+    )
+      continue;
+    if (
+      !head.draft_object ||
+      !head.draft_digest ||
+      (await digest(await storage.readObject(head.draft_object))) !==
+        head.draft_digest
+    )
+      throw new Error("Local source digest verification failed.");
+  }
+  const state = await storage.catalogState();
+  if (!state?.active_object)
+    throw new Error("Local catalog pointer is missing.");
+  const published = verifyCatalog(
+    await storage.readObject(state.active_object),
+  );
+  return {
+    verifiedLocalHeads: heads.length,
+    verifiedLocalArchives: versions.length,
+    activeChallenges: published.challenges.length,
   };
 }

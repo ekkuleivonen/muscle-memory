@@ -18,7 +18,7 @@ async function main() {
   const destination = catalogCopyPath(root);
   if (!destination.startsWith(resolve(root, ".local") + "/"))
     throw new Error("Use a gitignored .local destination.");
-  let token = process.env.CLOUDFLARE_API_TOKEN;
+  let token = process.env.CATALOG_READ_TOKEN ?? (process.env.CI ? undefined : process.env.CLOUDFLARE_API_TOKEN);
   if (!token && !process.env.CI) {
     const conf = await readFile(
       resolve(homedir(), "Library/Preferences/.wrangler/config/default.toml"),

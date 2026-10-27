@@ -11,7 +11,11 @@ import {
   type Head,
   type Version,
 } from "../packages/authoring/storage";
-import { planCatalogSeed, seedCatalog } from "../packages/authoring/seed";
+import {
+  planCatalogSeed,
+  seedCatalog,
+  verifySeededCatalog,
+} from "../packages/authoring/seed";
 
 const args = process.argv.slice(2);
 if (args.some((a) => a !== "--local"))
@@ -88,41 +92,7 @@ if (args.includes("--local")) {
     }
     const storage = new CatalogStorage(db, bucket);
     console.log(JSON.stringify(await seedCatalog(storage, input)));
-    const versions = (
-      await db.prepare("SELECT * FROM published_versions").all<Version>()
-    ).results;
-    const heads = (
-      await db.prepare("SELECT * FROM challenge_heads").all<Head>()
-    ).results;
-    for (const version of versions) {
-      const revision = (await storage.readObject(
-        version.object_key,
-      )) as Revision;
-      if (revisionId(revision) !== version.revision)
-        throw new Error("Local archive hash verification failed.");
-    }
-    for (const head of heads) {
-      if (
-        !head.draft_object ||
-        !head.draft_digest ||
-        (await digest(await storage.readObject(head.draft_object))) !==
-          head.draft_digest
-      )
-        throw new Error("Local source digest verification failed.");
-    }
-    const state = await storage.catalogState();
-    if (!state?.active_object)
-      throw new Error("Local catalog pointer is missing.");
-    const published = verifyCatalog(
-      await storage.readObject(state.active_object),
-    );
-    console.log(
-      JSON.stringify({
-        verifiedLocalHeads: heads.length,
-        verifiedLocalArchives: versions.length,
-        activeChallenges: published.challenges.length,
-      }),
-    );
+    console.log(JSON.stringify(await verifySeededCatalog(storage)));
   } finally {
     await mf.dispose();
   }

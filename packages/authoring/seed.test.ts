@@ -5,7 +5,12 @@ import { readFileSync } from "node:fs";
 import { CatalogStorage, type Statement } from "./storage";
 import { readChallenge } from "../content/source";
 import { revisionId } from "../content/revision";
-import { planCatalogSeed, seedCatalog, type SeedInput } from "./seed";
+import {
+  planCatalogSeed,
+  seedCatalog,
+  verifySeededCatalog,
+  type SeedInput,
+} from "./seed";
 
 const source = readChallenge("PY-001");
 const id = revisionId(source.revision);
@@ -228,4 +233,52 @@ test("managed copy seed preserves every current identity and registered revision
       ),
       version.id,
     );
+});
+
+test("an archived registered head without a draft verifies after seed and repeat seed", async () => {
+  const { runtimePin } = await import("./runtime");
+  const metadata = {
+    ...source.metadata,
+    key: "PY-900",
+    title: "Synthetic archived fixture",
+  };
+  const revision = {
+    ...source.revision,
+    challenge: metadata.key,
+    publication: {
+      metadata,
+      runtime: await runtimePin(source.revision.language),
+    },
+  };
+  const archive = revisionId(revision);
+  const complete = {
+    ...input,
+    archives: { ...input.archives, [archive]: revision },
+  };
+  const f = fixture();
+  try {
+    await seedCatalog(f.storage, complete);
+    assert.equal((await f.storage.head("PY-900"))!.draft_object, null);
+    assert.deepEqual(await verifySeededCatalog(f.storage), {
+      verifiedLocalHeads: 2,
+      verifiedLocalArchives: 2,
+      activeChallenges: 1,
+    });
+    assert.equal(
+      (await seedCatalog(f.storage, complete)).status,
+      "already-initialized",
+    );
+    assert.equal(
+      (await verifySeededCatalog(f.storage)).verifiedLocalArchives,
+      2,
+    );
+    f.sql
+      .prepare(
+        "UPDATE challenge_heads SET lifecycle='published' WHERE challenge_key='PY-900'",
+      )
+      .run();
+    await assert.rejects(verifySeededCatalog(f.storage), /Local source digest/);
+  } finally {
+    f.sql.close();
+  }
 });
