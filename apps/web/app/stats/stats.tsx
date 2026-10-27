@@ -1,4 +1,5 @@
 "use client";
+import { reportProfile } from "../../lib/profile";
 import Link from "next/link";
 import React, { useMemo, useState } from "react";
 import { buildReport, mergeEvidence, type Report } from "../../lib/report";
@@ -120,7 +121,7 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
             catalog,
             progress: device.progress,
             attempts,
-            profile: device.profile.profile,
+            profile: reportProfile(device.profile),
             receipts,
           })
         : null,
