@@ -93,11 +93,12 @@ function Outcomes({ c }: { c: OutcomesChapter }) {
                 <li
                   key={i.key}
                   className={`report-cell is-${i.outcome}${i.revisited ? " is-revisited" : ""}`}
-                  title={`${i.key} · ${i.title}: ${i.outcome === "completed" ? "finished" : "open"}${i.revisited ? ", revisited" : ""}`}
+                  title={`${i.key} · ${i.title}: ${i.outcome === "completed" ? "finished" : "open"}${i.revisited ? ", revisited" : ""}${i.fromUploads ? ", from your uploads" : ""}`}
                 >
                   <span className="sr-only">
                     {i.key} {i.title}: {i.outcome === "completed" ? "finished" : "open"}
                     {i.revisited ? ", revisited" : ""}
+                    {i.fromUploads ? ", from your uploads" : ""}
                   </span>
                 </li>
               ))}
@@ -354,7 +355,7 @@ function Surprise({ c }: { c: SurpriseChapter }) {
 }
 
 function Share({ items, report }: { items: NextChapter["shareable"]; report: Report }) {
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(items.slice(0, 1).map((i) => i.id)));
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [status, setStatus] = useState("");
   if (!items.length) return null;
   const copy = async () => {
@@ -392,6 +393,9 @@ function Share({ items, report }: { items: NextChapter["shareable"]; report: Rep
           </label>
         ))}
       </fieldset>
+      {selected.size > 0 && (
+        <pre className="report-share-text">{shareText(report, selected, "")}</pre>
+      )}
       <button type="button" className="t-cmd" onClick={() => void copy()}>
         Copy to clipboard
       </button>

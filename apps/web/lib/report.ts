@@ -65,6 +65,8 @@ export interface ChallengeOutcome {
   outcome: Outcome;
   revisited: boolean;
   resumable: boolean;
+  /** Finished only according to uploaded history; this device's progress doesn't show it. */
+  fromUploads: boolean;
 }
 export interface OutcomesChapter {
   id: "outcomes";
@@ -235,6 +237,7 @@ function outcomes(input: ReportInput): {
           attemptIds.size > 1 ||
           own.some((a) => a.practice === "repeat"),
         resumable: !!p && !p.completedAt && c.runnable,
+        fromUploads: completed && !((p?.completions ?? 0) > 0),
       };
     })
     .sort((a, b) => a.language.localeCompare(b.language) || a.key.localeCompare(b.key));
@@ -292,7 +295,7 @@ function outcomes(input: ReportInput): {
       })),
       unexplored: catalog.length - rows.length,
       evidence: {
-        basis: `${plural(done, "finished challenge")}, ${open} open${uploaded ? ", from this device and your uploads" : ", from this device"}.`,
+        basis: `${plural(done, "finished challenge")}, ${open} open${uploaded ? `, from this device and your uploads${rows.some((r) => r.fromUploads) ? ` (${rows.filter((r) => r.fromUploads).length} finished only in your uploads, not in this device's progress)` : ""}` : ", from this device"}.`,
         caveat:
           open > 0
             ? "Open isn't failed: it's work you haven't finished yet."
@@ -519,7 +522,7 @@ function modelCell(r: ModelReceipt, conditions: readonly string[]): Cell {
     if (match !== "matched")
       return { kind: "withheld", note: match.replace("-", " ") };
     return r.state === "completed"
-      ? { kind: "solved", note: plural(r.submissions ?? 0, "submission") }
+      ? { kind: "solved", note: r.submissions === null ? "submissions not recorded" : plural(r.submissions, "submission") }
       : { kind: "not-solved", note: MODEL_STATE[r.state]! };
   }
   return { kind: "none", note: MODEL_STATE[r.state] ?? r.state };
@@ -547,7 +550,14 @@ function minds(input: ReportInput): {
   const rows: ComparisonRow[] = picked.map((a) => {
     const subs = submissions(a);
     const you: Cell = a.completed
-      ? { kind: "solved", note: plural(subs.length || (a.values.submissions ?? 0), "submission") }
+      ? {
+          kind: "solved",
+          note: subs.length
+            ? plural(subs.length, "submission")
+            : a.values.submissions === null
+              ? "submissions not recorded"
+              : plural(a.values.submissions, "submission"),
+        }
       : { kind: "open", note: subs.length ? `${subs.at(-1)!.passed}/${subs.at(-1)!.total} so far` : "open" };
     const got = input.receipts[a.revision];
     if (!Array.isArray(got))
@@ -579,13 +589,22 @@ function minds(input: ReportInput): {
   const compared = rows.flatMap((r) =>
     r.models.filter((m) => m.cell.kind === "solved" || m.cell.kind === "not-solved"),
   );
-  const solvedByModels = compared.filter((m) => m.cell.kind === "solved").length;
+  // One count per model and setting: pooling different models' single tries would read like a rate.
+  const tally = new Map<string, { solved: number; tried: number }>();
+  for (const m of compared) {
+    const t = tally.get(m.slot) ?? { solved: 0, tried: 0 };
+    t.tried++;
+    if (m.cell.kind === "solved") t.solved++;
+    tally.set(m.slot, t);
+  }
+  const named = [...tally].slice(0, 3).map(([slot, t]) => `${slot.split(" · ")[0]} solved ${t.solved} of ${t.tried}`);
+  const perModel = tally.size > 3 ? `${named.join(", ")} and ${tally.size - 3} more` : named.join(", ");
   const ready = rows.every((r) => r.state !== "loading");
   const headline = !ready
     ? "Checking which models tried the same challenges…"
     : !compared.length
       ? "No model has a comparable try on these exact challenges yet."
-      : `You solved ${rows.filter((r) => r.you.kind === "solved").length} of ${rows.length}. Models solved ${solvedByModels} of ${plural(compared.length, "comparable try", "comparable tries")} on the same challenges.`;
+      : `You solved ${rows.filter((r) => r.you.kind === "solved").length} of ${rows.length}. ${perModel}.`;
   return {
     wanted,
     chapter: {

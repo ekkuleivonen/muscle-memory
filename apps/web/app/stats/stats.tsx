@@ -54,6 +54,7 @@ function Freshness({
           : history.state === "loading" || history.state === "idle"
             ? "Adding your uploads…"
             : history.message}
+        {history.state === "ready" && history.notice ? ` ${history.notice}` : ""}
       </span>
       {history.state === "ready" && history.value.next && (
         <button type="button" className="t-cmd" onClick={more}>
@@ -187,8 +188,8 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
                 summaries of what this browser uploaded in the past year. Your
                 browser&apos;s private secret proves the uploads are yours; nobody
                 else&apos;s activity is read. Summaries stay in this page&apos;s
-                memory for a few minutes and are never saved or restored into
-                your progress.
+                memory while the report is open and for at most five minutes
+                after, and are never saved or restored into your progress.
               </p>
               <p>
                 Each upload read covers up to five attempts; &quot;read more

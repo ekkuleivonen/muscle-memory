@@ -132,7 +132,7 @@ test("rich synthetic evidence tells all six chapters from what was recorded", ()
   const pyRow = m.rows.find((x) => x.challenge === "PY-001")!;
   assert.equal(jsRow.models[0].cell.kind, "solved");
   assert.equal(pyRow.models[0].cell.kind, "withheld", "a runtime mismatch withholds the outcome");
-  assert.match(m.headline, /You solved 2 of 2\. Models solved 1 of 1 comparable try/);
+  assert.match(m.headline, /You solved 2 of 2\. synthetic\/model solved 1 of 1\./);
   assert.match(m.evidence.caveat!, /one observed try, not a success rate/);
   assert.match(m.evidence.details.join(" "), /not enough comparable participants/);
 
@@ -176,7 +176,7 @@ test("model cells keep loading, unavailable and missing slots distinct", () => {
     "minds",
   )!;
   assert.deepEqual(none.rows[0].models.map((m) => m.cell.kind), ["none", "not-solved"]);
-  assert.match(none.headline, /Models solved 0 of 1 comparable try/);
+  assert.match(none.headline, /synthetic\/model solved 0 of 1|other\/model solved 0 of 1/);
 });
 
 test("stories never form from a trace without checks, and gaps are shortened, not named", () => {
@@ -229,4 +229,12 @@ test("a cohort is never invented: chapters carry no human percentile or rank", (
   const a = summary("c1", "JS-001");
   const r = buildReport(input({ attempts: device(a), progress: progressOf({ "JS-001": { completedAt: "x", completions: 1 } }), receipts: { [a.revision]: [receipt()] } }));
   assert.doesNotMatch(JSON.stringify(r.chapters), /percentile|faster than|top \d|rank|IQ|score/i);
+});
+
+test("a finish known only from uploads is marked, not presented as device progress", () => {
+  const a = { ...summary("u1", "JS-001"), source: "uploaded" as const };
+  const r = buildReport(input({ attempts: [a] }));
+  const o = chapter<OutcomesChapter>(r, "outcomes")!;
+  assert.equal(o.languages[0].items[0].fromUploads, true);
+  assert.match(o.evidence.basis, /1 finished only in your uploads/);
 });

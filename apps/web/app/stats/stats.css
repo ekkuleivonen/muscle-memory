@@ -447,6 +447,13 @@
   display: grid;
   gap: 0.4em;
 }
+.report-share-text {
+  white-space: pre-wrap;
+  border-left: 2px solid var(--t-line);
+  padding-left: 1.6ch;
+  color: var(--t-dim);
+  font: inherit;
+}
 .report-share input {
   accent-color: var(--t-accent);
 }

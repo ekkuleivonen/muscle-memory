@@ -39,20 +39,38 @@ export interface DeviceEvidence {
 export type HistoryStatus =
   | { state: "idle" }
   | { state: "loading" }
-  | { state: "ready"; value: UploadedHistory }
+  | { state: "ready"; value: UploadedHistory; notice?: string }
   | { state: "no-uploads" | "limited" | "unavailable" | "unauthorized"; message: string };
 
-/** Uploaded summaries for at most this long in page memory, so returning to /stats doesn't re-query. */
+/** After the report closes, uploaded summaries stay in page memory at most this long, so returning to /stats doesn't re-query. */
 const HISTORY_TTL_MS = 5 * 60 * 1000;
+/** The report holds at most this many uploaded attempt revisions, as the ENG-340 reader promised. */
+export const HISTORY_MAX_ATTEMPTS = 100;
 /** The private reader's widest window: the past year of uploaded activity. */
 export const HISTORY_DAYS = 366;
 let cache: { participant: string; value: UploadedHistory; at: number } | null = null;
+let expiry: ReturnType<typeof setTimeout> | undefined;
 const dropCache = () => {
   cache = null;
+  clearTimeout(expiry);
 };
-// Registered once per tab: a boundary anywhere drops the in-memory copy even while /stats is closed.
+const keep = (participant: string, value: UploadedHistory) => {
+  clearTimeout(expiry);
+  cache = { participant, value, at: Date.now() };
+  expiry = setTimeout(dropCache, HISTORY_TTL_MS);
+};
+/**
+ * Boundaries in progress anywhere in this tab, counted so a nested one (deletion wraps reset) keeps
+ * reads blocked until the outermost finishes, and a report mounted mid-boundary starts blocked too.
+ */
+let boundaries = 0;
+// Registered once per tab, before any report's own listener: a boundary anywhere drops the
+// in-memory copy even while /stats is closed.
 if (typeof window !== "undefined") {
-  listenPrivateBoundary(dropCache);
+  listenPrivateBoundary((phase) => {
+    dropCache();
+    boundaries = phase === "start" ? boundaries + 1 : Math.max(0, boundaries - 1);
+  });
   window.addEventListener(ACCOUNT_CHANGE, () => {
     try {
       const p = readProfile();
@@ -127,7 +145,7 @@ export function useReportData(revisions: readonly { challenge: string; revision:
   const loadHistory = useCallback(
     async (more = false, previous: UploadedHistory | null = null) => {
       const ticket = generation.current;
-      const live = () => ticket === generation.current && !blocked.current;
+      const live = () => ticket === generation.current && !blocked.current && !boundaries;
       let identity;
       try {
         const store = await openPracticeStore();
@@ -179,7 +197,7 @@ export function useReportData(revisions: readonly { challenge: string; revision:
           } else if (response.status === 429) {
             setHistory(
               more && previous
-                ? { state: "ready", value: previous }
+                ? { state: "ready", value: previous, notice: "More uploads can be read in a minute." }
                 : { state: "limited", message: "Your uploads were read a moment ago. Try again in a minute; this device's evidence is shown meanwhile." },
             );
           } else
@@ -197,12 +215,16 @@ export function useReportData(revisions: readonly { challenge: string; revision:
         const unavailable = new Map(
           [...(previous?.unavailable ?? []), ...page.unavailable].map((a) => [a.attempt, a]),
         );
+        const all = [...merged.values()];
         const value: UploadedHistory = {
           ...page,
-          attempts: [...merged.values()].slice(0, 100),
+          // Freshness is only as good as the oldest page read.
+          readAt: previous?.readAt ?? page.readAt,
+          attempts: all.slice(0, HISTORY_MAX_ATTEMPTS),
+          next: all.length >= HISTORY_MAX_ATTEMPTS ? null : page.next,
           unavailable: [...unavailable.values()],
         };
-        cache = { participant: identity.participant, value, at: Date.now() };
+        keep(identity.participant, value);
         setHistory({ state: "ready", value });
       } catch {
         if (live())
@@ -218,7 +240,7 @@ export function useReportData(revisions: readonly { challenge: string; revision:
   );
 
   const start = useCallback(() => {
-    if (blocked.current) return;
+    if (blocked.current || boundaries) return;
     const { privacy, profile } = privacyOf();
     setPrivacy(privacy);
     if (privacy !== "ok" || !profile) {
@@ -239,7 +261,7 @@ export function useReportData(revisions: readonly { challenge: string; revision:
     };
     const deviceOnly = () => {
       const { privacy, profile } = privacyOf();
-      if (privacy === "ok" && profile && !blocked.current) void readDevice(profile);
+      if (privacy === "ok" && profile && !blocked.current && !boundaries) void readDevice(profile);
     };
     const storage = (e: StorageEvent) => {
       if (e.key === null || e.key === PROFILE_KEY) destructive();
@@ -249,7 +271,8 @@ export function useReportData(revisions: readonly { challenge: string; revision:
       if (phase === "start") {
         blocked.current = true;
         flushSync(() => clear(true));
-      } else {
+      } else if (!boundaries) {
+        // Only the outermost finish reopens reads; the module listener has already counted it.
         blocked.current = false;
         device.release();
         start();
@@ -276,7 +299,8 @@ export function useReportData(revisions: readonly { challenge: string; revision:
     const ticket = generation.current;
     const controller = new AbortController();
     aborts.current.add(controller);
-    const live = () => ticket === generation.current && !blocked.current && !controller.signal.aborted;
+    const live = () =>
+      ticket === generation.current && !blocked.current && !boundaries && !controller.signal.aborted;
     for (const pair of wanted.split("|")) {
       const [challenge, revision] = pair.split("/");
       setReceipts((r) => (revision in r ? r : { ...r, [revision]: "loading" }));
