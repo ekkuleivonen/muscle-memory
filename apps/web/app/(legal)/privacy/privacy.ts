@@ -120,7 +120,13 @@ Since we don't know who you are, we can only act on a request for records we can
 
 ## Where it's stored
 
-In your browser, and on Cloudflare (our hosting and storage provider), whose storage for your records is in its **Asia-Pacific** region. Cloudflare runs the site from wherever is nearest to you, and Cloudflare and GitHub are US companies, so your data may be processed outside your country, including outside the EU/EEA; **[the legal safeguards for that transfer, to be confirmed]**. We're based in Japan.
+In your browser, and on Cloudflare (our hosting and storage provider), whose storage for your records is in its **Asia-Pacific** region. Cloudflare runs the site from wherever is nearest to you, and Cloudflare and GitHub are US companies, so your data may be processed outside your country, including outside the EU/EEA. These are the safeguards:
+
+- **We're based in Japan**, which the EU and the UK recognise as protecting personal data adequately.
+- **Cloudflare** handles your data under its data processing addendum, which includes the EU's standard contractual clauses (with the UK's addendum). It's also certified under the EU–US Data Privacy Framework and the Global CBPR system.
+- **GitHub** is certified under the EU–US Data Privacy Framework.
+
+Ask us and we'll tell you more about any of these.
 
 Uploads are not a backup: they don't give you account recovery or sync between devices. An exported file is how you move to another browser.
 
