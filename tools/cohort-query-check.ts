@@ -113,7 +113,7 @@ const discoveryCases = [
   {
     name: "discovery finds 20 potential browsers",
     events: many(20),
-    expectedRows: [{ challenge: "JS-001", revision: syntheticRevision }],
+    expectedRows: [{ challenge: "JS-001", revision: syntheticRevision, browsers: 20 }],
   },
   {
     name: "discovery excludes other revision and either date outside window",
@@ -148,6 +148,7 @@ discoveryCases.push({
   expectedRows: ["JS-001", "JS-003"].map((challenge) => ({
     challenge,
     revision: syntheticRevision,
+    browsers: 20,
   })),
   query: cohortDiscoveryQuery([
     {
@@ -178,6 +179,7 @@ discoveryCases.push({
   expectedRows: ["JS-007", "JS-141"].map((challenge) => ({
     challenge,
     revision: syntheticRevision,
+    browsers: 20,
   })),
   query: cohortDiscoveryQuery(
     launch.map((challenge) => ({

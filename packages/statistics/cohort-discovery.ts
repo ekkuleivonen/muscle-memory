@@ -1,6 +1,7 @@
 /** Internal scheduled-build seam only. Discovery is an upper bound, never eligibility evidence. */
 import { CHALLENGE_KEY, REVISION } from "../domain/records";
 import { MIN_COHORT } from "./cohort";
+import { CHECK_BATCH, MAX_COHORT_MEMBERS } from "./current-cohort";
 import { checkCohortWindow, type CohortWindow } from "./cohort-window";
 
 /**
@@ -61,7 +62,7 @@ export function cohortDiscoveryQuery(
   return `WITH current_revisions AS (
 ${current}
 )
-SELECT e.challenge, e.challenge_revision AS revision
+SELECT e.challenge, e.challenge_revision AS revision, COUNT(DISTINCT e.participant_id) AS browsers
 FROM default.events e JOIN current_revisions c
   ON e.challenge = c.challenge AND e.challenge_revision = c.revision
 WHERE e.kind = 'observation' AND e.type = 'practice.started'
@@ -75,21 +76,47 @@ ORDER BY e.challenge, e.challenge_revision
 LIMIT ${MAX_CURRENT_COHORT_REVISIONS + 1}`;
 }
 
-/** Complete, bounded discovery result -> at most 99 exact builds. No truncation of an
- * incomplete/overflow response. Over 99 candidates means some FYIs expire; this bounds work, not a
- * promise of hourly coverage of every eligible revision.
+/**
+ * CONTROL work per hourly run, in slots: one slot is one check() batch of up to 100 IDs before and
+ * one after. A build reserves ceil(potential browsers / 100) slots, so a large cohort uses several
+ * slots and fewer revisions are built that run; the total never grows. 14 slots keep a run at
+ * 1 generation read + 2 × 14 check calls = 29 service-binding calls, inside the documented limit
+ * of 32 Worker invocations per request (the run's own invocation included). CONTROL reads per run
+ * are at most 14 × 2 × 100 × 3 = 8,400, under the earlier 59,400 ceiling.
+ */
+export const RUN_CHECK_SLOTS = 14;
+export interface PlannedCohort extends CurrentCohortRevision {
+  /** Potential browsers from discovery: an upper bound on the build's members. */
+  browsers: number;
+  slots: number;
+}
+export interface CohortPlan {
+  builds: PlannedCohort[];
+  /** Candidates over MAX_COHORT_MEMBERS potential browsers: never built (fail closed). */
+  oversized: number;
+  /** Candidates that fit but not this run (slots or the build cap); first in a later run. */
+  deferred: number;
+  slots: number;
+}
+
+/**
+ * Complete, bounded discovery result -> a plan within RUN_CHECK_SLOTS and MAX_HOURLY_COHORT_BUILDS.
+ * No truncation of an incomplete/overflow response. Not every eligible revision is refreshed each
+ * hour; the plan says how many were left out and why.
  *
  * Order: with `refreshedAt` (each candidate's last successful snapshot write, from one listing of
  * the existing private snapshots), the stalest first: never-built, then oldest, then by challenge.
- * A revision left out by the cap or a deadline is therefore first in a later run. Without it (the
- * listing failed), a stateless hourly rotation still covers a stable set over a few hours.
+ * Without it (the listing failed), a stateless hourly rotation. Candidates are taken in that order
+ * while their slots fit; a larger one that doesn't fit is deferred and smaller ones still go, and
+ * as the stalest it leads the next run.
  */
-export function selectHourlyCohorts(
+export function planHourlyCohorts(
   raw: unknown,
   input: readonly CurrentCohortRevision[],
   now: Date,
   refreshedAt?: ReadonlyMap<string, number>,
-): CurrentCohortRevision[] {
+  slotBudget = RUN_CHECK_SLOTS,
+): CohortPlan {
   const revisions = registry(input);
   if (
     !Array.isArray(raw) ||
@@ -97,35 +124,55 @@ export function selectHourlyCohorts(
     !Number.isFinite(now.getTime())
   )
     throw new Error("Invalid cohort discovery result.");
-  const selected = new Set<string>();
+  const potential = new Map<string, number>();
   for (const row of raw) {
+    const browsers = Number(row?.browsers);
     if (
       !row ||
       typeof row !== "object" ||
       !revisions.some(
         (r) => r.challenge === row.challenge && r.revision === row.revision,
       ) ||
-      selected.has(row.challenge)
+      potential.has(row.challenge) ||
+      !Number.isSafeInteger(browsers) ||
+      browsers < MIN_COHORT
     )
       throw new Error("Invalid cohort discovery result.");
-    selected.add(row.challenge);
+    potential.set(row.challenge, browsers);
   }
-  const candidates = revisions.filter((r) => selected.has(r.challenge));
+  const candidates = revisions.filter((r) => potential.has(r.challenge));
+  let ordered: CurrentCohortRevision[];
   if (refreshedAt) {
     const at = (r: CurrentCohortRevision) =>
       refreshedAt.get(`${r.challenge}/${r.revision}`) ?? -Infinity;
-    return [...candidates]
-      .sort((a, b) => at(a) - at(b) || a.challenge.localeCompare(b.challenge))
-      .slice(0, MAX_HOURLY_COHORT_BUILDS);
+    ordered = [...candidates].sort(
+      (a, b) => at(a) - at(b) || a.challenge.localeCompare(b.challenge),
+    );
+  } else {
+    const hour = Math.floor(now.getTime() / 3_600_000);
+    const start = candidates.length
+      ? (((hour * slotBudget) % candidates.length) + candidates.length) %
+        candidates.length
+      : 0;
+    ordered = [...candidates.slice(start), ...candidates.slice(0, start)];
   }
-  if (candidates.length <= MAX_HOURLY_COHORT_BUILDS) return candidates;
-  const hour = Math.floor(now.getTime() / 3_600_000);
-  const start =
-    (((hour * MAX_HOURLY_COHORT_BUILDS) % candidates.length) +
-      candidates.length) %
-    candidates.length;
-  return Array.from(
-    { length: MAX_HOURLY_COHORT_BUILDS },
-    (_, i) => candidates[(start + i) % candidates.length],
-  );
+  const plan: CohortPlan = { builds: [], oversized: 0, deferred: 0, slots: 0 };
+  for (const r of ordered) {
+    const browsers = potential.get(r.challenge)!;
+    if (browsers > MAX_COHORT_MEMBERS) {
+      plan.oversized++;
+      continue;
+    }
+    const slots = Math.ceil(browsers / CHECK_BATCH);
+    if (
+      plan.slots + slots > slotBudget ||
+      plan.builds.length === MAX_HOURLY_COHORT_BUILDS
+    ) {
+      plan.deferred++;
+      continue;
+    }
+    plan.builds.push({ ...r, browsers, slots });
+    plan.slots += slots;
+  }
+  return plan;
 }

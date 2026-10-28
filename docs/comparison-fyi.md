@@ -113,8 +113,10 @@ admit a browser. Only an acknowledged adult, non-stealth CONTROL record without 
 missing, pending, unknown, 16–17, stealth and deleted states are excluded. So an adult who saves
 settings counts for every current revision, whenever the revision was published.
 
-**Known limit (open decision):** an exact build checks at most 100 distinct browsers against CONTROL
-(`MAX_COHORT_MEMBERS`, the `check()` bound). A revision with more browsers in its window builds no
-snapshot at all, so the most played challenges show no human line and the 100–249 and 250+ bands are
-not reached yet. This fails closed. Raising it means batching `check()` calls, at roughly six CONTROL
-reads per member per build, which is a cost decision before activation.
+**Cohort size and coverage.** A build checks every member in batches of at most 100 IDs, before and
+after, and may have up to 500 potential browsers; a revision with more is *oversized*: never built,
+counted in the run's report (it fails closed). Each hourly run has 14 CONTROL slots of 100 members, so
+large cohorts use more slots and fewer revisions are refreshed that run; with 141 small candidates each
+is rebuilt about every 10–11 hours. Snapshots last an hour, so most human lines are missing at any
+moment, and any acknowledged privacy change anywhere invalidates all of them until rebuilt. See
+`comparison-refresh.md` for the limits and the trade-off.

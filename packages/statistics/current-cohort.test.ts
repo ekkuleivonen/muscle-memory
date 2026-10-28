@@ -77,3 +77,31 @@ test("only exact registered-revision-shaped query inputs, no arbitrary SQL", () 
     cohortMemberQuery("JS-001", "../../control", syntheticWindow),
   );
 });
+test("members are checked in batches of at most 100, all of them, before and after; never a sample", async () => {
+  const many = Array.from({ length: 250 }, (_, i) => ({ ...rows[0], participant_id: `synthetic-${i}` }));
+  const calls: string[][] = [];
+  const result = await currentCohort(async () => many, {
+    check: async (ids) => {
+      calls.push(ids);
+      return ids.map(() => revision);
+    },
+  });
+  assert.deepEqual(calls.map((c) => c.length), [100, 100, 50, 100, 100, 50]);
+  assert.equal(new Set(calls.slice(0, 3).flat()).size, 250, "every member before");
+  assert.equal(new Set(calls.slice(3).flat()).size, 250, "every member after");
+  assert.equal(result.groups[0].participants, "250+");
+  // A change landing between batches, or between the passes, rejects the whole result.
+  let n = 0;
+  await assert.rejects(() =>
+    currentCohort(async () => many, {
+      check: async (ids) => ids.map((_, i) => (++n > 300 && i === 0 ? null : revision)),
+    }),
+  );
+  // Over the build's reservation (or 500): refused before any check.
+  let checked = 0;
+  const counter = { check: async (ids: string[]) => (checked++, ids.map(() => revision)) };
+  await assert.rejects(() => currentCohort(async () => many, counter, 200));
+  const tooMany = Array.from({ length: 501 }, (_, i) => ({ ...rows[0], participant_id: `synthetic-${i}` }));
+  await assert.rejects(() => currentCohort(async () => tooMany, counter));
+  assert.equal(checked, 0);
+});

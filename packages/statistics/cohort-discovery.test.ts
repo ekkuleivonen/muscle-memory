@@ -2,111 +2,108 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { syntheticRevision } from "../developer-profile/fixtures";
 import { syntheticWindow } from "./cohort-fixtures";
-import { cohortDiscoveryQuery, selectHourlyCohorts, MAX_HOURLY_COHORT_BUILDS } from "./cohort-discovery";
+import { cohortDiscoveryQuery, planHourlyCohorts, RUN_CHECK_SLOTS } from "./cohort-discovery";
 
-const current = Array.from({ length: 69 }, (_, i) => ({
-  challenge: `JS-${String(i + 1).padStart(3, "0")}`,
-  revision: syntheticRevision,
-  window: syntheticWindow,
-}));
-const rows = current.map(({ challenge, revision }) => ({
-  challenge,
-  revision,
-}));
 const now = new Date("2026-10-27T12:00:00.000Z");
-test("hourly selection bounds exact scans and covers a stable candidate set without a stored cursor", () => {
-  const seen = new Set<string>();
-  for (let hour = 0; hour < 6; hour++) {
-    const selected = selectHourlyCohorts(
-      rows,
-      current,
-      new Date(+now + hour * 3_600_000),
-    );
-    assert.equal(selected.length, Math.min(current.length, MAX_HOURLY_COHORT_BUILDS));
-    assert.equal(new Set(selected.map((r) => r.challenge)).size, selected.length);
-    selected.forEach((r) => seen.add(r.challenge));
-  }
-  assert.equal(seen.size, 69);
-  assert.deepEqual(
-    selectHourlyCohorts(rows.slice(0, 3), current, now),
-    current.slice(0, 3),
-  );
-  assert.deepEqual(selectHourlyCohorts([], current, now), []);
-  assert.deepEqual(
-    selectHourlyCohorts([...rows].reverse(), current, now),
-    selectHourlyCohorts(rows, current, now),
-  );
+const registry = (n: number) =>
+  Array.from({ length: n }, (_, i) => ({
+    challenge: `JS-${String(i + 1).padStart(3, "0")}`,
+    revision: syntheticRevision,
+    window: syntheticWindow,
+  }));
+const found = (revs: ReturnType<typeof registry>, browsers: (i: number) => number = () => 20) =>
+  revs.map(({ challenge, revision }, i) => ({ challenge, revision, browsers: browsers(i) }));
+const key = (r: { challenge: string; revision: string }) => `${r.challenge}/${r.revision}`;
+
+test("a run plans at most its CONTROL slots, one slot per 100 potential browsers", () => {
+  const revs = registry(69);
+  const plan = planHourlyCohorts(found(revs), revs, now, new Map());
+  assert.equal(RUN_CHECK_SLOTS, 14);
+  assert.equal(plan.builds.length, 14);
+  assert.equal(plan.slots, 14);
+  assert.equal(plan.deferred, 55);
+  assert.equal(plan.oversized, 0);
+  // Larger cohorts take more slots, so fewer revisions fit; the total never grows.
+  const big = planHourlyCohorts(found(revs, (i) => (i < 3 ? 450 : 20)), revs, now, new Map());
+  // Two 450-browser cohorts take 10 slots; the third doesn't fit and waits; four small ones fill the rest.
+  assert.deepEqual(big.builds.map((b) => b.slots), [5, 5, 1, 1, 1, 1]);
+  assert.equal(big.slots, RUN_CHECK_SLOTS);
+  assert.equal(big.deferred, 69 - 6);
 });
-test("discovery refuses unknown revisions, duplicates, overflow and unsafe registry boundaries", () => {
+
+test("over 500 potential browsers is oversized: never built, always counted", () => {
+  const revs = registry(5);
+  const plan = planHourlyCohorts(found(revs, (i) => (i === 0 ? 501 : 500)), revs, now, new Map());
+  assert.equal(plan.oversized, 1);
+  assert.ok(plan.builds.every((b) => b.browsers <= 500));
+  // 500 browsers is 5 slots: two fit in 14, the other two wait.
+  assert.deepEqual([plan.builds.length, plan.slots, plan.deferred], [2, 10, 2]);
+});
+
+test("stalest first; a big cohort that doesn't fit lets smaller ones go, then leads the next run", () => {
+  const revs = registry(10);
+  const at = new Map(revs.map((r, i) => [key(r), 1000 + i]));
+  // JS-001 (stalest) needs 5 slots, the others 1; budget 6 after JS-001 leaves room for 1 more.
+  const plan = planHourlyCohorts(found(revs, (i) => (i === 1 ? 450 : i === 0 ? 450 : 20)), revs, now, at, 6);
+  assert.deepEqual(plan.builds.map((b) => b.challenge), ["JS-001", "JS-003"]);
+  assert.equal(plan.deferred, 8);
+  // Next run: JS-001 and JS-003 are fresh now, so JS-002 (big, stalest) goes first.
+  at.set("JS-001/" + syntheticRevision, 5000);
+  at.set("JS-003/" + syntheticRevision, 5001);
+  const next = planHourlyCohorts(found(revs, (i) => (i === 1 ? 450 : i === 0 ? 450 : 20)), revs, now, at, 6);
+  assert.equal(next.builds[0].challenge, "JS-002");
+});
+
+test("fair eventual coverage of 141 revisions at 14 slots a run, even when deadlines cut runs short", () => {
+  const revs = registry(141);
+  const at = new Map<string, number>();
+  const lastRun = new Map<string, number>();
+  for (let run = 0; run < 24; run++) {
+    const plan = planHourlyCohorts(found(revs), revs, new Date(+now + run * 3_600_000), at);
+    // A deadline lets only the first 10 of 14 finish each run.
+    plan.builds.slice(0, 10).forEach((b, i) => {
+      at.set(key(b), run * 100 + i);
+      lastRun.set(key(b), run);
+    });
+  }
+  assert.equal(lastRun.size, 141, "every revision built within 24 short runs");
+  // 141 revisions at 10 builds a run: each is rebuilt at least every 15 runs.
+  for (const r of revs) assert.ok(23 - lastRun.get(key(r))! < 15, r.challenge);
+});
+
+test("without a listing, rotation still reaches every candidate", () => {
+  const revs = registry(141);
+  const seen = new Set<string>();
+  for (let hour = 0; hour < 11; hour++)
+    planHourlyCohorts(found(revs), revs, new Date(+now + hour * 3_600_000)).builds.forEach((b) => seen.add(b.challenge));
+  assert.equal(seen.size, 141);
+});
+
+test("discovery refuses unknown revisions, duplicates, bad counts, overflow and unsafe registries", () => {
+  const revs = registry(69);
+  const rows = found(revs);
   for (const bad of [
     null,
     [...rows, rows[0]],
-    [rows[0], rows[0]],
     [{ ...rows[0], revision: `sha256:${"0".repeat(64)}` }],
-    [{ challenge: "JS-999", revision: syntheticRevision }],
+    [{ challenge: "JS-999", revision: syntheticRevision, browsers: 20 }],
+    [{ ...rows[0], browsers: 19 }],
+    [{ ...rows[0], browsers: "many" }],
+    [{ ...rows[0], browsers: 2.5 }],
   ])
-    assert.throws(() => selectHourlyCohorts(bad, current, now));
+    assert.throws(() => planHourlyCohorts(bad, revs, now));
+  assert.throws(() => planHourlyCohorts(rows, revs, new Date(NaN)));
   for (const bad of [
     [],
-    [...current, current[0]],
-    [{ ...current[0], challenge: "' OR TRUE" }],
-    [
-      {
-        ...current[0],
-        window: { ...syntheticWindow, from: "2025-01-01T00:00:00.000Z" },
-      },
-    ],
-    [
-      current[0],
-      {
-        ...current[1],
-        window: { ...syntheticWindow, to: "2026-11-02T00:00:00.000Z" },
-      },
-    ],
+    [...revs, revs[0]],
+    [{ ...revs[0], challenge: "' OR TRUE" }],
+    [{ ...revs[0], window: { ...syntheticWindow, from: "2025-01-01T00:00:00.000Z" } }],
+    [revs[0], { ...revs[1], window: { ...syntheticWindow, to: "2026-11-02T00:00:00.000Z" } }],
   ])
     assert.throws(() => cohortDiscoveryQuery(bad));
-  const registry = (n: number) =>
-    Array.from({ length: n }, (_, i) => ({
-      ...current[0],
-      challenge: `JS-${String(i).padStart(3, "0")}`,
-    }));
   // The registry bound is the size of the one discovery query, not the query count.
   assert.doesNotThrow(() => cohortDiscoveryQuery(registry(141)));
   assert.doesNotThrow(() => cohortDiscoveryQuery(registry(200)));
   assert.throws(() => cohortDiscoveryQuery(registry(201)));
-  assert.throws(() => selectHourlyCohorts(rows, current, new Date(NaN)));
-});
-
-const launch = Array.from({ length: 141 }, (_, i) => ({
-  challenge: `JS-${String(i + 1).padStart(3, "0")}`,
-  revision: syntheticRevision,
-  window: syntheticWindow,
-}));
-const launchRows = launch.map(({ challenge, revision }) => ({ challenge, revision }));
-const key = (r: { challenge: string; revision: string }) => `${r.challenge}/${r.revision}`;
-
-test("141 candidates: the stalest 99 first, never-built before old, then by challenge", () => {
-  const at = new Map<string, number>();
-  launch.slice(0, 100).forEach((r, i) => at.set(key(r), 1000 + i)); // JS-001 oldest … JS-100
-  const picked = selectHourlyCohorts(launchRows, launch, now, at);
-  assert.equal(picked.length, MAX_HOURLY_COHORT_BUILDS);
-  // The 41 never built (JS-101…JS-141) come first, then the 58 oldest.
-  assert.deepEqual(picked.slice(0, 41).map((r) => r.challenge), launch.slice(100).map((r) => r.challenge));
-  assert.deepEqual(picked.slice(41).map((r) => r.challenge), launch.slice(0, 58).map((r) => r.challenge));
-});
-
-test("fair later coverage: with a deadline cutting runs short, every candidate is reached and none starves", () => {
-  const at = new Map<string, number>();
-  const lastRun = new Map<string, number>();
-  for (let hour = 0; hour < 6; hour++) {
-    const picked = selectHourlyCohorts(launchRows, launch, new Date(+now + hour * 3_600_000), at);
-    // A deadline lets only the first 60 of 99 finish each run.
-    picked.slice(0, 60).forEach((r, i) => {
-      at.set(key(r), hour * 1000 + i);
-      lastRun.set(key(r), hour);
-    });
-  }
-  assert.equal(lastRun.size, 141, "every revision built within six short runs");
-  // 141 revisions at 60 builds a run: each is rebuilt at least every third run.
-  for (const r of launch) assert.ok(5 - lastRun.get(key(r))! <= 2, r.challenge);
+  assert.match(cohortDiscoveryQuery(registry(3)), /COUNT\(DISTINCT e\.participant_id\) AS browsers/);
 });

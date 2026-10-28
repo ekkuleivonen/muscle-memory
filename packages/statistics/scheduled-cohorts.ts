@@ -6,7 +6,8 @@ import { CHALLENGE_KEY, REVISION } from "../domain/records";
 import { COHORTS_ENABLED, COHORT_VERSION } from "./cohort";
 import {
   cohortDiscoveryQuery,
-  selectHourlyCohorts,
+  planHourlyCohorts,
+  RUN_CHECK_SLOTS,
   MAX_CURRENT_COHORT_REVISIONS,
 } from "./cohort-discovery";
 import { cohortMemberQuery } from "./current-cohort";
@@ -30,6 +31,12 @@ export interface HumanSummaryEnvironment {
 const BODY_LIMIT = 1024 * 1024;
 const SNAPSHOT_LIMIT = 128 * 1024;
 const JOB_MS = 10 * 60 * 1000;
+/**
+ * Service-binding calls per run: 1 generation read + 2 × RUN_CHECK_SLOTS check batches. The
+ * documented limit is 32 Worker invocations per request, each binding call counting; this is a
+ * hard stop below it, not a production confirmation of how scheduled events are counted.
+ */
+export const RUN_RPC_CALLS = 1 + 2 * RUN_CHECK_SLOTS;
 const SUMMARY_PREFIX = `comparison-summaries/humans/${COHORT_VERSION}/${HUMAN_SNAPSHOT_VERSION}/`;
 export function humanSummaryKey(challenge: string, revision: string) {
   if (!CHALLENGE_KEY.test(challenge) || !REVISION.test(revision))
@@ -214,6 +221,10 @@ export async function refreshHumanSummaries(
     registered = 0,
     discovered = 0,
     selectedCount = 0,
+    oversized = 0,
+    deferred = 0,
+    slots = 0,
+    rpcCalls = 0,
     ordering: "stalest-first" | "rotation" = "rotation";
   /** Coverage, so a partial run is never mistaken for a complete one. No IDs or revisions. */
   const account = () => ({
@@ -225,8 +236,22 @@ export async function refreshHumanSummaries(
     selected: selectedCount,
     notRefreshed: discovered - refreshed,
     complete: discovered === refreshed,
+    /** Never built: more potential browsers than one build may check. */
+    oversized,
+    /** Fit, but not in this run's CONTROL slots; first in a later run. */
+    deferred,
+    slots,
+    slotBudget: RUN_CHECK_SLOTS,
+    rpcCalls,
     ordering,
   });
+  /** Every service-binding call counts; over the cap the call is refused, never made. */
+  const rpc = <T>(call: () => Promise<T>) => {
+    const ms = remaining();
+    if (++rpcCalls > RUN_RPC_CALLS)
+      throw new Error("Run service-binding budget reached.");
+    return withinSummaryBudget(call(), ms);
+  };
   const sql = async (query: string) => {
     remaining();
     if (++queries > 100) throw new Error("Hourly query budget reached.");
@@ -238,21 +263,10 @@ export async function refreshHumanSummaries(
     );
   };
   const control: ComparisonControl = {
-    generation: () => {
-      const ms = remaining();
-      return withinSummaryBudget(env.COMPARISON_ELIGIBILITY.generation(), ms);
-    },
-    check: (ids) => {
-      const ms = remaining();
-      return withinSummaryBudget(env.COMPARISON_ELIGIBILITY.check(ids), ms);
-    },
-    authorize: (generation) => {
-      const ms = remaining();
-      return withinSummaryBudget(
-        env.COMPARISON_ELIGIBILITY.authorize(generation),
-        ms,
-      );
-    },
+    generation: () => rpc(() => env.COMPARISON_ELIGIBILITY.generation()),
+    check: (ids) => rpc(() => env.COMPARISON_ELIGIBILITY.check(ids)),
+    authorize: (generation) =>
+      rpc(() => env.COMPARISON_ELIGIBILITY.authorize(generation)),
   };
   try {
     const registry = await withinSummaryBudget(
@@ -287,13 +301,18 @@ export async function refreshHumanSummaries(
     discovered = Array.isArray(found) ? found.length : 0;
     const refreshedAt = await lastRefreshed(env.CONTENT, remaining());
     if (refreshedAt) ordering = "stalest-first";
-    const candidates = selectHourlyCohorts(
-      found,
-      revisions,
-      now,
-      refreshedAt ?? undefined,
-    );
+    const plan = planHourlyCohorts(found, revisions, now, refreshedAt ?? undefined);
+    const candidates = plan.builds;
     selectedCount = candidates.length;
+    oversized = plan.oversized;
+    deferred = plan.deferred;
+    slots = plan.slots;
+    if (!candidates.length) return { state: "finished" as const, ...account() };
+    // One generation for the whole run, read before any member check (see buildHumanSnapshot).
+    const generation = await control.generation();
+    // No fence or an unreadable one: nothing can be authorized later, so build nothing.
+    if (typeof generation !== "string" || !/^[a-f0-9-]{36}$/.test(generation))
+      return { state: "unavailable" as const, ...account() };
     let next = 0;
     const build = async () => {
       while (next < candidates.length) {
@@ -323,6 +342,8 @@ export async function refreshHumanSummaries(
                   cohortMemberQuery(spec.challenge, spec.revision, spec.window),
                 ),
               control,
+              undefined,
+              { generation, maxMembers: candidate.slots * 100 },
             ),
             remaining(),
           );

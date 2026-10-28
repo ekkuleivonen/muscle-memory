@@ -39,13 +39,23 @@ export async function buildHumanSnapshot(
   query: () => Promise<unknown>,
   control: ComparisonControl,
   now = new Date(),
+  run?: {
+    /**
+     * A generation the caller read before any of this build's member checks. The snapshot is
+     * tagged with it, and serving re-authorizes that generation on every read, so a privacy change
+     * acknowledged during the build makes the snapshot unservable; no second read is needed.
+     */
+    generation: string;
+    /** Members this build reserved CONTROL work for. */
+    maxMembers: number;
+  },
 ): Promise<HumanSnapshot | null> {
   const { challenge, revision, window, runtime } = spec;
   if (!runtimeKey(runtime)) throw new Error("Invalid expected runtime.");
   if (!CHALLENGE_KEY.test(challenge) || !REVISION.test(revision))
     throw new Error("Invalid snapshot revision.");
   const bounded = checkCohortWindow(window);
-  const generation = await control.generation();
+  const generation = run ? run.generation : await control.generation();
   if (!token(generation)) return null;
   const result = await currentCohort(async () => {
     const raw = await query();
@@ -58,8 +68,8 @@ export async function buildHumanSnapshot(
         return false;
       }
     });
-  }, control);
-  if ((await control.generation()) !== generation) return null;
+  }, control, run?.maxMembers);
+  if (!run && (await control.generation()) !== generation) return null;
   return {
     version: HUMAN_SNAPSHOT_VERSION,
     challenge,

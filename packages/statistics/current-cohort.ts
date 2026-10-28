@@ -2,7 +2,12 @@
 import type { CohortWindow } from "./cohort-window";
 import { safeIdentifier } from "../domain/capture";
 import { cohortQuery, cohortResult, type CohortRead } from "./cohort";
-export const MAX_COHORT_MEMBERS = 100;
+/**
+ * Members one build may check: 500 browsers keep the member query within its 1,000-row bound (a
+ * first and a repeat unit each). Checked in batches of CHECK_BATCH, the existing check() limit.
+ */
+export const MAX_COHORT_MEMBERS = 500;
+export const CHECK_BATCH = 100;
 export interface EligibilityChecker {
   check(members: string[]): Promise<(string | null)[]>;
 }
@@ -31,6 +36,8 @@ LIMIT 1001`
 export async function currentCohort(
   query: () => Promise<unknown>,
   checker: EligibilityChecker,
+  /** The members this build reserved CONTROL work for; more fails closed rather than overspend. */
+  maxMembers = MAX_COHORT_MEMBERS,
 ): Promise<CohortRead> {
   const raw = await query();
   if (!Array.isArray(raw) || raw.length > 1000)
@@ -52,25 +59,36 @@ export async function currentCohort(
     ids.add(row.participant_id);
     rows.push(row);
   }
-  if (ids.size > MAX_COHORT_MEMBERS)
+  if (ids.size > Math.min(MAX_COHORT_MEMBERS, maxMembers))
     throw new Error("Comparison budget exceeded.");
   const members = [...ids];
-  const before = await checker.check(members);
-  const valid = (v: unknown): v is (string | null)[] =>
+  const valid = (v: unknown, n: number): v is (string | null)[] =>
     Array.isArray(v) &&
-    v.length === members.length &&
+    v.length === n &&
     v.every(
       (r) => r === null || (typeof r === "string" && /^[a-f0-9-]{36}$/.test(r)),
     );
-  if (!valid(before)) throw new Error("Invalid privacy control response.");
+  // Every member, in fixed batches of at most CHECK_BATCH IDs; never a sample.
+  const checkAll = async () => {
+    const out: (string | null)[] = [];
+    for (let i = 0; i < members.length; i += CHECK_BATCH) {
+      const batch = members.slice(i, i + CHECK_BATCH);
+      const answer = await checker.check(batch);
+      if (!valid(answer, batch.length))
+        throw new Error("Invalid privacy control response.");
+      out.push(...answer);
+    }
+    return out;
+  };
+  const before = await checkAll();
   const eligible = new Set(members.filter((_, i) => before[i] !== null));
   const result = cohortResult(
     rows
       .filter((r) => eligible.has(r.participant_id as string))
       .map((r) => ({ ...r, browsers: 1 })),
   );
-  const after = await checker.check(members);
-  if (!valid(after) || after.some((r, i) => r !== before[i]))
+  const after = await checkAll();
+  if (after.some((r, i) => r !== before[i]))
     throw new Error("Privacy changed during comparison.");
   return result;
 }

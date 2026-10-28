@@ -11,7 +11,12 @@ import {
 } from "./scheduled-cohorts";
 const now = new Date("2026-10-27T12:00:00.000Z");
 const generation = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
-function fixture(count = 1) {
+function fixture(
+  count = 1,
+  /** Potential browsers discovery reports per revision index, and members the query returns. */
+  potential: (i: number) => number = () => 20,
+  memberCount = 20,
+) {
   const db = new DatabaseSync(":memory:");
   db.exec(
     "CREATE TABLE challenge_heads(challenge_key TEXT,lifecycle TEXT,published_revision TEXT);CREATE TABLE published_versions(challenge_key TEXT,revision TEXT,metadata_json TEXT,published_at TEXT,object_key TEXT,runtime_fingerprint TEXT);",
@@ -112,7 +117,7 @@ function fixture(count = 1) {
     },
   };
   const runtime = engineFor("javascript")!.runtime;
-  const rows = Array.from({ length: 20 }, (_, i) => ({
+  const rows = Array.from({ length: memberCount }, (_, i) => ({
     participant_id: `synthetic-${i}`,
     runtime: JSON.stringify(runtime),
     editor: JSON.stringify({
@@ -143,7 +148,7 @@ function fixture(count = 1) {
       success: true,
       result: {
         rows: body.query.includes("COUNT(DISTINCT e.participant_id)")
-          ? revisions
+          ? revisions.map((r, i) => ({ ...r, browsers: potential(i) }))
           : rows,
       },
     });
@@ -237,14 +242,42 @@ test("discovery and exact build write aggregate-only cache; serving never querie
     f.db.close();
   }
 });
-test("100 revisions respect one discovery plus99 exact queries and two builds concurrent", async () => {
+test("a run stays within 14 CONTROL slots and 29 binding calls, two builds concurrent", async () => {
   const f = fixture(100);
   try {
     const r = await refreshHumanSummaries(f.env, now, f.request);
-    assert.equal(r.queries, 100);
-    assert.equal(r.refreshed, 99);
+    assert.deepEqual(
+      [r.queries, r.refreshed, r.slots, r.slotBudget, r.rpcCalls, r.deferred],
+      [15, 14, 14, 14, 29, 86],
+    );
+    assert.equal(f.checks, 28, "each member checked before and after, 100 IDs a call at most");
     assert.ok(f.peak <= 2);
-    assert.equal(f.requests, 100);
+  } finally {
+    f.db.close();
+  }
+});
+test("large cohorts use more slots, never more CONTROL work; oversized ones are counted, not built", async () => {
+  // Revision 1 has 501 potential browsers (oversized), 2 and 3 have 450 (5 slots each).
+  const f = fixture(20, (i) => (i === 0 ? 501 : i < 3 ? 450 : 20), 250);
+  try {
+    const r = await refreshHumanSummaries(f.env, now, f.request);
+    assert.equal(r.oversized, 1);
+    assert.equal(r.slots, 14);
+    assert.ok(r.rpcCalls <= 29);
+    // 250 members need three 100-ID batches before and three after.
+    assert.equal(f.checks % 6, 0);
+    assert.ok(r.refreshed >= 2);
+  } finally {
+    f.db.close();
+  }
+});
+test("a build with more members than it reserved fails closed instead of overspending", async () => {
+  // Discovery says 20 (1 slot, 100 members) but the member query returns 120.
+  const f = fixture(1, () => 20, 120);
+  try {
+    const r = await refreshHumanSummaries(f.env, now, f.request);
+    assert.deepEqual([r.refreshed, r.failed], [0, 1]);
+    assert.equal(f.checks, 0, "no CONTROL check beyond the reservation");
   } finally {
     f.db.close();
   }
@@ -267,7 +300,7 @@ test("a stalled SQL transport stops at the whole-run deadline even if a mock ign
   }
 });
 
-test("141 current revisions: one discovery plus 99 builds, stalest first, honest partial coverage", async () => {
+test("141 current revisions: 14 builds a run, stalest first, honest partial coverage, all reached", async () => {
   const f = fixture(141);
   try {
     const first = await refreshHumanSummaries(f.env, now, f.request);
@@ -275,24 +308,25 @@ test("141 current revisions: one discovery plus 99 builds, stalest first, honest
       { ...first },
       {
         state: "finished",
-        queries: 100,
-        refreshed: 99,
+        queries: 15,
+        refreshed: 14,
         failed: 0,
         registered: 141,
         discovered: 141,
-        selected: 99,
-        notRefreshed: 42,
+        selected: 14,
+        notRefreshed: 127,
         complete: false,
+        oversized: 0,
+        deferred: 127,
+        slots: 14,
+        slotBudget: 14,
+        rpcCalls: 29,
         ordering: "stalest-first",
       },
     );
-    assert.ok(f.peak <= 2);
-    const after1 = new Set(f.built());
-    assert.equal(after1.size, 99);
-    // The next run starts with the 42 never built, so all 141 are covered within two runs.
-    const second = await refreshHumanSummaries(f.env, new Date(+now + 3_600_000), f.request);
-    assert.equal(second.queries, 100);
-    assert.equal(new Set(f.built()).size, 141);
+    for (let run = 1; run < 11; run++)
+      await refreshHumanSummaries(f.env, new Date(+now + run * 3_600_000), f.request);
+    assert.equal(new Set(f.built()).size, 141, "every revision built within 11 runs");
   } finally {
     f.db.close();
   }
@@ -312,20 +346,20 @@ test("a deadline mid-run reports partial coverage, and the next run builds the s
   const f = fixture(141);
   try {
     let calls = 0;
-    // Each member query takes 25 ms; a 300 ms budget lets only some builds finish.
+    // Each member query takes 40 ms; a 200 ms budget lets only some of the 14 builds finish.
     const slow: typeof fetch = async (url, init) => {
-      if (calls++ > 0) await new Promise((r) => setTimeout(r, 25));
+      if (calls++ > 0) await new Promise((r) => setTimeout(r, 40));
       return f.request(url, init);
     };
-    const cut = await refreshHumanSummaries(f.env, now, slow, 300);
-    assert.ok(cut.refreshed > 0 && cut.refreshed < 99, `refreshed ${cut.refreshed}`);
+    const cut = await refreshHumanSummaries(f.env, now, slow, 200);
+    assert.ok(cut.refreshed > 0 && cut.refreshed < 14, `refreshed ${cut.refreshed}`);
     assert.equal(cut.complete, false);
     assert.equal(cut.notRefreshed, 141 - cut.refreshed);
     const before = new Set(f.built());
     await refreshHumanSummaries(f.env, new Date(+now + 3_600_000), f.request);
     const next = f.built().filter((k) => !before.has(k));
     // The deadline's leftovers go first: every one of them, up to the 99-build cap, is built next.
-    assert.equal(next.length, Math.min(99, 141 - cut.refreshed));
+    assert.equal(next.length, 14);
   } finally {
     f.db.close();
   }
@@ -336,8 +370,8 @@ test("without a listing, selection falls back to the bounded hourly rotation", a
     delete (f.env.CONTENT as any).list;
     const r = await refreshHumanSummaries(f.env, now, f.request);
     assert.equal(r.ordering, "rotation");
-    assert.equal(r.queries, 100);
-    assert.equal(r.refreshed, 99);
+    assert.equal(r.queries, 15);
+    assert.equal(r.refreshed, 14);
   } finally {
     f.db.close();
   }
