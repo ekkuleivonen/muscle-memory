@@ -1,7 +1,7 @@
 /** Fixed owner-only current-snapshot reader. No persistent cache or raw response. */
 import { safeIdentifier } from "../domain/capture";
 import { CHALLENGE_KEY, REVISION, type StoredRecord } from "../domain/records";
-import { AFTER_QUESTIONS } from "../domain/practice";
+import { AFTER_QUESTIONS, practiceActor } from "../domain/practice";
 import { deriveAttempts, type AttemptSummary } from "./derive";
 import { METRICS, type Values } from "./registry";
 
@@ -347,7 +347,8 @@ export function historyResult(
         throw new Error("History identity mismatch: attempt.");
       if (o.observationId !== r.record_id)
         throw new Error("History identity mismatch: observation.");
-      if (o.actor !== "person")
+      // A person's, as stored: current records say so; pre-actor captures only in their historic form.
+      if (practiceActor(o) !== "person")
         throw new Error("History identity mismatch: actor.");
       if (!CHALLENGE_KEY.test(o.challenge ?? ""))
         throw new Error("History identity mismatch: challenge.");

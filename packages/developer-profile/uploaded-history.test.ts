@@ -764,3 +764,99 @@ test("the actual transport accepts joined rows but never returns source payloads
     /input exceeds/,
   );
 });
+
+/**
+ * Exactly what the 1.0.0 (611d7cb) and 1.1.0 (933ac9b) envelopes produced, read from running
+ * them: today's keys without `actor`. Uploads before 4a263e3 are stored in this form.
+ */
+const HISTORIC_KEYS = ["schemaVersion", "type", "observationId", "participantId", "sessionId", "source", "occurredAt", "elapsedMs", "captureVersion", "termsVersion", "assignments", "challenge", "challengeRevision", "attemptId", "data"];
+function legacy(records: StoredRecord[], captureVersion = "practice-capture-1.1.0"): StoredRecord[] {
+  return records.map((r) => {
+    const o = JSON.parse(r.payload);
+    delete o.actor;
+    o.captureVersion = captureVersion;
+    // Stored payloads are canonical (sorted keys), so the set is what matters.
+    assert.deepEqual(Object.keys(o).sort(), [...HISTORIC_KEYS].sort());
+    return { ...r, payload: JSON.stringify(o) };
+  });
+}
+/** Changes some fields of the given records' payloads. */
+const edit = (records: StoredRecord[], change: (o: any) => void) =>
+  records.map((r) => {
+    const o = JSON.parse(r.payload);
+    change(o);
+    return { ...r, payload: JSON.stringify(o) };
+  });
+/** Through the fixed query (in SQLite), the transport and every identity check. */
+const read = (records: StoredRecord[]) =>
+  readUploadedHistory("synthetic-token", participant, window, (async () =>
+    Response.json({ success: true, result: { rows: rows(records, participant, window, true) } })) as typeof fetch);
+const diagnostic = async (records: StoredRecord[]) =>
+  read(records).then(
+    () => "read",
+    (e: unknown) => (e instanceof HistoryRefusal ? e.diagnostic : String(e)),
+  );
+
+test("uploads from before observations named their actor read as the person's own practice", async () => {
+  const current = (await read(trace("cur-attempt", "cur-source"))).attempts[0];
+  const old = (await read(legacy(trace("old-attempt", "old-source")))).attempts[0];
+  assert.deepEqual(old.issues, []);
+  assert.equal(old.completed, true);
+  assert.deepEqual(old.values, current.values, "the same practice derives the same values in either form");
+  // A page with a legacy attempt and a current one; and one attempt resumed across the change.
+  const page = await read([...legacy(trace("a-old", "a-old-source")), ...trace("b-new", "b-new-source")]);
+  assert.deepEqual(page.attempts.map((a) => [a.attempt, a.completed, a.issues.length]), [["a-old", true, 0], ["b-new", true, 0]]);
+  const before = legacy(trace("resumed", "page-one")).slice(0, 4);
+  const after = trace("resumed", "page-two").filter((r) => JSON.parse(r.payload).type !== "practice.started").map((r, i) => {
+    const o = JSON.parse(r.payload);
+    o.source.sequence = i + 1;
+    o.observationId = `page-two.${i + 1}`;
+    return { ...r, recordId: o.observationId, payload: JSON.stringify(o) };
+  });
+  const resumed = (await read([...before, ...after])).attempts[0];
+  assert.deepEqual([resumed.completed, resumed.issues], [true, []]);
+  // 1.0.0 reads too, and stays withheld as an unsupported capture version, as before.
+  const v1 = (await read(legacy(trace("v1-attempt", "v1-source"), "practice-capture-1.0.0"))).attempts[0];
+  assert.deepEqual(v1.issues, ["Unsupported capture version."]);
+});
+
+test("anything but the historic form still fails closed: models, named or malformed actors, unknown versions", async () => {
+  const old = () => legacy(trace("x-attempt", "x-source"));
+  const one = (records: StoredRecord[], change: (o: any) => void) => [...edit(records.slice(0, 1), change), ...records.slice(1)];
+  for (const [name, records] of [
+    ["a model's observation among a person's", one(trace("m-attempt", "m-source"), (o) => Object.assign(o, { actor: "model", termsVersion: null }))],
+    ["a model's observation among legacy ones", one(old(), (o) => Object.assign(o, { captureVersion: "practice-capture-1.2.0", actor: "model", termsVersion: null }))],
+    ["a legacy record that names a model", one(old(), (o) => (o.actor = "model"))],
+    ["a legacy record that names a person (no such format existed)", one(old(), (o) => (o.actor = "person"))],
+    ["a legacy record with a null actor", one(old(), (o) => (o.actor = null))],
+    ["a legacy record without a Terms version", one(old(), (o) => delete o.termsVersion)],
+    // The pre-actor envelope always wrote schema 1.0.0, and ingest never checked it.
+    ["a legacy record without a schema version", one(old(), (o) => delete o.schemaVersion)],
+    ["a legacy record with a null schema version", one(old(), (o) => (o.schemaVersion = null))],
+    ["a legacy record with another schema version", one(old(), (o) => (o.schemaVersion = "2.0.0"))],
+    ["a legacy record with an undated Terms version", one(old(), (o) => (o.termsVersion = "latest"))],
+    ["a current record without an actor", one(trace("c-attempt", "c-source"), (o) => delete o.actor)],
+    ["an unknown version without an actor", one(old(), (o) => (o.captureVersion = "practice-capture-0.9.0"))],
+    ["a malformed actor", one(trace("y-attempt", "y-source"), (o) => (o.actor = "Person"))],
+  ] as const)
+    assert.equal(await diagnostic(records as StoredRecord[]), "identity-actor", name);
+  // Ownership and the other identity checks still apply to legacy records (attempt mismatches are
+  // covered on joined rows above).
+  assert.equal(await diagnostic(one(old(), (o) => (o.participantId = "another-participant"))), "identity-participant");
+  assert.equal(await diagnostic(one(old(), (o) => (o.observationId = "x-source.999"))), "identity-observation");
+  assert.equal(await diagnostic(one(old(), (o) => (o.challenge = "not a key"))), "identity-challenge");
+});
+
+test("on this device, legacy practice derives as the person's and a model's never does", () => {
+  const current = deriveAttempts(trace("d-cur", "d-cur-source"), participant)[0];
+  const old = deriveAttempts(legacy(trace("d-old", "d-old-source")), participant)[0];
+  assert.deepEqual([old.completed, old.issues, old.values], [true, [], current.values]);
+  const model = edit(trace("d-model", "d-model-source"), (o) => Object.assign(o, { actor: "model", termsVersion: null }));
+  assert.deepEqual(deriveAttempts(model, participant), [], "a model's practice is not a person's evidence");
+  const named = edit(legacy(trace("d-named", "d-named-source")), (o) => (o.actor = "person"));
+  assert.deepEqual(deriveAttempts(named, participant), [], "a legacy version naming an actor never existed");
+  for (const schema of [undefined, null, "2.0.0"]) {
+    const other = edit(legacy(trace("d-schema", "d-schema-source")), (o) => (schema === undefined ? delete o.schemaVersion : (o.schemaVersion = schema)));
+    assert.deepEqual(deriveAttempts(other, participant), [], `schema ${String(schema)} isn't the pre-actor form`);
+  }
+});

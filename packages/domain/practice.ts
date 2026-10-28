@@ -5,7 +5,7 @@
  * showed, every run with its full outcome, submissions and completion, and the page's state.
  * Interpretation (active time, typos, pace) is derived later, from these, and versioned there.
  */
-import { runFeedback, type Envelope } from "./records";
+import { runFeedback, TERMS_VERSION, type Actor, type Envelope } from "./records";
 import type { Json } from "./json";
 
 /**
@@ -16,6 +16,32 @@ import type { Json } from "./json";
  * 1.1: type tooltips in practice.assist may be opened by keyboard as well as pointer.
  */
 export const PRACTICE_CAPTURE_VERSION = "practice-capture-1.2.0";
+/**
+ * Practice capture versions recorded before observations named who acted (1.2.0, 4a263e3). The
+ * client's envelope then always wrote schema 1.0.0, a dated Terms version and no `actor` key, and
+ * models had no stream. Ingest checked the participant and the capture version but none of those
+ * three fields, so readers check them. Some such records were uploaded and stay stored as they were.
+ */
+export const PRE_ACTOR_PRACTICE_CAPTURES: readonly string[] = ["practice-capture-1.0.0", "practice-capture-1.1.0"];
+/**
+ * Who acted in a stored practice observation, or null when that can't be told. A record that has
+ * an `actor` key on a version other than 1.0.0 and 1.1.0 is what it says (only "person" or "model").
+ * A record without one is a person's only in the one form the pre-actor envelope wrote: schema
+ * 1.0.0, a pre-actor capture version and a dated Terms version. An actorless record of any other
+ * version or schema, or a pre-actor one that names an actor, is null.
+ */
+export function practiceActor(o: {
+  schemaVersion?: unknown;
+  captureVersion?: unknown;
+  actor?: unknown;
+  termsVersion?: unknown;
+}): Actor | null {
+  const legacy = typeof o.captureVersion === "string" && PRE_ACTOR_PRACTICE_CAPTURES.includes(o.captureVersion);
+  if (Object.hasOwn(o, "actor")) return !legacy && (o.actor === "person" || o.actor === "model") ? o.actor : null;
+  return legacy && o.schemaVersion === "1.0.0" && typeof o.termsVersion === "string" && TERMS_VERSION.test(o.termsVersion)
+    ? "person"
+    : null;
+}
 /** An edit whose change set is larger than this is recorded without it, plus a snapshot. */
 export const EDIT_CHANGES_LIMIT_BYTES = 16384;
 /** What this capture does not record. Absence is a gap, not evidence of no activity. */
