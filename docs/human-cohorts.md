@@ -12,6 +12,8 @@ The requester approved the authorization-point contract for draft implementation
 
 Both browser transport and ingest authority remain disabled/unconfigured. No new live service binding, variable, credentials, scheduler or legal version is installed. Existing `ParticipantOwner.verify` authority is unchanged. The separate `ComparisonEligibility` entrypoint is not available to public HTTP or the approved ownership binding. No ID/proof/raw record/SQL method is exposed publicly.
 
+Stats shows at most one human line from these results, through the typed adapter in [comparison-fyi.md](comparison-fyi.md), which also gives the settings route by which an adult becomes countable.
+
 ## Private hourly interface and safe results
 
 `precomputeCohort()` and `buildHumanSnapshot(spec, query, control)` expose a disabled fixed-query builder seam for the separately owned scheduler. The private artifact is aggregate-only: `{version,challenge,revision,window,computedAt,expiresAt,generation,groups}`. Member IDs exist only transiently inside trusted build code and are not cached as eligibility authority. Web's existing server-only `ADMIN_STATS_SQL_TOKEN` is reused; no arbitrary caller SQL or new credential is added.
