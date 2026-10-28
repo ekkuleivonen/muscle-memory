@@ -194,6 +194,7 @@ for (const device of DEVICES) {
     }), "the inventory comes after every answer");
     await noOverflow(page, "one solve");
     await shot(page, "2-one");
+    await page.locator(".report-discover").screenshot({ path: `${output}/${engine}-${device.name}-2-one-discover.png` });
     step(`${device.name}: one solve describes that solve; next stays in JavaScript`);
     await context.close();
   }
@@ -242,6 +243,7 @@ for (const device of DEVICES) {
     assert.match(body, /Comparisons with other players and with AI models aren't shown/, "only the one line saying why");
     await noOverflow(page, "rich");
     await shot(page, "4-rich");
+    await page.locator(".report-discover").screenshot({ path: `${output}/${engine}-${device.name}-4-rich-discover.png` });
     if (!device.touch) {
       // Keyboard: the first Tab stops in the page reach the first takeaway; Enter moves to its answer.
       await page.locator(".report-takeaways a").first().focus();
