@@ -44,19 +44,19 @@ const catalog = [
 const adult = { version: "2", createdAt: "2026-10-20T00:00:00Z", stealth: false, profile: { age: "25-34" } } as unknown as StoredProfile;
 
 /** The shared synthetic trace, moved onto this revision and the engine's real runtime label. */
-function onRevision<T extends { payload: string | null }>(r: T): T {
+function onRevision<T extends Record<string, any>>(r: T): T {
   const o = JSON.parse(r.payload!);
   if (o.challengeRevision) o.challengeRevision = revision;
   if (o.type === "practice.opened") o.data.runtime = runtime;
   return { ...r, payload: JSON.stringify(o), ...("challenge_revision" in r && (r as any).challenge_revision ? { challenge_revision: revision } : {}) };
 }
-const browsers = (n: number, prefix = "b"): Event[] => many(n, prefix).map(onRevision);
+const browsers = (n: number, prefix = "b"): Event[] => many(n, prefix).map((e) => onRevision(e));
 
 /** The viewer's own attempts, from the real producer: their capture records through localHistory. */
 const viewerAttempts = (): ReportAttempt[] =>
   localHistory({
     settings: { participantId: "synthetic-participant" },
-    records: trace("viewer-attempt", "viewer-source", "JS-001", revision).map(onRevision),
+    records: trace("viewer-attempt", "viewer-source", "JS-001", revision).map((r) => onRevision(r)),
     outbox: [],
   }).map((a) => ({ ...a, source: "device" as const }));
 
