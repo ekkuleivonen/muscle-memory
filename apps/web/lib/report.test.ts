@@ -1,10 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { deriveAttempts, type AttemptSummary } from "../../../packages/developer-profile/derive";
+import type { StoredRecord } from "../../../packages/domain/records";
 import { trace, syntheticRevision } from "../../../packages/developer-profile/fixtures";
 import type { ChallengeSummary } from "./challenges";
 import type { Progress } from "./progress";
-import { buildReport, duration, mergeEvidence, type Question, type ReportAttempt, type ReportInput } from "./report";
+import { buildReport, duration, mergeEvidence, shareText, SLICES, type Question, type ReportAttempt, type ReportInput } from "./report";
 
 const challenge = (key: string, language: string, difficulty = "easy", revision = syntheticRevision) =>
   ({ key, title: `Synthetic ${key}`, language, tags: ["arrays"], difficulty, runnable: true, revision }) as unknown as ChallengeSummary;
@@ -59,7 +60,21 @@ test("a solved trace answers the supported questions from recorded values only",
   assert.equal(q(r, "difficulty")!.note, null);
   assert.equal(q(r, "iterate")!.answer, "Across your two solves, none passed on the first submission; a typical one took 2 submissions.");
   assert.equal(q(r, "iterate")!.detail, null, "the fixture records no example runs, so nothing is said about them");
-  assert.equal(q(r, "iterate")!.visual, null, "one bucket would only repeat the sentence");
+  // Two solves: each one's submissions in order, a miss then the pass.
+  assert.deepEqual(q(r, "iterate")!.visual, {
+    kind: "dots",
+    legend: ["passed", "didn't pass"],
+    rows: [
+      { label: "JS-001", marks: [false, true], display: "2 submissions" },
+      { label: "PY-001", marks: [false, true], display: "2 submissions" },
+    ],
+  });
+  // Two languages split the challenges worked on: a ring, each challenge in exactly one slice.
+  assert.deepEqual(q(r, "languages")!.visual, {
+    kind: "pie",
+    whole: "Challenges worked on, by language",
+    parts: [{ label: "JavaScript", value: 1, display: "1 solved" }, { label: "Python", value: 1, display: "1 solved" }],
+  });
   // recoveryChecks includes the better check itself: 1 is the next check, not one in between.
   assert.equal(q(r, "recovery")!.answer, "Across your two solves with a failed submission, a better one came about 3 s later, on the next check.");
   assert.equal(q(r, "recovery")!.detail, null, "how often the first failed is iterate's answer, not repeated here");
@@ -94,6 +109,7 @@ function withSubmissions(a: AttemptSummary, verdicts: ("pass" | "fail")[], start
   const timeline = [
     { at: started, label: "started" },
     ...verdicts.flatMap((v, i) => [
+      { at: at(i), label: "submit: result" },
       { at: at(i), label: v === "pass" ? "passed: 3/3 checks; 0 static rules" : "failed: 1/3 checks; 0 static rules" },
       ...(i === solved ? [{ at: at(i), label: "completed" }] : []),
     ]),
@@ -122,8 +138,24 @@ test("checks after a solve never count as needed: no false improvement, no extra
   assert.equal(first.values.submissions, 6);
   const r = buildReport(input({ attempts: [first, later] }));
   assert.equal(q(r, "repeat")!.answer, "Back on JS-001, the latest took 2 submissions; the first took 1.", "1 to solve, then 2: optional ones after the solve don't count");
-  // Checks to solve are 1 and 2, not 6 and 2.
-  assert.deepEqual(q(r, "iterate")!.visual, { kind: "bars", bars: [{ label: "1 submission", value: 1, display: "1 solve" }, { label: "2 submissions", value: 1, display: "1 solve" }] });
+  // Checks to solve are 1 and 2, not 6 and 2: the marks stop at each solve.
+  assert.deepEqual(q(r, "iterate")!.visual, {
+    kind: "dots",
+    legend: ["passed", "didn't pass"],
+    rows: [{ label: "JS-001", marks: [true], display: "1 submission" }, { label: "JS-001", marks: [false, true], display: "2 submissions" }],
+  });
+  const third = withSubmissions(summary("q3", "JS-001"), ["fail", "fail", "pass"], "2026-10-29T10:00:00.000Z");
+  // From three solves, the shape is how many took 1, 2, 3–4 or 5+.
+  assert.deepEqual(q(buildReport(input({ attempts: [first, later, third] })), "iterate")!.visual, {
+    kind: "bars",
+    bars: [
+      { label: "1 submission", value: 1, display: "1 solve" },
+      { label: "2 submissions", value: 1, display: "1 solve" },
+      { label: "3–4 submissions", value: 1, display: "1 solve" },
+    ],
+  });
+  const once = withSubmissions(summary("q4", "JS-002"), ["pass"], "2026-10-27T10:00:00.000Z");
+  assert.equal(q(buildReport(input({ attempts: [once] })), "iterate")!.visual, null, "one mark would only repeat the sentence");
 });
 
 test("durations read in seconds, minutes or hours without false precision", () => {
@@ -202,6 +234,14 @@ test("the languages invitation sits on the languages answer until answered; a gu
   const answer = q(filled, "familiarity")!;
   assert.match(answer.answer, /usual languages.*outside them/);
   assert.equal(answer.fyi, null);
+  // Inside or outside the listed languages, never both: one bar split in two.
+  assert.deepEqual(answer.visual, {
+    kind: "split",
+    whole: "Challenges worked on, inside and outside your usual languages",
+    parts: [{ label: "Usual languages", value: 1, display: "1 challenge" }, { label: "Other languages", value: 1, display: "1 challenge" }],
+  });
+  const allUsual = buildReport(input({ attempts, profile: { languages: ["javascript", "python"] } }));
+  assert.equal(q(allUsual, "familiarity")!.visual, null, "one part is the whole: nothing to split");
   const empty = buildReport(input({}));
   assert.equal(empty.languagesInvite, false, "no practice, no languages answer, no invitation");
 });
@@ -433,7 +473,12 @@ test("confidence is the after-solve answer beside the first submission, in count
   const c = q(buildReport(input({ catalog: rich, attempts })), "confidence")!;
   assert.equal(c.answer, "Across your three answered solves, the first submission passed in 2 of 2 solves you felt sure about, and 0 of 1 you felt unsure about.");
   assert.equal(c.note, "You answered after the result, so it may colour the answer.");
-  assert.deepEqual(c.visual, { kind: "bars", bars: [{ label: "sure", value: 1, display: "2 of 2 passed first" }, { label: "unsure", value: 0, display: "0 of 1 passed first" }] });
+  // One mark per answered solve under what you said, never a rate.
+  assert.deepEqual(c.visual, {
+    kind: "dots",
+    legend: ["first passed", "first didn't pass"],
+    rows: [{ label: "sure", marks: [true, true], display: "2 of 2 passed first" }, { label: "unsure", marks: [false], display: "0 of 1 passed first" }],
+  });
   assert.doesNotMatch(c.answer + c.note, /calibrat|overconfident|predict|score|%/i);
 });
 
@@ -465,7 +510,11 @@ test("languages read as challenges solved and in progress, never an unexplained 
   const r = buildReport(input({ catalog: rich, attempts: [tiny, solve("l2", "JS-002", { day: 1, active: 1200 }), open] }));
   const l = q(r, "languages")!;
   assert.equal(l.answer, "Across your two solved challenges: JavaScript 2, Python 0.");
-  assert.deepEqual(l.visual, { kind: "bars", bars: [{ label: "JavaScript", value: 2, display: "2 solved" }, { label: "Python", value: 1, display: "1 in progress" }] });
+  assert.deepEqual(l.visual, {
+    kind: "pie",
+    whole: "Challenges worked on, by language",
+    parts: [{ label: "JavaScript", value: 2, display: "2 solved" }, { label: "Python", value: 1, display: "1 in progress" }],
+  });
   assert.doesNotMatch(JSON.stringify(l), /\d+ s\b|min\b/);
 });
 
@@ -520,7 +569,10 @@ test("still to discover lists every supported question not yet answered, with it
   assert.ok(empty.discover.every((d) => d.action === null), "the start link above is the step; no extra links");
   const needs = empty.discover.map((d) => `${d.question} ${d.need}`).join(" ");
   assert.doesNotMatch(needs, /unlock|play more|model|other players|cohort|percentile/i, "never promises what practice can't provide");
-  assert.match(empty.discoverNote!, /other players' practice stays private for now, and models don't submit under the same rules/);
+  // Each comparison's real prerequisite, never a blanket "models aren't comparable".
+  assert.match(empty.discoverNote!, /^Not compared yet\. Other players: .*privacy controls still under review.*enough comparable players/);
+  assert.match(empty.discoverNote!, /AI models: their recorded submissions don't have to pass the examples first.*recorded the same way on the same challenge version\.$/);
+  assert.doesNotMatch(empty.discoverNote!, /never|can't be compared|not comparable|latency|faster|smarter/i);
 });
 
 test("answered questions are never listed; a missing one names a specific comparable challenge", () => {
@@ -621,4 +673,117 @@ test("start and build come from one population of solves (real traces)", () => {
   const stock = summary("stock", "JS-002");
   const r = buildReport(input({ attempts: device(stock, later) }));
   assert.equal(q(r, "start")!.answer, "Your first edit came 1 s in, then 7 s of active editing to the solve.", "the 28 s solve without a first edit isn't mixed in");
+});
+
+test("a ring folds languages past the fifth slice into one, so every slice stays readable", () => {
+  const langs = ["c", "go", "java", "javascript", "python", "ruby", "php"];
+  const many = langs.map((l, i) => challenge(`L-00${i}`, l));
+  const attempts = langs.map((_, i) => solve(`m${i}`, `L-00${i}`, { day: i, active: MIN }));
+  const v = q(buildReport(input({ catalog: many, attempts })), "languages")!.visual;
+  assert.equal(v?.kind, "pie");
+  const parts = v!.kind === "pie" ? v!.parts : [];
+  assert.equal(parts.length, SLICES);
+  assert.deepEqual(parts.at(-1), { label: "3 other languages", value: 3, display: "3 solved" });
+  assert.equal(parts.reduce((t, p) => t + p.value, 0), langs.length, "the slices still add up to the whole");
+});
+
+test("the share summary is a few counts, never names, times, answers or identity", () => {
+  assert.equal(buildReport(input()).share, null, "nothing to share before practice");
+  const started = buildReport(input({ attempts: [{ ...summary("o1", "JS-001"), completed: false, source: "device" }] }));
+  assert.equal(started.share, null, "nothing to share before a solve");
+  const attempts = [
+    solve("s1", "JS-001", { day: 0, active: 9 * MIN, confidence: "sure" }),
+    solve("s2", "JS-002", { day: 1, active: 4 * MIN, verdicts: ["fail", "pass"], confidence: "unsure" }),
+    solve("s3", "PY-001", { day: 2, active: 3 * MIN, revision: revB }),
+  ];
+  const r = buildReport(input({ catalog: rich, attempts, profile: { languages: ["python"], experience: "5-10" } as never }));
+  assert.deepEqual(r.share, {
+    solved: 3,
+    languages: [{ label: "JavaScript", solved: 2 }, { label: "Python", solved: 1 }],
+    firstPassed: { passed: 2, of: 3, solves: 3 },
+  });
+  const text = shareText(r.share!, "https://example.test");
+  assert.equal(
+    text,
+    [
+      "My unaided coding practice on Muscle Memory",
+      "",
+      "3 challenges solved",
+      "  JavaScript  ■■■■■■■■■■ 2",
+      "  Python      ■■■■■ 1",
+      "First submission passed in 2 of 3 solves",
+      "",
+      "Keep your coding skills in practice: https://example.test",
+    ].join("\n"),
+  );
+  // No challenge keys or titles, durations, dates, after-solve answers, profile context or ids.
+  assert.doesNotMatch(text, /JS-|PY-|Synthetic|\d+ (s|min)\b|2026|sure|unsure|usual|5-10|synthetic-participant|s1|attempt|sha256/);
+  const one = shareText({ solved: 1, languages: [{ label: "Go", solved: 1 }], firstPassed: { passed: 0, of: 1, solves: 1 } }, "https://example.test");
+  assert.match(one, /^1 Go challenge solved$/m);
+  assert.match(one, /^First submission didn't pass$/m);
+});
+
+test("a solve on an older revision still counts in the share summary, without a guessed language", () => {
+  const old = solve("v1", "JS-001", { day: 0, active: MIN, revision: revB });
+  const s = buildReport(input({ catalog: rich, attempts: [old, solve("v2", "JS-002", { day: 1, active: MIN })] })).share!;
+  assert.deepEqual(s, { solved: 2, languages: [], firstPassed: { passed: 2, of: 2, solves: 2 } });
+  assert.match(shareText(s, "https://example.test"), /^2 challenges solved$/m);
+});
+
+/**
+ * The fixture trace with its first submission's run changed, then derived for real: the run's
+ * status and outcome phase, and the submission's verdict.
+ */
+function firstRun(attempt: string, key: string, status: string, phase: string | null, result: string): ReportAttempt {
+  const records = trace(attempt, `${attempt}-source`, key).map((r: StoredRecord) => {
+    const o = JSON.parse(r.payload);
+    if (o.type === "practice.run" && o.data.runId === "r1" && o.data.status === "result") {
+      o.data.status = status;
+      if (phase) o.data.outcome = { status, phase };
+    }
+    if (o.type === "practice.submitted" && o.data.runId === "r1") {
+      o.data.result = result;
+      if (result === "errored") o.data.passed = 0;
+    }
+    return { ...r, payload: JSON.stringify(o) };
+  });
+  return { ...deriveAttempts(records, "synthetic-participant")[0], source: "device" };
+}
+
+test("a submission whose result isn't known is never drawn as a failure (derived traces)", () => {
+  const timeout = firstRun("u1", "JS-001", "timeout", null, "errored"),
+    unclassified = firstRun("u2", "JS-001", "user-error", null, "errored"),
+    compile = firstRun("u3", "JS-001", "user-error", "compile", "errored");
+  assert.equal(timeout.values.firstSubmit, null);
+  assert.equal(unclassified.values.firstSubmit, null);
+  assert.equal(compile.values.firstSubmit, 0, "a compile error is the code's: a known first result");
+  const marks = (a: ReportAttempt) => {
+    const v = q(buildReport(input({ attempts: [a] })), "iterate")!;
+    assert.equal(v.visual?.kind, "dots");
+    return v.visual!.kind === "dots" ? v.visual! : null;
+  };
+  for (const a of [timeout, unclassified]) {
+    const r = q(buildReport(input({ attempts: [a] })), "iterate")!;
+    assert.equal(r.answer, "Your solve took 2 submissions; the first one's result isn't known.");
+    const v = marks(a)!;
+    assert.deepEqual(v.rows[0].marks, [null, true], "unknown, then the pass: order kept, no failure drawn");
+    assert.deepEqual(v.legend, ["passed", "didn't pass", "result not known"]);
+  }
+  const c = marks(compile)!;
+  assert.deepEqual(c.rows[0].marks, [false, true]);
+  assert.deepEqual(c.legend, ["passed", "didn't pass"], "no unknown entry when every result is known");
+  // A later errored submission can't be told apart from a timeout in the timeline: not known.
+  const later = withSubmissions(summary("u4", "JS-001"), ["fail", "pass"], "2026-10-27T10:00:00.000Z");
+  const errored = { ...later, timeline: [later.timeline[0], ...later.timeline.slice(1, 3), { at: later.timeline[1].at, label: "submit: user-error" }, { at: later.timeline[1].at, label: "errored: 0/3 checks; 0 static rules" }, ...later.timeline.slice(3)] };
+  assert.deepEqual(marks(errored)!.rows[0].marks, [false, null, true]);
+});
+
+test("the share summary keeps its known-result scope when some first results aren't known", () => {
+  const timeout = firstRun("k1", "JS-001", "timeout", null, "errored");
+  const clean = withSubmissions(summary("k2", "JS-002"), ["pass"], "2026-10-28T10:00:00.000Z");
+  const r = buildReport(input({ attempts: [timeout, { ...clean, values: { ...clean.values, firstSubmit: 1 } }] }));
+  assert.match(q(r, "iterate")!.answer, /^Across your two solves, 1 of 1 first submission with a known result passed;/, "the report's own scope");
+  assert.deepEqual(r.share!.firstPassed, { passed: 1, of: 1, solves: 2 });
+  assert.match(shareText(r.share!, "https://example.test"), /^First submission passed in 1 of 1 solve with a known result$/m);
+  assert.doesNotMatch(shareText(r.share!, "https://example.test"), /^First submission passed$/m);
 });
