@@ -97,6 +97,61 @@ test("operational diagnostics expose fixed stages, never upstream or record cont
   }
 });
 
+test("identity refusals distinguish fixed fields without exposing values or accepting invalid records", async () => {
+  const canary = "synthetic-private-value-never-return";
+  const baseline = rows(trace(), participant, window, true);
+  const fields = [
+    ["participantId", "participant"],
+    ["attemptId", "attempt"],
+    ["observationId", "observation"],
+    ["actor", "actor"],
+    ["challenge", "challenge"],
+    ["challengeRevision", "revision"],
+  ] as const;
+  for (const [field, category] of fields) {
+    for (const value of [canary, null, undefined]) {
+      const changed = structuredClone(baseline);
+      const row = changed.find((r: any) => r.payload !== null);
+      const observation = JSON.parse(row.payload);
+      observation[field] = value;
+      row.payload = JSON.stringify(observation);
+      await assert.rejects(
+        readUploadedHistory("synthetic-token", participant, window, (async () =>
+          Response.json({
+            success: true,
+            result: { rows: changed },
+          })) as typeof fetch),
+        (error: unknown) => {
+          assert.ok(error instanceof HistoryRefusal);
+          assert.equal(error.status, 503);
+          assert.equal(error.diagnostic, `identity-${category}`);
+          const exposed = JSON.stringify(error) + error.message + error.stack;
+          for (const privateValue of [
+            canary,
+            participant,
+            row.attempt_id,
+            row.record_id,
+          ])
+            assert.ok(!exposed.includes(privateValue));
+          return true;
+        },
+      );
+    }
+  }
+  const valid = await readUploadedHistory(
+    "synthetic-token",
+    participant,
+    window,
+    (async () =>
+      Response.json({
+        success: true,
+        result: { rows: baseline },
+      })) as typeof fetch,
+  );
+  assert.equal(valid.attempts.length, 1);
+  assert.equal(valid.attempts[0].completed, true);
+});
+
 test("fixed query selects only owner and whole attempts, not arbitrary date fragments", () => {
   const a = trace();
   const opened = JSON.parse(a[0].payload);

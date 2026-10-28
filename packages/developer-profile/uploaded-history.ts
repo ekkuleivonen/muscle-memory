@@ -339,15 +339,20 @@ export function historyResult(
       if (typeof r.payload !== "string")
         throw new Error("Invalid observation.");
       const o = JSON.parse(r.payload);
-      if (
-        o.participantId !== participant ||
-        o.attemptId !== e.attempt_id ||
-        o.observationId !== r.record_id ||
-        o.actor !== "person" ||
-        !CHALLENGE_KEY.test(o.challenge ?? "") ||
-        !REVISION.test(o.challengeRevision ?? "")
-      )
-        throw new Error("History identity mismatch.");
+      // Fixed field names only: never include the rejected value in a diagnostic.
+      // Preserve the original validation order and fail-closed behavior.
+      if (o.participantId !== participant)
+        throw new Error("History identity mismatch: participant.");
+      if (o.attemptId !== e.attempt_id)
+        throw new Error("History identity mismatch: attempt.");
+      if (o.observationId !== r.record_id)
+        throw new Error("History identity mismatch: observation.");
+      if (o.actor !== "person")
+        throw new Error("History identity mismatch: actor.");
+      if (!CHALLENGE_KEY.test(o.challenge ?? ""))
+        throw new Error("History identity mismatch: challenge.");
+      if (!REVISION.test(o.challengeRevision ?? ""))
+        throw new Error("History identity mismatch: revision.");
       return {
         recordId: r.record_id,
         participantId: participant,
@@ -536,7 +541,12 @@ export async function readUploadedHistory(
       ["Invalid attempt coverage.", "coverage"],
       ["Incomplete history response.", "incomplete"],
       ["Invalid observation.", "observation-shape"],
-      ["History identity mismatch.", "identity"],
+      ["History identity mismatch: participant.", "identity-participant"],
+      ["History identity mismatch: attempt.", "identity-attempt"],
+      ["History identity mismatch: observation.", "identity-observation"],
+      ["History identity mismatch: actor.", "identity-actor"],
+      ["History identity mismatch: challenge.", "identity-challenge"],
+      ["History identity mismatch: revision.", "identity-revision"],
       ["History input exceeds its budget.", "input-budget"],
       ["History summaries exceed their response budget.", "summary-budget"],
       ["History response exceeds its budget.", "row-budget"],
