@@ -68,32 +68,29 @@ test("qualifiers parse into filters; unknown ones stay as text", () => {
 test("filters combine across qualifiers and match any value within one", () => {
   const keys = (q: string) =>
     filterChallenges(index.challenges, parseChallengeQuery(q)).map((i) => i.key);
-  assert.deepEqual(keys("lang:go"), [
-    "GO-001",
-    "GO-002",
-    "GO-003",
-    "GO-004",
-    "GO-005",
-    "GO-006",
-    "GO-007",
-  ]);
-  assert.deepEqual(keys("lang:go tag:parsing"), ["GO-002", "GO-003", "GO-004"]);
-  assert.deepEqual(keys("difficulty:hard"), [
-    "CPP-001",
-    "CPP-002",
-    "PY-009",
-    "PY-010",
-    "TS-005",
-    "TS-006",
-  ]);
-  assert.equal(keys("lang:rust,go").length, 7);
+  // Expected sets come from the catalog itself, so adding challenges doesn't break the test.
+  const where = (keep: (c: (typeof catalog.challenges)[number]) => boolean) =>
+    catalog.challenges.filter(keep).map((c) => c.key);
+  const go = where((c) => c.key.startsWith("GO-"));
+  assert.ok(go.length > 0);
+  assert.deepEqual(keys("lang:go"), go);
+  assert.deepEqual(
+    keys("lang:go tag:parsing"),
+    where((c) => c.key.startsWith("GO-") && c.tags.includes("parsing")),
+  );
+  assert.ok(keys("lang:go tag:parsing").includes("GO-003"));
+  assert.deepEqual(keys("difficulty:hard"), where((c) => c.difficulty === "hard"));
+  assert.deepEqual(keys("lang:rust,go"), go);
   assert.equal(keys("is:runnable").length, index.challenges.length);
   assert.deepEqual(keys("GO-003"), ["GO-003"]);
   assert.deepEqual(keys("parser"), ["GO-003"]);
   assert.deepEqual(keys("rust hard"), []);
   // Natural key order by default; easiest first on request.
   assert.equal(keys("sort:difficulty")[0], "C-001");
-  assert.equal(keys("sort:difficulty").at(-1), "TS-006");
+  assert.equal(
+    keys("sort:difficulty").at(-1),
+    where((c) => c.difficulty === "hard").at(-1),
+  );
 });
 
 test("toggles switch one value and round-trip through the search line", () => {
