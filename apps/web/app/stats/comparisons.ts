@@ -48,9 +48,13 @@ const modelOn = () => MODEL_FYI_ENABLED || comparisonPreview();
 export function comparisonRequests(attempts: readonly AttemptSummary[], catalog: readonly CatalogEntry[]): ComparisonRequests {
   if (!humanOn() && !modelOn()) return NO_COMPARISONS;
   const model = modelOn() ? modelFyiCandidates(attempts, catalog) : [];
+  // One read per challenge revision, however many attempts share it (two solves of one challenge
+  // would otherwise bind the same read twice, which the helper rightly refuses); lengths stay per attempt.
+  const once = <T extends Pair>(pairs: readonly T[]) =>
+    [...new Map(pairs.map((p) => [pairKey(p), { challenge: p.challenge, revision: p.revision }])).values()];
   return {
-    cohorts: humanOn() ? humanFyiCandidates(attempts, catalog) : [],
-    receipts: model.map(({ challenge, revision }) => ({ challenge, revision })),
+    cohorts: humanOn() ? once(humanFyiCandidates(attempts, catalog)) : [],
+    receipts: once(model),
     lengths: model,
   };
 }

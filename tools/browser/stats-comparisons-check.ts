@@ -202,7 +202,20 @@ for (const device of DEVICES) {
     await whole(page, device, "1-both-lines");
     step(`${device.name}: both named-task lines after the answers, personal answers first, exact pair only`);
 
-    // Stealth from another tab: report and lines gone.
+    // A simulated private-boundary start (as reset, import or deletion send): no new comparison
+    // read starts while it lasts, and nothing shown comes back.
+    const before = asked.length;
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("muscle-memory:private-boundary", { detail: "start" })));
+    await page.waitForTimeout(1500);
+    assert.equal(asked.length, before, `no comparison read after the boundary started (${asked.slice(before).join(", ")})`);
+    assert.equal(await page.locator(".report-compared").count(), 0);
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("muscle-memory:private-boundary", { detail: "finish" })));
+    await page.locator("#q-iterate").waitFor();
+    await page.waitForTimeout(1500);
+    step(`${device.name}: no comparison read while a simulated private boundary is open`);
+
+    // Stealth from another tab: report and lines gone, and no read after it.
+    const atStealth = asked.length;
     const other = await context.newPage();
     await other.goto(`${origin}/privacy`);
     await other.evaluate(() => {
@@ -212,7 +225,10 @@ for (const device of DEVICES) {
     await page.getByText("You're in stealth, so there's no report here.").waitFor();
     assert.equal(await page.locator(".report-compared").count(), 0);
     assert.doesNotMatch(await page.content(), /scored first submissions|models solved it/);
-    step(`${device.name}: stealth from another tab removes the lines with the report`);
+    await page.waitForTimeout(1500);
+    assert.equal(asked.slice(atStealth).filter((p) => p.startsWith("/api/cohort/")).length, 0, "no cohort read after stealth");
+    assert.equal(asked.slice(atStealth).length, 0, "no comparison read of any kind after stealth");
+    step(`${device.name}: stealth from another tab removes the lines with the report and starts no read`);
     await context.close();
   }
 
@@ -249,7 +265,10 @@ for (const device of DEVICES) {
     const { context, page } = await open(device, { age: "25-34", cohortDelay: 3000 });
     await report(page, "#q-iterate");
     await page.waitForTimeout(500);
+    const inFlight = asked.length;
     await page.evaluate(() => window.dispatchEvent(new CustomEvent("muscle-memory:private-boundary", { detail: "start" })));
+    await page.waitForTimeout(300);
+    assert.equal(asked.length, inFlight, "the boundary start itself starts no read");
     await page.evaluate(() => window.dispatchEvent(new CustomEvent("muscle-memory:private-boundary", { detail: "finish" })));
     await page.locator("#q-iterate").waitFor();
     await page.waitForTimeout(3500);
