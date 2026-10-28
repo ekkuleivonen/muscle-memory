@@ -5,7 +5,7 @@
  * showed, every run with its full outcome, submissions and completion, and the page's state.
  * Interpretation (active time, typos, pace) is derived later, from these, and versioned there.
  */
-import { runFeedback, type Envelope } from "./records";
+import { runFeedback, TERMS_VERSION, type Actor, type Envelope } from "./records";
 import type { Json } from "./json";
 
 /**
@@ -16,6 +16,25 @@ import type { Json } from "./json";
  * 1.1: type tooltips in practice.assist may be opened by keyboard as well as pointer.
  */
 export const PRACTICE_CAPTURE_VERSION = "practice-capture-1.2.0";
+/**
+ * Practice capture versions recorded before observations named who acted (1.2.0, 4a263e3). Their
+ * envelope had no `actor` key and always a dated Terms version; models had no stream, and ingest
+ * took only the current version from an authenticated participant. Some were uploaded and stay
+ * stored as they were.
+ */
+export const PRE_ACTOR_PRACTICE_CAPTURES: readonly string[] = ["practice-capture-1.0.0", "practice-capture-1.1.0"];
+/**
+ * Who acted in a stored practice observation, or null when that can't be told. A record that has
+ * an `actor` key is what it says (only "person" or "model"). A record without one is a person's
+ * only when it is a pre-actor capture with a dated Terms version, which is the only form such a
+ * record ever had; a current-version record without `actor`, or a pre-actor one that names an
+ * actor, never existed and is null.
+ */
+export function practiceActor(o: { captureVersion?: unknown; actor?: unknown; termsVersion?: unknown }): Actor | null {
+  const legacy = typeof o.captureVersion === "string" && PRE_ACTOR_PRACTICE_CAPTURES.includes(o.captureVersion);
+  if (Object.hasOwn(o, "actor")) return !legacy && (o.actor === "person" || o.actor === "model") ? o.actor : null;
+  return legacy && typeof o.termsVersion === "string" && TERMS_VERSION.test(o.termsVersion) ? "person" : null;
+}
 /** An edit whose change set is larger than this is recorded without it, plus a snapshot. */
 export const EDIT_CHANGES_LIMIT_BYTES = 16384;
 /** What this capture does not record. Absence is a gap, not evidence of no activity. */
