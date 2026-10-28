@@ -191,7 +191,7 @@ for (const device of DEVICES) {
     assert.equal(await page.locator('[data-comparison="human"]').count(), 0, "personal answers never wait on comparisons");
     const human = page.locator('[data-comparison="human"]');
     await human.waitFor();
-    assert.match(await human.innerText(), /^Other players\nOn .+ \(current version, same runtime and editor setup\), about 45% of scored first submissions passed, across first attempts from 20–49 browsers\.$/);
+    assert.match(await human.innerText(), /^Other players\nAmong first attempts at .+ \(current version, same runtime and editor setup\) from 20–49 browsers, about 45% of scored first submissions passed\.$/);
     const model = page.locator('[data-comparison="model"]');
     await model.waitFor();
     assert.match(await model.innerText(), /^AI models\nOn .+ \(current version, same runtime and diagnostics\), (your passing code was \d+ characters; 3 of 4 models solved it on their first try at their default setting, with a median of 340\. Counts include whitespace; length isn't a score\.|3 of 4 models solved it on their first try at their default setting\. One try each, not a success rate\.)$/);
@@ -262,7 +262,7 @@ for (const device of DEVICES) {
 
   // A private boundary while the cohort reply is in flight: the late reply never shows.
   {
-    const { context, page } = await open(device, { age: "25-34", cohortDelay: 3000 });
+    const { context, page, asked } = await open(device, { age: "25-34", cohortDelay: 3000 });
     await report(page, "#q-iterate");
     await page.waitForTimeout(500);
     const inFlight = asked.length;
@@ -271,7 +271,9 @@ for (const device of DEVICES) {
     assert.equal(asked.length, inFlight, "the boundary start itself starts no read");
     await page.evaluate(() => window.dispatchEvent(new CustomEvent("muscle-memory:private-boundary", { detail: "finish" })));
     await page.locator("#q-iterate").waitFor();
-    await page.waitForTimeout(3500);
+    // The reply in flight before the boundary lands about 2.2 s after it finishes; the fresh read
+    // the finished boundary allows lands at 3 s. Between the two, nothing may show.
+    await page.waitForTimeout(2600);
     assert.equal(await page.locator('[data-comparison="human"]').count(), 0, "the reply that was in flight is discarded");
     step(`${device.name}: a cohort reply in flight across a private boundary is discarded`);
     await context.close();

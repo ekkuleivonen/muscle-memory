@@ -53,7 +53,9 @@ async function visit(browsers: number) {
   await context.route("**/*", async (route) => {
     const url = new URL(route.request().url());
     if (url.origin !== origin || url.pathname.includes("/ingest/")) return route.fulfill({ status: 503, body: "isolated-synthetic-qa" });
-    if (url.pathname.startsWith("/api/model-receipts/")) throw new Error("models are off: no receipt read");
+    // The dev preview switch turns both lines on; in production MODEL_FYI_ENABLED stays false.
+    // Answer receipts as unavailable so no model line can appear in this human-only check.
+    if (url.pathname.startsWith("/api/model-receipts/")) return route.fulfill({ json: { state: "unavailable", receipts: [] } }).catch(() => {});
     if (url.pathname.startsWith("/api/private-history")) {
       const { window } = route.request().postDataJSON();
       return route.fulfill({ json: { attempts: [], unavailable: [], next: null, readAt: new Date().toISOString(), window, state: "ready" } }).catch(() => {});
@@ -105,11 +107,9 @@ async function visit(browsers: number) {
   );
   const page: Page = await context.newPage();
   page.setDefaultTimeout(60000);
-  let navigations = 0;
-  page.on("framenavigated", (frame) => frame === page.mainFrame() && navigations++);
   page.on("console", (m) => m.type() === "error" && !/Failed to load resource/.test(m.text()) && errors.push(m.text().slice(0, 200)));
   page.on("pageerror", (e) => errors.push(e.message.slice(0, 200)));
-  return { f, page, context, cohortReads, background, navigations: () => navigations };
+  return { f, page, context, cohortReads, background };
 }
 
 // Compile the page once, outside the visits under test.
@@ -124,6 +124,8 @@ async function visit(browsers: number) {
   const v = await visit(20);
   await v.page.goto(`${origin}/stats`);
   await v.page.locator("#q-iterate").waitFor();
+  // A marker in this document: it survives only if the page is never reloaded.
+  await v.page.evaluate(() => ((window as unknown as { __visit: number }).__visit = 1));
   assert.equal(await v.page.locator('[data-comparison="human"]').count(), 0, "personal answers first; the cold cache has no line yet");
   const human = v.page.locator('[data-comparison="human"]');
   await human.waitFor({ timeout: 45000 });
@@ -132,7 +134,12 @@ async function visit(browsers: number) {
     /^Other players\nAmong first attempts at .+ \(current version, same runtime and editor setup\) from 20–49 browsers, about \d+% of scored first submissions passed\.$/,
   );
   await Promise.all(v.background);
-  assert.equal(v.navigations(), 1, "a single visit: no reload");
+  assert.equal(
+    await v.page.evaluate(() => (window as unknown as { __visit?: number }).__visit),
+    1,
+    "a single visit: the same document throughout, never reloaded",
+  );
+  assert.equal(await v.page.locator('[data-comparison="model"]').count(), 0, "no model line");
   assert.ok(v.cohortReads.length >= 2, `warmup re-read the cohort (${v.cohortReads.length} reads)`);
   assert.equal(v.f.queries, 1, "one member query");
   step(`20 browsers, cold cache: line shown in the same visit after ${v.cohortReads.length} reads, 1 query, no reload`);
