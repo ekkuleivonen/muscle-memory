@@ -25,6 +25,7 @@ jobs:
       - run: pip install datafusion==50.1.0
       - run: node --import tsx tools/history-query-check.ts
       - run: node --import tsx tools/cohort-query-check.ts
+      - run: node --import tsx tools/launch-query-check.ts
   web:
     needs: catalog-contracts
     # Only code pushed by trusted repository writers may read private authoring material.
