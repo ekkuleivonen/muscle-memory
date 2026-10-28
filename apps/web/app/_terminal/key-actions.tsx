@@ -1,5 +1,5 @@
 "use client";
-import {
+import React, {
   forwardRef,
   useEffect,
   useImperativeHandle,
@@ -10,6 +10,11 @@ import {
 
 export interface KeyAction {
   label: string;
+  /**
+   * A short first column (the language in the quick-start picker). Leads line up in one column,
+   * and a long label wraps under itself, never under the lead.
+   */
+  lead?: string;
   run(): void;
   /** primary reads in the accent, danger in red. */
   kind?: "primary" | "danger" | "plain";
@@ -45,8 +50,10 @@ export const KeyActions = forwardRef<
     actions: readonly KeyAction[];
     autoFocus?: boolean;
     onEscape?(): void;
+    /** Number the rows 01, 02… so one- and two-digit numbers line up. Shortcuts stay 1–9. */
+    padNumbers?: boolean;
   }
->(function KeyActions({ id, message, actions, autoFocus, onEscape }, ref) {
+>(function KeyActions({ id, message, actions, autoFocus, onEscape, padNumbers }, ref) {
   const [cursor, setCursor] = useState(0);
   const list = useRef<HTMLDivElement>(null);
   useImperativeHandle(ref, () => ({
@@ -103,6 +110,7 @@ export const KeyActions = forwardRef<
     if (handled) event.preventDefault();
   }
 
+  const lead = Math.max(0, ...actions.map((action) => action.lead?.length ?? 0));
   return (
     <div className="t-key-actions">
       {message && (
@@ -115,7 +123,8 @@ export const KeyActions = forwardRef<
         role="toolbar"
         aria-label={message ?? "Actions"}
         aria-orientation="vertical"
-        className="t-keymenu"
+        className={lead ? "t-keymenu t-keymenu-lead" : "t-keymenu"}
+        style={lead ? ({ "--lead": `${lead}ch` } as React.CSSProperties) : undefined}
         onKeyDown={onKeyDown}
       >
         {actions.map((action, index) => {
@@ -132,7 +141,10 @@ export const KeyActions = forwardRef<
               onClick={() => run(index)}
             >
               <span className="t-accent">{current ? "❯" : " "}</span>
-              <span className="t-dim">{index + 1}.</span>
+              <span className="t-dim">
+                {padNumbers ? String(index + 1).padStart(2, "0") : index + 1}.
+              </span>
+              {lead > 0 && <span className="t-row-lead">{action.lead}</span>}
               <span className="t-row-name">{action.label}</span>
               {action.key && <span className="t-dim">({action.key})</span>}
               {action.disabled && (

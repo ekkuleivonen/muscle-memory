@@ -29,7 +29,7 @@ test("before privacy and storage are read, nothing private or zero-filled render
 });
 
 test("the empty report is one line and a start, with no preview cards", () => {
-  const report = buildReport({ catalog, progress: {}, attempts: [], profile: null, receipts: {} });
+  const report = buildReport({ catalog, progress: {}, attempts: [], profile: null });
   const html = renderToStaticMarkup(createElement(ReportBody, { report, status: null }));
   assert.match(html, /Your portrait starts with one challenge/);
   assert.match(html, /href="\/start"/);
@@ -38,20 +38,21 @@ test("the empty report is one line and a start, with no preview cards", () => {
 
 test("a portrait is questions with answers, never inventories, chapters or internals", () => {
   const attempts = deriveAttempts(trace(), "synthetic-participant").map((a) => ({ ...a, source: "device" as const }));
-  const receipt = { model: "synthetic/model", reportedModels: ["synthetic/model-2026"], reasoning: "high", harness: "h", try: 1, state: "completed" as const, submissions: 1, runtime: { engine: "javascript", version: "synthetic" }, features: [], budget: null, defaultReasoning: "high", finalCodeLength: null } as ModelReceipt;
   const report = buildReport({
     catalog,
     progress: { "JS-001": { attempt: "synthetic-attempt", startedAt: "2026-10-27T10:00:00Z", completedAt: "2026-10-27T10:00:09Z", completions: 1 } },
     attempts,
     profile: null,
-    receipts: { [attempts[0].revision]: [receipt] },
   });
   const html = renderToStaticMarkup(createElement(ReportBody, { report, status: null }));
   assert.match(html, /<h1[^>]*>How you code<\/h1>/);
-  assert.match(html, /How soon do you start typing\?/);
-  assert.doesNotMatch(html, /How fast do you type/, "the fixture has no run of code characters, so typing is left out");
-  assert.equal((html.match(/report-fyi/g) ?? []).length, 1, "one tiny model FYI, no comparison section");
-  assert.match(html, /Models that solved the same challenges needed 1 submission, typically\./);
+  // One solve is a first receipt: labelled lines, not chapters, each keeping its answer's anchor.
+  assert.match(html, /<h3 id="first-title">Your first solve<\/h3>/);
+  assert.match(html, /<li id="q-start"><span class="t-dim">Start<\/span><span class="report-first-answer">Your first edit came/);
+  assert.doesNotMatch(html, /report-question|report-bars|report-turn/, "no chapters or pictures for one solve");
+  assert.doesNotMatch(html, /id="q-typing"/, "the fixture has no run of code characters, so typing isn't answered");
+  assert.match(html, /<h3 id="discover-title">Still to discover<\/h3>.*How fast do you type when you&#x27;re coding\?/, "it is listed with what would answer it");
+  assert.equal((html.match(/report-fyi/g) ?? []).length, 0, "no comparison: model and human submissions aren't the same unit");
   assert.doesNotMatch(
     html,
     /finished|unfinished|revisited|waiting|Could you still|chapter|Report chapters|evidence|sha256|[Rr]evision|harness|receipt|UTC|definition|withheld|mismatch|not compared|reading|thinking|<details|<table/,
@@ -134,4 +135,14 @@ test("a failed history read keeps its reason out of the copy and offers Try agai
   assert.match(exhausted, /this shows this device only\. <button type="button" class="t-cmd">Try again<\/button>/);
   const ready = renderToStaticMarkup(createElement(Status, { history: { state: "unauthorized", message } }));
   assert.equal(ready, "", "ownership refusal shows nothing and offers no retry");
+});
+
+test("takeaways lead the report as links to the answers they sum up, and stay out of an empty one", () => {
+  const report = { ...buildReport({ catalog, progress: {}, attempts: [], profile: null }), empty: false };
+  const none = renderToStaticMarkup(createElement(ReportBody, { report, status: null }));
+  assert.doesNotMatch(none, /report-takeaways/);
+  const withLead = renderToStaticMarkup(
+    createElement(ReportBody, { report: { ...report, takeaways: [{ id: "progress", text: "Faster at easy JavaScript lately: 11 min → 6 min of active work per solve." }] }, status: null }),
+  );
+  assert.match(withLead, /<ul class="report-takeaways" aria-label="Takeaways"><li><a href="#q-progress">Faster at easy JavaScript lately/);
 });

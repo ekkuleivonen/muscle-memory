@@ -230,12 +230,15 @@ for (const device of DEVICES) {
     await line.waitFor();
     assert.match(await line.innerText(), /^Hidden\. Your languages stay in settings → profile\.$/);
     assert.equal(await line.evaluate((el) => el === document.activeElement), true, "focus stays on what replaced the button");
+    // Hiding itself sends nothing. The reload below reads uploads and flushes the site stream as
+    // any page load does (both stopped in the browser), so it is counted before the reload.
+    await page.waitForTimeout(300);
+    assert.equal(blocked, before, "hiding sends nothing");
     await shot(page, "5-hidden");
     await page.reload();
     await page.locator("#q-languages").waitFor();
     await page.waitForTimeout(300);
     assert.equal(await invite(page).count(), 0, "hidden for good");
-    assert.equal(blocked, before, "hiding sends nothing");
     step(`${device.name}: Hide this is visible, focused, remembered, and silent`);
 
     // 8. Reset keeps the choice, like the profile.
