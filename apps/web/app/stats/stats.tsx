@@ -11,6 +11,7 @@ import { QuestionView } from "./report-view";
 import type { AttemptSummary } from "../../../../packages/developer-profile/derive";
 
 const NONE: AttemptSummary[] = [];
+const NO_REVISIONS: { challenge: string; revision: string }[] = [];
 
 /** Stealth is the deal: no report at all, only what stealth means and where to change it. */
 export function StealthNotice() {
@@ -215,9 +216,8 @@ export function ReportBody({
 }
 
 export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
-  // The report picks the revisions for the model FYI; the data hook reads them. Kept in state to break the cycle.
-  const [wanted, setWanted] = useState<Report["comparisonRevisions"]>([]);
-  const { privacy, local, history, receipts, retryHistory } = useReportData(wanted);
+  // No model results are requested: they count only submissions, which aren't comparable with a person's.
+  const { privacy, local, history, retryHistory } = useReportData(NO_REVISIONS);
   const device = local.value;
   const uploaded = history.state === "ready" ? history.value.attempts : NONE;
   const attempts = useMemo(
@@ -232,10 +232,9 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
             progress: device.progress,
             attempts,
             profile: reportProfile(device.profile),
-            receipts,
           })
         : null,
-    [catalog, device, attempts, receipts],
+    [catalog, device, attempts],
   );
   const stored = device?.profile;
   const guess = stored && !stored.asked?.languages?.answeredAt ? (stored.profile.languages ?? []).map(languageLabel) : [];
@@ -249,9 +248,6 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
     returned.current = true;
     target?.scrollIntoView();
   }, [report]);
-  const key = report?.comparisonRevisions.map((r) => r.revision).join("|") ?? "";
-  if (key !== wanted.map((r) => r.revision).join("|"))
-    setWanted(report?.comparisonRevisions ?? []);
   return (
     <main className="term stats">
       <div className="stats-content">

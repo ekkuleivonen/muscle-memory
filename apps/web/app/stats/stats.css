@@ -114,14 +114,16 @@
 }
 .report-bars {
   display: grid;
-  gap: 0.4em;
+  /* Labels such as "5+ submissions" stay on one line, aligned across rows; the bar takes what is left. */
+  grid-template-columns: minmax(12ch, max-content) 1fr auto;
+  gap: 0.4em 2ch;
   margin: 1.2em 0;
   max-width: 64ch;
 }
 .report-bar-row {
   display: grid;
-  grid-template-columns: 12ch 1fr auto;
-  gap: 2ch;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
 }
 .report-bar {
@@ -149,6 +151,8 @@
 
 /* Secondary disclosures */
 .report-question {
+  /* The padding is the whole gap between answers; markdown's section margin would double it. */
+  margin-top: 0;
   padding: 1.6em 0;
   border-top: 1px solid var(--t-line);
 }
@@ -206,9 +210,9 @@
 }
 
 @media (max-width: 700px) {
-  .report-bar-row {
-    grid-template-columns: 9ch 1fr auto;
-    gap: 1ch;
+  .report-bars {
+    grid-template-columns: max-content 1fr auto;
+    column-gap: 1ch;
   }
   .report-hero {
     margin-top: 0.8em;

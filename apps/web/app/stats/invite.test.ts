@@ -21,7 +21,7 @@ const guessed: StoredProfile = {
   asked: { editor: { answeredAt: "2026-10-27T00:00:00Z" } },
 };
 const report = (stored: StoredProfile) =>
-  buildReport({ catalog, progress: {}, attempts, profile: reportProfile(stored), receipts: {} });
+  buildReport({ catalog, progress: {}, attempts, profile: reportProfile(stored) });
 
 function memory(fail?: "read" | "write") {
   const map = new Map<string, string>();

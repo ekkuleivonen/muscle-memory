@@ -3,11 +3,10 @@
  * then simple questions about how you code, each answered only from evidence already recorded. A
  * question the evidence can't answer is left out, never filled with zeroes or explained. Small
  * samples are described as what happened in them, never as a trait. Comparisons are at most one
- * matched FYI on the relevant answer. Pure and deterministic; see docs/developer-profile.md.
+ * matched FYI on the relevant answer, and only when the units really match. Pure and deterministic; see docs/developer-profile.md.
  */
 import type { AttemptSummary } from "../../../packages/developer-profile/derive";
-import { receiptMatch, type ModelReceipt } from "../../../packages/model-runs/receipts";
-import { defaultComparisons } from "../../../packages/model-runs/comparison";
+import type { ModelReceipt } from "../../../packages/model-runs/receipts";
 import { languageLabel, type ChallengeSummary } from "./challenges";
 import type { Profile } from "./profile";
 import type { Progress } from "./progress";
@@ -16,8 +15,6 @@ import { nextProblem } from "./next-problem";
 export type Source = "device" | "uploaded";
 export type ReportAttempt = AttemptSummary & { source: Source };
 
-/** Model results are read for at most this many of your solved challenges. */
-export const COMPARISON_TASKS = 3;
 /** Keystrokes per word for words per minute, the usual typing-test convention. */
 export const KEYS_PER_WORD = 5;
 /** derive keeps at most this many checkpoints per attempt. */
@@ -86,7 +83,11 @@ export interface Question {
   detail: string | null;
   /** At most one short line a player needs to read the answer correctly. */
   note: string | null;
-  /** At most one tiny matched comparison on this answer. */
+  /**
+   * At most one tiny matched comparison on this answer. None today: model receipts count only
+   * submissions, and practice makes a person pass the examples before submitting while a model
+   * may submit straight away, so neither checks nor submissions compare like for like.
+   */
   fyi: string | null;
   /** The answer in a few words, when it is strong enough to lead the report. */
   takeaway: string | null;
@@ -95,14 +96,13 @@ export interface NextStep {
   label: string;
   href: string;
 }
+/** Model results as the data hook reads them; the report itself shows none (see `Question.fyi`). */
 export type ReceiptState = ModelReceipt[] | "loading" | "unavailable";
 export interface ReportInput {
   catalog: readonly ChallengeSummary[];
   progress: Progress;
   attempts: readonly ReportAttempt[];
   profile: Profile | null;
-  /** Model receipts by exact revision; absent means not requested. */
-  receipts: Readonly<Record<string, ReceiptState>>;
 }
 export interface Report {
   /** Nothing started on this device or in uploaded history. */
@@ -120,8 +120,6 @@ export interface Report {
    * answer only groups their own practice into usual and other languages.
    */
   languagesInvite: boolean;
-  /** Exact revisions whose model results could add the iterate FYI. */
-  comparisonRevisions: { challenge: string; revision: string }[];
 }
 
 const WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
@@ -145,8 +143,8 @@ const num = (v: number | null): v is number => typeof v === "number" && Number.i
 const when = (a: AttemptSummary) => a.started ?? a.last;
 const chronological = <T extends AttemptSummary>(list: readonly T[]) =>
   [...list].sort((x, y) => when(x).localeCompare(when(y)) || x.attempt.localeCompare(y.attempt));
-/** Active time, explained once on the first answer that uses it. */
-const ACTIVE_NOTE = "Active work counts time spent typing, editing or selecting; pauses over 30 s are left out.";
+/** Active editing time, explained once on the first answer that uses it. */
+const ACTIVE_NOTE = "Active editing counts time typing, editing or selecting in the editor; pauses over 30 s are left out.";
 
 const SUBMITTED = /^(passed|failed|errored|cancelled): (\d+)\/(\d+) checks; (\d+) static rules$/;
 export function submissions(a: AttemptSummary) {
@@ -196,7 +194,7 @@ const activeToSolve = (a: AttemptSummary) => (num(a.values.activeToSolve) && a.v
 
 /**
  * Time to the first edit (one page session's clock, so it includes reading, thinking or being
- * away, and is never called any of them), then active work up to the solve. Two clocks, so two
+ * away, and is never called any of them), then active editing up to the solve. Two clocks, so two
  * numbers, never one split.
  */
 function start(solved: ReportAttempt[]): Question | null {
@@ -205,7 +203,7 @@ function start(solved: ReportAttempt[]): Question | null {
   const first = duration(median(firsts)!);
   const builds = solved.map(activeToSolve).filter(num);
   const build = builds.length ? duration(median(builds)!) : null;
-  const then = build ? `, then ${firsts.length > 2 ? "about " : ""}${build} of active work to the solve` : "";
+  const then = build ? `, then ${firsts.length > 2 ? "about " : ""}${build} of active editing to the solve` : "";
   return {
     id: "start",
     question: "How soon do you start, and how long do you build?",
@@ -215,7 +213,7 @@ function start(solved: ReportAttempt[]): Question | null {
         : firsts.length === 2
           ? `Across your two solves, your first edit came about ${first} in${then}.`
           : `Your first edit comes about ${first} in${then}.`,
-    visual: build ? { kind: "turn", from: `${first} to first edit`, to: `${build} active to solve` } : { kind: "number", value: first, unit: "to your first edit" },
+    visual: build ? { kind: "turn", from: `${first} to first edit`, to: `${build} active editing to solve` } : { kind: "number", value: first, unit: "to your first edit" },
     detail: null,
     note: null,
     fyi: null,
@@ -224,7 +222,7 @@ function start(solved: ReportAttempt[]): Question | null {
 }
 
 /**
- * Later solves of different challenges at the same language and difficulty: did active work to
+ * Later solves of different challenges at the same language and difficulty: did active editing to
  * the solve change? Each challenge counts once (its first solve); coming back to the same one is
  * the repeat answer. Two or three solves are described as they are; four or more compare the
  * earlier half with the later half.
@@ -249,12 +247,12 @@ function progress(solved: ReportAttempt[], catalog: readonly ChallengeSummary[])
   const shift = `${duration(before)} → ${duration(after)}`;
   const answer =
     n < 4
-      ? `Across your ${count(n)} ${label} challenges, the ${n === 2 ? "second" : "latest"} took ${duration(after)} of active work; the first took ${duration(before)}.`
+      ? `Across your ${count(n)} ${label} challenges, the ${n === 2 ? "second" : "latest"} took ${duration(after)} of active editing; the first took ${duration(before)}.`
       : change === "faster"
-        ? `You're getting faster at ${label}: about ${duration(before)} of active work per solve at first, ${duration(after)} lately.`
+        ? `You're getting faster at ${label}: about ${duration(before)} of active editing per solve at first, ${duration(after)} lately.`
         : change === "slower"
-          ? `Your recent ${label} solves took longer: about ${duration(before)} of active work at first, ${duration(after)} lately.`
-          : `Steady at ${label}: about ${duration(after)} of active work per solve, early on and lately.`;
+          ? `Your recent ${label} solves took longer: about ${duration(before)} of active editing at first, ${duration(after)} lately.`
+          : `Steady at ${label}: about ${duration(after)} of active editing per solve, early on and lately.`;
   return {
     id: "progress",
     question: "Has your pace changed?",
@@ -268,8 +266,8 @@ function progress(solved: ReportAttempt[], catalog: readonly ChallengeSummary[])
       change === "steady"
         ? null
         : n < 4
-          ? `Across your ${count(n)} ${label} challenges: ${shift} of active work.`
-          : `${change === "faster" ? "Faster" : "Slower"} at ${label} lately: ${shift} of active work per solve.`,
+          ? `Across your ${count(n)} ${label} challenges: ${shift} of active editing.`
+          : `${change === "faster" ? "Faster" : "Slower"} at ${label} lately: ${shift} of active editing per solve.`,
   };
 }
 
@@ -280,7 +278,7 @@ const SUBMISSION_BUCKETS: [string, number, number][] = [
   ["5+", 5, Infinity],
 ];
 /** Submissions up to each solve and whether the first passed; the examples first or not. */
-function iterate(solved: ReportAttempt[], fyi: string | null): Question | null {
+function iterate(solved: ReportAttempt[]): Question | null {
   // Submissions up to the solve: anything after it doesn't make a solve iterative.
   const counted = chronological(solved).filter((a) => toSolve(a));
   if (!counted.length) return null;
@@ -325,7 +323,7 @@ function iterate(solved: ReportAttempt[], fyi: string | null): Question | null {
             ? `You ran the examples before submitting in ${examplesFirst} of ${n} solves.`
             : "You went straight to Submit each time, without running the examples first.",
     note: null,
-    fyi,
+    fyi: null,
     takeaway: n >= 3 ? answer : null,
   };
 }
@@ -442,11 +440,11 @@ function difficulty(solved: ReportAttempt[], catalog: readonly ChallengeSummary[
     question: "How long do harder challenges take you?",
     answer: only
       ? only.times.length === 1
-        ? `Your ${only.d} solve took ${bars[0].display} of active work.`
+        ? `Your ${only.d} solve took ${bars[0].display} of active editing.`
         : only.times.length === 2
-          ? `Across your two ${only.d} solves: about ${bars[0].display} of active work per solve.`
-          : `Your ${only.d} solves take about ${bars[0].display} of active work, typically.`
-      : (bars.map((b) => `${b.label} ${b.display}`).join(", ") + ` of active work${groups.every((g) => g.times.length === 1) ? "" : ", typically"}.`).replace(/^./, (c) => c.toUpperCase()),
+          ? `Across your two ${only.d} solves: about ${bars[0].display} of active editing per solve.`
+          : `Your ${only.d} solves take about ${bars[0].display} of active editing, typically.`
+      : (bars.map((b) => `${b.label} ${b.display}`).join(", ") + ` of active editing${groups.every((g) => g.times.length === 1) ? "" : ", typically"}.`).replace(/^./, (c) => c.toUpperCase()),
     visual: { kind: "bars", bars },
     detail: null,
     note: null,
@@ -589,33 +587,6 @@ function repeat(solved: ReportAttempt[]): Question | null {
 }
 
 /**
- * One model FYI for the iterate answer, like for like: submissions to the solve on the same
- * challenge versions, yours beside comparable model solves'. Each model try counts once, however
- * many times you solved that challenge.
- */
-function modelFyi(solved: ReportAttempt[], receipts: ReportInput["receipts"]): string | null {
-  const tries = new Map<string, number>();
-  const yours: number[] = [];
-  for (const a of solved) {
-    const got = receipts[a.revision],
-      own = toSolve(a);
-    if (!Array.isArray(got) || !own) continue;
-    let matched = false;
-    for (const { receipt } of defaultComparisons(got))
-      if (receipt?.state === "completed" && num(receipt.submissions) && receiptMatch(receipt, a.conditions) === "matched") {
-        tries.set(JSON.stringify([a.revision, receipt.model, receipt.reasoning, receipt.try]), receipt.submissions);
-        matched = true;
-      }
-    if (matched) yours.push(own.submissions);
-  }
-  const model = median([...tries.values()]),
-    you = median(yours);
-  if (model === null || you === null) return null;
-  const several = yours.length > 1;
-  return `On the same challenge${several ? "s" : ""}, models that solved ${several ? "them" : "it"} needed ${plural(model, "submission")}${tries.size > 1 ? " (typical)" : ""}; you needed ${you}${several ? " (typical)" : ""}.`;
-}
-
-/**
  * Where to go next: an unfinished attempt first; otherwise what practice would offer after your
  * latest solve (same language, then your languages, then nearby difficulty).
  */
@@ -643,13 +614,10 @@ export function buildReport(input: ReportInput): Report {
   const known = new Set(input.catalog.map((c) => c.key));
   const started = new Set([...Object.keys(input.progress), ...input.attempts.map((a) => a.challenge)].filter((k) => known.has(k)));
   const solved = input.attempts.filter((a) => a.completed && clean(a) && known.has(a.challenge));
-  const comparisonRevisions = [...new Map(
-    [...solved].reverse().filter((a) => a.revision.startsWith("sha256:")).map((a) => [a.revision, { challenge: a.challenge, revision: a.revision }]),
-  ).values()].slice(0, COMPARISON_TASKS);
   const questions = [
     start(solved),
     progress(solved, input.catalog),
-    iterate(solved, modelFyi(solved, input.receipts)),
+    iterate(solved),
     recovery(solved),
     confidence(solved),
     difficulty(solved, input.catalog),
@@ -659,7 +627,7 @@ export function buildReport(input: ReportInput): Report {
     typing(input.attempts),
     repeat(solved),
   ].filter((q): q is Question => q !== null);
-  const active = questions.find((q) => /active work/.test(q.answer));
+  const active = questions.find((q) => /active editing/.test(q.answer));
   if (active) active.note = active.note ? `${active.note} ${ACTIVE_NOTE}` : ACTIVE_NOTE;
   // The strongest answers lead, in this order; one solve has nothing to sum up yet.
   const lead: QuestionId[] = ["progress", "recovery", "confidence", "iterate"];
@@ -677,6 +645,5 @@ export function buildReport(input: ReportInput): Report {
     languagesInvite:
       questions.some((q) => q.id === "languages") &&
       !input.profile?.languages?.length,
-    comparisonRevisions,
   };
 }

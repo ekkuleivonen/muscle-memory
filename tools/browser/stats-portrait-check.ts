@@ -62,6 +62,8 @@ type History = "empty-page" | "slow" | "down";
 
 const browser = await (engine === "webkit" ? webkit : chromium).launch();
 let blocked = 0;
+// The report shows no model comparison, so it must not ask for model results either.
+let receiptReads = 0;
 const log: string[] = [];
 const timings: Record<string, number> = {};
 const step = (s: string) => {
@@ -82,6 +84,7 @@ async function open(
   let reads = 0;
   await context.route("**/*", async (route) => {
     const url = new URL(route.request().url());
+    if (url.pathname.startsWith("/api/model-receipts")) receiptReads++;
     if (url.origin !== origin || url.pathname.includes("/ingest/")) {
       blocked++;
       return route.fulfill({ status: 503, body: "isolated-synthetic-qa" });
@@ -174,7 +177,7 @@ for (const device of DEVICES) {
     const body = await text(page);
     assert.equal(await page.locator(".report-takeaways").count(), 0, "one solve has nothing to sum up");
     assert.match(body, /This solve took 2 submissions; the first didn't pass\./);
-    assert.match(body, /Your first edit came \d+ s in, then \d+ s of active work to the solve\./);
+    assert.match(body, /Your first edit came \d+ s in, then \d+ s of active editing to the solve\./);
     assert.match(body, /All JavaScript so far: 1 challenge solved\./);
     assert.doesNotMatch(body, /typically|Mostly|Has your pace changed/);
     assert.doesNotMatch(body, FORBIDDEN);
@@ -190,7 +193,7 @@ for (const device of DEVICES) {
     const { context, page } = await open(device, HISTORIES.two);
     await report(page, "#q-progress");
     const body = await text(page);
-    assert.match(body, /Across your two easy JavaScript challenges, the second took \d+ s of active work; the first took \d+ s\./);
+    assert.match(body, /Across your two easy JavaScript challenges, the second took \d+ s of active editing; the first took \d+ s\./);
     assert.match(body, /Across your two solves, each took 2 submissions\./);
     assert.doesNotMatch(body, /typically|Mostly|You iterate|You're getting/);
     assert.doesNotMatch(body, FORBIDDEN);
@@ -224,7 +227,7 @@ for (const device of DEVICES) {
     assert.match(body, /When you felt sure, your first submission passed \d of \d times; when unsure, \d of \d\./);
     assert.match(body, /Mostly JavaScript \(5 solved\), then Python \(1 solved\)\./);
     assert.doesNotMatch(body, FORBIDDEN);
-    assert.equal(await page.locator(".report-fyi", { hasText: /models/ }).count(), 0, "no model receipts in this synthetic run, so no FYI");
+    assert.doesNotMatch(body, /model/i, "no model comparison");
     await noOverflow(page, "rich");
     await shot(page, "4-rich");
     if (!device.touch) {
@@ -279,6 +282,7 @@ for (const device of DEVICES) {
 }
 
 await browser.close();
+assert.equal(receiptReads, 0, "no model results requested");
 await writeFile(`${output}/${engine}-results.json`, JSON.stringify({ engine, blocked, timings, steps: log }, null, 2));
 console.log(`${engine}: ${log.length} checks passed; ${blocked} off-origin requests stopped, none sent`);
 console.log(timings);
