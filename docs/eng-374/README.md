@@ -18,3 +18,17 @@ Uploaded history was a synthetic empty page, a 6 s slow page or a 503, answered 
 | `phone-390-2-one-discover.png`, `desktop-1280-4-rich-discover.png` | "Still to discover" after one solve and in a rich history (element screenshots; the page scrolls inside its own container, so the page screenshots show the first screen only) |
 | `phone-390-2-one-full.png`, `phone-390-3-two-full.png`, `phone-390-4-rich-full.png`, `phone-320-4-rich-full.png`, `desktop-1280-4-rich-full.png` | The whole report, top to bottom (one, two and a rich history with a repeat), taken with the viewport grown to the report's height |
 | `footer-1440.png` | The status bar on desktop: the site links centred in the bar, level with the trail |
+
+## `/start` language picker (owner request, same PR)
+
+The picker on `/start?lang=python`, with PY-001 and PY-002 completed, so Python offers PY-003 (the owner's case). `start-before-*.png` are the build before the change, and `start-after-*.png` the build after it, on desktop-1280, phone-390, phone-320 and phone-landscape.
+
+**Before:**
+- the numbers 1–12 shift by a column at 10;
+- "tally sheet" wraps under the language;
+- on phones each row is cut off at the screen edge.
+
+**After:**
+- the rows are numbered 01–12 in one column;
+- the challenge wraps under itself;
+- on phones the challenge sits under the language.

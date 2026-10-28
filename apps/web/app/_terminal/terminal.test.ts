@@ -98,3 +98,19 @@ test("answers become a profile; skipped questions are left out", () => {
   assert.deepEqual(toProfile(answers), answers);
   assert.deepEqual(toProfile({ languages: ["go"] }), { languages: ["go"] });
 });
+
+test("key actions: padded numbers and a lead column only where asked; shortcuts and ids unchanged", async () => {
+  const { createElement } = await import("react");
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  const { KeyActions } = await import("./key-actions");
+  const run = () => {};
+  const picks = Array.from({ length: 12 }, (_, i) => ({ lead: i ? "TypeScript" : "Python", label: `KEY-${i} · A long synthetic title that wraps`, run }));
+  const html = renderToStaticMarkup(createElement(KeyActions, { id: "pick", actions: picks, padNumbers: true }));
+  assert.match(html, /class="t-keymenu t-keymenu-lead" style="--lead:10ch"/);
+  assert.match(html, /id="pick-0"[^>]*>.*?01\..*?<span class="t-row-lead">Python<\/span><span class="t-row-name">KEY-0 · /);
+  assert.match(html, /id="pick-11"[^>]*>.*?12\./);
+  const plain = renderToStaticMarkup(createElement(KeyActions, { id: "menu", actions: [{ label: "profile", run }, { label: "reset", run }] }));
+  assert.match(plain, /class="t-keymenu"/);
+  assert.doesNotMatch(plain, /t-row-lead|--lead|01\./);
+  assert.match(plain, /id="menu-0"[^>]*>.*?1\./);
+});
