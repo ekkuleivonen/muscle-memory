@@ -82,6 +82,8 @@ async function open(
     viewport: { width: device.width, height: device.height },
     hasTouch: device.touch,
     isMobile: device.touch && engine === "chromium",
+    // Settled pixels: the bars' grow animation is off, so screenshots show their real lengths.
+    reducedMotion: "reduce",
   });
   let reads = 0;
   await context.route("**/*", async (route) => {
@@ -176,6 +178,7 @@ for (const device of DEVICES) {
     await page.getByRole("link", { name: /Pick a language and start/ }).waitFor();
     await noOverflow(page, "empty");
     await shot(page, "1-empty");
+    await whole(page, "1-empty");
     step(`${device.name}: empty report is one line and a start`);
     await context.close();
   }
@@ -193,12 +196,14 @@ for (const device of DEVICES) {
     assert.equal(await page.locator("#q-progress").count(), 0, "one solve can't answer pace");
     assert.doesNotMatch(body, FORBIDDEN);
     assert.match(await page.locator(".report-action").innerText(), /^Next: JS-/);
+    // The same next challenge, quietly, at the top of the report.
+    assert.equal(await page.locator(".report-hero .report-next a").getAttribute("href"), await page.locator(".report-action").getAttribute("href"));
     // Pace needs a second challenge like this one: the inventory names one, at the bottom.
     const pace = page.locator(".report-discover li", { hasText: "How did later solves compare with earlier ones?" });
     assert.match(await pace.innerText(), /Solve another easy JavaScript challenge/);
     assert.match((await pace.getByRole("link").getAttribute("href"))!, /^\/challenges\/JS-00\d$/);
     assert.ok(await page.evaluate(() => {
-      const d = document.querySelector(".report-discover")!, qs = document.querySelectorAll(".report-question");
+      const d = document.querySelector(".report-discover")!, qs = document.querySelectorAll(".report-question, .report-first");
       return !!(qs[qs.length - 1].compareDocumentPosition(d) & Node.DOCUMENT_POSITION_FOLLOWING);
     }), "the inventory comes after every answer");
     await noOverflow(page, "one solve");
@@ -247,8 +252,11 @@ for (const device of DEVICES) {
     const body = await text(page);
     assert.match(body, /Across your four easy JavaScript challenges, the earlier 2 /);
     assert.match(body, /How sure were you, and how did the first submission go\?/);
-    assert.match(body, /the first submission passed \d of \d times you said you were sure, and \d of \d times you said unsure\./);
+    assert.match(body, /the first submission passed in \d of \d solves? you felt sure about, and \d of \d you felt unsure about\./);
     assert.match(body, /Across your six solved challenges: JavaScript 5, Python 1\./);
+    // Every dotted bar keeps a usable track, even at 320 px.
+    const tracks = await page.locator(".report-bar").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().width)));
+    assert.ok(tracks.length && tracks.every((w) => w >= 60), `bar tracks ${tracks.join(", ")} px`);
     assert.match(body, /Back on JS-001, the latest took 2 submissions, the same as the first\./);
     assert.equal(await page.locator(".report-discover li", { hasText: "Did coming back to a challenge change anything?" }).count(), 0, "answered, so not listed");
     assert.doesNotMatch(body, /Mostly|faster|improv|You're getting/);

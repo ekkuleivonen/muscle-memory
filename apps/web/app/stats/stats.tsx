@@ -7,7 +7,7 @@ import { dismiss, readDismissed } from "../../lib/invitations";
 import { buildReport, mergeEvidence, type Report } from "../../lib/report";
 import type { ChallengeSummary } from "../../lib/challenges";
 import { useReportData, type HistoryStatus } from "./report-data";
-import { QuestionView } from "./report-view";
+import { QuestionView, ReceiptLine } from "./report-view";
 import type { AttemptSummary } from "../../../../packages/developer-profile/derive";
 
 const NONE: AttemptSummary[] = [];
@@ -185,6 +185,17 @@ export function ReportBody({
   /** Quick-start languages not yet confirmed, by label. */
   guess?: readonly string[];
 }) {
+  // What goes under an answer: the languages invitation, or the way back to that answer's form.
+  const extra = (q: Report["questions"][number]) =>
+    q.id === "languages" && report.languagesInvite ? (
+      <LanguagesInvite guess={guess} />
+    ) : q.id === "familiarity" ? (
+      <p className="report-fyi">
+        <Link className="t-cmd" href={LANGUAGES_FORM}>
+          Edit your usual languages
+        </Link>
+      </p>
+    ) : null;
   const next = report.next && (
     <p>
       <Link className="report-action" href={report.next.href}>
@@ -218,21 +229,35 @@ export function ReportBody({
           </ul>
         )}
         {status}
+        {/* The next challenge, quietly, where it's seen first; the button below stays. */}
+        {!report.waiting && report.next && (
+          <p className="report-next">
+            <Link className="t-cmd" href={report.next.href}>
+              {report.next.label} →
+            </Link>
+          </p>
+        )}
         {report.waiting && <p className="report-context">{report.waiting}</p>}
         {report.waiting && next}
       </header>
-      {report.questions.map((q) => (
-        <QuestionView key={q.id} q={q}>
-          {q.id === "languages" && report.languagesInvite && <LanguagesInvite guess={guess} />}
-          {q.id === "familiarity" && (
-            <p className="report-fyi">
-              <Link className="t-cmd" href={LANGUAGES_FORM}>
-                Edit your usual languages
-              </Link>
-            </p>
-          )}
-        </QuestionView>
-      ))}
+      {report.firstSolves ? (
+        <section className="report-first t-md" aria-labelledby="first-title">
+          <h3 id="first-title">{report.firstSolves}</h3>
+          <ul>
+            {report.questions.map((q) => (
+              <ReceiptLine key={q.id} q={q}>
+                {extra(q)}
+              </ReceiptLine>
+            ))}
+          </ul>
+        </section>
+      ) : (
+        report.questions.map((q) => (
+          <QuestionView key={q.id} q={q}>
+            {extra(q)}
+          </QuestionView>
+        ))
+      )}
       {!report.waiting && next}
       <Discover report={report} />
       {report.profile && (

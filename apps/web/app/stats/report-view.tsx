@@ -1,6 +1,6 @@
 /** The report's questions: one answer, one small visual, and only the context a player needs. */
 import React from "react";
-import type { Question, Visual } from "../../lib/report";
+import { SHORT, type Question, type Visual } from "../../lib/report";
 
 const percent = (x: number) => `${Math.round(x * 1000) / 10}%`;
 
@@ -44,11 +44,24 @@ export function QuestionView({ q, children }: { q: Question; children?: React.Re
         {q.question}
       </h3>
       <p className="report-headline">{q.answer}</p>
-      <VisualView visual={q.visual} label={q.answer} />
+      {q.visual && <VisualView visual={q.visual} label={q.answer} />}
       {q.detail && <p className="report-detail">{q.detail}</p>}
       {q.note && <p className="report-note">{q.note}</p>}
       {q.fyi && <p className="report-fyi">{q.fyi}</p>}
       {children}
     </section>
+  );
+}
+
+/** One answer as a line of the first-solves summary: a short label, the answer, and only what reads it right. */
+export function ReceiptLine({ q, children }: { q: Question; children?: React.ReactNode }) {
+  return (
+    <li id={`q-${q.id}`}>
+      <span className="t-dim">{SHORT[q.id]}</span>
+      <span className="report-first-answer">{q.answer}</span>
+      {q.detail && <span className="report-first-more">{q.detail}</span>}
+      {q.note && <span className="report-first-more t-dim">{q.note}</span>}
+      {children}
+    </li>
   );
 }

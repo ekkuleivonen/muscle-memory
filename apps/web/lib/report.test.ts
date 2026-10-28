@@ -59,18 +59,17 @@ test("a solved trace answers the supported questions from recorded values only",
   assert.equal(q(r, "difficulty")!.note, null);
   assert.equal(q(r, "iterate")!.answer, "Across your two solves, none passed on the first submission; a typical one took 2 submissions.");
   assert.equal(q(r, "iterate")!.detail, null, "the fixture records no example runs, so nothing is said about them");
-  assert.deepEqual(q(r, "iterate")!.visual, { kind: "bars", bars: [{ label: "2 submissions", value: 2, display: "2 solves" }] });
-  assert.equal(q(r, "recovery")!.answer, "Across your two solves with a failed submission, a better one came about 3 s later, after 1 check in between.");
-  assert.equal(q(r, "recovery")!.detail, "Both your solves came after a failed first submission.");
+  assert.equal(q(r, "iterate")!.visual, null, "one bucket would only repeat the sentence");
+  // recoveryChecks includes the better check itself: 1 is the next check, not one in between.
+  assert.equal(q(r, "recovery")!.answer, "Across your two solves with a failed submission, a better one came about 3 s later, on the next check.");
+  assert.equal(q(r, "recovery")!.detail, null, "how often the first failed is iterate's answer, not repeated here");
+  assert.equal(q(r, "start")!.visual, null, "two numbers already in the sentence");
   assert.equal(q(r, "confidence")!.answer, "Across your two answered solves, you said you were unsure; the first submission passed in none of them.");
   assert.equal(q(r, "confidence")!.note, "You answered after the result, so it may colour the answer.");
   assert.equal(q(r, "rewrite"), undefined, "keystroke-size buckets are not revision style");
   assert.equal(q(r, "difficulty")!.answer, "Across your two solves, active editing to the solve: easy 7 s, medium 7 s.");
   assert.equal(q(r, "languages")!.answer, "JavaScript and Python so far, 1 solved in each.");
-  assert.deepEqual(r.takeaways.map((t) => t.text), [
-    "Across your two solves with a failed submission, a better one came about 3 s later.",
-    "Across your two solves, none passed on the first submission; a typical one took 2 submissions.",
-  ]);
+  assert.deepEqual(r.takeaways, [], "two solves are a first receipt: no summary over them");
   assert.doesNotMatch(visible(r), /thinking|reading|finished \d|open|revisited|waiting|sha256|revision|harness|receipt|evidence/i);
 });
 
@@ -79,7 +78,8 @@ test("gapped traces, one difficulty level and no failed first submission leave q
   const gapped = { ...a, issues: ["Recording gap."] };
   assert.deepEqual(buildReport(input({ attempts: device(gapped) })).questions, []);
   const r = buildReport(input({ attempts: device(a) }));
-  assert.equal(q(r, "difficulty")!.answer, "Your easy solve took 7 s of active editing.", "one level is described as it is");
+  assert.equal(q(r, "difficulty"), undefined, "one level would only repeat the start answer's active editing");
+  assert.match(r.discover.find((d) => d.id === "difficulty")!.need, /Solve a (medium|hard) challenge to set beside your easy ones\./);
   assert.equal(q(r, "confidence"), undefined, "one answered solve isn't a pattern");
   assert.equal(q(r, "progress"), undefined);
   assert.deepEqual(r.takeaways, [], "one solve has nothing to sum up yet");
@@ -287,7 +287,7 @@ test("an attempt on an earlier revision isn't classified with current difficulty
   const old = summary("h1", "JS-001", `sha256:${"c".repeat(64)}`),
     other = summary("h2", "PY-001", revB);
   const r = buildReport(input({ attempts: device(old, other) }));
-  assert.equal(q(r, "difficulty")!.answer, "Your medium solve took 7 s of active editing.", "only PY-001 (medium) has matching metadata");
+  assert.equal(q(r, "difficulty"), undefined, "only PY-001 (medium) has matching metadata: one level");
   assert.equal(q(r, "languages")!.answer, "All Python so far: 1 challenge solved.");
 });
 
@@ -355,10 +355,13 @@ test("recovery measures the way to a better submission, never checks to a solve"
   const a = summary("rc1", "JS-001");
   // recoveryChecks counts checks to the first improvement (0/3 to 1/3), not to 3/3.
   const r = q(buildReport(input({ attempts: device({ ...a, values: { ...a.values, recoveryChecks: 1 } }) })), "recovery")!;
-  assert.equal(r.answer, "After the failed submission, a better one came 3 s later, after 1 check in between.");
+  assert.equal(r.answer, "After the failed submission, a better one came 3 s later, on the next check.");
   assert.doesNotMatch(r.answer, /solve/);
-  const none = q(buildReport(input({ attempts: device({ ...a, values: { ...a.values, recoveryTime: null, recoveryChecks: null } }) })), "recovery")!;
-  assert.equal(none.answer, "You kept going: 1 solve came after a failed first submission.", "no improvement recorded: only the count");
+  const none = buildReport(input({ attempts: device({ ...a, values: { ...a.values, recoveryTime: null, recoveryChecks: null } }) }));
+  assert.equal(q(none, "recovery"), undefined, "no improvement recorded: the failed first is iterate's answer alone");
+  assert.equal(q(none, "iterate")!.answer, "Your solve took 2 submissions; the first didn't pass.");
+  const more = q(buildReport(input({ attempts: device({ ...a, values: { ...a.values, recoveryChecks: 3 } }) })), "recovery")!;
+  assert.equal(more.answer, "After the failed submission, a better one came 3 s later, within 3 checks.");
 });
 
 // A richer synthetic catalog: C-001 comes first in catalog order, as on the live site.
@@ -428,7 +431,7 @@ test("confidence is the after-solve answer beside the first submission, in count
     solve("c4", "JS-004", { day: 3, active: MIN }),
   ];
   const c = q(buildReport(input({ catalog: rich, attempts })), "confidence")!;
-  assert.equal(c.answer, "Across your three answered solves, the first submission passed 2 of 2 times you said you were sure, and 0 of 1 times you said unsure.");
+  assert.equal(c.answer, "Across your three answered solves, the first submission passed in 2 of 2 solves you felt sure about, and 0 of 1 you felt unsure about.");
   assert.equal(c.note, "You answered after the result, so it may colour the answer.");
   assert.deepEqual(c.visual, { kind: "bars", bars: [{ label: "sure", value: 1, display: "2 of 2 passed first" }, { label: "unsure", value: 0, display: "0 of 1 passed first" }] });
   assert.doesNotMatch(c.answer + c.note, /calibrat|overconfident|predict|score|%/i);
@@ -452,7 +455,7 @@ test("example runs and submissions that failed on our side are named and not cou
   const at = base.timeline[1].at;
   const flaky = { ...base, timeline: [base.timeline[0], { at, label: "examples: result" }, { at, label: "examples: runner-error" }, { at, label: "submit: runner-error" }, { at, label: "errored: 0/3 checks; 0 static rules" }, { at, label: "passed: 3/3 checks; 0 static rules" }, { at, label: "completed" }] };
   const f = q(buildReport(input({ catalog: rich, attempts: [flaky] })), "iterate")!;
-  assert.equal(f.answer, "Your solve took 1 submission that ran; the first one didn't run.");
+  assert.equal(f.answer, "Your solve took 1 submission, after an earlier one failed on our side.");
   assert.equal(f.detail, "You ran the examples once before the solve. 2 runs failed on our side; they aren't counted.");
 });
 
@@ -485,9 +488,13 @@ test("a rich history leads with at most three takeaways, each scoped and from an
   assert.deepEqual(r.takeaways.map((t) => t.id), ["recovery", "confidence", "iterate"]);
   for (const t of r.takeaways) {
     assert.ok(q(r, t.id), `${t.id} is answered below`);
-    assert.match(t.text, /^Across your (five|three|\d+) /, "the observed window is named");
+    assert.notEqual(t.text, q(r, t.id)!.answer, "a compact lead, not the answer's sentence again");
   }
-  assert.equal(r.takeaways[1].text, "Across your five answered solves, the first submission passed 2 of 3 times you said you were sure, and 0 of 2 times you said unsure.");
+  assert.deepEqual(r.takeaways.map((t) => t.text), [
+    "A better submission about 2 min after a failed one (3 solves)",
+    "Said sure: 2 of 3 first submissions passed; unsure: 0 of 2",
+    "First submission passed in 2 of 5 solves",
+  ]);
   assert.deepEqual(r.questions.map((x) => x.id), ["start", "iterate", "recovery", "confidence", "difficulty", "progress", "languages"]);
   assert.equal(q(r, "difficulty")!.answer, "Across your five solves, typical active editing to the solve: easy 10 min, medium 20 min.");
   assert.deepEqual(q(r, "difficulty")!.visual, { kind: "bars", bars: [{ label: "easy", value: 9.5 * MIN, display: "10 min · 4 solves" }, { label: "medium", value: 20 * MIN, display: "20 min · 1 solve" }] });
@@ -503,7 +510,12 @@ test("no model comparison: their receipts count only submissions, and people pas
 
 test("still to discover lists every supported question not yet answered, with its real requirement", () => {
   const empty = buildReport(input({ catalog: rich }));
-  assert.deepEqual(empty.discover.map((d) => d.id), ["basics", "progress", "recovery", "confidence", "typing", "repeat"]);
+  assert.deepEqual(empty.discover.map((d) => d.id), ["basics", "difficulty", "progress", "recovery", "confidence", "typing", "repeat"]);
+  assert.equal(empty.discover[0].question, "How soon you start, how you iterate and your languages");
+  // Practice in progress, nothing solved: languages is answered, so the basics line leaves it out.
+  const started = buildReport(input({ catalog: rich, attempts: [{ ...summary("ip", "JS-001"), completed: false, source: "device" as const }] }));
+  assert.ok(q(started, "languages"));
+  assert.equal(started.discover[0].question, "How soon you start and how you iterate");
   assert.equal(empty.discover[0].need, "Your first solve answers these.");
   assert.ok(empty.discover.every((d) => d.action === null), "the start link above is the step; no extra links");
   const needs = empty.discover.map((d) => `${d.question} ${d.need}`).join(" ");
@@ -518,7 +530,7 @@ test("answered questions are never listed; a missing one names a specific compar
   const pace = one.discover.find((d) => d.id === "progress")!;
   assert.equal(pace.need, "Solve another easy JavaScript challenge to set beside your earlier ones.");
   assert.deepEqual(pace.action, { label: "JS-002 · Synthetic JS-002", href: "/challenges/JS-002" });
-  assert.equal(one.discover.find((d) => d.id === "confidence")!.need, 'Answer the optional "how sure were you?" question after one more solve.');
+  assert.equal(one.discover.find((d) => d.id === "confidence")!.need, 'Shows after one more answer to "how sure were you?", an optional question offered now and then after a solve.', "offered now and then, never promised after the next solve");
   assert.deepEqual(one.discover.find((d) => d.id === "repeat")!.action, { label: "Again: JS-001 · Synthetic JS-001", href: "/challenges/JS-001" });
   assert.equal(one.discover.find((d) => d.id === "recovery")!.action, null, "a one-shot solve: nothing to ask for, no link to fail on purpose");
   const two = buildReport(input({ catalog: rich, attempts: [solve("u1", "JS-001", { day: 0, active: MIN }), solve("u2", "JS-002", { day: 1, active: MIN })] }));
@@ -549,20 +561,20 @@ function voidedFirst(attempt: string, how: "runner-error" | "cancelled"): Report
 }
 
 test("a pass after a submission that never ran is never called a first-submission pass", () => {
-  for (const [how, uncounted] of [
-    ["runner-error", "1 run failed on our side; they aren't counted."],
-    ["cancelled", "1 submission was cancelled; they aren't counted."],
+  for (const [how, uncounted, answer] of [
+    ["runner-error", "1 run failed on our side; they aren't counted.", "Your solve took 1 submission, after an earlier one failed on our side."],
+    ["cancelled", "1 submission was cancelled; they aren't counted.", "Your solve took 1 submission, after an earlier one was cancelled."],
   ] as const) {
     const a = voidedFirst(`v-${how}`, how);
     assert.equal(a.values.firstSubmit, null, `derive: a ${how} first submission is ineligible`);
     const r = buildReport(input({ attempts: [a] }));
-    assert.equal(q(r, "iterate")!.answer, "Your solve took 1 submission that ran; the first one didn't run.", how);
+    assert.equal(q(r, "iterate")!.answer, answer, how);
     assert.equal(q(r, "iterate")!.detail, uncounted);
     assert.equal(q(r, "recovery"), undefined, `${how} isn't a failed submission of yours`);
   }
   // Two solves, one with a voided first submission: the first-submission count says where it ran.
   const r = buildReport(input({ attempts: [voidedFirst("v1", "runner-error"), { ...summary("v2", "JS-002"), source: "device" as const }] }));
-  assert.equal(q(r, "iterate")!.answer, "Across your two solves, 0 of 1 first submission that ran passed; a typical solve took 1.5 submissions.");
+  assert.equal(q(r, "iterate")!.answer, "Across your two solves, 0 of 1 first submission with a known result passed; a typical solve took 1.5 submissions.");
 });
 
 test("a real failed submission, then one that didn't run, then a pass: the first still failed", () => {
@@ -575,6 +587,38 @@ test("a real failed submission, then one that didn't run, then a pass: the first
     const timeline = [base.timeline[0], { at, label: "failed: 1/3 checks; 0 static rules" }, ...voided, { at, label: "passed: 3/3 checks; 0 static rules" }, { at, label: "completed" }];
     const r = buildReport(input({ catalog: rich, attempts: [{ ...base, timeline }] }));
     assert.equal(q(r, "iterate")!.answer, "Your solve took 2 submissions; the first didn't pass.", voided[0].label);
-    assert.equal(q(r, "recovery")!.answer, "After the failed submission, a better one came 2 min later, after 1 check in between.", "recovery keeps derive's own meaning");
+    assert.equal(q(r, "recovery")!.answer, "After the failed submission, a better one came 2 min later, on the next check.", "recovery keeps derive's own meaning");
   }
+});
+
+test("a timed-out first submission is an unknown result, not one that didn't run (real trace)", () => {
+  const records = trace("to", "to-source").map((r) => {
+    const o = JSON.parse(r.payload);
+    if (o.type === "practice.run" && o.data.runId === "r1" && o.data.status === "result") o.data.status = "timeout";
+    if (o.type === "practice.submitted" && o.data.runId === "r1") Object.assign(o.data, { result: "errored", passed: 0 });
+    return { ...r, payload: JSON.stringify(o) };
+  });
+  const a = deriveAttempts(records, "synthetic-participant")[0];
+  assert.deepEqual([a.issues, a.values.firstSubmit], [[], null], "derive: clean, first submission ineligible");
+  const r = buildReport(input({ attempts: device(a) }));
+  assert.equal(q(r, "iterate")!.answer, "Your solve took 2 submissions; the first one's result isn't known.");
+  assert.doesNotMatch(q(r, "iterate")!.answer + (q(r, "iterate")!.detail ?? ""), /didn't run|failed on our side|cancelled|timed? ?out/i, "no invented cause");
+  assert.equal(q(r, "recovery"), undefined, "a timeout isn't a failed submission of yours");
+});
+
+test("start and build come from one population of solves (real traces)", () => {
+  // The first edit only in a second visit: no first edit in the starting visit, and a slower build.
+  const records = trace("sv", "first-visit").map((r, i) => {
+    if (i < 2) return r;
+    const o = JSON.parse(r.payload);
+    o.source = { ...o.source, id: "second-visit", sequence: i - 1 };
+    o.elapsedMs *= 4;
+    if (o.type === "practice.keys") o.data.keys = o.data.keys.map((k: unknown[]) => [(k[0] as number) * 4, ...k.slice(1)]);
+    return { ...r, payload: JSON.stringify(o) };
+  });
+  const later = deriveAttempts(records, "synthetic-participant")[0];
+  assert.deepEqual([later.issues, later.values.firstEdit, later.values.activeToSolve], [[], null, 27_600]);
+  const stock = summary("stock", "JS-002");
+  const r = buildReport(input({ attempts: device(stock, later) }));
+  assert.equal(q(r, "start")!.answer, "Your first edit came 1 s in, then 7 s of active editing to the solve.", "the 28 s solve without a first edit isn't mixed in");
 });

@@ -46,7 +46,10 @@ test("a portrait is questions with answers, never inventories, chapters or inter
   });
   const html = renderToStaticMarkup(createElement(ReportBody, { report, status: null }));
   assert.match(html, /<h1[^>]*>How you code<\/h1>/);
-  assert.match(html, /How soon do you start, and how long do you build\?/);
+  // One solve is a first receipt: labelled lines, not chapters, each keeping its answer's anchor.
+  assert.match(html, /<h3 id="first-title">Your first solve<\/h3>/);
+  assert.match(html, /<li id="q-start"><span class="t-dim">Start<\/span><span class="report-first-answer">Your first edit came/);
+  assert.doesNotMatch(html, /report-question|report-bars|report-turn/, "no chapters or pictures for one solve");
   assert.doesNotMatch(html, /id="q-typing"/, "the fixture has no run of code characters, so typing isn't answered");
   assert.match(html, /<h3 id="discover-title">Still to discover<\/h3>.*How fast do you type when you&#x27;re coding\?/, "it is listed with what would answer it");
   assert.equal((html.match(/report-fyi/g) ?? []).length, 0, "no comparison: model and human submissions aren't the same unit");

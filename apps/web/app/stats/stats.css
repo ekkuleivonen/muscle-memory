@@ -79,6 +79,10 @@
 .report-detail {
   max-width: 64ch;
 }
+.report-next {
+  margin: 0.8em 0 0;
+  font-size: var(--text-sm, 13px);
+}
 .report-context {
   max-width: 64ch;
   color: var(--t-fg);
@@ -192,6 +196,29 @@
   color: var(--t-dim);
   max-width: 72ch;
 }
+/* First solves: one or two solves as labelled lines, not chapters. */
+.report-first {
+  padding-top: 1.6em;
+  border-top: 1px solid var(--t-line);
+}
+.report-first ul {
+  list-style: none;
+  padding: 0;
+  max-width: 64ch;
+}
+.report-first li + li {
+  margin-top: 1.2em;
+}
+.t-md.report-first ul > li::before {
+  content: none;
+}
+.report-first li > span {
+  display: block;
+}
+.report-first-more {
+  margin-top: 0.4em;
+  font-size: var(--text-sm, 13px);
+}
 /* Still to discover: a quiet list, question then what would answer it. */
 .report-discover {
   margin-top: 2.4em;
@@ -238,6 +265,24 @@
   }
   .report-kicker {
     margin: 0;
+  }
+}
+/* Too narrow for label, bar and value side by side: label and value, then the bar under them. */
+@media (max-width: 480px) {
+  .report-bars {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .report-bar-row > :first-child {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .report-bar-row > :last-child {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .report-bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 }
 
