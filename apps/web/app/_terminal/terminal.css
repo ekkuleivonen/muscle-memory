@@ -116,24 +116,34 @@
   margin: 0 0 1.6em;
 }
 /* The status bar: where the page sits, as a breadcrumb trail, pinned under the terminal. */
+:root {
+  --t-bar-h: 32px;
+}
+/* A finger needs more room than a pointer. */
+@media (pointer: coarse) {
+  :root {
+    --t-bar-h: 44px;
+  }
+}
 .t-footer {
   position: fixed;
   inset: auto 0 0;
   z-index: 2;
-  height: 32px;
+  display: flex;
+  height: var(--t-bar-h);
+  padding-right: clamp(8px, 4vw, 40px);
   background: var(--t-bar);
   color: var(--t-dim);
   font-family: var(--mono);
   font-size: var(--text-sm);
 }
 .term:has(~ .t-footer) {
-  bottom: 32px;
+  bottom: var(--t-bar-h);
 }
-.t-footer nav {
+.t-footer > nav:first-child {
   display: flex;
-  align-items: stretch;
-  height: 100%;
-  padding: 0 clamp(8px, 4vw, 40px) 0 0;
+  flex: 1;
+  min-width: 0;
   overflow-x: auto;
   white-space: nowrap;
 }
@@ -147,6 +157,62 @@
 .t-footer-link:hover {
   color: var(--t-fg);
   background: var(--t-current);
+}
+/* The site's links: in the bar where they fit, otherwise a menu that opens above it. */
+.t-menu {
+  display: flex;
+  position: static;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: visible;
+  background: none;
+  color: inherit;
+  white-space: nowrap;
+}
+.t-menu [aria-current] {
+  color: var(--t-fg);
+}
+.t-menu-button {
+  display: none;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+@media (max-width: 860px) {
+  .t-menu-button {
+    display: flex;
+  }
+  .t-menu:not(:popover-open) {
+    display: none;
+  }
+  .t-menu:popover-open {
+    position: fixed;
+    inset: auto clamp(8px, 4vw, 40px) calc(var(--t-bar-h) + 4px) auto;
+    flex-direction: column;
+    min-width: 20ch;
+    padding: 4px 0;
+    border: 1px solid var(--t-line);
+    background: var(--t-bar);
+  }
+  .t-menu .t-footer-link {
+    min-height: 44px;
+    padding: 0 2ch;
+  }
+  .t-menu .t-footer-link::before {
+    content: " ";
+    width: 2ch;
+    white-space: pre;
+    color: var(--t-accent);
+  }
+  .t-menu [aria-current]::before {
+    content: "❯";
+  }
+  .t-footer:has(.t-menu:popover-open) .t-menu-button {
+    color: var(--t-fg);
+    background: var(--t-current);
+  }
 }
 /* Home's segment: the name, or ~ where the bar is short of room. */
 .t-home-short {
@@ -231,9 +297,6 @@
 .t-footer-link:focus-visible {
   outline: 1px solid var(--t-accent);
   outline-offset: -1px;
-}
-.t-footer-fill {
-  flex: 1;
 }
 /* The home page: everything in one screen, the start action on its own line. */
 .home-fold > p,

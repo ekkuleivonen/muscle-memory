@@ -76,6 +76,7 @@ import { CheckFeedbackView } from "../_components/review";
 import { CompletionModelComparisons } from "./model-comparisons";
 import { Reflection, reflectionFor, type ReflectionState } from "./reflection";
 import { CopyChallengeLink, ShareOutcome } from "../_components/share";
+import { DesktopFirst, useSolveHere } from "./desktop-first";
 import { nextProblem } from "../../lib/next-problem";
 import { isPracticePath, practiceHref } from "../../lib/paths";
 import type { ChallengeSummary } from "../../lib/challenges";
@@ -121,6 +122,10 @@ function attemptObservations(
     }
   });
 }
+
+/** Where the panes stack and the page scrolls (as in practice.css): narrow windows, phones held sideways. */
+const STACKED =
+  "(max-width: 760px), (hover: none) and (pointer: coarse) and (max-height: 500px)";
 
 /**
  * One editable challenge entry, immediate feedback and continuation. Support/test files
@@ -175,6 +180,7 @@ export function Practice({
         savedAt: new Date().toISOString(),
       });
   };
+  const [solveHere, chooseSolveHere] = useSolveHere();
   const [opening, setOpening] = useState<Opening>({ state: "opening" });
   const [message, setMessage] = useState("");
   const [offline, setOffline] = useState(false);
@@ -245,7 +251,7 @@ export function Practice({
     };
     const node = bodies[pane];
     if (!node) return;
-    const mobile = window.matchMedia("(max-width: 760px)").matches;
+    const mobile = window.matchMedia(STACKED).matches;
     const margin =
       (mainRef.current?.parentElement?.querySelector<HTMLElement>(
         ".practice-nav",
@@ -655,7 +661,17 @@ export function Practice({
       : null,
   });
   return (
-    <div className="practice tui" onClickCapture={persistView}>
+    <div
+      className={`practice tui${solveHere ? " solve-here" : ""}`}
+      onClickCapture={persistView}
+    >
+      <DesktopFirst
+        challenge={challenge}
+        onSolveHere={() => {
+          chooseSolveHere();
+          requestAnimationFrame(() => focusPane("code"));
+        }}
+      />
       <nav className="practice-nav" aria-label="Practice panes">
         <button
           type="button"
