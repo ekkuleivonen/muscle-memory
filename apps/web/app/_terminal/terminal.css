@@ -162,6 +162,9 @@
 .t-menu {
   display: flex;
   position: static;
+  /* The popover defaults size it to its text; in the bar it takes the bar's height, links centred. */
+  width: auto;
+  height: auto;
   margin: 0;
   padding: 0;
   border: 0;
