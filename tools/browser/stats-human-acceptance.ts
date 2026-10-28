@@ -49,13 +49,17 @@ async function visit(browsers: number) {
   });
   const background: Promise<unknown>[] = [];
   const cohortReads: string[] = [];
+  const modelReads: string[] = [];
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" });
   await context.route("**/*", async (route) => {
     const url = new URL(route.request().url());
     if (url.origin !== origin || url.pathname.includes("/ingest/")) return route.fulfill({ status: 503, body: "isolated-synthetic-qa" });
-    // The dev preview switch turns both lines on; in production MODEL_FYI_ENABLED stays false.
-    // Answer receipts as unavailable so no model line can appear in this human-only check.
-    if (url.pathname.startsWith("/api/model-receipts/")) return route.fulfill({ json: { state: "unavailable", receipts: [] } }).catch(() => {});
+    // Models are off (MODEL_FYI_ENABLED false). Without the dev preview switch no receipt is ever
+    // requested; with it, receipts are answered unavailable so no model line can appear here.
+    if (url.pathname.startsWith("/api/model-receipts/")) {
+      modelReads.push(url.pathname);
+      return route.fulfill({ json: { state: "unavailable", receipts: [] } }).catch(() => {});
+    }
     if (url.pathname.startsWith("/api/private-history")) {
       const { window } = route.request().postDataJSON();
       return route.fulfill({ json: { attempts: [], unavailable: [], next: null, readAt: new Date().toISOString(), window, state: "ready" } }).catch(() => {});
@@ -109,7 +113,7 @@ async function visit(browsers: number) {
   page.setDefaultTimeout(60000);
   page.on("console", (m) => m.type() === "error" && !/Failed to load resource/.test(m.text()) && errors.push(m.text().slice(0, 200)));
   page.on("pageerror", (e) => errors.push(e.message.slice(0, 200)));
-  return { f, page, context, cohortReads, background };
+  return { f, page, context, cohortReads, modelReads, background };
 }
 
 // Compile the page once, outside the visits under test.
@@ -142,6 +146,7 @@ async function visit(browsers: number) {
   assert.equal(await v.page.locator('[data-comparison="model"]').count(), 0, "no model line");
   assert.ok(v.cohortReads.length >= 2, `warmup re-read the cohort (${v.cohortReads.length} reads)`);
   assert.equal(v.f.queries, 1, "one member query");
+  step(`model receipts requested: ${v.modelReads.length}`);
   step(`20 browsers, cold cache: line shown in the same visit after ${v.cohortReads.length} reads, 1 query, no reload`);
   await v.context.close();
   v.f.close();
