@@ -9,6 +9,7 @@ import { PROGRESS_CHANGE, PROGRESS_KEY } from "./progress";
 import type { LanguageId } from "./languages";
 import { LEGAL_VERSION, type Acceptance } from "./legal";
 import { STARS_KEY } from "./stars";
+import { DISMISSED_KEY } from "./invitations";
 import {
   CONSENT_COOKIE,
   CONSENT_VALUE,
@@ -165,6 +166,7 @@ export async function deleteAccount() {
     await resetProgress(true);
     localStorage.removeItem(PROFILE_KEY);
     localStorage.removeItem(STARS_KEY);
+    localStorage.removeItem(DISMISSED_KEY);
     window.dispatchEvent(new Event(ACCOUNT_CHANGE));
     logOut();
   } finally {

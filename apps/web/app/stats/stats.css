@@ -215,9 +215,14 @@
   }
 }
 
-.report-preview {
-  margin: 2.4em 0;
+.report-invite {
+  margin-top: 1.2em;
   max-width: 72ch;
+  font-size: var(--text-sm, 13px);
+  color: var(--t-dim);
+}
+.report-invite p {
+  margin: 0.4em 0;
 }
 .report-hero .t-doc-title {
   margin-top: 0;

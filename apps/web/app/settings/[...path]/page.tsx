@@ -7,7 +7,10 @@ import "../../_terminal/terminal.css";
 import { isCommand, isQuestion } from "../commands";
 import { SettingsCommand } from "../settings-pages";
 
-type Props = { params: Promise<{ path: string[] }> };
+type Props = {
+  params: Promise<{ path: string[] }>;
+  searchParams: Promise<{ from?: string | string[] }>;
+};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const [command] = (await params).path;
@@ -22,9 +25,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  * One settings command on a clean screen: /settings/privacy, or /settings/profile/languages
  * to ask a single profile question.
  */
-export default async function SettingsCommandPage({ params }: Props) {
+export default async function SettingsCommandPage({ params, searchParams }: Props) {
   const { path } = await params;
   const [command, question, ...rest] = path;
+  // Only known pages to return to (?from=stats), never an address from the URL.
+  const { from } = await searchParams;
+  const back = from === "stats" && command === "profile" ? "stats" : undefined;
   if (!isCommand(command) || rest.length) notFound();
   if (
     question !== undefined &&
@@ -42,7 +48,7 @@ export default async function SettingsCommandPage({ params }: Props) {
     <>
       <div className="term">
         {/* Fresh state per page: client navigation between commands reuses this route. */}
-        <SettingsCommand key={here} command={command} question={question} />
+        <SettingsCommand key={here} command={command} question={question} from={back} />
       </div>
       <TermFooter trail={trail} />
     </>

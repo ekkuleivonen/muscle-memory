@@ -116,6 +116,15 @@ export function updateProfileAnswers(
   return { ...stored, profile, asked };
 }
 
+/** Profile values present without the person's own answer: guesses, never answers. */
+export function guesses(stored: StoredProfile | null): Set<keyof Profile> {
+  return new Set(
+    (Object.keys(stored?.profile ?? {}) as (keyof Profile)[]).filter(
+      (id) => !stored?.asked?.[id]?.answeredAt,
+    ),
+  );
+}
+
 /** A quick-start language guess must not become self-reported familiarity. */
 export function reportProfile(stored: StoredProfile): Profile {
   const profile = { ...stored.profile };

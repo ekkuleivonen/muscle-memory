@@ -93,7 +93,12 @@ export interface Report {
   waiting: string | null;
   next: NextStep | null;
   profile: NextStep | null;
-  previews: { question: string; action: NextStep }[];
+  /**
+   * Show the optional languages invitation under the languages answer: only while the person
+   * hasn't answered it themselves (a quick-start guess doesn't count). It unlocks nothing; an
+   * answer only groups their own practice into usual and other languages.
+   */
+  languagesInvite: boolean;
   /** Exact revisions whose model results could add the iterate FYI. */
   comparisonRevisions: { challenge: string; revision: string }[];
 }
@@ -424,19 +429,9 @@ export function buildReport(input: ReportInput): Report {
     waiting: started.size && !questions.length ? "Solve a challenge and your answers start here." : null,
     next: next(input, started),
     profile: null,
-    previews:
+    languagesInvite:
       questions.some((q) => q.id === "languages") &&
-      !input.profile?.languages?.length
-        ? [
-            {
-              question: "Your usual languages or something new?",
-              action: {
-                label: "Set your usual languages to group this practice",
-                href: "/settings/profile/languages",
-              },
-            },
-          ]
-        : [],
+      !input.profile?.languages?.length,
     comparisonRevisions,
   };
 }
