@@ -16,9 +16,16 @@ export async function readCohortBuildSpec(
   challenge: string,
   revision: string,
   now = new Date(),
+  /**
+   * Called before each new I/O stage (the D1 read, the object get, reading its text). It throws once
+   * the caller's time is up, so a late reply never leads to further reads; I/O already issued is not
+   * cancelled, only never followed.
+   */
+  guard: () => void = () => {},
 ) {
   if (!CHALLENGE_KEY.test(challenge) || !REVISION.test(revision))
     throw new Error("Invalid cohort revision.");
+  guard();
   const row = await db
     .prepare(
       `SELECT v.* FROM published_versions v
@@ -32,14 +39,18 @@ export async function readCohortBuildSpec(
   if (row.challenge_key !== challenge || row.revision !== revision)
     throw new Error("Invalid cohort publication.");
   if (syntheticRevisions([row]).length) return null;
+  guard();
   const object = await content.get(row.object_key);
   if (!object) return null;
+  guard();
+  const text = await object.text();
+  guard();
   // Same catalog/hash validation as the managed authoring reader. Published display metadata
   // intentionally has no language: only the immutable revision can establish it.
   const catalog = verifyCatalog({
     schemaVersion: "1.0.0",
     challenges: [JSON.parse(row.metadata_json)],
-    revisions: { [revision]: JSON.parse(await object.text()) },
+    revisions: { [revision]: JSON.parse(text) },
   });
   if (
     catalog.challenges[0].key !== challenge ||

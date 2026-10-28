@@ -430,6 +430,8 @@ export async function humanSummaryOnRequest(
   schedule: (work: Promise<unknown>) => void,
   now = new Date(),
   request: typeof fetch = fetch,
+  /** The build's time limit; tests shorten it. */
+  budgetMs = BUILD_ON_REQUEST_MS,
 ) {
   const served = await readHumanSummary(env, challenge, revision, runtime);
   if (served) return served;
@@ -441,21 +443,41 @@ export async function humanSummaryOnRequest(
     env.ADMIN_STATS_SQL_TOKEN?.trim()
   )
     schedule(
-      buildOnRequest(env as Required<HumanSummaryEnvironment>, challenge, revision, runtime, now, request).catch(
+      buildOnRequest(env as Required<HumanSummaryEnvironment>, challenge, revision, runtime, now, request, budgetMs).catch(
         () => false,
       ),
     );
   return null;
 }
 
-/** Claims this revision's lease for the current hour; true only for the one claimant. */
-async function claimLease(bucket: SummaryBucket, key: string, hour: number) {
+/**
+ * Claims this revision's lease for `hour`; true only for the one claimant. A lease already held
+ * for this hour or a later one (a delayed request from an earlier hour) is never overwritten, and an
+ * unreadable lease fails closed. `guard` runs before each I/O stage.
+ */
+export async function claimLease(
+  bucket: SummaryBucket,
+  key: string,
+  hour: number,
+  guard: () => void = () => {},
+) {
+  if (!Number.isSafeInteger(hour) || hour < 0) return false;
+  guard();
   const held = await bucket.get(key);
   if (held) {
+    if (!held.etag || held.size > 256) return false;
+    guard();
     const text = await held.text();
-    if (text.length > 256 || !held.etag) return false;
-    if ((JSON.parse(text) as { hour?: unknown }).hour === hour) return false;
+    guard();
+    let stored: unknown;
+    try {
+      stored = (JSON.parse(text) as { hour?: unknown }).hour;
+    } catch {
+      return false;
+    }
+    if (!Number.isSafeInteger(stored) || (stored as number) < 0 || (stored as number) >= hour) return false;
   }
+  guard();
   const written = await bucket.put(key, JSON.stringify({ hour }), {
     onlyIf: held ? { etagMatches: held.etag! } : { etagDoesNotMatch: "*" },
   });
@@ -469,53 +491,61 @@ async function buildOnRequest(
   runtime: Record<string, string>,
   now: Date,
   request: typeof fetch,
+  budgetMs: number,
 ) {
+  const limit = Math.max(0, Math.min(BUILD_ON_REQUEST_MS, budgetMs));
   const stop = new AbortController();
-  const timer = setTimeout(() => stop.abort(), BUILD_ON_REQUEST_MS);
-  const deadline = Date.now() + BUILD_ON_REQUEST_MS;
+  const timer = setTimeout(() => stop.abort(), limit);
+  const deadline = Date.now() + limit;
   const left = () => {
     stop.signal.throwIfAborted();
     const ms = deadline - Date.now();
     if (ms <= 0) throw new Error("Build time cap reached.");
     return ms;
   };
+  const guard = () => void left();
+  /** Checks the time BEFORE starting the call, so a timed-out build issues no new I/O. */
+  const stage = <T>(start: () => Promise<T>) => {
+    const ms = left();
+    return withinSummaryBudget(start(), ms);
+  };
   try {
     const hour = Math.floor(now.getTime() / 3_600_000);
-    if (!(await withinSummaryBudget(claimLease(env.CONTENT, leaseKey(challenge, revision), hour), left())))
+    if (!(await stage(() => claimLease(env.CONTENT, leaseKey(challenge, revision), hour, guard))))
       return false;
-    const spec = await withinSummaryBudget(
-      readCohortBuildSpec(env.CATALOG_DB, env.CONTENT, challenge, revision, now),
-      left(),
+    const spec = await stage(() =>
+      readCohortBuildSpec(env.CATALOG_DB, env.CONTENT, challenge, revision, now, guard),
     );
     // The setup this request asked about must be the revision's own; anything else builds nothing.
     if (!spec || JSON.stringify(spec.runtime) !== JSON.stringify(runtime)) return false;
     const control: ComparisonControl = {
-      generation: () => withinSummaryBudget(env.COMPARISON_ELIGIBILITY.generation(), left()),
-      check: (ids) => withinSummaryBudget(env.COMPARISON_ELIGIBILITY.check(ids), left()),
-      authorize: (g) => withinSummaryBudget(env.COMPARISON_ELIGIBILITY.authorize(g), left()),
+      generation: () => stage(() => env.COMPARISON_ELIGIBILITY.generation()),
+      check: (ids) => stage(() => env.COMPARISON_ELIGIBILITY.check(ids)),
+      authorize: (g) => stage(() => env.COMPARISON_ELIGIBILITY.authorize(g)),
     };
     const generation = await control.generation();
     if (typeof generation !== "string" || !/^[a-f0-9-]{36}$/.test(generation)) return false;
-    const snapshot = await withinSummaryBudget(
+    const snapshot = await stage(() =>
       buildHumanSnapshot(
         spec,
         () =>
-          readCohortRows(
-            env.ADMIN_STATS_SQL_TOKEN,
-            cohortMemberQuery(spec.challenge, spec.revision, spec.window),
-            stop.signal,
-            request,
+          stage(() =>
+            readCohortRows(
+              env.ADMIN_STATS_SQL_TOKEN,
+              cohortMemberQuery(spec.challenge, spec.revision, spec.window),
+              stop.signal,
+              request,
+            ),
           ),
         control,
         undefined,
         { generation, maxMembers: MAX_COHORT_MEMBERS },
       ),
-      left(),
     );
     if (!snapshot) return false;
     const text = JSON.stringify(snapshot);
     if (new TextEncoder().encode(text).length > SNAPSHOT_LIMIT) return false;
-    await withinSummaryBudget(env.CONTENT.put(humanSummaryKey(challenge, revision), text), left());
+    await stage(() => env.CONTENT.put(humanSummaryKey(challenge, revision), text));
     return true;
   } finally {
     clearTimeout(timer);
