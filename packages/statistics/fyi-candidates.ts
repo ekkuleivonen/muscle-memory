@@ -1,7 +1,12 @@
 /**
- * Which of a player's attempts a tiny comparison may describe: solved, on the challenge's current
- * revision, with exactly one recorded runtime and editor setup and no AI completion. Newest first,
- * at most three, so Stats requests a bounded number of comparison reads.
+ * Which of a player's attempts a tiny comparison may describe: solved, with no recorded integrity
+ * issue (missing start, source gaps or conflicts, lost records, unsupported capture), on the
+ * challenge's current revision, with exactly one recorded runtime and editor setup and no AI
+ * completion. Newest first, at most three, so Stats requests a bounded number of comparison reads.
+ *
+ * Practice type is not a filter: derived history can't prove a first-ever attempt (it says
+ * "unknown"; an explicit or post-completion repeat says "repeat"), so a comparison never claims
+ * the player's attempt was a first one.
  */
 import type { AttemptSummary } from "../developer-profile/derive";
 
@@ -22,7 +27,6 @@ export const MAX_FYI_CANDIDATES = 3;
 export function fyiCandidates(
   attempts: readonly AttemptSummary[],
   catalog: readonly CatalogEntry[],
-  practice: readonly AttemptSummary["practice"][],
 ): FyiCandidate[] {
   const current = new Map(catalog.map((c) => [c.key, c]));
   const seen = new Set<string>();
@@ -35,8 +39,8 @@ export function fyiCandidates(
     if (seen.has(a.attempt)) continue;
     seen.add(a.attempt);
     const c = current.get(a.challenge);
-    if (!a.completed || !c || c.revision !== a.revision || !practice.includes(a.practice))
-      continue;
+    // The central integrity guard: a runtime string is not evidence the attempt itself is sound.
+    if (!a.completed || a.issues.length || !c || c.revision !== a.revision) continue;
     const runtimes = a.conditions.filter((s) => s.startsWith("Runtime: "));
     const editors = a.conditions.filter((s) => s.startsWith("Editor: "));
     if (runtimes.length !== 1 || editors.length !== 1) continue;

@@ -156,5 +156,6 @@ test("candidates are bounded and include repeats, which models' first tries don'
   const many = ["a", "b", "c", "d"].map((id, i) => attempt({ attempt: id, last: `2026-10-27T00:0${i}:00Z` }));
   assert.deepEqual(modelFyiCandidates(many, catalog).map((c) => c.attempt), ["d", "c", "b"]);
   assert.equal(modelFyiCandidates([attempt({ practice: "repeat" })], catalog).length, 1);
-  assert.equal(modelFyiCandidates([attempt({ practice: "unknown" })], catalog).length, 0);
+  assert.equal(modelFyiCandidates([attempt({ practice: "unknown" })], catalog).length, 1);
+  assert.equal(modelFyiCandidates([attempt({ issues: ["Conflicting record IDs."] })], catalog).length, 0);
 });

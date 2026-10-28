@@ -1,9 +1,11 @@
 /**
- * At most one tiny human comparison for Stats: the share of scored first submissions that passed,
- * among other browsers' first attempts at one exact challenge revision with the same runtime and
- * editor setup. It names that challenge, is never set against the player's own figures (those
- * count differently), and is omitted, never stood in for, whenever anything is missing. ENG-394
- * wires it into the report; this module only decides what may be said.
+ * At most one tiny human line for Stats: descriptive context about one challenge the player solved.
+ * Among browsers' first attempts at that exact revision with the same runtime and editor setup,
+ * the share of scored first submissions that passed. It names the challenge, describes the
+ * cohort's first-attempt group only (it never claims the player's own attempt was a first one, which
+ * derived history can't prove), is never set against the player's own figures (those count
+ * differently), and is omitted, never stood in for, whenever anything is missing. ENG-394 wires it
+ * into the report; this module only decides what may be said.
  */
 import type { AttemptSummary } from "../developer-profile/derive";
 import {
@@ -31,6 +33,7 @@ export interface HumanFyi {
   challenge: string;
   title: string;
   revision: string;
+  /** The cohort group described: browsers' first attempts. Not a claim about the player's attempt. */
   practice: "first";
   /** Canonical runtime JSON of the matched group. */
   runtime: string;
@@ -48,7 +51,7 @@ export type HumanFyiReason =
   | "age-missing"
   /** The viewer answered 16–17: no adult comparison, and no prompt. */
   | "not-adult"
-  /** No solved first attempt on a current revision with one known setup. */
+  /** No sound solved attempt on a current revision with one known setup. */
   | "no-attempt"
   | "loading"
   /** No usable read: missing, expired or invalidated summary, or a failed request. */
@@ -88,7 +91,7 @@ export function humanFyiCandidates(
   attempts: readonly AttemptSummary[],
   catalog: readonly CatalogEntry[],
 ): { challenge: string; revision: string }[] {
-  return fyiCandidates(attempts, catalog, ["first"]).map((c) => ({
+  return fyiCandidates(attempts, catalog).map((c) => ({
     challenge: c.attempt.challenge,
     revision: c.attempt.revision,
   }));
@@ -113,7 +116,7 @@ export function humanFyi(
   if (viewer.age === "16-17") return omitted("not-adult");
   if (!(ADULT_BANDS as readonly string[]).includes(viewer.age ?? ""))
     return omitted("age-missing");
-  const candidates = fyiCandidates(attempts, catalog, ["first"]);
+  const candidates = fyiCandidates(attempts, catalog);
   if (!candidates.length) return omitted("no-attempt");
   let loading = false,
     valid = false;
@@ -159,7 +162,7 @@ export function humanFyi(
         metric: "scored-first-submission-pass-share",
         share: group.firstTry,
         browsers: group.denominators.firstTry,
-        text: `On ${c.title} (current version, same runtime and editor setup), about ${percent}% of scored first submissions passed, across first attempts from ${group.denominators.firstTry} browsers.`,
+        text: `Among first attempts at ${c.title} (current version, same runtime and editor setup) from ${group.denominators.firstTry} browsers, about ${percent}% of scored first submissions passed.`,
       },
     };
   }

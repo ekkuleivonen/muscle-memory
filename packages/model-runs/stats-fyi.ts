@@ -51,7 +51,7 @@ export interface ModelFyi {
 export type ModelFyiReason =
   /** Not requested, or the viewer is in stealth or signed out. */
   | "off"
-  /** No solved attempt on a current revision with one known setup. */
+  /** No sound solved attempt on a current revision with one known setup. */
   | "no-attempt"
   | "loading"
   /** No stored model results could be read for the candidates. */
@@ -82,7 +82,7 @@ export function modelFyiCandidates(
   attempts: readonly AttemptSummary[],
   catalog: readonly CatalogEntry[],
 ): { challenge: string; revision: string; attempt: string }[] {
-  return fyiCandidates(attempts, catalog, ["first", "repeat"]).map((c) => ({
+  return fyiCandidates(attempts, catalog).map((c) => ({
     challenge: c.attempt.challenge,
     revision: c.attempt.revision,
     attempt: c.attempt.attempt,
@@ -105,7 +105,7 @@ export function modelFyi(
   localLengths: Readonly<Record<string, number>> = {},
 ): ModelFyiResult {
   if (!reads || !viewer || viewer.stealth || viewer.signedOut) return omitted("off");
-  const candidates = fyiCandidates(attempts, catalog, ["first", "repeat"]);
+  const candidates = fyiCandidates(attempts, catalog);
   if (!candidates.length) return omitted("no-attempt");
   let loading = false,
     read = false;

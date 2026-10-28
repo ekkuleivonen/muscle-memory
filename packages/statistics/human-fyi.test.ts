@@ -66,7 +66,7 @@ test("20 eligible matched browsers show one named, bounded FYI", () => {
   assert.equal(r.fyi.browsers, "20–49");
   assert.equal(
     r.fyi.text,
-    "On Synthetic Sum (current version, same runtime and editor setup), about 45% of scored first submissions passed, across first attempts from 20–49 browsers.",
+    "Among first attempts at Synthetic Sum (current version, same runtime and editor setup) from 20–49 browsers, about 45% of scored first submissions passed.",
   );
   // Aggregate only: no browser IDs, counts or raw rows.
   assert.doesNotMatch(JSON.stringify(r), /viewer|participant|"browsers":\d/);
@@ -124,7 +124,7 @@ test("a read must be bound to the attempt's own challenge and current revision",
   assert.deepEqual(run(group(9, 11), { a: attempt({ revision: other }) }), { state: "omitted", reason: "no-attempt", action: null });
 });
 
-test("candidates are solved first attempts with one known setup, newest first, at most three", () => {
+test("candidates are sound solved attempts with one known setup, newest first, at most three", () => {
   const many = ["a", "b", "c", "d"].map((id, i) =>
     attempt({ attempt: id, last: `2026-10-27T00:0${i}:00Z` }),
   );
@@ -132,7 +132,11 @@ test("candidates are solved first attempts with one known setup, newest first, a
     humanFyiCandidates(many, catalog).length,
     3,
   );
-  assert.deepEqual(humanFyiCandidates([attempt({ practice: "repeat" })], catalog), []);
+  // Practice type isn't a filter: derived history says "unknown" or "repeat", never "first".
+  assert.equal(humanFyiCandidates([attempt({ practice: "unknown" })], catalog).length, 1);
+  assert.equal(humanFyiCandidates([attempt({ practice: "repeat" })], catalog).length, 1);
+  // The integrity guard: any recorded issue keeps an attempt out, whatever its conditions say.
+  assert.deepEqual(humanFyiCandidates([attempt({ issues: ["Capture reported lost records."] })], catalog), []);
   assert.deepEqual(humanFyiCandidates([attempt({ completed: false })], catalog), []);
   assert.deepEqual(humanFyiCandidates([attempt({ conditions: [] })], catalog), []);
   assert.deepEqual(
