@@ -5,6 +5,10 @@
  * downloads it, or closes the preview. Nothing is posted, uploaded or logged, and no link
  * carries their data. The preview always shows the current report: when the report goes away
  * (stealth, logout, reset, deletion, import) this unmounts with it, and the dialog with it.
+ *
+ * Copying and sharing finish later than the click. Each one belongs to an operation that ends on
+ * unmount, a change in the text, closing or reopening the preview, or the next action: an ended
+ * operation never falls back to another way of copying and never reports Copied or a failure.
  */
 import React, { useEffect, useRef, useState } from "react";
 import { shareText, type ShareSummary } from "../../lib/report";
@@ -23,6 +27,8 @@ export function ShareReport({ summary }: { summary: ShareSummary }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
   const live = useRef(true);
+  /** The current operation; anything that ends it bumps this. */
+  const operation = useRef(0);
   const [said, setSaid] = useState<Said>(null);
   const [canShare, setCanShare] = useState(false);
   const text = shareText(summary, SITE_URL);
@@ -30,11 +36,19 @@ export function ShareReport({ summary }: { summary: ShareSummary }) {
     live.current = true;
     return () => {
       live.current = false;
+      operation.current++;
     };
   }, []);
-  // A message about an earlier text never stays beside a new one.
-  useEffect(() => setSaid(null), [text]);
-  const say = (s: Said) => live.current && setSaid(s);
+  // A new text ends whatever was under way with the old one, and its message.
+  useEffect(() => {
+    operation.current++;
+    setSaid(null);
+  }, [text]);
+  /** Starts an operation; the returned check stays true only while it is the current one, in an open preview. */
+  const begin = () => {
+    const mine = ++operation.current;
+    return () => live.current && operation.current === mine && dialog.current?.open === true;
+  };
   return (
     <>
       <button
@@ -43,10 +57,12 @@ export function ShareReport({ summary }: { summary: ShareSummary }) {
         className="t-cmd report-share-open"
         aria-haspopup="dialog"
         onClick={() => {
-          setSaid(null);
           // Asked each time: only offer the system share sheet where this browser has one.
           setCanShare(typeof navigator.share === "function");
-          if (!dialog.current?.open) dialog.current?.showModal();
+          if (dialog.current?.open) return;
+          operation.current++;
+          setSaid(null);
+          dialog.current?.showModal();
         }}
       >
         Share a summary
@@ -57,6 +73,7 @@ export function ShareReport({ summary }: { summary: ShareSummary }) {
         aria-labelledby="report-share-title"
         onClick={(event) => event.target === dialog.current && dialog.current?.close()}
         onClose={() => {
+          operation.current++;
           setSaid(null);
           opener.current?.focus();
         }}
@@ -77,18 +94,27 @@ export function ShareReport({ summary }: { summary: ShareSummary }) {
             answers, and nothing that identifies you. Nothing is posted or uploaded for you.
           </p>
           <div className="share-actions">
-            <button type="button" className="primary" onClick={async () => say((await copyText(text)) ? "copied" : "copy-failed")}>
+            <button
+              type="button"
+              className="primary"
+              onClick={async () => {
+                const current = begin();
+                const copied = await copyText(text, current);
+                if (current()) setSaid(copied ? "copied" : "copy-failed");
+              }}
+            >
               Copy text
             </button>
             {canShare && (
               <button
                 type="button"
                 onClick={async () => {
+                  const current = begin();
                   try {
                     await navigator.share({ text });
                   } catch (error) {
                     // Closing the share sheet is a choice, not a failure.
-                    if ((error as DOMException)?.name !== "AbortError") say("share-failed");
+                    if (current() && (error as DOMException)?.name !== "AbortError") setSaid("share-failed");
                   }
                 }}
               >
@@ -104,7 +130,8 @@ export function ShareReport({ summary }: { summary: ShareSummary }) {
                 a.download = "muscle-memory-summary.txt";
                 a.click();
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
-                say("downloaded");
+                begin();
+                setSaid("downloaded");
               }}
             >
               Download
