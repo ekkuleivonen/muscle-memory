@@ -6,7 +6,7 @@
  * changes clear what is shown synchronously and discard every pending response.
  */
 import {
-  mergeHistoryPage,
+  acceptPage,
   HistoryPacer,
   failureReason,
   readPageBody,
@@ -345,14 +345,14 @@ export function useReportData(
           // body that isn't a page object is invalid-page.
           const page = await readPageBody(response);
           if (!live()) return;
-          historyPages.current++;
-          pacer.succeeded();
           let merged;
           try {
-            merged = mergeHistoryPage(previous, page);
+            // Refills the retry budget only after the page validates and merges.
+            merged = acceptPage(pacer, previous, page);
           } catch {
             return fail("invalid-page");
           }
+          historyPages.current++;
           const value = merged.value;
           const stopped = Boolean(
             value.next && historyPages.current >= HISTORY_MAX_PAGES,

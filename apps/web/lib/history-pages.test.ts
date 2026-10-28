@@ -135,3 +135,22 @@ test("a slow or truncated history body stays a transient failure; only complete 
   assert.equal(await reason(new Response("[1,2]")), "invalid-page");
   assert.equal(await reason(new Response('{"state":"ready","attempts":[],"unavailable":[],"next":null}')), "ok");
 });
+
+test("a 200 that fails validation never refills the automatic-retry budget; only a genuine page does", async () => {
+  const { HistoryPacer, acceptPage } = await import("./history-pages");
+  const pacer = new HistoryPacer(61_000);
+  let now = 2_000_000;
+  // Spend both automatic retries on transient failures.
+  assert.ok(pacer.retryAt("http-503", now));
+  assert.ok(pacer.retryAt("timeout", now));
+  assert.equal(pacer.retryAt("http-503", now), undefined, "budget exhausted");
+  // HTTP 200 with a JSON object that isn't a valid page: rejected before any refill.
+  const malformed = { state: "ready", attempts: "not-a-list", unavailable: [], next: null } as never;
+  assert.throws(() => acceptPage(pacer, null, malformed));
+  now += 61_000;
+  assert.equal(pacer.retryAt("network", now), undefined, "the malformed 200 didn't refill retries");
+  // A genuine page does refill them.
+  const page = { state: "ready", attempts: [], unavailable: [], next: null, readAt: "2026-10-28T00:00:00.000Z", window: { from: "2025-10-29", to: "2026-10-28", after: "" } } as never;
+  acceptPage(pacer, null, page);
+  assert.ok(pacer.retryAt("network", now), "a valid page restores automatic retries");
+});

@@ -139,3 +139,13 @@ export function thrownReason(error: unknown): HistoryFailure {
   if (error instanceof DOMException && error.name === "TimeoutError") return "timeout";
   return "network";
 }
+
+/**
+ * Merges a page and only then counts it as a success: a reply that parses but fails validation
+ * throws before the retry budget is refilled, so only a genuine page restores automatic retries.
+ */
+export function acceptPage(pacer: HistoryPacer, previous: UploadedHistory | null, page: UploadedHistory) {
+  const merged = mergeHistoryPage(previous, page);
+  pacer.succeeded();
+  return merged;
+}
