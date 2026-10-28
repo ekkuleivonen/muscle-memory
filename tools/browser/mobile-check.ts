@@ -465,9 +465,33 @@ try {
 
     await stats("How you code", "report");
     assert.equal(await status.count(), 0, `${device.name} report status`);
+    // Uploads down: two paced automatic retries say "trying again shortly", then the device-only
+    // state offers Try again and nothing more is read. A controlled clock stands in for the 61 s waits.
     history = "down";
-    await stats("How you code", "history-unavailable");
-    await status.filter({ hasText: "couldn't be added right now" }).waitFor();
+    let reads = 0;
+    page.on("request", (r) => {
+      if (r.url().endsWith("/api/private-history")) reads++;
+    });
+    await page.clock.install();
+    await stats("How you code", "history-retrying");
+    const retrying = status.filter({ hasText: "trying again shortly" });
+    const unavailable = status.filter({ hasText: "couldn't be added right now" });
+    await retrying.waitFor();
+    assert.equal(reads, 1, `${device.name} first history read`);
+    for (const expected of [2, 3]) {
+      const read = page.waitForRequest("**/api/private-history");
+      await page.clock.runFor(30_000);
+      assert.equal(reads, expected - 1, `${device.name} retry waits for the interval`);
+      await page.clock.runFor(31_000);
+      await read;
+      await (expected === 2 ? retrying : unavailable).waitFor();
+      assert.equal(reads, expected, `${device.name} history read ${expected}`);
+    }
+    await shot("stats-history-unavailable");
+    await unavailable.getByRole("button", { name: "Try again" }).waitFor();
+    await page.clock.runFor(180_000);
+    await page.waitForTimeout(500);
+    assert.equal(reads, 3, `${device.name} no automatic read after the budget is spent`);
     assert.deepEqual(errors, [], `${device.name} stats page errors`);
     await context.close();
 
@@ -514,6 +538,7 @@ try {
         "stealth",
         "empty",
         "report",
+        "history-retrying",
         "history-unavailable",
         "records-unreadable",
         "profile-unreadable",

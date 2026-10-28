@@ -33,18 +33,31 @@ export function StealthNotice() {
 }
 
 /** Only what changes how to read the page: earlier practice still arriving, or not added. */
-function Status({ history }: { history: HistoryStatus }) {
+export function Status({ history, onRetry }: { history: HistoryStatus; onRetry?: () => void }) {
+  const failed = history.state === "unavailable" || history.state === "limited" || (history.state === "ready" && Boolean(history.reason));
+  const waiting = "retryAt" in history && Boolean(history.retryAt);
   const text =
     history.state === "loading" || history.state === "idle"
       ? "Adding your earlier practice…"
-      : history.state === "ready"
-        ? history.notice ?? (history.value.next ? "Earlier practice is still being added…" : history.value.unavailable.length ? "Some earlier practice could not be added." : null)
-      : history.state === "unavailable" || history.state === "limited"
-        ? "Your earlier practice couldn't be added right now; this shows this device only."
-        : null;
+      : failed && waiting
+        ? "Your earlier practice couldn't be added yet; trying again shortly."
+        : history.state === "ready"
+          ? history.notice ?? (history.value.next ? "Earlier practice is still being added…" : history.value.unavailable.length ? "Some earlier practice could not be added." : null)
+          : failed
+            ? "Your earlier practice couldn't be added right now; this shows this device only."
+            : null;
   return text ? (
-    <p className="report-status" role="status">
+    // The reason is a fixed code for support, kept out of the copy.
+    <p className="report-status" role="status" data-history-reason={"reason" in history ? history.reason : undefined}>
       {text}
+      {failed && !waiting && onRetry ? (
+        <>
+          {" "}
+          <button type="button" className="t-cmd" onClick={onRetry}>
+            Try again
+          </button>
+        </>
+      ) : null}
     </p>
   ) : null;
 }
@@ -107,7 +120,7 @@ export function ReportBody({
 export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
   // The report picks the revisions for the model FYI; the data hook reads them. Kept in state to break the cycle.
   const [wanted, setWanted] = useState<Report["comparisonRevisions"]>([]);
-  const { privacy, local, history, receipts } = useReportData(wanted);
+  const { privacy, local, history, receipts, retryHistory } = useReportData(wanted);
   const device = local.value;
   const uploaded = history.state === "ready" ? history.value.attempts : NONE;
   const attempts = useMemo(
@@ -159,7 +172,7 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
           <>
             <ReportBody
               report={report}
-              status={<Status history={history} />}
+              status={<Status history={history} onRetry={retryHistory} />}
             />
             {local.error && <p role="status" className="t-dim">Some saved practice couldn&apos;t be read.</p>}
             <p className="report-footer">
