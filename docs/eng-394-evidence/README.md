@@ -1,6 +1,6 @@
 # ENG-394 verification evidence
 
-Settled, full-page screenshots of `/stats` from `tools/browser/stats-portrait-check.ts` (Chromium, reduced motion, local dev server, 28 October 2026). All practice is **synthetic**: the fixture trace replayed on real public challenge keys and revisions, a fixture participant, no code or player data. Uploaded history is answered in the browser (an empty page, slow, or a 503); no request leaves the machine. Web Share is stubbed and never opened; nothing was shared.
+Settled, full-page screenshots of `/stats` from `tools/browser/stats-portrait-check.ts` (Chromium, reduced motion, local dev server, 28 October 2026; recaptured after the comparison note change and the merge of main 6b28dda). All practice is **synthetic**: the fixture trace replayed on real public challenge keys and revisions, a fixture participant, no code or player data. Uploaded history is answered in the browser (an empty page, slow, or a 503); no request leaves the machine. Web Share is stubbed and never opened; nothing was shared.
 
 | State | Desktop 1280×800 | 390×844 | 320×640 | Landscape 844×390 |
 | --- | --- | --- | --- | --- |
