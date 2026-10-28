@@ -16,6 +16,7 @@ import { revisionId } from "../../../../packages/content/revision";
 import { engineFor } from "../../../../packages/runner/engines";
 import { many, type Event } from "../../../../packages/statistics/cohort-fixtures";
 import { humanEnvironment, onRevision } from "../../../../packages/statistics/human-acceptance-fixture";
+import { humanSummaryOnRequest } from "../../../../packages/statistics/scheduled-cohorts";
 import type { CohortRead } from "../../../../packages/statistics/cohort";
 import { buildReport, type ReportAttempt } from "../../lib/report";
 import type { ChallengeSummary } from "../../lib/challenges";
@@ -168,6 +169,36 @@ test("fail closed: CONTROL exclusion, invalidation after a privacy change, and e
     snap.expiresAt = new Date(Date.now() - 1).toISOString();
     f.objects.set(key, { text: JSON.stringify(snap), etag: "stale" });
     assert.equal((await f.request()).read, null);
+  } finally {
+    f.close();
+  }
+});
+
+test("a slower build of an older generation never replaces a newer generation's snapshot", async () => {
+  const f = environment(browsers(20));
+  try {
+    // G1's build stalls in its member query; meanwhile a privacy save advances to G2.
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    let calls = 0;
+    const slowFirst: typeof fetch = async (url, init) => {
+      if (++calls === 1) await held;
+      return f.basin(url, init);
+    };
+    const g1: Promise<unknown>[] = [];
+    assert.equal(await humanSummaryOnRequest(f.env, "JS-001", revision, runtime, (w) => g1.push(w), now, slowFirst), null);
+    f.advance();
+    // G2's rebuild runs and stores a valid snapshot.
+    const g2: Promise<unknown>[] = [];
+    assert.equal(await humanSummaryOnRequest(f.env, "JS-001", revision, runtime, (w) => g2.push(w), now, slowFirst), null);
+    assert.deepEqual(await Promise.all(g2), [true]);
+    const key = [...f.objects.keys()].find((k) => k.includes("/humans/") && !k.includes("/leases/"))!;
+    const g2Snapshot = f.objects.get(key)!.text;
+    // Now the slow G1 build finishes: it must not write over G2.
+    release();
+    assert.deepEqual(await Promise.all(g1), [false]);
+    assert.equal(f.objects.get(key)!.text, g2Snapshot, "G2's snapshot stays");
+    assert.equal((await f.request()).read?.state, "ready", "and is served");
   } finally {
     f.close();
   }

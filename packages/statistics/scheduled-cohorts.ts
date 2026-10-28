@@ -460,8 +460,8 @@ export const MAX_BUILDS_PER_REVISION_HOUR = 3;
 
 /**
  * Claims this revision's lease for (`hour`, `generation`); true only for the one claimant. A lease
- * held for a later hour (a delayed earlier-hour request) or for this hour and this generation is
- * never overwritten; within an hour a new generation may claim it until the build limit. An
+ * held for a later hour (a delayed earlier-hour request) is never overwritten; within an hour each
+ * generation builds at most once, up to the build limit in all. An
  * unreadable lease fails closed. `guard` runs before each I/O stage.
  */
 export async function claimLease(
@@ -474,13 +474,14 @@ export async function claimLease(
   if (!Number.isSafeInteger(hour) || hour < 0 || !/^[a-f0-9-]{36}$/.test(generation)) return false;
   guard();
   const held = await bucket.get(key);
-  let builds = 1;
+  // The generations built this hour, at most MAX_BUILDS_PER_REVISION_HOUR; each builds once.
+  let built: string[] = [];
   if (held) {
-    if (!held.etag || held.size > 256) return false;
+    if (!held.etag || held.size > 512) return false;
     guard();
     const text = await held.text();
     guard();
-    let stored: { hour?: unknown; generation?: unknown; builds?: unknown };
+    let stored: { hour?: unknown; generations?: unknown };
     try {
       stored = JSON.parse(text);
     } catch {
@@ -489,20 +490,21 @@ export async function claimLease(
     const at = stored?.hour;
     if (!Number.isSafeInteger(at) || (at as number) < 0 || (at as number) > hour) return false;
     if (at === hour) {
-      const count = stored.builds;
+      const list = stored.generations;
       if (
-        typeof stored.generation !== "string" ||
-        !Number.isSafeInteger(count) ||
-        (count as number) < 1 ||
-        stored.generation === generation ||
-        (count as number) >= MAX_BUILDS_PER_REVISION_HOUR
+        !Array.isArray(list) ||
+        list.length < 1 ||
+        list.length > MAX_BUILDS_PER_REVISION_HOUR ||
+        !list.every((g) => typeof g === "string" && /^[a-f0-9-]{36}$/.test(g)) ||
+        list.includes(generation) ||
+        list.length >= MAX_BUILDS_PER_REVISION_HOUR
       )
         return false;
-      builds = (count as number) + 1;
+      built = list as string[];
     }
   }
   guard();
-  const written = await bucket.put(key, JSON.stringify({ hour, generation, builds }), {
+  const written = await bucket.put(key, JSON.stringify({ hour, generations: [...built, generation] }), {
     onlyIf: held ? { etagMatches: held.etag! } : { etagDoesNotMatch: "*" },
   });
   return written !== null && written !== undefined;
@@ -570,8 +572,19 @@ async function buildOnRequest(
     if (!snapshot) return false;
     const text = JSON.stringify(snapshot);
     if (new TextEncoder().encode(text).length > SNAPSHOT_LIMIT) return false;
-    await stage(() => env.CONTENT.put(humanSummaryKey(challenge, revision), text));
-    return true;
+    // Never replace a newer snapshot with an older generation's. Read the stored snapshot's ETag,
+    // then the current generation: a newer snapshot written before that read means the generation
+    // had already moved on (skip); one written after it changes the ETag (the write fails).
+    const key = humanSummaryKey(challenge, revision);
+    const stored = await stage(() => env.CONTENT.get(key));
+    if (stored && !stored.etag) return false;
+    if ((await control.generation()) !== generation) return false;
+    const written = await stage(() =>
+      env.CONTENT.put(key, text, {
+        onlyIf: stored ? { etagMatches: stored.etag! } : { etagDoesNotMatch: "*" },
+      }),
+    );
+    return written !== null && written !== undefined;
   } finally {
     clearTimeout(timer);
     stop.abort();

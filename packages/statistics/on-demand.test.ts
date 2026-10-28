@@ -54,8 +54,19 @@ test("within an hour, a new privacy generation may rebuild, at most three builds
   assert.equal(await claimLease(b, "lease", 300, G2), true, "after a privacy change: one rebuild");
   assert.equal(await claimLease(b, "lease", 300, G3), true, "third build");
   assert.equal(await claimLease(b, "lease", 300, G4), false, "never a fourth in the hour");
-  assert.equal(JSON.parse(b.objects.get("lease")!.text).builds, 3);
+  assert.deepEqual(JSON.parse(b.objects.get("lease")!.text).generations, [G1, G2, G3]);
   assert.equal(await claimLease(b, "lease", 301, G4), true, "a new hour starts again");
+});
+
+test("each generation builds at most once an hour, even when generations alternate", async () => {
+  const b = bucket();
+  const claims = [];
+  for (const g of [G1, G2, G1, G2]) claims.push(await claimLease(b, "lease", 400, g));
+  assert.deepEqual(claims, [true, true, false, false]);
+  for (const stored of ['{"hour":400}', '{"hour":400,"generations":[]}', '{"hour":400,"generations":["x"]}', `{"hour":400,"generations":["${G1}","${G2}","${G3}","${G4}"]}`]) {
+    b.objects.set("bad", { text: stored, etag: "x" });
+    assert.equal(await claimLease(b, "bad", 400, "55555555-5555-5555-5555-555555555555"), false, stored);
+  }
 });
 
 const deferred = <T>() => {
@@ -70,7 +81,7 @@ const runtime = { id: "javascript", version: "synthetic" };
 function stalled(stage: "lease-get" | "lease-text" | "d1" | "source-get" | "source-text") {
   const calls: string[] = [];
   const hold = deferred<unknown>();
-  const leaseText = '{"hour":1,"generation":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","builds":1}';
+  const leaseText = '{"hour":1,"generations":["aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"]}';
   const source = { size: 10, etag: "s", text: () => (calls.push("source-text"), stage === "source-text" ? hold.promise : Promise.resolve("{}")) };
   const env: HumanSummaryEnvironment = {
     HUMAN_SUMMARY_CACHE_ENABLED: "true",
