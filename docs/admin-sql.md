@@ -42,3 +42,7 @@ Query results can hold private participant data (`payload` holds code; `particip
 ## Checking
 
 `npm test` runs the check, splitting, formatting, export and transport tests. `ADMIN_STATS_FIXTURE=1 node tools/browser/admin-check.mjs` (after `npm run build:cloudflare`) also drives the workbench in Chromium against a synthetic R2 SQL: Access denial on the page and both endpoints (anonymous, wrong identity, expired, forged, cross-origin), refused writes that never reach R2 SQL, schema and completion, statement runs, errors marked in the editor, stop and late answers, queueing, sorting, filtering, the inspector, CSV, the 500-row note, formatting, drafts across a reload, and the mobile layout. Without the fixture it checks the page says the credential is missing.
+
+## Saved query: launch-only reporting
+
+`npm run launch:query` prints a fixed, parameterized query for launch reporting: whole attempts started at or after the public announcement, with a stable as-of. Its parameters, procedure, limits and cost are in [launch reporting](launch-reporting.md). It is generated offline and pasted here; nothing runs it automatically.
