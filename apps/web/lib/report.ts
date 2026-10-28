@@ -11,6 +11,9 @@ import { languageLabel, type ChallengeSummary } from "./challenges";
 import type { Profile } from "./profile";
 import type { Progress } from "./progress";
 import { nextProblem } from "./next-problem";
+import type { HumanFyiReason, HumanFyiResult } from "../../../packages/statistics/human-fyi";
+import { MIN_COHORT } from "../../../packages/statistics/cohort";
+import type { ModelFyiReason, ModelFyiResult } from "../../../packages/model-runs/stats-fyi";
 
 export type Source = "device" | "uploaded";
 export type ReportAttempt = AttemptSummary & { source: Source };
@@ -161,6 +164,16 @@ export interface ReportInput {
   progress: Progress;
   attempts: readonly ReportAttempt[];
   profile: Profile | null;
+  /** The comparison helpers' results; off when not given. */
+  comparisons?: { human: HumanFyiResult; model: ModelFyiResult };
+}
+export interface ComparisonLine {
+  who: "human" | "model";
+  /** The short label before the line. */
+  label: string;
+  text: string;
+  /** The challenge the line names. */
+  challenge: string;
 }
 export interface Report {
   /** Nothing started on this device or in uploaded history. */
@@ -178,8 +191,13 @@ export interface Report {
   next: NextStep | null;
   /** Supported questions not answerable yet, for the bottom of the report. */
   discover: Undiscovered[];
-  /** Why each comparison isn't shown yet, with what it waits on: policy and method, not missing practice. */
-  discoverNote: string | null;
+  /**
+   * At most one line about other players and one about AI models, each about one named solved
+   * challenge (ENG-376's `humanFyi` / `modelFyi` text), never set against the answers above.
+   */
+  comparisons: ComparisonLine[];
+  /** For a line that isn't shown, what it waits on, with an optional settings step; none while loading or for 16–17. */
+  comparisonNotes: { text: string; action: NextStep | null }[];
   profile: NextStep | null;
   /**
    * Show the optional languages invitation under the languages answer: only while the person
@@ -844,6 +862,43 @@ function toDiscover(input: ReportInput, solved: ReportAttempt[], answered: Set<s
   return out;
 }
 
+/**
+ * What an omitted line waits on, as the contract's reasons (docs/comparison-fyi.md); thresholds
+ * come from the helpers' own exports. Nothing while a read is loading, and nothing at all for a
+ * 16–17 answer. Local age alone never reads as being counted: the settings step shows whether
+ * this browser's comparison settings reached the server. The link, when there is one, is the
+ * helper's own fixed `action` (the optional age form, or a neutral settings review).
+ */
+const HUMAN_NOTE: Record<HumanFyiReason, string | null> = {
+  off: "Other players: comparing with them waits on privacy controls still under review, then on enough comparable players on the same challenge.",
+  "age-missing": "Other players: comparisons are between adults.",
+  "not-adult": null,
+  "no-attempt": "Other players: comparisons cover completed challenges on their current version, with a matching setup.",
+  loading: null,
+  unavailable: "Other players' results aren't available right now.",
+  "too-few": `Other players' results appear once at least ${MIN_COHORT} comparable adults have played the same version.`,
+};
+const MODEL_NOTE: Record<ModelFyiReason, string | null> = {
+  off: "AI models: a line about stored model runs on a challenge you solved isn't switched on yet.",
+  "no-attempt": "AI models: comparisons cover solved challenges on their current version, in one known setup.",
+  loading: null,
+  unavailable: "AI model results aren't available right now.",
+  unmatched: "AI models: no stored model run used the same runtime and diagnostics setting as your solves.",
+};
+const OFF = { human: { state: "omitted", reason: "off", action: null }, model: { state: "omitted", reason: "off" } } as const;
+
+/** The lines to show and, for each one omitted, what it waits on. */
+function compare(input: ReportInput): Pick<Report, "comparisons" | "comparisonNotes"> {
+  const { human, model } = input.comparisons ?? OFF;
+  const comparisons: ComparisonLine[] = [];
+  const comparisonNotes: Report["comparisonNotes"] = [];
+  if (human.state === "shown") comparisons.push({ who: "human", label: "Other players", text: human.fyi.text, challenge: human.fyi.challenge });
+  else if (HUMAN_NOTE[human.reason]) comparisonNotes.push({ text: HUMAN_NOTE[human.reason]!, action: human.action });
+  if (model.state === "shown") comparisons.push({ who: "model", label: "AI models", text: model.fyi.text, challenge: model.fyi.challenge });
+  else if (MODEL_NOTE[model.reason]) comparisonNotes.push({ text: MODEL_NOTE[model.reason]!, action: null });
+  return { comparisons, comparisonNotes };
+}
+
 /** The share preview's counts; null before any solve. */
 function shareSummary(input: ReportInput, solved: ReportAttempt[]): ShareSummary | null {
   const total = new Set(solved.map((a) => a.challenge)).size;
@@ -925,9 +980,7 @@ export function buildReport(input: ReportInput): Report {
     waiting: started.size && !questions.length ? "Solve a challenge and your answers start here." : null,
     next: next(input, started, solved),
     discover: toDiscover(input, solved, new Set(questions.map((q) => q.id))),
-    // Each comparison's actual missing prerequisite, not a blanket "not comparable"; replaced by a
-    // single matched FYI on the relevant answer once one is eligible (ENG-376 provides it).
-    discoverNote: "Not compared yet. Other players: comparing with them waits on privacy controls still under review, then on enough comparable players on the same challenge. AI models: their recorded submissions don't have to pass the examples first, as yours do, so the two aren't counted alike; a model comparison shows only for a measure recorded the same way on the same challenge version.",
+    ...compare(input),
     profile: null,
     languagesInvite:
       questions.some((q) => q.id === "languages") &&

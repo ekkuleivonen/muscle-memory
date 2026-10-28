@@ -144,23 +144,65 @@ test("human length follows the latest successful submitted artifact, never later
       data,
     }),
   });
+  const passed = (runId: string, artifact: typeof a) => ({
+    runId,
+    revision: artifact.revision,
+    codeArtifactId: artifact.artifactId,
+    result: "passed",
+    passed: 3,
+    total: 3,
+    rules: [],
+  });
+  const done = (runId: string, artifact: typeof a) => ({
+    runId,
+    codeArtifactId: artifact.artifactId,
+  });
   const records = [
     toRecord(a),
     toRecord(b),
     toRecord(edit),
-    observation("practice.submitted", 1, {
-      runId: "a",
-      codeArtifactId: a.artifactId,
-      result: "passed",
-    }),
-    observation("practice.completed", 2, { runId: "a" }),
-    observation("practice.submitted", 3, {
-      runId: "b",
-      codeArtifactId: b.artifactId,
-      result: "passed",
-    }),
-    observation("practice.completed", 4, { runId: "b" }),
+    observation("practice.submitted", 1, passed("a", a)),
+    observation("practice.completed", 2, done("a", a)),
+    observation("practice.submitted", 3, passed("b", b)),
+    observation("practice.completed", 4, done("b", b)),
   ];
   assert.equal(solvedLength(records, "JS-900", revision, "attempt"), 6);
   assert.equal(solvedLength(records, "JS-900", revision, "different"), null);
+  // Each provenance gap is unknown, never a length from some other code.
+  const withSubmit = (data: any) => [
+    ...records.slice(0, 5),
+    observation("practice.submitted", 3, data),
+    records[6],
+  ];
+  const { codeArtifactId: _id, ...noArtifact } = passed("b", b);
+  for (const [why, rows] of [
+    ["no artifact id", withSubmit(noArtifact)],
+    ["artifact revision differs", withSubmit({ ...passed("b", b), revision: 1 })],
+    ["a case failed", withSubmit({ ...passed("b", b), passed: 2 })],
+    ["no cases", withSubmit({ ...passed("b", b), passed: 0, total: 0 })],
+    ["a rule fired", withSubmit({ ...passed("b", b), rules: ["no-loops"] })],
+    ["another artifact", withSubmit(passed("b", a))],
+    [
+      "conflicting submission copies",
+      [...records, observation("practice.submitted", 3, { ...passed("b", b), total: 4, passed: 4 })],
+    ],
+    [
+      "another challenge's submission",
+      records.map((r, i) =>
+        i === 5
+          ? { ...r, payload: JSON.stringify({ ...JSON.parse(r.payload), challenge: "JS-901" }) }
+          : r,
+      ),
+    ],
+    [
+      "a pre-actor submission",
+      records.map((r, i) => {
+        if (i !== 5) return r;
+        const { actor: _a, ...rest } = JSON.parse(r.payload);
+        return { ...r, payload: JSON.stringify(rest) };
+      }),
+    ],
+    ["no code copy", records.filter((_, i) => i !== 1)],
+  ] as const)
+    assert.equal(solvedLength(rows as any, "JS-900", revision, "attempt"), null, why);
 });

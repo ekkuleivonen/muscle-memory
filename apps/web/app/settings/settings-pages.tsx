@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useComparisonPrivacy } from "../../lib/use-comparison-privacy";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
@@ -10,6 +11,7 @@ import {
   type Ref,
 } from "react";
 import {
+  ACCOUNT_CHANGE,
   deleteAccount,
   logOut,
   readProfile,
@@ -18,7 +20,7 @@ import {
   saveProfile,
   setStealth,
 } from "../../lib/account";
-import { guesses, type StoredProfile } from "../../lib/profile";
+import { guesses, PROFILE_KEY, type StoredProfile } from "../../lib/profile";
 import {
   backupName,
   current,
@@ -40,6 +42,8 @@ import { KeyActions, type KeyAction } from "../_terminal/key-actions";
 /** Where a profile form was opened from, to return there after save or cancel. */
 export const RETURNS = {
   stats: { label: "back to your report", href: "/stats#q-languages" },
+  /** From a comparison note on the report: the optional age answer comparisons need. */
+  "stats-comparisons": { label: "back to your report", href: "/stats" },
 } as const;
 type ReturnTo = (typeof RETURNS)[keyof typeof RETURNS];
 
@@ -167,12 +171,78 @@ function Actions({
   );
 }
 
+const describe = (p?: { stealth: boolean; age: string } | null) =>
+  p
+    ? `${p.stealth ? "stealth" : "not stealth"}, ${p.age === "adult" ? "adult" : p.age === "non-adult" ? "under 18" : "age unanswered"}`
+    : "nothing recorded";
+
+/**
+ * Where human comparisons stand for this browser on the server, which is what decides whether it
+ * is counted. Nothing here writes on its own: saving, going stealth or the explicit action does.
+ */
+function ComparisonPrivacyStatus() {
+  const { view, retry, applyReviewed } = useComparisonPrivacy();
+  // Only an adult outside stealth has anything to add; the server not knowing already excludes others.
+  const countable = view.local?.age === "adult" && !view.local.stealth;
+  return (
+    <div role="status" aria-live="polite">
+      <p className="t-dim">
+        {view.status === "disabled"
+          ? "Human comparisons are off. Server exclusion has not been confirmed."
+          : view.status === "confirmed"
+            ? "The server confirmed these comparison privacy settings. Results already authorized may still arrive; downloaded aggregates cannot be recalled."
+            : view.status === "unshared"
+              ? countable
+                ? "Not shared yet: the server has no comparison settings for this browser, so it isn't counted in comparisons. Saving an age answer or a stealth choice sends them, and so does the action below; opening this page doesn't."
+                : "The server has no comparison settings for this browser, so it isn't counted in comparisons."
+              : view.status === "conflict"
+                ? "Your current settings differ from the server. Review them before applying; another tab may have changed them."
+                : view.status === "deleted"
+                  ? "The server marked this browser for deletion. Keep its deletion key until the request is confirmed."
+                  : "Saved on this device. Server confirmation is pending. Even online, this browser may still be waiting for its first practice to upload, which the server needs before it can confirm anything; nothing is included until it confirms. Retry after your first saved practice."}
+      </p>
+      {view.status === "conflict" && (
+        <p className="t-dim">
+          Server: {describe(view.remote)}. This device: {describe(view.local)}.
+        </p>
+      )}
+      {(view.status === "conflict" ||
+        (view.status === "unshared" && countable)) && (
+        <button className="t-cmd" onClick={() => void applyReviewed()}>
+          {view.status === "unshared"
+            ? "use these settings for comparisons"
+            : "apply these reviewed settings"}
+        </button>
+      )}
+      {(view.status === "pending" || view.status === "conflict") && (
+        <button className="t-cmd" onClick={() => void retry()}>
+          {view.status === "conflict"
+            ? "check server settings again"
+            : "retry these settings"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function Privacy() {
   const [stored, setStored] = useState<StoredProfile | null>(null);
   const [result, setResult] = useState<{ tone: Tone; text: ReactNode } | null>(
     null,
   );
-  useEffect(() => setStored(readProfile()), []);
+  useEffect(() => {
+    const update = () => setStored(readProfile());
+    const storage = (e: StorageEvent) => {
+      if (!e.key || e.key === PROFILE_KEY) update();
+    };
+    update();
+    window.addEventListener(ACCOUNT_CHANGE, update);
+    window.addEventListener("storage", storage);
+    return () => {
+      window.removeEventListener(ACCOUNT_CHANGE, update);
+      window.removeEventListener("storage", storage);
+    };
+  }, []);
   const stealth = stored?.stealth === true;
   const choose = (share: boolean) => {
     setStealth(!share);
@@ -181,8 +251,8 @@ function Privacy() {
     setResult({
       tone: "dim",
       text: share
-        ? "Your runs count towards future published insights and community comparisons."
-        : "Done, you've gone stealth. We won't include you in published insights or comparisons from now on, including what you've already done, and you won't see other people's stats, or your own report, either.",
+        ? "Saved on this device. Adult eligibility and server confirmation are required before future human comparisons."
+        : "Stealth is on for this device and your report is hidden. Server exclusion is separate; check its confirmation below. Recording and uploads continue.",
     });
   };
   return (
@@ -207,15 +277,20 @@ function Privacy() {
         .
       </p>
       <p>
-        Your runs may count towards future published insights (statistics
-        and findings, never your records or code) and community comparisons. Go stealth to be excluded from both; in return your report on /stats
-        is off too. Recording and uploads continue in stealth.
+        Your runs may count towards future published insights (statistics and
+        findings, never your records or code) and community comparisons. Go
+        stealth to be excluded from both; in return your report on /stats is off
+        too. Recording and uploads continue in stealth.
       </p>
       <p className="t-state">
         Right now you&apos;re{" "}
-        <strong>{stealth ? "in stealth" : "eligible for inclusion"}</strong>.
+        <strong>
+          {stealth ? "in stealth on this device" : "not stealth on this device"}
+        </strong>
+        .
       </p>
       <Result result={result} />
+      <ComparisonPrivacyStatus />
       <Actions
         id="privacy"
         actions={[
@@ -275,8 +350,8 @@ function Export() {
       <p>
         Your practice lives in this browser only: no account, no copy on our
         side you could sign back into. A backup is all of it in one file
-        (answers, progress, stars and the practice this browser keeps), to keep safe or to
-        import in another browser.
+        (answers, progress, stars and the practice this browser keeps), to keep
+        safe or to import in another browser.
       </p>
       <p className="t-dim">
         It also holds this browser&apos;s secret key, the one that can delete
@@ -327,10 +402,14 @@ function Access() {
                 <>
                   Requested. Your reference is <strong>{reference}</strong>.
                   Email it to{" "}
-                  <a className="t-cmd" href={`mailto:support@rowandreason.com?subject=${encodeURIComponent(`Data request ${reference}`)}`}>
+                  <a
+                    className="t-cmd"
+                    href={`mailto:support@rowandreason.com?subject=${encodeURIComponent(`Data request ${reference}`)}`}
+                  >
                     support@rowandreason.com
                   </a>{" "}
-                  and we&apos;ll reply within a month with a copy of your records.
+                  and we&apos;ll reply within a month with a copy of your
+                  records.
                 </>
               ),
             }
@@ -539,9 +618,10 @@ function Reset() {
   return (
     <SettingsFrame title="Reset">
       <p>
-        This clears your progress and deletes saved practice and recorded activity
-        from this browser. Your settings stay. Anything already uploaded stays
-        with us until you delete your account, and your report can still read it.
+        This clears your progress and deletes saved practice and recorded
+        activity from this browser. Your settings stay. Anything already
+        uploaded stays with us until you delete your account, and your report
+        can still read it.
       </p>
       <Result result={result} />
       {!asking ? (
@@ -617,8 +697,8 @@ function Delete() {
   return (
     <SettingsFrame title="Delete account">
       <p>
-        This deletes your profile, progress, stars, saved practice and activity from this
-        browser and from our servers, and signs you out.{" "}
+        This deletes your profile, progress, stars, saved practice and activity
+        from this browser and from our servers, and signs you out.{" "}
         <span className="t-err">It can&apos;t be undone.</span> Published
         insights aren&apos;t about you, so they stay.
       </p>
@@ -806,6 +886,9 @@ function ProfileForm({ only, from }: { only?: string; from?: ReturnTo }) {
           ? "Optional. Your answer groups your own practice on your report into your usual languages and others: change it, then save."
           : "Every question is optional. Your answers let us compare groups (never people): change any of them, then save."}
       </p>
+      {shown.some((question) => question.id === "age") && (
+        <ComparisonPrivacyStatus />
+      )}
       <div ref={options} onKeyDown={onKeyDown}>
         {shown.map((question) => {
           const multi = question.kind === "multiselect";

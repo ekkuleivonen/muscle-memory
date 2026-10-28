@@ -24,7 +24,12 @@ export function codeLength(artifact: any, participant: string): number | null {
     return null;
   return Array.from(files[0].text).length;
 }
-/** Exactly the code attached to the latest successful submission, never the subsequently edited document. */
+/**
+ * Exactly the code attached to the latest completing submission, never the subsequently edited
+ * document. The completion, its one submission (every case passed, no rule fired) and the code
+ * copy must agree on run, artifact, code revision and owner; anything missing, conflicting or
+ * unverifiable is unknown (null), never a guess.
+ */
 export function solvedLength(
   records: readonly StoredRecord[],
   challenge: string,
@@ -47,25 +52,50 @@ export function solvedLength(
           b.occurredAt.localeCompare(a.occurredAt) ||
           b.source.sequence - a.source.sequence,
       )[0];
-    if (!complete) return null;
-    const submitted = values.find(
+    if (
+      !complete ||
+      typeof complete.data?.runId !== "string" ||
+      typeof complete.data?.codeArtifactId !== "string"
+    )
+      return null;
+    const submitted = values.filter(
       (o) =>
         o.type === "practice.submitted" &&
+        o.actor === "person" &&
         o.participantId === complete.participantId &&
-        o.attemptId === attempt &&
-        o.source.id === complete.source.id &&
+        o.challenge === challenge &&
         o.challengeRevision === revision &&
-        o.data.runId === complete.data.runId &&
-        o.data.result === "passed",
+        o.attemptId === attempt &&
+        o.source?.id === complete.source.id &&
+        o.data?.runId === complete.data.runId,
     );
+    // Conflicting copies of the one submission: unknown, not whichever came first.
+    if (
+      !submitted.length ||
+      new Set(submitted.map((o) => JSON.stringify(o.data))).size !== 1
+    )
+      return null;
+    const s = submitted[0].data;
+    if (
+      s.result !== "passed" ||
+      !Number.isSafeInteger(s.total) ||
+      s.total <= 0 ||
+      s.passed !== s.total ||
+      !Array.isArray(s.rules) ||
+      s.rules.length ||
+      s.codeArtifactId !== complete.data.codeArtifactId ||
+      !Number.isSafeInteger(s.revision)
+    )
+      return null;
     const copies = values.filter(
       (o) =>
         o.type === "artifact.code-revision" &&
-        o.artifactId === submitted?.data.codeArtifactId,
+        o.artifactId === s.codeArtifactId,
     );
     if (
       !copies.length ||
-      new Set(copies.map((a) => JSON.stringify(a))).size !== 1
+      new Set(copies.map((a) => JSON.stringify(a))).size !== 1 ||
+      copies[0].revision !== s.revision
     )
       return null;
     return codeLength(copies[0], complete.participantId);

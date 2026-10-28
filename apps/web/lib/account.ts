@@ -2,6 +2,7 @@
  * The account as it exists so far: a profile in this browser's storage, and a
  * cookie that stands in for a session. Browser-only; the server sees just the cookie.
  */
+import { PRIVACY_SAVE } from "./comparison-privacy-controller";
 import { notifyPrivateBoundary } from "./private-boundary";
 import { openPracticeStore } from "../../../packages/browser/practice-store";
 import { eraseUploaded, requestAccess } from "./ingest";
@@ -61,6 +62,9 @@ export function saveProfile(
     new Date().toISOString(),
   );
   write(next);
+  // Age decides comparison eligibility: setting, changing or clearing it asks settings to sync.
+  if (stored.profile.age !== next.profile.age)
+    window.dispatchEvent(new Event(PRIVACY_SAVE));
   return next;
 }
 
@@ -101,7 +105,10 @@ export function guessLanguage(language: LanguageId): Profile {
 
 export function setStealth(stealth: boolean) {
   const stored = readProfile();
-  if (stored) write({ ...stored, stealth });
+  if (stored) {
+    write({ ...stored, stealth });
+    window.dispatchEvent(new Event(PRIVACY_SAVE));
+  }
 }
 
 /**

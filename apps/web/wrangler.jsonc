@@ -13,6 +13,8 @@
     "CATALOG_MODE": "managed",
     "ADMIN_ACCESS_ISSUER": "https://elei.cloudflareaccess.com",
     "ADMIN_ACCESS_AUD": "147a7760861e051b94b0c5035288fdddcb301afa47d7973527127deeda3e2c4e",
+    // ENG-376: human comparisons, built on demand into the private CONTENT cache (≤1 hour).
+    "HUMAN_SUMMARY_CACHE_ENABLED": "true",
   },
   "d1_databases": [
     {
@@ -29,5 +31,7 @@
     { "binding": "WORKER_SELF_REFERENCE", "service": "muscle-memory" },
     // ENG-340: owner-approved verification-only RPC; SQL credential stays in web.
     { "binding": "PARTICIPANT_OWNER", "service": "muscle-memory-ingest", "entrypoint": "ParticipantOwner" },
+    // ENG-376: owner-approved bounded eligibility checks (check ≤100 IDs, generation, authorize); no storage access.
+    { "binding": "COMPARISON_ELIGIBILITY", "service": "muscle-memory-ingest", "entrypoint": "ComparisonEligibility" },
   ],
 }

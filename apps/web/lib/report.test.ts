@@ -569,10 +569,12 @@ test("still to discover lists every supported question not yet answered, with it
   assert.ok(empty.discover.every((d) => d.action === null), "the start link above is the step; no extra links");
   const needs = empty.discover.map((d) => `${d.question} ${d.need}`).join(" ");
   assert.doesNotMatch(needs, /unlock|play more|model|other players|cohort|percentile/i, "never promises what practice can't provide");
-  // Each comparison's real prerequisite, never a blanket "models aren't comparable".
-  assert.match(empty.discoverNote!, /^Not compared yet\. Other players: .*privacy controls still under review.*enough comparable players/);
-  assert.match(empty.discoverNote!, /AI models: their recorded submissions don't have to pass the examples first.*recorded the same way on the same challenge version\.$/);
-  assert.doesNotMatch(empty.discoverNote!, /never|can't be compared|not comparable|latency|faster|smarter/i);
+  // Off by default: each comparison's real prerequisite, never a blanket "models aren't comparable".
+  assert.deepEqual(empty.comparisons, []);
+  const notes = empty.comparisonNotes.map((n) => n.text);
+  assert.match(notes[0], /^Other players: .*privacy controls still under review.*enough comparable players/);
+  assert.match(notes[1], /^AI models: .*isn't switched on yet\.$/);
+  assert.doesNotMatch(notes.join(" "), /never|can't be compared|not comparable|latency|faster|smarter/i);
 });
 
 test("answered questions are never listed; a missing one names a specific comparable challenge", () => {

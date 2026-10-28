@@ -30,7 +30,10 @@ export default async function SettingsCommandPage({ params, searchParams }: Prop
   const [command, question, ...rest] = path;
   // Only known pages to return to (?from=stats), never an address from the URL.
   const { from } = await searchParams;
-  const back = from === "stats" && command === "profile" ? "stats" : undefined;
+  const back =
+    command === "profile" && (from === "stats" || from === "stats-comparisons")
+      ? from
+      : undefined;
   if (!isCommand(command) || rest.length) notFound();
   if (
     question !== undefined &&

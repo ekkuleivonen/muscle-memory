@@ -8,6 +8,7 @@ import { randomId } from "./random-id";
 import type { StoredRecord } from "../domain/records";
 import type { CaptureSink, WriteOutcome } from "../capture/recorder";
 import { compactable } from "./compaction";
+import { solvedLength } from "../model-runs/comparison";
 import {
   deriveAttempts,
   type AttemptSummary,
@@ -405,6 +406,64 @@ export class PracticeStore implements CaptureSink {
       tx.oncomplete = () => {
         signal?.removeEventListener("abort", stop);
         resolve({ settings, records, outbox: [] });
+      };
+      tx.onabort = () => {
+        signal?.removeEventListener("abort", stop);
+        reject(tx.error ?? new Error("Practice could not be read."));
+      };
+    });
+  }
+
+  /**
+   * The code length of each given solved attempt, in characters, from code still kept here:
+   * numbers only, so no code leaves this module. An attempt whose code was compacted away, or
+   * whose provenance doesn't agree (`solvedLength`), is simply absent. At most three per call.
+   */
+  solvedCodeLengths(
+    attempts: readonly { challenge: string; revision: string; attempt: string }[],
+    signal?: AbortSignal,
+  ): Promise<Record<string, number>> {
+    return new Promise((resolve, reject) => {
+      if (signal?.aborted) return reject(new Error("Practice read cancelled."));
+      if (attempts.length > 3)
+        return reject(new Error("At most three code lengths per read."));
+      const wanted = new Set(attempts.map((a) => a.attempt));
+      const tx = this.database.transaction(["settings", "records"], "readonly");
+      const records: StoredRecord[] = [];
+      let owner: string | null = null;
+      const stop = () => {
+        try {
+          tx.abort();
+        } catch {}
+      };
+      signal?.addEventListener("abort", stop, { once: true });
+      const participant = tx.objectStore("settings").get("participantId");
+      participant.onsuccess = () => {
+        if (typeof participant.result !== "string") return;
+        owner = participant.result;
+        const cursor = tx.objectStore("records").openCursor();
+        cursor.onsuccess = () => {
+          const at = cursor.result;
+          if (!at) return;
+          const r = at.value as StoredRecord;
+          if (r.participantId === owner) {
+            if (r.kind === "artifact") records.push(r);
+            else
+              try {
+                if (wanted.has(JSON.parse(r.payload).attemptId)) records.push(r);
+              } catch {}
+          }
+          at.continue();
+        };
+      };
+      tx.oncomplete = () => {
+        signal?.removeEventListener("abort", stop);
+        const out: Record<string, number> = {};
+        for (const a of attempts) {
+          const n = solvedLength(records, a.challenge, a.revision, a.attempt);
+          if (n !== null && n > 0) out[a.attempt] = n;
+        }
+        resolve(out);
       };
       tx.onabort = () => {
         signal?.removeEventListener("abort", stop);

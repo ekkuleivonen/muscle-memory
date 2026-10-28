@@ -365,7 +365,7 @@ for (const device of DEVICES) {
     assert.doesNotMatch(body, /Mostly|faster|improv|You're getting/);
     assert.doesNotMatch(body, FORBIDDEN);
     assert.equal(await page.locator(".report-question .report-fyi:not(:has(a[href^='/settings/profile/languages']))").count(), 0, "no comparison in any answer (only the edit-languages link)");
-    assert.match(body, /Not compared yet\. Other players: [\s\S]*AI models: /, "only the one line saying what each comparison waits on");
+    assert.match(body, /Other players: comparing with them waits on privacy controls[\s\S]*AI models: .*isn't switched on yet\./, "off by default: what each comparison waits on");
     // A ring for languages (each challenge in one slice), a split bar for usual and other, marks for confidence.
     assert.match((await page.locator("#q-languages .report-pie").getAttribute("aria-label"))!, /^Challenges worked on, by language: JavaScript 5 solved; Python 1 solved\.$/);
     assert.match((await page.locator("#q-familiarity .report-split").getAttribute("aria-label"))!, /Usual languages 5 challenges; Other languages 1 challenge/);
