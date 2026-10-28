@@ -154,7 +154,7 @@
   --pane-border: var(--line-strong);
   --radius: 0;
   position: fixed;
-  inset: 0 0 32px;
+  inset: 0 0 var(--t-bar-h);
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   gap: 4px;
@@ -446,13 +446,14 @@
     display: none;
   }
 }
-/* Narrow windows: the panes stack and the page scrolls. */
-@media (max-width: 760px) {
+/* Narrow windows and phones held sideways: the panes stack and the page scrolls. */
+@media (max-width: 760px),
+  (hover: none) and (pointer: coarse) and (max-height: 500px) {
   .practice {
     position: static;
     display: block;
     min-height: 100dvh;
-    padding-bottom: 40px;
+    padding-bottom: calc(var(--t-bar-h) + 8px);
   }
   .practice-nav {
     display: flex;
@@ -496,6 +497,50 @@
   }
   .practice-challenge h1 {
     overflow-wrap: anywhere;
+  }
+}
+
+/*
+ * Desktop-first: on a phone (touch, and no room for code either way up) the challenge stays to
+ * read, with where to solve it on top, until the person chooses to solve here anyway. Tablets
+ * and narrow desktop windows keep the workspace.
+ */
+.practice-desktop-first {
+  display: none;
+}
+@media (hover: none) and (pointer: coarse) and (max-width: 600px),
+  (hover: none) and (pointer: coarse) and (max-height: 500px) {
+  .practice:not(.solve-here) .practice-desktop-first {
+    display: block;
+    margin-bottom: 16px;
+    padding: 4px 1.5ch;
+    border-left: 2px solid var(--accent);
+  }
+  .practice-desktop-first p {
+    margin: 0 0 8px;
+  }
+  .practice-desktop-first-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 2ch;
+  }
+  .practice-desktop-first-actions button {
+    min-height: 44px;
+  }
+  .practice:not(.solve-here)
+    :is(
+      .practice-nav,
+      .pane-splitter,
+      .practice-work,
+      .practice-results,
+      .tui-status
+    ) {
+    display: none;
+  }
+  /* Only the challenge shows: no empty grid tracks below it. The panes stay mounted. */
+  .practice:not(.solve-here) .tui-panes {
+    display: block;
   }
 }
 
