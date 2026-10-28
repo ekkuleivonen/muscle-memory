@@ -262,7 +262,7 @@ for (const device of DEVICES) {
 
   // A private boundary while the cohort reply is in flight: the late reply never shows.
   {
-    const { context, page } = await open(device, { age: "25-34", cohortDelay: 3000 });
+    const { context, page, asked } = await open(device, { age: "25-34", cohortDelay: 3000 });
     await report(page, "#q-iterate");
     await page.waitForTimeout(500);
     const inFlight = asked.length;
