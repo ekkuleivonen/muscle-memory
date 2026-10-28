@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { launchQuery } from "../packages/statistics/launch";
 import { announcedAt, asOf, at, attempt, fields, now, qaRevision, receipt, record, type Row } from "../packages/statistics/launch-fixtures";
 
-const scenarios: { name: string; events: Row[]; attempts: number }[] = [
+const scenarios: { name: string; events: Row[]; attempts: number; status?: "unavailable" }[] = [
   { name: "empty", events: [], attempts: 0 },
   { name: "exact boundary and after", events: [...attempt("exact", 0), ...attempt("after", 60, { from: "link" })], attempts: 2 },
   {
@@ -18,17 +18,36 @@ const scenarios: { name: string; events: Row[]; attempts: number }[] = [
     attempts: 0,
   },
   {
-    name: "missing, untrusted and conflicting starts",
-    events: [
-      record("practice.completed", "nostart", 10),
-      ...attempt("noorigin", 20, { from: null }),
-      ...(() => {
-        const a = attempt("conflict", 50);
-        return [...a, { ...a[0], payload: a[0].payload!.replace('"picker"', '"link"') }];
-      })(),
-      ...attempt("good", 60),
-    ],
+    name: "missing and untrusted starts",
+    events: [record("practice.completed", "nostart", 10), ...attempt("noorigin", 20, { from: null }), ...attempt("good", 60)],
     attempts: 1,
+  },
+  {
+    name: "a conflicting start makes the totals unavailable",
+    events: (() => {
+      const a = attempt("conflict", 50);
+      return [...a, { ...a[0], payload: a[0].payload!.replace('"picker"', '"link"') }, ...attempt("good", 60)];
+    })(),
+    attempts: 0,
+    status: "unavailable",
+  },
+  {
+    name: "a conflicting copy naming another attempt makes the totals unavailable",
+    events: (() => {
+      const a = attempt("c", 60);
+      return [...a, { ...a[5], attempt_id: "zzz", payload: "{}" }, ...attempt("ok", 90)];
+    })(),
+    attempts: 0,
+    status: "unavailable",
+  },
+  {
+    name: "a conflicting copy with another type makes the totals unavailable",
+    events: (() => {
+      const a = attempt("c", 60);
+      return [...a, { ...a[5], type: "site.viewed", payload: "{}" }, ...attempt("ok", 90)];
+    })(),
+    attempts: 0,
+    status: "unavailable",
   },
   {
     name: "synthetic QA, consent and duplicates",
@@ -52,14 +71,15 @@ const scenarios: { name: string; events: Row[]; attempts: number }[] = [
     attempts: 0,
   },
   {
-    name: "an ineligible conflicting copy still excludes its attempt",
+    name: "an ineligible conflicting copy makes the totals unavailable",
     events: (() => {
       const a = attempt("c", 60);
       const p = JSON.parse(a[3].payload!);
       p.termsVersion = null;
       return [...a, { ...a[3], payload: JSON.stringify(p) }, ...attempt("ok", 90)];
     })(),
-    attempts: 1,
+    attempts: 0,
+    status: "unavailable",
   },
   {
     name: "arbitrary origin is counted but never echoed",

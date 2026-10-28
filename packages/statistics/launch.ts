@@ -74,11 +74,14 @@ export function launchWindow(input: Record<string, unknown>, now = new Date()): 
 
 const COLUMNS = [
   "section",
+  // "ready", or "unavailable" when any record read has conflicting copies: then every launch figure is NULL.
+  "launch_status",
   // Included whole attempts: the launch cohort.
   "attempts", "browser_ids", "completed", "submitted_attempts", "submissions", "runs", "clock_ahead_starts",
   // Attempts with activity after the announcement that are not counted, by reason.
-  "prelaunch_resumed", "missing_start", "conflicting_attempts", "untrusted_start", "malformed_time",
-  // Records from the announcement to the as-of.
+  "prelaunch_resumed", "missing_start", "untrusted_start", "malformed_time",
+  // Records from the announcement to the as-of (coverage row); on the launch row, conflicting_records
+  // covers every record read, the lookback included.
   "observed_records", "duplicate_copies", "conflicting_records", "arrived_after_as_of", "synthetic_records",
   "ineligible_records", "latest_receipt",
 ] as const;
@@ -86,6 +89,21 @@ type Column = (typeof COLUMNS)[number];
 /** One UNION branch: the named columns, NULL for the rest, always in the same order. */
 const branch = (values: Partial<Record<Column, string>>, from: string) =>
   `SELECT ${COLUMNS.map((c) => `${values[c] ?? "NULL"} AS ${c}`).join(",\n  ")}\n${from}`;
+
+/** The launch row's figures, all over the one classified cohort. */
+const launch: Partial<Record<Column, string>> = {
+  attempts: "SUM(CASE WHEN cohort = 'included' THEN 1 ELSE 0 END)",
+  browser_ids: "COUNT(DISTINCT CASE WHEN cohort = 'included' THEN participant_id END)",
+  completed: "SUM(CASE WHEN cohort = 'included' THEN completed ELSE 0 END)",
+  submitted_attempts: "SUM(CASE WHEN cohort = 'included' AND submissions > 0 THEN 1 ELSE 0 END)",
+  submissions: "SUM(CASE WHEN cohort = 'included' THEN submissions ELSE 0 END)",
+  runs: "SUM(CASE WHEN cohort = 'included' THEN runs ELSE 0 END)",
+  clock_ahead_starts: "SUM(CASE WHEN cohort = 'included' THEN clock_ahead ELSE 0 END)",
+  prelaunch_resumed: "SUM(CASE WHEN cohort = 'prelaunch' THEN 1 ELSE 0 END)",
+  missing_start: "SUM(CASE WHEN cohort = 'missing-start' THEN 1 ELSE 0 END)",
+  untrusted_start: "SUM(CASE WHEN cohort = 'untrusted-start' THEN 1 ELSE 0 END)",
+  malformed_time: "SUM(CASE WHEN cohort = 'malformed-time' THEN 1 ELSE 0 END)",
+};
 
 /**
  * One fixed SELECT over `default.events`, generated for the workbench. Only validated instants,
@@ -148,18 +166,20 @@ WITH record_groups AS (
     CASE WHEN regexp_like(occurred_at, ${CANONICAL}) THEN 0 ELSE 1 END AS malformed
   FROM record_groups
 ), practice AS (
-  -- Every practice record of a non-synthetic attempt, eligible or not, so a conflicting or
-  -- malformed record marks its attempt even when that record itself is ineligible. Only
-  -- eligible records (ok = 1) feed any figure.
-  SELECT *, eligible AS ok, json_get_json(payload, 'data') AS data,
+  -- Every record received before the as-of, of any type, eligible or not. Conflicting copies can
+  -- disagree on the type, attempt or challenge itself, so no attribution of a conflict can be
+  -- trusted: any conflict makes the whole report unavailable. Only eligible, non-synthetic
+  -- records (ok = 1) feed any figure.
+  SELECT *, CASE WHEN eligible = 1 AND synthetic = 0 THEN 1 ELSE 0 END AS ok,
+    json_get_json(payload, 'data') AS data,
     json_get_str(json_get_json(payload, 'data'), 'runId') AS run_id,
     json_get_str(json_get_json(payload, 'data'), 'status') AS run_status
-  FROM checked WHERE copies > 0 AND synthetic = 0 AND type LIKE 'practice.%'
+  FROM checked WHERE copies > 0
 ), attempts AS (
   SELECT participant_id, attempt_id, challenge, challenge_revision,
     SUM(ok) AS eligible_records,
     SUM(CASE WHEN variants > 1 THEN 1 ELSE 0 END) AS conflicts,
-    SUM(malformed) AS malformed_times,
+    SUM(CASE WHEN synthetic = 0 AND type LIKE 'practice.%' THEN malformed ELSE 0 END) AS malformed_times,
     MIN(CASE WHEN ok = 1 AND type = 'practice.started' THEN occurred_at END) AS started,
     MIN(CASE WHEN ok = 1 AND type = 'practice.started' THEN received_at END) AS start_received,
     SUM(CASE WHEN ok = 1 AND variants = 1 AND type = 'practice.started' THEN 1 ELSE 0 END) AS start_records,
@@ -175,13 +195,13 @@ WITH record_groups AS (
   -- The cohort, decided once. A start before the announcement (by the device's clock or by when it
   -- reached us) excludes the whole attempt, however much of it happened later.
   SELECT *, CASE
+    WHEN eligible_records = 0 OR active_after = 0 THEN 'inactive'
     WHEN started IS NOT NULL AND (started < ${B} OR start_received < ${B}) THEN 'prelaunch'
-    WHEN conflicts > 0 THEN 'conflicting'
     WHEN malformed_times > 0 THEN 'malformed-time'
     WHEN start_records = 0 THEN 'missing-start'
     WHEN start_records > 1 OR starts_without_origin > 0 THEN 'untrusted-start'
     ELSE 'included' END AS cohort
-  FROM attempts WHERE eligible_records > 0 AND active_after = 1
+  FROM attempts
 )
 ${branch(
   {
@@ -200,18 +220,11 @@ UNION ALL
 ${branch(
   {
     section: "'launch'",
-    attempts: "SUM(CASE WHEN cohort = 'included' THEN 1 ELSE 0 END)",
-    browser_ids: "COUNT(DISTINCT CASE WHEN cohort = 'included' THEN participant_id END)",
-    completed: "SUM(CASE WHEN cohort = 'included' THEN completed ELSE 0 END)",
-    submitted_attempts: "SUM(CASE WHEN cohort = 'included' AND submissions > 0 THEN 1 ELSE 0 END)",
-    submissions: "SUM(CASE WHEN cohort = 'included' THEN submissions ELSE 0 END)",
-    runs: "SUM(CASE WHEN cohort = 'included' THEN runs ELSE 0 END)",
-    clock_ahead_starts: "SUM(CASE WHEN cohort = 'included' THEN clock_ahead ELSE 0 END)",
-    prelaunch_resumed: "SUM(CASE WHEN cohort = 'prelaunch' THEN 1 ELSE 0 END)",
-    missing_start: "SUM(CASE WHEN cohort = 'missing-start' THEN 1 ELSE 0 END)",
-    conflicting_attempts: "SUM(CASE WHEN cohort = 'conflicting' THEN 1 ELSE 0 END)",
-    untrusted_start: "SUM(CASE WHEN cohort = 'untrusted-start' THEN 1 ELSE 0 END)",
-    malformed_time: "SUM(CASE WHEN cohort = 'malformed-time' THEN 1 ELSE 0 END)",
+    launch_status: "CASE WHEN MAX(conflicts) > 0 THEN 'unavailable' ELSE 'ready' END",
+    conflicting_records: "COALESCE(SUM(conflicts), 0)",
+    ...Object.fromEntries(
+      Object.entries(launch).map(([column, figure]) => [column, `CASE WHEN MAX(conflicts) > 0 THEN NULL ELSE ${figure} END`]),
+    ),
   },
   "FROM classified",
 )}

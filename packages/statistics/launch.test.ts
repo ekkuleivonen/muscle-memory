@@ -121,19 +121,13 @@ test("a missing or unknowable start excludes the attempt and is reported, never 
     ...attempt("noorigin", 30, { from: null }),
     ...attempt("twice", 40),
     record("practice.started", "twice", 41, { data: { from: "again" } }),
-    // A conflicting copy anywhere in the attempt makes it not whole.
-    ...(() => {
-      const a = attempt("conflict", 50);
-      return [...a, { ...a[3], payload: a[3].payload!.replace('"failed"', '"passed"') }];
-    })(),
     ...attempt("good", 60),
   ];
   const r = run(rows);
   assert.equal(r.launch.attempts, 1);
   assert.equal(r.launch.missing_start, 2);
   assert.equal(r.launch.untrusted_start, 2);
-  assert.equal(r.launch.conflicting_attempts, 1);
-  assert.equal(r.coverage.conflicting_records, 1);
+  assert.equal(r.launch.launch_status, "ready");
 });
 
 test("synthetic QA revisions and records without person consent are excluded and counted", () => {
@@ -212,29 +206,67 @@ test("output is aggregates only", () => {
 const base = () => attempt("edge", 60, { browser: "edge-browser" });
 const clean = () => run([...base(), ...attempt("other", 90)]);
 
-test("a conflicting copy excludes its attempt even when that copy is itself ineligible", () => {
-  const mutations: [string, (p: Record<string, unknown>) => void][] = [
+const FIGURES = [
+  "attempts", "browser_ids", "completed", "submitted_attempts", "submissions", "runs", "clock_ahead_starts",
+  "prelaunch_resumed", "missing_start", "untrusted_start", "malformed_time",
+] as const;
+/** No success-looking totals: every launch figure is NULL and the row says unavailable. */
+function unavailable(r: ReturnType<typeof run>, label: string) {
+  assert.equal(r.launch.launch_status, "unavailable", label);
+  for (const f of FIGURES) assert.equal(r.launch[f], null, `${f}: ${label}`);
+  assert.ok(Number(r.launch.conflicting_records) >= 1, label);
+}
+
+test("any conflicting copy received before the as-of makes the launch totals unavailable", () => {
+  const before = clean();
+  assert.equal(before.launch.launch_status, "ready");
+  assert.equal(before.launch.attempts, 2);
+  assert.equal(before.launch.conflicting_records, 0);
+  // Payload conflicts, including copies that are themselves ineligible.
+  const payloads: [string, (p: Record<string, unknown>) => void][] = [
     ["no terms", (p) => (p.termsVersion = null)],
     ["empty terms", (p) => (p.termsVersion = "")],
     ["model actor", (p) => (p.actor = "model")],
     ["no actor", (p) => delete p.actor],
     ["other data", (p) => ((p.data as Record<string, unknown>).result = "passed")],
-    ["not JSON object", () => {}],
   ];
-  const before = clean();
-  assert.equal(before.launch.attempts, 2);
-  for (const target of [0, 3, 5]) // the start, a Submit, the completion
-    for (const [name, mutate] of mutations) {
+  // Envelope conflicts: the copy disagrees on what the record even belongs to.
+  const envelopes: [string, Partial<Row>][] = [
+    ["other attempt", { attempt_id: "zzz" }],
+    ["site type", { type: "site.viewed" }],
+    ["other attempt and site type", { attempt_id: "zzz", type: "site.viewed" }],
+    ["no attempt", { attempt_id: null }],
+    ["other browser", { participant_id: "zzz" }],
+    ["other challenge", { challenge: "ZZ-999" }],
+    ["synthetic revision", { challenge: "PY-900", challenge_revision: qaRevision }],
+    ["earlier time", { occurred_at: at(-600) }],
+    ["malformed time", { occurred_at: "2026-11-02T16:00:00.000+02:00" }],
+  ];
+  for (const target of [0, 3, 5]) { // the start, a Submit, the completion
+    for (const [name, mutate] of payloads) {
       const rows = base();
       const p = JSON.parse(rows[target].payload!);
       mutate(p);
-      const payload = name === "not JSON object" ? "[]" : JSON.stringify(p);
-      const r = run([...rows, { ...rows[target], payload }, ...attempt("other", 90)]);
-      const label = `${name} on record ${target}`;
-      assert.equal(r.launch.attempts, 1, label);
-      assert.equal(r.launch.conflicting_attempts, 1, label);
-      assert.equal(r.coverage.conflicting_records, 1, label);
+      unavailable(run([...rows, { ...rows[target], payload: JSON.stringify(p) }, ...attempt("other", 90)]), `${name} on ${target}`);
     }
+    const own = base();
+    unavailable(run([...own, { ...own[target], payload: "[]" }, ...attempt("other", 90)]), `non-object on ${target}`);
+    for (const [name, change] of envelopes) {
+      const rows = base();
+      const copy = { ...rows[target], ...change, payload: rows[target].payload!.replace("2026-10-27.2", "2026-10-27.3") };
+      unavailable(run([...rows, copy, ...attempt("other", 90)]), `${name} on ${target}`);
+    }
+  }
+  // A conflict anywhere read counts: in a synthetic QA attempt, or before the announcement.
+  const qa = attempt("qa", 30, { challenge: "PY-900", revision: qaRevision });
+  unavailable(run([...base(), ...qa, { ...qa[3], payload: "{}" }]), "synthetic QA record");
+  const old = attempt("old", -600);
+  unavailable(run([...base(), ...old, { ...old[3], payload: "{}" }]), "prelaunch record");
+  // Coverage stays reported while the totals are unavailable.
+  const rows = base();
+  const r = run([...rows, { ...rows[5], attempt_id: "zzz", payload: "{}" }]);
+  assert.equal(r.coverage.conflicting_records, 1);
+  assert.equal(r.coverage.observed_records, 5);
 });
 
 test("start origins are never echoed: no breakdown by data.from", () => {

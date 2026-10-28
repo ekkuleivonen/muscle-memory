@@ -71,5 +71,12 @@ for case in cases:
     launch = [r for r in actual if r["section"] == "launch"]
     assert not any("script" in json.dumps(r) for r in actual), (case["name"], actual)
     assert len(launch) == 1 and int(launch[0]["attempts"] or 0) == case["attempts"], (case["name"], launch)
+    status = case.get("status", "ready")
+    assert launch[0]["launch_status"] == status, (case["name"], launch)
+    if status == "unavailable":
+        figures = ["attempts", "browser_ids", "completed", "submitted_attempts", "submissions", "runs",
+                   "clock_ahead_starts", "prelaunch_resumed", "missing_start", "untrusted_start", "malformed_time"]
+        assert all(launch[0][f] is None for f in figures), (case["name"], launch)
+        assert int(launch[0]["conflicting_records"]) >= 1, (case["name"], launch)
     sql.close()
 print(json.dumps({"passed": len(cases)}))
