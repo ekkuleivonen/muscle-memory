@@ -5,7 +5,7 @@ import { cohort } from "../../../../../lib/cohort-server";
 import { CHALLENGE_KEY, REVISION } from "../../../../../../../packages/domain/records";
 import { engineFor } from "../../../../../../../packages/runner/engines";
 export const dynamic = "force-dynamic";
-/** Suppressed aggregates for one public revision. No participant, filter or SQL input. Disabled for now. */
+/** Suppressed aggregates for one public revision, built on demand (lib/cohort-server.ts). No participant, filter or SQL input. Off while COHORTS_ENABLED is false. */
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ key: string; revision: string }> },

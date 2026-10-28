@@ -412,9 +412,10 @@ export async function refreshHumanSummaries(
  * "no comparison yet" at once, and at most one bounded build of this one revision is started, in
  * the background (`schedule`, the request's waitUntil), for later requests to serve.
  *
- * At most one build per revision per clock hour, across all isolates: the build first claims a
- * per-revision lease by an atomic conditional write in the private snapshot area; whoever loses
- * the claim builds nothing. A failed build is not retried until the next hour. One build is one
+ * Builds are deduplicated across all isolates by a per-revision lease, claimed by an atomic
+ * conditional write in the private snapshot area: one build per revision per (hour, privacy
+ * generation), at most MAX_BUILDS_PER_REVISION_HOUR in an hour; whoever loses the claim builds
+ * nothing. A failed build is not retried for that generation within the hour. One build is one
  * D1 read, one source get, one fixed member query (15 s, 1 MiB, 1,000 rows), one generation read,
  * at most 2 × 5 member-check batches and one snapshot write, all within BUILD_ON_REQUEST_MS.
  */
@@ -451,34 +452,57 @@ export async function humanSummaryOnRequest(
 }
 
 /**
- * Claims this revision's lease for `hour`; true only for the one claimant. A lease already held
- * for this hour or a later one (a delayed request from an earlier hour) is never overwritten, and an
+ * Builds of one revision allowed per clock hour. Every acknowledged privacy change anywhere advances
+ * the one generation and makes every snapshot unservable; a rebuild for the new generation may run
+ * within the hour, but never more than this many builds of a revision in one hour.
+ */
+export const MAX_BUILDS_PER_REVISION_HOUR = 3;
+
+/**
+ * Claims this revision's lease for (`hour`, `generation`); true only for the one claimant. A lease
+ * held for a later hour (a delayed earlier-hour request) or for this hour and this generation is
+ * never overwritten; within an hour a new generation may claim it until the build limit. An
  * unreadable lease fails closed. `guard` runs before each I/O stage.
  */
 export async function claimLease(
   bucket: SummaryBucket,
   key: string,
   hour: number,
+  generation: string,
   guard: () => void = () => {},
 ) {
-  if (!Number.isSafeInteger(hour) || hour < 0) return false;
+  if (!Number.isSafeInteger(hour) || hour < 0 || !/^[a-f0-9-]{36}$/.test(generation)) return false;
   guard();
   const held = await bucket.get(key);
+  let builds = 1;
   if (held) {
     if (!held.etag || held.size > 256) return false;
     guard();
     const text = await held.text();
     guard();
-    let stored: unknown;
+    let stored: { hour?: unknown; generation?: unknown; builds?: unknown };
     try {
-      stored = (JSON.parse(text) as { hour?: unknown }).hour;
+      stored = JSON.parse(text);
     } catch {
       return false;
     }
-    if (!Number.isSafeInteger(stored) || (stored as number) < 0 || (stored as number) >= hour) return false;
+    const at = stored?.hour;
+    if (!Number.isSafeInteger(at) || (at as number) < 0 || (at as number) > hour) return false;
+    if (at === hour) {
+      const count = stored.builds;
+      if (
+        typeof stored.generation !== "string" ||
+        !Number.isSafeInteger(count) ||
+        (count as number) < 1 ||
+        stored.generation === generation ||
+        (count as number) >= MAX_BUILDS_PER_REVISION_HOUR
+      )
+        return false;
+      builds = (count as number) + 1;
+    }
   }
   guard();
-  const written = await bucket.put(key, JSON.stringify({ hour }), {
+  const written = await bucket.put(key, JSON.stringify({ hour, generation, builds }), {
     onlyIf: held ? { etagMatches: held.etag! } : { etagDoesNotMatch: "*" },
   });
   return written !== null && written !== undefined;
@@ -511,13 +535,7 @@ async function buildOnRequest(
   };
   try {
     const hour = Math.floor(now.getTime() / 3_600_000);
-    if (!(await stage(() => claimLease(env.CONTENT, leaseKey(challenge, revision), hour, guard))))
-      return false;
-    const spec = await stage(() =>
-      readCohortBuildSpec(env.CATALOG_DB, env.CONTENT, challenge, revision, now, guard),
-    );
-    // The setup this request asked about must be the revision's own; anything else builds nothing.
-    if (!spec || JSON.stringify(spec.runtime) !== JSON.stringify(runtime)) return false;
+    // The generation the build will be tagged with, read before the lease and every member check.
     const control: ComparisonControl = {
       generation: () => stage(() => env.COMPARISON_ELIGIBILITY.generation()),
       check: (ids) => stage(() => env.COMPARISON_ELIGIBILITY.check(ids)),
@@ -525,6 +543,13 @@ async function buildOnRequest(
     };
     const generation = await control.generation();
     if (typeof generation !== "string" || !/^[a-f0-9-]{36}$/.test(generation)) return false;
+    if (!(await stage(() => claimLease(env.CONTENT, leaseKey(challenge, revision), hour, generation, guard))))
+      return false;
+    const spec = await stage(() =>
+      readCohortBuildSpec(env.CATALOG_DB, env.CONTENT, challenge, revision, now, guard),
+    );
+    // The setup this request asked about must be the revision's own; anything else builds nothing.
+    if (!spec || JSON.stringify(spec.runtime) !== JSON.stringify(runtime)) return false;
     const snapshot = await stage(() =>
       buildHumanSnapshot(
         spec,

@@ -16,7 +16,7 @@ Stats shows at most one human line from these results, through the typed adapter
 
 ## Private hourly interface and safe results
 
-`precomputeCohort()` and `buildHumanSnapshot(spec, query, control)` expose a disabled fixed-query builder seam for the separately owned scheduler. The private artifact is aggregate-only: `{version,challenge,revision,window,computedAt,expiresAt,generation,groups}`. Member IDs exist only transiently inside trusted build code and are not cached as eligibility authority. Web's existing server-only `ADMIN_STATS_SQL_TOKEN` is reused; no arbitrary caller SQL or new credential is added.
+`buildHumanSnapshot(spec, query, control)` is the fixed-query builder, used on demand by `humanSummaryOnRequest` (see `comparison-refresh.md`). The private artifact is aggregate-only: `{version,challenge,revision,window,computedAt,expiresAt,generation,groups}`. Member IDs exist only transiently inside trusted build code and are not cached as eligibility authority. Web's existing server-only `ADMIN_STATS_SQL_TOKEN` is reused; no arbitrary caller SQL or new credential is added.
 
 `serveHumanSnapshot(raw, spec, control)` verifies the key/version/runtime/window/one-hour expiry, projects allowlisted aggregate fields and conditionally authorizes the same generation. Missing, expired, malformed, changed-generation or CONTROL failure omits the FYI with no stale fallback. Privacy validity is checked on every serve, independently of precomputation cadence. The cache owner handles persistence, triggers, cost review and serving integration. This PR adds none of that machinery and does not edit the separate model-cache implementation.
 

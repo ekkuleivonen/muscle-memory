@@ -24,20 +24,38 @@ function bucket() {
   };
 }
 
+const G1 = "11111111-1111-1111-1111-111111111111",
+  G2 = "22222222-2222-2222-2222-222222222222",
+  G3 = "33333333-3333-3333-3333-333333333333",
+  G4 = "44444444-4444-4444-4444-444444444444";
+
 test("a lease is claimed once per hour and never overwritten by an earlier hour's late request", async () => {
   const b = bucket();
   const claims = [];
-  for (const hour of [101, 100, 101]) claims.push(await claimLease(b, "lease", hour));
+  for (const hour of [101, 100, 101]) claims.push(await claimLease(b, "lease", hour, G1));
   assert.deepEqual(claims, [true, false, false]);
   assert.equal(JSON.parse(b.objects.get("lease")!.text).hour, 101, "the newer hour stays");
-  assert.equal(await claimLease(b, "lease", 102), true, "a later hour claims it");
-  // An unreadable, out-of-range or non-integer stored hour fails closed; so does a bad request hour.
-  for (const stored of ["not json", '{"hour":"101"}', '{"hour":1.5}', '{"hour":-1}', "{}"]) {
+  assert.equal(await claimLease(b, "lease", 100, G2), false, "an earlier hour never, even with a new generation");
+  assert.equal(await claimLease(b, "lease", 102, G1), true, "a later hour claims it");
+  // An unreadable, out-of-range or non-integer stored hour fails closed; so does a bad request.
+  for (const stored of ["not json", '{"hour":"101"}', '{"hour":1.5}', '{"hour":-1}', "{}", '{"hour":200}', '{"hour":200,"generation":1,"builds":1}']) {
     b.objects.set("bad", { text: stored, etag: "x" });
-    assert.equal(await claimLease(b, "bad", 200), false, stored);
+    assert.equal(await claimLease(b, "bad", 200, G2), false, stored);
   }
-  assert.equal(await claimLease(b, "other", -1), false);
-  assert.equal(await claimLease(b, "other", 1.5), false);
+  assert.equal(await claimLease(b, "other", -1, G1), false);
+  assert.equal(await claimLease(b, "other", 1.5, G1), false);
+  assert.equal(await claimLease(b, "other", 1, "not-a-generation"), false);
+});
+
+test("within an hour, a new privacy generation may rebuild, at most three builds in all", async () => {
+  const b = bucket();
+  assert.equal(await claimLease(b, "lease", 300, G1), true);
+  assert.equal(await claimLease(b, "lease", 300, G1), false, "same generation: no second build");
+  assert.equal(await claimLease(b, "lease", 300, G2), true, "after a privacy change: one rebuild");
+  assert.equal(await claimLease(b, "lease", 300, G3), true, "third build");
+  assert.equal(await claimLease(b, "lease", 300, G4), false, "never a fourth in the hour");
+  assert.equal(JSON.parse(b.objects.get("lease")!.text).builds, 3);
+  assert.equal(await claimLease(b, "lease", 301, G4), true, "a new hour starts again");
 });
 
 const deferred = <T>() => {
@@ -52,7 +70,7 @@ const runtime = { id: "javascript", version: "synthetic" };
 function stalled(stage: "lease-get" | "lease-text" | "d1" | "source-get" | "source-text") {
   const calls: string[] = [];
   const hold = deferred<unknown>();
-  const leaseText = '{"hour":1}';
+  const leaseText = '{"hour":1,"generation":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","builds":1}';
   const source = { size: 10, etag: "s", text: () => (calls.push("source-text"), stage === "source-text" ? hold.promise : Promise.resolve("{}")) };
   const env: HumanSummaryEnvironment = {
     HUMAN_SUMMARY_CACHE_ENABLED: "true",
@@ -125,5 +143,5 @@ for (const stage of ["lease-get", "lease-text", "d1", "source-get", "source-text
     );
     await tick();
     assert.deepEqual(s.calls, before, `no call after the timeout (issued I/O isn't cancelled, only never followed)`);
-    assert.ok(!s.calls.includes("sql") && !s.calls.includes("snapshot-put") && !s.calls.includes("generation"));
+    assert.ok(!s.calls.includes("sql") && !s.calls.includes("snapshot-put") && !s.calls.includes("check"));
   });

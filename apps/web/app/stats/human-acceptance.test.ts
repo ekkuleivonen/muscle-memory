@@ -156,6 +156,11 @@ test("fail closed: CONTROL exclusion, invalidation after a privacy change, and e
     const after = await f.request();
     assert.equal(after.read, null);
     assert.equal(stats(after.read).c.human.state, "omitted");
+    // ...but a rebuild for the new generation runs within the same hour, so the line comes back
+    // instead of the whole hour going dark after one player's privacy save.
+    assert.deepEqual(after.built, [true]);
+    assert.equal((await f.request()).read?.state, "ready");
+    assert.equal(f.queries, 2);
     // Older than an hour: not served; within the same hour no second build runs.
     const key = [...f.objects.keys()].find((k) => k.includes("/humans/") && !k.includes("/leases/"))!;
     const snap = JSON.parse(f.objects.get(key)!.text);
