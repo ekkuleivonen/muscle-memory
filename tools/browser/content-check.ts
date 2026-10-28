@@ -80,9 +80,9 @@ const failures: string[] = [];
 for (const { metadata, revision, private: secret } of challenges) {
   const { key } = metadata;
   const runs = await tab.evaluate(
-    async ({ requests }) => {
+    async (json) => {
       const outcomes = [];
-      for (const req of requests) {
+      for (const req of JSON.parse(json)) {
         const runner = new (window as any).MMRunner.Runner(
           (window as any).MMRunner.engineFor(req.language),
           document.getElementById("host"),
@@ -96,15 +96,14 @@ for (const { metadata, revision, private: secret } of challenges) {
       }
       return outcomes;
     },
-    {
-      requests: [
-        request(revision, secret.solution),
-        request(revision, secret.solution),
-        request(revision, revision.starter),
-        ...secret.alternatives.map((code) => request(revision, code)),
-        ...secret.wrong.map((code) => request(revision, code)),
-      ],
-    },
+    // As a JSON string: Playwright's argument serialization drops a "__proto__" key, which is valid case input.
+    JSON.stringify([
+      request(revision, secret.solution),
+      request(revision, secret.solution),
+      request(revision, revision.starter),
+      ...secret.alternatives.map((code) => request(revision, code)),
+      ...secret.wrong.map((code) => request(revision, code)),
+    ]),
   );
   const [first, second, start, ...others] = runs.map((outcome: any) => ({
     outcome,
