@@ -176,6 +176,16 @@ export function ReportBody({
     <>
       <header className="report-hero">
         <h1 className="t-doc-title">How you code</h1>
+        {report.takeaways.length > 0 && (
+          // The few strongest answers first, each leading to the answer it sums up.
+          <ul className="report-takeaways" aria-label="Takeaways">
+            {report.takeaways.map((t) => (
+              <li key={t.id}>
+                <a href={`#q-${t.id}`}>{t.text}</a>
+              </li>
+            ))}
+          </ul>
+        )}
         {status}
         {report.waiting && <p className="report-context">{report.waiting}</p>}
         {report.waiting && next}

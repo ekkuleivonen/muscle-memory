@@ -52,6 +52,33 @@
 .report-headline.is-lead {
   color: var(--t-accent);
 }
+.report-takeaways {
+  list-style: none;
+  padding: 0;
+  margin: 0.8em 0 1.2em;
+  max-width: 64ch;
+  display: grid;
+  gap: 0.4em;
+}
+.report-takeaways li {
+  display: grid;
+  grid-template-columns: 2ch 1fr;
+}
+.report-takeaways li::before {
+  content: "›";
+  color: var(--t-accent);
+  font-weight: 700;
+}
+.report-takeaways a {
+  color: var(--t-fg);
+  text-decoration: none;
+}
+.report-takeaways a:hover {
+  text-decoration: underline dotted;
+}
+.report-detail {
+  max-width: 64ch;
+}
 .report-context {
   max-width: 64ch;
   color: var(--t-fg);
@@ -116,33 +143,6 @@
   background: var(--t-err);
 }
 
-/* Habits */
-.report-split {
-  display: flex;
-  height: 30px;
-  margin: 1.6em 0 0.4em;
-  max-width: 72ch;
-  font-size: var(--text-sm, 13px);
-  font-weight: 700;
-}
-.report-split > span {
-  display: flex;
-  align-items: center;
-  padding: 0 1ch;
-  white-space: nowrap;
-  overflow: hidden;
-  flex-basis: 0;
-  transform-origin: left;
-}
-.report-split-small {
-  background: var(--t-accent);
-  color: var(--t-bg);
-}
-.report-split-large {
-  background: var(--t-bar);
-  border: 1px solid var(--t-accent);
-  color: var(--t-fg);
-}
 .report-caption {
   font-size: var(--text-sm, 13px);
 }
@@ -151,6 +151,10 @@
 .report-question {
   padding: 1.6em 0;
   border-top: 1px solid var(--t-line);
+}
+/* The section's padding is the gap; a trailing paragraph margin would double it. */
+.report-question > :last-child {
+  margin-bottom: 0;
 }
 .report-question .report-kicker {
   font: inherit;
@@ -191,8 +195,7 @@
 }
 /* Motion only for those who want it, and never in the way of reading. */
 @media (prefers-reduced-motion: no-preference) {
-  .report-fill,
-  .report-split > span {
+  .report-fill {
     animation: report-grow 600ms ease-out both;
   }
 }

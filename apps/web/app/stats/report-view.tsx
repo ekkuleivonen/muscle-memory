@@ -21,21 +21,6 @@ function VisualView({ visual, label }: { visual: Visual; label: string }) {
         <span className="t-ok">{visual.to}</span>
       </p>
     );
-  if (visual.kind === "split") {
-    const total = visual.parts.reduce((n, p) => n + p.value, 0) || 1;
-    return (
-      <>
-        <div className="report-split" role="img" aria-label={label}>
-          {visual.parts.map((p, i) => (
-            <span key={p.label} className={i ? "report-split-large" : "report-split-small"} style={{ flexGrow: p.value }} />
-          ))}
-        </div>
-        <p className="report-caption t-dim">
-          {visual.parts.map((p) => `${p.label} ${Math.round((p.value / total) * 100)}%`).join(" · ")}
-        </p>
-      </>
-    );
-  }
   const most = Math.max(1, ...visual.bars.map((b) => b.value));
   return (
     <div className="report-bars" role="list" aria-label={label}>
@@ -60,6 +45,7 @@ export function QuestionView({ q, children }: { q: Question; children?: React.Re
       </h3>
       <p className="report-headline">{q.answer}</p>
       <VisualView visual={q.visual} label={q.answer} />
+      {q.detail && <p className="report-detail">{q.detail}</p>}
       {q.note && <p className="report-note">{q.note}</p>}
       {q.fyi && <p className="report-fyi">{q.fyi}</p>}
       {children}

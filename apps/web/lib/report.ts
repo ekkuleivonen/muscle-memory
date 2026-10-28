@@ -1,8 +1,9 @@
 /**
- * The /stats report as a portrait (ENG-374, owner direction 27 October 2026): a few simple
- * questions about how you code, each answered only from evidence already recorded. A question the
- * evidence can't answer is left out, never filled with zeroes or explained. Comparisons are at most
- * one tiny FYI on the relevant answer. Pure and deterministic; see docs/developer-profile.md.
+ * The /stats report as a portrait (ENG-374, owner direction 27-28 October 2026): a few takeaways,
+ * then simple questions about how you code, each answered only from evidence already recorded. A
+ * question the evidence can't answer is left out, never filled with zeroes or explained. Small
+ * samples are described as what happened in them, never as a trait. Comparisons are at most one
+ * matched FYI on the relevant answer. Pure and deterministic; see docs/developer-profile.md.
  */
 import type { AttemptSummary } from "../../../packages/developer-profile/derive";
 import { receiptMatch, type ModelReceipt } from "../../../packages/model-runs/receipts";
@@ -10,12 +11,11 @@ import { defaultComparisons } from "../../../packages/model-runs/comparison";
 import { languageLabel, type ChallengeSummary } from "./challenges";
 import type { Profile } from "./profile";
 import type { Progress } from "./progress";
+import { nextProblem } from "./next-problem";
 
 export type Source = "device" | "uploaded";
 export type ReportAttempt = AttemptSummary & { source: Source };
 
-/** Wording cut-offs, not norms: they choose which true sentence answers a question. */
-export const FREQUENT_CHECKS = 3;
 /** Model results are read for at most this many of your solved challenges. */
 export const COMPARISON_TASKS = 3;
 /** Keystrokes per word for words per minute, the usual typing-test convention. */
@@ -24,6 +24,11 @@ export const KEYS_PER_WORD = 5;
 const TIMELINE_CAP = 200;
 /** Below this many code-character keystrokes a typing rate is too noisy to show. */
 export const MIN_TYPED_KEYS = 50;
+/** Wording cut-offs, not norms: later solves this much faster or slower read as a change. */
+export const FASTER = 0.8;
+export const SLOWER = 1.25;
+/** At most this many takeaways lead the report. */
+export const TAKEAWAYS = 3;
 
 /** One attempt per attempt/revision. A partial trace must not hide a verified completion. */
 export function mergeEvidence(
@@ -58,19 +63,33 @@ export function mergeEvidence(
 }
 
 export type Visual =
-  | { kind: "split"; parts: { label: string; value: number }[] }
   | { kind: "bars"; bars: { label: string; value: number; display: string }[] }
   | { kind: "number"; value: string; unit: string }
   | { kind: "turn"; from: string; to: string };
+export type QuestionId =
+  | "start"
+  | "progress"
+  | "iterate"
+  | "recovery"
+  | "confidence"
+  | "difficulty"
+  | "languages"
+  | "familiarity"
+  | "typing"
+  | "repeat";
 export interface Question {
-  id: "start" | "iterate" | "difficulty" | "languages" | "typing" | "rewrite" | "recovery" | "repeat" | "familiarity";
+  id: QuestionId;
   question: string;
   answer: string;
   visual: Visual;
+  /** One supporting fact, when it adds to the answer. */
+  detail: string | null;
   /** At most one short line a player needs to read the answer correctly. */
   note: string | null;
-  /** At most one tiny comparison on this answer. */
+  /** At most one tiny matched comparison on this answer. */
   fyi: string | null;
+  /** The answer in a few words, when it is strong enough to lead the report. */
+  takeaway: string | null;
 }
 export interface NextStep {
   label: string;
@@ -88,6 +107,8 @@ export interface ReportInput {
 export interface Report {
   /** Nothing started on this device or in uploaded history. */
   empty: boolean;
+  /** A few lines that lead the report, each pointing at the answer it summarizes. */
+  takeaways: { id: QuestionId; text: string }[];
   questions: Question[];
   /** A short line when something was started but no question can be answered yet. */
   waiting: string | null;
@@ -103,6 +124,9 @@ export interface Report {
   comparisonRevisions: { challenge: string; revision: string }[];
 }
 
+const WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
+const count = (n: number) => WORDS[n] ?? `${n}`;
+const and = (names: string[]) => (names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`);
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const median = (values: number[]) => {
   if (!values.length) return null;
@@ -118,6 +142,11 @@ export function duration(ms: number): string {
 }
 const clean = (a: AttemptSummary) => !a.issues.length;
 const num = (v: number | null): v is number => typeof v === "number" && Number.isFinite(v);
+const when = (a: AttemptSummary) => a.started ?? a.last;
+const chronological = <T extends AttemptSummary>(list: readonly T[]) =>
+  [...list].sort((x, y) => when(x).localeCompare(when(y)) || x.attempt.localeCompare(y.attempt));
+/** Active time, explained once on the first answer that uses it. */
+const ACTIVE_NOTE = "Active work counts time spent typing, editing or selecting; pauses over 30 s are left out.";
 
 const SUBMITTED = /^(passed|failed|errored|cancelled): (\d+)\/(\d+) checks; (\d+) static rules$/;
 export function submissions(a: AttemptSummary) {
@@ -129,89 +158,27 @@ export function submissions(a: AttemptSummary) {
 
 /**
  * Checks and submissions up to the first fully passing submission, in recorded order: what a
- * solve took, not what came after it. Unknown when the attempt isn't solved, or when its
- * checkpoint list was cut to the latest 200 and could be missing earlier checks.
+ * solve took, not what came after it, and whether the examples ran before the first submission.
+ * Unknown when the attempt isn't solved, or when its checkpoint list was cut to the latest 200
+ * and could be missing earlier checks.
  */
-export function toSolve(a: AttemptSummary): { checks: number; submissions: number } | null {
+export function toSolve(a: AttemptSummary): { checks: number; submissions: number; examplesFirst: boolean } | null {
   if (!a.completed || a.timeline.length >= TIMELINE_CAP) return null;
   let checks = 0,
-    count = 0;
+    count = 0,
+    examplesFirst = false;
   for (const t of a.timeline) {
-    if (t.label.startsWith("examples: ")) checks++;
+    if (t.label.startsWith("examples: ")) {
+      checks++;
+      if (!count) examplesFirst = true;
+    }
     const m = SUBMITTED.exec(t.label);
     if (!m) continue;
     checks++;
     count++;
-    if (m[1] === "passed" && +m[2] === +m[3] && +m[4] === 0) return { checks, submissions: count };
+    if (m[1] === "passed" && +m[2] === +m[3] && +m[4] === 0) return { checks, submissions: count, examplesFirst };
   }
   return null;
-}
-
-/**
- * Time from the start to the first edit, on one clock (same page session), over clean solves.
- * Nothing after it: the recorded session span includes pauses, runner waits and time after a
- * solve, so it is not implementation time. Never called reading or thinking.
- */
-function start(solved: ReportAttempt[]): Question | null {
-  const firsts = solved.filter((a) => num(a.values.firstEdit)).map((a) => a.values.firstEdit!);
-  if (!firsts.length) return null;
-  const m = median(firsts)!;
-  return {
-    id: "start",
-    question: "How soon do you start typing?",
-    answer: `Your first edit comes about ${duration(m)} in.`,
-    visual: { kind: "number", value: duration(m), unit: "to your first edit" },
-    note: firsts.length === 1 ? "From one solve so far." : null,
-    fyi: null,
-  };
-}
-
-const CHECK_BUCKETS: [string, number, number][] = [
-  ["1", 1, 1],
-  ["2–3", 2, 3],
-  ["4–6", 4, 6],
-  ["7+", 7, Infinity],
-];
-/** Checks per solve and how often the first submission passed. */
-function iterate(solved: ReportAttempt[], fyi: string | null): Question | null {
-  // Checks up to the solve: checks made after it don't make a solve iterative.
-  const counted = solved.filter((a) => toSolve(a));
-  if (!counted.length) return null;
-  const checks = counted.map((a) => toSolve(a)!.checks);
-  const m = median(checks)!;
-  const firsts = counted.filter((a) => num(a.values.firstSubmit));
-  const oneShot = firsts.filter((a) => a.values.firstSubmit === 1).length;
-  const answer =
-    counted.length === 1
-      ? `This solve took ${plural(checks[0], "check")}${firsts.length ? `; your first submission ${oneShot ? "passed" : "didn't pass"}` : ""}.`
-      : m >= FREQUENT_CHECKS
-        ? `You iterate: a median of ${plural(m, "check")} per solve.`
-        : firsts.length && oneShot / firsts.length >= 0.5
-          ? `Mostly one shot: ${oneShot} of ${plural(firsts.length, "solve")} passed on the first submission.`
-          : `A few checks per solve: ${plural(m, "check")} in a typical one.`;
-  return {
-    id: "iterate",
-    question: "Do you iterate or go for one shot?",
-    answer,
-    // How many solves took 1, 2–3, 4–6 or 7+ checks: a shape, not a list of every solve.
-    visual: {
-      kind: "bars",
-      bars: CHECK_BUCKETS.flatMap(([label, low, high]) => {
-        const n = checks.filter((c) => c >= low && c <= high).length;
-        return n
-          ? [
-              {
-                label: `${label} ${low === 1 && high === 1 ? "check" : "checks"}`,
-                value: n,
-                display: plural(n, "solve"),
-              },
-            ]
-          : [];
-      }),
-    },
-    note: null,
-    fyi,
-  };
 }
 
 /**
@@ -225,52 +192,309 @@ function current<T>(catalog: readonly ChallengeSummary[], pick: (c: ChallengeSum
     return c && c.revision === a.revision ? pick(c) : undefined;
   };
 }
-/** Active time up to the solve (keystrokes, edits and selections, gaps over 30 s left out) by difficulty. */
+const activeToSolve = (a: AttemptSummary) => (num(a.values.activeToSolve) && a.values.activeToSolve > 0 ? a.values.activeToSolve : null);
+
+/**
+ * Time to the first edit (one page session's clock, so it includes reading, thinking or being
+ * away, and is never called any of them), then active work up to the solve. Two clocks, so two
+ * numbers, never one split.
+ */
+function start(solved: ReportAttempt[]): Question | null {
+  const firsts = solved.filter((a) => num(a.values.firstEdit)).map((a) => a.values.firstEdit!);
+  if (!firsts.length) return null;
+  const first = duration(median(firsts)!);
+  const builds = solved.map(activeToSolve).filter(num);
+  const build = builds.length ? duration(median(builds)!) : null;
+  const then = build ? `, then ${firsts.length > 2 ? "about " : ""}${build} of active work to the solve` : "";
+  return {
+    id: "start",
+    question: "How soon do you start, and how long do you build?",
+    answer:
+      firsts.length === 1
+        ? `Your first edit came ${first} in${then}.`
+        : firsts.length === 2
+          ? `Across your two solves, your first edit came about ${first} in${then}.`
+          : `Your first edit comes about ${first} in${then}.`,
+    visual: build ? { kind: "turn", from: `${first} to first edit`, to: `${build} active to solve` } : { kind: "number", value: first, unit: "to your first edit" },
+    detail: null,
+    note: null,
+    fyi: null,
+    takeaway: null,
+  };
+}
+
+/**
+ * Later solves of different challenges at the same language and difficulty: did active work to
+ * the solve change? Each challenge counts once (its first solve); coming back to the same one is
+ * the repeat answer. Two or three solves are described as they are; four or more compare the
+ * earlier half with the later half.
+ */
+function progress(solved: ReportAttempt[], catalog: readonly ChallengeSummary[]): Question | null {
+  const level = current(catalog, (c) => `${c.difficulty} ${languageLabel(c.language)}`);
+  const groups = new Map<string, ReportAttempt[]>();
+  const seen = new Set<string>();
+  for (const a of chronological(solved)) {
+    const label = level(a);
+    if (!label || !activeToSolve(a) || seen.has(a.challenge)) continue;
+    seen.add(a.challenge);
+    groups.set(label, [...(groups.get(label) ?? []), a]);
+  }
+  const [label, group] = [...groups].sort((x, y) => y[1].length - x[1].length)[0] ?? [];
+  if (!label || group.length < 2) return null;
+  const times = group.map((a) => activeToSolve(a)!);
+  const n = times.length,
+    half = Math.floor(n / 2);
+  const [before, after] = n >= 4 ? [median(times.slice(0, half))!, median(times.slice(n - half))!] : [times[0], times[n - 1]];
+  const change = after <= before * FASTER ? "faster" : after >= before * SLOWER ? "slower" : "steady";
+  const shift = `${duration(before)} → ${duration(after)}`;
+  const answer =
+    n < 4
+      ? `Across your ${count(n)} ${label} challenges, the ${n === 2 ? "second" : "latest"} took ${duration(after)} of active work; the first took ${duration(before)}.`
+      : change === "faster"
+        ? `You're getting faster at ${label}: about ${duration(before)} of active work per solve at first, ${duration(after)} lately.`
+        : change === "slower"
+          ? `Your recent ${label} solves took longer: about ${duration(before)} of active work at first, ${duration(after)} lately.`
+          : `Steady at ${label}: about ${duration(after)} of active work per solve, early on and lately.`;
+  return {
+    id: "progress",
+    question: "Has your pace changed?",
+    answer,
+    // Each solve in order, the oldest first: the shape of the change, at most the latest eight.
+    visual: { kind: "bars", bars: group.slice(-8).map((a) => ({ label: a.challenge, value: activeToSolve(a)!, display: duration(activeToSolve(a)!) })) },
+    detail: null,
+    note: "Different challenges at the same level, so some are simply easier than others.",
+    fyi: null,
+    takeaway:
+      change === "steady"
+        ? null
+        : n < 4
+          ? `Across your ${count(n)} ${label} challenges: ${shift} of active work.`
+          : `${change === "faster" ? "Faster" : "Slower"} at ${label} lately: ${shift} of active work per solve.`,
+  };
+}
+
+const SUBMISSION_BUCKETS: [string, number, number][] = [
+  ["1", 1, 1],
+  ["2", 2, 2],
+  ["3–4", 3, 4],
+  ["5+", 5, Infinity],
+];
+/** Submissions up to each solve and whether the first passed; the examples first or not. */
+function iterate(solved: ReportAttempt[], fyi: string | null): Question | null {
+  // Submissions up to the solve: anything after it doesn't make a solve iterative.
+  const counted = chronological(solved).filter((a) => toSolve(a));
+  if (!counted.length) return null;
+  const steps = counted.map((a) => toSolve(a)!);
+  const subs = steps.map((s) => s.submissions);
+  const m = median(subs)!;
+  const n = counted.length;
+  const oneShot = subs.filter((x) => x === 1).length;
+  const examplesFirst = steps.filter((s) => s.examplesFirst).length;
+  const answer =
+    n === 1
+      ? subs[0] === 1
+        ? "This solve passed on its first submission."
+        : `This solve took ${plural(subs[0], "submission")}; the first didn't pass.`
+      : n === 2
+        ? subs[0] === subs[1]
+          ? `Across your two solves, each took ${plural(subs[0], "submission")}.`
+          : `Across your two solves: ${plural(subs[0], "submission")}, then ${subs[1]}.`
+        : oneShot / n >= 0.5
+          ? `Mostly one shot: ${oneShot} of ${n} solves passed on the first submission.`
+          : `You iterate: about ${plural(m, "submission")} per solve, typically.`;
+  return {
+    id: "iterate",
+    question: "Do you iterate or go for one shot?",
+    answer,
+    // How many solves took 1, 2, 3–4 or 5+ submissions: a shape, not a list of every solve.
+    visual: {
+      kind: "bars",
+      bars: SUBMISSION_BUCKETS.flatMap(([label, low, high]) => {
+        const k = subs.filter((c) => c >= low && c <= high).length;
+        return k ? [{ label: `${label} ${low === 1 && high === 1 ? "submission" : "submissions"}`, value: k, display: plural(k, "solve") }] : [];
+      }),
+    },
+    detail:
+      n === 1
+        ? examplesFirst
+          ? "You ran the examples before submitting."
+          : null
+        : examplesFirst === n
+          ? `You ran the examples before submitting every time.`
+          : examplesFirst
+            ? `You ran the examples before submitting in ${examplesFirst} of ${n} solves.`
+            : "You went straight to Submit each time, without running the examples first.",
+    note: null,
+    fyi,
+    takeaway: n >= 3 ? answer : null,
+  };
+}
+
+/**
+ * After a failed submission (failed checks, fired rules or code that didn't compile or run): how
+ * long until a better submission, and how many checks in between. Not time to the solve.
+ */
+function recovery(solved: ReportAttempt[]): Question | null {
+  const firsts = solved.filter((a) => num(a.values.firstSubmit));
+  const back = firsts.filter((a) => a.values.firstSubmit === 0).length;
+  const recovered = solved.filter((a) => num(a.values.recoveryTime) && a.values.recoveryTime >= 0);
+  if (!recovered.length && !back) return null;
+  const detail = !back || firsts.length === 1
+    ? null
+    : back === firsts.length
+      ? `${back === 2 ? "Both your solves" : back === 1 ? "Your solve" : `All ${back} solves`} came after a failed first submission.`
+      : `${back} of your ${plural(firsts.length, "solve")} came after a failed first submission.`;
+  if (!recovered.length)
+    return {
+      id: "recovery",
+      question: "What happens after a failed submission?",
+      answer: `You kept going: ${plural(back, "solve")} came after a failed first submission.`,
+      visual: { kind: "turn", from: "first submission failed", to: `solved ${back}×` },
+      detail: null,
+      note: null,
+      fyi: null,
+      takeaway: null,
+    };
+  const t = duration(median(recovered.map((a) => a.values.recoveryTime!))!);
+  const checks = recovered.map((a) => a.values.recoveryChecks).filter(num);
+  const c = median(checks);
+  const between = c === null ? "" : c === 0 ? ", on your very next submission" : `, after ${plural(c, "check")} in between`;
+  const answer =
+    recovered.length === 1
+      ? `After the failed submission, a better one came ${t} later${between}.`
+      : recovered.length === 2
+        ? `Across your two solves with a failed submission, a better one came about ${t} later${between}.`
+        : `After a failed submission, a better one comes about ${t} later${between}, typically.`;
+  return {
+    id: "recovery",
+    question: "What happens after a failed submission?",
+    answer,
+    visual: { kind: "turn", from: "failed submission", to: `better one ${t} later` },
+    detail,
+    note: null,
+    fyi: null,
+    takeaway:
+      recovered.length < 2
+        ? null
+        : recovered.length === 2
+          ? `Across two solves, a better submission came about ${t} after a failed one.`
+          : `After a failed submission, a better one comes about ${t} later.`,
+  };
+}
+
+const howMany = (n: number) => (n ? `${n}` : "none");
+const CONFIDENCE: [string, string][] = [
+  ["sure", "sure"],
+  ["fairly", "fairly sure"],
+  ["unsure", "unsure"],
+  ["guessing", "guessing"],
+];
+/** Your answer after a solve ("how sure were you it would pass?") beside whether the first submission did. */
+function confidence(solved: ReportAttempt[]): Question | null {
+  const rows = solved.filter((a) => a.answers.confidence && num(a.values.firstSubmit));
+  if (rows.length < 2) return null;
+  const tally = (levels: string[]) => {
+    const r = rows.filter((a) => levels.includes(a.answers.confidence));
+    return { n: r.length, passed: r.filter((a) => a.values.firstSubmit === 1).length };
+  };
+  const sure = tally(["sure", "fairly"]),
+    unsure = tally(["unsure", "guessing"]);
+  const of = (t: { n: number; passed: number }) => `${t.passed} of ${t.n}`;
+  const answer =
+    sure.n && unsure.n
+      ? `When you felt sure, your first submission passed ${of(sure)} times; when unsure, ${of(unsure)}.`
+      : sure.n
+        ? `You felt sure ${plural(sure.n, "time")}; your first submission passed in ${howMany(sure.passed)} of them.`
+        : `You felt unsure ${plural(unsure.n, "time")}; your first submission passed in ${howMany(unsure.passed)} of them.`;
+  return {
+    id: "confidence",
+    question: "Does your confidence match the result?",
+    answer,
+    visual: {
+      kind: "bars",
+      bars: CONFIDENCE.flatMap(([value, label]) => {
+        const t = tally([value]);
+        return t.n ? [{ label, value: t.passed / t.n, display: `${of(t)} passed first` }] : [];
+      }),
+    },
+    detail: null,
+    note: "From your answer after each solve: how sure you were before submitting.",
+    fyi: null,
+    // Leads only when feeling sure and unsure went differently; otherwise there is nothing to sum up.
+    takeaway: rows.length >= 3 && sure.n && unsure.n && sure.passed / sure.n !== unsure.passed / unsure.n ? answer : null,
+  };
+}
+
+/** Active work up to the solve by difficulty. One level is described as it is. */
 function difficulty(solved: ReportAttempt[], catalog: readonly ChallengeSummary[]): Question | null {
   const level = current(catalog, (c) => c.difficulty);
-  const order = ["easy", "medium", "hard"];
-  const groups = order
-    .map((d) => ({ d, times: solved.filter((a) => level(a) === d && num(a.values.activeToSolve) && a.values.activeToSolve! > 0).map((a) => a.values.activeToSolve!) }))
+  const groups = ["easy", "medium", "hard"]
+    .map((d) => ({ d, times: solved.filter((a) => level(a) === d && activeToSolve(a)).map((a) => activeToSolve(a)!) }))
     .filter((g) => g.times.length);
-  // A difference needs two levels; one level alone isn't an answer to "by difficulty".
-  if (groups.length < 2) return null;
+  if (!groups.length) return null;
   const bars = groups.map((g) => {
     const m = median(g.times)!;
     return { label: g.d, value: m, display: duration(m) };
   });
+  const only = groups.length === 1 ? groups[0] : null;
   return {
     id: "difficulty",
     question: "How long do harder challenges take you?",
-    answer: bars.map((b) => `${b.label} ${b.display}`).join(", ") + " of active time, typically.",
+    answer: only
+      ? only.times.length === 1
+        ? `Your ${only.d} solve took ${bars[0].display} of active work.`
+        : only.times.length === 2
+          ? `Across your two ${only.d} solves: about ${bars[0].display} of active work per solve.`
+          : `Your ${only.d} solves take about ${bars[0].display} of active work, typically.`
+      : (bars.map((b) => `${b.label} ${b.display}`).join(", ") + ` of active work${groups.every((g) => g.times.length === 1) ? "" : ", typically"}.`).replace(/^./, (c) => c.toUpperCase()),
     visual: { kind: "bars", bars },
-    note: "Active time counts the minutes you were typing, editing or selecting before the solve.",
+    detail: null,
+    note: null,
     fyi: null,
+    takeaway: null,
   };
 }
 
-/** Languages by actual work: solves and active time per language. */
+/** Languages by challenges solved and still in progress, never by an unexplained duration. */
 function languages(attempts: readonly ReportAttempt[], catalog: readonly ChallengeSummary[]): Question | null {
   const lang = current(catalog, (c) => c.language);
-  const work = new Map<string, { active: number; solves: Set<string> }>();
+  const work = new Map<string, { solved: Set<string>; tried: Set<string> }>();
   for (const a of attempts) {
     const l = lang(a);
-    if (!l || !clean(a) || !num(a.values.active) || a.values.active <= 0) continue;
-    const w = work.get(l) ?? { active: 0, solves: new Set<string>() };
-    w.active += a.values.active;
-    if (a.completed) w.solves.add(a.challenge);
+    if (!l || !clean(a)) continue;
+    const w = work.get(l) ?? { solved: new Set<string>(), tried: new Set<string>() };
+    w.tried.add(a.challenge);
+    if (a.completed) w.solved.add(a.challenge);
     work.set(l, w);
   }
   if (!work.size) return null;
-  const bars = [...work]
-    .sort((x, y) => y[1].active - x[1].active)
-    .map(([l, w]) => ({ label: languageLabel(l), value: w.active, display: `${duration(w.active)}${w.solves.size ? ` · ${plural(w.solves.size, "solve")}` : ""}` }));
+  const rows = [...work]
+    .map(([l, w]) => ({ label: languageLabel(l), solved: w.solved.size, open: w.tried.size - w.solved.size }))
+    .sort((x, y) => y.solved - x.solved || y.open - x.open || x.label.localeCompare(y.label));
+  const solvedIn = (r: (typeof rows)[number]) => `${r.solved} solved`;
   return {
     id: "languages",
     question: "Which languages do you actually code in?",
-    answer: bars.length === 1 ? `All ${bars[0].label} so far.` : `Mostly ${bars[0].label}, then ${bars.slice(1).map((b) => b.label).join(", ")}.`,
-    visual: { kind: "bars", bars },
+    answer:
+      rows.length === 1
+        ? rows[0].solved
+          ? `All ${rows[0].label} so far: ${plural(rows[0].solved, "challenge")} solved.`
+          : `All ${rows[0].label} so far, nothing solved yet.`
+        : rows.every((r) => r.solved === rows[0].solved)
+          ? `${and(rows.map((r) => r.label))} so far, ${rows[0].solved} solved in each.`
+          : `Mostly ${rows[0].label} (${solvedIn(rows[0])}), then ${rows.slice(1).map((r) => `${r.label} (${solvedIn(r)})`).join(", ")}.`,
+    visual: {
+      kind: "bars",
+      bars: rows.map((r) => ({
+        label: r.label,
+        value: r.solved + r.open,
+        display: [r.solved && `${r.solved} solved`, r.open && `${r.open} in progress`].filter(Boolean).join(" · "),
+      })),
+    },
+    detail: null,
     note: null,
     fyi: null,
+    takeaway: null,
   };
 }
 
@@ -282,34 +506,33 @@ function familiarity(
 ): Question | null {
   if (!profile?.languages?.length) return null;
   const lang = current(catalog, (c) => c.language);
-  const work = [0, 0];
+  const work = [new Set<string>(), new Set<string>()];
   for (const a of attempts) {
     const language = lang(a);
-    if (!language || !clean(a) || !num(a.values.active) || a.values.active <= 0)
-      continue;
-    work[
-      profile.languages.includes(language as (typeof profile.languages)[number])
-        ? 0
-        : 1
-    ] += a.values.active;
+    if (!language || !clean(a)) continue;
+    work[profile.languages.includes(language as (typeof profile.languages)[number]) ? 0 : 1].add(a.challenge);
   }
-  if (!work[0] && !work[1]) return null;
+  const [usual, other] = work.map((w) => w.size);
+  if (!usual && !other) return null;
   return {
     id: "familiarity",
     question: "Your usual languages or something new?",
-    answer: !work[1]
+    answer: !other
       ? "All your recorded practice is in your usual languages so far."
-      : !work[0]
+      : !usual
         ? "Your recorded practice is outside your usual languages so far."
-        : `${duration(work[0])} in your usual languages; ${duration(work[1])} outside them.`,
+        : `${plural(usual, "challenge")} in your usual languages; ${other} outside them.`,
     visual: {
       kind: "bars",
-      bars: ["Usual languages", "Other languages"].flatMap((label, i) =>
-        work[i] ? [{ label, value: work[i], display: duration(work[i]) }] : [],
-      ),
+      bars: [
+        ["Usual languages", usual],
+        ["Other languages", other],
+      ].flatMap(([label, n]) => (n ? [{ label: label as string, value: n as number, display: plural(n as number, "challenge") }] : [])),
     },
-    note: "Active practice time, grouped by the languages you listed.",
+    detail: null,
+    note: "Challenges you worked on, grouped by the languages you listed.",
     fyi: null,
+    takeaway: null,
   };
 }
 
@@ -329,26 +552,10 @@ function typing(attempts: readonly ReportAttempt[]): Question | null {
     question: "How fast do you type when you're coding?",
     answer: `About ${wpm} words a minute while you're typing code.`,
     visual: { kind: "number", value: `${wpm}`, unit: "wpm" },
+    detail: null,
     note: "Pastes, arrows, deletions and pauses don't count.",
     fyi: null,
-  };
-}
-
-
-/**
- * Solves whose first submission failed. Only the count: `recoveryChecks` measures checks to the
- * first improvement, not to the solve, so it isn't presented as either here.
- */
-function recovery(solved: ReportAttempt[]): Question | null {
-  const back = solved.filter((a) => clean(a) && a.values.firstSubmit === 0);
-  if (!back.length) return null;
-  return {
-    id: "recovery",
-    question: "What happens after a failed submission?",
-    answer: `You kept going: ${plural(back.length, "solve")} came after a failed first submission.`,
-    visual: { kind: "turn", from: "first submission failed", to: `solved ${back.length}×` },
-    note: null,
-    fyi: null,
+    takeaway: null,
   };
 }
 
@@ -361,7 +568,7 @@ function repeat(solved: ReportAttempt[]): Question | null {
   }
   for (const group of groups.values()) {
     // Submissions up to each solve; any checks after a solve aren't "needed".
-    const s = group.filter((a) => toSolve(a)).sort((x, y) => (x.started ?? x.last).localeCompare(y.started ?? y.last));
+    const s = chronological(group.filter((a) => toSolve(a)));
     if (s.length < 2) continue;
     const before = toSolve(s[0])!.submissions,
       after = toSolve(s[s.length - 1])!.submissions,
@@ -372,37 +579,64 @@ function repeat(solved: ReportAttempt[]): Question | null {
       question: "Did coming back to a challenge change anything?",
       answer: `Back on ${last.challenge}, you needed ${plural(after, "submission")} instead of ${before}.`,
       visual: { kind: "turn", from: plural(before, "submission"), to: plural(after, "submission") },
+      detail: null,
       note: "Same challenge, so familiarity helps.",
       fyi: null,
+      takeaway: null,
     };
   }
   return null;
 }
 
 /**
- * One model FYI for the iterate answer: the median submissions of comparable model solves. Each
- * model try counts once, however many times you solved that challenge.
+ * One model FYI for the iterate answer, like for like: submissions to the solve on the same
+ * challenge versions, yours beside comparable model solves'. Each model try counts once, however
+ * many times you solved that challenge.
  */
 function modelFyi(solved: ReportAttempt[], receipts: ReportInput["receipts"]): string | null {
   const tries = new Map<string, number>();
+  const yours: number[] = [];
   for (const a of solved) {
-    const got = receipts[a.revision];
-    if (!Array.isArray(got)) continue;
+    const got = receipts[a.revision],
+      own = toSolve(a);
+    if (!Array.isArray(got) || !own) continue;
+    let matched = false;
     for (const { receipt } of defaultComparisons(got))
-      if (receipt?.state === "completed" && num(receipt.submissions) && receiptMatch(receipt, a.conditions) === "matched")
+      if (receipt?.state === "completed" && num(receipt.submissions) && receiptMatch(receipt, a.conditions) === "matched") {
         tries.set(JSON.stringify([a.revision, receipt.model, receipt.reasoning, receipt.try]), receipt.submissions);
+        matched = true;
+      }
+    if (matched) yours.push(own.submissions);
   }
-  const m = median([...tries.values()]);
-  return m === null ? null : `Models that solved the same challenges needed ${plural(m, "submission")}, typically.`;
+  const model = median([...tries.values()]),
+    you = median(yours);
+  if (model === null || you === null) return null;
+  const several = yours.length > 1;
+  return `On the same challenge${several ? "s" : ""}, models that solved ${several ? "them" : "it"} needed ${plural(model, "submission")}${tries.size > 1 ? " (typical)" : ""}; you needed ${you}${several ? " (typical)" : ""}.`;
 }
 
-function next(input: ReportInput, started: Set<string>): NextStep | null {
+/**
+ * Where to go next: an unfinished attempt first; otherwise what practice would offer after your
+ * latest solve (same language, then your languages, then nearby difficulty).
+ */
+function next(input: ReportInput, started: Set<string>, solved: ReportAttempt[]): NextStep | null {
   const { catalog, progress } = input;
   const open = catalog.find((c) => progress[c.key] && !progress[c.key].completedAt && c.runnable);
   if (open) return { label: `Resume ${open.key} · ${open.title}`, href: `/challenges/${open.key}` };
   if (!started.size) return { label: "Pick a language and start", href: "/start" };
-  const fresh = catalog.find((c) => c.runnable && !progress[c.key] && !started.has(c.key));
-  return fresh ? { label: `Next: ${fresh.key} · ${fresh.title}`, href: `/challenges/${fresh.key}` } : null;
+  const completed = new Set([...Object.keys(progress).filter((k) => progress[k].completedAt), ...solved.map((a) => a.challenge)]);
+  // The most recent thing worked on anchors the suggestion, as finishing it in practice would.
+  const recent = [
+    ...Object.entries(progress).map(([key, p]) => ({ key, at: p.completedAt ?? p.startedAt })),
+    ...input.attempts.map((a) => ({ key: a.challenge, at: a.last })),
+  ]
+    .filter((r) => r.at && started.has(r.key))
+    .sort((x, y) => y.at!.localeCompare(x.at!) || x.key.localeCompare(y.key))[0];
+  const anchor = recent && catalog.find((c) => c.key === recent.key);
+  const pick = anchor
+    ? nextProblem(anchor, catalog, completed, input.profile?.languages ?? [])
+    : catalog.find((c) => c.runnable && !completed.has(c.key));
+  return pick && pick.runnable && !started.has(pick.key) ? { label: `Next: ${pick.key} · ${pick.title}`, href: `/challenges/${pick.key}` } : null;
 }
 
 export function buildReport(input: ReportInput): Report {
@@ -414,20 +648,31 @@ export function buildReport(input: ReportInput): Report {
   ).values()].slice(0, COMPARISON_TASKS);
   const questions = [
     start(solved),
+    progress(solved, input.catalog),
     iterate(solved, modelFyi(solved, input.receipts)),
     recovery(solved),
-    // Per-keystroke change sizes do not establish a person's revision style.
-    typing(input.attempts),
+    confidence(solved),
     difficulty(solved, input.catalog),
     languages(input.attempts, input.catalog),
     familiarity(input.attempts, input.catalog, input.profile),
+    // Per-keystroke change sizes do not establish a person's revision style.
+    typing(input.attempts),
     repeat(solved),
   ].filter((q): q is Question => q !== null);
+  const active = questions.find((q) => /active work/.test(q.answer));
+  if (active) active.note = active.note ? `${active.note} ${ACTIVE_NOTE}` : ACTIVE_NOTE;
+  // The strongest answers lead, in this order; one solve has nothing to sum up yet.
+  const lead: QuestionId[] = ["progress", "recovery", "confidence", "iterate"];
+  const takeaways = solved.length < 2 ? [] : lead.flatMap((id) => {
+    const q = questions.find((x) => x.id === id);
+    return q?.takeaway ? [{ id, text: q.takeaway }] : [];
+  }).slice(0, TAKEAWAYS);
   return {
     empty: !started.size,
+    takeaways,
     questions,
     waiting: started.size && !questions.length ? "Solve a challenge and your answers start here." : null,
-    next: next(input, started),
+    next: next(input, started, solved),
     profile: null,
     languagesInvite:
       questions.some((q) => q.id === "languages") &&

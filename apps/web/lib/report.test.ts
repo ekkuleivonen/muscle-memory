@@ -24,7 +24,7 @@ const summary = (attempt: string, key: string, revision?: string): AttemptSummar
   deriveAttempts(trace(attempt, `${attempt}-source`, key, revision), "synthetic-participant")[0];
 const device = (...a: AttemptSummary[]): ReportAttempt[] => a.map((x) => ({ ...x, source: "device" as const }));
 const input = (over: Partial<ReportInput> = {}): ReportInput => ({ catalog, progress: {}, attempts: [], profile: null, receipts: {}, ...over });
-const q = (r: ReturnType<typeof buildReport>, id: Question["id"]) => r.questions.find((x) => x.id === id);
+const q = (r: ReturnType<typeof buildReport>, id: Question["id"] | "rewrite") => r.questions.find((x) => x.id === id);
 // Carries ENG-375's receipt fields; the assertion keeps it valid across that type change.
 const receipt = (over: Partial<ModelReceipt> = {}): ModelReceipt =>
   ({
@@ -67,15 +67,22 @@ test("a solved trace answers the supported questions from recorded values only",
     py = summary("a2", "PY-001", revB);
   const r = buildReport(input({ attempts: device(js, py) }));
   // The fixture's few keys never form a run of code characters, so typing is left out.
-  assert.deepEqual(r.questions.map((x) => x.id), ["start", "iterate", "recovery", "difficulty", "languages"]);
-  // The fixture: first edit at 0.1 s, 2 submissions, the first failed.
-  assert.equal(q(r, "start")!.answer, "Your first edit comes about 1 s in.");
-  assert.equal(q(r, "iterate")!.answer, "A few checks per solve: 2 checks in a typical one.");
-  assert.deepEqual(q(r, "iterate")!.visual, { kind: "bars", bars: [{ label: "2–3 checks", value: 2, display: "2 solves" }] });
-  assert.equal(q(r, "recovery")!.answer, "You kept going: 2 solves came after a failed first submission.");
+  // Different languages and levels: nothing comparable for "getting faster".
+  assert.deepEqual(r.questions.map((x) => x.id), ["start", "iterate", "recovery", "confidence", "difficulty", "languages"]);
+  // The fixture: first edit at 0.1 s, 6.9 s of active work, 2 submissions, the first failed, a better one 3 s later.
+  assert.equal(q(r, "start")!.answer, "Across your two solves, your first edit came about 1 s in, then 7 s of active work to the solve.");
+  assert.match(q(r, "start")!.note!, /^Active work counts/, "active work is explained once, on its first use");
+  assert.equal(q(r, "difficulty")!.note, null);
+  assert.equal(q(r, "iterate")!.answer, "Across your two solves, each took 2 submissions.");
+  assert.equal(q(r, "iterate")!.detail, "You went straight to Submit each time, without running the examples first.");
+  assert.deepEqual(q(r, "iterate")!.visual, { kind: "bars", bars: [{ label: "2 submissions", value: 2, display: "2 solves" }] });
+  assert.equal(q(r, "recovery")!.answer, "Across your two solves with a failed submission, a better one came about 3 s later, after 1 check in between.");
+  assert.equal(q(r, "recovery")!.detail, "Both your solves came after a failed first submission.");
+  assert.equal(q(r, "confidence")!.answer, "You felt unsure 2 times; your first submission passed in none of them.");
   assert.equal(q(r, "rewrite"), undefined, "keystroke-size buckets are not revision style");
-  assert.equal(q(r, "difficulty")!.answer, "easy 7 s, medium 7 s of active time, typically.");
-  assert.equal(q(r, "languages")!.answer, "Mostly JavaScript, then Python.");
+  assert.equal(q(r, "difficulty")!.answer, "Easy 7 s, medium 7 s of active work.");
+  assert.equal(q(r, "languages")!.answer, "JavaScript and Python so far, 1 solved in each.");
+  assert.deepEqual(r.takeaways, [{ id: "recovery", text: "Across two solves, a better submission came about 3 s after a failed one." }]);
   assert.doesNotMatch(visible(r), /thinking|reading|finished \d|open|revisited|waiting|sha256|revision|harness|receipt|evidence/i);
 });
 
@@ -84,15 +91,19 @@ test("gapped traces, one difficulty level and no failed first submission leave q
   const gapped = { ...a, issues: ["Recording gap."] };
   assert.deepEqual(buildReport(input({ attempts: device(gapped) })).questions, []);
   const r = buildReport(input({ attempts: device(a) }));
-  assert.equal(q(r, "difficulty"), undefined, "one level isn't an answer to by-difficulty");
-  const clean = { ...a, values: { ...a.values, firstSubmit: 1 } };
+  assert.equal(q(r, "difficulty")!.answer, "Your easy solve took 7 s of active work.", "one level is described as it is");
+  assert.equal(q(r, "confidence"), undefined, "one answered solve isn't a pattern");
+  assert.equal(q(r, "progress"), undefined);
+  assert.deepEqual(r.takeaways, [], "one solve has nothing to sum up yet");
+  const clean = { ...a, values: { ...a.values, firstSubmit: 1, recoveryTime: null, recoveryChecks: null } };
   assert.equal(q(buildReport(input({ attempts: device(clean) })), "recovery"), undefined);
 });
 
 test("the model comparison is one tiny FYI on the iterate answer, only from comparable solves", () => {
   const a = summary("m1", "JS-001");
   const fyi = (receipts: ReportInput["receipts"]) => q(buildReport(input({ attempts: device(a), receipts })), "iterate")!.fyi;
-  assert.equal(fyi({ [a.revision]: [receipt()] }), "Models that solved the same challenges needed 2 submissions, typically.");
+  // Like for like: submissions to the solve on both sides, never your checks beside their submissions.
+  assert.equal(fyi({ [a.revision]: [receipt()] }), "On the same challenge, models that solved it needed 2 submissions; you needed 2.");
   assert.equal(fyi({}), null);
   assert.equal(fyi({ [a.revision]: "loading" }), null);
   assert.equal(fyi({ [a.revision]: "unavailable" }), null);
@@ -133,7 +144,7 @@ test("checks after a solve never count as needed: no false improvement, no extra
   const r = buildReport(input({ attempts: [first, later] }));
   assert.equal(q(r, "repeat"), undefined, "1 to solve, then 2: not an improvement");
   // Checks to solve are 1 and 2, not 6 and 2.
-  assert.deepEqual(q(r, "iterate")!.visual, { kind: "bars", bars: [{ label: "1 check", value: 1, display: "1 solve" }, { label: "2–3 checks", value: 1, display: "1 solve" }] });
+  assert.deepEqual(q(r, "iterate")!.visual, { kind: "bars", bars: [{ label: "1 submission", value: 1, display: "1 solve" }, { label: "2 submissions", value: 1, display: "1 solve" }] });
 });
 
 test("durations read in seconds, minutes or hours without false precision", () => {
@@ -246,7 +257,7 @@ test("the real uploaded-history projection flows into the portrait beside device
     ["older-attempt", "uploaded"],
   ]);
   const r = buildReport(input({ attempts: merged }));
-  assert.match(q(r, "iterate")!.answer, /2 checks/);
+  assert.match(q(r, "iterate")!.answer, /2 submissions/);
   assert.doesNotMatch(JSON.stringify(r) ?? "", /synthetic-artifact|"abc"|secret/, "no code or identifiers reach the report");
 });
 
@@ -281,7 +292,7 @@ test("typing speed counts only runs of code characters, pooled, never arrows, sh
 test("the first-edit answer ignores resumes and idle time after a solve", () => {
   const a = summary("p1", "JS-001");
   const idle = { ...a, values: { ...a.values, elapsed: 6 * 3600_000 } };
-  assert.equal(q(buildReport(input({ attempts: device(idle) })), "start")!.answer, "Your first edit comes about 1 s in.");
+  assert.equal(q(buildReport(input({ attempts: device(idle) })), "start")!.answer, "Your first edit came 1 s in, then 7 s of active work to the solve.");
   assert.doesNotMatch(JSON.stringify(q(buildReport(input({ attempts: device(idle) })), "start")), /to a solve|6 h/);
 });
 
@@ -300,15 +311,15 @@ test("repeated solves count each model try once in the FYI", () => {
     [revB]: [receipt({ submissions: 6, runtime: { engine: "javascript", version: "synthetic" } })],
   };
   // Distinct tries [2, 6] give 4; counting JS-001's try three times would give 2.
-  assert.equal(q(buildReport(input({ attempts: device(...solves), receipts })), "iterate")!.fyi, "Models that solved the same challenges needed 4 submissions, typically.");
+  assert.equal(q(buildReport(input({ attempts: device(...solves), receipts })), "iterate")!.fyi, "On the same challenges, models that solved them needed 4 submissions (typical); you needed 2 (typical).");
 });
 
 test("an attempt on an earlier revision isn't classified with current difficulty or language", () => {
   const old = summary("h1", "JS-001", `sha256:${"c".repeat(64)}`),
     other = summary("h2", "PY-001", revB);
   const r = buildReport(input({ attempts: device(old, other) }));
-  assert.equal(q(r, "difficulty"), undefined, "only PY-001 (medium) has matching metadata: one level");
-  assert.equal(q(r, "languages")!.answer, "All Python so far.");
+  assert.equal(q(r, "difficulty")!.answer, "Your medium solve took 7 s of active work.", "only PY-001 (medium) has matching metadata");
+  assert.equal(q(r, "languages")!.answer, "All Python so far: 1 challenge solved.");
 });
 
 test("reproduction: a page observation an hour after completion doesn't change any answer", () => {
@@ -371,10 +382,134 @@ test("editing after a solve doesn't change time by difficulty; the solve stays t
   assert.equal(answer(after), answer(before));
 });
 
-test("recovery states solves after a failed first submission, never checks to a solve", () => {
+test("recovery measures the way to a better submission, never checks to a solve", () => {
   const a = summary("rc1", "JS-001");
   // recoveryChecks counts checks to the first improvement (0/3 to 1/3), not to 3/3.
   const r = q(buildReport(input({ attempts: device({ ...a, values: { ...a.values, recoveryChecks: 1 } }) })), "recovery")!;
-  assert.equal(r.answer, "You kept going: 1 solve came after a failed first submission.");
-  assert.doesNotMatch(r.answer, /check/);
+  assert.equal(r.answer, "After the failed submission, a better one came 3 s later, after 1 check in between.");
+  assert.doesNotMatch(r.answer, /solve/);
+  const none = q(buildReport(input({ attempts: device({ ...a, values: { ...a.values, recoveryTime: null, recoveryChecks: null } }) })), "recovery")!;
+  assert.equal(none.answer, "You kept going: 1 solve came after a failed first submission.", "no improvement recorded: only the count");
+});
+
+// A richer synthetic catalog: C-001 comes first in catalog order, as on the live site.
+const rich = [
+  challenge("C-001", "c", "easy"),
+  ...["JS-001", "JS-002", "JS-003", "JS-004", "JS-005", "JS-006"].map((k) => challenge(k, "javascript", "easy")),
+  challenge("JS-010", "javascript", "medium"),
+  challenge("PY-001", "python", "medium", revB),
+];
+/** A synthetic clean solve: submissions in order ("pass" solves), active work to it, an optional answer. */
+function solve(
+  attempt: string,
+  key: string,
+  o: { day: number; active: number; verdicts?: ("pass" | "fail")[]; examples?: boolean; confidence?: string; revision?: string },
+): ReportAttempt {
+  const started = new Date(Date.parse("2026-10-01T10:00:00Z") + o.day * 86_400_000).toISOString();
+  const verdicts = o.verdicts ?? ["pass"];
+  const base = withSubmissions(summary(attempt, key, o.revision), verdicts, started);
+  const failedFirst = verdicts[0] === "fail";
+  return {
+    ...base,
+    last: started,
+    timeline: o.examples ? [base.timeline[0], { at: started, label: "examples: result" }, ...base.timeline.slice(1)] : base.timeline,
+    answers: o.confidence ? { confidence: o.confidence } : {},
+    values: { ...base.values, activeToSolve: o.active, firstSubmit: failedFirst ? 0 : 1, recoveryTime: failedFirst ? 90_000 : null, recoveryChecks: failedFirst ? 1 : null },
+  };
+}
+const MIN = 60_000;
+
+test("two comparable solves are described as they are: scoped, never a trait", () => {
+  const r = buildReport(input({ catalog: rich, attempts: [solve("t1", "JS-001", { day: 0, active: 9 * MIN }), solve("t2", "JS-002", { day: 1, active: 4 * MIN })] }));
+  assert.equal(q(r, "progress")!.answer, "Across your two easy JavaScript challenges, the second took 4 min of active work; the first took 9 min.");
+  assert.deepEqual(q(r, "progress")!.visual, { kind: "bars", bars: [{ label: "JS-001", value: 9 * MIN, display: "9 min" }, { label: "JS-002", value: 4 * MIN, display: "4 min" }] });
+  assert.equal(r.takeaways[0].text, "Across your two easy JavaScript challenges: 9 min → 4 min of active work.");
+  assert.doesNotMatch(visible(r), /you are|you're (a|an) |always|never fail|getting faster|typically/i, "two solves are not a habit");
+});
+
+test("four or more comparable solves compare the earlier half with the later half", () => {
+  const times = [12, 10, 6, 5];
+  const attempts = times.map((m, i) => solve(`f${i}`, `JS-00${i + 1}`, { day: i, active: m * MIN }));
+  const r = buildReport(input({ catalog: rich, attempts }));
+  assert.equal(q(r, "progress")!.answer, "You're getting faster at easy JavaScript: about 11 min of active work per solve at first, 6 min lately.");
+  assert.equal(r.takeaways[0].text, "Faster at easy JavaScript lately: 11 min → 6 min of active work per solve.");
+  const steady = buildReport(input({ catalog: rich, attempts: [10, 11, 10, 10].map((m, i) => solve(`s${i}`, `JS-00${i + 1}`, { day: i, active: m * MIN })) }));
+  assert.match(q(steady, "progress")!.answer, /^Steady at easy JavaScript/);
+  assert.equal(steady.takeaways.some((t) => t.id === "progress"), false, "no change, no headline");
+});
+
+test("getting faster compares different challenges at one level; a repeat or another level isn't in it", () => {
+  const r = buildReport(input({
+    catalog: rich,
+    attempts: [
+      solve("d1", "JS-001", { day: 0, active: 9 * MIN }),
+      solve("d2", "JS-001", { day: 1, active: 2 * MIN }),
+      solve("d3", "JS-010", { day: 2, active: 1 * MIN }),
+    ],
+  }));
+  assert.equal(q(r, "progress"), undefined, "JS-001 twice is a repeat; JS-010 is medium");
+});
+
+test("confidence beside the first submission is told in counts, from answers that exist", () => {
+  const attempts = [
+    solve("c1", "JS-001", { day: 0, active: MIN, confidence: "sure" }),
+    solve("c2", "JS-002", { day: 1, active: MIN, confidence: "sure" }),
+    solve("c3", "JS-003", { day: 2, active: MIN, confidence: "unsure", verdicts: ["fail", "pass"] }),
+    solve("c4", "JS-004", { day: 3, active: MIN }),
+  ];
+  const c = q(buildReport(input({ catalog: rich, attempts })), "confidence")!;
+  assert.equal(c.answer, "When you felt sure, your first submission passed 2 of 2 times; when unsure, 0 of 1.");
+  assert.deepEqual(c.visual, { kind: "bars", bars: [{ label: "sure", value: 1, display: "2 of 2 passed first" }, { label: "unsure", value: 0, display: "0 of 1 passed first" }] });
+  assert.doesNotMatch(c.answer + c.note, /calibrat|overconfident|score|%/i);
+});
+
+test("one shot or iterate is told in submissions to the solve, with whether the examples ran first", () => {
+  const oneShot = [0, 1, 2].map((d) => solve(`o${d}`, `JS-00${d + 1}`, { day: d, active: MIN, examples: d < 2 }));
+  const r = q(buildReport(input({ catalog: rich, attempts: oneShot })), "iterate")!;
+  assert.equal(r.answer, "Mostly one shot: 3 of 3 solves passed on the first submission.");
+  assert.equal(r.detail, "You ran the examples before submitting in 2 of 3 solves.");
+  const iterating = [0, 1, 2].map((d) => solve(`i${d}`, `JS-00${d + 1}`, { day: d, active: MIN, verdicts: ["fail", "fail", "pass"], examples: true }));
+  const i = q(buildReport(input({ catalog: rich, attempts: iterating })), "iterate")!;
+  assert.equal(i.answer, "You iterate: about 3 submissions per solve, typically.");
+  assert.equal(i.detail, "You ran the examples before submitting every time.");
+});
+
+test("the model FYI uses only your solves of the challenges models solved", () => {
+  const matched = solve("m1", "JS-001", { day: 0, active: MIN }),
+    unmatched = solve("m2", "JS-002", { day: 1, active: MIN, verdicts: ["fail", "fail", "fail", "fail", "pass"], revision: revB });
+  const r = buildReport(input({ catalog: rich, attempts: [matched, unmatched], receipts: { [syntheticRevision]: [receipt({ submissions: 1 })] } }));
+  assert.equal(q(r, "iterate")!.fyi, "On the same challenge, models that solved it needed 1 submission; you needed 1.");
+});
+
+test("languages read as challenges solved and in progress, never an unexplained duration", () => {
+  const open = { ...summary("lo", "PY-001", revB), completed: false, source: "device" as const };
+  const tiny = solve("l1", "JS-001", { day: 0, active: 900 });
+  const r = buildReport(input({ catalog: rich, attempts: [tiny, solve("l2", "JS-002", { day: 1, active: 1200 }), open] }));
+  const l = q(r, "languages")!;
+  assert.equal(l.answer, "Mostly JavaScript (2 solved), then Python (0 solved).");
+  assert.deepEqual(l.visual, { kind: "bars", bars: [{ label: "JavaScript", value: 2, display: "2 solved" }, { label: "Python", value: 1, display: "1 in progress" }] });
+  assert.doesNotMatch(JSON.stringify(l), /\d+ s\b|min\b/);
+});
+
+test("the next challenge follows your latest solve's language, as practice does, not catalog order", () => {
+  const two = [solve("n1", "JS-001", { day: 0, active: MIN }), solve("n2", "JS-002", { day: 1, active: MIN })];
+  const progress = progressOf({ "JS-001": { completedAt: "2026-10-01T10:05:00Z", completions: 1 }, "JS-002": { completedAt: "2026-10-02T10:05:00Z", completions: 1 } });
+  assert.deepEqual(buildReport(input({ catalog: rich, progress, attempts: two })).next, { label: "Next: JS-003 · Synthetic JS-003", href: "/challenges/JS-003" });
+  const py = [...two, solve("n3", "PY-001", { day: 2, active: MIN, revision: revB })];
+  assert.equal(buildReport(input({ catalog: rich, attempts: py, profile: { languages: ["javascript"] } })).next?.href, "/challenges/JS-010", "nothing left in Python: your languages, at the same level");
+  const resume = progressOf({ ...progress, "JS-004": { completedAt: null, completions: 0 } });
+  assert.equal(buildReport(input({ catalog: rich, progress: { ...progress, ...resume }, attempts: two })).next?.href, "/challenges/JS-004", "an unfinished attempt still comes first");
+});
+
+test("a rich history leads with at most three takeaways, each from an answer below", () => {
+  const attempts = [
+    ...[14, 12, 7, 6].map((m, i) => solve(`r${i}`, `JS-00${i + 1}`, { day: i, active: m * MIN, verdicts: i % 2 ? ["pass"] : ["fail", "pass"], confidence: i % 2 ? "sure" : "unsure", examples: true })),
+    solve("r5", "PY-001", { day: 5, active: 20 * MIN, revision: revB, verdicts: ["fail", "fail", "pass"], confidence: "fairly" }),
+  ];
+  const r = buildReport(input({ catalog: rich, attempts }));
+  assert.deepEqual(r.takeaways.map((t) => t.id), ["progress", "recovery", "confidence"]);
+  for (const t of r.takeaways) assert.ok(q(r, t.id), `${t.id} is answered below`);
+  assert.equal(r.takeaways[2].text, "When you felt sure, your first submission passed 2 of 3 times; when unsure, 0 of 2.");
+  assert.deepEqual(r.questions.map((x) => x.id), ["start", "progress", "iterate", "recovery", "confidence", "difficulty", "languages"]);
+  assert.doesNotMatch(visible(r), /sha256|revision|harness|receipt|percentile|evidence|reading|thinking/i);
 });

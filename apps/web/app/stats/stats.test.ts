@@ -48,10 +48,10 @@ test("a portrait is questions with answers, never inventories, chapters or inter
   });
   const html = renderToStaticMarkup(createElement(ReportBody, { report, status: null }));
   assert.match(html, /<h1[^>]*>How you code<\/h1>/);
-  assert.match(html, /How soon do you start typing\?/);
+  assert.match(html, /How soon do you start, and how long do you build\?/);
   assert.doesNotMatch(html, /How fast do you type/, "the fixture has no run of code characters, so typing is left out");
   assert.equal((html.match(/report-fyi/g) ?? []).length, 1, "one tiny model FYI, no comparison section");
-  assert.match(html, /Models that solved the same challenges needed 1 submission, typically\./);
+  assert.match(html, /On the same challenge, models that solved it needed 1 submission; you needed 2\./);
   assert.doesNotMatch(
     html,
     /finished|unfinished|revisited|waiting|Could you still|chapter|Report chapters|evidence|sha256|[Rr]evision|harness|receipt|UTC|definition|withheld|mismatch|not compared|reading|thinking|<details|<table/,
@@ -134,4 +134,14 @@ test("a failed history read keeps its reason out of the copy and offers Try agai
   assert.match(exhausted, /this shows this device only\. <button type="button" class="t-cmd">Try again<\/button>/);
   const ready = renderToStaticMarkup(createElement(Status, { history: { state: "unauthorized", message } }));
   assert.equal(ready, "", "ownership refusal shows nothing and offers no retry");
+});
+
+test("takeaways lead the report as links to the answers they sum up, and stay out of an empty one", () => {
+  const report = { ...buildReport({ catalog, progress: {}, attempts: [], profile: null, receipts: {} }), empty: false };
+  const none = renderToStaticMarkup(createElement(ReportBody, { report, status: null }));
+  assert.doesNotMatch(none, /report-takeaways/);
+  const withLead = renderToStaticMarkup(
+    createElement(ReportBody, { report: { ...report, takeaways: [{ id: "progress", text: "Faster at easy JavaScript lately: 11 min → 6 min of active work per solve." }] }, status: null }),
+  );
+  assert.match(withLead, /<ul class="report-takeaways" aria-label="Takeaways"><li><a href="#q-progress">Faster at easy JavaScript lately/);
 });
