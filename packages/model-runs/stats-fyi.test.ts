@@ -119,6 +119,9 @@ test("each model counts once: first default try, including its failure, never a 
   const r = run(rows, {});
   if (r.state !== "shown") return assert.fail("shown expected");
   assert.deepEqual([r.fyi.solved, r.fyi.ran], [2, 3]);
+  // A model with no try 1 on record isn't described by its try 2 as a "first try".
+  const laterOnly = run([...three, receipt("m/d", { try: 2 })], {});
+  assert.deepEqual([(laterOnly as any).fyi.solved, (laterOnly as any).fyi.ran], [3, 3]);
   // Conflicting duplicates of a model's first try drop that model, not choose between them.
   const conflicting = run([...three, receipt("m/a", { finalCodeLength: 91 })], {});
   assert.deepEqual([(conflicting as any).fyi.solved, (conflicting as any).fyi.ran], [2, 2]);

@@ -125,7 +125,8 @@ export function modelFyi(
       .flatMap((d) => {
         const r = d.receipt;
         const outcome = r && OUTCOME[r.state];
-        if (!r || !outcome || receiptMatch(r, a.conditions) !== "matched") return [];
+        // "First try" must be literal: a model whose try 1 is absent isn't described by a later try.
+        if (!r || r.try !== 1 || !outcome || receiptMatch(r, a.conditions) !== "matched") return [];
         const length =
           outcome === "solved" && Number.isSafeInteger(r.finalCodeLength) && r.finalCodeLength! > 0
             ? r.finalCodeLength
