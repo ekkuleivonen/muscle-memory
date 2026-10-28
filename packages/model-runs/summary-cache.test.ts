@@ -177,3 +177,43 @@ test("bad keys, duplicate catalog rows, corrupt and oversize objects fail closed
   values.set(summaryKey("JS-001", revision), "{".repeat(SUMMARY_BYTES + 1));
   assert.equal(await readModelSummary(bucket, "JS-001", revision), null);
 });
+test("stalled reads cost one row each; rotation-first order reaches healthy rows past a stalled frontier", async () => {
+  const { fairOrder } = await import("./summary-cache");
+  const { bucket } = storage();
+  const rows = Array.from({ length: 41 }, (_, i) => ({ challenge: `JS-${String(i + 1).padStart(3, "0")}`, revision }));
+  const poison = new Set(rows.slice(0, 30).map((r) => r.challenge));
+  const written = new Set<string>();
+  for (let hour = 0; hour < 11; hour++) {
+    const order = fairOrder(rows, (r) => r.challenge, new Map(), hour, 4);
+    const counts = await refreshModelSummaries(
+      order,
+      bucket,
+      async (challenge) => {
+        if (poison.has(challenge)) return new Promise<never>(() => {});
+        written.add(challenge);
+        return result;
+      },
+      { budgetMs: 60, rowMs: 10 },
+    );
+    assert.equal(counts.attempted, counts.refreshed + counts.failed);
+    assert.equal(counts.attempted + counts.remaining, order.length);
+  }
+  for (const r of rows.slice(30)) assert.ok(written.has(r.challenge), r.challenge);
+});
+test("counts are actual work: nothing started under a spent budget; a deadline after a read is a failure", async () => {
+  const { bucket } = storage();
+  const rows = ["JS-001", "JS-002"].map((challenge) => ({ challenge, revision }));
+  const none = await refreshModelSummaries(rows, bucket, async () => result, { budgetMs: 0 });
+  assert.deepEqual(none, { attempted: 0, refreshed: 0, failed: 0, remaining: 2 });
+  let t = 0;
+  const late = await refreshModelSummaries(
+    rows,
+    bucket,
+    async () => {
+      t += 100; // the read ends after the deadline
+      return result;
+    },
+    { budgetMs: 50, now: () => t },
+  );
+  assert.deepEqual(late, { attempted: 1, refreshed: 0, failed: 1, remaining: 1 });
+});

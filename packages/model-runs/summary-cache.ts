@@ -147,11 +147,15 @@ export async function refreshModelSummaries(
   revisions: readonly { challenge: string; revision: string }[],
   bucket: SummaryBucket,
   read: (challenge: string, revision: string) => Promise<ReceiptRead>,
-  options: { now?: () => number; budgetMs?: number } = {},
+  options: { now?: () => number; budgetMs?: number; rowMs?: number } = {},
 ) {
   const clock = options.now ?? Date.now;
   const deadline = clock() + (options.budgetMs ?? 45_000);
-  const result = { refreshed: 0, failed: 0, remaining: revisions.length };
+  /**
+   * attempted: reads started; refreshed: snapshots written; failed: attempted but not written
+   * (read error, timeout, or the deadline between read and write); remaining: never started.
+   */
+  const result = { attempted: 0, refreshed: 0, failed: 0, remaining: revisions.length };
   if (
     revisions.length > 100 ||
     new Set(revisions.map((r) => summaryKey(r.challenge, r.revision))).size !==
@@ -162,6 +166,8 @@ export async function refreshModelSummaries(
     );
   for (const row of revisions) {
     if (clock() >= deadline) break;
+    result.attempted++;
+    result.remaining--;
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       const value = await Promise.race([
@@ -169,11 +175,11 @@ export async function refreshModelSummaries(
         new Promise<never>((_, reject) => {
           timer = setTimeout(
             () => reject(new Error("Model refresh timed out.")),
-            Math.max(0, deadline - clock()),
+            Math.max(0, Math.min(deadline - clock(), options.rowMs ?? Infinity)),
           );
         }),
       ]);
-      if (clock() >= deadline) break;
+      if (clock() >= deadline) throw new Error("Model refresh deadline after read.");
       await writeModelSummary(
         bucket,
         row.challenge,
@@ -188,7 +194,43 @@ export async function refreshModelSummaries(
     } finally {
       if (timer) clearTimeout(timer);
     }
-    result.remaining--;
   }
   return result;
+}
+
+/**
+ * Run order for a bounded refresh, with no stored state beyond the snapshots themselves. The first
+ * `rotation` items come from a fixed hourly rotation over the key-sorted list, regardless of past
+ * success or failure, so a frontier of revisions that keep failing or stalling can never starve the
+ * rest: each item is a rotation pick once every ceil(n / rotation) hours and is attempted first in
+ * that run. The rest follow stalest first (never written, then oldest, then by key) when the
+ * snapshot listing is available, else in rotation order.
+ */
+export function fairOrder<T>(
+  items: readonly T[],
+  key: (item: T) => string,
+  refreshedAt: ReadonlyMap<string, number> | null,
+  hour: number,
+  rotation: number,
+  /** Without a listing, the rest start this many places further each hour (a run's width). */
+  stride = rotation,
+): T[] {
+  const sorted = [...items].sort((a, b) => key(a).localeCompare(key(b)));
+  const n = sorted.length;
+  if (!n) return [];
+  const start = (((hour * rotation) % n) + n) % n;
+  const cyclic = [...sorted.slice(start), ...sorted.slice(0, start)];
+  const picks = cyclic.slice(0, Math.min(rotation, n));
+  const rest = cyclic.slice(picks.length);
+  if (refreshedAt) {
+    const at = (item: T) => refreshedAt.get(key(item)) ?? -Infinity;
+    rest.sort((a, b) => at(a) - at(b) || key(a).localeCompare(key(b)));
+  } else {
+    // Continue a whole run's width further along the sorted list each hour.
+    const index = new Map(sorted.map((item, i) => [item, i]));
+    const from = (((hour * stride) % n) + n) % n;
+    const offset = (item: T) => (index.get(item)! - from + n) % n;
+    rest.sort((a, b) => offset(a) - offset(b));
+  }
+  return [...picks, ...rest];
 }

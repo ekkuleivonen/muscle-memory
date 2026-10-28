@@ -115,3 +115,26 @@ test("without a listing, hourly rotation moves a whole run's width and reaches e
   await scheduledModelSummaries(env, 3_600_000);
   assert.equal(uploaded.size, 141);
 });
+test("model poison frontier: revisions whose ledger read keeps failing can't starve healthy ones", async () => {
+  const { env, uploaded } = launchEnv(141);
+  const poison = new Set(Array.from({ length: 99 }, (_, i) => `JS-${String(i + 1).padStart(3, "0")}`));
+  const prepare = env.CATALOG_DB!.prepare;
+  env.CATALOG_DB = {
+    prepare: (sql) => ({
+      bind: (...params: unknown[]) => ({
+        all: async <T>() => {
+          if (sql.includes("model_runs") && poison.has(params[0] as string)) throw new Error("synthetic failure");
+          return prepare(sql).bind(...params).all<T>();
+        },
+      }),
+    }),
+  };
+  for (let run = 0; run < 36; run++) {
+    const r: any = await scheduledModelSummaries(env, run * 3_600_000);
+    assert.equal(r.attempted, r.refreshed + r.failed);
+    assert.equal(r.complete, false);
+  }
+  // ceil(141 / 4) = 36 runs: every healthy revision has had a rotation turn.
+  const written = new Set([...uploaded.keys()].map((k) => k.split("/").at(-2)));
+  for (let i = 100; i <= 141; i++) assert.ok(written.has(`JS-${i}`), `JS-${i}`);
+});

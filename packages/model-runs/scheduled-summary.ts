@@ -1,6 +1,7 @@
 import type { Sql } from "./ledger";
 import { readModelReceipts, type ReceiptBucket } from "./read-receipts";
 import {
+  fairOrder,
   MODEL_SUMMARY_PREFIX,
   refreshModelSummaries,
   withinSummaryBudget,
@@ -10,6 +11,12 @@ import {
 export const MAX_MODEL_SUMMARY_REVISIONS = 200;
 /** Revisions attempted per run; the 250-read, 32 MiB and 45-second limits still stop it sooner. */
 export const MAX_MODEL_REFRESHES = 100;
+/**
+ * Revisions each run takes from the fixed hourly rotation, attempted first. Each read is capped at
+ * 5 s and the listing at 5 s, so these 4 always start inside the 45-second budget: every revision is
+ * attempted at least once every ceil(n / 4) hours (36 for 141), whatever else fails or stalls.
+ */
+export const MODEL_ROTATION = 4;
 
 export interface SummaryEnvironment {
   MODEL_SUMMARY_CACHE_ENABLED?: string;
@@ -61,15 +68,14 @@ export async function scheduledModelSummaries(
   );
   if (rows.length > MAX_MODEL_SUMMARY_REVISIONS)
     return { state: "catalog-limit" as const };
-  // Stalest first (never written, then oldest), from one listing of the snapshot prefix's keys and
-  // upload times, so read limits and slow receipts can't starve later revisions. Without a listing,
-  // rotate by a whole run's width each hour.
+  // Rotation picks first, then stalest first from one listing of the snapshot prefix's keys and
+  // upload times (fairOrder). The listing gets at most 5 s so it can't consume the run.
   let refreshedAt: Map<string, number> | null = null;
   try {
     const listed = env.CONTENT.list
       ? await withinSummaryBudget(
           env.CONTENT.list({ prefix: MODEL_SUMMARY_PREFIX, limit: 1000 }),
-          Math.max(0, deadline - Date.now()),
+          Math.max(0, Math.min(5000, deadline - Date.now())),
         )
       : null;
     if (listed && !listed.truncated && Array.isArray(listed.objects)) {
@@ -81,17 +87,14 @@ export async function scheduledModelSummaries(
   } catch {
     refreshedAt = null;
   }
-  let ordered: typeof rows;
-  if (refreshedAt) {
-    const at = (r: { challenge: string; revision: string }) =>
-      refreshedAt!.get(`${r.challenge}/${r.revision}.json`) ?? -Infinity;
-    ordered = [...rows].sort((a, b) => at(a) - at(b) || a.challenge.localeCompare(b.challenge));
-  } else {
-    const start = rows.length
-      ? (Math.floor(scheduledTime / 3_600_000) * MAX_MODEL_REFRESHES) % rows.length
-      : 0;
-    ordered = [...rows.slice(start), ...rows.slice(0, start)];
-  }
+  const ordered = fairOrder(
+    rows,
+    (r) => `${r.challenge}/${r.revision}.json`,
+    refreshedAt,
+    Math.floor(scheduledTime / 3_600_000),
+    MODEL_ROTATION,
+    MAX_MODEL_REFRESHES,
+  );
   const revisions = ordered.slice(0, MAX_MODEL_REFRESHES);
   let gets = 0,
     bytes = 0;
@@ -120,7 +123,8 @@ export async function scheduledModelSummaries(
         revision,
         Math.min(5000, Math.max(0, deadline - Date.now())),
       ),
-    { budgetMs: Math.max(0, deadline - Date.now()) },
+    // Each revision gets at most 5 s, so no slow receipt frontier can hold the run.
+    { budgetMs: Math.max(0, deadline - Date.now()), rowMs: 5000 },
   );
   return {
     state: "finished" as const,
@@ -128,9 +132,10 @@ export async function scheduledModelSummaries(
     gets,
     bytes,
     registered: rows.length,
-    attempted: revisions.length,
+    /** Planned for this run (rotation picks first, then stalest); `attempted` is how many started. */
+    planned: revisions.length,
     ordering: refreshedAt ? ("stalest-first" as const) : ("rotation" as const),
-    // Not refreshed this run, whether by the per-run cap, a read limit or the deadline.
+    // Not refreshed this run, whether by the per-run cap, a failure, a read limit or the deadline.
     notRefreshed: rows.length - counts.refreshed,
     complete: counts.refreshed === rows.length,
   };

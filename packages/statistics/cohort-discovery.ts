@@ -2,6 +2,7 @@
 import { CHALLENGE_KEY, REVISION } from "../domain/records";
 import { MIN_COHORT } from "./cohort";
 import { CHECK_BATCH, MAX_COHORT_MEMBERS } from "./current-cohort";
+import { fairOrder } from "../model-runs/summary-cache";
 import { checkCohortWindow, type CohortWindow } from "./cohort-window";
 
 /**
@@ -85,6 +86,13 @@ LIMIT ${MAX_CURRENT_COHORT_REVISIONS + 1}`;
  * are at most 14 × 2 × 100 × 3 = 8,400, under the earlier 59,400 ceiling.
  */
 export const RUN_CHECK_SLOTS = 14;
+/**
+ * Candidates each run takes from a fixed hourly rotation, planned first: a frontier of revisions
+ * that keep failing or stalling can't starve healthy ones, each of which is a rotation pick once
+ * every ceil(n / 4) hours (36 for 141). Per-build time caps (scheduled-cohorts.ts) make sure every
+ * planned build starts within the run, even if all of them stall.
+ */
+export const HUMAN_ROTATION = 4;
 export interface PlannedCohort extends CurrentCohortRevision {
   /** Potential browsers from discovery: an upper bound on the build's members. */
   browsers: number;
@@ -104,11 +112,11 @@ export interface CohortPlan {
  * No truncation of an incomplete/overflow response. Not every eligible revision is refreshed each
  * hour; the plan says how many were left out and why.
  *
- * Order: with `refreshedAt` (each candidate's last successful snapshot write, from one listing of
- * the existing private snapshots), the stalest first: never-built, then oldest, then by challenge.
- * Without it (the listing failed), a stateless hourly rotation. Candidates are taken in that order
- * while their slots fit; a larger one that doesn't fit is deferred and smaller ones still go, and
- * as the stalest it leads the next run.
+ * Order (`fairOrder`): HUMAN_ROTATION candidates from a fixed hourly rotation first, regardless of
+ * past failures; then, with `refreshedAt` (each candidate's last successful snapshot write, from one
+ * listing of the existing private snapshots), the stalest: never-built, then oldest, then by
+ * challenge; without it, a stateless rotation. Candidates are taken in that order while their
+ * slots fit; one that doesn't fit is deferred and smaller ones still go.
  */
 export function planHourlyCohorts(
   raw: unknown,
@@ -141,21 +149,15 @@ export function planHourlyCohorts(
     potential.set(row.challenge, browsers);
   }
   const candidates = revisions.filter((r) => potential.has(r.challenge));
-  let ordered: CurrentCohortRevision[];
-  if (refreshedAt) {
-    const at = (r: CurrentCohortRevision) =>
-      refreshedAt.get(`${r.challenge}/${r.revision}`) ?? -Infinity;
-    ordered = [...candidates].sort(
-      (a, b) => at(a) - at(b) || a.challenge.localeCompare(b.challenge),
-    );
-  } else {
-    const hour = Math.floor(now.getTime() / 3_600_000);
-    const start = candidates.length
-      ? (((hour * slotBudget) % candidates.length) + candidates.length) %
-        candidates.length
-      : 0;
-    ordered = [...candidates.slice(start), ...candidates.slice(0, start)];
-  }
+  const ordered = fairOrder(
+    candidates,
+    (r) => `${r.challenge}/${r.revision}`,
+    refreshedAt ?? null,
+    Math.floor(now.getTime() / 3_600_000),
+    HUMAN_ROTATION,
+    // Without a listing the rest advance by what a run of small cohorts builds after the picks.
+    Math.max(1, slotBudget - HUMAN_ROTATION),
+  );
   const plan: CohortPlan = { builds: [], oversized: 0, deferred: 0, slots: 0 };
   for (const r of ordered) {
     const browsers = potential.get(r.challenge)!;

@@ -37,6 +37,13 @@ const JOB_MS = 10 * 60 * 1000;
  * hard stop below it, not a production confirmation of how scheduled events are counted.
  */
 export const RUN_RPC_CALLS = 1 + 2 * RUN_CHECK_SLOTS;
+/**
+ * Each build's own time cap, as a share of the run budget: 15 s plus 20 s per slot at the full
+ * 10 minutes. Builds run two at a time, so even if every planned build stalls to its cap, all of
+ * them start: the caps sum to at most 14 × 15 s + 14 × 20 s = 490 s. A stall costs one build.
+ */
+const buildMs = (budget: number, slots: number) =>
+  Math.round((budget * (15_000 + 20_000 * slots)) / JOB_MS);
 const SUMMARY_PREFIX = `comparison-summaries/humans/${COHORT_VERSION}/${HUMAN_SNAPSHOT_VERSION}/`;
 export function humanSummaryKey(challenge: string, revision: string) {
   if (!CHALLENGE_KEY.test(challenge) || !REVISION.test(revision))
@@ -219,8 +226,9 @@ export async function refreshHumanSummaries(
     refreshed = 0,
     failed = 0,
     registered = 0,
-    discovered = 0,
+    discovered: number | null = null,
     selectedCount = 0,
+    attempted = 0,
     oversized = 0,
     deferred = 0,
     slots = 0,
@@ -232,10 +240,15 @@ export async function refreshHumanSummaries(
     refreshed,
     failed,
     registered,
+    /** Candidates from a valid discovery; null when discovery didn't run or wasn't valid. */
     discovered,
+    /** Planned for this run. */
     selected: selectedCount,
-    notRefreshed: discovered - refreshed,
-    complete: discovered === refreshed,
+    /** Planned builds that started; `failed` of those didn't write a snapshot. */
+    attempted,
+    notRefreshed: discovered === null ? null : discovered - refreshed,
+    /** Only a valid discovery whose every candidate was refreshed this run. */
+    complete: discovered !== null && discovered === refreshed,
     /** Never built: more potential browsers than one build may check. */
     oversized,
     /** Fit, but not in this run's CONTROL slots; first in a later run. */
@@ -296,12 +309,16 @@ export async function refreshHumanSummaries(
         window: cohortWindow(r.published_at, now),
       }));
     registered = revisions.length;
-    if (!revisions.length) return { state: "finished" as const, ...account() };
+    if (!revisions.length) {
+      discovered = 0;
+      return { state: "finished" as const, ...account() };
+    }
     const found = await sql(cohortDiscoveryQuery(revisions));
-    discovered = Array.isArray(found) ? found.length : 0;
     const refreshedAt = await lastRefreshed(env.CONTENT, remaining());
     if (refreshedAt) ordering = "stalest-first";
+    // Validates the discovery result; only then is its candidate count known.
     const plan = planHourlyCohorts(found, revisions, now, refreshedAt ?? undefined);
+    discovered = (found as unknown[]).length;
     const candidates = plan.builds;
     selectedCount = candidates.length;
     oversized = plan.oversized;
@@ -317,8 +334,17 @@ export async function refreshHumanSummaries(
     const build = async () => {
       while (next < candidates.length) {
         const candidate = candidates[next++];
-        try {
+        attempted++;
+        // This build's own cap: a stall here costs one build, never the rest of the run.
+        const capAt = Date.now() + Math.min(remaining(), buildMs(budget, candidate.slots));
+        const left = () => {
           remaining();
+          const ms = capAt - Date.now();
+          if (ms <= 0) throw new Error("Build time cap reached.");
+          return ms;
+        };
+        try {
+          left();
           const spec = await withinSummaryBudget(
             readCohortBuildSpec(
               env.CATALOG_DB,
@@ -327,13 +353,13 @@ export async function refreshHumanSummaries(
               candidate.revision,
               now,
             ),
-            remaining(),
+            left(),
           );
           if (!spec) {
             failed++;
             continue;
           }
-          remaining();
+          left();
           const snapshot = await withinSummaryBudget(
             buildHumanSnapshot(
               spec,
@@ -345,13 +371,13 @@ export async function refreshHumanSummaries(
               undefined,
               { generation, maxMembers: candidate.slots * 100 },
             ),
-            remaining(),
+            left(),
           );
           if (!snapshot) {
             failed++;
             continue;
           }
-          remaining();
+          left();
           const text = JSON.stringify(snapshot);
           if (new TextEncoder().encode(text).length > SNAPSHOT_LIMIT)
             throw new Error("Snapshot exceeds budget.");
@@ -360,7 +386,7 @@ export async function refreshHumanSummaries(
               humanSummaryKey(spec.challenge, spec.revision),
               text,
             ),
-            remaining(),
+            left(),
           );
           refreshed++;
         } catch {

@@ -25,6 +25,8 @@ function fixture(
   const uploaded = new Map<string, Date>();
   let clock = 0;
   const revisions: { challenge: string; revision: string }[] = [];
+  /** Each revision's immutable source object, so tests can remove or stall it. */
+  const sources = new Map<string, string>();
   for (let i = 1; i <= count; i++) {
     const challenge = `JS-${String(i).padStart(3, "0")}`;
     const revision = {
@@ -61,6 +63,7 @@ function fixture(
       "synthetic",
     );
     objects.set(key, JSON.stringify(revision));
+    sources.set(challenge, key);
     revisions.push({ challenge, revision: hash });
   }
   const catalog: any = {
@@ -158,6 +161,7 @@ function fixture(
     request,
     objects,
     revisions,
+    sources,
     runtime,
     db,
     get requests() {
@@ -300,7 +304,7 @@ test("a stalled SQL transport stops at the whole-run deadline even if a mock ign
   }
 });
 
-test("141 current revisions: 14 builds a run, stalest first, honest partial coverage, all reached", async () => {
+test("141 current revisions: 14 builds a run, precise accounting, all reached", async () => {
   const f = fixture(141);
   try {
     const first = await refreshHumanSummaries(f.env, now, f.request);
@@ -314,6 +318,7 @@ test("141 current revisions: 14 builds a run, stalest first, honest partial cove
         registered: 141,
         discovered: 141,
         selected: 14,
+        attempted: 14,
         notRefreshed: 127,
         complete: false,
         oversized: 0,
@@ -324,42 +329,69 @@ test("141 current revisions: 14 builds a run, stalest first, honest partial cove
         ordering: "stalest-first",
       },
     );
-    for (let run = 1; run < 11; run++)
+    // 4 rotation picks may repeat built ones, so about 10 new a run: ceil(141 / 10) = 15 runs.
+    for (let run = 1; run < 15; run++)
       await refreshHumanSummaries(f.env, new Date(+now + run * 3_600_000), f.request);
-    assert.equal(new Set(f.built()).size, 141, "every revision built within 11 runs");
+    assert.equal(new Set(f.built()).size, 141, "every revision built within 15 runs");
   } finally {
     f.db.close();
   }
 });
-test("more than 200 current revisions stops the whole human refresh before any SQL", async () => {
-  const f = fixture(201);
+test("over 200 revisions, a failed discovery or an invalid one never reports complete coverage", async () => {
+  const over = fixture(201);
   try {
-    const r = await refreshHumanSummaries(f.env, now, f.request);
-    assert.equal(r.state, "registry-overflow");
-    assert.equal(r.queries, 0);
-    assert.equal(f.requests, 0);
+    const r = await refreshHumanSummaries(over.env, now, over.request);
+    assert.deepEqual([r.state, r.queries, r.discovered, r.complete, r.notRefreshed], ["registry-overflow", 0, null, false, null]);
+    assert.equal(over.requests, 0);
+  } finally {
+    over.db.close();
+  }
+  const f = fixture(3);
+  try {
+    const failing: typeof fetch = async () => Response.json({ success: false }, { status: 500 });
+    const r = await refreshHumanSummaries(f.env, now, failing);
+    assert.deepEqual([r.state, r.discovered, r.complete, r.attempted], ["unavailable", null, false, 0]);
+    const invalid: typeof fetch = async () =>
+      Response.json({ success: true, result: { rows: [{ challenge: "JS-999", revision: f.revisions[0].revision, browsers: 20 }] } });
+    const bad = await refreshHumanSummaries(f.env, now, invalid);
+    assert.deepEqual([bad.state, bad.discovered, bad.complete], ["unavailable", null, false]);
   } finally {
     f.db.close();
   }
 });
-test("a deadline mid-run reports partial coverage, and the next run builds the skipped revisions first", async () => {
-  const f = fixture(141);
+test("poison frontier: revisions whose source keeps failing can't starve the healthy ones", async () => {
+  const f = fixture(41);
   try {
-    let calls = 0;
-    // Each member query takes 40 ms; a 200 ms budget lets only some of the 14 builds finish.
-    const slow: typeof fetch = async (url, init) => {
-      if (calls++ > 0) await new Promise((r) => setTimeout(r, 40));
-      return f.request(url, init);
-    };
-    const cut = await refreshHumanSummaries(f.env, now, slow, 200);
-    assert.ok(cut.refreshed > 0 && cut.refreshed < 14, `refreshed ${cut.refreshed}`);
-    assert.equal(cut.complete, false);
-    assert.equal(cut.notRefreshed, 141 - cut.refreshed);
-    const before = new Set(f.built());
-    await refreshHumanSummaries(f.env, new Date(+now + 3_600_000), f.request);
-    const next = f.built().filter((k) => !before.has(k));
-    // The deadline's leftovers go first: every one of them, up to the 99-build cap, is built next.
-    assert.equal(next.length, 14);
+    // The first 30 (by key, so also the stalest never-built ones) have no source object: every
+    // build of them fails, forever.
+    const poison = new Set(f.revisions.slice(0, 30).map((r) => r.challenge));
+    for (const c of poison) f.objects.delete(f.sources.get(c)!);
+    for (let run = 0; run < 11; run++) {
+      const r = await refreshHumanSummaries(f.env, new Date(+now + run * 3_600_000), f.request);
+      assert.equal(r.complete, false);
+      assert.equal(r.attempted, r.refreshed + r.failed);
+    }
+    const built = new Set(f.built().map((k) => k.split("/").at(-2)));
+    // ceil(41 / 4) = 11 runs: every healthy revision has had its rotation turn.
+    for (const r of f.revisions) if (!poison.has(r.challenge)) assert.ok(built.has(r.challenge), r.challenge);
+  } finally {
+    f.db.close();
+  }
+});
+test("poison frontier: stalled source reads cost one build each, never the run", async () => {
+  const f = fixture(41);
+  try {
+    const poison = new Set(f.revisions.slice(0, 30).map((r) => f.sources.get(r.challenge)!));
+    const get = f.env.CONTENT.get;
+    f.env.CONTENT.get = (key: string) => (poison.has(key) ? new Promise(() => {}) : get(key));
+    const healthy = f.revisions.slice(30).map((r) => r.challenge);
+    for (let run = 0; run < 11; run++) {
+      // A 600 ms run budget: each 1-slot build is capped at 35 ms, so all 14 planned builds start.
+      const r = await refreshHumanSummaries(f.env, new Date(+now + run * 3_600_000), f.request, 600);
+      assert.equal(r.attempted, r.selected, "every planned build started despite the stalls");
+    }
+    const built = new Set(f.built().map((k) => k.split("/").at(-2)));
+    for (const c of healthy) assert.ok(built.has(c), c);
   } finally {
     f.db.close();
   }
