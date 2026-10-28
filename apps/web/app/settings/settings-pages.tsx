@@ -696,6 +696,11 @@ function ProfileForm({ only, from }: { only?: string; from?: ReturnTo }) {
   /** ↑↓ or j/k move through every option, across questions; Enter picks like Space. */
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.metaKey || event.ctrlKey || event.altKey) return;
+    // Esc anywhere in the questions leaves without saving, as it does from the actions.
+    if (event.key === "Escape") {
+      event.preventDefault();
+      return router.push(from?.href ?? "/settings");
+    }
     const inputs = [
       ...(options.current?.querySelectorAll<HTMLInputElement>("input") ?? []),
     ];
@@ -797,8 +802,9 @@ function ProfileForm({ only, from }: { only?: string; from?: ReturnTo }) {
   return (
     <SettingsFrame title={only ? "Profile question" : "Profile"}>
       <p className="t-dim">
-        Every question is optional. Your answers let us compare groups (never
-        people): change any of them, then save.
+        {only === "languages"
+          ? "Optional. Your answer groups your own practice on your report into your usual languages and others: change it, then save."
+          : "Every question is optional. Your answers let us compare groups (never people): change any of them, then save."}
       </p>
       <div ref={options} onKeyDown={onKeyDown}>
         {shown.map((question) => {
@@ -852,6 +858,8 @@ function ProfileForm({ only, from }: { only?: string; from?: ReturnTo }) {
                         tone: "dim",
                         text: "Confirmed. Save to keep it as your answer.",
                       });
+                      // The button goes away; Save is the next step.
+                      actions.current?.focus();
                     }}
                   >
                     Confirm as my answer
