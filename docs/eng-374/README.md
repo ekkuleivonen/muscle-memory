@@ -16,3 +16,4 @@ Uploaded history was a synthetic empty page, a 6 s slow page or a 503, answered 
 | `desktop-1280-4-rich.png`, `phone-320-4-rich.png`, `phone-landscape-4-rich.png` | Rich history: three takeaways, then the answers; uploads still arriving |
 | `desktop-1280-5-history-down.png` | Uploads failing: the device report stays, with a retrying line |
 | `phone-390-2-one-discover.png`, `desktop-1280-4-rich-discover.png` | "Still to discover" after one solve and in a rich history (element screenshots; the page scrolls inside its own container, so the page screenshots show the first screen only) |
+| `phone-390-2-one-full.png`, `phone-390-3-two-full.png`, `phone-390-4-rich-full.png`, `phone-320-4-rich-full.png`, `desktop-1280-4-rich-full.png` | The whole report, top to bottom (one, two and a rich history with a repeat), taken with the viewport grown to the report's height |

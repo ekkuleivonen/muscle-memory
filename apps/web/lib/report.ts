@@ -455,14 +455,13 @@ function difficulty(solved: ReportAttempt[], catalog: readonly ChallengeSummary[
     return { label: g.d, value: m, display: `${duration(m)} · ${plural(g.times.length, "solve")}` };
   });
   const total = groups.reduce((t, g) => t + g.times.length, 0);
-  const each = (g: (typeof groups)[number]) => `${g.times.length > 1 ? "about " : ""}${duration(median(g.times)!)}`;
   return {
     id: "difficulty",
     question: QUESTIONS.difficulty,
     answer:
       total === 1
         ? `Your ${groups[0].d} solve took ${duration(groups[0].times[0])} of active editing.`
-        : `${across(total)}, active editing to the solve: ${groups.map((g) => `${g.d} ${each(g)}`).join(", ")}${groups.some((g) => g.times.length > 1) ? " each, typically" : ""}.`,
+        : `${across(total)}, ${groups.some((g) => g.times.length > 1) ? "typical " : ""}active editing to the solve: ${groups.map((g) => `${g.d} ${duration(median(g.times)!)}`).join(", ")}.`,
     visual: { kind: "bars", bars },
     detail: null,
     note: null,
@@ -574,33 +573,40 @@ function typing(attempts: readonly ReportAttempt[]): Question | null {
   };
 }
 
-/** A later solve of the same challenge, version and conditions, with fewer submissions. */
+/**
+ * Solving the same challenge again (same version and conditions): submissions to the first solve
+ * and to the latest, whichever way it went. Fewer, the same and more are all shown; familiarity
+ * with that challenge helps, so it is never a claim about skill. The most recently repeated one.
+ */
 function repeat(solved: ReportAttempt[]): Question | null {
   const groups = new Map<string, ReportAttempt[]>();
   for (const a of solved.filter(clean)) {
     const key = JSON.stringify([a.challenge, a.revision, [...a.conditions].sort()]);
     groups.set(key, [...(groups.get(key) ?? []), a]);
   }
-  for (const group of groups.values()) {
-    // Submissions up to each solve; any checks after a solve aren't "needed".
-    const s = chronological(group.filter((a) => toSolve(a)));
-    if (s.length < 2) continue;
-    const before = toSolve(s[0])!.submissions,
-      after = toSolve(s[s.length - 1])!.submissions,
-      last = s[s.length - 1];
-    if (after >= before) continue;
-    return {
-      id: "repeat",
-      question: QUESTIONS.repeat,
-      answer: `Back on ${last.challenge}, you needed ${plural(after, "submission")} instead of ${before}.`,
-      visual: { kind: "turn", from: plural(before, "submission"), to: plural(after, "submission") },
-      detail: null,
-      note: "Same challenge, so familiarity helps.",
-      fyi: null,
-      takeaway: null,
-    };
-  }
-  return null;
+  // Submissions up to each solve; any checks after a solve aren't "needed".
+  const s = [...groups.values()]
+    .map((group) => chronological(group.filter((a) => toSolve(a))))
+    .filter((g) => g.length >= 2)
+    .sort((x, y) => when(y.at(-1)!).localeCompare(when(x.at(-1)!)))[0];
+  if (!s) return null;
+  const before = toSolve(s[0])!.submissions,
+    after = toSolve(s.at(-1)!)!.submissions,
+    key = s[0].challenge;
+  const scope = s.length === 2 ? `Back on ${key}` : `Across your ${count(s.length)} solves of ${key}`;
+  return {
+    id: "repeat",
+    question: QUESTIONS.repeat,
+    answer:
+      after === before
+        ? `${scope}, the latest took ${plural(after, "submission")}, the same as the first.`
+        : `${scope}, the latest took ${plural(after, "submission")}; the first took ${before}.`,
+    visual: { kind: "turn", from: `first ${plural(before, "submission")}`, to: `latest ${plural(after, "submission")}` },
+    detail: null,
+    note: "Same challenge, so familiarity with it plays a part.",
+    fyi: null,
+    takeaway: null,
+  };
 }
 
 /**
@@ -688,7 +694,7 @@ function toDiscover(input: ReportInput, solved: ReportAttempt[], answered: Set<s
   const first = ordered[0] && byKey.get(ordered[0].challenge);
   add(
     "repeat",
-    first ? "Solve a challenge again later; this shows whether it took fewer submissions." : "Solve a challenge, then solve it again later.",
+    first ? "Solve a challenge again later; this sets its submissions beside your first solve." : "Solve a challenge, then solve it again later.",
     first?.runnable ? { label: `Again: ${first.key} · ${first.title}`, href: `/challenges/${first.key}` } : null,
   );
   return out;

@@ -101,12 +101,18 @@ function withSubmissions(a: AttemptSummary, verdicts: ("pass" | "fail")[], start
   return { ...a, started, timeline, completed: solved >= 0, values: { ...a.values, submissions: verdicts.length }, source: "device" };
 }
 
-test("a later solve with fewer submissions to solve answers the repeat question; otherwise it's left out", () => {
+test("coming back to a challenge shows fewer, the same or more submissions alike, in the same conditions only", () => {
   const first = withSubmissions(summary("r1", "JS-001"), ["fail", "pass"], "2026-10-27T10:00:00.000Z"),
-    later = withSubmissions(summary("r2", "JS-001"), ["pass"], "2026-10-28T10:00:00.000Z");
-  assert.equal(q(buildReport(input({ attempts: [first, later] })), "repeat")!.answer, "Back on JS-001, you needed 1 submission instead of 2.");
-  const other = { ...later, conditions: ["Runtime: {}"] };
-  assert.equal(q(buildReport(input({ attempts: [first, other] })), "repeat"), undefined);
+    later = withSubmissions(summary("r2", "JS-001"), ["pass"], "2026-10-28T10:00:00.000Z"),
+    same = withSubmissions(summary("r3", "JS-001"), ["fail", "pass"], "2026-10-28T10:00:00.000Z"),
+    more = withSubmissions(summary("r4", "JS-001"), ["fail", "fail", "pass"], "2026-10-28T10:00:00.000Z");
+  const answer = (...a: ReportAttempt[]) => q(buildReport(input({ attempts: a })), "repeat")?.answer;
+  assert.equal(answer(first, later), "Back on JS-001, the latest took 1 submission; the first took 2.");
+  assert.equal(answer(first, same), "Back on JS-001, the latest took 2 submissions, the same as the first.");
+  assert.equal(answer(first, more), "Back on JS-001, the latest took 3 submissions; the first took 2.", "more is shown as plainly as fewer");
+  assert.equal(answer(first, later, { ...more, started: "2026-10-29T10:00:00.000Z" }), "Across your three solves of JS-001, the latest took 3 submissions; the first took 2.");
+  assert.equal(q(buildReport(input({ attempts: [first, later] })), "repeat")!.note, "Same challenge, so familiarity with it plays a part.");
+  assert.equal(answer(first, { ...later, conditions: ["Runtime: {}"] }), undefined, "different conditions aren't a repeat");
 });
 
 test("checks after a solve never count as needed: no false improvement, no extra iteration", () => {
@@ -115,7 +121,7 @@ test("checks after a solve never count as needed: no false improvement, no extra
     later = withSubmissions(summary("q2", "JS-001"), ["fail", "pass"], "2026-10-28T10:00:00.000Z");
   assert.equal(first.values.submissions, 6);
   const r = buildReport(input({ attempts: [first, later] }));
-  assert.equal(q(r, "repeat"), undefined, "1 to solve, then 2: not an improvement");
+  assert.equal(q(r, "repeat")!.answer, "Back on JS-001, the latest took 2 submissions; the first took 1.", "1 to solve, then 2: optional ones after the solve don't count");
   // Checks to solve are 1 and 2, not 6 and 2.
   assert.deepEqual(q(r, "iterate")!.visual, { kind: "bars", bars: [{ label: "1 submission", value: 1, display: "1 solve" }, { label: "2 submissions", value: 1, display: "1 solve" }] });
 });
@@ -479,6 +485,8 @@ test("a rich history leads with at most three takeaways, each scoped and from an
   }
   assert.equal(r.takeaways[1].text, "Across your five answered solves, the first submission passed 2 of 3 times you said you were sure, and 0 of 2 times you said unsure.");
   assert.deepEqual(r.questions.map((x) => x.id), ["start", "iterate", "recovery", "confidence", "difficulty", "progress", "languages"]);
+  assert.equal(q(r, "difficulty")!.answer, "Across your five solves, typical active editing to the solve: easy 10 min, medium 20 min.");
+  assert.deepEqual(q(r, "difficulty")!.visual, { kind: "bars", bars: [{ label: "easy", value: 9.5 * MIN, display: "10 min · 4 solves" }, { label: "medium", value: 20 * MIN, display: "20 min · 1 solve" }] });
   assert.doesNotMatch(visible(r), /sha256|revision|harness|receipt|percentile|evidence|reading|thinking/i);
   assert.doesNotMatch(said(r), /faster|improv|mostly|you iterate|you are|always/i, "observations, never traits");
 });

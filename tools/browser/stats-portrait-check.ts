@@ -26,9 +26,9 @@ const DAY = 86_400_000;
  * The fixture trace, slowed by `pace` (gaps stay under the 30 s active gap up to 7×), started
  * `day` days in, with its after-solve confidence answer replaced.
  */
-function attempt(key: string, day: number, pace: number, confidence: string): StoredRecord[] {
+function attempt(key: string, day: number, pace: number, confidence: string, again = ""): StoredRecord[] {
   const base = Date.parse("2026-10-20T09:00:00Z") + day * DAY;
-  return trace(`qa-${key}`, `qa-${key}-source`, key, revision(key)).map((r) => {
+  return trace(`qa-${key}${again}`, `qa-${key}${again}-source`, key, revision(key)).map((r) => {
     const o = JSON.parse(r.payload);
     o.elapsedMs *= pace;
     o.occurredAt = new Date(base + o.elapsedMs).toISOString();
@@ -48,6 +48,8 @@ const HISTORIES: Record<string, StoredRecord[]> = {
     ...attempt("JS-004", 5, 2, "fairly"),
     ...attempt("JS-005", 6, 5, "guessing"),
     ...attempt("PY-001", 8, 4, "unsure"),
+    // Back on JS-001 later: a repeat, never part of the earlier/later comparison.
+    ...attempt("JS-001", 9, 3, "sure", "-again"),
   ],
 };
 
@@ -157,6 +159,13 @@ const FORBIDDEN = /sha256|revision|harness|receipt|percentile|cohort|evidence|re
 for (const device of DEVICES) {
   console.log(`${engine} ${device.name}`);
   const shot = (page: Page, name: string) => page.screenshot({ path: `${output}/${engine}-${device.name}-${name}.png`, fullPage: true });
+  // The page scrolls inside its own container, so the viewport grows to the whole report for one shot.
+  const whole = async (page: Page, name: string) => {
+    const height = await page.evaluate(() => document.querySelector(".stats-content")!.scrollHeight + 160);
+    await page.setViewportSize({ width: device.width, height: Math.max(device.height, height) });
+    await page.screenshot({ path: `${output}/${engine}-${device.name}-${name}-full.png` });
+    await page.setViewportSize({ width: device.width, height: device.height });
+  };
 
   // Empty: one line and a start, no cards.
   {
@@ -194,6 +203,7 @@ for (const device of DEVICES) {
     }), "the inventory comes after every answer");
     await noOverflow(page, "one solve");
     await shot(page, "2-one");
+    await whole(page, "2-one");
     await page.locator(".report-discover").screenshot({ path: `${output}/${engine}-${device.name}-2-one-discover.png` });
     step(`${device.name}: one solve describes that solve; next stays in JavaScript`);
     await context.close();
@@ -213,6 +223,7 @@ for (const device of DEVICES) {
     assert.ok(await page.locator(".report-takeaways li").count() <= 3);
     await noOverflow(page, "two solves");
     await shot(page, "3-two");
+    await whole(page, "3-two");
     step(`${device.name}: two solves are scoped, never a trait; next is JS-003, not C-001`);
     await context.close();
   }
@@ -238,12 +249,15 @@ for (const device of DEVICES) {
     assert.match(body, /How sure were you, and how did the first submission go\?/);
     assert.match(body, /the first submission passed \d of \d times you said you were sure, and \d of \d times you said unsure\./);
     assert.match(body, /Across your six solved challenges: JavaScript 5, Python 1\./);
+    assert.match(body, /Back on JS-001, the latest took 2 submissions, the same as the first\./);
+    assert.equal(await page.locator(".report-discover li", { hasText: "Did coming back to a challenge change anything?" }).count(), 0, "answered, so not listed");
     assert.doesNotMatch(body, /Mostly|faster|improv|You're getting/);
     assert.doesNotMatch(body, FORBIDDEN);
     assert.equal(await page.locator(".report-question .report-fyi").count(), 0, "no comparison in any answer");
     assert.match(body, /Comparisons with other players and with AI models aren't shown/, "only the one line saying why");
     await noOverflow(page, "rich");
     await shot(page, "4-rich");
+    await whole(page, "4-rich");
     await page.locator(".report-discover").screenshot({ path: `${output}/${engine}-${device.name}-4-rich-discover.png` });
     if (!device.touch) {
       // Keyboard: the first Tab stops in the page reach the first takeaway; Enter moves to its answer.
