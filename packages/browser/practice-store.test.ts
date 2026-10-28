@@ -164,3 +164,59 @@ test("report evidence excludes artifacts, upload queue and unrelated private set
     store.close();
   }
 });
+
+test("solved code lengths return numbers only, from code still kept, for at most three attempts", async () => {
+  const { codeRevision, toRecord } = await import("../domain/records");
+  const revision = `sha256:${"a".repeat(64)}`;
+  const store = await openPracticeStore(new IDBFactory());
+  try {
+    const code = codeRevision("p", "src", 1, "practice-capture-1.2.0", {
+      "fixture.js": { text: "SYNTHETIC_CODE", mediaType: "text/javascript" },
+    });
+    const at = (type: string, sequence: number, data: unknown): StoredRecord => ({
+      recordId: `src.${sequence}`,
+      participantId: "p",
+      kind: "observation",
+      payload: JSON.stringify({
+        type,
+        actor: "person",
+        participantId: "p",
+        source: { id: "src", sequence },
+        occurredAt: "2026-10-27T00:00:00Z",
+        challenge: "JS-900",
+        challengeRevision: revision,
+        attemptId: "solved",
+        data,
+      }),
+    });
+    const submitted = at("practice.submitted", 1, {
+      runId: "r",
+      revision: 1,
+      codeArtifactId: code.artifactId,
+      result: "passed",
+      passed: 2,
+      total: 2,
+      rules: [],
+    });
+    const completed = at("practice.completed", 2, { runId: "r", codeArtifactId: code.artifactId });
+    await store.restore({
+      settings: { participantId: "p", deviceSecret: "secret" },
+      records: [toRecord(code), submitted, completed],
+      outbox: [],
+    });
+    const want = { challenge: "JS-900", revision, attempt: "solved" };
+    const lengths = await store.solvedCodeLengths([want, { ...want, attempt: "compacted" }]);
+    assert.deepEqual(lengths, { solved: 14 });
+    assert.doesNotMatch(JSON.stringify(lengths), /SYNTHETIC_CODE/);
+    await assert.rejects(store.solvedCodeLengths([want, want, want, want]), /three/);
+    // Without the code copy (compacted away) the length is absent, not zero.
+    await store.restore({
+      settings: { participantId: "p", deviceSecret: "secret" },
+      records: [submitted, completed],
+      outbox: [],
+    });
+    assert.deepEqual(await store.solvedCodeLengths([want]), {});
+  } finally {
+    store.close();
+  }
+});
