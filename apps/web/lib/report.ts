@@ -77,9 +77,13 @@ export type Visual =
   | { kind: "split"; whole: string; parts: Part[] }
   /**
    * One mark per item, filled when it passed: each submission of a solve in order, or each
-   * answered solve's first submission. `legend` names both marks.
+   * answered solve's first submission. A null mark is a submission whose result isn't known
+   * (a timeout, or an error not classified as the code's), never drawn as a failure. `legend`
+   * names the marks; its third entry only when some mark is null.
    */
-  | { kind: "dots"; legend: [string, string]; rows: { label: string; marks: boolean[]; display: string }[] };
+  | { kind: "dots"; legend: [string, string] | [string, string, string]; rows: { label: string; marks: Mark[]; display: string }[] };
+/** Passed, didn't pass, or not known. */
+export type Mark = boolean | null;
 export type QuestionId =
   | "start"
   | "progress"
@@ -196,7 +200,8 @@ export interface ShareSummary {
   solved: number;
   /** Every solved challenge by catalog language, or empty when some language isn't known. */
   languages: { label: string; solved: number }[];
-  firstPassed: { passed: number; of: number } | null;
+  /** Of `of` solves whose first submission's result is known, out of `solves` counted (as in the iterate answer). */
+  firstPassed: { passed: number; of: number; solves: number } | null;
 }
 
 const WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
@@ -249,8 +254,12 @@ export function toSolve(
   serviceFailures: number;
   /** What happened to the first recorded submission when it doesn't count: cancelled, or failed on our side. */
   firstVoided: "cancelled" | "service" | null;
-  /** Each counted submission in order, true for the one that solved it (always the last). */
-  marks: boolean[];
+  /**
+   * Each counted submission in order: true for the one that solved it (always the last), false
+   * only when its checks were decided and it didn't pass, null when its result isn't known. The
+   * first agrees with `firstSubmit`, which also knows a compile or runtime error was the code's.
+   */
+  marks: Mark[];
 } | null {
   if (!a.completed || a.timeline.length >= TIMELINE_CAP) return null;
   let count = 0,
@@ -259,9 +268,11 @@ export function toSolve(
     serviceFailures = 0,
     skip = false,
     seen = false,
-    firstVoided: "cancelled" | "service" | null = null;
-  const marks: boolean[] = [];
+    firstVoided: "cancelled" | "service" | null = null,
+    run: string | null = null;
+  const marks: Mark[] = [];
   for (const t of a.timeline) {
+    if (t.label.startsWith("submit: ")) run = t.label.slice(8);
     if (t.label === "examples: result" || t.label === "examples: user-error") exampleRuns++;
     if (t.label.endsWith(": runner-error")) {
       serviceFailures++;
@@ -270,6 +281,8 @@ export function toSolve(
     }
     const m = SUBMITTED.exec(t.label);
     if (!m) continue;
+    const ran = run;
+    run = null;
     if (skip || m[1] === "cancelled") {
       if (!seen) firstVoided = skip ? "service" : "cancelled";
       seen = true;
@@ -280,7 +293,13 @@ export function toSolve(
     seen = true;
     count++;
     const solved = m[1] === "passed" && +m[2] === +m[3] && +m[4] === 0;
-    marks.push(solved);
+    // Decided: checks ran to a verdict on a run that finished (derive's own rule for a decided submission).
+    const decided = (m[1] === "passed" || m[1] === "failed") && +m[3] > 0 && (ran === "result" || ran === "user-error");
+    // The very first recorded submission is judged by derive (`firstSubmit`), which also knows a
+    // compile or runtime error was the code's; the timeline can't tell that error from others.
+    const first = a.values.firstSubmit;
+    const judged = count === 1 && !firstVoided;
+    marks.push(solved ? true : judged ? (first === 0 ? false : null) : decided ? false : null);
     if (solved) return { submissions: count, cancelled, exampleRuns, serviceFailures, firstVoided, marks };
   }
   return null;
@@ -439,7 +458,7 @@ function iterate(solved: ReportAttempt[]): Question | null {
         ? rows.some((s) => s.submissions > 1)
           ? {
               kind: "dots",
-              legend: ["passed", "didn't pass"],
+              legend: rows.some((s) => s.marks.includes(null)) ? ["passed", "didn't pass", "result not known"] : ["passed", "didn't pass"],
               rows: rows.map((s) => ({ label: s.challenge, marks: s.marks, display: plural(s.submissions, "submission") })),
             }
           : null
@@ -832,13 +851,12 @@ function shareSummary(input: ReportInput, solved: ReportAttempt[]): ShareSummary
   // By language only when every solved challenge has one (an older revision's isn't guessed).
   const rows = languageWork(input.attempts, input.catalog).filter((r) => r.solved);
   // The iterate answer's population: solves up to the solve, first result known.
-  const known = chronological(solved)
-    .filter((a) => toSolve(a) && (a.values.firstSubmit === 0 || a.values.firstSubmit === 1))
-    .map((a) => a.values.firstSubmit === 1);
+  const counted = solved.filter((a) => toSolve(a));
+  const known = counted.filter((a) => a.values.firstSubmit === 0 || a.values.firstSubmit === 1).map((a) => a.values.firstSubmit === 1);
   return {
     solved: total,
     languages: rows.reduce((t, r) => t + r.solved, 0) === total ? rows.map((r) => ({ label: r.label, solved: r.solved })) : [],
-    firstPassed: known.length ? { passed: known.filter(Boolean).length, of: known.length } : null,
+    firstPassed: known.length ? { passed: known.filter(Boolean).length, of: known.length, solves: counted.length } : null,
   };
 }
 
@@ -859,11 +877,15 @@ export function shareText(s: ShareSummary, site: string): string {
     for (const l of s.languages)
       lines.push(`  ${l.label.padEnd(width)}  ${"■".repeat(Math.max(1, Math.round((l.solved / most) * SHARE_BAR)))} ${l.solved}`);
   }
-  if (s.firstPassed)
+  const f = s.firstPassed;
+  // Scoped to the solves whose first result is known, saying so when that isn't all of them.
+  if (f)
     lines.push(
-      s.firstPassed.of === 1
-        ? `First submission ${s.firstPassed.passed ? "passed" : "didn't pass"}`
-        : `First submission passed in ${s.firstPassed.passed} of ${s.firstPassed.of} solves`,
+      f.of < f.solves
+        ? `First submission passed in ${f.passed} of ${plural(f.of, "solve")} with a known result`
+        : f.of === 1
+          ? `First submission ${f.passed ? "passed" : "didn't pass"}`
+          : `First submission passed in ${f.passed} of ${f.of} solves`,
     );
   lines.push("", `Keep your coding skills in practice: ${site}`);
   return lines.join("\n");

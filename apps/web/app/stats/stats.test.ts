@@ -165,3 +165,17 @@ test("a ring and a split bar carry their whole in words, and never colour alone"
   assert.match(split, /role="img" aria-label="Usual or not: JavaScript 2 solved; Python 1 in progress\."/);
   assert.match(split, /width:66\.7%/);
 });
+
+test("a submission whose result isn't known reads as not known, never as a miss", async () => {
+  const { VisualView } = await import("./report-view");
+  const html = renderToStaticMarkup(
+    createElement(VisualView, {
+      visual: { kind: "dots", legend: ["passed", "didn't pass", "result not known"], rows: [{ label: "JS-001", marks: [null, true], display: "2 submissions" }] },
+      label: "",
+    }),
+  );
+  assert.match(html, /<span class="sr-only">JS-001: result not known, passed; 2 submissions<\/span>/);
+  assert.match(html, /<span class="is-unknown">\?<\/span><span class="is-yes">●<\/span>/);
+  assert.doesNotMatch(html, /class="is-no">○<\/span><span class="is-yes"/, "no miss drawn for it");
+  assert.match(html, /<span class="is-unknown">\?<\/span> result not known/, "the legend names it");
+});

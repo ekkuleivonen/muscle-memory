@@ -1,6 +1,6 @@
 /** The report's questions: one answer, one small visual, and only the context a player needs. */
 import React from "react";
-import { SHORT, type Part, type Question, type Visual } from "../../lib/report";
+import { SHORT, type Mark, type Part, type Question, type Visual } from "../../lib/report";
 
 const percent = (x: number) => `${Math.round(x * 1000) / 10}%`;
 /** Slice colours in a fixed order (checked for colour-blind separation on the terminal background); the folded "other" slice is grey. */
@@ -66,22 +66,26 @@ function Split({ whole, parts }: { whole: string; parts: Part[] }) {
   );
 }
 
-/** Rows of marks: ● for one that passed, ○ for one that didn't, in order. */
+const GLYPH = { yes: "●", no: "○", unknown: "?" };
+const markClass = (m: Mark) => (m === null ? "unknown" : m ? "yes" : "no");
+
+/** Rows of marks: ● for one that passed, ○ for one that didn't, ? when its result isn't known, in order. */
 function Dots({ visual }: { visual: Extract<Visual, { kind: "dots" }> }) {
-  const [yes, no] = visual.legend;
+  const [yes, no, unknown] = visual.legend;
+  const said = { yes, no, unknown: unknown ?? "result not known" };
   return (
     <div className="report-dots">
       <ul>
         {visual.rows.map((r, i) => (
           <li key={`${r.label}:${i}`}>
-            <span className="sr-only">{`${r.label}: ${r.marks.map((m) => (m ? yes : no)).join(", ")}; ${r.display}`}</span>
+            <span className="sr-only">{`${r.label}: ${r.marks.map((m) => said[markClass(m)]).join(", ")}; ${r.display}`}</span>
             <span className="t-dim" aria-hidden>
               {r.label}
             </span>
             <span className="report-marks" aria-hidden>
               {r.marks.map((m, j) => (
-                <span key={j} className={m ? "is-yes" : "is-no"}>
-                  {m ? "●" : "○"}
+                <span key={j} className={`is-${markClass(m)}`}>
+                  {GLYPH[markClass(m)]}
                 </span>
               ))}
             </span>
@@ -91,6 +95,12 @@ function Dots({ visual }: { visual: Extract<Visual, { kind: "dots" }> }) {
       </ul>
       <p className="report-key t-dim" aria-hidden>
         <span className="is-yes">●</span> {yes} <span className="is-no">○</span> {no}
+        {unknown && (
+          <>
+            {" "}
+            <span className="is-unknown">?</span> {unknown}
+          </>
+        )}
       </p>
     </div>
   );

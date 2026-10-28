@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { deriveAttempts, type AttemptSummary } from "../../../packages/developer-profile/derive";
+import type { StoredRecord } from "../../../packages/domain/records";
 import { trace, syntheticRevision } from "../../../packages/developer-profile/fixtures";
 import type { ChallengeSummary } from "./challenges";
 import type { Progress } from "./progress";
@@ -108,6 +109,7 @@ function withSubmissions(a: AttemptSummary, verdicts: ("pass" | "fail")[], start
   const timeline = [
     { at: started, label: "started" },
     ...verdicts.flatMap((v, i) => [
+      { at: at(i), label: "submit: result" },
       { at: at(i), label: v === "pass" ? "passed: 3/3 checks; 0 static rules" : "failed: 1/3 checks; 0 static rules" },
       ...(i === solved ? [{ at: at(i), label: "completed" }] : []),
     ]),
@@ -698,7 +700,7 @@ test("the share summary is a few counts, never names, times, answers or identity
   assert.deepEqual(r.share, {
     solved: 3,
     languages: [{ label: "JavaScript", solved: 2 }, { label: "Python", solved: 1 }],
-    firstPassed: { passed: 2, of: 3 },
+    firstPassed: { passed: 2, of: 3, solves: 3 },
   });
   const text = shareText(r.share!, "https://example.test");
   assert.equal(
@@ -716,7 +718,7 @@ test("the share summary is a few counts, never names, times, answers or identity
   );
   // No challenge keys or titles, durations, dates, after-solve answers, profile context or ids.
   assert.doesNotMatch(text, /JS-|PY-|Synthetic|\d+ (s|min)\b|2026|sure|unsure|usual|5-10|synthetic-participant|s1|attempt|sha256/);
-  const one = shareText({ solved: 1, languages: [{ label: "Go", solved: 1 }], firstPassed: { passed: 0, of: 1 } }, "https://example.test");
+  const one = shareText({ solved: 1, languages: [{ label: "Go", solved: 1 }], firstPassed: { passed: 0, of: 1, solves: 1 } }, "https://example.test");
   assert.match(one, /^1 Go challenge solved$/m);
   assert.match(one, /^First submission didn't pass$/m);
 });
@@ -724,6 +726,64 @@ test("the share summary is a few counts, never names, times, answers or identity
 test("a solve on an older revision still counts in the share summary, without a guessed language", () => {
   const old = solve("v1", "JS-001", { day: 0, active: MIN, revision: revB });
   const s = buildReport(input({ catalog: rich, attempts: [old, solve("v2", "JS-002", { day: 1, active: MIN })] })).share!;
-  assert.deepEqual(s, { solved: 2, languages: [], firstPassed: { passed: 2, of: 2 } });
+  assert.deepEqual(s, { solved: 2, languages: [], firstPassed: { passed: 2, of: 2, solves: 2 } });
   assert.match(shareText(s, "https://example.test"), /^2 challenges solved$/m);
+});
+
+/**
+ * The fixture trace with its first submission's run changed, then derived for real: the run's
+ * status and outcome phase, and the submission's verdict.
+ */
+function firstRun(attempt: string, key: string, status: string, phase: string | null, result: string): ReportAttempt {
+  const records = trace(attempt, `${attempt}-source`, key).map((r: StoredRecord) => {
+    const o = JSON.parse(r.payload);
+    if (o.type === "practice.run" && o.data.runId === "r1" && o.data.status === "result") {
+      o.data.status = status;
+      if (phase) o.data.outcome = { status, phase };
+    }
+    if (o.type === "practice.submitted" && o.data.runId === "r1") {
+      o.data.result = result;
+      if (result === "errored") o.data.passed = 0;
+    }
+    return { ...r, payload: JSON.stringify(o) };
+  });
+  return { ...deriveAttempts(records, "synthetic-participant")[0], source: "device" };
+}
+
+test("a submission whose result isn't known is never drawn as a failure (derived traces)", () => {
+  const timeout = firstRun("u1", "JS-001", "timeout", null, "errored"),
+    unclassified = firstRun("u2", "JS-001", "user-error", null, "errored"),
+    compile = firstRun("u3", "JS-001", "user-error", "compile", "errored");
+  assert.equal(timeout.values.firstSubmit, null);
+  assert.equal(unclassified.values.firstSubmit, null);
+  assert.equal(compile.values.firstSubmit, 0, "a compile error is the code's: a known first result");
+  const marks = (a: ReportAttempt) => {
+    const v = q(buildReport(input({ attempts: [a] })), "iterate")!;
+    assert.equal(v.visual?.kind, "dots");
+    return v.visual!.kind === "dots" ? v.visual! : null;
+  };
+  for (const a of [timeout, unclassified]) {
+    const r = q(buildReport(input({ attempts: [a] })), "iterate")!;
+    assert.equal(r.answer, "Your solve took 2 submissions; the first one's result isn't known.");
+    const v = marks(a)!;
+    assert.deepEqual(v.rows[0].marks, [null, true], "unknown, then the pass: order kept, no failure drawn");
+    assert.deepEqual(v.legend, ["passed", "didn't pass", "result not known"]);
+  }
+  const c = marks(compile)!;
+  assert.deepEqual(c.rows[0].marks, [false, true]);
+  assert.deepEqual(c.legend, ["passed", "didn't pass"], "no unknown entry when every result is known");
+  // A later errored submission can't be told apart from a timeout in the timeline: not known.
+  const later = withSubmissions(summary("u4", "JS-001"), ["fail", "pass"], "2026-10-27T10:00:00.000Z");
+  const errored = { ...later, timeline: [later.timeline[0], ...later.timeline.slice(1, 3), { at: later.timeline[1].at, label: "submit: user-error" }, { at: later.timeline[1].at, label: "errored: 0/3 checks; 0 static rules" }, ...later.timeline.slice(3)] };
+  assert.deepEqual(marks(errored)!.rows[0].marks, [false, null, true]);
+});
+
+test("the share summary keeps its known-result scope when some first results aren't known", () => {
+  const timeout = firstRun("k1", "JS-001", "timeout", null, "errored");
+  const clean = withSubmissions(summary("k2", "JS-002"), ["pass"], "2026-10-28T10:00:00.000Z");
+  const r = buildReport(input({ attempts: [timeout, { ...clean, values: { ...clean.values, firstSubmit: 1 } }] }));
+  assert.match(q(r, "iterate")!.answer, /^Across your two solves, 1 of 1 first submission with a known result passed;/, "the report's own scope");
+  assert.deepEqual(r.share!.firstPassed, { passed: 1, of: 1, solves: 2 });
+  assert.match(shareText(r.share!, "https://example.test"), /^First submission passed in 1 of 1 solve with a known result$/m);
+  assert.doesNotMatch(shareText(r.share!, "https://example.test"), /^First submission passed$/m);
 });

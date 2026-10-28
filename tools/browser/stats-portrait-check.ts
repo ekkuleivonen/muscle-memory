@@ -172,6 +172,32 @@ async function noOverflow(page: Page, where: string) {
 }
 const text = (page: Page) => page.locator(".stats-content").innerText();
 
+type Clip = {
+  state: () => { pending: number; fallbacks: number; textareas: number };
+  settle: (how: "reject" | "resolve", which: number) => void;
+  resetTextareas: () => void;
+};
+/** A Clipboard whose writes wait to be settled by the check, and counters for the select-and-copy fallback. */
+const DEFERRED_CLIPBOARD = `(() => {
+  const pending = [];
+  let fallbacks = 0, textareas = 0;
+  Object.defineProperty(Navigator.prototype, "clipboard", { get: () => ({
+    writeText: () => new Promise((resolve, reject) => pending.push({ resolve, reject })),
+  }) });
+  Document.prototype.execCommand = (command) => (command === "copy" ? (fallbacks++, true) : false);
+  new MutationObserver((list) => {
+    for (const m of list) for (const n of m.addedNodes) if (n.nodeName === "TEXTAREA") textareas++;
+  }).observe(document, { childList: true, subtree: true });
+  window.clip = {
+    state: () => ({ pending: pending.length, fallbacks, textareas }),
+    settle: (how, which) => {
+      const [p] = pending.splice(which, 1);
+      how === "reject" ? p.reject(new DOMException("Synthetic: write refused", "NotAllowedError")) : p.resolve();
+    },
+    resetTextareas: () => { textareas = 0; },
+  };
+})();`;
+
 /**
  * Opens the share preview by keyboard (desktop) or touch, checks it says only the counts, copies
  * and downloads exactly the previewed text with no request, then closes, with focus back on the
@@ -202,6 +228,11 @@ async function sharePreview(page: Page, device: Device, name: string, counts: Re
   await page.waitForTimeout(400);
   const box = await dialog.boundingBox();
   assert.ok(box && box.x >= 0 && box.x + box.width <= device.width + 1, "the preview fits the screen");
+  // Every action is in view as the preview opens, without scrolling the dialog.
+  for (const name of ["Copy text", "Share…", "Download"]) {
+    const b = await page.getByRole("button", { name }).boundingBox();
+    assert.ok(b && b.y >= 0 && b.y + b.height <= device.height, `${name} is in view (${b?.y}+${b?.height} of ${device.height})`);
+  }
   await page.screenshot({ path: `${output}/${engine}-${device.name}-${name}-share.png` });
   const before = leaked;
   await page.getByRole("button", { name: "Copy text" }).click();
@@ -421,6 +452,104 @@ for (const device of DEVICES) {
     assert.doesNotMatch(await page.content(), /challenges? solved|unaided coding practice/);
     await shot(page, "8-stealth-while-sharing");
     step(`${device.name}: stealth while the preview is open removes the preview and its text`);
+    await context.close();
+  }
+
+  // A Clipboard write still pending when the copy stops being current: when the browser then
+  // refuses it, the old text is never copied the other way, and no Copied or failure shows.
+  {
+    const { context, page } = await open(device, HISTORIES.two, { init: DEFERRED_CLIPBOARD });
+    await report(page, "#q-progress");
+    const share = page.getByRole("button", { name: "Share a summary" });
+    const status = page.locator(".report-share [role=status]");
+    const preview = page.locator(".report-share-preview");
+    const clip = () => page.evaluate(() => (window as unknown as { clip: Clip }).clip.state());
+    const settle = async (how: "reject" | "resolve", which = 0) => {
+      await page.evaluate(([how, which]) => (window as unknown as { clip: Clip }).clip.settle(how as "reject" | "resolve", which as number), [how, which] as const);
+      await page.waitForTimeout(300);
+    };
+    const pending = async (n = 1) => {
+      await page.getByRole("button", { name: "Copy text" }).click();
+      for (let i = 0; i < 50 && (await clip()).pending < n; i++) await page.waitForTimeout(50);
+      assert.equal((await clip()).pending, n, "the Clipboard write is pending");
+    };
+    const noFallback = async (where: string, before: number) => {
+      const c = await clip();
+      assert.equal(c.fallbacks, before, `${where}: no select-and-copy after the copy ended`);
+      assert.equal(c.textareas, 0, `${where}: no textarea of the old text was added`);
+    };
+
+    // Still current: the refusal falls back to select-and-copy, as before.
+    await share.click();
+    await pending();
+    await settle("reject");
+    assert.equal((await clip()).fallbacks, 1, "a current copy still falls back");
+    await status.getByText("Copied.").waitFor();
+    const base = 1;
+    await page.evaluate(() => (window as unknown as { clip: Clip }).clip.resetTextareas());
+
+    // Closed with the write pending.
+    await pending();
+    await page.keyboard.press("Escape");
+    await settle("reject");
+    await noFallback("closed", base);
+    // Closed and reopened with the write pending.
+    await share.click();
+    await pending();
+    await page.keyboard.press("Escape");
+    await share.click();
+    await settle("reject");
+    await noFallback("reopened", base);
+    assert.equal((await status.innerText()).trim(), "", "no message from the earlier copy");
+    // Pressed twice: the first write's late refusal says nothing; the second's success does.
+    await pending(1);
+    await pending(2);
+    await settle("reject", 0);
+    await noFallback("superseded", base);
+    assert.equal((await status.innerText()).trim(), "");
+    await settle("resolve", 0);
+    await status.getByText("Copied.").waitFor();
+    // The summary changes under a pending write (a new solve read from this device).
+    await pending();
+    await page.evaluate(async (rows) => {
+      const db: IDBDatabase = await new Promise((done) => {
+        const r = indexedDB.open("muscle-memory-local-practice", 5);
+        r.onsuccess = () => done(r.result);
+      });
+      await new Promise((done) => {
+        const tx = db.transaction("records", "readwrite");
+        for (const row of rows) tx.objectStore("records").put(row);
+        tx.oncomplete = done;
+      });
+      db.close();
+      window.dispatchEvent(new Event("focus"));
+    }, attempt("PY-001", 2, 3, "sure") as unknown as object[]);
+    await preview.getByText(/Python/).waitFor();
+    await settle("reject");
+    await noFallback("summary changed", base);
+    assert.equal((await status.innerText()).trim(), "");
+    // A private boundary (reset, import, deletion) with the write pending.
+    await pending();
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("muscle-memory:private-boundary", { detail: "start" })));
+    await page.locator("dialog").waitFor({ state: "detached" });
+    await settle("reject");
+    await noFallback("private boundary", base);
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("muscle-memory:private-boundary", { detail: "finish" })));
+    await page.locator("#q-progress").waitFor();
+    // Stealth from another tab with the write pending.
+    await share.click();
+    await pending();
+    const other = await context.newPage();
+    await other.goto(`${origin}/privacy`);
+    await other.evaluate(() => {
+      const p = JSON.parse(localStorage.getItem("muscle-memory.profile")!);
+      localStorage.setItem("muscle-memory.profile", JSON.stringify({ ...p, stealth: true }));
+    });
+    await page.getByText("You're in stealth, so there's no report here.").waitFor();
+    await settle("reject");
+    await noFallback("stealth", base);
+    assert.doesNotMatch(await page.content(), /challenges? solved|unaided coding practice|Copied\./);
+    step(`${device.name}: a pending copy refused after close, reopen, a second press, a new summary, a private boundary or stealth copies nothing and says nothing`);
     await context.close();
   }
 
