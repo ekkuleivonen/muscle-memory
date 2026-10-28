@@ -18,7 +18,7 @@ import {
   saveProfile,
   setStealth,
 } from "../../lib/account";
-import type { StoredProfile } from "../../lib/profile";
+import { guesses, type StoredProfile } from "../../lib/profile";
 import {
   backupName,
   current,
@@ -42,18 +42,27 @@ import { KeyActions, type KeyAction } from "../_terminal/key-actions";
  * stand, one line saying what happened, then the actions as a prompt's choices, run by key or
  * click (KeyActions), ending with the way back. Profile has its own form.
  */
+/** Where a profile form was opened from, to return there after save or cancel. */
+export const RETURNS = {
+  stats: { label: "back to your report", href: "/stats#q-languages" },
+} as const;
+type ReturnTo = (typeof RETURNS)[keyof typeof RETURNS];
+
 export function SettingsCommand({
   command,
   question,
+  from,
 }: {
   command: CommandName;
   /** Profile only: ask just this question (/settings/profile/languages). */
   question?: string;
+  /** Profile only: the page that opened the form. */
+  from?: keyof typeof RETURNS;
 }) {
   if (command === "profile")
     return (
       <Account>
-        <ProfileForm only={question} />
+        <ProfileForm only={question} from={from && RETURNS[from]} />
       </Account>
     );
   const Page = PAGES[command];
@@ -134,22 +143,25 @@ function Actions({
   actions,
   autoFocus = true,
   handle,
+  to = { label: "back to settings", href: "/settings" },
 }: {
   id: string;
   message?: string;
   actions: readonly KeyAction[];
   autoFocus?: boolean;
   handle?: Ref<{ focus(): void }>;
+  /** Where back (and Esc) goes. */
+  to?: { label: string; href: string };
 }) {
   const router = useRouter();
-  const back = () => router.push("/settings");
+  const back = () => router.push(to.href);
   return (
     <KeyActions
       ref={handle}
       id={id}
       message={message}
       autoFocus={autoFocus}
-      actions={[...actions, { label: "back to settings", run: back }]}
+      actions={[...actions, { label: to.label, run: back }]}
       onEscape={back}
     />
   );
@@ -653,11 +665,13 @@ function Delete() {
 
 /**
  * The profile questions as one form, current answers ticked; `only` shows just one. Saving
- * stores only questions explicitly changed. Unchanged guesses stay guesses; cleared answers
- * become unanswered after saving.
+ * stores only questions explicitly changed. Unchanged guesses stay guesses until confirmed;
+ * cleared answers become unanswered after saving.
  */
-function ProfileForm({ only }: { only?: string }) {
+function ProfileForm({ only, from }: { only?: string; from?: ReturnTo }) {
   const [answers, setAnswers] = useState<Record<string, Answer> | null>(null);
+  /** Questions with a value the person didn't give (quick start's language). */
+  const [guessed, setGuessed] = useState<Set<keyof Profile>>(new Set());
   const [changed, setChanged] = useState<Set<keyof Profile>>(new Set());
   const options = useRef<HTMLDivElement>(null);
   const actions = useRef<{ focus(): void }>(null);
@@ -666,8 +680,9 @@ function ProfileForm({ only }: { only?: string }) {
     null,
   );
   useEffect(() => {
-    const current = readProfile()?.profile ?? {};
-    setAnswers({ ...current } as Record<string, Answer>);
+    const stored = readProfile();
+    setAnswers({ ...stored?.profile } as Record<string, Answer>);
+    setGuessed(guesses(stored));
   }, []);
   // The keyboard starts on the first option, as a prompt would.
   const ready = answers !== null;
@@ -737,12 +752,47 @@ function ProfileForm({ only }: { only?: string }) {
         return;
       }
     }
-    const stored = saveProfile(toProfile(next), [...changed]);
+    if (!changed.size) {
+      setResult({
+        tone: "dim",
+        text: shown.some((q) => guessed.has(q.id))
+          ? "Nothing changed. A guess stays a guess until you confirm or change it."
+          : "Nothing changed.",
+      });
+      return;
+    }
+    let stored: StoredProfile | null;
+    try {
+      stored = saveProfile(toProfile(next), [...changed]);
+    } catch {
+      setResult({
+        tone: "err",
+        text: "This browser couldn't save your answers. Storage may be blocked or full; nothing was changed.",
+      });
+      return;
+    }
     if (!stored) return;
-    if (changed.size) void logProfile("settings");
+    void logProfile("settings");
     setAnswers({ ...stored.profile } as Record<string, Answer>);
+    setGuessed(guesses(stored));
     setChanged(new Set());
-    setResult({ tone: "ok", text: "Saved." });
+    setResult({
+      tone: "ok",
+      text: from ? (
+        <>
+          Saved.{" "}
+          <Link className="t-cmd" href={from.href}>
+            {from.label}
+          </Link>
+        </>
+      ) : (
+        "Saved."
+      ),
+    });
+  };
+  const mark = (id: keyof Profile) => {
+    setResult(null);
+    setChanged((current) => new Set(current).add(id));
   };
   return (
     <SettingsFrame title={only ? "Profile question" : "Profile"}>
@@ -789,13 +839,31 @@ function ProfileForm({ only }: { only?: string }) {
                   </label>
                 );
               })}
+              {guessed.has(question.id) && !changed.has(question.id) && (
+                <p className="t-dim">
+                  Ticked from quick start, as a guess. It isn&apos;t your
+                  answer until you confirm or change it, then save.{" "}
+                  <button
+                    type="button"
+                    className="t-cmd"
+                    onClick={() => {
+                      mark(question.id);
+                      setResult({
+                        tone: "dim",
+                        text: "Confirmed. Save to keep it as your answer.",
+                      });
+                    }}
+                  >
+                    Confirm as my answer
+                  </button>
+                </p>
+              )}
               <button
                 type="button"
                 className="t-cmd"
                 disabled={value === undefined}
                 onClick={() => {
-                  setResult(null);
-                  setChanged((current) => new Set(current).add(question.id));
+                  mark(question.id);
                   setAnswers((current) => {
                     const next = { ...current };
                     delete next[question.id];
@@ -817,6 +885,7 @@ function ProfileForm({ only }: { only?: string }) {
         id="profile"
         autoFocus={false}
         handle={actions}
+        to={from}
         actions={[
           { label: "save", kind: "primary", run: save },
           ...(only
