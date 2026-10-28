@@ -17,7 +17,17 @@ export interface PrivacyTransport {
   ): Promise<PrivacyReply>;
 }
 export type PrivacyView = {
-  status: "disabled" | "pending" | "confirmed" | "conflict" | "deleted";
+  /**
+   * unshared: the server has never recorded this browser's comparison settings, so it is not
+   * counted. Only the explicit review action sends them; a reload never enrolls anyone.
+   */
+  status:
+    | "disabled"
+    | "pending"
+    | "confirmed"
+    | "unshared"
+    | "conflict"
+    | "deleted";
   local?: PrivacySnapshot;
   remote?: RemotePrivacy | null;
 };
@@ -80,8 +90,11 @@ export class PrivacyController {
     if (reply.status === "ok") {
       this.baseline = { participant: local.participant, value: reply.value };
       this.publish({
-        status:
-          reply.value && matches(local, reply.value) ? "confirmed" : "conflict",
+        status: !reply.value
+          ? "unshared"
+          : matches(local, reply.value)
+            ? "confirmed"
+            : "conflict",
         local,
         remote: reply.value,
       });
@@ -148,7 +161,7 @@ export class PrivacyController {
   /** Explicit review only; a later server mutation still wins through conditional writes. */
   async applyReviewed(local: PrivacySnapshot) {
     if (
-      this.view.status !== "conflict" ||
+      (this.view.status !== "conflict" && this.view.status !== "unshared") ||
       !this.view.local ||
       this.view.local.participant !== local.participant ||
       !matches(this.view.local, local)

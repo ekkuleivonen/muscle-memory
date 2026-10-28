@@ -172,3 +172,31 @@ test("retrying a conflict only rereads; only the review action can use the newly
   await c.applyReviewed(local);
   assert.equal(writes, 1);
 });
+test("a browser the server never recorded is unshared: reloads never enroll, the explicit action creates it once", async () => {
+  let current: RemotePrivacy | null = null;
+  const writes: (string | null)[] = [];
+  const c = new PrivacyController({
+    read: async () => ({ status: "ok", value: current }),
+    update: async (value, expected) => {
+      writes.push(expected);
+      if ((current?.revision ?? null) !== expected) return { status: "conflict" };
+      current = { stealth: value.stealth, age: value.age, revision: "dddddddd-dddd-dddd-dddd-dddddddddddd" };
+      return { status: "ok", value: current };
+    },
+  });
+  await c.observe(local);
+  await c.observe(local);
+  await c.retry(local);
+  assert.equal(c.getSnapshot().status, "unshared");
+  assert.deepEqual(writes, [], "observing and retrying never write");
+  await c.applyReviewed(local);
+  assert.deepEqual(writes, [null], "create only if still absent");
+  assert.equal(c.getSnapshot().status, "confirmed");
+  // A record created meanwhile elsewhere makes the create-if-absent write conflict, not overwrite.
+  current = null;
+  await c.observe(local);
+  current = restrictive;
+  await c.applyReviewed(local);
+  assert.equal(c.getSnapshot().status, "conflict");
+  assert.equal(current, restrictive);
+});

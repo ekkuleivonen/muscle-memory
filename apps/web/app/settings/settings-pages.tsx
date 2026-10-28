@@ -42,6 +42,8 @@ import { KeyActions, type KeyAction } from "../_terminal/key-actions";
 /** Where a profile form was opened from, to return there after save or cancel. */
 export const RETURNS = {
   stats: { label: "back to your report", href: "/stats#q-languages" },
+  /** From a comparison note on the report: the optional age answer comparisons need. */
+  "stats-comparisons": { label: "back to your report", href: "/stats" },
 } as const;
 type ReturnTo = (typeof RETURNS)[keyof typeof RETURNS];
 
@@ -169,8 +171,19 @@ function Actions({
   );
 }
 
+const describe = (p?: { stealth: boolean; age: string } | null) =>
+  p
+    ? `${p.stealth ? "stealth" : "not stealth"}, ${p.age === "adult" ? "adult" : p.age === "non-adult" ? "under 18" : "age unanswered"}`
+    : "nothing recorded";
+
+/**
+ * Where human comparisons stand for this browser on the server, which is what decides whether it
+ * is counted. Nothing here writes on its own: saving, going stealth or the explicit action does.
+ */
 function ComparisonPrivacyStatus() {
   const { view, retry, applyReviewed } = useComparisonPrivacy();
+  // Only an adult outside stealth has anything to add; the server not knowing already excludes others.
+  const countable = view.local?.age === "adult" && !view.local.stealth;
   return (
     <div role="status" aria-live="polite">
       <p className="t-dim">
@@ -178,31 +191,28 @@ function ComparisonPrivacyStatus() {
           ? "Human comparisons are off. Server exclusion has not been confirmed."
           : view.status === "confirmed"
             ? "The server confirmed these comparison privacy settings. Results already authorized may still arrive; downloaded aggregates cannot be recalled."
-            : view.status === "conflict"
-              ? "Your current settings differ from the server. Review them before applying; another tab may have changed them."
-              : view.status === "deleted"
-                ? "The server marked this browser for deletion. Keep its deletion key until the request is confirmed."
-                : "Settings apply on this device now. Server confirmation is pending; retry when online."}
+            : view.status === "unshared"
+              ? countable
+                ? "Not shared yet: the server has no comparison settings for this browser, so it isn't counted in comparisons. Nothing is sent until you choose to."
+                : "The server has no comparison settings for this browser, so it isn't counted in comparisons."
+              : view.status === "conflict"
+                ? "Your current settings differ from the server. Review them before applying; another tab may have changed them."
+                : view.status === "deleted"
+                  ? "The server marked this browser for deletion. Keep its deletion key until the request is confirmed."
+                  : "Settings apply on this device now. Server confirmation is pending: it needs a connection, and a browser is only known to the server once its first practice has uploaded. Retry after that."}
       </p>
       {view.status === "conflict" && (
-        <>
-          <p className="t-dim">
-            Server:{" "}
-            {view.remote
-              ? `${view.remote.stealth ? "stealth" : "not stealth"}, ${view.remote.age === "adult" ? "adult" : view.remote.age === "non-adult" ? "under 18" : "age unanswered"}`
-              : "no confirmed eligibility"}
-            . This device: {view.local?.stealth ? "stealth" : "not stealth"},{" "}
-            {view.local?.age === "adult"
-              ? "adult"
-              : view.local?.age === "non-adult"
-                ? "under 18"
-                : "age unanswered"}
-            .
-          </p>
-          <button className="t-cmd" onClick={() => void applyReviewed()}>
-            apply these reviewed settings
-          </button>
-        </>
+        <p className="t-dim">
+          Server: {describe(view.remote)}. This device: {describe(view.local)}.
+        </p>
+      )}
+      {(view.status === "conflict" ||
+        (view.status === "unshared" && countable)) && (
+        <button className="t-cmd" onClick={() => void applyReviewed()}>
+          {view.status === "unshared"
+            ? "use these settings for comparisons"
+            : "apply these reviewed settings"}
+        </button>
       )}
       {(view.status === "pending" || view.status === "conflict") && (
         <button className="t-cmd" onClick={() => void retry()}>
