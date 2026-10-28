@@ -4,8 +4,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { AttemptSummary } from "../../../../packages/developer-profile/derive";
 import { cohortResult, MIN_COHORT, type CohortRead } from "../../../../packages/statistics/cohort";
-import { AGE_FORM, humanFyi, PRIVACY_SETTINGS, type HumanFyiReason } from "../../../../packages/statistics/human-fyi";
-import { MIN_MODELS, modelFyi, type ModelFyiReason } from "../../../../packages/model-runs/stats-fyi";
+import { AGE_ACTION, humanFyi, REVIEW_ACTION, type HumanFyiReason } from "../../../../packages/statistics/human-fyi";
+import { modelFyi, type ModelFyiReason } from "../../../../packages/model-runs/stats-fyi";
 import type { ModelReceipt } from "../../../../packages/model-runs/receipts";
 import { buildReport, type ReportAttempt } from "../../lib/report";
 import type { ChallengeSummary } from "../../lib/challenges";
@@ -71,32 +71,40 @@ const stored = (age?: string): StoredProfile =>
 const report = (human: ReturnType<typeof humanFyi>, model: ReturnType<typeof modelFyi>) =>
   buildReport({ catalog, progress: {}, attempts: [attempt], profile: null, comparisons: { human, model } });
 const omitted = <R extends string>(reason: R) => ({ state: "omitted" as const, reason });
+/** A human omission as humanFyi returns it, with its fixed action. */
+const humanOmitted = (reason: HumanFyiReason) => ({
+  state: "omitted" as const,
+  reason,
+  action: reason === "age-missing" ? AGE_ACTION : reason === "too-few" || reason === "unavailable" ? REVIEW_ACTION : null,
+});
 
 test("off by default: nothing is requested and each line says what it waits on", () => {
   assert.equal(process.env.NEXT_PUBLIC_STATS_COMPARISON_PREVIEW, undefined);
   assert.deepEqual(comparisonRequests([attempt], catalog), NO_COMPARISONS, "no cohort, receipt or code-length read");
   const c = comparisons([attempt], catalog, stored("25-34"), NO_COMPARISONS, { cohorts: {}, receipts: {}, lengths: {} });
-  assert.deepEqual(c, { human: omitted("off"), model: omitted("off") });
+  assert.deepEqual(c, { human: humanOmitted("off"), model: omitted("off") });
   const r = buildReport({ catalog, progress: {}, attempts: [attempt], profile: null, comparisons: c });
   assert.deepEqual(r.comparisons, []);
   assert.equal(r.comparisonNotes.length, 2);
 });
 
 test("every omission reason reads as its real prerequisite, thresholds from the helpers' own exports", () => {
-  const human = (reason: HumanFyiReason) => report(omitted(reason), omitted("loading")).comparisonNotes;
-  assert.deepEqual(human("age-missing"), [{ text: "Other players: comparisons are between adults.", action: { label: "Add your age band (optional)", href: AGE_FORM } }]);
+  // The helper's own omission, action included, exactly as humanFyi returns it.
+  const human = (reason: HumanFyiReason) => {
+    return report(humanOmitted(reason), omitted("loading")).comparisonNotes;
+  };
+  assert.deepEqual(human("age-missing"), [{ text: "Other players: comparisons are between adults.", action: AGE_ACTION }]);
   assert.deepEqual(human("not-adult"), [], "16–17: nothing, and no prompt");
   assert.deepEqual(human("loading"), [], "nothing while a read is in flight");
   assert.match(human("too-few")[0].text, new RegExp(`at least ${MIN_COHORT} comparable adults`));
-  assert.deepEqual(human("too-few")[0].action, { label: "Check your comparison settings", href: PRIVACY_SETTINGS }, "local age alone isn't being counted");
+  assert.deepEqual(human("too-few")[0].action, REVIEW_ACTION, "local age alone isn't being counted");
   assert.equal(human("unavailable")[0].text, "Other players' results aren't available right now.");
-  assert.match(human("no-attempt")[0].text, /first attempts on a challenge's current version/);
-  const model = (reason: ModelFyiReason) => report(omitted("loading"), omitted(reason)).comparisonNotes.map((n) => n.text);
-  assert.match(model("too-few")[0], new RegExp(`fewer than ${MIN_MODELS} models`));
+  assert.match(human("no-attempt")[0].text, /solved challenges on their current version/);
+  const model = (reason: ModelFyiReason) => report(humanOmitted("loading"), omitted(reason)).comparisonNotes.map((n) => n.text);
   assert.match(model("unmatched")[0], /same runtime and diagnostics setting/);
   assert.match(model("unavailable")[0], /aren't available right now/);
   assert.deepEqual(model("loading"), []);
-  for (const r of ["off", "no-attempt", "unavailable", "unmatched", "too-few"] as const)
+  for (const r of ["off", "no-attempt", "unavailable", "unmatched"] as const)
     assert.doesNotMatch(model(r).join(" "), /not comparable|can't be compared|never|latency|faster|smarter|submissions/i);
 });
 
@@ -114,7 +122,7 @@ test("eligible lines show the helpers' own text, one each, under the answers and
   const at = html.indexOf('class="report-compared"');
   assert.ok(at > html.lastIndexOf('id="q-'), "after every answer, never inside one");
   const list = html.slice(at, html.indexOf("</ul>", at));
-  assert.match(list, /On Synthetic Sum \(current version, same runtime and editor setup\), about 45% of scored first submissions passed, across first attempts from 20–49 browsers\./);
+  assert.match(list, /Among first attempts at Synthetic Sum \(current version, same runtime and editor setup\) from 20–49 browsers, about 45% of scored first submissions passed\./);
   assert.match(list, /your passing code was 412 characters; 3 of 3 models solved it/);
   assert.doesNotMatch(list, /Across your|didn&#x27;t pass|first submission passed in/i, "never beside the player's own first-submission figures");
 });
@@ -129,12 +137,12 @@ test("each read is bound to the exact pair that asked; another revision's read i
     const other = pairKey({ challenge: "JS-001", revision: `sha256:${"b".repeat(64)}` });
     const read = (cohorts: Record<string, CohortRead | "unavailable">) =>
       comparisons([attempt], catalog, stored("25-34"), requests, { cohorts, receipts: {}, lengths: {} }).human;
-    assert.deepEqual(read({ [other]: cohort(9, 11) }), omitted("loading"), "a different revision's read stays unused");
+    assert.deepEqual(read({ [other]: cohort(9, 11) }), humanOmitted("loading"), "a different revision's read stays unused");
     assert.equal(read({ [key]: cohort(9, 11) }).state, "shown");
-    assert.deepEqual(read({ [key]: "unavailable" }), omitted("unavailable"));
-    assert.deepEqual(read({ [key]: cohort(5, 5) }), omitted("too-few"));
-    assert.deepEqual(comparisons([attempt], catalog, { ...stored("25-34"), stealth: true }, requests, { cohorts: { [key]: cohort(9, 11) }, receipts: {}, lengths: {} }).human, omitted("off"), "stealth: nothing");
-    assert.deepEqual(comparisons([attempt], catalog, stored(), requests, { cohorts: { [key]: cohort(9, 11) }, receipts: {}, lengths: {} }).human, omitted("age-missing"));
+    assert.deepEqual(read({ [key]: "unavailable" }), humanOmitted("unavailable"));
+    assert.deepEqual(read({ [key]: cohort(5, 5) }), humanOmitted("too-few"));
+    assert.deepEqual(comparisons([attempt], catalog, { ...stored("25-34"), stealth: true }, requests, { cohorts: { [key]: cohort(9, 11) }, receipts: {}, lengths: {} }).human, humanOmitted("off"), "stealth: nothing");
+    assert.deepEqual(comparisons([attempt], catalog, stored(), requests, { cohorts: { [key]: cohort(9, 11) }, receipts: {}, lengths: {} }).human, humanOmitted("age-missing"));
   } finally {
     delete process.env.NEXT_PUBLIC_STATS_COMPARISON_PREVIEW;
   }

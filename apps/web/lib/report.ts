@@ -11,9 +11,9 @@ import { languageLabel, type ChallengeSummary } from "./challenges";
 import type { Profile } from "./profile";
 import type { Progress } from "./progress";
 import { nextProblem } from "./next-problem";
-import { AGE_FORM, PRIVACY_SETTINGS, type HumanFyiReason, type HumanFyiResult } from "../../../packages/statistics/human-fyi";
+import type { HumanFyiReason, HumanFyiResult } from "../../../packages/statistics/human-fyi";
 import { MIN_COHORT } from "../../../packages/statistics/cohort";
-import { MIN_MODELS, type ModelFyiReason, type ModelFyiResult } from "../../../packages/model-runs/stats-fyi";
+import type { ModelFyiReason, ModelFyiResult } from "../../../packages/model-runs/stats-fyi";
 
 export type Source = "device" | "uploaded";
 export type ReportAttempt = AttemptSummary & { source: Source };
@@ -866,19 +866,17 @@ function toDiscover(input: ReportInput, solved: ReportAttempt[], answered: Set<s
  * What an omitted line waits on, as the contract's reasons (docs/comparison-fyi.md); thresholds
  * come from the helpers' own exports. Nothing while a read is loading, and nothing at all for a
  * 16–17 answer. Local age alone never reads as being counted: the settings step shows whether
- * this browser's comparison settings reached the server.
+ * this browser's comparison settings reached the server. The link, when there is one, is the
+ * helper's own fixed `action` (the optional age form, or a neutral settings review).
  */
-const HUMAN_NOTE: Record<HumanFyiReason, { text: string; action: NextStep | null } | null> = {
-  off: { text: "Other players: comparing with them waits on privacy controls still under review, then on enough comparable players on the same challenge.", action: null },
-  "age-missing": { text: "Other players: comparisons are between adults.", action: { label: "Add your age band (optional)", href: AGE_FORM } },
+const HUMAN_NOTE: Record<HumanFyiReason, string | null> = {
+  off: "Other players: comparing with them waits on privacy controls still under review, then on enough comparable players on the same challenge.",
+  "age-missing": "Other players: comparisons are between adults.",
   "not-adult": null,
-  "no-attempt": { text: "Other players: comparisons cover solved first attempts on a challenge's current version.", action: null },
+  "no-attempt": "Other players: comparisons cover solved challenges on their current version, in one known setup.",
   loading: null,
-  unavailable: { text: "Other players' results aren't available right now.", action: null },
-  "too-few": {
-    text: `Other players' results appear once at least ${MIN_COHORT} comparable adults have played the same version.`,
-    action: { label: "Check your comparison settings", href: PRIVACY_SETTINGS },
-  },
+  unavailable: "Other players' results aren't available right now.",
+  "too-few": `Other players' results appear once at least ${MIN_COHORT} comparable adults have played the same version.`,
 };
 const MODEL_NOTE: Record<ModelFyiReason, string | null> = {
   off: "AI models: a line about stored model runs on a challenge you solved isn't switched on yet.",
@@ -886,9 +884,8 @@ const MODEL_NOTE: Record<ModelFyiReason, string | null> = {
   loading: null,
   unavailable: "AI model results aren't available right now.",
   unmatched: "AI models: no stored model run used the same runtime and diagnostics setting as your solves.",
-  "too-few": `AI models: fewer than ${MIN_MODELS} models ran with your setup on the challenges you solved, too few to describe.`,
 };
-const OFF = { human: { state: "omitted", reason: "off" }, model: { state: "omitted", reason: "off" } } as const;
+const OFF = { human: { state: "omitted", reason: "off", action: null }, model: { state: "omitted", reason: "off" } } as const;
 
 /** The lines to show and, for each one omitted, what it waits on. */
 function compare(input: ReportInput): Pick<Report, "comparisons" | "comparisonNotes"> {
@@ -896,7 +893,7 @@ function compare(input: ReportInput): Pick<Report, "comparisons" | "comparisonNo
   const comparisons: ComparisonLine[] = [];
   const comparisonNotes: Report["comparisonNotes"] = [];
   if (human.state === "shown") comparisons.push({ who: "human", label: "Other players", text: human.fyi.text, challenge: human.fyi.challenge });
-  else if (HUMAN_NOTE[human.reason]) comparisonNotes.push(HUMAN_NOTE[human.reason]!);
+  else if (HUMAN_NOTE[human.reason]) comparisonNotes.push({ text: HUMAN_NOTE[human.reason]!, action: human.action });
   if (model.state === "shown") comparisons.push({ who: "model", label: "AI models", text: model.fyi.text, challenge: model.fyi.challenge });
   else if (MODEL_NOTE[model.reason]) comparisonNotes.push({ text: MODEL_NOTE[model.reason]!, action: null });
   return { comparisons, comparisonNotes };
