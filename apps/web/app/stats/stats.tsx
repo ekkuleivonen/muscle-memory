@@ -7,10 +7,11 @@ import { dismiss, readDismissed } from "../../lib/invitations";
 import { buildReport, mergeEvidence, type Report } from "../../lib/report";
 import type { ChallengeSummary } from "../../lib/challenges";
 import { useReportData, type HistoryStatus } from "./report-data";
-import { QuestionView } from "./report-view";
+import { QuestionView, ReceiptLine } from "./report-view";
 import type { AttemptSummary } from "../../../../packages/developer-profile/derive";
 
 const NONE: AttemptSummary[] = [];
+const NO_REVISIONS: { challenge: string; revision: string }[] = [];
 
 /** Stealth is the deal: no report at all, only what stealth means and where to change it. */
 export function StealthNotice() {
@@ -145,6 +146,35 @@ export function InviteCopy({ guess, onHide }: { guess: readonly string[]; onHide
   );
 }
 
+/** The bottom of the report: questions it can answer once there's the practice for them. */
+export function Discover({ report }: { report: Report }) {
+  if (!report.discover.length) return null;
+  return (
+    <section className="report-discover t-md" aria-labelledby="discover-title">
+      <h3 id="discover-title">Still to discover</h3>
+      <ul>
+        {report.discover.map((d) => (
+          <li key={d.id}>
+            <span className="report-discover-question">{d.question}</span>
+            <span className="t-dim">
+              {d.need}
+              {d.action && (
+                <>
+                  {" "}
+                  <Link className="t-cmd" href={d.action.href}>
+                    {d.action.label} →
+                  </Link>
+                </>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {report.discoverNote && <p className="report-note">{report.discoverNote}</p>}
+    </section>
+  );
+}
+
 export function ReportBody({
   report,
   status,
@@ -155,6 +185,17 @@ export function ReportBody({
   /** Quick-start languages not yet confirmed, by label. */
   guess?: readonly string[];
 }) {
+  // What goes under an answer: the languages invitation, or the way back to that answer's form.
+  const extra = (q: Report["questions"][number]) =>
+    q.id === "languages" && report.languagesInvite ? (
+      <LanguagesInvite guess={guess} />
+    ) : q.id === "familiarity" ? (
+      <p className="report-fyi">
+        <Link className="t-cmd" href={LANGUAGES_FORM}>
+          Edit your usual languages
+        </Link>
+      </p>
+    ) : null;
   const next = report.next && (
     <p>
       <Link className="report-action" href={report.next.href}>
@@ -170,29 +211,55 @@ export function ReportBody({
         </h1>
         {next}
         {status}
+        <Discover report={report} />
       </section>
     );
   return (
     <>
       <header className="report-hero">
         <h1 className="t-doc-title">How you code</h1>
+        {report.takeaways.length > 0 && (
+          // The few strongest answers first, each leading to the answer it sums up.
+          <ul className="report-takeaways" aria-label="Takeaways">
+            {report.takeaways.map((t) => (
+              <li key={t.id}>
+                <a href={`#q-${t.id}`}>{t.text}</a>
+              </li>
+            ))}
+          </ul>
+        )}
         {status}
+        {/* The next challenge, quietly, where it's seen first; the button below stays. */}
+        {!report.waiting && report.next && (
+          <p className="report-next">
+            <Link className="t-cmd" href={report.next.href}>
+              {report.next.label} →
+            </Link>
+          </p>
+        )}
         {report.waiting && <p className="report-context">{report.waiting}</p>}
         {report.waiting && next}
       </header>
-      {report.questions.map((q) => (
-        <QuestionView key={q.id} q={q}>
-          {q.id === "languages" && report.languagesInvite && <LanguagesInvite guess={guess} />}
-          {q.id === "familiarity" && (
-            <p className="report-fyi">
-              <Link className="t-cmd" href={LANGUAGES_FORM}>
-                Edit your usual languages
-              </Link>
-            </p>
-          )}
-        </QuestionView>
-      ))}
+      {report.firstSolves ? (
+        <section className="report-first t-md" aria-labelledby="first-title">
+          <h3 id="first-title">{report.firstSolves}</h3>
+          <ul>
+            {report.questions.map((q) => (
+              <ReceiptLine key={q.id} q={q}>
+                {extra(q)}
+              </ReceiptLine>
+            ))}
+          </ul>
+        </section>
+      ) : (
+        report.questions.map((q) => (
+          <QuestionView key={q.id} q={q}>
+            {extra(q)}
+          </QuestionView>
+        ))
+      )}
       {!report.waiting && next}
+      <Discover report={report} />
       {report.profile && (
         <p className="report-note">
           <Link className="t-cmd" href={report.profile.href}>
@@ -205,9 +272,8 @@ export function ReportBody({
 }
 
 export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
-  // The report picks the revisions for the model FYI; the data hook reads them. Kept in state to break the cycle.
-  const [wanted, setWanted] = useState<Report["comparisonRevisions"]>([]);
-  const { privacy, local, history, receipts, retryHistory } = useReportData(wanted);
+  // No model results are requested: they count only submissions, which aren't comparable with a person's.
+  const { privacy, local, history, retryHistory } = useReportData(NO_REVISIONS);
   const device = local.value;
   const uploaded = history.state === "ready" ? history.value.attempts : NONE;
   const attempts = useMemo(
@@ -222,10 +288,9 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
             progress: device.progress,
             attempts,
             profile: reportProfile(device.profile),
-            receipts,
           })
         : null,
-    [catalog, device, attempts, receipts],
+    [catalog, device, attempts],
   );
   const stored = device?.profile;
   const guess = stored && !stored.asked?.languages?.answeredAt ? (stored.profile.languages ?? []).map(languageLabel) : [];
@@ -239,9 +304,6 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
     returned.current = true;
     target?.scrollIntoView();
   }, [report]);
-  const key = report?.comparisonRevisions.map((r) => r.revision).join("|") ?? "";
-  if (key !== wanted.map((r) => r.revision).join("|"))
-    setWanted(report?.comparisonRevisions ?? []);
   return (
     <main className="term stats">
       <div className="stats-content">

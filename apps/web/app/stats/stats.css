@@ -52,6 +52,37 @@
 .report-headline.is-lead {
   color: var(--t-accent);
 }
+.report-takeaways {
+  list-style: none;
+  padding: 0;
+  margin: 0.8em 0 1.2em;
+  max-width: 64ch;
+  display: grid;
+  gap: 0.4em;
+}
+.report-takeaways li {
+  display: grid;
+  grid-template-columns: 2ch 1fr;
+}
+.report-takeaways li::before {
+  content: "›";
+  color: var(--t-accent);
+  font-weight: 700;
+}
+.report-takeaways a {
+  color: var(--t-fg);
+  text-decoration: none;
+}
+.report-takeaways a:hover {
+  text-decoration: underline dotted;
+}
+.report-detail {
+  max-width: 64ch;
+}
+.report-next {
+  margin: 0.8em 0 0;
+  font-size: var(--text-sm, 13px);
+}
 .report-context {
   max-width: 64ch;
   color: var(--t-fg);
@@ -87,14 +118,16 @@
 }
 .report-bars {
   display: grid;
-  gap: 0.4em;
+  /* Labels such as "5+ submissions" stay on one line, aligned across rows; the bar takes what is left. */
+  grid-template-columns: minmax(12ch, max-content) 1fr auto;
+  gap: 0.4em 2ch;
   margin: 1.2em 0;
   max-width: 64ch;
 }
 .report-bar-row {
   display: grid;
-  grid-template-columns: 12ch 1fr auto;
-  gap: 2ch;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
 }
 .report-bar {
@@ -116,41 +149,20 @@
   background: var(--t-err);
 }
 
-/* Habits */
-.report-split {
-  display: flex;
-  height: 30px;
-  margin: 1.6em 0 0.4em;
-  max-width: 72ch;
-  font-size: var(--text-sm, 13px);
-  font-weight: 700;
-}
-.report-split > span {
-  display: flex;
-  align-items: center;
-  padding: 0 1ch;
-  white-space: nowrap;
-  overflow: hidden;
-  flex-basis: 0;
-  transform-origin: left;
-}
-.report-split-small {
-  background: var(--t-accent);
-  color: var(--t-bg);
-}
-.report-split-large {
-  background: var(--t-bar);
-  border: 1px solid var(--t-accent);
-  color: var(--t-fg);
-}
 .report-caption {
   font-size: var(--text-sm, 13px);
 }
 
 /* Secondary disclosures */
 .report-question {
+  /* The padding is the whole gap between answers; markdown's section margin would double it. */
+  margin-top: 0;
   padding: 1.6em 0;
   border-top: 1px solid var(--t-line);
+}
+/* The section's padding is the gap; a trailing paragraph margin would double it. */
+.report-question > :last-child {
+  margin-bottom: 0;
 }
 .report-question .report-kicker {
   font: inherit;
@@ -184,6 +196,48 @@
   color: var(--t-dim);
   max-width: 72ch;
 }
+/* First solves: one or two solves as labelled lines, not chapters. */
+.report-first {
+  padding-top: 1.6em;
+  border-top: 1px solid var(--t-line);
+}
+.report-first ul {
+  list-style: none;
+  padding: 0;
+  max-width: 64ch;
+}
+.report-first li + li {
+  margin-top: 1.2em;
+}
+.t-md.report-first ul > li::before {
+  content: none;
+}
+.report-first li > span {
+  display: block;
+}
+.report-first-more {
+  margin-top: 0.4em;
+  font-size: var(--text-sm, 13px);
+}
+/* Still to discover: a quiet list, question then what would answer it. */
+.report-discover {
+  margin-top: 2.4em;
+  padding-top: 1.6em;
+  border-top: 1px solid var(--t-line);
+}
+/* The shared markdown list ("-" markers); the question, then what would answer it below. */
+.report-discover ul {
+  max-width: 64ch;
+}
+.report-discover li + li {
+  margin-top: 0.8em;
+}
+.report-discover li > .t-dim {
+  display: block;
+}
+.report-discover .t-dim {
+  font-size: var(--text-sm, 13px);
+}
 .report-footer {
   margin-top: 2.4em;
   font-size: var(--text-sm, 13px);
@@ -191,8 +245,7 @@
 }
 /* Motion only for those who want it, and never in the way of reading. */
 @media (prefers-reduced-motion: no-preference) {
-  .report-fill,
-  .report-split > span {
+  .report-fill {
     animation: report-grow 600ms ease-out both;
   }
 }
@@ -203,15 +256,33 @@
 }
 
 @media (max-width: 700px) {
-  .report-bar-row {
-    grid-template-columns: 9ch 1fr auto;
-    gap: 1ch;
+  .report-bars {
+    grid-template-columns: max-content 1fr auto;
+    column-gap: 1ch;
   }
   .report-hero {
     margin-top: 0.8em;
   }
   .report-kicker {
     margin: 0;
+  }
+}
+/* Too narrow for label, bar and value side by side: label and value, then the bar under them. */
+@media (max-width: 480px) {
+  .report-bars {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .report-bar-row > :first-child {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .report-bar-row > :last-child {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .report-bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 }
 

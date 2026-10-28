@@ -55,7 +55,6 @@ export function QuickStart({
     const challenge = quickStart(challenges, language.id, (key) => completed(progress, key));
     return challenge ? [{ language, challenge }] : [];
   });
-  const width = Math.max(...picks.map((p) => p.language.label.length));
 
   const start = async (language: string, challenge: QuickChallenge) => {
     setStarting(true);
@@ -105,8 +104,10 @@ export function QuickStart({
         id="quick-start"
         message="Pick your language"
         autoFocus
+        padNumbers
         actions={picks.map(({ language, challenge }, index) => ({
-          label: `${language.label.padEnd(width)}  ${challenge.key} · ${challenge.title}`,
+          lead: language.label,
+          label: `${challenge.key} · ${challenge.title}`,
           kind: index === 0 ? "primary" : "plain",
           disabled: starting && "opening…",
           run: () => void start(language.id, challenge),

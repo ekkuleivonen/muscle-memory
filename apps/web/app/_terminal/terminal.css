@@ -162,6 +162,9 @@
 .t-menu {
   display: flex;
   position: static;
+  /* The popover defaults size it to its text; in the bar it takes the bar's height, links centred. */
+  width: auto;
+  height: auto;
   margin: 0;
   padding: 0;
   border: 0;
@@ -505,7 +508,36 @@
     white-space: pre;
   }
 }
+/*
+ * Rows with a lead column (the quick-start picker): the lead in a column as wide as the longest,
+ * and the label wrapping under itself. On a phone the label goes under the lead.
+ */
+.term .t-keymenu-lead .t-row {
+  display: grid;
+  grid-template-columns: 1ch auto var(--lead) minmax(0, 1fr);
+  gap: 0 1ch;
+  align-items: baseline;
+}
+.t-keymenu-lead .t-row > :nth-child(n + 5) {
+  grid-column: 4;
+}
+.t-row-lead {
+  font-weight: 700;
+}
+.t-keymenu.t-keymenu-lead .t-row-name {
+  white-space: normal;
+}
+@media (max-width: 600px) {
+  .term .t-keymenu-lead .t-row {
+    grid-template-columns: 1ch auto minmax(0, 1fr);
+  }
+  .t-keymenu-lead .t-row > :nth-child(n + 4) {
+    grid-column: 3;
+  }
+}
 /* The row the ❯ is on, and the action a prompt suggests, read in the accent. */
+.t-current-row .t-row-lead,
+.t-primary .t-row-lead,
 .t-current-row .t-row-name,
 .t-primary .t-row-name {
   color: var(--t-accent);
@@ -604,6 +636,8 @@
 .t-action.t-disabled {
   cursor: default;
 }
+.t-action.t-disabled .t-row-lead,
+.t-action.t-disabled.t-current-row .t-row-lead,
 .t-action.t-disabled .t-row-name,
 .t-action.t-disabled.t-current-row .t-row-name {
   color: var(--t-dim);
