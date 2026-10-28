@@ -157,14 +157,19 @@ Option A and the exact `PARTICIPANT_OWNER` binding are approved by Ekku via dot.
 
 Existing device progress appears before IndexedDB interpretation. The selective evidence reader excludes code artifacts, upload queue and unrelated settings. Local storage and identity waits have eight-second deadlines. Model reads have a twelve-second end-to-end deadline and at most two concurrent requests; transient capacity results get at most one retry after the batch. History remains independent, guarded against duplicate pagination requests and invalidated by existing privacy boundaries. No collection, capture, retention, permissions or human-cohort activation changes.
 
-**Pre-actor uploads (`identity-actor`).** The reader checks every selected observation's actor. Practice captures 1.0.0 and 1.1.0 (before `4a263e3`) had no `actor` key, and some were uploaded then. One such record used to refuse the whole read as `identity-actor`, while `derive` skipped the same records on the device. Both now use `practiceActor`. It counts a record as a person's only when the record says so, or when it is in that exact historic form: a pre-actor version, no `actor` key, and a dated Terms version. Anything else still refuses the read:
-- a model;
-- a malformed or null actor;
-- a current-version record without `actor`;
-- a legacy record that names an actor;
-- an unknown version.
+**Pre-actor uploads (`identity-actor`).** The reader checks every selected observation's actor. Practice captures 1.0.0 and 1.1.0 (before `4a263e3`) had no `actor` key. The client envelope always wrote schema 1.0.0 and a dated Terms version; ingest checked none of the three. Some such records were uploaded, and one of them refuses the whole read as `identity-actor`, while `derive` skips the same records on the device.
 
-Ownership, attempt, observation, challenge and revision checks are unchanged. 1.0.0 attempts still derive as "Unsupported capture version."
+This is a reproduced, source-supported explanation of the diagnostic; the owner's records have not been examined. Both readers now use `practiceActor`:
+- **An explicit actor on a version other than 1.0.0 and 1.1.0** is read as it says (`person` or `model`).
+- **An actorless record** is a person's only in the exact pre-actor form: schema 1.0.0, capture 1.0.0 or 1.1.0, and a dated Terms version.
+- **Still refusing the read:**
+  - a model;
+  - a malformed or null actor;
+  - an actorless record of any other version or schema, including current 1.2.0;
+  - a 1.0.0 or 1.1.0 record that names an actor;
+  - a missing or undated Terms version.
+
+Ownership, attempt, observation, challenge and revision checks are unchanged. Versions `derive` doesn't support, 1.0.0 among them, are still flagged "Unsupported capture version."
 
 **History recovery.** A failed uploaded-history read keeps everything already shown and records a fixed reason code: `http-<status>`, `http-<status>:<server diagnostic stage>`, `timeout`, `network`, `identity` or `invalid-page`. The code goes on the status line's `data-history-reason` attribute and into one `console.info` line, never into the visible copy, and never includes the request, identity or response text. Rate limits, 5xx, timeouts, network errors and a slow identity read are retried automatically up to twice: identity after 10 s, everything else at the server's 61 s read interval. A body that is slow or cut off counts as a timeout or network failure; only a complete body that isn't a page object is `invalid-page`. Ownership refusals (401/403/410), other 4xx and malformed pages are not retried. After that, a "Try again" button and returning to the tab retry once more. One pacer per tab (`HistoryPacer`) holds the 61 s read interval and the retry budget across report remounts: a remount, click or focus inside the interval waits for it ("Adding your earlier practice…"), and only a successful page refills the budget. Reset, deletion, import, logout and stealth cancel pending retries and discard late replies as before.
 

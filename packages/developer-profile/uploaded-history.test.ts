@@ -830,6 +830,10 @@ test("anything but the historic form still fails closed: models, named or malfor
     ["a legacy record that names a person (no such format existed)", one(old(), (o) => (o.actor = "person"))],
     ["a legacy record with a null actor", one(old(), (o) => (o.actor = null))],
     ["a legacy record without a Terms version", one(old(), (o) => delete o.termsVersion)],
+    // The pre-actor envelope always wrote schema 1.0.0, and ingest never checked it.
+    ["a legacy record without a schema version", one(old(), (o) => delete o.schemaVersion)],
+    ["a legacy record with a null schema version", one(old(), (o) => (o.schemaVersion = null))],
+    ["a legacy record with another schema version", one(old(), (o) => (o.schemaVersion = "2.0.0"))],
     ["a legacy record with an undated Terms version", one(old(), (o) => (o.termsVersion = "latest"))],
     ["a current record without an actor", one(trace("c-attempt", "c-source"), (o) => delete o.actor)],
     ["an unknown version without an actor", one(old(), (o) => (o.captureVersion = "practice-capture-0.9.0"))],
@@ -851,4 +855,8 @@ test("on this device, legacy practice derives as the person's and a model's neve
   assert.deepEqual(deriveAttempts(model, participant), [], "a model's practice is not a person's evidence");
   const named = edit(legacy(trace("d-named", "d-named-source")), (o) => (o.actor = "person"));
   assert.deepEqual(deriveAttempts(named, participant), [], "a legacy version naming an actor never existed");
+  for (const schema of [undefined, null, "2.0.0"]) {
+    const other = edit(legacy(trace("d-schema", "d-schema-source")), (o) => (schema === undefined ? delete o.schemaVersion : (o.schemaVersion = schema)));
+    assert.deepEqual(deriveAttempts(other, participant), [], `schema ${String(schema)} isn't the pre-actor form`);
+  }
 });
