@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { init, parse } from "@guanmingchiu/sqlparser-ts";
 import { checkQuery, type SqlParse } from "../workbench/check";
 import { launchQuery, launchWindow, type LaunchWindow } from "./launch";
-import { announcedAt, asOf, attempt, fields, now, qaRevision, receipt, record, type Row } from "./launch-fixtures";
+import { announcedAt, asOf, at, attempt, fields, now, qaRevision, receipt, record, type Row } from "./launch-fixtures";
 
 const window: LaunchWindow = { announcedAt, asOf, receipt, lookbackDays: 7 };
 const synthetic = [{ challenge: "PY-900", revision: qaRevision }];
@@ -178,6 +178,28 @@ test("as-of is stable: late arrivals are reported, never counted, until a later 
   const later = run([...base, ...late], { ...window, asOf: "2026-11-03T23:00:00.000Z" });
   assert.equal(later.launch.attempts, 4);
   assert.equal(later.launch.completed, 4);
+});
+
+test("a conflicting copy received after the as-of cannot change the frozen report", () => {
+  // A genuine prelaunch start, uploaded after the announcement: excluded as prelaunch.
+  const rows = attempt("offline", -3, { received: 60 });
+  const start = rows[0];
+  // A later copy of that same start, received after the as-of, claiming a post-announcement time.
+  const rewrite = {
+    ...start,
+    occurred_at: at(10),
+    received_at: at(1500),
+    payload: start.payload!.replace(start.occurred_at!, at(10)),
+    type: "practice.started",
+  };
+  const before = run(rows),
+    after = run([...rows, rewrite]);
+  assert.equal(Number(before.launch.attempts), 0);
+  assert.equal(before.launch.prelaunch_resumed, 1);
+  assert.deepEqual(after.rows, before.rows, "every figure, including coverage, is unchanged");
+  // Other envelope columns in a late copy cannot move the record either.
+  const moved = run([...rows, { ...rewrite, attempt_id: "zzz", participant_id: "zzz", challenge: "ZZ-999", type: "site.viewed" }]);
+  assert.deepEqual(moved.rows, before.rows);
 });
 
 test("duplicate deliveries count once, and a device clock ahead of receipt is disclosed", () => {

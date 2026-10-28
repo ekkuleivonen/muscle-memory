@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { launchQuery } from "../packages/statistics/launch";
-import { announcedAt, asOf, attempt, fields, now, qaRevision, receipt, record, type Row } from "../packages/statistics/launch-fixtures";
+import { announcedAt, asOf, at, attempt, fields, now, qaRevision, receipt, record, type Row } from "../packages/statistics/launch-fixtures";
 
 const scenarios: { name: string; events: Row[]; attempts: number }[] = [
   { name: "empty", events: [], attempts: 0 },
@@ -41,6 +41,15 @@ const scenarios: { name: string; events: Row[]; attempts: number }[] = [
       })(),
     ],
     attempts: 1,
+  },
+  {
+    name: "a conflicting copy after the as-of leaves a prelaunch start excluded",
+    events: (() => {
+      const a = attempt("offline", -3, { received: 60 });
+      const late = { ...a[0], occurred_at: at(10), received_at: at(1500), payload: a[0].payload!.replace(a[0].occurred_at!, at(10)) };
+      return [...a, late, { ...late, record_id: a[1].record_id, attempt_id: "zzz", type: "site.viewed" }];
+    })(),
+    attempts: 0,
   },
   {
     name: "late arrivals",
