@@ -141,7 +141,10 @@ test("refresh is sequential and bounded without exposing query errors", async ()
     { budgetMs: 10 },
   );
   assert.equal(timeout.refreshed, 0);
-  assert.ok(timeout.remaining >= 1);
+  // Whether the budget ends before or during the second read, nothing counts as refreshed and
+  // every revision is accounted for as failed or not attempted.
+  assert.equal(timeout.failed + timeout.remaining, rows.length);
+  assert.ok(timeout.failed >= 1);
 });
 test("a stalled final write is bounded by the remaining invocation budget", async () => {
   const bucket: SummaryBucket = {
