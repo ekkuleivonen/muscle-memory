@@ -17,6 +17,8 @@ function fixture(count = 1) {
     "CREATE TABLE challenge_heads(challenge_key TEXT,lifecycle TEXT,published_revision TEXT);CREATE TABLE published_versions(challenge_key TEXT,revision TEXT,metadata_json TEXT,published_at TEXT,object_key TEXT,runtime_fingerprint TEXT);",
   );
   const objects = new Map<string, string>();
+  const uploaded = new Map<string, Date>();
+  let clock = 0;
   const revisions: { challenge: string; revision: string }[] = [];
   for (let i = 1; i <= count; i++) {
     const challenge = `JS-${String(i).padStart(3, "0")}`;
@@ -101,7 +103,12 @@ function fixture(count = 1) {
       },
       put: async (key, text) => {
         objects.set(key, text);
+        uploaded.set(key, new Date(Date.UTC(2026, 9, 27) + ++clock));
       },
+      list: async ({ prefix }) => ({
+        objects: [...uploaded].filter(([k]) => k.startsWith(prefix)).map(([key, at]) => ({ key, uploaded: at })),
+        truncated: false,
+      }),
     },
   };
   const runtime = engineFor("javascript")!.runtime;
@@ -156,6 +163,9 @@ function fixture(count = 1) {
     },
     get checks() {
       return checks;
+    },
+    built() {
+      return [...uploaded.keys()].filter((k) => k.startsWith("comparison-summaries/humans/"));
     },
     invalidate() {
       current = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
@@ -252,6 +262,82 @@ test("a stalled SQL transport stops at the whole-run deadline even if a mock ign
     assert.equal(result.state, "unavailable");
     assert.ok(Date.now() - start < 500);
     assert.equal(f.checks, 0);
+  } finally {
+    f.db.close();
+  }
+});
+
+test("141 current revisions: one discovery plus 99 builds, stalest first, honest partial coverage", async () => {
+  const f = fixture(141);
+  try {
+    const first = await refreshHumanSummaries(f.env, now, f.request);
+    assert.deepEqual(
+      { ...first },
+      {
+        state: "finished",
+        queries: 100,
+        refreshed: 99,
+        failed: 0,
+        registered: 141,
+        discovered: 141,
+        selected: 99,
+        notRefreshed: 42,
+        complete: false,
+        ordering: "stalest-first",
+      },
+    );
+    assert.ok(f.peak <= 2);
+    const after1 = new Set(f.built());
+    assert.equal(after1.size, 99);
+    // The next run starts with the 42 never built, so all 141 are covered within two runs.
+    const second = await refreshHumanSummaries(f.env, new Date(+now + 3_600_000), f.request);
+    assert.equal(second.queries, 100);
+    assert.equal(new Set(f.built()).size, 141);
+  } finally {
+    f.db.close();
+  }
+});
+test("more than 200 current revisions stops the whole human refresh before any SQL", async () => {
+  const f = fixture(201);
+  try {
+    const r = await refreshHumanSummaries(f.env, now, f.request);
+    assert.equal(r.state, "registry-overflow");
+    assert.equal(r.queries, 0);
+    assert.equal(f.requests, 0);
+  } finally {
+    f.db.close();
+  }
+});
+test("a deadline mid-run reports partial coverage, and the next run builds the skipped revisions first", async () => {
+  const f = fixture(141);
+  try {
+    let calls = 0;
+    // Each member query takes 25 ms; a 300 ms budget lets only some builds finish.
+    const slow: typeof fetch = async (url, init) => {
+      if (calls++ > 0) await new Promise((r) => setTimeout(r, 25));
+      return f.request(url, init);
+    };
+    const cut = await refreshHumanSummaries(f.env, now, slow, 300);
+    assert.ok(cut.refreshed > 0 && cut.refreshed < 99, `refreshed ${cut.refreshed}`);
+    assert.equal(cut.complete, false);
+    assert.equal(cut.notRefreshed, 141 - cut.refreshed);
+    const before = new Set(f.built());
+    await refreshHumanSummaries(f.env, new Date(+now + 3_600_000), f.request);
+    const next = f.built().filter((k) => !before.has(k));
+    // The deadline's leftovers go first: every one of them, up to the 99-build cap, is built next.
+    assert.equal(next.length, Math.min(99, 141 - cut.refreshed));
+  } finally {
+    f.db.close();
+  }
+});
+test("without a listing, selection falls back to the bounded hourly rotation", async () => {
+  const f = fixture(141);
+  try {
+    delete (f.env.CONTENT as any).list;
+    const r = await refreshHumanSummaries(f.env, now, f.request);
+    assert.equal(r.ordering, "rotation");
+    assert.equal(r.queries, 100);
+    assert.equal(r.refreshed, 99);
   } finally {
     f.db.close();
   }

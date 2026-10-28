@@ -65,13 +65,48 @@ test("discovery refuses unknown revisions, duplicates, overflow and unsafe regis
     ],
   ])
     assert.throws(() => cohortDiscoveryQuery(bad));
-  assert.throws(() =>
-    cohortDiscoveryQuery(
-      Array.from({ length: 101 }, (_, i) => ({
-        ...current[0],
-        challenge: `JS-${String(i).padStart(3, "0")}`,
-      })),
-    ),
-  );
+  const registry = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      ...current[0],
+      challenge: `JS-${String(i).padStart(3, "0")}`,
+    }));
+  // The registry bound is the size of the one discovery query, not the query count.
+  assert.doesNotThrow(() => cohortDiscoveryQuery(registry(141)));
+  assert.doesNotThrow(() => cohortDiscoveryQuery(registry(200)));
+  assert.throws(() => cohortDiscoveryQuery(registry(201)));
   assert.throws(() => selectHourlyCohorts(rows, current, new Date(NaN)));
+});
+
+const launch = Array.from({ length: 141 }, (_, i) => ({
+  challenge: `JS-${String(i + 1).padStart(3, "0")}`,
+  revision: syntheticRevision,
+  window: syntheticWindow,
+}));
+const launchRows = launch.map(({ challenge, revision }) => ({ challenge, revision }));
+const key = (r: { challenge: string; revision: string }) => `${r.challenge}/${r.revision}`;
+
+test("141 candidates: the stalest 99 first, never-built before old, then by challenge", () => {
+  const at = new Map<string, number>();
+  launch.slice(0, 100).forEach((r, i) => at.set(key(r), 1000 + i)); // JS-001 oldest … JS-100
+  const picked = selectHourlyCohorts(launchRows, launch, now, at);
+  assert.equal(picked.length, MAX_HOURLY_COHORT_BUILDS);
+  // The 41 never built (JS-101…JS-141) come first, then the 58 oldest.
+  assert.deepEqual(picked.slice(0, 41).map((r) => r.challenge), launch.slice(100).map((r) => r.challenge));
+  assert.deepEqual(picked.slice(41).map((r) => r.challenge), launch.slice(0, 58).map((r) => r.challenge));
+});
+
+test("fair later coverage: with a deadline cutting runs short, every candidate is reached and none starves", () => {
+  const at = new Map<string, number>();
+  const lastRun = new Map<string, number>();
+  for (let hour = 0; hour < 6; hour++) {
+    const picked = selectHourlyCohorts(launchRows, launch, new Date(+now + hour * 3_600_000), at);
+    // A deadline lets only the first 60 of 99 finish each run.
+    picked.slice(0, 60).forEach((r, i) => {
+      at.set(key(r), hour * 1000 + i);
+      lastRun.set(key(r), hour);
+    });
+  }
+  assert.equal(lastRun.size, 141, "every revision built within six short runs");
+  // 141 revisions at 60 builds a run: each is rebuilt at least every third run.
+  for (const r of launch) assert.ok(5 - lastRun.get(key(r))! <= 2, r.challenge);
 });

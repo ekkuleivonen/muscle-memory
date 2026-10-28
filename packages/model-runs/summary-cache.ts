@@ -28,6 +28,11 @@ export async function withinSummaryBudget<T>(
 export interface SummaryBucket {
   get(key: string): Promise<{ size: number; text(): Promise<string> } | null>;
   put(key: string, value: string): Promise<unknown>;
+  /** R2's listing; the human refresh reads only its own snapshot prefix's keys and upload times. */
+  list?(options: { prefix: string; limit: number }): Promise<{
+    objects: { key: string; uploaded: Date }[];
+    truncated: boolean;
+  }>;
 }
 export interface ModelSummary {
   version: typeof MODEL_SUMMARY_VERSION;
@@ -38,10 +43,11 @@ export interface ModelSummary {
   /** The existing allowlisted reader produces these, never raw stored run text. */
   result: ReceiptRead;
 }
+export const MODEL_SUMMARY_PREFIX = `comparison-summaries/models/${MODEL_SUMMARY_VERSION}/${encodeURIComponent(HARNESS_VERSION)}/`;
 export function summaryKey(challenge: string, revision: string) {
   if (!CHALLENGE_KEY.test(challenge) || !REVISION.test(revision))
     throw new Error("An exact registered challenge revision is required.");
-  return `comparison-summaries/models/${MODEL_SUMMARY_VERSION}/${encodeURIComponent(HARNESS_VERSION)}/${challenge}/${revision}.json`;
+  return `${MODEL_SUMMARY_PREFIX}${challenge}/${revision}.json`;
 }
 /** Explicit projection also drops accidental future private fields in the source reader. */
 function publicResult(value: ReceiptRead): ReceiptRead {

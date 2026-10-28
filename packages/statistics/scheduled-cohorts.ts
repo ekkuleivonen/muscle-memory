@@ -4,7 +4,11 @@ import type { SummaryBucket } from "../model-runs/summary-cache";
 import { withinSummaryBudget } from "../model-runs/summary-cache";
 import { CHALLENGE_KEY, REVISION } from "../domain/records";
 import { COHORTS_ENABLED, COHORT_VERSION } from "./cohort";
-import { cohortDiscoveryQuery, selectHourlyCohorts } from "./cohort-discovery";
+import {
+  cohortDiscoveryQuery,
+  selectHourlyCohorts,
+  MAX_CURRENT_COHORT_REVISIONS,
+} from "./cohort-discovery";
 import { cohortMemberQuery } from "./current-cohort";
 import { readCohortBuildSpec } from "./cohort-source";
 import {
@@ -26,10 +30,37 @@ export interface HumanSummaryEnvironment {
 const BODY_LIMIT = 1024 * 1024;
 const SNAPSHOT_LIMIT = 128 * 1024;
 const JOB_MS = 10 * 60 * 1000;
+const SUMMARY_PREFIX = `comparison-summaries/humans/${COHORT_VERSION}/${HUMAN_SNAPSHOT_VERSION}/`;
 export function humanSummaryKey(challenge: string, revision: string) {
   if (!CHALLENGE_KEY.test(challenge) || !REVISION.test(revision))
     throw new Error("Invalid summary revision.");
-  return `comparison-summaries/humans/${COHORT_VERSION}/${HUMAN_SNAPSHOT_VERSION}/${challenge}/${revision}.json`;
+  return `${SUMMARY_PREFIX}${challenge}/${revision}.json`;
+}
+/**
+ * When each current snapshot was last written, from one bounded listing of the private snapshot
+ * prefix: keys and upload times only, never contents. Null (rotate instead) when unavailable.
+ */
+async function lastRefreshed(
+  bucket: SummaryBucket,
+  ms: number,
+): Promise<Map<string, number> | null> {
+  if (!bucket.list) return null;
+  try {
+    const listed = await withinSummaryBudget(
+      bucket.list({ prefix: SUMMARY_PREFIX, limit: 1000 }),
+      ms,
+    );
+    if (!listed || listed.truncated || !Array.isArray(listed.objects)) return null;
+    const at = new Map<string, number>();
+    for (const o of listed.objects) {
+      const m = /^([^/]+)\/([^/]+)\.json$/.exec(o.key.slice(SUMMARY_PREFIX.length));
+      const t = o.uploaded instanceof Date ? o.uploaded.getTime() : NaN;
+      if (m && Number.isFinite(t)) at.set(`${m[1]}/${m[2]}`, t);
+    }
+    return at;
+  } catch {
+    return null;
+  }
 }
 /** The only transport caller supplies fixed discovery/member SQL; never exposed as an endpoint. */
 export async function readCohortRows(
@@ -179,7 +210,23 @@ export async function refreshHumanSummaries(
   };
   let queries = 0,
     refreshed = 0,
-    failed = 0;
+    failed = 0,
+    registered = 0,
+    discovered = 0,
+    selectedCount = 0,
+    ordering: "stalest-first" | "rotation" = "rotation";
+  /** Coverage, so a partial run is never mistaken for a complete one. No IDs or revisions. */
+  const account = () => ({
+    queries,
+    refreshed,
+    failed,
+    registered,
+    discovered,
+    selected: selectedCount,
+    notRefreshed: discovered - refreshed,
+    complete: discovered === refreshed,
+    ordering,
+  });
   const sql = async (query: string) => {
     remaining();
     if (++queries > 100) throw new Error("Hourly query budget reached.");
@@ -212,7 +259,7 @@ export async function refreshHumanSummaries(
       env.CATALOG_DB.prepare(
         `SELECT v.challenge_key, v.revision, v.metadata_json, v.published_at FROM published_versions v
        JOIN challenge_heads h ON h.challenge_key=v.challenge_key AND h.published_revision=v.revision
-       WHERE h.lifecycle='published' ORDER BY v.challenge_key LIMIT 101`,
+       WHERE h.lifecycle='published' ORDER BY v.challenge_key LIMIT ${MAX_CURRENT_COHORT_REVISIONS + 1}`,
       ).all<{
         challenge_key: string;
         revision: string;
@@ -221,8 +268,9 @@ export async function refreshHumanSummaries(
       }>(),
       remaining(),
     );
-    if (registry.results.length > 100)
-      throw new Error("Catalog exceeds refresh budget.");
+    // Over the registry bound the whole human refresh stops: never a silent first-200 subset.
+    if (registry.results.length > MAX_CURRENT_COHORT_REVISIONS)
+      return { state: "registry-overflow" as const, ...account() };
     const excluded = new Set(
       syntheticRevisions(registry.results).map((r) => r.revision),
     );
@@ -233,13 +281,19 @@ export async function refreshHumanSummaries(
         revision: r.revision,
         window: cohortWindow(r.published_at, now),
       }));
-    if (!revisions.length)
-      return { state: "finished" as const, queries, refreshed, failed };
+    registered = revisions.length;
+    if (!revisions.length) return { state: "finished" as const, ...account() };
+    const found = await sql(cohortDiscoveryQuery(revisions));
+    discovered = Array.isArray(found) ? found.length : 0;
+    const refreshedAt = await lastRefreshed(env.CONTENT, remaining());
+    if (refreshedAt) ordering = "stalest-first";
     const candidates = selectHourlyCohorts(
-      await sql(cohortDiscoveryQuery(revisions)),
+      found,
       revisions,
       now,
+      refreshedAt ?? undefined,
     );
+    selectedCount = candidates.length;
     let next = 0;
     const build = async () => {
       while (next < candidates.length) {
@@ -295,9 +349,9 @@ export async function refreshHumanSummaries(
       }
     };
     await Promise.all([build(), build()]);
-    return { state: "finished" as const, queries, refreshed, failed };
+    return { state: "finished" as const, ...account() };
   } catch {
-    return { state: "unavailable" as const, queries, refreshed, failed };
+    return { state: "unavailable" as const, ...account() };
   } finally {
     clearTimeout(timer);
     stop.abort();

@@ -165,6 +165,27 @@ discoveryCases.push({
     })),
   ]),
 });
+// Launch size: one discovery query naming all 141 current revisions, two of them with 20 starters.
+const launch = Array.from({ length: 141 }, (_, i) => `JS-${String(i + 1).padStart(3, "0")}`);
+discoveryCases.push({
+  name: "one discovery query covers 141 current revisions",
+  events: [
+    ...many(20).map((e) => ({ ...e, challenge: "JS-007" })),
+    ...many(20).map((e) => ({ ...e, challenge: "JS-141" })),
+    ...many(19).map((e) => ({ ...e, challenge: "JS-100" })),
+  ],
+  expectedRows: ["JS-007", "JS-141"].map((challenge) => ({
+    challenge,
+    revision: syntheticRevision,
+  })),
+  query: cohortDiscoveryQuery(
+    launch.map((challenge) => ({
+      challenge,
+      revision: syntheticRevision,
+      window: syntheticWindow,
+    })),
+  ),
+});
 const run = spawnSync(
   process.env.COHORT_SQL_PYTHON ?? "python3",
   ["tools/cohort-query-check.py"],

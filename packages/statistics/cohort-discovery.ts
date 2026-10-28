@@ -3,7 +3,12 @@ import { CHALLENGE_KEY, REVISION } from "../domain/records";
 import { MIN_COHORT } from "./cohort";
 import { checkCohortWindow, type CohortWindow } from "./cohort-window";
 
-export const MAX_CURRENT_COHORT_REVISIONS = 100;
+/**
+ * Registry bound, separate from the query budget: one discovery query names every current revision
+ * (141 at launch), so this caps the size of that one query, not the number of queries. Over it the
+ * human refresh stops whole rather than silently dropping revisions.
+ */
+export const MAX_CURRENT_COHORT_REVISIONS = 200;
 /** One discovery + at most 99 exact scans keeps the hourly run at 100 SQL queries. */
 export const MAX_HOURLY_COHORT_BUILDS = 99;
 export interface CurrentCohortRevision {
@@ -70,14 +75,20 @@ ORDER BY e.challenge, e.challenge_revision
 LIMIT ${MAX_CURRENT_COHORT_REVISIONS + 1}`;
 }
 
-/** Complete, bounded discovery result -> at most 99 exact builds, rotating without new storage.
- * No truncation of an incomplete/overflow response. Over 99 candidates means some FYIs expire;
- * this intentionally bounds work, not a promise of hourly coverage of every eligible revision.
+/** Complete, bounded discovery result -> at most 99 exact builds. No truncation of an
+ * incomplete/overflow response. Over 99 candidates means some FYIs expire; this bounds work, not a
+ * promise of hourly coverage of every eligible revision.
+ *
+ * Order: with `refreshedAt` (each candidate's last successful snapshot write, from one listing of
+ * the existing private snapshots), the stalest first: never-built, then oldest, then by challenge.
+ * A revision left out by the cap or a deadline is therefore first in a later run. Without it (the
+ * listing failed), a stateless hourly rotation still covers a stable set over a few hours.
  */
 export function selectHourlyCohorts(
   raw: unknown,
   input: readonly CurrentCohortRevision[],
   now: Date,
+  refreshedAt?: ReadonlyMap<string, number>,
 ): CurrentCohortRevision[] {
   const revisions = registry(input);
   if (
@@ -100,6 +111,13 @@ export function selectHourlyCohorts(
     selected.add(row.challenge);
   }
   const candidates = revisions.filter((r) => selected.has(r.challenge));
+  if (refreshedAt) {
+    const at = (r: CurrentCohortRevision) =>
+      refreshedAt.get(`${r.challenge}/${r.revision}`) ?? -Infinity;
+    return [...candidates]
+      .sort((a, b) => at(a) - at(b) || a.challenge.localeCompare(b.challenge))
+      .slice(0, MAX_HOURLY_COHORT_BUILDS);
+  }
   if (candidates.length <= MAX_HOURLY_COHORT_BUILDS) return candidates;
   const hour = Math.floor(now.getTime() / 3_600_000);
   const start =
