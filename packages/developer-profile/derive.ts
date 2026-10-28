@@ -1,4 +1,4 @@
-import type { PracticeObservation, PracticeData } from "../domain/practice";
+import { practiceActor, type PracticeObservation, type PracticeData } from "../domain/practice";
 import { CHALLENGE_KEY, REVISION, type StoredRecord } from "../domain/records";
 import { canonical, type Json } from "../domain/json";
 import { orderSource } from "../domain/source-order";
@@ -79,7 +79,8 @@ export function deriveAttempts(
     if (r.kind !== "observation") continue;
     try {
       const o = JSON.parse(r.payload) as PracticeObservation;
-      if (!o.type?.startsWith("practice.") || o.actor !== "person") continue;
+      // A person's practice only; pre-actor captures count as a person's only in their one historic form.
+      if (!o.type?.startsWith("practice.") || practiceActor(o) !== "person") continue;
       if (
         o.participantId !== participant ||
         o.observationId !== r.recordId ||
