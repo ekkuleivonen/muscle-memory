@@ -47,7 +47,8 @@ test("a portrait is questions with answers, never inventories, chapters or inter
   const html = renderToStaticMarkup(createElement(ReportBody, { report, status: null }));
   assert.match(html, /<h1[^>]*>How you code<\/h1>/);
   assert.match(html, /How soon do you start, and how long do you build\?/);
-  assert.doesNotMatch(html, /How fast do you type/, "the fixture has no run of code characters, so typing is left out");
+  assert.doesNotMatch(html, /id="q-typing"/, "the fixture has no run of code characters, so typing isn't answered");
+  assert.match(html, /<h3 id="discover-title">Still to discover<\/h3>.*How fast do you type when you&#x27;re coding\?/, "it is listed with what would answer it");
   assert.equal((html.match(/report-fyi/g) ?? []).length, 0, "no comparison: model and human submissions aren't the same unit");
   assert.doesNotMatch(
     html,

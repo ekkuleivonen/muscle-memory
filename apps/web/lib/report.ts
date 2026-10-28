@@ -74,6 +74,19 @@ export type QuestionId =
   | "familiarity"
   | "typing"
   | "repeat";
+/** Every question the report can answer, by id: the answers and the "still to discover" list share them. */
+export const QUESTIONS: Record<QuestionId, string> = {
+  start: "How soon do you start, and how long do you build?",
+  progress: "Has your pace changed?",
+  iterate: "Do you iterate or go for one shot?",
+  recovery: "What happens after a failed submission?",
+  confidence: "Does your confidence match the result?",
+  difficulty: "How long do harder challenges take you?",
+  languages: "Which languages do you actually code in?",
+  familiarity: "Your usual languages or something new?",
+  typing: "How fast do you type when you're coding?",
+  repeat: "Did coming back to a challenge change anything?",
+};
 export interface Question {
   id: QuestionId;
   question: string;
@@ -96,6 +109,15 @@ export interface NextStep {
   label: string;
   href: string;
 }
+/** A question the report supports but can't answer from this player's practice yet. */
+export interface Undiscovered {
+  id: QuestionId | "basics";
+  question: string;
+  /** What practice would let it be answered: the real requirement, never an arbitrary count. */
+  need: string;
+  /** One specific step that provides it, when one exists. */
+  action: NextStep | null;
+}
 /** Model results as the data hook reads them; the report itself shows none (see `Question.fyi`). */
 export type ReceiptState = ModelReceipt[] | "loading" | "unavailable";
 export interface ReportInput {
@@ -113,6 +135,10 @@ export interface Report {
   /** A short line when something was started but no question can be answered yet. */
   waiting: string | null;
   next: NextStep | null;
+  /** Supported questions not answerable yet, for the bottom of the report. */
+  discover: Undiscovered[];
+  /** Why comparisons aren't shown: policy and method, not missing practice. */
+  discoverNote: string | null;
   profile: NextStep | null;
   /**
    * Show the optional languages invitation under the languages answer: only while the person
@@ -206,7 +232,7 @@ function start(solved: ReportAttempt[]): Question | null {
   const then = build ? `, then ${firsts.length > 2 ? "about " : ""}${build} of active editing to the solve` : "";
   return {
     id: "start",
-    question: "How soon do you start, and how long do you build?",
+    question: QUESTIONS.start,
     answer:
       firsts.length === 1
         ? `Your first edit came ${first} in${then}.`
@@ -255,7 +281,7 @@ function progress(solved: ReportAttempt[], catalog: readonly ChallengeSummary[])
           : `Steady at ${label}: about ${duration(after)} of active editing per solve, early on and lately.`;
   return {
     id: "progress",
-    question: "Has your pace changed?",
+    question: QUESTIONS.progress,
     answer,
     // Each solve in order, the oldest first: the shape of the change, at most the latest eight.
     visual: { kind: "bars", bars: group.slice(-8).map((a) => ({ label: a.challenge, value: activeToSolve(a)!, display: duration(activeToSolve(a)!) })) },
@@ -302,7 +328,7 @@ function iterate(solved: ReportAttempt[]): Question | null {
           : `You iterate: about ${plural(m, "submission")} per solve, typically.`;
   return {
     id: "iterate",
-    question: "Do you iterate or go for one shot?",
+    question: QUESTIONS.iterate,
     answer,
     // How many solves took 1, 2, 3–4 or 5+ submissions: a shape, not a list of every solve.
     visual: {
@@ -345,7 +371,7 @@ function recovery(solved: ReportAttempt[]): Question | null {
   if (!recovered.length)
     return {
       id: "recovery",
-      question: "What happens after a failed submission?",
+      question: QUESTIONS.recovery,
       answer: `You kept going: ${plural(back, "solve")} came after a failed first submission.`,
       visual: { kind: "turn", from: "first submission failed", to: `solved ${back}×` },
       detail: null,
@@ -365,7 +391,7 @@ function recovery(solved: ReportAttempt[]): Question | null {
         : `After a failed submission, a better one comes about ${t} later${between}, typically.`;
   return {
     id: "recovery",
-    question: "What happens after a failed submission?",
+    question: QUESTIONS.recovery,
     answer,
     visual: { kind: "turn", from: "failed submission", to: `better one ${t} later` },
     detail,
@@ -406,7 +432,7 @@ function confidence(solved: ReportAttempt[]): Question | null {
         : `You felt unsure ${plural(unsure.n, "time")}; your first submission passed in ${howMany(unsure.passed)} of them.`;
   return {
     id: "confidence",
-    question: "Does your confidence match the result?",
+    question: QUESTIONS.confidence,
     answer,
     visual: {
       kind: "bars",
@@ -437,7 +463,7 @@ function difficulty(solved: ReportAttempt[], catalog: readonly ChallengeSummary[
   const only = groups.length === 1 ? groups[0] : null;
   return {
     id: "difficulty",
-    question: "How long do harder challenges take you?",
+    question: QUESTIONS.difficulty,
     answer: only
       ? only.times.length === 1
         ? `Your ${only.d} solve took ${bars[0].display} of active editing.`
@@ -472,7 +498,7 @@ function languages(attempts: readonly ReportAttempt[], catalog: readonly Challen
   const solvedIn = (r: (typeof rows)[number]) => `${r.solved} solved`;
   return {
     id: "languages",
-    question: "Which languages do you actually code in?",
+    question: QUESTIONS.languages,
     answer:
       rows.length === 1
         ? rows[0].solved
@@ -514,7 +540,7 @@ function familiarity(
   if (!usual && !other) return null;
   return {
     id: "familiarity",
-    question: "Your usual languages or something new?",
+    question: QUESTIONS.familiarity,
     answer: !other
       ? "All your recorded practice is in your usual languages so far."
       : !usual
@@ -547,7 +573,7 @@ function typing(attempts: readonly ReportAttempt[]): Question | null {
   const wpm = Math.round((keys / ms) * 60_000 / KEYS_PER_WORD);
   return {
     id: "typing",
-    question: "How fast do you type when you're coding?",
+    question: QUESTIONS.typing,
     answer: `About ${wpm} words a minute while you're typing code.`,
     visual: { kind: "number", value: `${wpm}`, unit: "wpm" },
     detail: null,
@@ -574,7 +600,7 @@ function repeat(solved: ReportAttempt[]): Question | null {
     if (after >= before) continue;
     return {
       id: "repeat",
-      question: "Did coming back to a challenge change anything?",
+      question: QUESTIONS.repeat,
       answer: `Back on ${last.challenge}, you needed ${plural(after, "submission")} instead of ${before}.`,
       visual: { kind: "turn", from: plural(before, "submission"), to: plural(after, "submission") },
       detail: null,
@@ -610,6 +636,73 @@ function next(input: ReportInput, started: Set<string>, solved: ReportAttempt[])
   return pick && pick.runnable && !started.has(pick.key) ? { label: `Next: ${pick.key} · ${pick.title}`, href: `/challenges/${pick.key}` } : null;
 }
 
+/**
+ * The rest of the portrait: each supported question not answered yet, what would answer it and,
+ * where one exists, one step that does. Only real requirements: no unlock counts, nothing the
+ * report can't compute. Familiarity isn't listed: the languages invitation already offers it,
+ * and a hidden invitation stays hidden.
+ */
+function toDiscover(input: ReportInput, solved: ReportAttempt[], answered: Set<string>): Undiscovered[] {
+  const out: Undiscovered[] = [];
+  const add = (id: QuestionId, need: string, action: NextStep | null = null) => {
+    if (!answered.has(id)) out.push({ id, question: QUESTIONS[id], need, action });
+  };
+  const byKey = new Map(input.catalog.map((c) => [c.key, c]));
+  const completed = new Set([...Object.keys(input.progress).filter((k) => input.progress[k].completedAt), ...solved.map((a) => a.challenge)]);
+  const ordered = chronological(solved);
+  if (!ordered.length)
+    // One solve answers these together, so they're one line rather than four with the same need.
+    out.push({
+      id: "basics",
+      question: "How soon you start, how you iterate, your time by difficulty and your languages",
+      need: "Your first solve answers these.",
+      action: null,
+    });
+  else
+    for (const id of ["start", "iterate", "difficulty", "languages"] as const)
+      add(id, "Shows for a solve recorded from its start to the solve on this challenge's current version.");
+  // Pace compares different challenges at one language and level: offer one like the latest solve.
+  const latest = ordered.at(-1);
+  const level = latest && byKey.get(latest.challenge)?.revision === latest.revision ? byKey.get(latest.challenge) : undefined;
+  const alike = level
+    ? nextProblem(
+        level,
+        input.catalog.filter((c) => c.language === level.language && c.difficulty === level.difficulty),
+        completed,
+        input.profile?.languages ?? [],
+      )
+    : null;
+  add(
+    "progress",
+    level && alike
+      ? `Solve another ${level.difficulty} ${languageLabel(level.language)} challenge to compare your pace on like-for-like work.`
+      : "Solve two different challenges in one language at the same difficulty to compare your pace.",
+    alike?.runnable ? { label: `${alike.key} · ${alike.title}`, href: `/challenges/${alike.key}` } : null,
+  );
+  add("recovery", "Shows once a submission doesn't pass and a later one does better.");
+  const answeredConfidence = solved.filter((a) => a.answers.confidence && num(a.values.firstSubmit)).length;
+  add(
+    "confidence",
+    `Answer the optional "how sure were you?" question after ${answeredConfidence ? "one more solve" : "two solves"}.`,
+  );
+  // Clean attempts whose typing is null had Vim keybindings on: their letters can be commands.
+  const cleanAttempts = input.attempts.filter(clean);
+  const vim = cleanAttempts.length > 0 && cleanAttempts.every((a) => a.values.typedKeys === null);
+  add(
+    "typing",
+    vim
+      ? "Not measured while Vim keybindings are on, since their letters can be commands."
+      : `Shows after about ${MIN_TYPED_KEYS} characters of code typed by hand; pastes and shortcuts don't count.`,
+  );
+  const first = ordered[0] && byKey.get(ordered[0].challenge);
+  add(
+    "repeat",
+    first ? "Solve a challenge again later; this shows whether it took fewer submissions." : "Solve a challenge, then solve it again later.",
+    first?.runnable ? { label: `Again: ${first.key} · ${first.title}`, href: `/challenges/${first.key}` } : null,
+  );
+  return out;
+}
+
 export function buildReport(input: ReportInput): Report {
   const known = new Set(input.catalog.map((c) => c.key));
   const started = new Set([...Object.keys(input.progress), ...input.attempts.map((a) => a.challenge)].filter((k) => known.has(k)));
@@ -641,6 +734,8 @@ export function buildReport(input: ReportInput): Report {
     questions,
     waiting: started.size && !questions.length ? "Solve a challenge and your answers start here." : null,
     next: next(input, started, solved),
+    discover: toDiscover(input, solved, new Set(questions.map((q) => q.id))),
+    discoverNote: "Comparisons with other players and with AI models aren't shown: other players' practice stays private for now, and models don't submit under the same rules.",
     profile: null,
     languagesInvite:
       questions.some((q) => q.id === "languages") &&

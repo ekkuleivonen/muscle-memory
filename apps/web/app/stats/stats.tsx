@@ -146,6 +146,35 @@ export function InviteCopy({ guess, onHide }: { guess: readonly string[]; onHide
   );
 }
 
+/** The bottom of the report: questions it can answer once there's the practice for them. */
+export function Discover({ report }: { report: Report }) {
+  if (!report.discover.length) return null;
+  return (
+    <section className="report-discover t-md" aria-labelledby="discover-title">
+      <h3 id="discover-title">Still to discover</h3>
+      <ul>
+        {report.discover.map((d) => (
+          <li key={d.id}>
+            <span className="report-discover-question">{d.question}</span>
+            <span className="t-dim">
+              {d.need}
+              {d.action && (
+                <>
+                  {" "}
+                  <Link className="t-cmd" href={d.action.href}>
+                    {d.action.label} →
+                  </Link>
+                </>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {report.discoverNote && <p className="report-note">{report.discoverNote}</p>}
+    </section>
+  );
+}
+
 export function ReportBody({
   report,
   status,
@@ -171,6 +200,7 @@ export function ReportBody({
         </h1>
         {next}
         {status}
+        <Discover report={report} />
       </section>
     );
   return (
@@ -204,6 +234,7 @@ export function ReportBody({
         </QuestionView>
       ))}
       {!report.waiting && next}
+      <Discover report={report} />
       {report.profile && (
         <p className="report-note">
           <Link className="t-cmd" href={report.profile.href}>

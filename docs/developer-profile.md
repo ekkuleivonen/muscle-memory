@@ -27,6 +27,16 @@ Not shown, on purpose: edit sizes as a "rewrite style" (keystroke-level edit siz
 
 **No model comparison.** The report used to set models' submissions beside a person's checks, which aren't the same unit. Submissions against submissions isn't like for like either. Practice lets a person submit only after the current code passes the examples (`session.ts`, the example gate), while a model may submit straight away, and model receipts record submissions only. So the report shows no FYI and requests no model results. Model results stay on practice's completion screen with their own context. Human comparisons stay off (`COHORTS_ENABLED = false`, [human cohorts](human-cohorts.md), ENG-376); when enabled, they would be a single FYI on the relevant answer, in the same units.
 
+**Still to discover** (owner direction, 28 October 2026). At the bottom of the report (and under the empty report's start) is a short list of every supported question this player's practice can't answer yet. Each entry gives what would answer it, as the real requirement, and one specific step where one exists:
+- **Before any solve:** one line covers start, iterate, difficulty and languages, since the first solve answers them all.
+- **Pace:** another challenge at the latest solve's language and difficulty, named and linked (practice's `nextProblem`, restricted to that language and level).
+- **Recovery:** shows once a submission doesn't pass and a later one does better. There's no link, since nobody should fail on purpose.
+- **Confidence:** the optional after-solve question on two solves, or one more.
+- **Typing:** about 50 hand-typed code characters. With Vim keybindings on, it says the rate isn't measured, rather than asking for more practice.
+- **Repeat:** solve a solved challenge again, linked.
+
+There are no unlock counts beyond the real ones. Familiarity isn't listed: the languages invitation already offers it, and a hidden invitation stays hidden. One line says what isn't a matter of practice: comparisons with other players (private for now) and with models (they don't submit under the same rules). Stealth shows no report, so no list either.
+
 **Next challenge.** An unfinished attempt comes first. Otherwise the report offers what practice would after the latest thing worked on (`nextProblem`): the same language, then the player's listed languages, then the nearest difficulty, so two JavaScript solves lead to the next JavaScript challenge, not the first in catalog order.
 
 **Caching, precisely.** Two short-lived caches exist, both from existing infrastructure:

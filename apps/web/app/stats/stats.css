@@ -192,6 +192,25 @@
   color: var(--t-dim);
   max-width: 72ch;
 }
+/* Still to discover: a quiet list, question then what would answer it. */
+.report-discover {
+  margin-top: 2.4em;
+  padding-top: 1.6em;
+  border-top: 1px solid var(--t-line);
+}
+/* The shared markdown list ("-" markers); the question, then what would answer it below. */
+.report-discover ul {
+  max-width: 64ch;
+}
+.report-discover li + li {
+  margin-top: 0.8em;
+}
+.report-discover li > .t-dim {
+  display: block;
+}
+.report-discover .t-dim {
+  font-size: var(--text-sm, 13px);
+}
 .report-footer {
   margin-top: 2.4em;
   font-size: var(--text-sm, 13px);

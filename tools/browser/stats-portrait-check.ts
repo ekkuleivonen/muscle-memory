@@ -163,6 +163,7 @@ for (const device of DEVICES) {
     const { context, page } = await open(device, HISTORIES.empty);
     await report(page, "text=Your portrait starts with one challenge.");
     assert.equal(await page.locator(".report-question, .report-takeaways").count(), 0);
+    assert.match(await page.locator(".report-discover").innerText(), /Still to discover[\s\S]*Your first solve answers these\./);
     await page.getByRole("link", { name: /Pick a language and start/ }).waitFor();
     await noOverflow(page, "empty");
     await shot(page, "1-empty");
@@ -179,9 +180,18 @@ for (const device of DEVICES) {
     assert.match(body, /This solve took 2 submissions; the first didn't pass\./);
     assert.match(body, /Your first edit came \d+ s in, then \d+ s of active editing to the solve\./);
     assert.match(body, /All JavaScript so far: 1 challenge solved\./);
-    assert.doesNotMatch(body, /typically|Mostly|Has your pace changed/);
+    assert.doesNotMatch(body, /typically|Mostly/);
+    assert.equal(await page.locator("#q-progress").count(), 0, "one solve can't answer pace");
     assert.doesNotMatch(body, FORBIDDEN);
     assert.match(await page.locator(".report-action").innerText(), /^Next: JS-/);
+    // Pace needs a second challenge like this one: the inventory names one, at the bottom.
+    const pace = page.locator(".report-discover li", { hasText: "Has your pace changed?" });
+    assert.match(await pace.innerText(), /Solve another easy JavaScript challenge/);
+    assert.match((await pace.getByRole("link").getAttribute("href"))!, /^\/challenges\/JS-00\d$/);
+    assert.ok(await page.evaluate(() => {
+      const d = document.querySelector(".report-discover")!, qs = document.querySelectorAll(".report-question");
+      return !!(qs[qs.length - 1].compareDocumentPosition(d) & Node.DOCUMENT_POSITION_FOLLOWING);
+    }), "the inventory comes after every answer");
     await noOverflow(page, "one solve");
     await shot(page, "2-one");
     step(`${device.name}: one solve describes that solve; next stays in JavaScript`);
@@ -198,6 +208,7 @@ for (const device of DEVICES) {
     assert.doesNotMatch(body, /typically|Mostly|You iterate|You're getting/);
     assert.doesNotMatch(body, FORBIDDEN);
     assert.match(await page.locator(".report-action").innerText(), /^Next: JS-003 · /);
+    assert.equal(await page.locator(".report-discover li", { hasText: "Has your pace changed?" }).count(), 0, "answered, so not listed");
     assert.ok(await page.locator(".report-takeaways li").count() <= 3);
     await noOverflow(page, "two solves");
     await shot(page, "3-two");
@@ -227,7 +238,8 @@ for (const device of DEVICES) {
     assert.match(body, /When you felt sure, your first submission passed \d of \d times; when unsure, \d of \d\./);
     assert.match(body, /Mostly JavaScript \(5 solved\), then Python \(1 solved\)\./);
     assert.doesNotMatch(body, FORBIDDEN);
-    assert.doesNotMatch(body, /model/i, "no model comparison");
+    assert.equal(await page.locator(".report-question .report-fyi").count(), 0, "no comparison in any answer");
+    assert.match(body, /Comparisons with other players and with AI models aren't shown/, "only the one line saying why");
     await noOverflow(page, "rich");
     await shot(page, "4-rich");
     if (!device.touch) {
@@ -275,8 +287,8 @@ for (const device of DEVICES) {
     await page.getByText("You're in stealth, so there's no report here.").waitFor();
     await page.waitForTimeout(500);
     assert.equal(reads(), 0, "stealth reads no history");
-    assert.equal(await page.locator(".report-question").count(), 0);
-    step(`${device.name}: stealth shows no report and reads nothing`);
+    assert.equal(await page.locator(".report-question, .report-discover").count(), 0, "no report, no inventory");
+    step(`${device.name}: stealth shows no report or inventory and reads nothing`);
     await context.close();
   }
 }

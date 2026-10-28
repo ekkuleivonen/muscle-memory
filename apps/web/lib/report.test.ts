@@ -469,3 +469,35 @@ test("no model comparison: their receipts count only submissions, and people pas
   assert.equal(r.questions.filter((x) => x.fyi).length, 0);
   assert.doesNotMatch(visible(r), /model/i);
 });
+
+test("still to discover lists every supported question not yet answered, with its real requirement", () => {
+  const empty = buildReport(input({ catalog: rich }));
+  assert.deepEqual(empty.discover.map((d) => d.id), ["basics", "progress", "recovery", "confidence", "typing", "repeat"]);
+  assert.equal(empty.discover[0].need, "Your first solve answers these.");
+  assert.ok(empty.discover.every((d) => d.action === null), "the start link above is the step; no extra links");
+  const needs = empty.discover.map((d) => `${d.question} ${d.need}`).join(" ");
+  assert.doesNotMatch(needs, /unlock|play more|model|other players|cohort|percentile/i, "never promises what practice can't provide");
+  assert.match(empty.discoverNote!, /other players' practice stays private for now, and models don't submit under the same rules/);
+});
+
+test("answered questions are never listed; a missing one names a specific comparable challenge", () => {
+  const one = buildReport(input({ catalog: rich, attempts: [solve("u1", "JS-001", { day: 0, active: MIN, confidence: "sure" })] }));
+  const answered = new Set(one.questions.map((x) => x.id));
+  assert.ok(one.discover.every((d) => !answered.has(d.id as Question["id"])));
+  const pace = one.discover.find((d) => d.id === "progress")!;
+  assert.equal(pace.need, "Solve another easy JavaScript challenge to compare your pace on like-for-like work.");
+  assert.deepEqual(pace.action, { label: "JS-002 · Synthetic JS-002", href: "/challenges/JS-002" });
+  assert.equal(one.discover.find((d) => d.id === "confidence")!.need, 'Answer the optional "how sure were you?" question after one more solve.');
+  assert.deepEqual(one.discover.find((d) => d.id === "repeat")!.action, { label: "Again: JS-001 · Synthetic JS-001", href: "/challenges/JS-001" });
+  assert.equal(one.discover.find((d) => d.id === "recovery")!.action, null, "a one-shot solve: nothing to ask for, no link to fail on purpose");
+  const two = buildReport(input({ catalog: rich, attempts: [solve("u1", "JS-001", { day: 0, active: MIN }), solve("u2", "JS-002", { day: 1, active: MIN })] }));
+  assert.equal(two.discover.find((d) => d.id === "progress"), undefined, "a comparable pair answers pace");
+});
+
+test("typing that Vim keybindings make unmeasurable says so, rather than asking for more practice", () => {
+  const hjkl = Array.from({ length: 61 }, (_, i) => [200 + i * 100, "hjkl"[i % 4], ""] as [number, string, string]);
+  const r = buildReport(input({ attempts: device(withKeys("vd", hjkl, ["syntax-highlighting", "vim-keybindings"])) }));
+  assert.equal(r.discover.find((d) => d.id === "typing")!.need, "Not measured while Vim keybindings are on, since their letters can be commands.");
+  const plain = buildReport(input({ attempts: device(summary("pl", "JS-001")) }));
+  assert.equal(plain.discover.find((d) => d.id === "typing")!.need, "Shows after about 50 characters of code typed by hand; pastes and shortcuts don't count.");
+});
