@@ -33,7 +33,7 @@ test("the empty report is one line and a start, with no preview cards", () => {
   const html = renderToStaticMarkup(createElement(ReportBody, { report, status: null }));
   assert.match(html, /Your portrait starts with one challenge/);
   assert.match(html, /href="\/start"/);
-  assert.doesNotMatch(html, /sample data|report-question|<details/);
+  assert.doesNotMatch(html, /sample data|report-question|<details|Share a summary/);
 });
 
 test("a portrait is questions with answers, never inventories, chapters or internals", () => {
@@ -49,7 +49,11 @@ test("a portrait is questions with answers, never inventories, chapters or inter
   // One solve is a first receipt: labelled lines, not chapters, each keeping its answer's anchor.
   assert.match(html, /<h3 id="first-title">Your first solve<\/h3>/);
   assert.match(html, /<li id="q-start"><span class="t-dim">Start<\/span><span class="report-first-answer">Your first edit came/);
-  assert.doesNotMatch(html, /report-question|report-bars|report-turn/, "no chapters or pictures for one solve");
+  assert.doesNotMatch(html, /report-question|report-turn|report-figure/, "no chapters or big numbers for one solve");
+  // Its one shape: the submissions in order, with the same in words for screen readers.
+  assert.match(html, /<li id="q-iterate">.*class="report-dots".*<span class="sr-only">JS-001: didn&#x27;t pass, passed; 2 submissions<\/span>/);
+  assert.match(html, /<button type="button" class="t-cmd report-share-open" aria-haspopup="dialog">Share a summary<\/button>/);
+  assert.match(html, /<pre class="report-share-preview"[^>]*>My unaided coding practice on Muscle Memory\n\n1 challenge solved\nFirst submission didn&#x27;t pass\n/);
   assert.doesNotMatch(html, /id="q-typing"/, "the fixture has no run of code characters, so typing isn't answered");
   assert.match(html, /<h3 id="discover-title">Still to discover<\/h3>.*How fast do you type when you&#x27;re coding\?/, "it is listed with what would answer it");
   assert.equal((html.match(/report-fyi/g) ?? []).length, 0, "no comparison: model and human submissions aren't the same unit");
@@ -145,4 +149,33 @@ test("takeaways lead the report as links to the answers they sum up, and stay ou
     createElement(ReportBody, { report: { ...report, takeaways: [{ id: "progress", text: "Faster at easy JavaScript lately: 11 min → 6 min of active work per solve." }] }, status: null }),
   );
   assert.match(withLead, /<ul class="report-takeaways" aria-label="Takeaways"><li><a href="#q-progress">Faster at easy JavaScript lately/);
+});
+
+test("a ring and a split bar carry their whole in words, and never colour alone", async () => {
+  const { VisualView } = await import("./report-view");
+  const parts = [
+    { label: "JavaScript", value: 2, display: "2 solved" },
+    { label: "Python", value: 1, display: "1 in progress" },
+  ];
+  const pie = renderToStaticMarkup(createElement(VisualView, { visual: { kind: "pie", whole: "Challenges worked on, by language", parts }, label: "" }));
+  assert.match(pie, /<figure class="report-pie" role="img" aria-label="Challenges worked on, by language: JavaScript 2 solved; Python 1 in progress\.">/);
+  assert.match(pie, /conic-gradient\(#7d86f1 0deg 240deg, #bf8418 240deg 360deg\)/);
+  assert.match(pie, /<span>JavaScript<\/span><span class="t-dim">2 solved<\/span>/, "every slice is named in text");
+  const split = renderToStaticMarkup(createElement(VisualView, { visual: { kind: "split", whole: "Usual or not", parts }, label: "" }));
+  assert.match(split, /role="img" aria-label="Usual or not: JavaScript 2 solved; Python 1 in progress\."/);
+  assert.match(split, /width:66\.7%/);
+});
+
+test("a submission whose result isn't known reads as not known, never as a miss", async () => {
+  const { VisualView } = await import("./report-view");
+  const html = renderToStaticMarkup(
+    createElement(VisualView, {
+      visual: { kind: "dots", legend: ["passed", "didn't pass", "result not known"], rows: [{ label: "JS-001", marks: [null, true], display: "2 submissions" }] },
+      label: "",
+    }),
+  );
+  assert.match(html, /<span class="sr-only">JS-001: result not known, passed; 2 submissions<\/span>/);
+  assert.match(html, /<span class="is-unknown">\?<\/span><span class="is-yes">●<\/span>/);
+  assert.doesNotMatch(html, /class="is-no">○<\/span><span class="is-yes"/, "no miss drawn for it");
+  assert.match(html, /<span class="is-unknown">\?<\/span> result not known/, "the legend names it");
 });

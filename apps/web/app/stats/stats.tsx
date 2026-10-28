@@ -8,6 +8,7 @@ import { buildReport, mergeEvidence, type Report } from "../../lib/report";
 import type { ChallengeSummary } from "../../lib/challenges";
 import { useReportData, type HistoryStatus } from "./report-data";
 import { QuestionView, ReceiptLine } from "./report-view";
+import { ShareReport } from "./share-summary";
 import type { AttemptSummary } from "../../../../packages/developer-profile/derive";
 
 const NONE: AttemptSummary[] = [];
@@ -229,13 +230,18 @@ export function ReportBody({
           </ul>
         )}
         {status}
-        {/* The next challenge, quietly, where it's seen first; the button below stays. */}
-        {!report.waiting && report.next && (
-          <p className="report-next">
-            <Link className="t-cmd" href={report.next.href}>
-              {report.next.label} →
-            </Link>
-          </p>
+        {/* The next challenge, quietly, where it's seen first; the button below stays. Sharing
+            sits beside it, quieter still, and only does anything when pressed. */}
+        {!report.waiting && (report.next || report.share) && (
+          // A div: the share preview's dialog can't sit inside a paragraph.
+          <div className="report-next">
+            {report.next && (
+              <Link className="t-cmd" href={report.next.href}>
+                {report.next.label} →
+              </Link>
+            )}
+            {report.share && <ShareReport summary={report.share} />}
+          </div>
         )}
         {report.waiting && <p className="report-context">{report.waiting}</p>}
         {report.waiting && next}
