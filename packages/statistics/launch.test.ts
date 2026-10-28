@@ -33,7 +33,7 @@ print(json.dumps([dict(r) for r in c.execute(v['sql'].replace('default.events','
   assert.equal(out.status, 0, out.stderr);
   const result = JSON.parse(out.stdout) as Record<string, string | number | null>[];
   const section = (s: string) => result.filter((r) => r.section === s);
-  return { coverage: section("coverage")[0], launch: section("launch")[0], challenge: section("challenge"), rows: result };
+  return { coverage: section("coverage")[0], launch: section("launch")[0], rows: result };
 }
 
 test("the announcement time is required and exact; nothing stands in for it", () => {
@@ -71,7 +71,6 @@ test("empty data: a coverage row and a launch row of zeros, nothing else", () =>
   const r = run([]);
   assert.equal(r.rows.length, 2);
   assert.equal(Number(r.launch.attempts ?? 0), 0);
-  assert.equal(r.challenge.length, 0);
 });
 
 test("only whole attempts that genuinely started at or after the announcement are counted", () => {
@@ -96,7 +95,6 @@ test("only whole attempts that genuinely started at or after the announcement ar
   assert.equal(r.launch.submissions, 6);
   assert.equal(r.launch.runs, 3);
   assert.equal(r.launch.prelaunch_resumed, 3, "resumed, offline and skewed: activity after, start before");
-  assert.deepEqual(r.challenge.map((c) => [c.challenge, c.attempts, c.browser_ids]), [["PY-003", 3, 2]]);
 });
 
 test("a prelaunch attempt with only resumed events after the boundary is not a new attempt", () => {
@@ -108,7 +106,6 @@ test("a prelaunch attempt with only resumed events after the boundary is not a n
   const r = run(rows);
   assert.equal(Number(r.launch.attempts), 0);
   assert.equal(r.launch.prelaunch_resumed, 1);
-  assert.equal(r.challenge.length, 0);
 });
 
 test("a missing or unknowable start excludes the attempt and is reported, never inferred", () => {
@@ -151,7 +148,6 @@ test("synthetic QA revisions and records without person consent are excluded and
   assert.equal(r.launch.attempts, 1);
   assert.equal(r.coverage.synthetic_records, 6);
   assert.equal(r.coverage.ineligible_records, 18);
-  assert.deepEqual(r.challenge.map((c) => c.challenge), ["PY-003"]);
 });
 
 test("as-of is stable: late arrivals are reported, never counted, until a later as-of", () => {
@@ -244,8 +240,8 @@ test("a conflicting copy excludes its attempt even when that copy is itself inel
 test("start origins are never echoed: no breakdown by data.from", () => {
   const rows = attempt("odd", 60, { from: "<script>alert(1)</script>" });
   const r = run(rows);
-  assert.deepEqual([...new Set(r.rows.map((x) => x.section))].sort(), ["challenge", "coverage", "launch"]);
-  assert.doesNotMatch(JSON.stringify(r.rows), /script|picker/);
+  assert.deepEqual([...new Set(r.rows.map((x) => x.section))].sort(), ["coverage", "launch"]);
+  assert.doesNotMatch(JSON.stringify(r.rows), /script|picker|PY-003|sha256/);
   assert.ok(!("origin" in r.launch));
 });
 

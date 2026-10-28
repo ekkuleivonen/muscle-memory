@@ -7,7 +7,8 @@
  * approved public launch receipt, never from now, midnight, a commit, a deploy or an artifact.
  *
  * Eligibility (which attempts are in the cohort) is decided once, in `classified`; every
- * aggregate reads the same `included` attempts. Read-only interpretation of existing capture:
+ * figure in the `launch` row reads the same included attempts. Output is two rows: coverage and
+ * launch totals, with no breakdown that could rest on one browser or echo client text. Read-only interpretation of existing capture:
  * no new events, tables or stored results.
  */
 import { CHALLENGE_KEY, REVISION } from "../domain/records";
@@ -72,7 +73,7 @@ export function launchWindow(input: Record<string, unknown>, now = new Date()): 
 }
 
 const COLUMNS = [
-  "section", "challenge", "challenge_revision",
+  "section",
   // Included whole attempts: the launch cohort.
   "attempts", "browser_ids", "completed", "submitted_attempts", "submissions", "runs", "clock_ahead_starts",
   // Attempts with activity after the announcement that are not counted, by reason.
@@ -85,14 +86,6 @@ type Column = (typeof COLUMNS)[number];
 /** One UNION branch: the named columns, NULL for the rest, always in the same order. */
 const branch = (values: Partial<Record<Column, string>>, from: string) =>
   `SELECT ${COLUMNS.map((c) => `${values[c] ?? "NULL"} AS ${c}`).join(",\n  ")}\n${from}`;
-const cohort = {
-  attempts: "COUNT(*)",
-  browser_ids: "COUNT(DISTINCT participant_id)",
-  completed: "SUM(completed)",
-  submitted_attempts: "SUM(CASE WHEN submissions > 0 THEN 1 ELSE 0 END)",
-  submissions: "SUM(submissions)",
-  runs: "SUM(runs)",
-};
 
 /**
  * One fixed SELECT over `default.events`, generated for the workbench. Only validated instants,
@@ -189,8 +182,6 @@ WITH record_groups AS (
     WHEN start_records > 1 OR starts_without_origin > 0 THEN 'untrusted-start'
     ELSE 'included' END AS cohort
   FROM attempts WHERE eligible_records > 0 AND active_after = 1
-), included AS (
-  SELECT * FROM classified WHERE cohort = 'included'
 )
 ${branch(
   {
@@ -224,10 +215,5 @@ ${branch(
   },
   "FROM classified",
 )}
-UNION ALL
-${branch(
-  { section: "'challenge'", challenge: "challenge", challenge_revision: "challenge_revision", ...cohort },
-  "FROM included GROUP BY challenge, challenge_revision",
-)}
-LIMIT 502`;
+LIMIT 2`;
 }
