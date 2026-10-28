@@ -37,17 +37,17 @@ import { logProfile } from "../../lib/site-log";
 import type { CommandName } from "./commands";
 import { KeyActions, type KeyAction } from "../_terminal/key-actions";
 
-/**
- * Settings commands as pages in the terminal's look: what the command does, where things
- * stand, one line saying what happened, then the actions as a prompt's choices, run by key or
- * click (KeyActions), ending with the way back. Profile has its own form.
- */
 /** Where a profile form was opened from, to return there after save or cancel. */
 export const RETURNS = {
   stats: { label: "back to your report", href: "/stats#q-languages" },
 } as const;
 type ReturnTo = (typeof RETURNS)[keyof typeof RETURNS];
 
+/**
+ * Settings commands as pages in the terminal's look: what the command does, where things
+ * stand, one line saying what happened, then the actions as a prompt's choices, run by key or
+ * click (KeyActions), ending with the way back. Profile has its own form.
+ */
 export function SettingsCommand({
   command,
   question,

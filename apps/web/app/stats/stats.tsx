@@ -220,9 +220,11 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
   const returned = useRef(false);
   useEffect(() => {
     if (!report || returned.current) return;
+    const target = location.hash.startsWith("#q-") ? document.getElementById(location.hash.slice(1)) : null;
+    // Wait for the answer itself; the first report may come before every answer does.
+    if (location.hash.startsWith("#q-") && !target) return;
     returned.current = true;
-    if (location.hash.startsWith("#q-"))
-      document.getElementById(location.hash.slice(1))?.scrollIntoView();
+    target?.scrollIntoView();
   }, [report]);
   const key = report?.comparisonRevisions.map((r) => r.revision).join("|") ?? "";
   if (key !== wanted.map((r) => r.revision).join("|"))
