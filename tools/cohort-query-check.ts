@@ -24,7 +24,8 @@ const scenarios: { name: string; events: Event[]; browsers: number }[] = [
     browsers: 21,
   },
   {
-    name: "stealth now, minors, no age, models",
+    // Uploaded profiles are not eligibility: CONTROL decides after the query. Models never count.
+    name: "stealth, minor and unanswered profiles are ignored; models never count",
     events: [
       ...many(20),
       ...[0, 1, 2].flatMap((i) =>
@@ -47,10 +48,10 @@ const scenarios: { name: string; events: Event[]; browsers: number }[] = [
         profile(`m${i}`, ADULT, at),
       ]),
     ],
-    browsers: 17,
+    browsers: 24,
   },
   {
-    name: "conflicting newer profile fails closed",
+    name: "a conflicting newer profile is ignored, not an eligibility signal",
     events: (() => {
       const newer = profile(
         "b0",
@@ -66,7 +67,7 @@ const scenarios: { name: string; events: Event[]; browsers: number }[] = [
         },
       ];
     })(),
-    browsers: 20,
+    browsers: 21,
   },
   {
     name: "first and repeat",

@@ -107,14 +107,11 @@ Nothing is backfilled from uploads and nothing enrolls in the background.
 
 Counting then starts with the next hourly summary build.
 
-**Known gap (open decision):** the fixed member query still keeps PR71's prefilter: the browser's
-latest uploaded profile record must say adult and not stealth, and it is read within the same window
-as the attempts, which starts at the revision's publication. A profile saved before a revision was
-published therefore doesn't count for it until the player saves a profile answer or stealth choice
-again, and the explicit **use these settings for comparisons** action uploads no profile record.
-CONTROL is already the authority and fails closed, so dropping the prefilter (or reading profiles
-without the publication bound) would not admit anyone CONTROL excludes; either is a SQL change and
-needs a fresh bounded native run before activation.
+**Eligibility is CONTROL state alone.** The member query no longer reads uploaded profile records
+(PR71's prefilter is removed): an old, missing or conflicting uploaded profile can neither exclude nor
+admit a browser. Only an acknowledged adult, non-stealth CONTROL record without a tombstone counts;
+missing, pending, unknown, 16–17, stealth and deleted states are excluded. So an adult who saves
+settings counts for every current revision, whenever the revision was published.
 
 **Known limit (open decision):** an exact build checks at most 100 distinct browsers against CONTROL
 (`MAX_COHORT_MEMBERS`, the `check()` bound). A revision with more browsers in its window builds no

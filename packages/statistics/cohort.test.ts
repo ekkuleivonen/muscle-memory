@@ -12,6 +12,7 @@ import {
   type Event,
 } from "./cohort-fixtures";
 import { deriveAttempts } from "../developer-profile/derive";
+import { cohortMemberQuery, currentCohort } from "./current-cohort";
 import {
   cohortQuery,
   cohortResult,
@@ -26,6 +27,7 @@ function run(
   challenge = "JS-001",
   revision = syntheticRevision,
   window = syntheticWindow,
+  build: typeof cohortQuery = cohortQuery,
 ) {
   const script = `import sqlite3,json,sys
 v=json.load(sys.stdin)
@@ -42,7 +44,7 @@ print(json.dumps([dict(r) for r in c.execute(v['sql'].replace('default.events','
     input: JSON.stringify({
       rows: events,
       fields,
-      sql: cohortQuery(challenge, revision, window),
+      sql: build(challenge, revision, window),
     }),
     encoding: "utf8",
     maxBuffer: 16 * 1024 * 1024,
@@ -80,31 +82,51 @@ test("a group below the minimum is withheld entirely, not shown as small or zero
   assert.equal(cohortResult(run(many(MIN_COHORT))).groups.length, 1);
 });
 
-test("current stealth and the 16–17 band remove a browser's whole history, by its latest profile", () => {
-  const events = many(25);
-  for (let i = 0; i < 6; i++)
-    events.push(
-      profile(`b${i}`, { ...ADULT, stealth: true }, "2026-10-26T00:00:00.000Z"),
-    );
-  assert.deepEqual(
-    cohortResult(run(events)).groups,
-    [],
-    "25 − 6 stealth = 19 < 20",
-  );
-  // A later profile turning stealth off counts the browser again; latest wins.
-  for (let i = 0; i < 6; i++)
-    events.push(profile(`b${i}`, ADULT, "2026-10-27T00:00:00.000Z"));
-  assert.equal(cohortResult(run(events)).groups.length, 1);
-  const minors = many(25);
-  for (let i = 0; i < 6; i++)
-    minors.push(
-      profile(
-        `b${i}`,
-        { age: "16-17", stealth: false },
-        "2026-10-26T00:00:00.000Z",
-      ),
-    );
-  assert.deepEqual(cohortResult(run(minors)).groups, []);
+test("uploaded profiles neither exclude nor admit: stealth, minor, unanswered or conflicting", () => {
+  const plain = run(many(25));
+  const withProfiles = (extra: (i: number) => Event[]) => {
+    const events = many(25);
+    for (let i = 0; i < 6; i++) events.push(...extra(i));
+    return run(events);
+  };
+  const cases: [string, (i: number) => Event[]][] = [
+    ["later stealth profiles", (i) => [profile(`b${i}`, { ...ADULT, stealth: true }, "2026-10-26T00:00:00.000Z")]],
+    ["16–17 profiles", (i) => [profile(`b${i}`, { age: "16-17", stealth: false }, "2026-10-26T00:00:00.000Z")]],
+    ["unanswered age", (i) => [profile(`b${i}`, { stealth: false }, "2026-10-26T00:00:00.000Z")]],
+    [
+      "conflicting profile copies",
+      (i) => {
+        const p = profile(`b${i}`, { ...ADULT, stealth: true }, "2026-10-26T00:00:00.000Z");
+        return [p, { ...p, payload: p.payload!.replace('"stealth":true', '"stealth":false') }];
+      },
+    ],
+  ];
+  for (const [name, extra] of cases)
+    assert.deepEqual(withProfiles(extra), plain, `${name} don't change the query's output`);
+  // Browsers that never uploaded a profile are still returned, for the CONTROL check to decide.
+  const bare = Array.from({ length: 25 }, (_, i) => browser(`n${i}`)).flat();
+  assert.equal(cohortResult(run(bare)).groups.length, 1);
+});
+
+test("CONTROL alone decides: a profile can't override missing, pending, unknown, minor, stealth or deleted state", async () => {
+  // 25 browsers whose uploaded profiles all say adult and not stealth.
+  const members = run(many(25), "JS-001", syntheticRevision, syntheticWindow, cohortMemberQuery);
+  assert.equal(new Set(members.map((r: { participant_id: string }) => r.participant_id)).size, 25);
+  const acknowledged = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+  // The ingest check (comparison-privacy.test.ts) returns a revision only for an acknowledged,
+  // adult, non-stealth record with no tombstone; missing, pending, unknown, non-adult, stealth and
+  // deleted all return null. Here the first `excluded` browsers are in any of those states.
+  const control = (excluded: number) => ({
+    check: async (ids: string[]) => ids.map((id) => (+id.slice(1) < excluded ? null : acknowledged)),
+  });
+  assert.equal((await currentCohort(async () => members, control(5))).groups.length, 1, "25 − 5 = 20");
+  assert.deepEqual((await currentCohort(async () => members, control(6))).groups, [], "25 − 6 = 19");
+  // The reverse: profiles saying stealth or 16–17 don't remove a browser CONTROL calls eligible.
+  const contrary = many(25);
+  for (let i = 0; i < 25; i++)
+    contrary.push(profile(`b${i}`, { age: "16-17", stealth: true }, "2026-10-26T00:00:00.000Z"));
+  const rows = run(contrary, "JS-001", syntheticRevision, syntheticWindow, cohortMemberQuery);
+  assert.equal((await currentCohort(async () => rows, control(0))).groups[0].participants, "20–49");
 });
 
 test("duplicate copies count once; conflicting copies and model actors are left out", () => {
@@ -195,7 +217,7 @@ test("an attempt matches only the group with its exact runtime, diagnostics and 
   );
 });
 
-test("unknown age, stealth, consent or start origin is never counted as an eligible adult", () => {
+test("records without consent or a recorded start origin are never counted", () => {
   const read = cohortResult(run(many(25)));
   assert.equal(read.eligibility.unit, "distinct browsers, not people");
   assert.match(read.eligibility.ages, /adults only/);
@@ -204,75 +226,11 @@ test("unknown age, stealth, consent or start origin is never counted as an eligi
     ...Array.from({ length: 6 }, (_, i) => extra(i)).flat(),
   ];
   const cases: [string, Event[]][] = [
-    ["no profile uploaded", withSix((i) => browser(`x${i}`))],
-    [
-      "no age answer",
-      withSix((i) => [
-        ...browser(`x${i}`),
-        profile(`x${i}`, { stealth: false }, "2026-10-01T00:00:00.000Z"),
-      ]),
-    ],
-    [
-      "stealth not recorded",
-      withSix((i) => [
-        ...browser(`x${i}`),
-        profile(`x${i}`, { age: "25-34" }, "2026-10-01T00:00:00.000Z"),
-      ]),
-    ],
-    [
-      "an adult band answered earlier, unanswered now",
-      withSix((i) => [
-        ...browser(`x${i}`),
-        profile(`x${i}`, ADULT, "2026-10-01T00:00:00.000Z"),
-        profile(`x${i}`, { stealth: false }, "2026-10-02T00:00:00.000Z"),
-      ]),
-    ],
-    [
-      "no Terms version on the records",
-      withSix((i) => [
-        ...browser(`x${i}`, "a", { noTerms: true }),
-        profile(`x${i}`, ADULT, "2026-10-01T00:00:00.000Z"),
-      ]),
-    ],
-    [
-      "a start without a recorded origin",
-      withSix((i) => [
-        ...browser(`x${i}`, "a", { noOrigin: true }),
-        profile(`x${i}`, ADULT, "2026-10-01T00:00:00.000Z"),
-      ]),
-    ],
+    ["no Terms version on the records", withSix((i) => browser(`x${i}`, "a", { noTerms: true }))],
+    ["a start without a recorded origin", withSix((i) => browser(`x${i}`, "a", { noOrigin: true }))],
   ];
   for (const [name, events] of cases)
-    assert.deepEqual(
-      cohortResult(run(events)).groups,
-      [],
-      `${name}: 19 eligible stay withheld`,
-    );
-});
-
-test("a conflicting profile excludes its browser instead of falling back to an older eligible one", () => {
-  const events = many(20);
-  // b0 later uploaded a profile whose copies conflict: one says stealth, one says adult and not stealth.
-  const newer = profile(
-    "b0",
-    { ...ADULT, stealth: true },
-    "2026-10-26T00:00:00.000Z",
-  );
-  const twin = {
-    ...newer,
-    payload: newer.payload!.replace('"stealth":true', '"stealth":false'),
-  };
-  assert.notEqual(twin.payload, newer.payload);
-  assert.deepEqual(
-    cohortResult(run([...events, newer, twin])).groups,
-    [],
-    "20 − b0 = 19: withheld",
-  );
-  assert.equal(
-    cohortResult(run(events)).groups.length,
-    1,
-    "without the conflict, b0 counts",
-  );
+    assert.deepEqual(cohortResult(run(events)).groups, [], `${name}: 19 countable stay withheld`);
 });
 
 function editEvent(e: Event, change: (o: any) => void): Event {

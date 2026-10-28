@@ -144,3 +144,16 @@ test("invalid IDs, duplicate members, excess members and control failures never 
   };
   await assert.rejects(() => checkComparisonMembers(env, [id]));
 });
+test("stealth and a pending (unacknowledged) record are excluded too", async () => {
+  const { env, update, set } = await fixture();
+  let r = await update();
+  r = await update((r.body.value as { revision: string }).revision, true, "adult");
+  assert.deepEqual(await checkComparisonMembers(env, [id]), [null], "stealth");
+  set(`comparison-privacy/${id}`, {
+    stealth: false,
+    age: "adult",
+    revision: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+    acknowledged: false,
+  });
+  assert.deepEqual(await checkComparisonMembers(env, [id]), [null], "pending");
+});

@@ -5,8 +5,8 @@
  * Policy approved by Ekku on 27 October 2026 (via dot): at least 20 eligible distinct browsers, same
  * revision and compatible conditions, first attempts apart from repeats, current stealth excluded,
  * under-18s never mixed with adults, no narrow slices or individual records. A conservative floor,
- * not a statistical guarantee. Still DISABLED: uploaded profiles are not authoritative current
- * privacy state. The disabled CONTROL fence is implemented; activation awaits independent review,
+ * not a statistical guarantee. Still DISABLED. Eligibility is current CONTROL state only; the
+ * disabled CONTROL fence is implemented; activation awaits independent review,
  * native Basin verification, scheduled snapshot integration and root's approval
  * (docs/human-cohorts.md). While COHORTS_ENABLED is false the route answers "disabled" without SQL.
  * Nothing here accepts a participant, demographic filter or SQL from a caller.
@@ -47,8 +47,8 @@ export interface CohortGroup {
   submissions: { p25: number; p50: number; p75: number } | null;
 }
 /**
- * Published eligibility requires current CONTROL state in addition to conservative uploaded
- * evidence. Client-ordered profiles cannot establish current privacy. The independent member
+ * Published eligibility is current CONTROL state alone (plus tombstones); uploaded profiles are
+ * not read. Client-ordered profiles cannot establish current privacy. The independent member
  * checks are in current-cohort.ts; the implemented disabled fence and live approval are described
  * in docs/eng-376-publication-contract.md.
  */
@@ -76,10 +76,13 @@ export interface CohortRead {
 /**
  * One fixed SELECT for one validated revision. It returns value counts, never a participant:
  * (runtime, diagnostics, practice, completed, first_pass, submissions) → number of browsers.
- * Counted only: browsers whose latest uploaded profile states an adult band and not-stealth (so a
- * later uploaded stealth profile excludes past attempts within this window), with no conflicting
- * profile copies, person records with a Terms version and
- * no conflicting copies, attempts with one runtime and a start whose origin was recorded. Window functions and joins only: DataFusion could not plan
+ * Counted only: person records with a Terms version and no conflicting copies, attempts with one
+ * runtime and a start whose origin was recorded.
+ *
+ * It applies NO privacy eligibility and must never be published on its own: only its member form
+ * (`cohortMemberQuery`) is run, and every browser it returns then passes current CONTROL checks
+ * (acknowledged adult, not stealth, no tombstone) before any aggregate. Uploaded profiles are not
+ * read at all: they are delayed, client-ordered and can't override or stand in for CONTROL. Window functions and joins only: DataFusion could not plan
  * an IN subquery inside an aggregate (see the ENG-340 history fix).
  */
 export function cohortQuery(
@@ -98,7 +101,7 @@ export function cohortQuery(
   WHERE kind = 'observation' AND participant_id IS NOT NULL AND participant_id <> ''
     AND received_at >= '${w.from}' AND received_at < '${w.to}'
     AND occurred_at >= '${w.from}' AND occurred_at < '${w.to}'
-    AND ((challenge = '${challenge}' AND challenge_revision = '${revision}') OR type = 'site.profile')
+    AND challenge = '${challenge}' AND challenge_revision = '${revision}'
 ), record_groups AS (
   SELECT record_id, MAX(type) AS type, MAX(participant_id) AS participant_id,
     MAX(attempt_id) AS attempt_id, MAX(occurred_at) AS occurred_at, MAX(payload) AS payload,
@@ -106,17 +109,6 @@ export function cohortQuery(
   FROM raw GROUP BY record_id
 ), observations AS (
   SELECT * FROM record_groups WHERE variants = 1
-), bad_profiles AS (
-  SELECT DISTINCT r.participant_id FROM raw r JOIN record_groups g ON g.record_id = r.record_id
-  WHERE r.type = 'site.profile' AND g.variants > 1
-), profiles AS (
-  SELECT participant_id, json_get_json(json_get_json(payload, 'data'), 'answers') AS answers,
-    ROW_NUMBER() OVER (PARTITION BY participant_id ORDER BY occurred_at DESC, record_id DESC) AS latest
-  FROM record_groups WHERE type = 'site.profile'
-), eligible AS (
-  SELECT p.participant_id FROM profiles p LEFT JOIN bad_profiles b ON b.participant_id = p.participant_id
-  WHERE b.participant_id IS NULL AND p.latest = 1 AND json_get_json(p.answers, 'stealth') = 'false'
-    AND json_get_str(p.answers, 'age') IN (${ADULT_BANDS.map((b) => `'${b}'`).join(", ")})
 ), bad_attempts AS (
   SELECT DISTINCT r.participant_id, r.attempt_id
   FROM raw r JOIN record_groups g ON g.record_id = r.record_id
@@ -127,7 +119,7 @@ export function cohortQuery(
   SELECT o.*, json_get_json(o.payload, 'data') AS data,
     json_get_str(json_get_json(o.payload, 'source'), 'id') AS source_id,
     CAST(json_get_json(json_get_json(o.payload, 'source'), 'sequence') AS BIGINT) AS sequence
-  FROM observations o JOIN eligible e ON e.participant_id = o.participant_id
+  FROM observations o
   LEFT JOIN bad_attempts b ON b.participant_id = o.participant_id AND b.attempt_id = o.attempt_id
   WHERE b.participant_id IS NULL AND o.attempt_id IS NOT NULL AND o.attempt_id <> ''
     AND json_get_str(o.payload, 'actor') = 'person'
