@@ -174,7 +174,7 @@ export interface Report {
   next: NextStep | null;
   /** Supported questions not answerable yet, for the bottom of the report. */
   discover: Undiscovered[];
-  /** Why comparisons aren't shown: policy and method, not missing practice. */
+  /** Why each comparison isn't shown yet, with what it waits on: policy and method, not missing practice. */
   discoverNote: string | null;
   profile: NextStep | null;
   /**
@@ -903,7 +903,9 @@ export function buildReport(input: ReportInput): Report {
     waiting: started.size && !questions.length ? "Solve a challenge and your answers start here." : null,
     next: next(input, started, solved),
     discover: toDiscover(input, solved, new Set(questions.map((q) => q.id))),
-    discoverNote: "Comparisons with other players and with AI models aren't shown: other players' practice stays private for now, and models don't submit under the same rules.",
+    // Each comparison's actual missing prerequisite, not a blanket "not comparable"; replaced by a
+    // single matched FYI on the relevant answer once one is eligible (ENG-376 provides it).
+    discoverNote: "Not compared yet. Other players: comparing with them waits on privacy controls still under review, then on enough comparable players on the same challenge. AI models: their recorded submissions don't have to pass the examples first, as yours do, so the two aren't counted alike; a model comparison shows only for a measure recorded the same way on the same challenge version.",
     profile: null,
     languagesInvite:
       questions.some((q) => q.id === "languages") &&

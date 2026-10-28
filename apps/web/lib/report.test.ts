@@ -567,7 +567,10 @@ test("still to discover lists every supported question not yet answered, with it
   assert.ok(empty.discover.every((d) => d.action === null), "the start link above is the step; no extra links");
   const needs = empty.discover.map((d) => `${d.question} ${d.need}`).join(" ");
   assert.doesNotMatch(needs, /unlock|play more|model|other players|cohort|percentile/i, "never promises what practice can't provide");
-  assert.match(empty.discoverNote!, /other players' practice stays private for now, and models don't submit under the same rules/);
+  // Each comparison's real prerequisite, never a blanket "models aren't comparable".
+  assert.match(empty.discoverNote!, /^Not compared yet\. Other players: .*privacy controls still under review.*enough comparable players/);
+  assert.match(empty.discoverNote!, /AI models: their recorded submissions don't have to pass the examples first.*recorded the same way on the same challenge version\.$/);
+  assert.doesNotMatch(empty.discoverNote!, /never|can't be compared|not comparable|latency|faster|smarter/i);
 });
 
 test("answered questions are never listed; a missing one names a specific comparable challenge", () => {
