@@ -2,7 +2,7 @@
  * The AI comparison line through Stats, on the real producers only: the viewer's attempts from
  * capture records (trace → localHistory), model results from the real receipt projector
  * (`modelReceipt` over a stored-run text), then the Stats bridge and the rendered report.
- * Synthetic data only; no model call. MODEL_FYI_ENABLED stays false in source: these tests use the
+ * Synthetic data only; no model call. MODEL_FYI_ENABLED is on in source; these tests also set the
  * development preview switch the bridge already honours.
  */
 import { test } from "node:test";
@@ -78,8 +78,8 @@ function stats(receipts: Record<string, ModelReceipt[] | "unavailable">, profile
 const key1 = pairKey({ challenge: "JS-001", revision });
 const key2 = pairKey({ challenge: "JS-002", revision });
 
-test("the model line stays off in source; only the development preview turns it on", () => {
-  assert.equal(MODEL_FYI_ENABLED, false);
+test("the model line is on in source (owner-approved activation)", () => {
+  assert.equal(MODEL_FYI_ENABLED, true);
 });
 
 test("per challenge: a newer task with no stored runs doesn't hide an older task's matching run", () => {
