@@ -139,6 +139,15 @@ function privacyOf(): { privacy: Privacy; profile: StoredProfile | null } {
   return { privacy: "ok", profile };
 }
 
+/**
+ * Re-read delays for a human comparison still "unavailable" on first read: the server builds a cold
+ * revision after answering (at most 25 s). Bounded: four more reads over about a minute, then none.
+ */
+export const COHORT_WARMUP_MS = [4_000, 8_000, 15_000, 30_000] as const;
+/** What a comparison read depends on in the stored profile; any change ends warmup reads. */
+const profileKey = (p: StoredProfile | null) =>
+  p ? JSON.stringify([p.profile?.age ?? null, p.stealth === true, p.signedOut === true]) : "none";
+
 export function useReportData(requests: ComparisonRequests = NO_COMPARISONS) {
   const [device] = useState(() => privateView<DeviceEvidence>());
   const local = useSyncExternalStore(
@@ -521,17 +530,25 @@ export function useReportData(requests: ComparisonRequests = NO_COMPARISONS) {
 
   // Human cohorts: no request at all while switched off (docs/human-cohorts.md), unless a
   // development build previews the bridge on synthetic replies (`comparisonPreview`).
+  // A cold cache answers "unavailable" while the server builds that revision after the response,
+  // so an unavailable pair is read again a few times (COHORT_WARMUP_MS), never more, then left.
   useEffect(() => {
     if (!(COHORTS_ENABLED || comparisonPreview()) || privacy !== "ok" || !wantedCohorts || !mayRead()) return;
     const ticket = generation.current;
     const controller = new AbortController();
     aborts.current.add(controller);
+    const timers = new Set<ReturnType<typeof setTimeout>>();
+    // The profile these reads are for: a change (age, stealth, sign-out) ends them.
+    const asked = profileKey(privacyOf().profile);
     const live = () =>
       ticket === generation.current &&
       !blocked.current &&
       !boundaries &&
-      !controller.signal.aborted;
-    for (const pair of wantedCohorts.split("|")) {
+      !controller.signal.aborted &&
+      mayRead() &&
+      profileKey(privacyOf().profile) === asked;
+    const read = (pair: string, attempt: number) => {
+      if (!live()) return;
       const [challenge, revision] = pair.split("/");
       void fetch(
         `/api/cohort/${encodeURIComponent(challenge)}/${encodeURIComponent(revision)}`,
@@ -544,18 +561,27 @@ export function useReportData(requests: ComparisonRequests = NO_COMPARISONS) {
         .then(async (response) => {
           if (!response.ok) throw new Error();
           const data = (await response.json()) as CohortRead;
-          if (live())
-            setCohorts((c) => ({
-              ...c,
-              [pair]: Array.isArray(data.groups) ? data : "unavailable",
-            }));
+          if (!live()) return;
+          const usable = Array.isArray(data.groups);
+          setCohorts((c) => ({ ...c, [pair]: usable ? data : "unavailable" }));
+          // Only "unavailable" may still be warming up; ready, disabled and earlier-version are final.
+          if (usable && data.state === "unavailable" && attempt < COHORT_WARMUP_MS.length) {
+            const timer = setTimeout(() => {
+              timers.delete(timer);
+              read(pair, attempt + 1);
+            }, COHORT_WARMUP_MS[attempt]);
+            timers.add(timer);
+          }
         })
         .catch(() => {
           if (live()) setCohorts((c) => ({ ...c, [pair]: "unavailable" }));
         });
-    }
+    };
+    for (const pair of wantedCohorts.split("|")) read(pair, 0);
     const set = aborts.current;
     return () => {
+      for (const timer of timers) clearTimeout(timer);
+      timers.clear();
       controller.abort();
       set.delete(controller);
     };
