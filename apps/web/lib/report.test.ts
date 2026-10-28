@@ -182,7 +182,7 @@ test("one solved sample describes that solve rather than a developer trait", () 
     ),
     "iterate",
   )!;
-  assert.match(r.answer, /^Your solve took/);
+  assert.match(r.answer, /^Your solve /);
   assert.doesNotMatch(r.answer, /mostly|one.shot|typical|you iterate/i);
 });
 
@@ -443,13 +443,17 @@ test("iterate counts submissions and example runs to the solve; runs that failed
   const i = q(buildReport(input({ catalog: rich, attempts: iterating })), "iterate")!;
   assert.equal(i.answer, "Across your three solves, none passed on the first submission; a typical one took 3 submissions.");
   assert.doesNotMatch(i.answer + i.detail, /mostly|you iterate|habit|before submitting/i, "examples before Submit are required, so never a habit");
-  // A submission whose run failed on our side, then the real one: one submission, one service failure.
-  const base = solve("sv", "JS-001", { day: 0, active: MIN, examples: 1 });
+});
+
+test("example runs and submissions that failed on our side are named and not counted", () => {
+  // As derive records it: the first submission never ran, so firstSubmit is unknown.
+  const solved = solve("sv", "JS-001", { day: 0, active: MIN, examples: 1 });
+  const base = { ...solved, values: { ...solved.values, firstSubmit: null } };
   const at = base.timeline[1].at;
   const flaky = { ...base, timeline: [base.timeline[0], { at, label: "examples: result" }, { at, label: "examples: runner-error" }, { at, label: "submit: runner-error" }, { at, label: "errored: 0/3 checks; 0 static rules" }, { at, label: "passed: 3/3 checks; 0 static rules" }, { at, label: "completed" }] };
   const f = q(buildReport(input({ catalog: rich, attempts: [flaky] })), "iterate")!;
-  assert.equal(f.answer, "Your solve passed on its first submission.");
-  assert.equal(f.detail, "You ran the examples once before the solve. 2 runs failed on our side and aren't counted.");
+  assert.equal(f.answer, "Your solve took 1 submission that ran; the first one didn't run.");
+  assert.equal(f.detail, "You ran the examples once before the solve. 2 runs failed on our side; they aren't counted.");
 });
 
 test("languages read as challenges solved and in progress, never an unexplained duration", () => {
@@ -527,4 +531,50 @@ test("typing that Vim keybindings make unmeasurable says so, rather than asking 
   assert.equal(r.discover.find((d) => d.id === "typing")!.need, "Not measured while Vim keybindings are on, since their letters can be commands.");
   const plain = buildReport(input({ attempts: device(summary("pl", "JS-001")) }));
   assert.equal(plain.discover.find((d) => d.id === "typing")!.need, "Shows after about 50 characters of code typed by hand; pastes and shortcuts don't count.");
+});
+
+/**
+ * The fixture's first submission (r1) turned into one that never ran your code: its run failed on
+ * our side ("runner-error", verdict "errored") or was cancelled. Derived for real, so `firstSubmit`
+ * is what derive says about the first recorded submission.
+ */
+function voidedFirst(attempt: string, how: "runner-error" | "cancelled"): ReportAttempt {
+  const records = trace(attempt, `${attempt}-source`).map((r) => {
+    const o = JSON.parse(r.payload);
+    if (o.type === "practice.run" && o.data.runId === "r1" && o.data.status === "result") o.data.status = how;
+    if (o.type === "practice.submitted" && o.data.runId === "r1") Object.assign(o.data, { result: how === "cancelled" ? "cancelled" : "errored", passed: 0 });
+    return { ...r, payload: JSON.stringify(o) };
+  });
+  return { ...deriveAttempts(records, "synthetic-participant")[0], source: "device" };
+}
+
+test("a pass after a submission that never ran is never called a first-submission pass", () => {
+  for (const [how, uncounted] of [
+    ["runner-error", "1 run failed on our side; they aren't counted."],
+    ["cancelled", "1 submission was cancelled; they aren't counted."],
+  ] as const) {
+    const a = voidedFirst(`v-${how}`, how);
+    assert.equal(a.values.firstSubmit, null, `derive: a ${how} first submission is ineligible`);
+    const r = buildReport(input({ attempts: [a] }));
+    assert.equal(q(r, "iterate")!.answer, "Your solve took 1 submission that ran; the first one didn't run.", how);
+    assert.equal(q(r, "iterate")!.detail, uncounted);
+    assert.equal(q(r, "recovery"), undefined, `${how} isn't a failed submission of yours`);
+  }
+  // Two solves, one with a voided first submission: the first-submission count says where it ran.
+  const r = buildReport(input({ attempts: [voidedFirst("v1", "runner-error"), { ...summary("v2", "JS-002"), source: "device" as const }] }));
+  assert.equal(q(r, "iterate")!.answer, "Across your two solves, 0 of 1 first submission that ran passed; a typical solve took 1.5 submissions.");
+});
+
+test("a real failed submission, then one that didn't run, then a pass: the first still failed", () => {
+  const base = solve("fv", "JS-001", { day: 0, active: MIN, verdicts: ["fail", "pass"] });
+  const at = base.timeline[1].at;
+  for (const voided of [
+    [{ at, label: "submit: runner-error" }, { at, label: "errored: 0/3 checks; 0 static rules" }],
+    [{ at, label: "submit: cancelled" }, { at, label: "cancelled: 0/3 checks; 0 static rules" }],
+  ]) {
+    const timeline = [base.timeline[0], { at, label: "failed: 1/3 checks; 0 static rules" }, ...voided, { at, label: "passed: 3/3 checks; 0 static rules" }, { at, label: "completed" }];
+    const r = buildReport(input({ catalog: rich, attempts: [{ ...base, timeline }] }));
+    assert.equal(q(r, "iterate")!.answer, "Your solve took 2 submissions; the first didn't pass.", voided[0].label);
+    assert.equal(q(r, "recovery")!.answer, "After the failed submission, a better one came 2 min later, after 1 check in between.", "recovery keeps derive's own meaning");
+  }
 });

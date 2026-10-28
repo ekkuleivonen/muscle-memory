@@ -97,9 +97,10 @@ export interface Question {
   /** At most one short line a player needs to read the answer correctly. */
   note: string | null;
   /**
-   * At most one tiny matched comparison on this answer. None today: model receipts count only
-   * submissions, and practice makes a person pass the examples before submitting while a model
-   * may submit straight away, so neither checks nor submissions compare like for like.
+   * At most one tiny matched comparison on this answer. None in this version (ENG-374): of the
+   * receipt fields, submissions differ by the example gate (a person passes the examples before
+   * submitting, a model needn't) and final code length has no counterpart in the code-free
+   * attempt summaries. A matched model nugget stays welcome when one is genuinely like for like.
    */
   fyi: string | null;
   /** The answer in a few words, when it is strong enough to lead the report. */
@@ -185,13 +186,16 @@ const across = (n: number, what = "solve") => (n === 1 ? `In your one ${what}` :
 /**
  * What a solve took, in recorded order up to the first fully passing submission: submissions,
  * example runs that ran your code, and runs that failed on the service's side. Cancelled
- * submissions and submissions whose run failed on the service's side aren't yours, so they aren't
- * counted. Unknown when the attempt isn't solved, or when its checkpoint list was cut to the latest
+ * submissions (counted apart) and submissions whose run failed on the service's side never ran
+ * your code, so they aren't submissions here. Unknown when the attempt isn't solved, or when its checkpoint list was cut to the latest
  * 200 and could be missing earlier checks.
  */
-export function toSolve(a: AttemptSummary): { submissions: number; exampleRuns: number; serviceFailures: number } | null {
+export function toSolve(
+  a: AttemptSummary,
+): { submissions: number; cancelled: number; exampleRuns: number; serviceFailures: number } | null {
   if (!a.completed || a.timeline.length >= TIMELINE_CAP) return null;
   let count = 0,
+    cancelled = 0,
     exampleRuns = 0,
     serviceFailures = 0,
     skip = false;
@@ -205,11 +209,12 @@ export function toSolve(a: AttemptSummary): { submissions: number; exampleRuns: 
     const m = SUBMITTED.exec(t.label);
     if (!m) continue;
     if (skip || m[1] === "cancelled") {
+      if (!skip) cancelled++;
       skip = false;
       continue;
     }
     count++;
-    if (m[1] === "passed" && +m[2] === +m[3] && +m[4] === 0) return { submissions: count, exampleRuns, serviceFailures };
+    if (m[1] === "passed" && +m[2] === +m[3] && +m[4] === 0) return { submissions: count, cancelled, exampleRuns, serviceFailures };
   }
   return null;
 }
@@ -305,36 +310,54 @@ const SUBMISSION_BUCKETS: [string, number, number][] = [
   ["3–4", 3, 4],
   ["5+", 5, Infinity],
 ];
-/** Submissions up to each solve, whether the first passed, and the example runs along the way. */
+/**
+ * Submissions up to each solve that ran your code, and whether the first recorded submission
+ * passed. That claim comes from `firstSubmit`, which judges the very first submission in order and
+ * is unknown when it was cancelled or failed on our side: a later pass is never called a first.
+ */
 function iterate(solved: ReportAttempt[]): Question | null {
   // Up to the solve: anything after it doesn't make a solve iterative.
-  const steps = chronological(solved).map(toSolve).filter((x): x is NonNullable<typeof x> => x !== null);
-  if (!steps.length) return null;
-  const n = steps.length;
-  const subs = steps.map((s) => s.submissions);
-  const oneShot = subs.filter((x) => x === 1).length;
+  const rows = chronological(solved).flatMap((a) => {
+    const s = toSolve(a);
+    return s ? [{ ...s, first: a.values.firstSubmit }] : [];
+  });
+  if (!rows.length) return null;
+  const n = rows.length;
+  const subs = rows.map((s) => s.submissions);
+  const known = rows.filter((s) => s.first === 0 || s.first === 1);
+  const passedFirst = known.filter((s) => s.first === 1).length;
   const m = median(subs)!;
+  const only = rows[0];
   const answer =
     n === 1
-      ? subs[0] === 1
+      ? only.first === 1
         ? "Your solve passed on its first submission."
-        : `Your solve took ${plural(subs[0], "submission")}; the first didn't pass.`
-      : oneShot === n
-        ? `${across(n)}, every first submission passed.`
-        : `${across(n)}, ${howMany(oneShot)} passed on the first submission; a typical one took ${plural(m, "submission")}.`;
-  const runs = median(steps.map((s) => s.exampleRuns))!;
-  const failures = steps.reduce((t, s) => t + s.serviceFailures, 0);
+        : only.first === 0
+          ? `Your solve took ${plural(only.submissions, "submission")}; the first didn't pass.`
+          : `Your solve took ${plural(only.submissions, "submission")} that ran; the first one didn't run.`
+      : known.length === n
+        ? passedFirst === n
+          ? `${across(n)}, every first submission passed.`
+          : `${across(n)}, ${howMany(passedFirst)} passed on the first submission; a typical one took ${plural(m, "submission")}.`
+        : `${across(n)}, ${passedFirst} of ${known.length} first ${known.length === 1 ? "submission" : "submissions"} that ran passed; a typical solve took ${plural(m, "submission")}.`;
+  const runs = median(rows.map((s) => s.exampleRuns))!;
+  const failures = rows.reduce((t, s) => t + s.serviceFailures, 0);
+  const cancelled = rows.reduce((t, s) => t + s.cancelled, 0);
   // Practice asks for passing examples before a submission, so a run is expected; how many is yours.
   const examples = !runs
     ? ""
     : n === 1
       ? `You ran the examples ${runs === 1 ? "once" : `${runs} times`} before the solve.`
       : `You ran the examples about ${plural(runs, "time")} per solve.`;
+  const uncounted = [
+    failures ? `${plural(failures, "run")} failed on our side` : "",
+    cancelled ? `${plural(cancelled, "submission")} ${cancelled === 1 ? "was" : "were"} cancelled` : "",
+  ].filter(Boolean);
   return {
     id: "iterate",
     question: QUESTIONS.iterate,
     answer,
-    // How many solves took 1, 2, 3–4 or 5+ submissions: a shape, not a list of every solve.
+    // How many solves took 1, 2, 3–4 or 5+ submissions that ran: a shape, not a list of every solve.
     visual: {
       kind: "bars",
       bars: SUBMISSION_BUCKETS.flatMap(([label, low, high]) => {
@@ -342,7 +365,7 @@ function iterate(solved: ReportAttempt[]): Question | null {
         return k ? [{ label: `${label} ${low === 1 && high === 1 ? "submission" : "submissions"}`, value: k, display: plural(k, "solve") }] : [];
       }),
     },
-    detail: [examples, failures ? `${plural(failures, "run")} failed on our side and ${failures === 1 ? "isn't" : "aren't"} counted.` : ""].filter(Boolean).join(" ") || null,
+    detail: [examples, uncounted.length ? `${uncounted.join(" and ")}; they aren't counted.` : ""].filter(Boolean).join(" ") || null,
     note: null,
     fyi: null,
     takeaway: n >= 2 ? answer : null,
