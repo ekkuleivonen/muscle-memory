@@ -172,12 +172,18 @@ for (const device of DEVICES) {
       await page.getByText("Confirmed. Save to keep it as your answer.").waitFor();
       await page.locator("#profile-0").tap();
     } else {
-      // Keyboard only: Enter on Confirm moves focus to Save; Enter saves.
+      // Keyboard only, with the toolbar cursor first moved away from Save (to back): Confirm, then Enter must save.
+      await page.locator("#profile-0").focus();
+      await page.keyboard.press("ArrowDown");
+      await page.keyboard.press("ArrowDown");
+      assert.equal(await page.evaluate(() => document.activeElement?.id), "profile-2", "cursor on back to your report");
       await page.getByRole("button", { name: "Confirm as my answer" }).focus();
       await page.keyboard.press("Enter");
       await page.getByText("Confirmed. Save to keep it as your answer.").waitFor();
-      assert.equal(await page.evaluate(() => document.activeElement?.id), "profile-0", "focus lands on Save, not the page");
+      assert.equal(await page.evaluate(() => document.activeElement?.id), "profile-0", "focus lands on Save, wherever the cursor was");
       await page.keyboard.press("Enter");
+      await page.getByText("Saved.").waitFor();
+      assert.match(page.url(), /\/settings\/profile\/languages\?from=stats$/, "Enter saved instead of leaving");
     }
     await page.getByRole("link", { name: "back to your report" }).first().waitFor();
     const confirmed = await stored(page);

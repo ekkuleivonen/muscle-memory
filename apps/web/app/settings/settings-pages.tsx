@@ -149,7 +149,7 @@ function Actions({
   message?: string;
   actions: readonly KeyAction[];
   autoFocus?: boolean;
-  handle?: Ref<{ focus(): void }>;
+  handle?: Ref<{ focus(index?: number): void }>;
   /** Where back (and Esc) goes. */
   to?: { label: string; href: string };
 }) {
@@ -674,7 +674,7 @@ function ProfileForm({ only, from }: { only?: string; from?: ReturnTo }) {
   const [guessed, setGuessed] = useState<Set<keyof Profile>>(new Set());
   const [changed, setChanged] = useState<Set<keyof Profile>>(new Set());
   const options = useRef<HTMLDivElement>(null);
-  const actions = useRef<{ focus(): void }>(null);
+  const actions = useRef<{ focus(index?: number): void }>(null);
   const router = useRouter();
   const [result, setResult] = useState<{ tone: Tone; text: ReactNode } | null>(
     null,
@@ -858,8 +858,8 @@ function ProfileForm({ only, from }: { only?: string; from?: ReturnTo }) {
                         tone: "dim",
                         text: "Confirmed. Save to keep it as your answer.",
                       });
-                      // The button goes away; Save is the next step.
-                      actions.current?.focus();
+                      // The button goes away; Save (the first action) is the next step, wherever the cursor was.
+                      actions.current?.focus(0);
                     }}
                   >
                     Confirm as my answer

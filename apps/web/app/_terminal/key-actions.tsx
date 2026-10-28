@@ -36,7 +36,8 @@ const MOVES: Record<string, number> = {
  * Every row is a button, so a click or a screen reader works too.
  */
 export const KeyActions = forwardRef<
-  { focus(): void },
+  /** Focus the current row, or move the cursor to `index` and focus that row. */
+  { focus(index?: number): void },
   {
     id: string;
     /** A question above the choices, as `? Sure?` */
@@ -49,8 +50,13 @@ export const KeyActions = forwardRef<
   const [cursor, setCursor] = useState(0);
   const list = useRef<HTMLDivElement>(null);
   useImperativeHandle(ref, () => ({
-    focus: () =>
-      list.current?.querySelector<HTMLElement>('[tabindex="0"]')?.focus(),
+    focus: (index?: number) => {
+      if (index !== undefined) setCursor(index);
+      (index === undefined
+        ? list.current?.querySelector<HTMLElement>('[tabindex="0"]')
+        : document.getElementById(`${id}-${index}`)
+      )?.focus();
+    },
   }));
   useEffect(() => {
     if (autoFocus)
