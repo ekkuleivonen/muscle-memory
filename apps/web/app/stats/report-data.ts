@@ -43,6 +43,7 @@ import {
   type Progress,
 } from "../../lib/progress";
 import type { ReceiptState } from "../../lib/report";
+import { comparisonPreview, NO_COMPARISONS, pairKey, type ComparisonRequests } from "./comparisons";
 import {
   COHORTS_ENABLED,
   type CohortRead,
@@ -138,9 +139,7 @@ function privacyOf(): { privacy: Privacy; profile: StoredProfile | null } {
   return { privacy: "ok", profile };
 }
 
-export function useReportData(
-  revisions: readonly { challenge: string; revision: string }[],
-) {
+export function useReportData(requests: ComparisonRequests = NO_COMPARISONS) {
   const [device] = useState(() => privateView<DeviceEvidence>());
   const local = useSyncExternalStore(
     device.subscribe,
@@ -153,6 +152,8 @@ export function useReportData(
   const [cohorts, setCohorts] = useState<
     Record<string, CohortRead | "unavailable">
   >({});
+  /** Attempt → passing-code length, read inside the practice store; code never leaves it. */
+  const [lengths, setLengths] = useState<Record<string, number>>({});
   /** Bumped by every clear, so receipts are requested again for the same revisions. */
   const [epoch, setEpoch] = useState(0);
   const generation = useRef(0);
@@ -164,6 +165,13 @@ export function useReportData(
   const historyPages = useRef(0);
 
   /** Synchronously forget everything shown and everything in flight. */
+  /**
+   * Whether a new comparison read may start now: no boundary in progress or blocking this report,
+   * and the stored profile (read now, not the last rendered state) still allows a report. A clear
+   * re-runs the read effects before the next render's privacy and pairs arrive; this refuses them.
+   */
+  const mayRead = () => !blocked.current && !boundaries && privacyOf().privacy === "ok";
+
   const clear = useCallback(
     (block = false) => {
       generation.current++;
@@ -175,6 +183,7 @@ export function useReportData(
       setHistory({ state: "idle" });
       setReceipts({});
       setCohorts({});
+      setLengths({});
       setEpoch((e) => e + 1);
     },
     [device],
@@ -421,6 +430,8 @@ export function useReportData(
         // Only the outermost finish reopens reads; the module listener has already counted it.
         blocked.current = false;
         device.release();
+        // Comparison reads were refused while blocked; let them ask once more for what's shown now.
+        setEpoch((e) => e + 1);
         start();
       }
     });
@@ -439,11 +450,13 @@ export function useReportData(
   }, [start, clear, readDevice, device]);
 
   // Model receipts for the exact revisions chapter 4 shows; bounded by the report's task limit.
-  const wanted = revisions.map((r) => `${r.challenge}/${r.revision}`).join("|");
+  const wanted = requests.receipts.map(pairKey).join("|");
+  const wantedCohorts = requests.cohorts.map(pairKey).join("|");
+  const wantedLengths = requests.lengths.map((l) => `${pairKey(l)}/${l.attempt}`).join("|");
   /** Revisions read or being read since the last clear, so a changed selection only asks for new ones. */
   const requested = useRef({ epoch: -1, revisions: new Set<string>() });
   useEffect(() => {
-    if (privacy !== "ok" || !wanted) return;
+    if (privacy !== "ok" || !wanted || !mayRead()) return;
     if (requested.current.epoch !== epoch)
       requested.current = { epoch, revisions: new Set() };
     const done = requested.current.revisions;
@@ -456,12 +469,12 @@ export function useReportData(
       !blocked.current &&
       !boundaries &&
       !controller.signal.aborted;
+    // Keyed by challenge and revision: a read is only ever bound to the pair that asked for it.
     const pairs = wanted.split("|").filter((pair) => {
-      const revision = pair.split("/")[1];
-      if (done.has(revision)) return false;
-      done.add(revision);
-      pending.add(revision);
-      setReceipts((r) => (revision in r ? r : { ...r, [revision]: "loading" }));
+      if (done.has(pair)) return false;
+      done.add(pair);
+      pending.add(pair);
+      setReceipts((r) => (pair in r ? r : { ...r, [pair]: "loading" }));
       return true;
     });
     void reportReceipts(
@@ -485,14 +498,14 @@ export function useReportData(
             data?.state === "ready" && Array.isArray(data.receipts);
           setReceipts((r) => ({
             ...r,
-            [revision]: available ? data.receipts : "unavailable",
+            [pair]: available ? data.receipts : "unavailable",
           }));
           return data !== null && data.state !== "unavailable";
         } catch {
-          if (live()) setReceipts((r) => ({ ...r, [revision]: "unavailable" }));
+          if (live()) setReceipts((r) => ({ ...r, [pair]: "unavailable" }));
           return true; // A timed-out read is not retried automatically.
         } finally {
-          pending.delete(revision);
+          pending.delete(pair);
         }
       },
       controller.signal,
@@ -502,13 +515,14 @@ export function useReportData(
       controller.abort();
       set.delete(controller);
       // Reads cut short here never finished: let the next selection ask for them again.
-      for (const revision of pending) done.delete(revision);
+      for (const pair of pending) done.delete(pair);
     };
   }, [privacy, wanted, epoch]);
 
-  // Human cohorts: no request at all while switched off (docs/human-cohorts.md).
+  // Human cohorts: no request at all while switched off (docs/human-cohorts.md), unless a
+  // development build previews the bridge on synthetic replies (`comparisonPreview`).
   useEffect(() => {
-    if (!COHORTS_ENABLED || privacy !== "ok" || !wanted) return;
+    if (!(COHORTS_ENABLED || comparisonPreview()) || privacy !== "ok" || !wantedCohorts || !mayRead()) return;
     const ticket = generation.current;
     const controller = new AbortController();
     aborts.current.add(controller);
@@ -517,7 +531,7 @@ export function useReportData(
       !blocked.current &&
       !boundaries &&
       !controller.signal.aborted;
-    for (const pair of wanted.split("|")) {
+    for (const pair of wantedCohorts.split("|")) {
       const [challenge, revision] = pair.split("/");
       void fetch(
         `/api/cohort/${encodeURIComponent(challenge)}/${encodeURIComponent(revision)}`,
@@ -533,11 +547,11 @@ export function useReportData(
           if (live())
             setCohorts((c) => ({
               ...c,
-              [revision]: Array.isArray(data.groups) ? data : "unavailable",
+              [pair]: Array.isArray(data.groups) ? data : "unavailable",
             }));
         })
         .catch(() => {
-          if (live()) setCohorts((c) => ({ ...c, [revision]: "unavailable" }));
+          if (live()) setCohorts((c) => ({ ...c, [pair]: "unavailable" }));
         });
     }
     const set = aborts.current;
@@ -545,7 +559,47 @@ export function useReportData(
       controller.abort();
       set.delete(controller);
     };
-  }, [privacy, wanted, epoch]);
+  }, [privacy, wantedCohorts, epoch]);
+
+  // Passing-code lengths for the model line: numbers counted inside the practice store, at most
+  // three attempts; no code is returned. Cleared with everything else at a boundary.
+  useEffect(() => {
+    if (privacy !== "ok" || !wantedLengths || !mayRead()) return;
+    const ticket = generation.current;
+    const controller = new AbortController();
+    aborts.current.add(controller);
+    const live = () =>
+      ticket === generation.current &&
+      !blocked.current &&
+      !boundaries &&
+      !controller.signal.aborted;
+    const asked = wantedLengths.split("|").map((s) => {
+      const [challenge, revision, attempt] = s.split("/");
+      return { challenge, revision, attempt };
+    });
+    void reportRead(
+      async (signal) => {
+        const store = await openPracticeStore();
+        try {
+          return await store.solvedCodeLengths(asked, signal);
+        } finally {
+          store.close();
+        }
+      },
+      controller.signal,
+      8000,
+    )
+      .then((found) => {
+        if (live()) setLengths(found);
+      })
+      // Without a length the model line falls back to outcomes; nothing to report.
+      .catch(() => {});
+    const set = aborts.current;
+    return () => {
+      controller.abort();
+      set.delete(controller);
+    };
+  }, [privacy, wantedLengths, epoch]);
 
   // The first page is useful immediately. Continue at the existing server rate, never via a manual workflow.
   useEffect(() => {
@@ -597,5 +651,5 @@ export function useReportData(
     };
   }, [history, privacy, retryHistory]);
 
-  return { privacy, local, history, receipts, cohorts, retryHistory };
+  return { privacy, local, history, receipts, cohorts, lengths, retryHistory };
 }

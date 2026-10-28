@@ -7,12 +7,12 @@ import { dismiss, readDismissed } from "../../lib/invitations";
 import { buildReport, mergeEvidence, type Report } from "../../lib/report";
 import type { ChallengeSummary } from "../../lib/challenges";
 import { useReportData, type HistoryStatus } from "./report-data";
+import { comparisonRequests, comparisons, NO_COMPARISONS, type ComparisonRequests } from "./comparisons";
 import { QuestionView, ReceiptLine } from "./report-view";
 import { ShareReport } from "./share-summary";
 import type { AttemptSummary } from "../../../../packages/developer-profile/derive";
 
 const NONE: AttemptSummary[] = [];
-const NO_REVISIONS: { challenge: string; revision: string }[] = [];
 
 /** Stealth is the deal: no report at all, only what stealth means and where to change it. */
 export function StealthNotice() {
@@ -149,11 +149,11 @@ export function InviteCopy({ guess, onHide }: { guess: readonly string[]; onHide
 
 /** The bottom of the report: questions it can answer once there's the practice for them. */
 export function Discover({ report }: { report: Report }) {
-  if (!report.discover.length) return null;
+  if (!report.discover.length && !report.comparisonNotes.length) return null;
   return (
     <section className="report-discover t-md" aria-labelledby="discover-title">
       <h3 id="discover-title">Still to discover</h3>
-      <ul>
+      {report.discover.length > 0 && <ul>
         {report.discover.map((d) => (
           <li key={d.id}>
             <span className="report-discover-question">{d.question}</span>
@@ -170,9 +170,41 @@ export function Discover({ report }: { report: Report }) {
             </span>
           </li>
         ))}
-      </ul>
-      {report.discoverNote && <p className="report-note">{report.discoverNote}</p>}
+      </ul>}
+      {/* Each comparison not shown, with what it waits on: never a blanket "not comparable". */}
+      {report.comparisonNotes.map((n) => (
+        <p className="report-note" key={n.text}>
+          {n.text}
+          {n.action && (
+            <>
+              {" "}
+              <Link className="t-cmd" href={n.action.href}>
+                {n.action.label} →
+              </Link>
+            </>
+          )}
+        </p>
+      ))}
     </section>
+  );
+}
+
+/**
+ * The comparison lines, under the answers and apart from them: each names its own solved challenge
+ * and is never set beside a figure across several solves. At most one about other players and one
+ * about AI models.
+ */
+export function Compared({ report }: { report: Report }) {
+  if (!report.comparisons.length) return null;
+  return (
+    <ul className="report-compared" aria-label="For comparison, on a challenge you solved">
+      {report.comparisons.map((c) => (
+        <li key={c.who} data-comparison={c.who}>
+          <span className="t-dim">{c.label}</span>
+          <span>{c.text}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -264,6 +296,7 @@ export function ReportBody({
           </QuestionView>
         ))
       )}
+      <Compared report={report} />
       {!report.waiting && next}
       <Discover report={report} />
       {report.profile && (
@@ -278,13 +311,22 @@ export function ReportBody({
 }
 
 export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
-  // No model results are requested: they count only submissions, which aren't comparable with a person's.
-  const { privacy, local, history, retryHistory } = useReportData(NO_REVISIONS);
+  // Comparison reads follow the attempts they describe, which arrive from this hook: asked for
+  // after the attempts are known, and only for lines that are switched on (`comparisons.ts`).
+  const [requests, setRequests] = useState<ComparisonRequests>(NO_COMPARISONS);
+  const { privacy, local, history, retryHistory, cohorts, receipts, lengths } = useReportData(requests);
   const device = local.value;
   const uploaded = history.state === "ready" ? history.value.attempts : NONE;
   const attempts = useMemo(
     () => (device ? mergeEvidence(device.attempts, uploaded) : []),
     [device, uploaded],
+  );
+  const wanted = useMemo(() => comparisonRequests(attempts, catalog), [attempts, catalog]);
+  const wantedKey = JSON.stringify(wanted);
+  useEffect(() => setRequests(JSON.parse(wantedKey)), [wantedKey]);
+  const compared = useMemo(
+    () => (device ? comparisons(attempts, catalog, device.profile, requests, { cohorts, receipts, lengths }) : undefined),
+    [device, attempts, catalog, requests, cohorts, receipts, lengths],
   );
   const report = useMemo(
     () =>
@@ -294,9 +336,10 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
             progress: device.progress,
             attempts,
             profile: reportProfile(device.profile),
+            comparisons: compared,
           })
         : null,
-    [catalog, device, attempts],
+    [catalog, device, attempts, compared],
   );
   const stored = device?.profile;
   const guess = stored && !stored.asked?.languages?.answeredAt ? (stored.profile.languages ?? []).map(languageLabel) : [];
