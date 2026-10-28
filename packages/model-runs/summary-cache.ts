@@ -26,8 +26,13 @@ export async function withinSummaryBudget<T>(
   }
 }
 export interface SummaryBucket {
-  get(key: string): Promise<{ size: number; text(): Promise<string> } | null>;
-  put(key: string, value: string): Promise<unknown>;
+  get(key: string): Promise<{ size: number; text(): Promise<string>; etag?: string } | null>;
+  /** R2 put; with `onlyIf` it resolves null when the condition fails (an atomic claim). */
+  put(
+    key: string,
+    value: string,
+    options?: { onlyIf: { etagMatches: string } | { etagDoesNotMatch: string } },
+  ): Promise<unknown>;
   /** R2's listing; the human refresh reads only its own snapshot prefix's keys and upload times. */
   list?(options: { prefix: string; limit: number }): Promise<{
     objects: { key: string; uploaded: Date }[];

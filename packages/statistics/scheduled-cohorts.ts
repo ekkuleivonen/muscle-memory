@@ -10,7 +10,7 @@ import {
   RUN_CHECK_SLOTS,
   MAX_CURRENT_COHORT_REVISIONS,
 } from "./cohort-discovery";
-import { cohortMemberQuery } from "./current-cohort";
+import { cohortMemberQuery, MAX_COHORT_MEMBERS } from "./current-cohort";
 import { readCohortBuildSpec } from "./cohort-source";
 import {
   buildHumanSnapshot,
@@ -399,6 +399,124 @@ export async function refreshHumanSummaries(
     return { state: "finished" as const, ...account() };
   } catch {
     return { state: "unavailable" as const, ...account() };
+  } finally {
+    clearTimeout(timer);
+    stop.abort();
+  }
+}
+
+
+/**
+ * The human comparison read for one current revision, built on demand. A fresh snapshot (at most
+ * one hour old, its generation still current) is served as aggregates. Otherwise the answer is
+ * "no comparison yet" at once, and at most one bounded build of this one revision is started, in
+ * the background (`schedule`, the request's waitUntil), for later requests to serve.
+ *
+ * At most one build per revision per clock hour, across all isolates: the build first claims a
+ * per-revision lease by an atomic conditional write in the private snapshot area; whoever loses
+ * the claim builds nothing. A failed build is not retried until the next hour. One build is one
+ * D1 read, one source get, one fixed member query (15 s, 1 MiB, 1,000 rows), one generation read,
+ * at most 2 × 5 member-check batches and one snapshot write, all within BUILD_ON_REQUEST_MS.
+ */
+export const BUILD_ON_REQUEST_MS = 25_000;
+const leaseKey = (challenge: string, revision: string) =>
+  `${SUMMARY_PREFIX}leases/${humanSummaryKey(challenge, revision).slice(SUMMARY_PREFIX.length)}`;
+
+export async function humanSummaryOnRequest(
+  env: HumanSummaryEnvironment,
+  challenge: string,
+  revision: string,
+  runtime: Record<string, string>,
+  schedule: (work: Promise<unknown>) => void,
+  now = new Date(),
+  request: typeof fetch = fetch,
+) {
+  const served = await readHumanSummary(env, challenge, revision, runtime);
+  if (served) return served;
+  if (
+    env.HUMAN_SUMMARY_CACHE_ENABLED === "true" &&
+    env.CONTENT &&
+    env.CATALOG_DB &&
+    env.COMPARISON_ELIGIBILITY &&
+    env.ADMIN_STATS_SQL_TOKEN?.trim()
+  )
+    schedule(
+      buildOnRequest(env as Required<HumanSummaryEnvironment>, challenge, revision, runtime, now, request).catch(
+        () => false,
+      ),
+    );
+  return null;
+}
+
+/** Claims this revision's lease for the current hour; true only for the one claimant. */
+async function claimLease(bucket: SummaryBucket, key: string, hour: number) {
+  const held = await bucket.get(key);
+  if (held) {
+    const text = await held.text();
+    if (text.length > 256 || !held.etag) return false;
+    if ((JSON.parse(text) as { hour?: unknown }).hour === hour) return false;
+  }
+  const written = await bucket.put(key, JSON.stringify({ hour }), {
+    onlyIf: held ? { etagMatches: held.etag! } : { etagDoesNotMatch: "*" },
+  });
+  return written !== null && written !== undefined;
+}
+
+async function buildOnRequest(
+  env: Required<HumanSummaryEnvironment>,
+  challenge: string,
+  revision: string,
+  runtime: Record<string, string>,
+  now: Date,
+  request: typeof fetch,
+) {
+  const stop = new AbortController();
+  const timer = setTimeout(() => stop.abort(), BUILD_ON_REQUEST_MS);
+  const deadline = Date.now() + BUILD_ON_REQUEST_MS;
+  const left = () => {
+    stop.signal.throwIfAborted();
+    const ms = deadline - Date.now();
+    if (ms <= 0) throw new Error("Build time cap reached.");
+    return ms;
+  };
+  try {
+    const hour = Math.floor(now.getTime() / 3_600_000);
+    if (!(await withinSummaryBudget(claimLease(env.CONTENT, leaseKey(challenge, revision), hour), left())))
+      return false;
+    const spec = await withinSummaryBudget(
+      readCohortBuildSpec(env.CATALOG_DB, env.CONTENT, challenge, revision, now),
+      left(),
+    );
+    // The setup this request asked about must be the revision's own; anything else builds nothing.
+    if (!spec || JSON.stringify(spec.runtime) !== JSON.stringify(runtime)) return false;
+    const control: ComparisonControl = {
+      generation: () => withinSummaryBudget(env.COMPARISON_ELIGIBILITY.generation(), left()),
+      check: (ids) => withinSummaryBudget(env.COMPARISON_ELIGIBILITY.check(ids), left()),
+      authorize: (g) => withinSummaryBudget(env.COMPARISON_ELIGIBILITY.authorize(g), left()),
+    };
+    const generation = await control.generation();
+    if (typeof generation !== "string" || !/^[a-f0-9-]{36}$/.test(generation)) return false;
+    const snapshot = await withinSummaryBudget(
+      buildHumanSnapshot(
+        spec,
+        () =>
+          readCohortRows(
+            env.ADMIN_STATS_SQL_TOKEN,
+            cohortMemberQuery(spec.challenge, spec.revision, spec.window),
+            stop.signal,
+            request,
+          ),
+        control,
+        undefined,
+        { generation, maxMembers: MAX_COHORT_MEMBERS },
+      ),
+      left(),
+    );
+    if (!snapshot) return false;
+    const text = JSON.stringify(snapshot);
+    if (new TextEncoder().encode(text).length > SNAPSHOT_LIMIT) return false;
+    await withinSummaryBudget(env.CONTENT.put(humanSummaryKey(challenge, revision), text), left());
+    return true;
   } finally {
     clearTimeout(timer);
     stop.abort();

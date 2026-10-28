@@ -99,7 +99,8 @@ test("every omission reason reads as its real prerequisite, thresholds from the 
   assert.match(human("too-few")[0].text, new RegExp(`at least ${MIN_COHORT} comparable adults`));
   assert.deepEqual(human("too-few")[0].action, REVIEW_ACTION, "local age alone isn't being counted");
   assert.equal(human("unavailable")[0].text, "Other players' results aren't available right now.");
-  assert.match(human("no-attempt")[0].text, /solved challenges on their current version/);
+  assert.match(human("no-attempt")[0].text, /completed challenges on their current version, with a matching setup/);
+  assert.doesNotMatch(human("no-attempt")[0].text, /first/, "never claims the viewer's attempt was a first one");
   const model = (reason: ModelFyiReason) => report(humanOmitted("loading"), omitted(reason)).comparisonNotes.map((n) => n.text);
   assert.match(model("unmatched")[0], /same runtime and diagnostics setting/);
   assert.match(model("unavailable")[0], /aren't available right now/);

@@ -873,7 +873,7 @@ const HUMAN_NOTE: Record<HumanFyiReason, string | null> = {
   off: "Other players: comparing with them waits on privacy controls still under review, then on enough comparable players on the same challenge.",
   "age-missing": "Other players: comparisons are between adults.",
   "not-adult": null,
-  "no-attempt": "Other players: comparisons cover solved challenges on their current version, in one known setup.",
+  "no-attempt": "Other players: comparisons cover completed challenges on their current version, with a matching setup.",
   loading: null,
   unavailable: "Other players' results aren't available right now.",
   "too-few": `Other players' results appear once at least ${MIN_COHORT} comparable adults have played the same version.`,

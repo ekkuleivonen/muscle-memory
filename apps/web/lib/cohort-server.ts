@@ -9,7 +9,7 @@ import {
 } from "../../../packages/statistics/cohort";
 import { cohortMemberQuery } from "../../../packages/statistics/current-cohort";
 import { readCohortBuildSpec } from "../../../packages/statistics/cohort-source";
-import { readHumanSummary, type HumanSummaryEnvironment } from "../../../packages/statistics/scheduled-cohorts";
+import { humanSummaryOnRequest, type HumanSummaryEnvironment } from "../../../packages/statistics/scheduled-cohorts";
 import {
   buildHumanSnapshot,
   type ComparisonControl,
@@ -38,7 +38,12 @@ export const empty = (state: CohortRead["state"]): CohortRead => ({
  * pending the control-authority approval and publication guarantee in docs/eng-376-current-privacy.md.
  * While disabled no SQL or CONTROL lookup runs.
  */
-/** Page requests never launch SQL. Scheduled artifact serving is owned by the cache follow-up. */
+/**
+ * A fresh private snapshot (at most an hour old, generation still current) is served as aggregates.
+ * On a miss the answer is "unavailable" at once, and at most one bounded build of this revision per
+ * hour (a lease shared by all isolates) runs after the response via waitUntil; see
+ * humanSummaryOnRequest. The page never waits on SQL, and no stale snapshot stands in.
+ */
 export async function cohort(
   challenge: string,
   revision: string,
@@ -49,8 +54,16 @@ export async function cohort(
   if (!current) return empty("earlier-version");
   if (!runtime) return empty("unavailable");
   try {
-    const env = (await getCloudflareContext({ async: true })).env as unknown as HumanSummaryEnvironment;
-    return (await readHumanSummary(env, challenge, revision, runtime)) ?? empty("unavailable");
+    const { env, ctx } = await getCloudflareContext({ async: true });
+    return (
+      (await humanSummaryOnRequest(
+        env as unknown as HumanSummaryEnvironment,
+        challenge,
+        revision,
+        runtime,
+        (work) => ctx.waitUntil(work),
+      )) ?? empty("unavailable")
+    );
   } catch { return empty("unavailable"); }
 }
 
