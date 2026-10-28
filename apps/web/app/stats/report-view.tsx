@@ -52,7 +52,7 @@ function VisualView({ visual, label }: { visual: Visual; label: string }) {
   );
 }
 
-export function QuestionView({ q }: { q: Question }) {
+export function QuestionView({ q, children }: { q: Question; children?: React.ReactNode }) {
   return (
     <section className="report-question t-md" id={`q-${q.id}`} aria-labelledby={`q-${q.id}-title`}>
       <h3 id={`q-${q.id}-title`}>
@@ -62,6 +62,7 @@ export function QuestionView({ q }: { q: Question }) {
       <VisualView visual={q.visual} label={q.answer} />
       {q.note && <p className="report-note">{q.note}</p>}
       {q.fyi && <p className="report-fyi">{q.fyi}</p>}
+      {children}
     </section>
   );
 }

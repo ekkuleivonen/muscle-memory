@@ -196,25 +196,24 @@ test("one solved sample describes that solve rather than a developer trait", () 
   assert.doesNotMatch(r.answer, /mostly|one.shot|typical|you iterate/i);
 });
 
-test("the usual-language preview enables a personal grouping, never promises demographic cohorts", () => {
+test("the languages invitation sits on the languages answer until answered; a guess doesn't count", () => {
   const attempts = device(
     summary("usual-js", "JS-001"),
     summary("other-py", "PY-001", revB),
   );
   const missing = buildReport(input({ attempts }));
-  assert.equal(missing.previews.length, 1);
-  assert.equal(missing.previews[0].action.href, "/settings/profile/languages");
+  assert.equal(missing.languagesInvite, true);
+  assert.ok(q(missing, "languages"), "invites only beside an answer it groups");
+  assert.equal(q(missing, "familiarity"), undefined);
   const filled = buildReport(
     input({ attempts, profile: { languages: ["javascript"] } }),
   );
-  assert.deepEqual(filled.previews, []);
+  assert.equal(filled.languagesInvite, false);
   const answer = q(filled, "familiarity")!;
   assert.match(answer.answer, /usual languages.*outside them/);
   assert.equal(answer.fyi, null);
-  assert.doesNotMatch(
-    JSON.stringify(missing.previews),
-    /unlock|similar experience|AI.use|faster than/i,
-  );
+  const empty = buildReport(input({}));
+  assert.equal(empty.languagesInvite, false, "no practice, no languages answer, no invitation");
 });
 
 test("the real uploaded-history projection flows into the portrait beside device evidence", async () => {

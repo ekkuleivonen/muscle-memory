@@ -1,7 +1,9 @@
 "use client";
 import { reportProfile } from "../../lib/profile";
 import Link from "next/link";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { languageLabel } from "../../lib/challenges";
+import { dismiss, readDismissed } from "../../lib/invitations";
 import { buildReport, mergeEvidence, type Report } from "../../lib/report";
 import type { ChallengeSummary } from "../../lib/challenges";
 import { useReportData, type HistoryStatus } from "./report-data";
@@ -49,12 +51,96 @@ function Status({ history }: { history: HistoryStatus }) {
   ) : null;
 }
 
+/** The languages form, returning to this answer on the report after save or cancel. */
+export const LANGUAGES_FORM = "/settings/profile/languages?from=stats";
+
+const list = (names: readonly string[]) =>
+  names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+
+/**
+ * The optional languages question, under the answer it would group (ENG-360). Quiet: it never
+ * takes focus on its own, blocks nothing, and once hidden stays hidden on this browser. A quick-start guess is named as a guess and
+ * stays one until confirmed in the form.
+ */
+export function LanguagesInvite({ guess }: { guess: readonly string[] }) {
+  const [state, setState] = useState<"reading" | "shown" | "hidden" | "kept" | "unsaved">("reading");
+  const line = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    let hidden = false;
+    try {
+      hidden = readDismissed(localStorage).has("languages");
+    } catch {}
+    setState(hidden ? "hidden" : "shown");
+  }, []);
+  useEffect(() => {
+    // The button just pressed is gone; keep keyboard focus on what replaced it.
+    if (state === "kept" || state === "unsaved") line.current?.focus();
+  }, [state]);
+  if (state === "reading" || state === "hidden") return null;
+  if (state !== "shown")
+    return (
+      <p className="report-fyi" role="status" tabIndex={-1} ref={line}>
+        {state === "kept"
+          ? "Hidden. Your languages stay in "
+          : "Hidden for now, but this browser couldn't remember that, so it may show again. Your languages stay in "}
+        <Link className="t-cmd" href="/settings/profile">
+          settings → profile
+        </Link>
+        .
+      </p>
+    );
+  return (
+    <InviteCopy
+      guess={guess}
+      onHide={() => {
+        let kept = false;
+        try {
+          kept = dismiss("languages", localStorage);
+        } catch {}
+        setState(kept ? "kept" : "unsaved");
+      }}
+    />
+  );
+}
+
+/** What the invitation says: what an answer does here, that a guess is a guess, and where it goes. */
+export function InviteCopy({ guess, onHide }: { guess: readonly string[]; onHide?: () => void }) {
+  const named = guess.length
+    ? `${list(guess)} ${guess.length === 1 ? "is" : "are"} ticked from quick start, as a guess. Confirm or change it`
+    : "Say which languages you work with";
+  return (
+    <div className="report-invite">
+      <p>
+        Optional: {named}, and this report splits your practice into your usual languages and
+        others. Trying a challenge doesn&apos;t make its language one of yours. Your answer is
+        saved with your profile, as the{" "}
+        <Link className="t-cmd" href="/privacy">
+          Privacy Notice
+        </Link>{" "}
+        describes.
+      </p>
+      <p>
+        <Link className="t-cmd" href={LANGUAGES_FORM}>
+          {guess.length ? "Confirm your languages" : "Set your languages"} →
+        </Link>
+        <span className="t-dim"> · </span>
+        <button type="button" className="t-cmd" onClick={onHide}>
+          Hide this
+        </button>
+      </p>
+    </div>
+  );
+}
+
 export function ReportBody({
   report,
   status,
+  guess = [],
 }: {
   report: Report;
   status: React.ReactNode;
+  /** Quick-start languages not yet confirmed, by label. */
+  guess?: readonly string[];
 }) {
   const next = report.next && (
     <p>
@@ -82,15 +168,16 @@ export function ReportBody({
         {report.waiting && next}
       </header>
       {report.questions.map((q) => (
-        <QuestionView key={q.id} q={q} />
-      ))}
-      {report.previews.map((preview) => (
-        <section className="report-preview t-md" key={preview.action.href}>
-          <h3>{preview.question}</h3>
-          <Link className="t-cmd" href={preview.action.href}>
-            {preview.action.label} →
-          </Link>
-        </section>
+        <QuestionView key={q.id} q={q}>
+          {q.id === "languages" && report.languagesInvite && <LanguagesInvite guess={guess} />}
+          {q.id === "familiarity" && (
+            <p className="report-fyi">
+              <Link className="t-cmd" href={LANGUAGES_FORM}>
+                Edit your usual languages
+              </Link>
+            </p>
+          )}
+        </QuestionView>
       ))}
       {!report.waiting && next}
       {report.profile && (
@@ -127,6 +214,16 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
         : null,
     [catalog, device, attempts, receipts],
   );
+  const stored = device?.profile;
+  const guess = stored && !stored.asked?.languages?.answeredAt ? (stored.profile.languages ?? []).map(languageLabel) : [];
+  // Back from a settings form (/stats#q-languages): the answer renders after storage is read.
+  const returned = useRef(false);
+  useEffect(() => {
+    if (!report || returned.current) return;
+    returned.current = true;
+    if (location.hash.startsWith("#q-"))
+      document.getElementById(location.hash.slice(1))?.scrollIntoView();
+  }, [report]);
   const key = report?.comparisonRevisions.map((r) => r.revision).join("|") ?? "";
   if (key !== wanted.map((r) => r.revision).join("|"))
     setWanted(report?.comparisonRevisions ?? []);
@@ -159,6 +256,7 @@ export function Dashboard({ catalog }: { catalog: ChallengeSummary[] }) {
           <>
             <ReportBody
               report={report}
+              guess={guess}
               status={<Status history={history} />}
             />
             {local.error && <p role="status" className="t-dim">Some saved practice couldn&apos;t be read.</p>}
