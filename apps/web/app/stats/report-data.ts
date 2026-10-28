@@ -165,6 +165,13 @@ export function useReportData(requests: ComparisonRequests = NO_COMPARISONS) {
   const historyPages = useRef(0);
 
   /** Synchronously forget everything shown and everything in flight. */
+  /**
+   * Whether a new comparison read may start now: no boundary in progress or blocking this report,
+   * and the stored profile (read now, not the last rendered state) still allows a report. A clear
+   * re-runs the read effects before the next render's privacy and pairs arrive; this refuses them.
+   */
+  const mayRead = () => !blocked.current && !boundaries && privacyOf().privacy === "ok";
+
   const clear = useCallback(
     (block = false) => {
       generation.current++;
@@ -423,6 +430,8 @@ export function useReportData(requests: ComparisonRequests = NO_COMPARISONS) {
         // Only the outermost finish reopens reads; the module listener has already counted it.
         blocked.current = false;
         device.release();
+        // Comparison reads were refused while blocked; let them ask once more for what's shown now.
+        setEpoch((e) => e + 1);
         start();
       }
     });
@@ -447,7 +456,7 @@ export function useReportData(requests: ComparisonRequests = NO_COMPARISONS) {
   /** Revisions read or being read since the last clear, so a changed selection only asks for new ones. */
   const requested = useRef({ epoch: -1, revisions: new Set<string>() });
   useEffect(() => {
-    if (privacy !== "ok" || !wanted) return;
+    if (privacy !== "ok" || !wanted || !mayRead()) return;
     if (requested.current.epoch !== epoch)
       requested.current = { epoch, revisions: new Set() };
     const done = requested.current.revisions;
@@ -513,7 +522,7 @@ export function useReportData(requests: ComparisonRequests = NO_COMPARISONS) {
   // Human cohorts: no request at all while switched off (docs/human-cohorts.md), unless a
   // development build previews the bridge on synthetic replies (`comparisonPreview`).
   useEffect(() => {
-    if (!(COHORTS_ENABLED || comparisonPreview()) || privacy !== "ok" || !wantedCohorts) return;
+    if (!(COHORTS_ENABLED || comparisonPreview()) || privacy !== "ok" || !wantedCohorts || !mayRead()) return;
     const ticket = generation.current;
     const controller = new AbortController();
     aborts.current.add(controller);
@@ -555,7 +564,7 @@ export function useReportData(requests: ComparisonRequests = NO_COMPARISONS) {
   // Passing-code lengths for the model line: numbers counted inside the practice store, at most
   // three attempts; no code is returned. Cleared with everything else at a boundary.
   useEffect(() => {
-    if (privacy !== "ok" || !wantedLengths) return;
+    if (privacy !== "ok" || !wantedLengths || !mayRead()) return;
     const ticket = generation.current;
     const controller = new AbortController();
     aborts.current.add(controller);

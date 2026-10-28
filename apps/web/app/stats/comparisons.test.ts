@@ -139,3 +139,20 @@ test("each read is bound to the exact pair that asked; another revision's read i
     delete process.env.NEXT_PUBLIC_STATS_COMPARISON_PREVIEW;
   }
 });
+
+test("two solves of one challenge revision share one receipt read; the model line still shows", () => {
+  process.env.NEXT_PUBLIC_STATS_COMPARISON_PREVIEW = "1";
+  try {
+    const again = (id: string, last: string) => ({ ...attempt, attempt: id, practice: "repeat", last }) as ReportAttempt;
+    const twice = [again("r1", "2026-10-27T00:10:00Z"), again("r2", "2026-10-28T00:10:00Z")];
+    const requests = comparisonRequests(twice, catalog);
+    assert.deepEqual(requests.receipts, [{ challenge: "JS-001", revision }], "one read for the pair");
+    assert.deepEqual(requests.lengths.map((l) => l.attempt), ["r2", "r1"], "lengths still per attempt");
+    const key = pairKey({ challenge: "JS-001", revision });
+    const read = { cohorts: {}, receipts: { [key]: [receipt("m/a"), receipt("m/b"), receipt("m/c")] }, lengths: {} };
+    assert.equal(comparisons([twice[0]], catalog, stored("25-34"), comparisonRequests([twice[0]], catalog), read).model.state, "shown", "one repeat");
+    assert.equal(comparisons(twice, catalog, stored("25-34"), requests, read).model.state, "shown", "two repeats of the same pair");
+  } finally {
+    delete process.env.NEXT_PUBLIC_STATS_COMPARISON_PREVIEW;
+  }
+});
