@@ -1,6 +1,6 @@
 # ENG-360 evidence: the languages invitation
 
-Synthetic only: a seeded profile (Python as an unconfirmed quick-start guess, editor answered) and one fixture JavaScript attempt, in fresh Chromium contexts on a synthetic catalog. Every off-origin and history request was stopped in the browser. Produced by `tools/browser/languages-invite-check.ts` (40 checks over desktop 1280, phone 390, phone 320 and phone landscape 844×390, all passed). WebKit couldn't run on the QA host, and no real devices were used.
+Synthetic only: a seeded profile (Python as an unconfirmed quick-start guess, editor answered) and one fixture JavaScript attempt, in fresh Chromium contexts on a synthetic catalog. Every off-origin and history request was stopped in the browser. Produced by `tools/browser/languages-invite-check.ts` (44 checks over desktop 1280, phone 390, phone 320 and phone landscape 844×390, all passed). WebKit couldn't run on the QA host, and no real devices were used.
 
 | Screen | What it shows |
 | --- | --- |

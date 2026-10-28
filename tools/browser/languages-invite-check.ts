@@ -139,27 +139,46 @@ for (const device of DEVICES) {
     }
     await page.waitForURL(/\/settings\/profile\/languages\?from=stats$/);
     await page.getByText("Ticked from quick start, as a guess.").waitFor();
+    const intro = await page.locator(".t-dim").first().innerText();
+    assert.match(intro, /groups your own practice on your report into your usual languages and others/);
+    assert.doesNotMatch(intro, /compare|cohort|unlock/i, "the language route promises only the grouping");
     await noOverflow(page, "form");
     await shot(page, "2-form-guess");
     await page.locator("#profile-0").click();
     await page.getByText("Nothing changed. A guess stays a guess").waitFor();
     assert.equal((await stored(page)).asked.languages, undefined, "viewing and saving nothing never confirms");
 
-    // 3. Cancel from the form: back to the report, unchanged.
+    // 3. Cancel from the form with Esc while on a language checkbox, then while on Confirm: back to the report, unchanged.
     await page.locator("label.t-option", { hasText: "JavaScript" }).click();
-    await page.locator("#profile-0").focus();
+    await page.getByRole("checkbox", { name: /JavaScript/ }).focus();
     await page.keyboard.press("Escape");
     await page.waitForURL(/\/stats#q-languages$/);
     await invite(page).waitFor();
-    assert.deepEqual((await stored(page)).profile.languages, ["python"], "cancel saves nothing");
-    step(`${device.name}: no-op save and Esc cancel keep the guess a guess`);
+    assert.deepEqual((await stored(page)).profile.languages, ["python"], "Esc on a checkbox saves nothing");
+    await page.getByRole("link", { name: /Confirm your languages/ }).click();
+    await page.waitForURL(/from=stats/);
+    await page.getByRole("button", { name: "Confirm as my answer" }).focus();
+    await page.keyboard.press("Escape");
+    await page.waitForURL(/\/stats#q-languages$/);
+    await invite(page).waitFor();
+    assert.equal((await stored(page)).asked.languages, undefined, "Esc on Confirm saves nothing");
+    step(`${device.name}: no-op save, and Esc from a checkbox or from Confirm, keep the guess a guess`);
 
     // 4. Confirm deliberately; unrelated answers keep their provenance; return lands on the answer.
     await page.getByRole("link", { name: /Confirm your languages/ }).click();
     await page.waitForURL(/from=stats/);
-    await tap(device, page, "text=Confirm as my answer");
-    await page.getByText("Confirmed. Save to keep it as your answer.").waitFor();
-    await page.locator("#profile-0").click();
+    if (device.touch) {
+      await tap(device, page, "text=Confirm as my answer");
+      await page.getByText("Confirmed. Save to keep it as your answer.").waitFor();
+      await page.locator("#profile-0").tap();
+    } else {
+      // Keyboard only: Enter on Confirm moves focus to Save; Enter saves.
+      await page.getByRole("button", { name: "Confirm as my answer" }).focus();
+      await page.keyboard.press("Enter");
+      await page.getByText("Confirmed. Save to keep it as your answer.").waitFor();
+      assert.equal(await page.evaluate(() => document.activeElement?.id), "profile-0", "focus lands on Save, not the page");
+      await page.keyboard.press("Enter");
+    }
     await page.getByRole("link", { name: "back to your report" }).first().waitFor();
     const confirmed = await stored(page);
     assert.deepEqual(confirmed.profile, { languages: ["python"], editor: "vim" });
@@ -220,6 +239,9 @@ for (const device of DEVICES) {
     await page.getByText("Done. Progress cleared.").waitFor();
     assert.equal(await page.evaluate(() => localStorage.getItem("muscle-memory.dismissed")), '["languages"]');
     step(`${device.name}: reset keeps the hidden choice`);
+    await page.goto(`${origin}/settings/profile`);
+    await page.getByText("Every question is optional. Your answers let us compare groups (never people)").waitFor();
+    step(`${device.name}: the all-questions form keeps its own introduction`);
     await context.close();
   }
 
