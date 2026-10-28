@@ -39,22 +39,18 @@ export async function advanceComparisonGeneration(env: Env): Promise<string> {
   }
   throw new Error("Comparison control unavailable.");
 }
-/** The successful conditional put is the publication authorization point, not delivery. */
+/**
+ * The authorization point is this read of the current generation. R2 reads are strongly
+ * consistent, and every privacy change or deletion advances the generation before it is
+ * acknowledged, so a read after an acknowledgement can never return the old generation; a read
+ * before it is an earlier authorization, which the contract allows to be delivered later. A read
+ * writes nothing: public page loads never contend with, or delay, a privacy change or deletion.
+ */
 export async function authorizeComparisonGeneration(
   env: Env,
   generation: unknown,
 ): Promise<boolean> {
   if (!generationToken(generation)) return false;
-  for (let attempt = 0; attempt < RETRIES; attempt++) {
-    const current = await read(env);
-    if (!current || current.value.generation !== generation) return false;
-    const written = await env.CONTROL.put(
-      KEY,
-      JSON.stringify({ generation, authorizationNonce: crypto.randomUUID() }),
-      { onlyIf: { etagMatches: current.etag } },
-    );
-    if (written) return true;
-    // Re-read before retrying; never overwrite an invalidation with the old generation.
-  }
-  return false;
+  const current = await read(env);
+  return current !== null && current.value.generation === generation;
 }

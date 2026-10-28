@@ -63,20 +63,26 @@ async function fixture() {
   const read = () => comparisonPrivacy(env, id, { action: "read", secret });
   return { env, objects, set, update, read };
 }
-test("conditional authorization cannot replace an invalidation that wins between its get and put", async () => {
+test("an invalidation acknowledged before the authorizing read always wins; one after it only affects later reads", async () => {
   const { env } = await fixture();
   const old = await advanceComparisonGeneration(env);
-  const put = env.CONTROL.put;
+  const get = env.CONTROL.get;
+  // The invalidation lands just before the authorizing read reaches storage.
   let invalidate = true;
-  env.CONTROL.put = async (key, text, options) => {
-    if (key === fence && invalidate && JSON.parse(text).generation === old) {
+  env.CONTROL.get = async (key, ...rest) => {
+    if (key === fence && invalidate) {
       invalidate = false;
       await advanceComparisonGeneration(env);
     }
-    return put(key, text, options);
+    return get(key, ...rest);
   };
   assert.equal(await authorizeComparisonGeneration(env, old), false);
-  assert.notEqual(await comparisonGeneration(env), old);
+  env.CONTROL.get = get;
+  // Authorized first, invalidated after: that earlier authorization may be delivered, nothing newer.
+  const current = await comparisonGeneration(env);
+  assert.equal(await authorizeComparisonGeneration(env, current), true);
+  await advanceComparisonGeneration(env);
+  assert.equal(await authorizeComparisonGeneration(env, current), false);
 });
 test("invalidation retries an overlapping authorization without losing the mutation; bounded CAS failure fails closed", async () => {
   const { env } = await fixture();
@@ -100,9 +106,29 @@ test("invalidation retries an overlapping authorization without losing the mutat
   };
   await assert.rejects(() => advanceComparisonGeneration(env));
   assert.equal(writes, 3);
+  // A failed invalidation leaves the last acknowledged generation current: reading authorizes it
+  // without writing, so public reads never compete with privacy changes or deletion.
   writes = 0;
-  assert.equal(await authorizeComparisonGeneration(env, next), false);
-  assert.equal(writes, 3);
+  assert.equal(await authorizeComparisonGeneration(env, next), true);
+  assert.equal(await authorizeComparisonGeneration(env, old), false);
+  assert.equal(writes, 0);
+});
+test("authorization is a read: it never writes the fence and never blocks an invalidation", async () => {
+  const { env } = await fixture();
+  const old = await advanceComparisonGeneration(env);
+  const put = env.CONTROL.put;
+  let writes = 0;
+  env.CONTROL.put = async (key, text, options) => {
+    writes++;
+    return put(key, text, options);
+  };
+  for (let i = 0; i < 50; i++)
+    assert.equal(await authorizeComparisonGeneration(env, old), true);
+  assert.equal(writes, 0);
+  const next = await advanceComparisonGeneration(env);
+  assert.equal(writes, 1, "one write, no retries caused by reads");
+  assert.equal(await authorizeComparisonGeneration(env, old), false);
+  assert.equal(await authorizeComparisonGeneration(env, next), true);
 });
 test("every acknowledged permissive/restrictive/age change invalidates the prior generation", async () => {
   const { env, update } = await fixture();
