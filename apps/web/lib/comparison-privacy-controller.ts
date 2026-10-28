@@ -19,7 +19,8 @@ export interface PrivacyTransport {
 export type PrivacyView = {
   /**
    * unshared: the server has never recorded this browser's comparison settings, so it is not
-   * counted. Only the explicit review action sends them; a reload never enrolls anyone.
+   * counted. Only a person's own action sends them (saving an age answer or a stealth choice, or
+   * the explicit review action); observing, focus and retry never enroll anyone.
    */
   status:
     | "disabled"

@@ -65,10 +65,14 @@ test("code length: the player's passing code beside the median of matched solvin
   assert.equal(r.fyi.yours, 140);
   assert.equal(r.fyi.modelMedian, 120);
   assert.equal(r.fyi.models, 3);
+  assert.equal(r.fyi.ran, 3);
   assert.equal(
     r.fyi.text,
-    "On Synthetic Sum (current version, same runtime and diagnostics), your passing code was 140 characters; the 3 models that solved it at their default setting wrote a median of 120. Counts include whitespace; length isn't a score.",
+    "On Synthetic Sum (current version, same runtime and diagnostics), your passing code was 140 characters; 3 of 3 models solved it on their first try at their default setting, with a median of 120. Counts include whitespace; length isn't a score.",
   );
+  // Models that ran and failed are always in the denominator, never hidden behind the solvers.
+  const withFailures = run([...three, receipt("m/d", { state: "error", finalCodeLength: null })]);
+  assert.match((withFailures as any).fyi.text, /3 of 4 models solved it/);
   assert.doesNotMatch(r.fyi.text, /shorter|longer|better|worse|%/);
 });
 

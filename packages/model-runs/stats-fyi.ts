@@ -36,6 +36,8 @@ export type ModelFyi =
       modelMedian: number;
       /** Matched models that solved it, each counted once. */
       models: number;
+      /** Matched models whose run finished, solved or not: the denominator is always shown. */
+      ran: number;
     })
   | (Named & {
       kind: "outcome";
@@ -121,6 +123,7 @@ export function modelFyi(
       revision: a.revision,
     };
     const where = `${c.title} (current version, same runtime and diagnostics)`;
+    const finished = matched.filter((r) => FINISHED.includes(r.state));
     const yours = localLengths[a.attempt];
     const lengths = matched
       .filter((r) => r.state === "completed")
@@ -136,11 +139,11 @@ export function modelFyi(
           yours,
           modelMedian: m,
           models: lengths.length,
-          text: `On ${where}, your passing code was ${yours} characters; the ${lengths.length} models that solved it at their default setting wrote a median of ${m}. Counts include whitespace; length isn't a score.`,
+          ran: finished.length,
+          text: `On ${where}, your passing code was ${yours} characters; ${lengths.length} of ${finished.length} models solved it on their first try at their default setting, with a median of ${m}. Counts include whitespace; length isn't a score.`,
         },
       };
     }
-    const finished = matched.filter((r) => FINISHED.includes(r.state));
     if (finished.length >= MIN_MODELS) {
       const solved = finished.filter((r) => r.state === "completed").length;
       return {

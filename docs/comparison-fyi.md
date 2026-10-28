@@ -60,7 +60,8 @@ first-submission result beside it: the report scores compile and runtime errors,
 
 Shown model lines: `kind: "code-length"` when the player's local passing-code length and at least three
 matched solving models exist — *On Two Sum (current version, same runtime and diagnostics), your passing
-code was 412 characters; the 5 models that solved it at their default setting wrote a median of 380.
+code was 412 characters; 5 of 7 models solved it on their first try at their default setting, with a median
+of 380.
 Counts include whitespace; length isn't a score.* Otherwise `kind: "outcome"` with at least three matched
 finished runs — *…, 4 of 6 models solved it on their first try at their default setting. One try each,
 not a success rate.* Each model counts once (first provider-default try, failures included, conflicting
@@ -78,7 +79,8 @@ Nothing is backfilled from uploads and nothing enrolls in the background.
   band sends this browser's comparison settings (conditional create) and the page shows the server's
   confirmation; **back to your report** returns to `/stats`.
 - **Adult answered before activation:** `PRIVACY_SETTINGS` = `/settings/privacy` shows *Not shared yet*
-  with **use these settings for comparisons** (the existing explicit review action).
+  with **use these settings for comparisons** (the existing explicit review action). Saving an age answer
+  or a stealth choice also sends the settings; opening a page, focus and retry never do.
 - **Going stealth or leaving it:** `/settings/privacy`, same write.
 - A browser is known to the server only after its first practice upload; a save before that stays
   pending and says so, with a retry.
@@ -93,3 +95,9 @@ again, and the explicit **use these settings for comparisons** action uploads no
 CONTROL is already the authority and fails closed, so dropping the prefilter (or reading profiles
 without the publication bound) would not admit anyone CONTROL excludes; either is a SQL change and
 needs a fresh bounded native run before activation.
+
+**Known limit (open decision):** an exact build checks at most 100 distinct browsers against CONTROL
+(`MAX_COHORT_MEMBERS`, the `check()` bound). A revision with more browsers in its window builds no
+snapshot at all, so the most played challenges show no human line and the 100–249 and 250+ bands are
+not reached yet. This fails closed. Raising it means batching `check()` calls, at roughly six CONTROL
+reads per member per build, which is a cost decision before activation.

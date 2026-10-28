@@ -193,7 +193,7 @@ function ComparisonPrivacyStatus() {
             ? "The server confirmed these comparison privacy settings. Results already authorized may still arrive; downloaded aggregates cannot be recalled."
             : view.status === "unshared"
               ? countable
-                ? "Not shared yet: the server has no comparison settings for this browser, so it isn't counted in comparisons. Nothing is sent until you choose to."
+                ? "Not shared yet: the server has no comparison settings for this browser, so it isn't counted in comparisons. Saving an age answer or a stealth choice sends them, and so does the action below; opening this page doesn't."
                 : "The server has no comparison settings for this browser, so it isn't counted in comparisons."
               : view.status === "conflict"
                 ? "Your current settings differ from the server. Review them before applying; another tab may have changed them."

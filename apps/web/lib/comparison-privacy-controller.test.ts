@@ -200,3 +200,22 @@ test("a browser the server never recorded is unshared: reloads never enroll, the
   assert.equal(c.getSnapshot().status, "conflict");
   assert.equal(current, restrictive);
 });
+test("a person's own save while unshared creates the record once; observing never does", async () => {
+  let current: RemotePrivacy | null = null;
+  const writes: (string | null)[] = [];
+  const c = new PrivacyController({
+    read: async () => ({ status: "ok", value: current }),
+    update: async (value, expected) => {
+      writes.push(expected);
+      if ((current?.revision ?? null) !== expected) return { status: "conflict" };
+      current = { stealth: value.stealth, age: value.age, revision: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee" };
+      return { status: "ok", value: current };
+    },
+  });
+  await c.observe(local);
+  assert.equal(c.getSnapshot().status, "unshared");
+  assert.deepEqual(writes, []);
+  await c.save(local); // saving an age answer or stealth choice
+  assert.deepEqual(writes, [null]);
+  assert.equal(c.getSnapshot().status, "confirmed");
+});
