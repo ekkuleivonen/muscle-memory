@@ -11,7 +11,8 @@
 An attempt (a browser's `attempt_id` on one challenge revision) is **included** only when all of these hold:
 - it has exactly one `practice.started` record with its origin (`data.from`) recorded;
 - that start's `occurred_at` (device clock) **and** its `received_at` (ingest Worker clock) are both at or after the announcement. A start that reached us before the announcement began before it, whatever the device clock says;
-- none of its records has conflicting copies (same `record_id`, different payload);
+- none of its practice records has conflicting copies (same `record_id`, different payload), including copies that are themselves ineligible: a conflict is carried to the attempt before the eligibility filter;
+- every one of its records has an `occurred_at` in the canonical form `YYYY-MM-DDTHH:MM:SS.sssZ`. Ingest accepts anything `Date.parse` reads (offsets, other formats), but the cutoffs compare text, so `2026-11-02T16:00:00.000+02:00` (14:00Z) would sort after a 14:30Z announcement. A non-canonical time is never trusted;
 - every record counted is a person's (`actor = person`) with an accepted Terms version, in a supported practice capture (1.0–1.2), on a well-formed challenge and revision. These are the same rules as [admin statistics](admin-statistics.md) and [human cohorts](human-cohorts.md);
 - its revision is not explicitly tagged `synthetic-qa` in the immutable `published_versions` metadata, the existing exclusion `syntheticRevisions` reads.
 
@@ -22,13 +23,14 @@ An attempt (a browser's `attempt_id` on one challenge revision) is **included** 
 | `prelaunch_resumed` | started before the announcement, then continued or completed after it. Not a launch attempt, however much happened later |
 | `missing_start` | no start record readable: never uploaded, lost, ineligible, or older than the lookback. Never inferred from the first surviving event |
 | `untrusted_start` | a start without its origin, or more than one start record |
-| `conflicting_attempts` | some record has conflicting copies, so the attempt is not whole |
+| `conflicting_attempts` | some record has conflicting copies, eligible or not, so the attempt is not whole |
+| `malformed_time` | some record's `occurred_at` is not canonical UTC, so its place against the cutoffs is unknown |
 
-**Figures for the included cohort** (rows `launch` for all, `origin` per `data.from`, `challenge` per exact revision): `attempts`, `browser_ids` (browsers, not people; not additive across rows), `completed` (browser-reported completion, not server grading), `submitted_attempts`, `submissions` (distinct Submit run IDs), `runs` (distinct run IDs seen queued) and `clock_ahead_starts` (included starts whose device time is later than their receipt: a clock running fast).
+**Figures for the included cohort** (row `launch` for all, rows `challenge` per exact revision): `attempts`, `browser_ids` (browsers, not people; not additive across rows), `completed` (browser-reported completion, not server grading), `submitted_attempts`, `submissions` (distinct Submit run IDs), `runs` (distinct run IDs seen queued) and `clock_ahead_starts` (included starts whose device time is later than their receipt: a clock running fast).
 
 **The `coverage` row** covers records from the announcement to the as-of: `observed_records`, `duplicate_copies` (retried deliveries, counted once), `conflicting_records`, `arrived_after_as_of`, `synthetic_records`, `ineligible_records` (practice records failing the person, Terms or capture rule) and `latest_receipt` (the newest `received_at` read).
 
-Output is aggregates only: no participant, attempt, record, code or payload.
+Output is aggregates only: no participant, attempt, record, code or payload. There is no breakdown by start origin: `data.from` is not validated at ingest, so grouping by it would echo arbitrary client text.
 
 ## Parameters
 
@@ -72,7 +74,8 @@ Records arrive late. Devices queue them offline, a closed tab can hold them unti
 - **Only what was uploaded.** Visits before the Terms are accepted, abandoned outboxes and deleted participants are absent. Zero rows means no recorded supported activity, not zero plays.
 - **Provenance.** Apart from exact `synthetic-qa` revisions, there is no field telling the owner's or testers' own play from anyone else's (see [admin statistics](admin-statistics.md)). Testing after the announcement on a regular challenge counts.
 - **Browsers, not people.** One person on two browsers is two `browser_ids`; clearing storage makes a new one.
-- **Per-row privacy.** `origin` and `challenge` rows can rest on one browser. They are for internal reading only.
+- **Non-canonical times outside the window.** The scan's `occurred_at` window compares text too. A non-canonical value that sorts outside it (an RFC 2822 date, an expanded year) is not read at all: if it was a start, the attempt has no start and is excluded; if not, that one record is missing from an included attempt's figures. Neither can add an attempt.
+- **Per-row privacy.** `challenge` rows can rest on one browser. They are for internal reading only.
 
 ## Privacy and sharing
 
@@ -81,12 +84,12 @@ The query reads the current Iceberg snapshot after erasure, with the existing re
 ## Cost and bounds
 
 - The scan reads every `default.events` row whose `occurred_at` falls between the announcement minus the lookback and the as-of. That is at most 62 days, and it includes the `payload` column, which carries keys and code and is the bulk of the bytes. File pruning on `occurred_at` statistics is assumed (Pipelines writes files in arrival order), not guaranteed.
-- DataFusion plans the table **four times**, once per output section, because CTEs are inlined. Assume bytes scanned is up to 4 × the window's bytes, with Basin's minimum of 10 MB a query. At $0.0025/GB after 10 GB a month, a window holding 1 GB costs at most about 4 GB of allowance. The workbench shows the actual bytes after the run when R2 SQL reports them; no estimate exists before.
-- Workbench bounds apply: 30 s wait, 5,000 rows, 8 MiB. The query returns at most 502 rows: coverage, launch, one per origin and one per revision. If 502 come back, some revisions were cut.
+- DataFusion plans the table **three times**, once per output section, because CTEs are inlined. Assume bytes scanned is up to 3 × the window's bytes, with Basin's minimum of 10 MB a query. At $0.0025/GB after 10 GB a month, a window holding 1 GB costs at most about 3 GB of allowance. The workbench shows the actual bytes after the run when R2 SQL reports them; no estimate exists before.
+- Workbench bounds apply: 30 s wait, 5,000 rows, 8 MiB. The query returns at most 502 rows: coverage, launch and one per revision. If 502 come back, some revisions were cut.
 - It is never scheduled, polled or run automatically. R2 SQL cannot cancel a running query. *Stop waiting* stops only the wait.
 
 ## Validation
 
-- `packages/statistics/launch.test.ts` runs the generated SELECT in SQLite on synthetic attempts. It covers: exact-boundary and later starts; prelaunch attempts resumed after the boundary, uploaded late, or with a fast clock; missing, too-old, origin-less, doubled and conflicting starts; synthetic QA, no-Terms, model and unsupported records; duplicate deliveries; late arrivals and a stable as-of, including a later conflicting copy that tries to move a prelaunch start after the announcement; empty data; and aggregates-only output. It also checks parameter validation (missing, date-only, offset and impossible instants; as-of order, span and settle time; receipt URL; lookback; injection-shaped exclusions) and that the workbench's read-only check accepts the query.
-- `tools/launch-query-check.ts` runs the same query in DataFusion 50.1.0 (CI installs it) and compares it with SQLite over seven scenarios, including a conflicting copy received after the as-of.
+- `packages/statistics/launch.test.ts` runs the generated SELECT in SQLite on synthetic attempts. It covers: exact-boundary and later starts; prelaunch attempts resumed after the boundary, uploaded late, or with a fast clock; missing, too-old, origin-less, doubled and conflicting starts; fuzz-style source-contract edges (conflicting copies that are themselves ineligible, on the start, a Submit or the completion; arbitrary origin text never echoed; eight non-canonical `occurred_at` forms on each of those records; and eleven rewrites in copies received after the as-of, none of which may change any figure); synthetic QA, no-Terms, model and unsupported records; duplicate deliveries; late arrivals and a stable as-of, including a later conflicting copy that tries to move a prelaunch start after the announcement; empty data; and aggregates-only output. It also checks parameter validation (missing, date-only, offset and impossible instants; as-of order, span and settle time; receipt URL; lookback; injection-shaped exclusions) and that the workbench's read-only check accepts the query.
+- `tools/launch-query-check.ts` runs the same query in DataFusion 50.1.0 (CI installs it) and compares it with SQLite over ten scenarios, including a conflicting copy received after the as-of, an ineligible conflicting copy, an arbitrary origin and non-canonical times.
 - Neither is a live Basin run. Basin's native JSON functions are stood in by Python, as for the [cohort check](human-cohorts.md). The first production run is the live check, and it waits for the announcement and the owner's approval.

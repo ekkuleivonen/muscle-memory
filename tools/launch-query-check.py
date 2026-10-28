@@ -69,6 +69,7 @@ for case in cases:
     expected = [dict(row) for row in sql.execute(case["query"].replace("default.events", "events"))]
     assert normalize(actual) == normalize(expected), (case["name"], actual, expected)
     launch = [r for r in actual if r["section"] == "launch"]
+    assert not any("script" in json.dumps(r) for r in actual), (case["name"], actual)
     assert len(launch) == 1 and int(launch[0]["attempts"] or 0) == case["attempts"], (case["name"], launch)
     sql.close()
 print(json.dumps({"passed": len(cases)}))

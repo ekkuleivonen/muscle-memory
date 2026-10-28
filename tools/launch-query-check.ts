@@ -52,6 +52,30 @@ const scenarios: { name: string; events: Row[]; attempts: number }[] = [
     attempts: 0,
   },
   {
+    name: "an ineligible conflicting copy still excludes its attempt",
+    events: (() => {
+      const a = attempt("c", 60);
+      const p = JSON.parse(a[3].payload!);
+      p.termsVersion = null;
+      return [...a, { ...a[3], payload: JSON.stringify(p) }, ...attempt("ok", 90)];
+    })(),
+    attempts: 1,
+  },
+  {
+    name: "arbitrary origin is counted but never echoed",
+    events: attempt("odd", 60, { from: "<script>x</script>" }),
+    attempts: 1,
+  },
+  {
+    name: "non-canonical times are never trusted",
+    events: (["2026-11-02T16:00:00.000+02:00", "2026-11-02T14:40:00Z", "2026-11-02 14:40:00.000Z"] as const).flatMap((form, i) => {
+      const a = attempt(`t${i}`, 60);
+      a[i === 2 ? 5 : 0] = { ...a[i === 2 ? 5 : 0], occurred_at: form };
+      return a;
+    }),
+    attempts: 0,
+  },
+  {
     name: "late arrivals",
     events: [...attempt("a", 60, { complete: false }), record("practice.completed", "a", 1380, { received: 1500 }), ...attempt("c", 1400, { received: 1450 })],
     attempts: 1,

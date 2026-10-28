@@ -33,7 +33,7 @@ print(json.dumps([dict(r) for r in c.execute(v['sql'].replace('default.events','
   assert.equal(out.status, 0, out.stderr);
   const result = JSON.parse(out.stdout) as Record<string, string | number | null>[];
   const section = (s: string) => result.filter((r) => r.section === s);
-  return { coverage: section("coverage")[0], launch: section("launch")[0], origin: section("origin"), challenge: section("challenge"), rows: result };
+  return { coverage: section("coverage")[0], launch: section("launch")[0], challenge: section("challenge"), rows: result };
 }
 
 test("the announcement time is required and exact; nothing stands in for it", () => {
@@ -71,7 +71,6 @@ test("empty data: a coverage row and a launch row of zeros, nothing else", () =>
   const r = run([]);
   assert.equal(r.rows.length, 2);
   assert.equal(Number(r.launch.attempts ?? 0), 0);
-  assert.equal(r.origin.length, 0);
   assert.equal(r.challenge.length, 0);
 });
 
@@ -97,10 +96,6 @@ test("only whole attempts that genuinely started at or after the announcement ar
   assert.equal(r.launch.submissions, 6);
   assert.equal(r.launch.runs, 3);
   assert.equal(r.launch.prelaunch_resumed, 3, "resumed, offline and skewed: activity after, start before");
-  assert.deepEqual(
-    r.origin.map((o) => [o.origin, o.attempts, o.completed]).sort(),
-    [["link", 1, 1], ["picker", 2, 1]],
-  );
   assert.deepEqual(r.challenge.map((c) => [c.challenge, c.attempts, c.browser_ids]), [["PY-003", 3, 2]]);
 });
 
@@ -215,4 +210,88 @@ test("duplicate deliveries count once, and a device clock ahead of receipt is di
 test("output is aggregates only", () => {
   const r = run([...attempt("secret-attempt", 10, { browser: "secret-browser" })]);
   assert.doesNotMatch(JSON.stringify(r.rows), /secret-|synthetic-\d|payload/);
+});
+
+// Source-contract edges, fuzz style: each mutation must leave a would-be launch attempt out.
+const base = () => attempt("edge", 60, { browser: "edge-browser" });
+const clean = () => run([...base(), ...attempt("other", 90)]);
+
+test("a conflicting copy excludes its attempt even when that copy is itself ineligible", () => {
+  const mutations: [string, (p: Record<string, unknown>) => void][] = [
+    ["no terms", (p) => (p.termsVersion = null)],
+    ["empty terms", (p) => (p.termsVersion = "")],
+    ["model actor", (p) => (p.actor = "model")],
+    ["no actor", (p) => delete p.actor],
+    ["other data", (p) => ((p.data as Record<string, unknown>).result = "passed")],
+    ["not JSON object", () => {}],
+  ];
+  const before = clean();
+  assert.equal(before.launch.attempts, 2);
+  for (const target of [0, 3, 5]) // the start, a Submit, the completion
+    for (const [name, mutate] of mutations) {
+      const rows = base();
+      const p = JSON.parse(rows[target].payload!);
+      mutate(p);
+      const payload = name === "not JSON object" ? "[]" : JSON.stringify(p);
+      const r = run([...rows, { ...rows[target], payload }, ...attempt("other", 90)]);
+      const label = `${name} on record ${target}`;
+      assert.equal(r.launch.attempts, 1, label);
+      assert.equal(r.launch.conflicting_attempts, 1, label);
+      assert.equal(r.coverage.conflicting_records, 1, label);
+    }
+});
+
+test("start origins are never echoed: no breakdown by data.from", () => {
+  const rows = attempt("odd", 60, { from: "<script>alert(1)</script>" });
+  const r = run(rows);
+  assert.deepEqual([...new Set(r.rows.map((x) => x.section))].sort(), ["challenge", "coverage", "launch"]);
+  assert.doesNotMatch(JSON.stringify(r.rows), /script|picker/);
+  assert.ok(!("origin" in r.launch));
+});
+
+test("non-canonical occurred_at values are never trusted, on the start or any record", () => {
+  // 16:00+02:00 is 14:00Z, before the 14:30Z announcement, but sorts after it as text.
+  const forms = [
+    "2026-11-02T16:00:00.000+02:00",
+    "2026-11-02T14:40:00.000+00:00",
+    "2026-11-02T14:40:00Z",
+    "2026-11-02T14:40:00.000000Z",
+    "2026-11-02 14:40:00.000Z",
+    "2026-11-02T14:40:00.000z",
+    "2026-11-02T14:40Z",
+    "2026-11-02T14:40:00.000Z ",
+  ];
+  for (const target of [0, 3, 5])
+    for (const form of forms) {
+      const rows = base();
+      rows[target] = { ...rows[target], occurred_at: form };
+      const r = run([...rows, ...attempt("other", 90)]);
+      const label = `${JSON.stringify(form)} on record ${target}`;
+      assert.equal(r.launch.attempts, 1, label);
+      assert.equal(r.launch.completed, 1, label);
+      assert.equal(r.launch.malformed_time, 1, label);
+    }
+});
+
+test("no copy received after the as-of changes any figure, whatever it rewrites", () => {
+  const rows = [...attempt("offline", -3, { received: 60 }), ...base(), ...attempt("other", 90)];
+  const before = run(rows);
+  const rewrites: Partial<Row>[] = [
+    { occurred_at: at(10) },
+    { occurred_at: at(-100) },
+    { occurred_at: "2026-11-02T16:00:00.000+02:00" },
+    { type: "practice.started" },
+    { type: "practice.completed" },
+    { attempt_id: "zzz" },
+    { participant_id: "zzz" },
+    { challenge: "ZZ-999" },
+    { challenge_revision: "sha256:" + "d".repeat(64) },
+    { capture_version: "practice-capture-0.1.0" },
+    { payload: "{}" },
+  ];
+  for (const target of [0, 3, 6, 9, 11]) // starts, Submits and a completion, both attempts
+    for (const rewrite of rewrites) {
+      const late = { ...rows[target], received_at: at(1500), ...rewrite };
+      assert.deepEqual(run([...rows, late]).rows, before.rows, `${JSON.stringify(rewrite)} on record ${target}`);
+    }
 });

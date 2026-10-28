@@ -20,6 +20,9 @@ export const DEFAULT_LOOKBACK_DAYS = 7;
 const DAY = 86400000;
 /** The ingest Worker and devices write `new Date().toISOString()`, so text order is time order. */
 const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+/** The same shape in SQL. Ingest accepts anything Date.parse reads (offsets, other formats), and
+ * the cutoffs compare text, so a record whose occurred_at is not in this form is never trusted. */
+const CANONICAL = "'^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{3}Z$'";
 /** As in the admin statistics query: the practice captures this interpretation understands. */
 const CAPTURES = ["practice-capture-1.0.0", "practice-capture-1.1.0", "practice-capture-1.2.0"];
 
@@ -69,11 +72,11 @@ export function launchWindow(input: Record<string, unknown>, now = new Date()): 
 }
 
 const COLUMNS = [
-  "section", "origin", "challenge", "challenge_revision",
+  "section", "challenge", "challenge_revision",
   // Included whole attempts: the launch cohort.
   "attempts", "browser_ids", "completed", "submitted_attempts", "submissions", "runs", "clock_ahead_starts",
   // Attempts with activity after the announcement that are not counted, by reason.
-  "prelaunch_resumed", "missing_start", "conflicting_attempts", "untrusted_start",
+  "prelaunch_resumed", "missing_start", "conflicting_attempts", "untrusted_start", "malformed_time",
   // Records from the announcement to the as-of.
   "observed_records", "duplicate_copies", "conflicting_records", "arrived_after_as_of", "synthetic_records",
   "ineligible_records", "latest_receipt",
@@ -147,26 +150,32 @@ WITH record_groups AS (
       AND attempt_id IS NOT NULL AND attempt_id <> ''
       AND regexp_like(challenge, '^[A-Z][A-Z0-9]{0,4}-[0-9]{3}$')
       AND regexp_like(challenge_revision, '^sha256:[0-9a-f]{64}$')
-    THEN 1 ELSE 0 END AS eligible
+      AND regexp_like(occurred_at, ${CANONICAL})
+    THEN 1 ELSE 0 END AS eligible,
+    CASE WHEN regexp_like(occurred_at, ${CANONICAL}) THEN 0 ELSE 1 END AS malformed
   FROM record_groups
 ), practice AS (
-  SELECT *, json_get_json(payload, 'data') AS data,
+  -- Every practice record of a non-synthetic attempt, eligible or not, so a conflicting or
+  -- malformed record marks its attempt even when that record itself is ineligible. Only
+  -- eligible records (ok = 1) feed any figure.
+  SELECT *, eligible AS ok, json_get_json(payload, 'data') AS data,
     json_get_str(json_get_json(payload, 'data'), 'runId') AS run_id,
     json_get_str(json_get_json(payload, 'data'), 'status') AS run_status
-  FROM checked WHERE copies > 0 AND eligible = 1 AND synthetic = 0
+  FROM checked WHERE copies > 0 AND synthetic = 0 AND type LIKE 'practice.%'
 ), attempts AS (
   SELECT participant_id, attempt_id, challenge, challenge_revision,
-    MIN(CASE WHEN type = 'practice.started' THEN occurred_at END) AS started,
-    MIN(CASE WHEN type = 'practice.started' THEN received_at END) AS start_received,
-    SUM(CASE WHEN variants = 1 AND type = 'practice.started' THEN 1 ELSE 0 END) AS start_records,
-    SUM(CASE WHEN variants = 1 AND type = 'practice.started' AND json_get_str(data, 'from') IS NULL THEN 1 ELSE 0 END) AS starts_without_origin,
-    MAX(CASE WHEN variants = 1 AND type = 'practice.started' THEN json_get_str(data, 'from') END) AS origin,
-    MAX(CASE WHEN type = 'practice.started' AND occurred_at > received_at THEN 1 ELSE 0 END) AS clock_ahead,
+    SUM(ok) AS eligible_records,
     SUM(CASE WHEN variants > 1 THEN 1 ELSE 0 END) AS conflicts,
-    MAX(CASE WHEN occurred_at >= ${B} THEN 1 ELSE 0 END) AS active_after,
-    MAX(CASE WHEN variants = 1 AND type = 'practice.completed' THEN 1 ELSE 0 END) AS completed,
-    COUNT(DISTINCT CASE WHEN variants = 1 AND type = 'practice.submitted' THEN run_id END) AS submissions,
-    COUNT(DISTINCT CASE WHEN variants = 1 AND type = 'practice.run' AND run_status = 'queued' THEN run_id END) AS runs
+    SUM(malformed) AS malformed_times,
+    MIN(CASE WHEN ok = 1 AND type = 'practice.started' THEN occurred_at END) AS started,
+    MIN(CASE WHEN ok = 1 AND type = 'practice.started' THEN received_at END) AS start_received,
+    SUM(CASE WHEN ok = 1 AND variants = 1 AND type = 'practice.started' THEN 1 ELSE 0 END) AS start_records,
+    SUM(CASE WHEN ok = 1 AND variants = 1 AND type = 'practice.started' AND json_get_str(data, 'from') IS NULL THEN 1 ELSE 0 END) AS starts_without_origin,
+    MAX(CASE WHEN ok = 1 AND type = 'practice.started' AND occurred_at > received_at THEN 1 ELSE 0 END) AS clock_ahead,
+    MAX(CASE WHEN ok = 1 AND occurred_at >= ${B} THEN 1 ELSE 0 END) AS active_after,
+    MAX(CASE WHEN ok = 1 AND variants = 1 AND type = 'practice.completed' THEN 1 ELSE 0 END) AS completed,
+    COUNT(DISTINCT CASE WHEN ok = 1 AND variants = 1 AND type = 'practice.submitted' THEN run_id END) AS submissions,
+    COUNT(DISTINCT CASE WHEN ok = 1 AND variants = 1 AND type = 'practice.run' AND run_status = 'queued' THEN run_id END) AS runs
   FROM practice
   GROUP BY participant_id, attempt_id, challenge, challenge_revision
 ), classified AS (
@@ -175,10 +184,11 @@ WITH record_groups AS (
   SELECT *, CASE
     WHEN started IS NOT NULL AND (started < ${B} OR start_received < ${B}) THEN 'prelaunch'
     WHEN conflicts > 0 THEN 'conflicting'
+    WHEN malformed_times > 0 THEN 'malformed-time'
     WHEN start_records = 0 THEN 'missing-start'
     WHEN start_records > 1 OR starts_without_origin > 0 THEN 'untrusted-start'
     ELSE 'included' END AS cohort
-  FROM attempts WHERE active_after = 1
+  FROM attempts WHERE eligible_records > 0 AND active_after = 1
 ), included AS (
   SELECT * FROM classified WHERE cohort = 'included'
 )
@@ -210,11 +220,10 @@ ${branch(
     missing_start: "SUM(CASE WHEN cohort = 'missing-start' THEN 1 ELSE 0 END)",
     conflicting_attempts: "SUM(CASE WHEN cohort = 'conflicting' THEN 1 ELSE 0 END)",
     untrusted_start: "SUM(CASE WHEN cohort = 'untrusted-start' THEN 1 ELSE 0 END)",
+    malformed_time: "SUM(CASE WHEN cohort = 'malformed-time' THEN 1 ELSE 0 END)",
   },
   "FROM classified",
 )}
-UNION ALL
-${branch({ section: "'origin'", origin: "origin", ...cohort }, "FROM included GROUP BY origin")}
 UNION ALL
 ${branch(
   { section: "'challenge'", challenge: "challenge", challenge_revision: "challenge_revision", ...cohort },
