@@ -53,8 +53,9 @@ print(json.dumps([dict(r) for r in c.execute(v['sql'].replace('default.events','
   return JSON.parse(out.stdout);
 }
 
-test("cohorts stay switched off until the policy is approved", () => {
-  assert.equal(COHORTS_ENABLED, false);
+test("human cohorts are on for activation; the floor stays 20", () => {
+  // Activated for humans (ENG-376); models stay off separately.
+  assert.equal(COHORTS_ENABLED, true);
   assert.equal(MIN_COHORT, 20);
 });
 

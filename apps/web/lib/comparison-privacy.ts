@@ -6,7 +6,7 @@ import type {
   ComparisonPreference,
   PrivacyReply,
 } from "./comparison-privacy-controller";
-export const COMPARISON_PRIVACY_ENABLED = false;
+export const COMPARISON_PRIVACY_ENABLED = true;
 export function comparisonAge(
   age: Profile["age"],
 ): ComparisonPreference["age"] {

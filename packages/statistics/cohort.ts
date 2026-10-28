@@ -15,7 +15,7 @@ import { CHALLENGE_KEY, REVISION } from "../domain/records";
 import { knownEditor } from "./cohort-conditions";
 import { checkCohortWindow, type CohortWindow } from "./cohort-window";
 
-export const COHORTS_ENABLED = false;
+export const COHORTS_ENABLED = true;
 /** Approved policy: the smallest number of eligible distinct browsers behind any published figure. */
 export const MIN_COHORT = 20;
 /** Shares are published rounded to this step, to reduce precision; changes at rounding boundaries can still disclose membership. */

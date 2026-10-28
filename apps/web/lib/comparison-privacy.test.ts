@@ -8,7 +8,7 @@ import {
 } from "./comparison-privacy";
 import type { PracticeStore } from "../../../packages/browser/practice-store";
 test("age eligibility is positive; draft sync is pending and does not access secrets or network", async () => {
-  assert.equal(COMPARISON_PRIVACY_ENABLED, false);
+  assert.equal(COMPARISON_PRIVACY_ENABLED, true);
   assert.equal(comparisonAge(undefined), "unknown");
   assert.equal(comparisonAge("16-17"), "non-adult");
   assert.equal(comparisonAge("18-24"), "adult");

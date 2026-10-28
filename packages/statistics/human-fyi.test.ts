@@ -110,7 +110,7 @@ test("missing, invalidated, disabled and loading reads say nothing and invent no
   assert.deepEqual(run({ ...group(9, 11), minimum: 5 }), unavailable);
   assert.deepEqual(run("loading"), { state: "omitted", reason: "loading", action: null });
   assert.deepEqual(humanFyi([attempt()], catalog, adult, undefined, true), { state: "omitted", reason: "off", action: null });
-  assert.deepEqual(humanFyi([attempt()], catalog, adult, bound(group(9, 11))), { state: "omitted", reason: "off", action: null }, "build switch off");
+  assert.deepEqual(humanFyi([attempt()], catalog, adult, bound(group(9, 11)), false), { state: "omitted", reason: "off", action: null }, "build switch off");
 });
 
 test("a read must be bound to the attempt's own challenge and current revision", () => {

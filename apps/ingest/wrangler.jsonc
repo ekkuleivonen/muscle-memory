@@ -11,7 +11,8 @@
   "r2_buckets": [{ "binding": "CONTROL", "bucket_name": "muscle-memory-control" }],
   // The stream muscle_memory_events (docs/telemetry.md).
   "pipelines": [{ "binding": "EVENTS", "stream": "e54c4a2140c94890b714985878beab26" }],
-  "vars": { "ALLOWED_ORIGINS": "" },
+  // ENG-376: comparison privacy writes and the ComparisonEligibility entrypoint.
+  "vars": { "ALLOWED_ORIGINS": "", "COMPARISON_PRIVACY_ENABLED": "true" },
   // Per participant and per address; see Env in src/index.ts.
   "ratelimits": [
     { "name": "PER_PARTICIPANT", "namespace_id": "4101", "simple": { "limit": 120, "period": 60 } },
