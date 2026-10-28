@@ -177,7 +177,7 @@ for (const device of DEVICES) {
     await report(page, "#q-iterate");
     const body = await text(page);
     assert.equal(await page.locator(".report-takeaways").count(), 0, "one solve has nothing to sum up");
-    assert.match(body, /This solve took 2 submissions; the first didn't pass\./);
+    assert.match(body, /Your solve took 2 submissions; the first didn't pass\./);
     assert.match(body, /Your first edit came \d+ s in, then \d+ s of active editing to the solve\./);
     assert.match(body, /All JavaScript so far: 1 challenge solved\./);
     assert.doesNotMatch(body, /typically|Mostly/);
@@ -185,7 +185,7 @@ for (const device of DEVICES) {
     assert.doesNotMatch(body, FORBIDDEN);
     assert.match(await page.locator(".report-action").innerText(), /^Next: JS-/);
     // Pace needs a second challenge like this one: the inventory names one, at the bottom.
-    const pace = page.locator(".report-discover li", { hasText: "Has your pace changed?" });
+    const pace = page.locator(".report-discover li", { hasText: "How did later solves compare with earlier ones?" });
     assert.match(await pace.innerText(), /Solve another easy JavaScript challenge/);
     assert.match((await pace.getByRole("link").getAttribute("href"))!, /^\/challenges\/JS-00\d$/);
     assert.ok(await page.evaluate(() => {
@@ -204,12 +204,12 @@ for (const device of DEVICES) {
     const { context, page } = await open(device, HISTORIES.two);
     await report(page, "#q-progress");
     const body = await text(page);
-    assert.match(body, /Across your two easy JavaScript challenges, the second took \d+ s of active editing; the first took \d+ s\./);
-    assert.match(body, /Across your two solves, each took 2 submissions\./);
-    assert.doesNotMatch(body, /typically|Mostly|You iterate|You're getting/);
+    assert.match(body, /Across your two easy JavaScript challenges, the first took \d+ s of active editing and the latest \d+ s\./);
+    assert.match(body, /Across your two solves, none passed on the first submission; a typical one took 2 submissions\./);
+    assert.doesNotMatch(body, /Mostly|faster|improv|You're getting/);
     assert.doesNotMatch(body, FORBIDDEN);
     assert.match(await page.locator(".report-action").innerText(), /^Next: JS-003 · /);
-    assert.equal(await page.locator(".report-discover li", { hasText: "Has your pace changed?" }).count(), 0, "answered, so not listed");
+    assert.equal(await page.locator(".report-discover li", { hasText: "How did later solves compare with earlier ones?" }).count(), 0, "answered, so not listed");
     assert.ok(await page.locator(".report-takeaways li").count() <= 3);
     await noOverflow(page, "two solves");
     await shot(page, "3-two");
@@ -234,10 +234,11 @@ for (const device of DEVICES) {
       assert.equal(await page.locator(href).count(), 1, `${href} answer exists`);
     }
     const body = await text(page);
-    assert.match(body, /You're getting faster at easy JavaScript|Your recent easy JavaScript solves took longer|Steady at easy JavaScript/);
-    assert.match(body, /Does your confidence match the result\?/);
-    assert.match(body, /When you felt sure, your first submission passed \d of \d times; when unsure, \d of \d\./);
-    assert.match(body, /Mostly JavaScript \(5 solved\), then Python \(1 solved\)\./);
+    assert.match(body, /Across your four easy JavaScript challenges, the earlier 2 /);
+    assert.match(body, /How sure were you, and how did the first submission go\?/);
+    assert.match(body, /the first submission passed \d of \d times you said you were sure, and \d of \d times you said unsure\./);
+    assert.match(body, /Across your six solved challenges: JavaScript 5, Python 1\./);
+    assert.doesNotMatch(body, /Mostly|faster|improv|You're getting/);
     assert.doesNotMatch(body, FORBIDDEN);
     assert.equal(await page.locator(".report-question .report-fyi").count(), 0, "no comparison in any answer");
     assert.match(body, /Comparisons with other players and with AI models aren't shown/, "only the one line saying why");
