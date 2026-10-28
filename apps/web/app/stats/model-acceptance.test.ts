@@ -42,10 +42,12 @@ function attempts(): ReportAttempt[] {
 }
 
 /** A stored run through the real projector, at `effort`, with the model's run-start listing. */
-function stored(effort: string, declaredDefault: string | null, model = slot.model): ModelReceipt {
+function stored(effort: string, declaredDefault: string | null, model = slot.model, answeredBy = slot.model): ModelReceipt {
   const projected = modelReceipt(
     { ...slot, condition: canonical({ reasoning: effort }) },
     receiptText((os) => {
+      // The model that actually answered, as the provider reported it.
+      for (const o of os) if (o.type === "model.response") o.data.model = answeredBy;
       const start = os.find((o) => o.type === "model.run-started");
       start.data.request = { model: slot.model, ...(effort === "default" ? {} : { reasoning: { effort } }) };
       const last = os.filter((o) => o.type.startsWith("model.")).at(-1);
@@ -62,7 +64,7 @@ function stored(effort: string, declaredDefault: string | null, model = slot.mod
   );
   assert.equal(projected.state, "completed", "the projector accepted the stored run");
   // A second model is the same validated run under another name (the fixture has one model id).
-  return model === slot.model ? projected : { ...projected, model, reportedModels: [`${model}-2026`] };
+  return model === slot.model ? projected : { ...projected, model, reportedModels: [model] };
 }
 
 /** What Stats shows for these receipt reads, through the bridge and the report. */
@@ -111,6 +113,18 @@ test("provenance: a medium or high run counts only when that model declared it i
   assert.equal(shown(stored("medium", "high")), "omitted", "not this model's default");
   assert.equal(shown(stored("high", null)), "omitted", "missing default metadata is never relabelled");
   assert.equal(shown({ ...stored("high", "high"), try: 2 }), "omitted", "no first try on record");
+  // Never borrowed: trial 1 without its own default declaration isn't made "default" by trial 2's.
+  const borrowed = stats({ [key2]: [], [key1]: [stored("high", null), { ...stored("high", "high"), try: 2 }] });
+  assert.equal(borrowed.model.state, "omitted", "trial 1 lacks its own provenance; trial 2 is not a first try");
+});
+
+test("identity: a run is counted only when the model reported answering is the one requested", () => {
+  // Requested synthetic/model, but the provider reported another model answering: not attributed.
+  const other = stored("high", "high", slot.model, "synthetic/another-model");
+  assert.deepEqual(other.reportedModels, ["synthetic/another-model"]);
+  assert.equal(stats({ [key2]: [], [key1]: [other] }).model.state, "omitted");
+  // The same run answered by the requested model is named as that model.
+  assert.match((stats({ [key2]: [], [key1]: [stored("high", "high")] }).model as any).fyi.text, /synthetic\/model solved it/);
 });
 
 test("negatives: setup mismatch, unfinished runs, stealth and the off switch say nothing", () => {

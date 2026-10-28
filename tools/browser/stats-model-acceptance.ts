@@ -33,6 +33,7 @@ const stored = modelReceipt(
   { ...slot, condition: canonical({ reasoning: "high" }) },
   receiptText((os) => {
     for (const o of os) {
+      if (o.type === "model.response") o.data.model = slot.model; // answered by the model requested
       o.challenge = older.key;
       o.challengeRevision = older.revision;
       if (o.type === "practice.opened") o.data.runtime = runtime;

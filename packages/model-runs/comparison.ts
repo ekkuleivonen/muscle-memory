@@ -128,14 +128,14 @@ export function defaultComparisons(
 ): DefaultComparison[] {
   return [...new Set(receipts.map((r) => r.model))].sort().map((model) => {
     const rows = receipts.filter((r) => r.model === model);
-    const declared = [
-      ...new Set(rows.map((r) => r.defaultReasoning).filter((v) => v != null)),
-    ];
-    const effort = declared.length === 1 ? declared[0] : null;
+    // Each trial on its own provenance: an effort is the default only if that same run's
+    // start-of-run listing declared it so. Never borrowed from another trial of the model.
     const eligible = rows.filter(
       (r) =>
         r.reasoning === "default" ||
-        (effort !== null && r.reasoning === effort),
+        (r.defaultReasoning != null &&
+          r.defaultReasoning !== "default" &&
+          r.reasoning === r.defaultReasoning),
     );
     // Prefer explicit provider-default protocol if present. No fallback to a different effort.
     const explicit = eligible.filter((r) => r.reasoning === "default");
