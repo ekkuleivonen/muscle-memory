@@ -78,18 +78,19 @@ const humanOmitted = (reason: HumanFyiReason) => ({
   action: reason === "age-missing" ? AGE_ACTION : reason === "too-few" || reason === "unavailable" ? REVIEW_ACTION : null,
 });
 
-test("activated for humans only: the cohort is requested, models request nothing and say they're off", () => {
+test("activated: both lines request exactly their pairs, and nothing shows while reads load", () => {
   assert.equal(process.env.NEXT_PUBLIC_STATS_COMPARISON_PREVIEW, undefined);
-  assert.deepEqual(
-    comparisonRequests([attempt], catalog),
-    { cohorts: [{ challenge: "JS-001", revision }], receipts: [], lengths: [] },
-    "the human cohort only: no receipt or code-length read",
-  );
+  const pair = { challenge: "JS-001", revision };
+  assert.deepEqual(comparisonRequests([attempt], catalog), {
+    cohorts: [pair],
+    receipts: [pair],
+    lengths: [{ ...pair, attempt: "a1" }],
+  });
   const c = comparisons([attempt], catalog, stored("25-34"), comparisonRequests([attempt], catalog), { cohorts: {}, receipts: {}, lengths: {} });
-  assert.deepEqual(c, { human: humanOmitted("loading"), model: omitted("off") });
+  assert.deepEqual(c, { human: humanOmitted("loading"), model: omitted("loading") });
   const r = buildReport({ catalog, progress: {}, attempts: [attempt], profile: null, comparisons: c });
   assert.deepEqual(r.comparisons, []);
-  assert.deepEqual(r.comparisonNotes.map((n) => n.text), ["AI models: a line about stored model runs on a challenge you solved isn't switched on yet."]);
+  assert.deepEqual(r.comparisonNotes, [], "nothing while a read is in flight");
 });
 
 test("every omission reason reads as its real prerequisite, thresholds from the helpers' own exports", () => {

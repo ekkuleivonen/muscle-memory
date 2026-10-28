@@ -127,6 +127,9 @@ export function modelFyi(
         const outcome = r && OUTCOME[r.state];
         // "First try" must be literal: a model whose try 1 is absent isn't described by a later try.
         if (!r || r.try !== 1 || !outcome || receiptMatch(r, a.conditions) !== "matched") return [];
+        // The run is named by the model requested; only count it when that same model is the one
+        // reported answering. A different reported identity can't be verified as an alias: omit it.
+        if (r.reportedModels.length !== 1 || r.reportedModels[0] !== r.model) return [];
         const length =
           outcome === "solved" && Number.isSafeInteger(r.finalCodeLength) && r.finalCodeLength! > 0
             ? r.finalCodeLength

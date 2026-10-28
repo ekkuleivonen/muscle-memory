@@ -206,3 +206,14 @@ test("human length follows the latest successful submitted artifact, never later
   ] as const)
     assert.equal(solvedLength(rows as any, "JS-900", revision, "attempt"), null, why);
 });
+
+test("default provenance is per trial: a trial never borrows another trial's declared default", () => {
+  const own = receipt("high", "high");
+  const unproven = receipt("high", null);
+  // Trial 1 has no declaration of its own; trial 2 declares high. Trial 1 is not a default run.
+  const chosen = defaultComparisons([unproven, { ...own, try: 2 }])[0].receipt;
+  assert.notEqual(chosen?.try, 1, "trial 1 not relabelled default");
+  assert.equal(chosen?.try, 2, "only trial 2 carries its own default provenance");
+  assert.equal(defaultComparisons([unproven])[0].receipt, null);
+  assert.equal(defaultComparisons([own])[0].receipt?.try, 1);
+});

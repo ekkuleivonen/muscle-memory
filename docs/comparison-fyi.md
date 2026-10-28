@@ -64,8 +64,11 @@ first-submission result beside it: the report scores compile and runtime errors,
 `unavailable` (no stored results readable), `unmatched` (no finished run with the same runtime and
 diagnostics setting).
 
-Each model counts once: its first provider-default try, failures included; conflicting duplicates
-drop that model. Queued, running, missing, incompatible and infrastructure-failed runs are left out,
+Each model counts once: its first try (try 1) at the provider default, failures included; conflicting
+duplicates drop that model. A trial is a default run only on its own provenance (reasoning "default",
+or the effort that same run's start-of-run listing declared as the default), never borrowed from
+another trial. A run is counted only when the model reported answering is the model requested;
+another reported identity is not attributed. Queued, running, missing, incompatible and infrastructure-failed runs are left out,
 never counted as failures. There is no minimum number of models: these are observed runs, said as such.
 
 ```ts

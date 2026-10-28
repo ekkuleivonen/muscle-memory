@@ -52,7 +52,7 @@ const cohort = (passed: number, failed: number) =>
   );
 const receipt = (model: string, over: Partial<ModelReceipt> = {}): ModelReceipt => ({
   model,
-  reportedModels: [`${model}-synthetic`],
+  reportedModels: [model],
   reasoning: "default",
   defaultReasoning: "default",
   finalCodeLength: 300,

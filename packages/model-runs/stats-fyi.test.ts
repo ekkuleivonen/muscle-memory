@@ -132,6 +132,8 @@ test("runtime, diagnostics, reported-model and unfinished mismatches are withhel
   assert.deepEqual(run(off({ runtime: { ...runtime, version: "other" } })), { state: "omitted", reason: "unmatched" });
   assert.deepEqual(run(off({ features: ["edit-code-tool"] })), { state: "omitted", reason: "unmatched" });
   assert.deepEqual(run(off({ reportedModels: [] })), { state: "omitted", reason: "unmatched" });
+  // A different model reported answering than the one requested: never attributed to the requested one.
+  assert.deepEqual(run(three.map((r) => ({ ...r, reportedModels: [`${r.model}-other`] }))), { state: "omitted", reason: "unmatched" });
   for (const state of ["queued", "running", "missing", "incompatible", "infrastructure-failed", "receipt-unavailable"] as const)
     assert.deepEqual(run(off({ state, finalCodeLength: null })), { state: "omitted", reason: "unmatched" }, state);
   // An unfinished run beside finished ones is left out of the account, not counted as a failure.

@@ -31,7 +31,7 @@ export const NO_COMPARISONS: ComparisonRequests = { cohorts: [], receipts: [], l
  * The model line's switch, off until its release is decided (ENG-376 owns integration and
  * activation). Human lines follow the cohort build switch, `COHORTS_ENABLED`.
  */
-export const MODEL_FYI_ENABLED = false;
+export const MODEL_FYI_ENABLED = true;
 
 /**
  * A development build may preview both lines against synthetic replies (the browser check serves
