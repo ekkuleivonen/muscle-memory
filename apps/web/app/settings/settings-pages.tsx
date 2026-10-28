@@ -199,7 +199,7 @@ function ComparisonPrivacyStatus() {
                 ? "Your current settings differ from the server. Review them before applying; another tab may have changed them."
                 : view.status === "deleted"
                   ? "The server marked this browser for deletion. Keep its deletion key until the request is confirmed."
-                  : "Settings apply on this device now. Server confirmation is pending: it needs a connection, and a browser is only known to the server once its first practice has uploaded. Retry after that."}
+                  : "Saved on this device. Server confirmation is pending. Even online, this browser may still be waiting for its first practice to upload, which the server needs before it can confirm anything; nothing is included until it confirms. Retry after your first saved practice."}
       </p>
       {view.status === "conflict" && (
         <p className="t-dim">

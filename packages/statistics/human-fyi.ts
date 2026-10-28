@@ -55,14 +55,31 @@ export type HumanFyiReason =
   | "unavailable"
   /** A valid read, but no exactly matching group with at least 20 browsers behind the metric. */
   | "too-few";
+/** A link Stats may offer beside an omitted line; fixed routes only. */
+export interface FyiAction {
+  label: string;
+  href: string;
+}
 export type HumanFyiResult =
   | { state: "shown"; fyi: HumanFyi }
-  | { state: "omitted"; reason: HumanFyiReason };
+  | { state: "omitted"; reason: HumanFyiReason; action: FyiAction | null };
 
 /** The fixed settings route that lets a viewer add the optional age answer, returning to Stats. */
 export const AGE_FORM = "/settings/profile/age?from=stats-comparisons";
 /** Where the server-confirmed comparison settings are shown and can be applied. */
 export const PRIVACY_SETTINGS = "/settings/privacy";
+/** Only for an unanswered age. Never offered to someone who answered 16–17. */
+export const AGE_ACTION: FyiAction = { label: "Add your age band (optional)", href: AGE_FORM };
+/**
+ * For an adult whose line is unavailable or too few. Stats can't know the server's record from
+ * this device, so the action is neutral: it never says settings are unconfirmed or unshared.
+ */
+export const REVIEW_ACTION: FyiAction = { label: "Review comparison settings", href: PRIVACY_SETTINGS };
+const ACTION: Partial<Record<HumanFyiReason, FyiAction>> = {
+  "age-missing": AGE_ACTION,
+  unavailable: REVIEW_ACTION,
+  "too-few": REVIEW_ACTION,
+};
 
 type Viewer = { age?: string; stealth?: boolean; signedOut?: boolean } | null;
 
@@ -77,7 +94,11 @@ export function humanFyiCandidates(
   }));
 }
 
-const omitted = (reason: HumanFyiReason): HumanFyiResult => ({ state: "omitted", reason });
+const omitted = (reason: HumanFyiReason): HumanFyiResult => ({
+  state: "omitted",
+  reason,
+  action: ACTION[reason] ?? null,
+});
 
 export function humanFyi(
   attempts: readonly AttemptSummary[],

@@ -1,14 +1,15 @@
 /**
  * At most one tiny model comparison for Stats, about one named solved attempt and the stored model
- * runs of that exact challenge revision with the same runtime and diagnostics setting. Models are
- * taken one result each (first try at the provider-default reasoning, failures included,
- * conflicting duplicates dropped: `defaultComparisons`), never the best of several.
+ * runs of that exact challenge revision with the same runtime and diagnostics setting. Each model
+ * counts once: its first try at the provider-default reasoning, failures included, conflicting
+ * duplicates dropped (`defaultComparisons`), never the best of several.
  *
- * Preferably code length: the player's passing code against the median of models that solved it,
- * in Unicode code points including whitespace, said neutrally (length is not a score). Without
- * the player's own local code length, the models' outcome on the task instead. One try per model
- * is an observation, not a success rate. Submissions and time are never compared: a person passes
- * the examples before submitting and a model needn't, and editing time isn't API latency.
+ * These are observed runs, not a population: one matched run is said as that named model's result;
+ * several are said with their actual count, solved of finished. With the player's own local code
+ * length, the line gives code length (Unicode code points, whitespace included; length is not a
+ * score); otherwise the outcome. One try per model is not a success rate. Submissions and time are
+ * never compared: a person passes the examples before submitting and a model needn't, and editing
+ * time isn't API latency.
  */
 import type { AttemptSummary } from "../developer-profile/derive";
 import { fyiCandidates, type CatalogEntry } from "../statistics/fyi-candidates";
@@ -21,30 +22,32 @@ export interface ModelReceiptsRead {
   revision: string;
   receipts: readonly ModelReceipt[] | "loading" | "unavailable";
 }
-interface Named {
+export type RunOutcome = "solved" | "stopped" | "budget" | "refused" | "error";
+/** One matched model's first default try. Code-free: a length at most. */
+export interface ModelRun {
+  model: string;
+  outcome: RunOutcome;
+  /** The solving code's length, when it solved and the length is recorded. */
+  codeLength: number | null;
+}
+export interface ModelFyi {
+  kind: "code-length" | "outcome";
   attempt: string;
   challenge: string;
   title: string;
   revision: string;
+  /** Every matched finished run, by model id: the whole account, failures included. */
+  runs: ModelRun[];
+  solved: number;
+  ran: number;
+  /** code-length only: the player's passing code, in characters. */
+  yours: number | null;
+  /** code-length only: the one solving run's length, or the median of the solving runs' lengths. */
+  modelLength: number | null;
+  /** How many solving runs `modelLength` is drawn from. */
+  lengthRuns: number;
   text: string;
 }
-export type ModelFyi =
-  | (Named & {
-      kind: "code-length";
-      /** The player's passing code, in characters (code points, whitespace included). */
-      yours: number;
-      modelMedian: number;
-      /** Matched models that solved it, each counted once. */
-      models: number;
-      /** Matched models whose run finished, solved or not: the denominator is always shown. */
-      ran: number;
-    })
-  | (Named & {
-      kind: "outcome";
-      solved: number;
-      /** Matched models whose run finished (solved, stopped, budget, refused or error). */
-      ran: number;
-    });
 export type ModelFyiReason =
   /** Not requested, or the viewer is in stealth or signed out. */
   | "off"
@@ -53,17 +56,26 @@ export type ModelFyiReason =
   | "loading"
   /** No stored model results could be read for the candidates. */
   | "unavailable"
-  /** Results exist, but none ran with the same runtime and diagnostics setting. */
-  | "unmatched"
-  /** Fewer than three matched models to describe. */
-  | "too-few";
+  /** No finished model run with the same runtime and diagnostics setting. */
+  | "unmatched";
 export type ModelFyiResult =
   | { state: "shown"; fyi: ModelFyi }
   | { state: "omitted"; reason: ModelFyiReason };
 
-/** Fewer models than this would describe one or two runs, not a pattern. */
-export const MIN_MODELS = 3;
-const FINISHED: readonly ModelReceipt["state"][] = ["completed", "stopped", "budget", "refused", "error"];
+const OUTCOME: Partial<Record<ModelReceipt["state"], RunOutcome>> = {
+  completed: "solved",
+  stopped: "stopped",
+  budget: "budget",
+  refused: "refused",
+  error: "error",
+};
+const DID: Record<RunOutcome, string> = {
+  solved: "solved it",
+  stopped: "stopped without solving it",
+  budget: "ran out of its budget without solving it",
+  refused: "refused it",
+  error: "ended with an error without solving it",
+};
 
 /** Which revisions to request and, for the local code-length read, which attempts; at most three. */
 export function modelFyiCandidates(
@@ -96,8 +108,7 @@ export function modelFyi(
   const candidates = fyiCandidates(attempts, catalog, ["first", "repeat"]);
   if (!candidates.length) return omitted("no-attempt");
   let loading = false,
-    read = false,
-    matchedAny = false;
+    read = false;
   for (const c of candidates) {
     const a = c.attempt;
     const bound = reads.filter((r) => r.challenge === a.challenge && r.revision === a.revision);
@@ -109,54 +120,60 @@ export function modelFyi(
     }
     if (receipts === "unavailable" || !Array.isArray(receipts)) continue;
     read = true;
-    const matched = defaultComparisons(receipts)
-      .map((d) => d.receipt)
-      .filter(
-        (r): r is ModelReceipt =>
-          r !== null && receiptMatch(r, a.conditions) === "matched",
-      );
-    if (matched.length) matchedAny = true;
-    const named = {
-      attempt: a.attempt,
-      challenge: a.challenge,
-      title: c.title,
-      revision: a.revision,
-    };
+    // Queued, running, missing and incompatible runs never finished: not a failure, not counted.
+    const runs: ModelRun[] = defaultComparisons(receipts)
+      .flatMap((d) => {
+        const r = d.receipt;
+        const outcome = r && OUTCOME[r.state];
+        if (!r || !outcome || receiptMatch(r, a.conditions) !== "matched") return [];
+        const length =
+          outcome === "solved" && Number.isSafeInteger(r.finalCodeLength) && r.finalCodeLength! > 0
+            ? r.finalCodeLength
+            : null;
+        return [{ model: r.model, outcome, codeLength: length }];
+      })
+      .sort((x, y) => x.model.localeCompare(y.model));
+    if (!runs.length) continue;
+    const solved = runs.filter((r) => r.outcome === "solved").length;
+    const lengths = runs.flatMap((r) => (r.codeLength === null ? [] : [r.codeLength]));
     const where = `${c.title} (current version, same runtime and diagnostics)`;
-    const finished = matched.filter((r) => FINISHED.includes(r.state));
     const yours = localLengths[a.attempt];
-    const lengths = matched
-      .filter((r) => r.state === "completed")
-      .map((r) => r.finalCodeLength)
-      .filter((n): n is number => Number.isSafeInteger(n) && n! > 0);
-    if (Number.isSafeInteger(yours) && yours > 0 && lengths.length >= MIN_MODELS) {
-      const m = median(lengths);
-      return {
-        state: "shown",
-        fyi: {
-          ...named,
-          kind: "code-length",
-          yours,
-          modelMedian: m,
-          models: lengths.length,
-          ran: finished.length,
-          text: `On ${where}, your passing code was ${yours} characters; ${lengths.length} of ${finished.length} models solved it on their first try at their default setting, with a median of ${m}. Counts include whitespace; length isn't a score.`,
-        },
-      };
+    const own = Number.isSafeInteger(yours) && yours > 0 ? yours : null;
+    const one = runs.length === 1 ? runs[0] : null;
+    const codeLength = own !== null && lengths.length > 0;
+    const modelLength = codeLength ? median(lengths) : null;
+    let text: string;
+    if (one)
+      text = codeLength
+        ? `On ${where}, your passing code was ${own} characters; ${one.model} solved it on its first try at its default setting with ${modelLength}. One observed run; length isn't a score.`
+        : `On ${where}, ${one.model} ${DID[one.outcome]} on its first try at its default setting. One observed run, not a success rate.`;
+    else {
+      const account = `${solved} of ${runs.length} models solved it on their first try at their default setting`;
+      text = codeLength
+        ? `On ${where}, your passing code was ${own} characters; ${account}, ${
+            lengths.length === 1
+              ? `and the solving run's code was ${modelLength}`
+              : `with a median of ${modelLength} across those ${lengths.length} solving runs`
+          }. Length isn't a score.`
+        : `On ${where}, ${account}. One try each, not a success rate.`;
     }
-    if (finished.length >= MIN_MODELS) {
-      const solved = finished.filter((r) => r.state === "completed").length;
-      return {
-        state: "shown",
-        fyi: {
-          ...named,
-          kind: "outcome",
-          solved,
-          ran: finished.length,
-          text: `On ${where}, ${solved} of ${finished.length} models solved it on their first try at their default setting. One try each, not a success rate.`,
-        },
-      };
-    }
+    return {
+      state: "shown",
+      fyi: {
+        kind: codeLength ? "code-length" : "outcome",
+        attempt: a.attempt,
+        challenge: a.challenge,
+        title: c.title,
+        revision: a.revision,
+        runs,
+        solved,
+        ran: runs.length,
+        yours: codeLength ? own : null,
+        modelLength,
+        lengthRuns: codeLength ? lengths.length : 0,
+        text,
+      },
+    };
   }
-  return omitted(loading ? "loading" : !read ? "unavailable" : matchedAny ? "too-few" : "unmatched");
+  return omitted(loading ? "loading" : read ? "unmatched" : "unavailable");
 }

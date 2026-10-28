@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { AttemptSummary } from "../developer-profile/derive";
 import { cohortResult, type CohortRead } from "./cohort";
-import { humanFyi, humanFyiCandidates, type HumanCohortRead } from "./human-fyi";
+import { AGE_ACTION, REVIEW_ACTION, humanFyi, humanFyiCandidates, type HumanCohortRead } from "./human-fyi";
 
 const revision = `sha256:${"a".repeat(64)}`;
 const runtime = { id: "javascript", version: "synthetic" };
@@ -77,51 +77,51 @@ test("the metric uses its own denominator, not everyone who started", () => {
   const r = run(group(10, 10, 5));
   assert.equal(r.state === "shown" && r.fyi.browsers, "20–49");
   // 20 started but only 19 scored: the share is withheld, so nothing is said.
-  assert.deepEqual(run(group(9, 10, 1)), { state: "omitted", reason: "too-few" });
+  assert.deepEqual(run(group(9, 10, 1)), { state: "omitted", reason: "too-few", action: REVIEW_ACTION });
 });
 
 test("19 browsers, a repeat group, or any setup mismatch is too few, never a near match", () => {
-  assert.deepEqual(run(group(9, 10)), { state: "omitted", reason: "too-few" });
-  assert.deepEqual(run(group(9, 11, 0, "repeat")), { state: "omitted", reason: "too-few" });
+  assert.deepEqual(run(group(9, 10)), { state: "omitted", reason: "too-few", action: REVIEW_ACTION });
+  assert.deepEqual(run(group(9, 11, 0, "repeat")), { state: "omitted", reason: "too-few", action: REVIEW_ACTION });
   const other = (cond: string[]) => run(group(9, 11), { a: attempt({ conditions: cond }) });
   const [e, rt] = attempt().conditions;
   for (const cond of [
     [e, `Runtime: ${JSON.stringify({ ...runtime, version: "other" })}`],
     [`Editor: CodeMirror; features: syntax-highlighting`, rt],
   ])
-    assert.deepEqual(other(cond), { state: "omitted", reason: "too-few" });
+    assert.deepEqual(other(cond), { state: "omitted", reason: "too-few", action: REVIEW_ACTION });
 });
 
 test("unknown, under-18, stealth and signed-out viewers get no adult comparison", () => {
-  assert.deepEqual(run(group(9, 11), { viewer: { stealth: false } }), { state: "omitted", reason: "age-missing" });
-  assert.deepEqual(run(group(9, 11), { viewer: { age: "16-17" } }), { state: "omitted", reason: "not-adult" });
-  assert.deepEqual(run(group(9, 11), { viewer: { ...adult, stealth: true } }), { state: "omitted", reason: "off" });
-  assert.deepEqual(run(group(9, 11), { viewer: { ...adult, signedOut: true } }), { state: "omitted", reason: "off" });
-  assert.deepEqual(run(group(9, 11), { viewer: null }), { state: "omitted", reason: "off" });
+  assert.deepEqual(run(group(9, 11), { viewer: { stealth: false } }), { state: "omitted", reason: "age-missing", action: AGE_ACTION });
+  assert.deepEqual(run(group(9, 11), { viewer: { age: "16-17" } }), { state: "omitted", reason: "not-adult", action: null });
+  assert.deepEqual(run(group(9, 11), { viewer: { ...adult, stealth: true } }), { state: "omitted", reason: "off", action: null });
+  assert.deepEqual(run(group(9, 11), { viewer: { ...adult, signedOut: true } }), { state: "omitted", reason: "off", action: null });
+  assert.deepEqual(run(group(9, 11), { viewer: null }), { state: "omitted", reason: "off", action: null });
 });
 
 test("missing, invalidated, disabled and loading reads say nothing and invent nothing", () => {
-  const unavailable = { state: "omitted", reason: "unavailable" };
+  const unavailable = { state: "omitted", reason: "unavailable", action: REVIEW_ACTION };
   // The serving path returns "unavailable" for a missing, expired or invalidated snapshot.
   assert.deepEqual(run("unavailable"), unavailable);
   assert.deepEqual(run({ ...group(9, 11), state: "unavailable", groups: [] }), unavailable);
   assert.deepEqual(run({ ...group(9, 11), state: "disabled" }), unavailable);
   assert.deepEqual(run({ ...group(9, 11), state: "earlier-version" }), unavailable);
   assert.deepEqual(run({ ...group(9, 11), minimum: 5 }), unavailable);
-  assert.deepEqual(run("loading"), { state: "omitted", reason: "loading" });
-  assert.deepEqual(humanFyi([attempt()], catalog, adult, undefined, true), { state: "omitted", reason: "off" });
-  assert.deepEqual(humanFyi([attempt()], catalog, adult, bound(group(9, 11))), { state: "omitted", reason: "off" }, "build switch off");
+  assert.deepEqual(run("loading"), { state: "omitted", reason: "loading", action: null });
+  assert.deepEqual(humanFyi([attempt()], catalog, adult, undefined, true), { state: "omitted", reason: "off", action: null });
+  assert.deepEqual(humanFyi([attempt()], catalog, adult, bound(group(9, 11))), { state: "omitted", reason: "off", action: null }, "build switch off");
 });
 
 test("a read must be bound to the attempt's own challenge and current revision", () => {
   const other = `sha256:${"b".repeat(64)}`;
-  assert.deepEqual(run(group(9, 11), { over: { revision: other } }), { state: "omitted", reason: "unavailable" });
-  assert.deepEqual(run(group(9, 11), { over: { challenge: "JS-002" } }), { state: "omitted", reason: "unavailable" });
+  assert.deepEqual(run(group(9, 11), { over: { revision: other } }), { state: "omitted", reason: "unavailable", action: REVIEW_ACTION });
+  assert.deepEqual(run(group(9, 11), { over: { challenge: "JS-002" } }), { state: "omitted", reason: "unavailable", action: REVIEW_ACTION });
   // Two answers for the same revision: neither is trusted.
   const twice = [...bound(group(9, 11)), ...bound(group(19, 1))];
-  assert.deepEqual(humanFyi([attempt()], catalog, adult, twice, true), { state: "omitted", reason: "unavailable" });
+  assert.deepEqual(humanFyi([attempt()], catalog, adult, twice, true), { state: "omitted", reason: "unavailable", action: REVIEW_ACTION });
   // An attempt on an older revision is not a candidate at all.
-  assert.deepEqual(run(group(9, 11), { a: attempt({ revision: other }) }), { state: "omitted", reason: "no-attempt" });
+  assert.deepEqual(run(group(9, 11), { a: attempt({ revision: other }) }), { state: "omitted", reason: "no-attempt", action: null });
 });
 
 test("candidates are solved first attempts with one known setup, newest first, at most three", () => {
@@ -139,5 +139,18 @@ test("candidates are solved first attempts with one known setup, newest first, a
     humanFyiCandidates([attempt({ conditions: ["Editor: CodeMirror; features: ai-completion", attempt().conditions[1]] })], catalog),
     [],
   );
-  assert.deepEqual(humanFyi([], catalog, adult, [], true), { state: "omitted", reason: "no-attempt" });
+  assert.deepEqual(humanFyi([], catalog, adult, [], true), { state: "omitted", reason: "no-attempt", action: null });
+});
+
+test("omitted lines offer only fixed, neutral next steps; a 16–17 answer gets no prompt", () => {
+  const actionFor = (viewer: any, read: HumanCohortRead["read"] = group(9, 10)) =>
+    (humanFyi([attempt()], catalog, viewer, bound(read), true) as any).action;
+  assert.deepEqual(actionFor({}), { label: "Add your age band (optional)", href: "/settings/profile/age?from=stats-comparisons" });
+  assert.equal(actionFor({ age: "16-17" }), null);
+  assert.deepEqual(actionFor(adult), { label: "Review comparison settings", href: "/settings/privacy" });
+  assert.deepEqual(actionFor(adult, "unavailable"), REVIEW_ACTION);
+  assert.equal(actionFor(adult, "loading"), null);
+  assert.equal(actionFor({ ...adult, stealth: true }), null);
+  // Neutral: never asserts that this browser's server record is missing or unconfirmed.
+  assert.doesNotMatch(JSON.stringify([AGE_ACTION, REVIEW_ACTION]), /confirm|shar|not counted/i);
 });

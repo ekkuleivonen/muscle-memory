@@ -58,34 +58,54 @@ const run = (
   a = attempt(),
 ) => modelFyi([a], catalog, viewer, bound(receipts), lengths);
 
-test("code length: the player's passing code beside the median of matched solving models", () => {
-  const r = run(three);
-  assert.equal(r.state, "shown");
+test("several matched runs: the player's code beside the solving runs' median, with the whole account", () => {
+  const r = run([...three, receipt("m/d", { state: "error", finalCodeLength: null })]);
   if (r.state !== "shown" || r.fyi.kind !== "code-length") return assert.fail("code length expected");
-  assert.equal(r.fyi.yours, 140);
-  assert.equal(r.fyi.modelMedian, 120);
-  assert.equal(r.fyi.models, 3);
-  assert.equal(r.fyi.ran, 3);
+  assert.deepEqual([r.fyi.yours, r.fyi.modelLength, r.fyi.lengthRuns, r.fyi.solved, r.fyi.ran], [140, 120, 3, 3, 4]);
   assert.equal(
     r.fyi.text,
-    "On Synthetic Sum (current version, same runtime and diagnostics), your passing code was 140 characters; 3 of 3 models solved it on their first try at their default setting, with a median of 120. Counts include whitespace; length isn't a score.",
+    "On Synthetic Sum (current version, same runtime and diagnostics), your passing code was 140 characters; 3 of 4 models solved it on their first try at their default setting, with a median of 120 across those 3 solving runs. Length isn't a score.",
   );
-  // Models that ran and failed are always in the denominator, never hidden behind the solvers.
-  const withFailures = run([...three, receipt("m/d", { state: "error", finalCodeLength: null })]);
-  assert.match((withFailures as any).fyi.text, /3 of 4 models solved it/);
   assert.doesNotMatch(r.fyi.text, /shorter|longer|better|worse|%/);
+  assert.deepEqual(r.fyi.runs.map((x) => [x.model, x.outcome]), [["m/a", "solved"], ["m/b", "solved"], ["m/c", "solved"], ["m/d", "error"]]);
 });
 
-test("without the player's local code length, the matched outcome is said instead, failures included", () => {
+test("one matched run is that named model's observed result, with no threshold or population claim", () => {
+  const solo = run([receipt("m/a", { finalCodeLength: 95 })]);
+  assert.equal(
+    (solo as any).fyi.text,
+    "On Synthetic Sum (current version, same runtime and diagnostics), your passing code was 140 characters; m/a solved it on its first try at its default setting with 95. One observed run; length isn't a score.",
+  );
+  for (const [state, said] of [
+    ["stopped", "stopped without solving it"],
+    ["budget", "ran out of its budget without solving it"],
+    ["refused", "refused it"],
+    ["error", "ended with an error without solving it"],
+  ] as const) {
+    const r = run([receipt("m/a", { state, finalCodeLength: null })]);
+    if (r.state !== "shown" || r.fyi.kind !== "outcome") return assert.fail(state);
+    assert.equal(
+      r.fyi.text,
+      `On Synthetic Sum (current version, same runtime and diagnostics), m/a ${said} on its first try at its default setting. One observed run, not a success rate.`,
+    );
+  }
+  // Without the player's own local length, a solve is still an observed outcome, not a length.
+  assert.match((run([receipt("m/a")], {}) as any).fyi.text, /m\/a solved it on its first try at its default setting\. One observed run/);
+});
+
+test("without the player's local code length, the outcome account is said, failures included", () => {
   const rows = [...three, receipt("m/d", { state: "error", finalCodeLength: null }), receipt("m/e", { state: "budget", finalCodeLength: null })];
   const r = run(rows, {});
   if (r.state !== "shown" || r.fyi.kind !== "outcome") return assert.fail("outcome expected");
-  assert.equal(r.fyi.solved, 3);
-  assert.equal(r.fyi.ran, 5);
+  assert.deepEqual([r.fyi.solved, r.fyi.ran, r.fyi.yours, r.fyi.modelLength], [3, 5, null, null]);
   assert.equal(
     r.fyi.text,
     "On Synthetic Sum (current version, same runtime and diagnostics), 3 of 5 models solved it on their first try at their default setting. One try each, not a success rate.",
   );
+  // No solving run with recorded code: the outcome, never a length from nothing.
+  const failedOnly = run([receipt("m/a", { state: "stopped", finalCodeLength: null }), receipt("m/b", { state: "refused", finalCodeLength: null })]);
+  assert.equal((failedOnly as any).fyi.kind, "outcome");
+  assert.match((failedOnly as any).fyi.text, /0 of 2 models solved it/);
 });
 
 test("each model counts once: first default try, including its failure, never a later success", () => {
@@ -97,13 +117,11 @@ test("each model counts once: first default try, including its failure, never a 
     receipt("m/c"),
   ];
   const r = run(rows, {});
-  if (r.state !== "shown" || r.fyi.kind !== "outcome") return assert.fail("outcome expected");
+  if (r.state !== "shown") return assert.fail("shown expected");
   assert.deepEqual([r.fyi.solved, r.fyi.ran], [2, 3]);
-  // Two solving models and a stopped one: not three code lengths, so no length comparison.
-  assert.equal(run(rows).state === "shown" && (run(rows) as any).fyi.kind, "outcome");
-  // Conflicting duplicates of a model's first try are dropped, not chosen between.
-  const conflicting = [...three, receipt("m/a", { finalCodeLength: 91 })];
-  assert.deepEqual(run(conflicting, {}), { state: "omitted", reason: "too-few" });
+  // Conflicting duplicates of a model's first try drop that model, not choose between them.
+  const conflicting = run([...three, receipt("m/a", { finalCodeLength: 91 })], {});
+  assert.deepEqual([(conflicting as any).fyi.solved, (conflicting as any).fyi.ran], [2, 2]);
 });
 
 test("runtime, diagnostics, reported-model and unfinished mismatches are withheld, never counted as failures", () => {
@@ -111,10 +129,11 @@ test("runtime, diagnostics, reported-model and unfinished mismatches are withhel
   assert.deepEqual(run(off({ runtime: { ...runtime, version: "other" } })), { state: "omitted", reason: "unmatched" });
   assert.deepEqual(run(off({ features: ["edit-code-tool"] })), { state: "omitted", reason: "unmatched" });
   assert.deepEqual(run(off({ reportedModels: [] })), { state: "omitted", reason: "unmatched" });
-  // Queued, running and missing runs carry no runtime: never a matched run, never a failure.
-  assert.deepEqual(run(off({ state: "missing", runtime: null, finalCodeLength: null })), { state: "omitted", reason: "unmatched" });
-  assert.deepEqual(run(three.slice(0, 2)), { state: "omitted", reason: "too-few" });
-  // An AI-completion editor is not a like-for-like setup at all.
+  for (const state of ["queued", "running", "missing", "incompatible", "infrastructure-failed", "receipt-unavailable"] as const)
+    assert.deepEqual(run(off({ state, finalCodeLength: null })), { state: "omitted", reason: "unmatched" }, state);
+  // An unfinished run beside finished ones is left out of the account, not counted as a failure.
+  const mixed = run([...three, receipt("m/d", { state: "missing", runtime: null, finalCodeLength: null })], {});
+  assert.deepEqual([(mixed as any).fyi.solved, (mixed as any).fyi.ran], [3, 3]);
   const ai = attempt({ conditions: ["Editor: CodeMirror; features: ai-completion", attempt().conditions[1]] });
   assert.deepEqual(run(three, {}, ai), { state: "omitted", reason: "no-attempt" });
 });
