@@ -1,5 +1,8 @@
 /** ENG-374 synthetic acceptance: the /stats portrait from empty to a rich history.
  * STATS_ORIGIN=http://localhost:3080 STATS_BROWSER=chromium|webkit node --import tsx tools/browser/stats-portrait-check.ts
+ * ENG-394 adds the visuals and the share preview: copy, Web Share (stubbed, never opened),
+ * download, Clipboard and Web Share missing, repeated presses, stealth, a private boundary and
+ * Back while it is open. Nothing is shared for real.
  * Every context is fresh and synthetic: a seeded profile and fixture attempts in IndexedDB, paced
  * and dated differently so the report has something to say. Requests off the origin and ingest are
  * stopped in the browser; uploaded history is a synthetic empty page, a slow page or a 503, never
@@ -64,6 +67,9 @@ type History = "empty-page" | "slow" | "down";
 
 const browser = await (engine === "webkit" ? webkit : chromium).launch();
 let blocked = 0;
+let leaked = 0;
+/** Console errors and page errors, other than the synthetic 503s this check serves on purpose. */
+const errors: string[] = [];
 // The report shows no model comparison, so it must not ask for model results either.
 let receiptReads = 0;
 const log: string[] = [];
@@ -76,7 +82,7 @@ const step = (s: string) => {
 async function open(
   device: Device,
   rows: StoredRecord[],
-  o: { history?: History; stealth?: boolean; init?: string } = {},
+  o: { history?: History; stealth?: boolean; init?: string; languages?: string[] } = {},
 ): Promise<{ context: BrowserContext; page: Page; reads: () => number }> {
   const context = await browser.newContext({
     viewport: { width: device.width, height: device.height },
@@ -84,10 +90,14 @@ async function open(
     isMobile: device.touch && engine === "chromium",
     // Settled pixels: the bars' grow animation is off, so screenshots show their real lengths.
     reducedMotion: "reduce",
+    // A real clipboard to read the copy back from (Chromium); nothing leaves the machine.
+    permissions: engine === "chromium" ? ["clipboard-read", "clipboard-write"] : [],
   });
   let reads = 0;
   await context.route("**/*", async (route) => {
     const url = new URL(route.request().url());
+    // The share summary never leaves the browser: no request carries it.
+    if (/unaided coding practice|challenges? solved/i.test(`${decodeURIComponent(route.request().url())} ${route.request().postData() ?? ""}`)) leaked++;
     if (url.pathname.startsWith("/api/model-receipts")) receiptReads++;
     if (url.origin !== origin || url.pathname.includes("/ingest/")) {
       blocked++;
@@ -131,7 +141,8 @@ async function open(
         createdAt: "2026-10-20T00:00:00.000Z",
         accepted: { version: LEGAL_VERSION, at: "2026-10-20T00:00:00.000Z" },
         stealth: o.stealth ?? false,
-        profile: {},
+        profile: o.languages ? { languages: o.languages } : {},
+        ...(o.languages ? { asked: { languages: { answeredAt: "2026-10-20T00:00:00.000Z" } } } : {}),
       }),
       rows,
       PARTICIPANT,
@@ -139,6 +150,10 @@ async function open(
   );
   if (o.init) await context.addInitScript(o.init);
   const page = await context.newPage();
+  page.on("console", (m) => {
+    if (m.type() === "error" && !/Failed to load resource|Synthetic: storage blocked/.test(m.text())) errors.push(m.text().slice(0, 200));
+  });
+  page.on("pageerror", (e) => errors.push(e.message.slice(0, 200)));
   page.setDefaultTimeout(20000);
   return { context, page, reads: () => reads };
 }
@@ -156,6 +171,87 @@ async function noOverflow(page: Page, where: string) {
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${where}: no sideways scroll`);
 }
 const text = (page: Page) => page.locator(".stats-content").innerText();
+
+type Clip = {
+  state: () => { pending: number; fallbacks: number; textareas: number };
+  settle: (how: "reject" | "resolve", which: number) => void;
+  resetTextareas: () => void;
+};
+/** A Clipboard whose writes wait to be settled by the check, and counters for the select-and-copy fallback. */
+const DEFERRED_CLIPBOARD = `(() => {
+  const pending = [];
+  let fallbacks = 0, textareas = 0;
+  Object.defineProperty(Navigator.prototype, "clipboard", { get: () => ({
+    writeText: () => new Promise((resolve, reject) => pending.push({ resolve, reject })),
+  }) });
+  Document.prototype.execCommand = (command) => (command === "copy" ? (fallbacks++, true) : false);
+  new MutationObserver((list) => {
+    for (const m of list) for (const n of m.addedNodes) if (n.nodeName === "TEXTAREA") textareas++;
+  }).observe(document, { childList: true, subtree: true });
+  window.clip = {
+    state: () => ({ pending: pending.length, fallbacks, textareas }),
+    settle: (how, which) => {
+      const [p] = pending.splice(which, 1);
+      how === "reject" ? p.reject(new DOMException("Synthetic: write refused", "NotAllowedError")) : p.resolve();
+    },
+    resetTextareas: () => { textareas = 0; },
+  };
+})();`;
+
+/**
+ * Opens the share preview by keyboard (desktop) or touch, checks it says only the counts, copies
+ * and downloads exactly the previewed text with no request, then closes, with focus back on the
+ * button. Web Share is stubbed: the sheet is never really opened.
+ */
+async function sharePreview(page: Page, device: Device, name: string, counts: RegExp) {
+  const opener = page.getByRole("button", { name: "Share a summary" });
+  await page.evaluate(() => {
+    (window as unknown as { shared: unknown[] }).shared = [];
+    navigator.share = async (data) => {
+      (window as unknown as { shared: unknown[] }).shared.push(data);
+      throw new DOMException("Synthetic: sheet closed", "AbortError");
+    };
+  });
+  if (device.touch) await opener.tap();
+  else {
+    await opener.focus();
+    await page.keyboard.press("Enter");
+  }
+  const dialog = page.locator("dialog[open]");
+  await dialog.waitFor();
+  const preview = await page.locator(".report-share-preview").innerText();
+  assert.match(preview, /^My unaided coding practice on Muscle Memory\n/);
+  assert.match(preview, counts);
+  assert.match(preview, /Keep your coding skills in practice: https:\/\/\S+$/);
+  assert.doesNotMatch(preview, /JS-|PY-|\d+ (s|min)\b|2026|sure|synthetic|participant|attempt|sha256|undefined|NaN|null/i);
+  // Settled: a touch's tap highlight fades before the picture.
+  await page.waitForTimeout(400);
+  const box = await dialog.boundingBox();
+  assert.ok(box && box.x >= 0 && box.x + box.width <= device.width + 1, "the preview fits the screen");
+  // Every action is in view as the preview opens, without scrolling the dialog.
+  for (const name of ["Copy text", "Share…", "Download"]) {
+    const b = await page.getByRole("button", { name }).boundingBox();
+    assert.ok(b && b.y >= 0 && b.y + b.height <= device.height, `${name} is in view (${b?.y}+${b?.height} of ${device.height})`);
+  }
+  await page.screenshot({ path: `${output}/${engine}-${device.name}-${name}-share.png` });
+  const before = leaked;
+  await page.getByRole("button", { name: "Copy text" }).click();
+  await page.getByText(/^Copied\.$|^Couldn't copy here/).waitFor();
+  if (await page.getByText(/^Copied\.$/).count())
+    assert.equal(await page.evaluate(() => navigator.clipboard.readText()), preview, "copied exactly the preview");
+  await page.getByRole("button", { name: "Share…" }).click();
+  assert.deepEqual(await page.evaluate(() => (window as unknown as { shared: unknown[] }).shared), [{ text: preview }], "text only, no link with data");
+  assert.equal(await page.getByText("Sharing isn't available here").count(), 0, "closing the sheet isn't an error");
+  const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download" }).click()]);
+  const { readFile } = await import("node:fs/promises");
+  assert.equal((await readFile((await download.path())!, "utf8")).trimEnd(), preview.trimEnd(), "downloaded exactly the preview");
+  assert.equal(leaked, before, "nothing about the summary was requested");
+  if (device.touch) await page.getByRole("button", { name: "Close" }).tap();
+  else await page.keyboard.press("Escape");
+  await dialog.waitFor({ state: "detached" });
+  if (!device.touch) assert.ok(await opener.evaluate((e) => e === document.activeElement), "focus back on the button");
+  step(`${device.name}: share preview shows only counts; copy, share and download give exactly it, with no request`);
+}
 const FORBIDDEN = /sha256|revision|harness|receipt|percentile|cohort|evidence|reading time|thinking|undefined|NaN|null/i;
 
 for (const device of DEVICES) {
@@ -206,6 +302,10 @@ for (const device of DEVICES) {
       const d = document.querySelector(".report-discover")!, qs = document.querySelectorAll(".report-question, .report-first");
       return !!(qs[qs.length - 1].compareDocumentPosition(d) & Node.DOCUMENT_POSITION_FOLLOWING);
     }), "the inventory comes after every answer");
+    // Its shape: the solve's submissions in order, with the same in words for screen readers.
+    assert.equal(await page.locator("#q-iterate .report-marks .is-no").count(), 1);
+    assert.match(await page.locator("#q-iterate .report-dots .sr-only").innerText(), /^JS-00\d: didn't pass, passed; 2 submissions$/);
+    await sharePreview(page, device, "2-one", /^1 JavaScript challenge solved$/m);
     await noOverflow(page, "one solve");
     await shot(page, "2-one");
     await whole(page, "2-one");
@@ -226,6 +326,9 @@ for (const device of DEVICES) {
     assert.match(await page.locator(".report-action").innerText(), /^Next: JS-003 · /);
     assert.equal(await page.locator(".report-discover li", { hasText: "How did later solves compare with earlier ones?" }).count(), 0, "answered, so not listed");
     assert.ok(await page.locator(".report-takeaways li").count() <= 3);
+    assert.equal(await page.locator("#q-iterate .report-dots li").count(), 2, "each solve's submissions in order");
+    assert.equal(await page.locator("#q-progress .report-bar").count(), 2, "earlier and later as dotted bars");
+    await sharePreview(page, device, "3-two", /^2 JavaScript challenges solved$/m);
     await noOverflow(page, "two solves");
     await shot(page, "3-two");
     await whole(page, "3-two");
@@ -235,7 +338,7 @@ for (const device of DEVICES) {
 
   // Rich: a few takeaways that lead to their answers; history slow and not blocking.
   {
-    const { context, page, reads } = await open(device, HISTORIES.rich, { history: "slow" });
+    const { context, page, reads } = await open(device, HISTORIES.rich, { history: "slow", languages: ["javascript"] });
     const ms = await report(page, "#q-progress");
     timings[`${device.name} rich: first answer with history pending`] = ms;
     assert.ok(ms < 6000, `the report rendered before the 6 s history reply (${ms} ms)`);
@@ -261,8 +364,16 @@ for (const device of DEVICES) {
     assert.equal(await page.locator(".report-discover li", { hasText: "Did coming back to a challenge change anything?" }).count(), 0, "answered, so not listed");
     assert.doesNotMatch(body, /Mostly|faster|improv|You're getting/);
     assert.doesNotMatch(body, FORBIDDEN);
-    assert.equal(await page.locator(".report-question .report-fyi").count(), 0, "no comparison in any answer");
-    assert.match(body, /Comparisons with other players and with AI models aren't shown/, "only the one line saying why");
+    assert.equal(await page.locator(".report-question .report-fyi:not(:has(a[href^='/settings/profile/languages']))").count(), 0, "no comparison in any answer (only the edit-languages link)");
+    assert.match(body, /Not compared yet\. Other players: [\s\S]*AI models: /, "only the one line saying what each comparison waits on");
+    // A ring for languages (each challenge in one slice), a split bar for usual and other, marks for confidence.
+    assert.match((await page.locator("#q-languages .report-pie").getAttribute("aria-label"))!, /^Challenges worked on, by language: JavaScript 5 solved; Python 1 solved\.$/);
+    assert.match((await page.locator("#q-familiarity .report-split").getAttribute("aria-label"))!, /Usual languages 5 challenges; Other languages 1 challenge/);
+    assert.ok((await page.locator("#q-confidence .report-dots li").count()) >= 2);
+    assert.equal(await page.locator("#q-start .report-pie, #q-start .report-split, #q-start .report-bars").count(), 0, "no picture of two different clocks");
+    const ring = await page.locator(".report-ring").boundingBox();
+    assert.ok(ring && ring.width >= 60, `ring is legible (${ring?.width} px)`);
+    await sharePreview(page, device, "4-rich", /^6 challenges solved\n {2}JavaScript +■+ 5\n {2}Python +■+ 1\nFirst submission passed in \d of 7 solves$/m);
     await noOverflow(page, "rich");
     await shot(page, "4-rich");
     await whole(page, "4-rich");
@@ -305,6 +416,168 @@ for (const device of DEVICES) {
     await context.close();
   }
 
+  // Sharing without Clipboard or Web Share: says what to do instead, and only one dialog however often it's pressed.
+  {
+    const { context, page } = await open(device, HISTORIES.two, {
+      init: `Object.defineProperty(Navigator.prototype, "clipboard", { get: () => undefined }); delete Navigator.prototype.share; Document.prototype.execCommand = () => false;`,
+    });
+    await report(page, "#q-progress");
+    const opener = page.getByRole("button", { name: "Share a summary" });
+    await opener.click();
+    await opener.click({ force: true }).catch(() => {});
+    await page.evaluate(() => (document.querySelector(".report-share-open") as HTMLButtonElement).click());
+    assert.equal(await page.locator("dialog[open]").count(), 1, "repeated presses open one preview");
+    assert.equal(await page.getByRole("button", { name: "Share…" }).count(), 0, "no system share sheet, no button for it");
+    await page.getByRole("button", { name: "Copy text" }).click();
+    await page.getByText("Couldn't copy here. Select the text above and copy it yourself.").waitFor();
+    // The text stays selectable by hand.
+    assert.equal(await page.locator(".report-share-preview").evaluate((e) => getComputedStyle(e).userSelect), "text");
+    await page.keyboard.press("Escape");
+    await page.locator("dialog[open]").waitFor({ state: "detached" });
+    // Reopened: no message left from before.
+    await opener.click();
+    assert.equal((await page.locator(".report-share [role=status]").innerText()).trim(), "");
+    await shot(page, "7-share-unavailable");
+    step(`${device.name}: without Clipboard or Web Share the preview says to copy by hand; repeated presses open one preview`);
+
+    // Stealth while the preview is open (another tab): the report, the preview and its text go.
+    const other = await context.newPage();
+    await other.goto(`${origin}/privacy`);
+    await other.evaluate(() => {
+      const p = JSON.parse(localStorage.getItem("muscle-memory.profile")!);
+      localStorage.setItem("muscle-memory.profile", JSON.stringify({ ...p, stealth: true }));
+    });
+    await page.getByText("You're in stealth, so there's no report here.").waitFor();
+    assert.equal(await page.locator("dialog, .report-share-preview").count(), 0, "no preview or summary left in the page");
+    assert.doesNotMatch(await page.content(), /challenges? solved|unaided coding practice/);
+    await shot(page, "8-stealth-while-sharing");
+    step(`${device.name}: stealth while the preview is open removes the preview and its text`);
+    await context.close();
+  }
+
+  // A Clipboard write still pending when the copy stops being current: when the browser then
+  // refuses it, the old text is never copied the other way, and no Copied or failure shows.
+  {
+    const { context, page } = await open(device, HISTORIES.two, { init: DEFERRED_CLIPBOARD });
+    await report(page, "#q-progress");
+    const share = page.getByRole("button", { name: "Share a summary" });
+    const status = page.locator(".report-share [role=status]");
+    const preview = page.locator(".report-share-preview");
+    const clip = () => page.evaluate(() => (window as unknown as { clip: Clip }).clip.state());
+    const settle = async (how: "reject" | "resolve", which = 0) => {
+      await page.evaluate(([how, which]) => (window as unknown as { clip: Clip }).clip.settle(how as "reject" | "resolve", which as number), [how, which] as const);
+      await page.waitForTimeout(300);
+    };
+    const pending = async (n = 1) => {
+      await page.getByRole("button", { name: "Copy text" }).click();
+      for (let i = 0; i < 50 && (await clip()).pending < n; i++) await page.waitForTimeout(50);
+      assert.equal((await clip()).pending, n, "the Clipboard write is pending");
+    };
+    const noFallback = async (where: string, before: number) => {
+      const c = await clip();
+      assert.equal(c.fallbacks, before, `${where}: no select-and-copy after the copy ended`);
+      assert.equal(c.textareas, 0, `${where}: no textarea of the old text was added`);
+    };
+
+    // Still current: the refusal falls back to select-and-copy, as before.
+    await share.click();
+    await pending();
+    await settle("reject");
+    assert.equal((await clip()).fallbacks, 1, "a current copy still falls back");
+    await status.getByText("Copied.").waitFor();
+    const base = 1;
+    await page.evaluate(() => (window as unknown as { clip: Clip }).clip.resetTextareas());
+
+    // Closed with the write pending.
+    await pending();
+    await page.keyboard.press("Escape");
+    await settle("reject");
+    await noFallback("closed", base);
+    // Closed and reopened with the write pending.
+    await share.click();
+    await pending();
+    await page.keyboard.press("Escape");
+    await share.click();
+    await settle("reject");
+    await noFallback("reopened", base);
+    assert.equal((await status.innerText()).trim(), "", "no message from the earlier copy");
+    // Pressed twice: the first write's late refusal says nothing; the second's success does.
+    await pending(1);
+    await pending(2);
+    await settle("reject", 0);
+    await noFallback("superseded", base);
+    assert.equal((await status.innerText()).trim(), "");
+    await settle("resolve", 0);
+    await status.getByText("Copied.").waitFor();
+    // The summary changes under a pending write (a new solve read from this device).
+    await pending();
+    await page.evaluate(async (rows) => {
+      const db: IDBDatabase = await new Promise((done) => {
+        const r = indexedDB.open("muscle-memory-local-practice", 5);
+        r.onsuccess = () => done(r.result);
+      });
+      await new Promise((done) => {
+        const tx = db.transaction("records", "readwrite");
+        for (const row of rows) tx.objectStore("records").put(row);
+        tx.oncomplete = done;
+      });
+      db.close();
+      window.dispatchEvent(new Event("focus"));
+    }, attempt("PY-001", 2, 3, "sure") as unknown as object[]);
+    await preview.getByText(/Python/).waitFor();
+    await settle("reject");
+    await noFallback("summary changed", base);
+    assert.equal((await status.innerText()).trim(), "");
+    // A private boundary (reset, import, deletion) with the write pending.
+    await pending();
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("muscle-memory:private-boundary", { detail: "start" })));
+    await page.locator("dialog").waitFor({ state: "detached" });
+    await settle("reject");
+    await noFallback("private boundary", base);
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("muscle-memory:private-boundary", { detail: "finish" })));
+    await page.locator("#q-progress").waitFor();
+    // Stealth from another tab with the write pending.
+    await share.click();
+    await pending();
+    const other = await context.newPage();
+    await other.goto(`${origin}/privacy`);
+    await other.evaluate(() => {
+      const p = JSON.parse(localStorage.getItem("muscle-memory.profile")!);
+      localStorage.setItem("muscle-memory.profile", JSON.stringify({ ...p, stealth: true }));
+    });
+    await page.getByText("You're in stealth, so there's no report here.").waitFor();
+    await settle("reject");
+    await noFallback("stealth", base);
+    assert.doesNotMatch(await page.content(), /challenges? solved|unaided coding practice|Copied\./);
+    step(`${device.name}: a pending copy refused after close, reopen, a second press, a new summary, a private boundary or stealth copies nothing and says nothing`);
+    await context.close();
+  }
+
+  // A reset/import/deletion boundary while the preview is open, then Back with it open.
+  {
+    const { context, page } = await open(device, HISTORIES.two);
+    await report(page, "#q-progress");
+    await page.getByRole("button", { name: "Share a summary" }).click();
+    await page.locator("dialog[open]").waitFor();
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("muscle-memory:private-boundary", { detail: "start" })));
+    await page.locator("dialog").waitFor({ state: "detached" });
+    assert.doesNotMatch(await page.content(), /challenges? solved|unaided coding practice/, "stale summary gone at the boundary");
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("muscle-memory:private-boundary", { detail: "finish" })));
+    await page.locator("#q-progress").waitFor();
+    assert.equal(await page.locator("dialog[open]").count(), 0, "the preview doesn't come back on its own");
+    step(`${device.name}: a private boundary while the preview is open removes it; it stays closed after`);
+
+    await page.getByRole("button", { name: "Share a summary" }).click();
+    await page.locator("dialog[open]").waitFor();
+    await page.goBack();
+    await page.waitForURL((u) => !u.pathname.startsWith("/stats"));
+    await page.goForward();
+    await page.locator("#q-progress").waitFor();
+    assert.equal(await page.locator("dialog[open]").count(), 0, "Back then Forward reopens the report, not the preview");
+    step(`${device.name}: Back with the preview open leaves the page; Forward shows the report without it`);
+    await context.close();
+  }
+
   // Stealth: no report, no history read.
   {
     const { context, page, reads } = await open(device, HISTORIES.rich, { stealth: true });
@@ -320,6 +593,8 @@ for (const device of DEVICES) {
 
 await browser.close();
 assert.equal(receiptReads, 0, "no model results requested");
+assert.equal(leaked, 0, "no request carried the share summary");
+assert.deepEqual([...new Set(errors)], [], "no console or page errors");
 await writeFile(`${output}/${engine}-results.json`, JSON.stringify({ engine, blocked, timings, steps: log }, null, 2));
 console.log(`${engine}: ${log.length} checks passed; ${blocked} off-origin requests stopped, none sent`);
 console.log(timings);

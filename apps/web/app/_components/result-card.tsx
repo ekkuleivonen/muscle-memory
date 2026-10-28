@@ -69,8 +69,11 @@ export function useReferral(): string | null {
 /**
  * Copies text: the Clipboard API where the page is a secure context (HTTPS, localhost), else
  * the older select-and-copy, which also works over plain HTTP (a LAN address in development).
+ * `current` is asked before the fallback: a Clipboard write that fails after the text stopped
+ * being current (the report was cleared, the preview closed) must not copy it a second way.
+ * A write already handed to the browser can't be taken back.
  */
-export async function copyText(text: string): Promise<boolean> {
+export async function copyText(text: string, current: () => boolean = () => true): Promise<boolean> {
   try {
     if (navigator.clipboard) {
       await navigator.clipboard.writeText(text);
@@ -79,6 +82,7 @@ export async function copyText(text: string): Promise<boolean> {
   } catch {
     // Denied or unavailable: try the fallback.
   }
+  if (!current()) return false;
   const area = document.createElement("textarea");
   area.value = text;
   area.setAttribute("readonly", "");

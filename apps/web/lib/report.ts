@@ -59,10 +59,31 @@ export function mergeEvidence(
   );
 }
 
+export interface Part {
+  label: string;
+  value: number;
+  display: string;
+}
 export type Visual =
-  | { kind: "bars"; bars: { label: string; value: number; display: string }[] }
+  | { kind: "bars"; bars: Part[] }
   | { kind: "number"; value: string; unit: string }
-  | { kind: "turn"; from: string; to: string };
+  | { kind: "turn"; from: string; to: string }
+  /**
+   * A whole split into parts that never overlap and add up to it (challenges by language,
+   * challenges inside and outside your languages): a ring, or one split bar for two parts.
+   * Never for clocks or counts that overlap.
+   */
+  | { kind: "pie"; whole: string; parts: Part[] }
+  | { kind: "split"; whole: string; parts: Part[] }
+  /**
+   * One mark per item, filled when it passed: each submission of a solve in order, or each
+   * answered solve's first submission. A null mark is a submission whose result isn't known
+   * (a timeout, or an error not classified as the code's), never drawn as a failure. `legend`
+   * names the marks; its third entry only when some mark is null.
+   */
+  | { kind: "dots"; legend: [string, string] | [string, string, string]; rows: { label: string; marks: Mark[]; display: string }[] };
+/** Passed, didn't pass, or not known. */
+export type Mark = boolean | null;
 export type QuestionId =
   | "start"
   | "progress"
@@ -157,7 +178,7 @@ export interface Report {
   next: NextStep | null;
   /** Supported questions not answerable yet, for the bottom of the report. */
   discover: Undiscovered[];
-  /** Why comparisons aren't shown: policy and method, not missing practice. */
+  /** Why each comparison isn't shown yet, with what it waits on: policy and method, not missing practice. */
   discoverNote: string | null;
   profile: NextStep | null;
   /**
@@ -166,6 +187,21 @@ export interface Report {
    * answer only groups their own practice into usual and other languages.
    */
   languagesInvite: boolean;
+  /** The few counts a player may choose to share (see `shareText`); null before any solve. */
+  share: ShareSummary | null;
+}
+
+/**
+ * What the share preview offers, and nothing else: counts of solved challenges, by catalog
+ * language, and how many first submissions passed. No challenge names, times, dates, code,
+ * profile or after-solve answers, and nothing that identifies the player or an attempt.
+ */
+export interface ShareSummary {
+  solved: number;
+  /** Every solved challenge by catalog language, or empty when some language isn't known. */
+  languages: { label: string; solved: number }[];
+  /** Of `of` solves whose first submission's result is known, out of `solves` counted (as in the iterate answer). */
+  firstPassed: { passed: number; of: number; solves: number } | null;
 }
 
 const WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
@@ -218,6 +254,12 @@ export function toSolve(
   serviceFailures: number;
   /** What happened to the first recorded submission when it doesn't count: cancelled, or failed on our side. */
   firstVoided: "cancelled" | "service" | null;
+  /**
+   * Each counted submission in order: true for the one that solved it (always the last), false
+   * only when its checks were decided and it didn't pass, null when its result isn't known. The
+   * first agrees with `firstSubmit`, which also knows a compile or runtime error was the code's.
+   */
+  marks: Mark[];
 } | null {
   if (!a.completed || a.timeline.length >= TIMELINE_CAP) return null;
   let count = 0,
@@ -226,8 +268,11 @@ export function toSolve(
     serviceFailures = 0,
     skip = false,
     seen = false,
-    firstVoided: "cancelled" | "service" | null = null;
+    firstVoided: "cancelled" | "service" | null = null,
+    run: string | null = null;
+  const marks: Mark[] = [];
   for (const t of a.timeline) {
+    if (t.label.startsWith("submit: ")) run = t.label.slice(8);
     if (t.label === "examples: result" || t.label === "examples: user-error") exampleRuns++;
     if (t.label.endsWith(": runner-error")) {
       serviceFailures++;
@@ -236,6 +281,8 @@ export function toSolve(
     }
     const m = SUBMITTED.exec(t.label);
     if (!m) continue;
+    const ran = run;
+    run = null;
     if (skip || m[1] === "cancelled") {
       if (!seen) firstVoided = skip ? "service" : "cancelled";
       seen = true;
@@ -245,7 +292,15 @@ export function toSolve(
     }
     seen = true;
     count++;
-    if (m[1] === "passed" && +m[2] === +m[3] && +m[4] === 0) return { submissions: count, cancelled, exampleRuns, serviceFailures, firstVoided };
+    const solved = m[1] === "passed" && +m[2] === +m[3] && +m[4] === 0;
+    // Decided: checks ran to a verdict on a run that finished (derive's own rule for a decided submission).
+    const decided = (m[1] === "passed" || m[1] === "failed") && +m[3] > 0 && (ran === "result" || ran === "user-error");
+    // The very first recorded submission is judged by derive (`firstSubmit`), which also knows a
+    // compile or runtime error was the code's; the timeline can't tell that error from others.
+    const first = a.values.firstSubmit;
+    const judged = count === 1 && !firstVoided;
+    marks.push(solved ? true : judged ? (first === 0 ? false : null) : decided ? false : null);
+    if (solved) return { submissions: count, cancelled, exampleRuns, serviceFailures, firstVoided, marks };
   }
   return null;
 }
@@ -352,7 +407,7 @@ function iterate(solved: ReportAttempt[]): Question | null {
   // Up to the solve: anything after it doesn't make a solve iterative.
   const rows = chronological(solved).flatMap((a) => {
     const s = toSolve(a);
-    return s ? [{ ...s, first: a.values.firstSubmit }] : [];
+    return s ? [{ ...s, first: a.values.firstSubmit, challenge: a.challenge }] : [];
   });
   if (!rows.length) return null;
   const n = rows.length;
@@ -396,8 +451,20 @@ function iterate(solved: ReportAttempt[]): Question | null {
     id: "iterate",
     question: QUESTIONS.iterate,
     answer,
-    // How many solves took 1, 2, 3–4 or 5+ submissions: a shape, shown only when there is one.
-    visual: buckets.length > 1 ? { kind: "bars", bars: buckets } : null,
+    // One or two solves: each one's submissions in order, when one took more than one. From
+    // three, how many solves took 1, 2, 3–4 or 5+: a shape, shown only when there is one.
+    visual:
+      n <= 2
+        ? rows.some((s) => s.submissions > 1)
+          ? {
+              kind: "dots",
+              legend: rows.some((s) => s.marks.includes(null)) ? ["passed", "didn't pass", "result not known"] : ["passed", "didn't pass"],
+              rows: rows.map((s) => ({ label: s.challenge, marks: s.marks, display: plural(s.submissions, "submission") })),
+            }
+          : null
+        : buckets.length > 1
+          ? { kind: "bars", bars: buckets }
+          : null,
     detail: [examples, uncounted.length ? `${uncounted.join(" and ")}; they aren't counted.` : ""].filter(Boolean).join(" ") || null,
     note: null,
     fyi: null,
@@ -467,11 +534,14 @@ function confidence(solved: ReportAttempt[]): Question | null {
     id: "confidence",
     question: QUESTIONS.confidence,
     answer,
+    // Each answered solve as a mark under what you said: filled when its first submission passed.
     visual: {
-      kind: "bars",
-      bars: CONFIDENCE.flatMap(([value, label]) => {
+      kind: "dots",
+      legend: ["first passed", "first didn't pass"],
+      rows: CONFIDENCE.flatMap(([value, label]) => {
+        const r = chronological(rows.filter((a) => a.answers.confidence === value));
         const t = tally([value]);
-        return t.n ? [{ label, value: t.passed / t.n, display: `${of(t)} passed first` }] : [];
+        return r.length ? [{ label, marks: r.map((a) => a.values.firstSubmit === 1), display: `${of(t)} passed first` }] : [];
       }),
     },
     detail: null,
@@ -512,8 +582,8 @@ function difficulty(solved: ReportAttempt[], catalog: readonly ChallengeSummary[
   };
 }
 
-/** Languages by challenges solved and still in progress, never by an unexplained duration. */
-function languages(attempts: readonly ReportAttempt[], catalog: readonly ChallengeSummary[]): Question | null {
+/** Challenges solved and in progress per catalog language (current revisions, clean traces), most solved first. */
+function languageWork(attempts: readonly ReportAttempt[], catalog: readonly ChallengeSummary[]) {
   const lang = current(catalog, (c) => c.language);
   const work = new Map<string, { solved: Set<string>; tried: Set<string> }>();
   for (const a of attempts) {
@@ -524,10 +594,32 @@ function languages(attempts: readonly ReportAttempt[], catalog: readonly Challen
     if (a.completed) w.solved.add(a.challenge);
     work.set(l, w);
   }
-  if (!work.size) return null;
-  const rows = [...work]
+  return [...work]
     .map(([l, w]) => ({ label: languageLabel(l), solved: w.solved.size, open: w.tried.size - w.solved.size }))
     .sort((x, y) => y.solved - x.solved || y.open - x.open || x.label.localeCompare(y.label));
+}
+/** A ring stays readable up to this many slices; the rest are one "other languages" slice. */
+export const SLICES = 5;
+
+/** Languages by challenges solved and still in progress, never by an unexplained duration. */
+function languages(attempts: readonly ReportAttempt[], catalog: readonly ChallengeSummary[]): Question | null {
+  const rows = languageWork(attempts, catalog);
+  if (!rows.length) return null;
+  const parts = rows.map((r) => ({
+    label: r.label,
+    value: r.solved + r.open,
+    display: [r.solved && `${r.solved} solved`, r.open && `${r.open} in progress`].filter(Boolean).join(" · "),
+  }));
+  if (parts.length > SLICES) {
+    const rest = rows.slice(SLICES - 1);
+    const solvedRest = rest.reduce((t, r) => t + r.solved, 0),
+      openRest = rest.reduce((t, r) => t + r.open, 0);
+    parts.splice(SLICES - 1, Infinity, {
+      label: `${rest.length} other languages`,
+      value: solvedRest + openRest,
+      display: [solvedRest && `${solvedRest} solved`, openRest && `${openRest} in progress`].filter(Boolean).join(" · "),
+    });
+  }
   return {
     id: "languages",
     question: QUESTIONS.languages,
@@ -539,18 +631,9 @@ function languages(attempts: readonly ReportAttempt[], catalog: readonly Challen
         : rows.every((r) => r.solved === rows[0].solved)
           ? `${and(rows.map((r) => r.label))} so far, ${rows[0].solved} solved in each.`
           : `${across(rows.reduce((t, r) => t + r.solved, 0), "solved challenge")}: ${rows.map((r) => `${r.label} ${r.solved}`).join(", ")}.`,
-    // One language is said in the answer; bars only when there are languages to set side by side.
-    visual:
-      rows.length > 1
-        ? {
-            kind: "bars",
-            bars: rows.map((r) => ({
-              label: r.label,
-              value: r.solved + r.open,
-              display: [r.solved && `${r.solved} solved`, r.open && `${r.open} in progress`].filter(Boolean).join(" · "),
-            })),
-          }
-        : null,
+    // Each challenge has one language, so they split the whole. One language is said in the
+    // answer; a ring only when there are languages to share it.
+    visual: rows.length > 1 ? { kind: "pie", whole: "Challenges worked on, by language", parts } : null,
     detail: null,
     note: null,
     fyi: null,
@@ -582,13 +665,18 @@ function familiarity(
       : !usual
         ? "Your recorded practice is outside your usual languages so far."
         : `${plural(usual, "challenge")} in your usual languages; ${other} outside them.`,
-    visual: {
-      kind: "bars",
-      bars: [
-        ["Usual languages", usual],
-        ["Other languages", other],
-      ].flatMap(([label, n]) => (n ? [{ label: label as string, value: n as number, display: plural(n as number, "challenge") }] : [])),
-    },
+    // Inside or outside your languages, never both: one bar split in two, when both have some.
+    visual:
+      usual && other
+        ? {
+            kind: "split",
+            whole: "Challenges worked on, inside and outside your usual languages",
+            parts: [
+              { label: "Usual languages", value: usual, display: plural(usual, "challenge") },
+              { label: "Other languages", value: other, display: plural(other, "challenge") },
+            ],
+          }
+        : null,
     detail: null,
     note: "Challenges you worked on, grouped by the languages you listed.",
     fyi: null,
@@ -756,6 +844,53 @@ function toDiscover(input: ReportInput, solved: ReportAttempt[], answered: Set<s
   return out;
 }
 
+/** The share preview's counts; null before any solve. */
+function shareSummary(input: ReportInput, solved: ReportAttempt[]): ShareSummary | null {
+  const total = new Set(solved.map((a) => a.challenge)).size;
+  if (!total) return null;
+  // By language only when every solved challenge has one (an older revision's isn't guessed).
+  const rows = languageWork(input.attempts, input.catalog).filter((r) => r.solved);
+  // The iterate answer's population: solves up to the solve, first result known.
+  const counted = solved.filter((a) => toSolve(a));
+  const known = counted.filter((a) => a.values.firstSubmit === 0 || a.values.firstSubmit === 1).map((a) => a.values.firstSubmit === 1);
+  return {
+    solved: total,
+    languages: rows.reduce((t, r) => t + r.solved, 0) === total ? rows.map((r) => ({ label: r.label, solved: r.solved })) : [],
+    firstPassed: known.length ? { passed: known.filter(Boolean).length, of: known.length, solves: counted.length } : null,
+  };
+}
+
+/** Text-sized bar for a plain-text summary: at most this many blocks for the largest count. */
+const SHARE_BAR = 10;
+/**
+ * The summary exactly as the preview shows it and as it is copied, shared or downloaded: the
+ * counts in `ShareSummary`, a link to the site, nothing else.
+ */
+export function shareText(s: ShareSummary, site: string): string {
+  const lines = ["My unaided coding practice on Muscle Memory", ""];
+  if (s.languages.length === 1) lines.push(`${plural(s.solved, `${s.languages[0].label} challenge`)} solved`);
+  else if (!s.languages.length) lines.push(`${plural(s.solved, "challenge")} solved`);
+  else {
+    lines.push(`${plural(s.solved, "challenge")} solved`);
+    const most = Math.max(...s.languages.map((l) => l.solved));
+    const width = Math.max(...s.languages.map((l) => l.label.length));
+    for (const l of s.languages)
+      lines.push(`  ${l.label.padEnd(width)}  ${"■".repeat(Math.max(1, Math.round((l.solved / most) * SHARE_BAR)))} ${l.solved}`);
+  }
+  const f = s.firstPassed;
+  // Scoped to the solves whose first result is known, saying so when that isn't all of them.
+  if (f)
+    lines.push(
+      f.of < f.solves
+        ? `First submission passed in ${f.passed} of ${plural(f.of, "solve")} with a known result`
+        : f.of === 1
+          ? `First submission ${f.passed ? "passed" : "didn't pass"}`
+          : `First submission passed in ${f.passed} of ${f.of} solves`,
+    );
+  lines.push("", `Keep your coding skills in practice: ${site}`);
+  return lines.join("\n");
+}
+
 export function buildReport(input: ReportInput): Report {
   const known = new Set(input.catalog.map((c) => c.key));
   const started = new Set([...Object.keys(input.progress), ...input.attempts.map((a) => a.challenge)].filter((k) => known.has(k)));
@@ -790,10 +925,13 @@ export function buildReport(input: ReportInput): Report {
     waiting: started.size && !questions.length ? "Solve a challenge and your answers start here." : null,
     next: next(input, started, solved),
     discover: toDiscover(input, solved, new Set(questions.map((q) => q.id))),
-    discoverNote: "Comparisons with other players and with AI models aren't shown: other players' practice stays private for now, and models don't submit under the same rules.",
+    // Each comparison's actual missing prerequisite, not a blanket "not comparable"; replaced by a
+    // single matched FYI on the relevant answer once one is eligible (ENG-376 provides it).
+    discoverNote: "Not compared yet. Other players: comparing with them waits on privacy controls still under review, then on enough comparable players on the same challenge. AI models: their recorded submissions don't have to pass the examples first, as yours do, so the two aren't counted alike; a model comparison shows only for a measure recorded the same way on the same challenge version.",
     profile: null,
     languagesInvite:
       questions.some((q) => q.id === "languages") &&
       !input.profile?.languages?.length,
+    share: shareSummary(input, solved),
   };
 }
