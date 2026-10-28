@@ -117,3 +117,21 @@ test("partial practice offers Resume only when the browser can actually continue
   );
   assert.doesNotMatch(noContinuation, /Resume JS-001/);
 });
+
+test("a failed history read keeps its reason out of the copy and offers Try again only when no retry is pending", async () => {
+  const { Status } = await import("./stats");
+  const message = "Your uploads can't be read right now, so the report uses this device only.";
+  const waiting = renderToStaticMarkup(
+    createElement(Status, { history: { state: "unavailable", message, reason: "http-503:storage-http-400", retryAt: Date.now() + 61_000 }, onRetry: () => {} }),
+  );
+  assert.match(waiting, /data-history-reason="http-503:storage-http-400"/);
+  assert.match(waiting, />Your earlier practice couldn&#x27;t be added yet; trying again shortly\.</);
+  assert.doesNotMatch(waiting, />[^<]*(storage-http|503)[^<]*</, "the code is in an attribute, never in text");
+  assert.doesNotMatch(waiting, /<button/);
+  const exhausted = renderToStaticMarkup(
+    createElement(Status, { history: { state: "limited", message, reason: "http-429" }, onRetry: () => {} }),
+  );
+  assert.match(exhausted, /this shows this device only\. <button type="button" class="t-cmd">Try again<\/button>/);
+  const ready = renderToStaticMarkup(createElement(Status, { history: { state: "unauthorized", message } }));
+  assert.equal(ready, "", "ownership refusal shows nothing and offers no retry");
+});
