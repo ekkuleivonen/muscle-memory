@@ -131,9 +131,16 @@ export function Statistics({
           <p>
             Coverage above includes site observations and is independent of the
             challenge/revision filters. The table uses practice capture 1.0 /
-            1.1 only. Uploads may be delayed, incomplete or absent; deletion
+            1.1 / 1.2. Uploads may be delayed, incomplete or absent; deletion
             follows the archive's existing erasure process.
           </p>
+          {rows.some((row) => row.submissionsLimited || row.runsLimited) && (
+            <p role="status">
+              Counts marked ≥ are lower bounds: some run or submission records
+              exceed the archive JSON parser's limit. Starts and solves still
+              include these attempts; large records were not deleted.
+            </p>
+          )}
           {rows.length === 0 ? (
             <p role="status">
               No supported challenge activity is recorded for these filters.
@@ -193,8 +200,14 @@ export function Statistics({
                         <td>{r.browserIds}</td>
                         <td>{r.completions}</td>
                         <td>{completionRate(r)}</td>
-                        <td>{r.submissions}</td>
-                        <td>{r.runs}</td>
+                        <td>
+                          {r.submissionsLimited ? "≥" : ""}
+                          {r.submissions}
+                        </td>
+                        <td>
+                          {r.runsLimited ? "≥" : ""}
+                          {r.runs}
+                        </td>
                         <td>{r.missingStarts}</td>
                       </tr>
                     ))}

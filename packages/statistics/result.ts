@@ -7,6 +7,8 @@ export interface StatsRow {
   submissions: number;
   runs: number;
   missingStarts: number;
+  submissionsLimited: boolean;
+  runsLimited: boolean;
 }
 export interface StatsResult {
   rows: StatsRow[];
@@ -26,6 +28,11 @@ function count(v: unknown): number {
   if (typeof n !== "number" || !Number.isSafeInteger(n) || n < 0)
     throw new Error("Invalid aggregate count.");
   return n;
+}
+function flag(v: unknown): boolean {
+  const n = count(v);
+  if (n > 1) throw new Error("Invalid aggregate limit flag.");
+  return n === 1;
 }
 function time(v: unknown): string | null {
   if (v === null) return null;
@@ -70,6 +77,8 @@ export function statsResult(value: unknown): StatsResult {
         submissions: count(r.submissions),
         runs: count(r.runs),
         missingStarts: count(r.missing_starts),
+        submissionsLimited: flag(r.submissions_limited),
+        runsLimited: flag(r.runs_limited),
       };
       if (
         result.completions > result.starts ||
