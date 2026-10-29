@@ -78,8 +78,12 @@ export function statsQuery(
 ), eligible AS (
   SELECT * FROM observations WHERE NOT (${excluded})
 ), practice AS (
-  SELECT *, json_get_str(json_get_json(payload, 'data'), 'runId') AS run_id,
-    json_get_str(json_get_json(payload, 'data'), 'status') AS run_status
+  SELECT *, json_get_str(json_get_json(
+      CASE WHEN type IN ('practice.run', 'practice.submitted') AND octet_length(payload) <= 2000
+        THEN payload ELSE '{}' END, 'data'), 'runId') AS run_id,
+    json_get_str(json_get_json(
+      CASE WHEN type = 'practice.run' AND octet_length(payload) <= 2000
+        THEN payload ELSE '{}' END, 'data'), 'status') AS run_status
   FROM eligible
   WHERE capture_version IN ('practice-capture-1.0.0', 'practice-capture-1.1.0', 'practice-capture-1.2.0')
     AND type IN ('practice.started', 'practice.opened', 'practice.run', 'practice.submitted', 'practice.completed')
@@ -94,7 +98,9 @@ export function statsQuery(
     MIN(CASE WHEN type = 'practice.started' THEN occurred_at END) AS started,
     MAX(CASE WHEN type = 'practice.completed' THEN occurred_at END) AS completed,
     COUNT(DISTINCT CASE WHEN type = 'practice.submitted' THEN run_id END) AS submissions,
-    COUNT(DISTINCT CASE WHEN type = 'practice.run' AND run_status = 'queued' THEN run_id END) AS runs
+    COUNT(DISTINCT CASE WHEN type = 'practice.run' AND run_status = 'queued' THEN run_id END) AS runs,
+    MAX(CASE WHEN type = 'practice.submitted' AND octet_length(payload) > 2000 THEN 1 ELSE 0 END) AS submissions_limited,
+    MAX(CASE WHEN type = 'practice.run' AND octet_length(payload) > 2000 THEN 1 ELSE 0 END) AS runs_limited
   FROM practice GROUP BY challenge, challenge_revision, participant_id, attempt_id
 )
 SELECT 'coverage' AS scope, NULL AS challenge, NULL AS challenge_revision,
@@ -108,7 +114,7 @@ SELECT 'coverage' AS scope, NULL AS challenge, NULL AS challenge_revision,
   (SELECT MAX(occurred_at) FROM observations) AS last_observed,
   (SELECT MAX(received_at) FROM observations) AS last_received,
   NULL AS starts, NULL AS browser_ids, NULL AS completions, NULL AS submissions,
-  NULL AS runs, NULL AS missing_starts
+  NULL AS runs, NULL AS missing_starts, NULL AS submissions_limited, NULL AS runs_limited
 UNION ALL
 SELECT 'challenge' AS scope, challenge, challenge_revision,
   NULL AS observed, NULL AS duplicates, NULL AS conflicts, NULL AS known_synthetic,
@@ -117,7 +123,8 @@ SELECT 'challenge' AS scope, challenge, challenge_revision,
   COUNT(DISTINCT CASE WHEN started IS NOT NULL THEN participant_id END) AS browser_ids,
   SUM(CASE WHEN started IS NOT NULL AND completed >= started THEN 1 ELSE 0 END) AS completions,
   SUM(submissions) AS submissions, SUM(runs) AS runs,
-  SUM(CASE WHEN started IS NULL THEN 1 ELSE 0 END) AS missing_starts
+  SUM(CASE WHEN started IS NULL THEN 1 ELSE 0 END) AS missing_starts,
+  MAX(submissions_limited) AS submissions_limited, MAX(runs_limited) AS runs_limited
 FROM attempts GROUP BY challenge, challenge_revision
 LIMIT 502`;
 }

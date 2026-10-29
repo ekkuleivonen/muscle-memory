@@ -58,7 +58,11 @@ c.executemany('INSERT INTO events VALUES ('+','.join('?' for x in v['fields'])+'
 def get(doc,key):
  try: return json.loads(doc).get(key)
  except: return None
-c.create_function('json_get_json',2,lambda doc,key: json.dumps(get(doc,key)))
+def bounded(doc,key):
+ if doc is not None and len(doc.encode('utf-8')) > 2000: raise ValueError('JSON input exceeds 2000 bytes')
+ return json.dumps(get(doc,key))
+c.create_function('json_get_json',2,bounded)
+c.create_function('octet_length',1,lambda doc: len(doc.encode('utf-8')) if doc is not None else None)
 c.create_function('json_get_str',2,lambda doc,key: get(doc,key) if isinstance(get(doc,key),str) else None)
 c.create_function('regexp_like',2,lambda s,p: bool(re.search(p,s)) if s else False)
 print(json.dumps([dict(r) for r in c.execute(v['sql'].replace('default.events','events'))]))`;
@@ -213,6 +217,8 @@ test("actual query deduplicates deliveries, joins full attempt identity, and nev
     submissions: 1,
     runs: 1,
     missingStarts: 0,
+    submissionsLimited: false,
+    runsLimited: false,
   });
   assert.equal(completionRate(a), "66.7% (2/3)");
   assert.equal(r.rows.find((x) => x.revision === otherRevision)!.browserIds, 1);
@@ -252,6 +258,70 @@ test("missing starts, conflicting IDs, unknown capture, partial windows and miss
     completionRate({ starts: 0, completions: 0 }),
     "Unavailable (no recorded starts)",
   );
+});
+test("large outcomes and metadata preserve starts/solves and disclose count lower bounds", () => {
+  const large = "€".repeat(900); // byte limit, not character count
+  const r = query([
+    observation("practice.started", {
+      payload: JSON.stringify({ data: { context: large } }),
+    }),
+    observation("practice.opened", {
+      payload: JSON.stringify({ data: { context: large } }),
+    }),
+    observation("practice.run"),
+    observation("practice.run", {
+      payload: JSON.stringify({
+        data: { runId: "run-a", status: "result", outcome: large },
+      }),
+    }),
+    observation("practice.submitted"),
+    observation("practice.completed", {
+      payload: JSON.stringify({ data: { context: large } }),
+    }),
+    observation("practice.submitted", {
+      payload: JSON.stringify({ data: { runId: "run-b", rules: [large] } }),
+    }),
+  ]);
+  assert.equal(r.coverage.observed, 7);
+  assert.equal(r.rows[0].starts, 1);
+  assert.equal(r.rows[0].completions, 1);
+  assert.equal(r.rows[0].runs, 1);
+  assert.equal(r.rows[0].submissions, 1);
+  assert.equal(r.rows[0].runsLimited, true);
+  assert.equal(r.rows[0].submissionsLimited, true);
+  const unrelated = query([
+    observation("practice.started", {
+      payload: JSON.stringify({ data: { padding: large } }),
+    }),
+    observation("practice.completed"),
+  ]);
+  assert.equal(unrelated.rows[0].runsLimited, false);
+  assert.equal(unrelated.rows[0].submissionsLimited, false);
+});
+test("the JSON input boundary is UTF-8 bytes and does not silently drop submissions", () => {
+  const payload = (bytes: number) => {
+    const value = JSON.stringify({
+      data: { runId: "bounded-run", padding: "" },
+    });
+    return value.replace(
+      '"padding":""',
+      '"padding":"' + "x".repeat(bytes - Buffer.byteLength(value)) + '"',
+    );
+  };
+  assert.equal(Buffer.byteLength(payload(2000)), 2000);
+  const small = query([
+    observation("practice.started"),
+    observation("practice.submitted", { payload: payload(2000) }),
+  ]);
+  assert.equal(small.rows[0].submissions, 1);
+  assert.equal(small.rows[0].submissionsLimited, false);
+  const large = query([
+    observation("practice.started"),
+    observation("practice.submitted", { payload: payload(2001) }),
+  ]);
+  assert.equal(large.rows[0].submissions, 0);
+  assert.equal(large.rows[0].submissionsLimited, true); // UI must render ≥0, never an exact zero
+  assert.equal(large.coverage.observed, 2);
 });
 test("empty snapshot is different from unavailable and projection strips private material", () => {
   const empty = query([]);

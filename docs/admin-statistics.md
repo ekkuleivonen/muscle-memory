@@ -49,3 +49,26 @@ the repaired query against the same synthetic empty, populated, duplicate, confl
 revision, date-boundary and missing-start fixtures as SQLite. Python JSON stand-ins
 are used; this is a planner/semantics regression, not fresh native Basin or production
 acceptance. No real records, credentials or raw event output are used by these tests.
+
+### Large practice payloads (29 October 2026)
+
+A controlled read-only native query exposed a second production constraint:
+`json_get_json` rejects an input over 2,000 UTF-8 bytes. The former query parsed
+all practice payloads, including bulky opened/run-result observations, although
+starts and solves need only the envelope columns. Only run/submission metadata
+now reaches the JSON parser, through a CASE input that is always within that
+byte limit. No payload is truncated, deleted or regex-parsed.
+
+All observations still participate in coverage/conflict detection; starts and
+solves retain their full original logic. Small run/submission metadata still
+contributes distinct run IDs. If a relevant run/submission payload is too large
+to parse, that row's affected counter is explicitly displayed as a lower bound
+(`≥N`), with a concise notice. This is conservative: a large terminal outcome may
+refer to a queued run already counted. It never silently presents an incomplete
+counter as exact or treats parser failures as zero activity. Large unrelated
+opened/completion payloads do not mark these counters incomplete.
+
+SQLite and the optional physical DataFusion suite enforce the production JSON
+input limit and cover realistic large outcomes, multi-byte strings, oversized
+submission metadata, and the exact 2,000/2,001-byte boundary. Native query error
+verification is separate from post-release normal admin-page acceptance.

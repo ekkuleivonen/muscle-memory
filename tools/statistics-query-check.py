@@ -28,6 +28,8 @@ def get_str(doc, key):
 
 
 def get_json(doc, key):
+    if doc is not None and len(doc.encode("utf-8")) > 2000:
+        raise ValueError("JSON input exceeds 2000 bytes")
     result = get(doc, key)
     return None if result is None else json.dumps(result, separators=(",", ":"))
 
