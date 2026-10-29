@@ -33,3 +33,19 @@ The fixed query was successfully executed against the current Iceberg snapshot u
 ## Verification
 
 `packages/statistics/statistics.test.ts` executes the actual fixed SELECT against synthetic SQLite fixtures (namespace adapted; documented JSON/regexp functions provided). It tests expected aggregates, duplicates, identity/version joins, missing starts, window boundaries, conflicts, unsupported versions, empty data, invalid filters, result projection and transport bounds. This proves local interpretation logic, not live credentials or Cloudflare SQL execution. Built-worker/browser security and UI checks are separate fixtures. Synthetic tests do not upload research events or constitute human study data.
+
+### Planner regression (29 October 2026)
+
+The former challenge branch of the aggregate UNION projected eight unnamed `NULL`
+columns. DataFusion 50.1.0 rejects that projection before reading rows: projection
+expression names must be unique. SQLite accepts it, which let the original fixtures
+pass. Each placeholder now has its existing output-column name; counting, filters,
+ownership/access, exclusions and result projection are unchanged.
+
+Run `STATS_SQL_PYTHON=python node --import tsx --test packages/statistics/statistics.test.ts`
+in an environment with DataFusion 50.1.0 installed. This optional physical check was
+verified locally; this repair does not add a CI workflow step. The suite proves the former query fails and physically executes
+the repaired query against the same synthetic empty, populated, duplicate, conflict,
+revision, date-boundary and missing-start fixtures as SQLite. Python JSON stand-ins
+are used; this is a planner/semantics regression, not fresh native Basin or production
+acceptance. No real records, credentials or raw event output are used by these tests.

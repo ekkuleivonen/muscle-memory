@@ -67,8 +67,51 @@ print(json.dumps([dict(r) for r in c.execute(v['sql'].replace('default.events','
     encoding: "utf8",
   });
   assert.equal(run.status, 0, run.stderr);
-  return statsResult(JSON.parse(run.stdout));
+  const expected = JSON.parse(run.stdout);
+  // SQLite accepts duplicate unnamed UNION projections that Basin/DataFusion rejects.
+  // STATS_SQL_PYTHON enables physical execution with DataFusion-compatible planning.
+  if (process.env.STATS_SQL_PYTHON) {
+    const physical = spawnSync(
+      process.env.STATS_SQL_PYTHON,
+      ["tools/statistics-query-check.py"],
+      {
+        input: JSON.stringify({ rows, fields, sql: statsQuery(w, exclusions) }),
+        encoding: "utf8",
+      },
+    );
+    assert.equal(physical.status, 0, physical.stderr);
+    const normalize = (value: Record<string, unknown>[]) =>
+      value.map((row) => JSON.stringify(Object.entries(row).sort())).sort();
+    assert.deepEqual(
+      normalize(JSON.parse(physical.stdout)),
+      normalize(expected),
+    );
+  }
+  return statsResult(expected);
 }
+test(
+  "DataFusion rejects the former repeated unnamed NULL projections",
+  {
+    skip: !process.env.STATS_SQL_PYTHON,
+  },
+  () => {
+    const previous = statsQuery(window).replace(
+      "NULL AS observed, NULL AS duplicates, NULL AS conflicts, NULL AS known_synthetic,\n  NULL AS unsupported, NULL AS first_observed, NULL AS last_observed, NULL AS last_received,",
+      "NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,",
+    );
+    assert.notEqual(previous, statsQuery(window));
+    const run = spawnSync(
+      process.env.STATS_SQL_PYTHON!,
+      ["tools/statistics-query-check.py"],
+      {
+        input: JSON.stringify({ rows: [], fields, sql: previous }),
+        encoding: "utf8",
+      },
+    );
+    assert.notEqual(run.status, 0);
+    assert.match(run.stderr, /Projections require unique expression names/);
+  },
+);
 test("only registered exact revisions explicitly tagged synthetic-qa are excluded", () => {
   const exclusions = syntheticRevisions([
     {

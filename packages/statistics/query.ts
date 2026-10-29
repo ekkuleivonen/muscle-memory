@@ -111,7 +111,8 @@ SELECT 'coverage' AS scope, NULL AS challenge, NULL AS challenge_revision,
   NULL AS runs, NULL AS missing_starts
 UNION ALL
 SELECT 'challenge' AS scope, challenge, challenge_revision,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL AS observed, NULL AS duplicates, NULL AS conflicts, NULL AS known_synthetic,
+  NULL AS unsupported, NULL AS first_observed, NULL AS last_observed, NULL AS last_received,
   SUM(CASE WHEN started IS NOT NULL THEN 1 ELSE 0 END) AS starts,
   COUNT(DISTINCT CASE WHEN started IS NOT NULL THEN participant_id END) AS browser_ids,
   SUM(CASE WHEN started IS NOT NULL AND completed >= started THEN 1 ELSE 0 END) AS completions,
