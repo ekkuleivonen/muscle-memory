@@ -12,6 +12,7 @@
     "check:publish": "node --import tsx tools/browser/content-check.ts",
     "build:content": "node --import tsx tools/build-content.ts",
     "build:cloudflare": "npm run build:cloudflare --workspace apps/web",
+    "deploy": "node tools/deploy.mjs",
     "build:logo": "node tools/build-logo.mjs",
     "test:browser": "node tools/browser/sandbox-check.mjs && node --import tsx tools/browser/content-check.ts",
     "pretest": "npm run build:content",

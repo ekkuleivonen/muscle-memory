@@ -28,8 +28,26 @@ Cloudflare Access is kept for what must stay private: the `/admin*` routes have 
 
 ## Deploying
 
-GitHub Actions deploys every push to `main` (`.github/workflows/ci.yml`), after the tests, the typecheck and the Cloudflare build pass: first the ingest Worker (`apps/ingest`), so it accepts what the new app records, then the app. Deploys from `main` run one at a time. Cloudflare's Workers Builds is switched off: it has no Docker, which the Go, C# and Java runners are built in.
+Production is deployed from the operator's Mac, not CI (13 November 2026,
+[ENG-660](https://linear.app/rowandreason/issue/ENG-660)). Run it from a clean checkout of
+`origin/main` with Node 22 and Docker:
 
-CI authenticates with the repository secret `CLOUDFLARE_API_TOKEN`, an account API token named "muscle-memory deploy (GitHub Actions)" limited to this account and the `musclememory.run` zone: Workers Scripts edit, Workers Routes edit, DNS edit (the app's custom domain), Account Settings read, and R2 and Pipelines read (the ingest Worker's bindings). Never commit a token.
+```sh
+npm ci
+npm run deploy -- --dry-run   # everything below, with wrangler's --dry-run: uploads nothing
+npm run deploy                # catalog pull, test, typecheck, build:cloudflare, ingest, then the app
+```
 
-After a merge, check the run, and `npx wrangler deployments list --name muscle-memory` for the new version. A manual deploy is the same commands run locally with Node 22 and Docker: `npm run build:cloudflare`, then `npx wrangler deploy --config apps/ingest/wrangler.jsonc --env=""` and `npx wrangler deploy --config apps/web/wrangler.jsonc`. The erasure Worker (`apps/erasure`) is not deployed by CI, since it needs a Containers permission CI's token lacks; deploy it by hand ([telemetry](telemetry.md#setup)).
+`tools/deploy.mjs` takes `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` from Infisical
+`company-platform` / `prod` / `/cloudflare`, the account's one central token. They exist only
+in that process and its wrangler and npm children: never in argv, a file, `.dev.vars` or a
+GitHub secret. Without `INFISICAL_TOKEN`, the script re-runs itself under the homelab operator
+loader (`scripts/operator_env.py --token-only` in `~/homelab`, or `HOMELAB_CHECKOUT`), which logs
+in with the Infisical bootstrap and revokes its token afterwards. A real deploy refuses a dirty
+checkout or one that isn't `origin/main`. It deploys the ingest Worker first, so it accepts what
+the new app records, then the app. Locally, `catalog:pull` uses the same token. Cloudflare's
+Workers Builds stays off, because it has no Docker for the Go, C# and Java runners.
+
+CI still runs the tests and the Cloudflare build on every push, but it holds no deploy token.
+After a deploy, check `npx wrangler deployments list --name muscle-memory` for the new version.
+The erasure Worker (`apps/erasure`) is not deployed by CI, deploy it by hand ([telemetry](telemetry.md#setup)).
